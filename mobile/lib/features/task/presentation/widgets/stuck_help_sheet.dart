@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class StuckHelpSheet extends StatelessWidget {
@@ -15,11 +16,11 @@ class StuckHelpSheet extends StatelessWidget {
   final VoidCallback? onContinuePressed;
 
   static const List<String> genericSuggestions = [
-    '把卡住的具体位置写下来',
-    '换一个更小的子问题',
-    '先完成你确实会的部分',
-    '给自己限时5分钟',
-    '标记这个点，继续其他部分',
+    context.l10n.stuckHelpSuggestion1,
+    context.l10n.stuckHelpSuggestion2,
+    context.l10n.stuckHelpSuggestion3,
+    context.l10n.stuckHelpSuggestion4,
+    context.l10n.stuckHelpSuggestion5,
   ];
 
   @override
@@ -36,7 +37,7 @@ class StuckHelpSheet extends StatelessWidget {
       minChildSize: 0.42,
       maxChildSize: 0.92,
       builder: (context, scrollController) => GraphiteModalSurface(
-        title: '别担心，我们来看看卡在哪里',
+        title: context.l10n.stuckHelpTitle,
         expandChild: true,
         child: SingleChildScrollView(
           controller: scrollController,
@@ -82,7 +83,7 @@ class StuckHelpSheet extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing20),
               _SheetSection(
-                title: '要不要让AI来看看？',
+                title: context.l10n.stuckHelpAskAi,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -97,7 +98,7 @@ class StuckHelpSheet extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: SparkleButton(
-                        label: '和Sparkle聊聊这个问题',
+                        label: context.l10n.stuckHelpChatWithSparkle,
                         icon: const Icon(
                           Icons.forum_outlined,
                         ),
@@ -112,7 +113,7 @@ class StuckHelpSheet extends StatelessWidget {
                 width: double.infinity,
                 child: SparkleButton(
                   key: const Key('stuck-help-continue-button'),
-                  label: '好了，继续',
+                  label: context.l10n.stuckHelpContinue,
                   variant: ButtonVariant.outline,
                   icon: const Icon(Icons.play_arrow_rounded),
                   onPressed: () {
@@ -213,14 +214,14 @@ class _MicroTeachingSteps extends StatelessWidget {
           _MicroTeachingStepCard(
             key: const Key('stuck-help-diagnosis-step'),
             number: 1,
-            title: '诊断问题',
+            title: context.l10n.stuckHelpDiagnose,
             body: data.diagnosisQuestion,
             chips: data.diagnosisOptions,
           ),
           _MicroTeachingStepCard(
             key: const Key('stuck-help-fix-step'),
             number: 2,
-            title: '精准修复',
+            title: context.l10n.stuckHelpFix,
             body: data.targetedFix,
             footer: data.checkQuestion,
           ),

@@ -1476,6 +1476,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusPaused => '已暂停';
 
   @override
+  String get taskStatusStuck => '卡住了';
+
+  @override
   String get taskActionStart => '开始';
 
   @override
@@ -1500,10 +1503,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskPriorityHigh => '高优先级';
 
   @override
+  String get taskPriorityHighShort => '高';
+
+  @override
+  String get taskPriorityMediumShort => '中';
+
+  @override
+  String get taskPriorityLowShort => '低';
+
+  @override
   String get taskPriorityMedium => '中优先级';
 
   @override
   String get taskPriorityLow => '低优先级';
+
+  @override
+  String get taskListEmptyTitle => '今天还没有待办事项';
+
+  @override
+  String get taskListEmptyDescription => '先放进一件最想推进的小事，系统会帮你把今天逐步铺开。';
+
+  @override
+  String get taskListEmptyAction => '创建第一项任务';
+
+  @override
+  String get taskListReorderDisabledHint => '拖拽排序仅在「全部任务」列表中可用。';
+
+  @override
+  String get taskListPartialErrorHint => '部分数据刷新失败，当前先显示已加载的任务。';
+
+  @override
+  String get taskListFilterTooltip => '优先级筛选';
 
   @override
   String get taskNoTasks => '暂无任务';
@@ -9190,6 +9220,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExecutionCompletedTitle => '任务已完成';
 
   @override
+  String get taskConfirmCompleteTitle => '确认完成任务？';
+
+  @override
+  String taskConfirmCompleteBody(String title) {
+    return '将「$title」标记为已完成。';
+  }
+
+  @override
+  String taskEstimatedMinutesValue(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
   String get taskExecutionConfirmComplete => '确认完成';
 
   @override
@@ -9304,6 +9347,134 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskGenerateGuideTitle => '生成执行指南';
+
+  @override
+  String get taskDetailNoteSection => '任务说明';
+
+  @override
+  String taskDetailSubtasks(Object completed, Object total) {
+    return '子任务 ($completed/$total)';
+  }
+
+  @override
+  String taskDetailSubtaskLoadFailed(Object error) {
+    return '子任务加载失败：$error';
+  }
+
+  @override
+  String get taskDetailAiExpansionTitle => 'AI 拓展相关节点';
+
+  @override
+  String get taskDetailAiExpansionDescription =>
+      '基于当前节点生成 3 个候选相关节点。你可以不选，也可以任选 1 到 3 个真正写入知识星图。';
+
+  @override
+  String get taskDetailGenerateCandidates => '生成候选节点';
+
+  @override
+  String get taskDetailUnknownNode => '未知节点';
+
+  @override
+  String get taskDetailNodeCleanedUp => '这个节点已被清理，星图会在下次刷新后同步。';
+
+  @override
+  String get taskDetailRecentLearningPath => '最近生成的学习路径';
+
+  @override
+  String get taskDetailLightweightPath => '当前为轻量任务路径，不占用计划额度。';
+
+  @override
+  String get taskDetailFullPath => '当前为完整学习计划路径。';
+
+  @override
+  String get taskDetailGeneratedTasks => '已生成任务';
+
+  @override
+  String get taskDetailPlanContext => '所属计划';
+
+  @override
+  String get taskDetailPlanContextLoading => '正在加载所属计划...';
+
+  @override
+  String get taskDetailCopyAiPromptSuccess => 'AI 提示词已复制';
+
+  @override
+  String get taskDetailGuideGenerated => '任务指南已生成';
+
+  @override
+  String taskDetailGuideGenerateFailed(Object error) {
+    return '生成失败: $error';
+  }
+
+  @override
+  String get taskDetailRelationPrerequisite => '前置';
+
+  @override
+  String get taskDetailRelationApplication => '应用';
+
+  @override
+  String get taskDetailRelationEvolution => '进阶';
+
+  @override
+  String get taskDetailRelationRelated => '相关';
+
+  @override
+  String get taskDetailCandidatesProcessed => '候选节点已处理。';
+
+  @override
+  String taskDetailCandidatesApplied(
+      Object count, Object created, Object reused) {
+    return '已处理 $count 个候选节点，新增 $created 个，复用 $reused 个已有节点。';
+  }
+
+  @override
+  String taskDetailCandidatesReused(Object count, Object reused) {
+    return '已处理 $count 个候选节点，复用 $reused 个已有节点。';
+  }
+
+  @override
+  String taskDetailCandidatesAccepted(Object count) {
+    return '已将 $count 个节点纳入星图。';
+  }
+
+  @override
+  String taskDetailNodeExpansionDescription(Object name) {
+    return '围绕「$name」生成 3 个候选节点，再由你决定哪些真正写入知识星图。';
+  }
+
+  @override
+  String get taskDetailGenerateThreeCandidates => '生成 3 个候选节点';
+
+  @override
+  String taskDetailSelectedCount(Object selected, Object total) {
+    return '已选 $selected / $total 个候选节点';
+  }
+
+  @override
+  String taskDetailImportanceLevel(Object level) {
+    return '重要度 $level';
+  }
+
+  @override
+  String get taskDetailRegenerate => '重新生成';
+
+  @override
+  String get taskDetailSkipAll => '本次不纳入';
+
+  @override
+  String taskDetailAcceptIntoGalaxy(Object count) {
+    return '纳入星图（$count）';
+  }
+
+  @override
+  String taskDetailStepMinutesValue(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String taskDetailStepMinutes(Object minutes) {
+    return '$minutes分钟';
+  }
 
   @override
   String get taskGuideEmpty => '暂无指南';
@@ -16122,4 +16293,483 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxyUploadStepComplete => '完成';
+
+  @override
+  String get executionEngineTitle => 'AI执行引擎';
+
+  @override
+  String get executionConnectionSuccess => '连接成功';
+
+  @override
+  String get executionConnectionFailure => '连接失败';
+
+  @override
+  String get executionConfigSavedConnected => '配置已保存并连接成功';
+
+  @override
+  String get executionConfigSavedUnavailable => '配置已保存，但当前引擎不可达';
+
+  @override
+  String get executionResultPreview => '结果预览';
+
+  @override
+  String get executionReplay => '执行回放';
+
+  @override
+  String get executionSelfVerification => '自验证';
+
+  @override
+  String get executionSelfVerificationHint => '自验证提示';
+
+  @override
+  String get executionResultComparison => '结果对比';
+
+  @override
+  String get executionAdoptResult => '采纳结果';
+
+  @override
+  String get executionRejectResult => '退回修改';
+
+  @override
+  String get executionViewDetails => '查看详情';
+
+  @override
+  String get executionCollapseDetails => '收起详情';
+
+  @override
+  String get executionQueueAction => '加入等待队列';
+
+  @override
+  String get executionConnectEngine => '先连接 AI执行引擎';
+
+  @override
+  String get executionEngineOffline => 'AI执行引擎当前离线';
+
+  @override
+  String get executionEngineNotConnected => 'AI执行引擎尚未连接';
+
+  @override
+  String get executionOfflineQueueTitle => '离线等待队列';
+
+  @override
+  String get executionAboutEngineTitle => '什么是AI执行引擎？';
+
+  @override
+  String get executionAboutEngineBody =>
+      'AI执行引擎（OpenClaw）可以自动完成网页调研、文档整理等任务。你可以在自己的电脑上运行 OpenClaw，然后在这里连接它。';
+
+  @override
+  String get taskCopyAiPrompt => '复制AI提示词';
+
+  @override
+  String get taskObjective => '目标';
+
+  @override
+  String get taskEstimatedTime => '预计时间';
+
+  @override
+  String get taskCompletionCriteria => '完成标准';
+
+  @override
+  String get taskSteps => '步骤';
+
+  @override
+  String get taskKeyPoints => '关键点';
+
+  @override
+  String get taskStartFocus => '开始专注';
+
+  @override
+  String get taskOpenAiAssistant => '打开AI助手';
+
+  @override
+  String get taskAiGenerate => 'AI 生成';
+
+  @override
+  String get knowledgeMasteryLevelMastered => '已掌握';
+
+  @override
+  String get knowledgeMasteryLevelPracticing => '熟练中';
+
+  @override
+  String get knowledgeMasteryLevelBeginner => '初涉';
+
+  @override
+  String get knowledgeMasteryLevelUntouched => '未学习';
+
+  @override
+  String get executionStatusDraft => '待准备';
+
+  @override
+  String get executionStatusReady => '准备完成';
+
+  @override
+  String get executionStatusQueued => '排队中';
+
+  @override
+  String get executionStatusDispatched => '已发送';
+
+  @override
+  String get executionStatusRunning => '执行中';
+
+  @override
+  String get executionStatusWaitingApproval => '等待确认';
+
+  @override
+  String get executionStatusSucceeded => '执行成功';
+
+  @override
+  String get executionStatusPartial => '部分完成';
+
+  @override
+  String get executionStatusFailed => '执行失败';
+
+  @override
+  String get executionStatusCanceled => '已取消';
+
+  @override
+  String get executionStatusTimedOut => '执行超时';
+
+  @override
+  String get executionStatusHandedBack => '已交还';
+
+  @override
+  String get executionStatusUnknown => '状态未知';
+
+  @override
+  String get stuckHelpTitle => '别担心，我们来看看卡在哪里';
+
+  @override
+  String get stuckHelpAskAi => '要不要让AI来看看？';
+
+  @override
+  String get stuckHelpChatWithSparkle => '和Sparkle聊聊这个问题';
+
+  @override
+  String get stuckHelpContinue => '好了，继续';
+
+  @override
+  String get stuckHelpSuggestion1 => '把卡住的具体位置写下来';
+
+  @override
+  String get stuckHelpSuggestion2 => '换一个更小的子问题';
+
+  @override
+  String get stuckHelpSuggestion3 => '先完成你确实会的部分';
+
+  @override
+  String get stuckHelpSuggestion4 => '给自己限时5分钟';
+
+  @override
+  String get stuckHelpSuggestion5 => '标记这个点，继续其他部分';
+
+  @override
+  String get stuckHelpAuroraSteps => 'Aurora 两步帮扶';
+
+  @override
+  String get stuckHelpFallbackOrder => '卡住时按这个顺序救火';
+
+  @override
+  String get stuckHelpWhatToDo => '具体该怎么做';
+
+  @override
+  String get stuckHelpDiagnose => '诊断问题';
+
+  @override
+  String get stuckHelpFix => '精准修复';
+
+  @override
+  String get taskQuickActionSnoozed => '已推迟到明天，今天轻一点。';
+
+  @override
+  String get taskQuickActionTooHard => '拆好了，先做第一小步。';
+
+  @override
+  String get taskQuickActionSkipped => '已跳过，这张卡先不打扰你。';
+
+  @override
+  String get taskQuickActionAdjusted => '已经帮你调整好了。';
+
+  @override
+  String get taskQuickActionSnoozing => '好，我先把它挪到明天。';
+
+  @override
+  String get taskQuickActionSimplifying => '我来把这张卡拆小一点。';
+
+  @override
+  String get taskQuickActionSkipping => '收到，我先把它从今天拿开。';
+
+  @override
+  String get executionResultNoText => '暂无文本结果。';
+
+  @override
+  String get executionResultNoStructured => '暂无结构化结果字段。';
+
+  @override
+  String get executionResultNoCode => '暂无代码结果。';
+
+  @override
+  String get executionResultNoLinks => '暂无链接结果。';
+
+  @override
+  String get executionResultArtifacts => '附件产物';
+
+  @override
+  String executionResultMoreFields(Object count) {
+    return '还有 $count 个字段';
+  }
+
+  @override
+  String executionResultNoPreview(Object type) {
+    return '当前附件类型为 $type，还没有更详细的预览内容。';
+  }
+
+  @override
+  String get executionResultLinkCopied => '链接已复制';
+
+  @override
+  String get executionResultCopyLink => '复制链接';
+
+  @override
+  String executionResultArtifactType(Object type) {
+    return '类型：$type';
+  }
+
+  @override
+  String get executionResultArtifactFallback => '附件';
+
+  @override
+  String get onboardingVoiceInput => '语音输入';
+
+  @override
+  String get onboardingVoiceInputEn => 'Voice Input';
+
+  @override
+  String get onboardingVoiceInputDesc => '启用麦克风后，你可以直接说出目标和问题。';
+
+  @override
+  String get onboardingVoiceInputDescEn =>
+      'Enable the microphone so you can speak goals and questions naturally.';
+
+  @override
+  String get onboardingPermissionEnable => '开启';
+
+  @override
+  String get onboardingPermissionEnabled => '已开启';
+
+  @override
+  String get onboardingPermissionReady => '已准备好，之后也可以在设置里调整';
+
+  @override
+  String get onboardingPermissionPending => '稍后也可以在设置里开启';
+
+  @override
+  String get onboardingPermissionWorking => '处理中...';
+
+  @override
+  String homeNotificationUnreadMessages(int count) {
+    return '$count 条未读消息';
+  }
+
+  @override
+  String homeNotificationUnreadNotifications(int count) {
+    return '$count 条未读通知';
+  }
+
+  @override
+  String get splashSubtitle => '从第一秒开始，进入更聪明也更有温度的学习旅程。';
+
+  @override
+  String get taskGuidePanelCollapse => '收起指南';
+
+  @override
+  String get taskGuidePanelExpand => '展开指南';
+
+  @override
+  String get taskGuidePanelEstimatedTimeCustom => '预估时间：按自己的节奏';
+
+  @override
+  String taskGuidePanelEstimatedTimeMinutes(int minutes) {
+    return '预估时间：$minutes 分钟';
+  }
+
+  @override
+  String get taskGuidePanelTodayFocus => '今日焦点';
+
+  @override
+  String get taskGuidePanelSteps => '步骤';
+
+  @override
+  String get taskGuidePanelKeyHints => '关键提示';
+
+  @override
+  String get taskGuidePanelCompletionCriteria => '完成标准';
+
+  @override
+  String get taskGuidePanelTapToMark => '点一下就能标记你已经完成的标准。';
+
+  @override
+  String get taskGuidePanelCommonMistakes => '常见陷阱';
+
+  @override
+  String get taskGuidePanelNoDetailedGuide => '这张卡还没有更细的指南，先从你能确定的一小步开始。';
+
+  @override
+  String get taskGuidePanelFailSafeRule => '失手时降压规则';
+
+  @override
+  String taskGuidePanelFailSafeRuleContent(String rule) {
+    return '失手规则：$rule';
+  }
+
+  @override
+  String get taskGuidePanelAskAiTriggers => '遇到这些情况时问 AI';
+
+  @override
+  String get taskGuidePanelStepInProgress => '当前进行中';
+
+  @override
+  String taskGuidePanelCompletedSteps(int completed, int total) {
+    return '已完成 $completed/$total';
+  }
+
+  @override
+  String taskGuidePanelCompletedCriteria(int completed, int total) {
+    return '$completed/$total';
+  }
+
+  @override
+  String taskGuidePanelExpectedOutput(String output) {
+    return '期望产出：$output';
+  }
+
+  @override
+  String taskGuidePanelFallbackLastStep(String output) {
+    return '最后用 $output 做一个最小检查。';
+  }
+
+  @override
+  String get taskGuidePanelFallbackLastStepDefault => '最后做一个最小检查，确认今天真的会了。';
+
+  @override
+  String get taskGuidePanelFallbackSplitStep => '把这一小步拆成你现在能立刻开始的版本。';
+
+  @override
+  String get taskGuidePanelFallbackOutput1 => '留下这一步的起手框架或关键词。';
+
+  @override
+  String get taskGuidePanelFallbackOutput2 => '完成一次不看答案的独立输出。';
+
+  @override
+  String get taskGuidePanelFallbackOutput3 => '标出关键缺口，并补一句提醒。';
+
+  @override
+  String taskGuidePanelFallbackOutputCheck(String check) {
+    return '完成最小检查：$check。';
+  }
+
+  @override
+  String get taskGuidePanelFallbackOutputCheckDefault => '完成最小检查，确认不是只看懂。';
+
+  @override
+  String get reviewPlanHubTitle => '复习计划中心';
+
+  @override
+  String get reviewPlanHubTodayList => '今日复习清单';
+
+  @override
+  String get reviewPlanHubNightlyReview => '夜间回顾';
+
+  @override
+  String get reviewPlanHubNoActivePlan => '还没有活跃计划';
+
+  @override
+  String get reviewPlanHubStartToday => '开始今日复习';
+
+  @override
+  String get reviewPlanHubOpenReview => '打开复习页';
+
+  @override
+  String get reviewPlanHubViewReview => '查看复习页';
+
+  @override
+  String get reviewPlanHubViewTonight => '查看今晚回顾';
+
+  @override
+  String get reviewPlanHubCreatePlan => '去创建计划';
+
+  @override
+  String get reviewPlanHubStartTodayReview => '开始今天的复习';
+
+  @override
+  String get reviewPlanHubHeroDescription => '把错题复习、夜间回顾和计划任务放在同一个入口里管理。';
+
+  @override
+  String get reviewPlanHubHeroSubtitle =>
+      '这里不会替代原有复习页，而是把今天值得回看的东西先排好，再带你进入具体执行。';
+
+  @override
+  String get reviewPlanHubPlanIntegration => '和长期/冲刺计划联动';
+
+  @override
+  String get reviewPlanHubTodayPlanTasks => '今天建议优先回看的计划任务';
+
+  @override
+  String get reviewPlanHubNoDueErrors => '今天没有到期错题，但仍然可以检查计划任务与夜间复盘。';
+
+  @override
+  String reviewPlanHubHasErrors(int count) {
+    return '今天有 $count 条待复习错题，适合先完成高优先级回看。';
+  }
+
+  @override
+  String get reviewPlanHubNoNightlyReview => '今晚还没有生成夜间回顾，先完成主线复习也可以。';
+
+  @override
+  String get reviewPlanHubHasNightlyReview => '系统已经生成夜间回顾，适合在收尾时统一查看。';
+
+  @override
+  String get reviewPlanHubNightlyUnavailable => '夜间回顾暂不可用，先按计划推进今日复习。';
+
+  @override
+  String reviewPlanHubLoadFailed(String error) {
+    return '复习列表暂时加载失败：$error';
+  }
+
+  @override
+  String get reviewPlanHubCreatePlanFirst =>
+      '先创建成长计划或冲刺计划，复习计划中心才会把计划任务和复习节奏串起来。';
+
+  @override
+  String get reviewPlanHubNoPlanTasks => '今天没有关联到计划的待推进任务，可以先做错题复习或回到计划里补任务。';
+
+  @override
+  String reviewPlanHubSprintProgress(int percent, int days) {
+    return '冲刺进度 $percent% · 剩余 $days 天';
+  }
+
+  @override
+  String reviewPlanHubGrowthProgress(int percent, int mastery) {
+    return '成长进度 $percent% · 掌握 $mastery%';
+  }
+
+  @override
+  String get reviewPlanHubPlanTask => '计划任务';
+
+  @override
+  String reviewPlanHubTaskSubtitle(String plan, int minutes) {
+    return '$plan · $minutes 分钟';
+  }
+
+  @override
+  String get taskQuickActionSnooze => '推迟到明天';
+
+  @override
+  String get taskQuickActionTooHardLabel => '标记为太难';
+
+  @override
+  String get taskQuickActionSkip => '跳过';
+
+  @override
+  String get taskQuickActionHelp => '寻求帮助';
 }

@@ -135,7 +135,7 @@ class _TaskDetailView extends ConsumerWidget {
                 Icon(Icons.notes_rounded, color: DS.primaryBase, size: 20),
                 const SizedBox(width: DS.spacing8),
                 Text(
-                  '任务说明',
+                  context.l10n.taskDetailNoteSection,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -188,7 +188,7 @@ class _TaskDetailView extends ConsumerWidget {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                '子任务 (${subtaskState.completed}/${subtaskState.total})',
+                context.l10n.taskDetailSubtasks(subtaskState.completed, subtaskState.total),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -208,7 +208,7 @@ class _TaskDetailView extends ConsumerWidget {
                 ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
                 : subtaskState.error != null && subtaskState.total == 0
                     ? Text(
-                        '子任务加载失败：${subtaskState.error}',
+                        context.l10n.taskDetailSubtaskLoadFailed(subtaskState.error ?? ''),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: DS.error,
                             ),
@@ -574,7 +574,7 @@ class _TaskDetailView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '所属计划',
+                        context.l10n.taskDetailPlanContext,
                         style:
                             Theme.of(context).textTheme.labelMedium?.copyWith(
                                   color: DS.textSecondary,
@@ -685,7 +685,7 @@ class _TaskDetailView extends ConsumerWidget {
       case TaskStatus.inProgress:
         return l10n.taskStatusInProgress;
       case TaskStatus.stuck:
-        return '卡住了';
+        return l10n.taskStatusStuck;
       case TaskStatus.completed:
         return l10n.taskStatusCompleted;
       case TaskStatus.abandoned:
@@ -977,7 +977,7 @@ class _StructuredGuideSection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '任务指南',
+                  context.l10n.taskGuideTitle,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -985,7 +985,7 @@ class _StructuredGuideSection extends StatelessWidget {
               ),
               if ((task.aiPrompt ?? '').trim().isNotEmpty)
                 SparkleButton(
-                  label: '复制AI提示词',
+                  label: context.l10n.taskCopyAiPrompt,
                   size: ButtonSize.small,
                   variant: ButtonVariant.secondary,
                   icon: const Icon(Icons.content_copy_rounded, size: 14),
@@ -997,7 +997,7 @@ class _StructuredGuideSection extends StatelessWidget {
           if ((guide['objective']?.toString() ?? '').trim().isNotEmpty)
             _GuideInfoRow(
               icon: Icons.track_changes_rounded,
-              label: '目标',
+              label: context.l10n.taskObjective,
               value: guide['objective'].toString(),
             ),
           if ((guide['time_estimate_minutes']?.toString() ?? '')
@@ -1005,8 +1005,8 @@ class _StructuredGuideSection extends StatelessWidget {
               .isNotEmpty)
             _GuideInfoRow(
               icon: Icons.timer_outlined,
-              label: '预计时间',
-              value: '${guide['time_estimate_minutes']} 分钟',
+              label: context.l10n.taskEstimatedTime,
+              value: context.l10n.taskDetailStepMinutesValue(guide['time_estimate_minutes'] as int),
             ),
           if ((task.successCriteria ??
                   guide['success_criteria']?.toString() ??
@@ -1015,7 +1015,7 @@ class _StructuredGuideSection extends StatelessWidget {
               .isNotEmpty)
             _GuideInfoRow(
               icon: Icons.verified_outlined,
-              label: '完成标准',
+              label: context.l10n.taskCompletionCriteria,
               value: (task.successCriteria ??
                       guide['success_criteria']?.toString() ??
                       '')
@@ -1024,7 +1024,7 @@ class _StructuredGuideSection extends StatelessWidget {
           if (methodSteps.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '步骤',
+              context.l10n.taskSteps,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -1047,7 +1047,7 @@ class _StructuredGuideSection extends StatelessWidget {
           if (keyPoints.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '关键点',
+              context.l10n.taskKeyPoints,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -1073,18 +1073,17 @@ class _StructuredGuideSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: SparkleButton(
-                    label: '开始专注',
+                    label: context.l10n.taskStartFocus,
                     variant: ButtonVariant.primary,
                     icon: const Icon(Icons.play_arrow_rounded, size: 16),
                     onPressed: () => unawaited(
                       context.push('/tasks/${task.id}/execute'),
                     ),
                   ),
-                ),
-                const SizedBox(width: DS.spacing8),
-                Expanded(
-                  child: SparkleButton(
-                    label: '打开AI助手',
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: SparkleButton(
+                      label: context.l10n.taskOpenAiAssistant,
                     variant: ButtonVariant.secondary,
                     icon: const Icon(Icons.smart_toy_outlined, size: 16),
                     onPressed: () => unawaited(
@@ -1103,7 +1102,7 @@ class _StructuredGuideSection extends StatelessWidget {
   Future<void> _copyAiPrompt(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: task.aiPrompt ?? ''));
     if (!context.mounted) return;
-    AppFeedback.success(context, 'AI 提示词已复制');
+    AppFeedback.success(context, context.l10n.taskDetailCopyAiPromptSuccess);
   }
 }
 
@@ -1168,11 +1167,11 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
       await ref.read(taskListProvider.notifier).generateGuide(widget.taskId);
       if (mounted) {
         ref.invalidate(taskDetailProvider(widget.taskId));
-        AppFeedback.success(context, '任务指南已生成');
+        AppFeedback.success(context, context.l10n.taskDetailGuideGenerated);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '生成失败: $e');
+        AppFeedback.error(context, context.l10n.taskDetailGuideGenerateFailed('$e'));
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
@@ -1189,7 +1188,7 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
       );
     }
     return SparkleButton(
-      label: 'AI 生成',
+      label: context.l10n.taskAiGenerate,
       size: ButtonSize.small,
       variant: ButtonVariant.secondary,
       icon: const Icon(Icons.auto_awesome, size: 14),

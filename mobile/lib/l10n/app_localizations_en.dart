@@ -1507,6 +1507,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusPaused => 'Paused';
 
   @override
+  String get taskStatusStuck => 'Stuck';
+
+  @override
   String get taskActionStart => 'Start';
 
   @override
@@ -1531,10 +1534,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskPriorityHigh => 'High Priority';
 
   @override
+  String get taskPriorityHighShort => 'High';
+
+  @override
+  String get taskPriorityMediumShort => 'Med';
+
+  @override
+  String get taskPriorityLowShort => 'Low';
+
+  @override
   String get taskPriorityMedium => 'Medium Priority';
 
   @override
   String get taskPriorityLow => 'Low Priority';
+
+  @override
+  String get taskListEmptyTitle => 'No tasks for today yet';
+
+  @override
+  String get taskListEmptyDescription =>
+      'Start with one small thing you want to push forward. The system will gradually unfold the rest of your day.';
+
+  @override
+  String get taskListEmptyAction => 'Create first task';
+
+  @override
+  String get taskListReorderDisabledHint =>
+      'Drag-to-reorder is only available in the \"All Tasks\" list.';
+
+  @override
+  String get taskListPartialErrorHint =>
+      'Some data failed to refresh. Showing loaded tasks.';
+
+  @override
+  String get taskListFilterTooltip => 'Priority Filter';
 
   @override
   String get taskNoTasks => 'No tasks yet';
@@ -9547,6 +9580,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionCompletedTitle => 'Task Execution Completed Title';
 
   @override
+  String get taskConfirmCompleteTitle => 'Confirm completion?';
+
+  @override
+  String taskConfirmCompleteBody(String title) {
+    return 'Mark \"$title\" as completed.';
+  }
+
+  @override
+  String taskEstimatedMinutesValue(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
   String get taskExecutionConfirmComplete => 'Task Execution Confirm Complete';
 
   @override
@@ -9665,6 +9711,136 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskGenerateGuideTitle => 'Task Generate Guide Title';
+
+  @override
+  String get taskDetailNoteSection => 'Task Note';
+
+  @override
+  String taskDetailSubtasks(Object completed, Object total) {
+    return 'Subtasks ($completed/$total)';
+  }
+
+  @override
+  String taskDetailSubtaskLoadFailed(Object error) {
+    return 'Subtask load failed: $error';
+  }
+
+  @override
+  String get taskDetailAiExpansionTitle => 'AI Related Nodes';
+
+  @override
+  String get taskDetailAiExpansionDescription =>
+      'Generate 3 candidate related nodes based on the current node. Choose 1 to 3 to write into the galaxy.';
+
+  @override
+  String get taskDetailGenerateCandidates => 'Generate candidate nodes';
+
+  @override
+  String get taskDetailUnknownNode => 'Unknown node';
+
+  @override
+  String get taskDetailNodeCleanedUp =>
+      'This node has been cleaned up. The galaxy will sync after the next refresh.';
+
+  @override
+  String get taskDetailRecentLearningPath => 'Recent Learning Path';
+
+  @override
+  String get taskDetailLightweightPath =>
+      'Lightweight task path, does not count toward plan quota.';
+
+  @override
+  String get taskDetailFullPath => 'Full learning plan path.';
+
+  @override
+  String get taskDetailGeneratedTasks => 'Generated Tasks';
+
+  @override
+  String get taskDetailPlanContext => 'Belongs to Plan';
+
+  @override
+  String get taskDetailPlanContextLoading => 'Loading plan...';
+
+  @override
+  String get taskDetailCopyAiPromptSuccess => 'AI prompt copied';
+
+  @override
+  String get taskDetailGuideGenerated => 'Guide generated';
+
+  @override
+  String taskDetailGuideGenerateFailed(Object error) {
+    return 'Guide generation failed: $error';
+  }
+
+  @override
+  String get taskDetailRelationPrerequisite => 'Prerequisite';
+
+  @override
+  String get taskDetailRelationApplication => 'Application';
+
+  @override
+  String get taskDetailRelationEvolution => 'Advanced';
+
+  @override
+  String get taskDetailRelationRelated => 'Related';
+
+  @override
+  String get taskDetailCandidatesProcessed => 'Candidates processed.';
+
+  @override
+  String taskDetailCandidatesApplied(
+      Object count, Object created, Object reused) {
+    return 'Processed $count candidates, created $created new, reused $reused existing.';
+  }
+
+  @override
+  String taskDetailCandidatesReused(Object count, Object reused) {
+    return 'Processed $count candidates, reused $reused existing.';
+  }
+
+  @override
+  String taskDetailCandidatesAccepted(Object count) {
+    return '$count nodes added to galaxy.';
+  }
+
+  @override
+  String taskDetailNodeExpansionDescription(Object name) {
+    return 'Generate 3 candidate nodes around \"$name\", then you decide which ones to write into the galaxy.';
+  }
+
+  @override
+  String get taskDetailGenerateThreeCandidates => 'Generate 3 candidate nodes';
+
+  @override
+  String taskDetailSelectedCount(Object selected, Object total) {
+    return 'Selected $selected / $total candidates';
+  }
+
+  @override
+  String taskDetailImportanceLevel(Object level) {
+    return 'Importance $level';
+  }
+
+  @override
+  String get taskDetailRegenerate => 'Regenerate';
+
+  @override
+  String get taskDetailSkipAll => 'Skip this round';
+
+  @override
+  String taskDetailAcceptIntoGalaxy(Object count) {
+    return 'Add to galaxy ($count)';
+  }
+
+  @override
+  String taskDetailStepMinutesValue(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String taskDetailStepMinutes(Object minutes) {
+    return '$minutes minutes';
+  }
 
   @override
   String get taskGuideEmpty => 'Task Guide Empty';
@@ -16851,4 +17027,509 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyUploadStepComplete => 'Complete';
+
+  @override
+  String get executionEngineTitle => 'AI Execution Engine';
+
+  @override
+  String get executionConnectionSuccess => 'Connection successful';
+
+  @override
+  String get executionConnectionFailure => 'Connection failed';
+
+  @override
+  String get executionConfigSavedConnected =>
+      'Configuration saved and connected';
+
+  @override
+  String get executionConfigSavedUnavailable =>
+      'Configuration saved, but the engine is currently unreachable';
+
+  @override
+  String get executionResultPreview => 'Result Preview';
+
+  @override
+  String get executionReplay => 'Execution Replay';
+
+  @override
+  String get executionSelfVerification => 'Self-Verification';
+
+  @override
+  String get executionSelfVerificationHint => 'Validation Hint';
+
+  @override
+  String get executionResultComparison => 'Result Comparison';
+
+  @override
+  String get executionAdoptResult => 'Adopt Result';
+
+  @override
+  String get executionRejectResult => 'Request Changes';
+
+  @override
+  String get executionViewDetails => 'View Details';
+
+  @override
+  String get executionCollapseDetails => 'Collapse';
+
+  @override
+  String get executionQueueAction => 'Queue for Later';
+
+  @override
+  String get executionConnectEngine => 'Connect the AI Execution Engine First';
+
+  @override
+  String get executionEngineOffline => 'AI execution engine is offline';
+
+  @override
+  String get executionEngineNotConnected =>
+      'AI execution engine is not connected';
+
+  @override
+  String get executionOfflineQueueTitle => 'Offline Waiting Queue';
+
+  @override
+  String get executionAboutEngineTitle => 'What is the AI Execution Engine?';
+
+  @override
+  String get executionAboutEngineBody =>
+      'The AI execution engine (OpenClaw) can automate web research, document digestion, and similar tasks. Run OpenClaw on your computer and connect it here.';
+
+  @override
+  String get taskCopyAiPrompt => 'Copy AI prompt';
+
+  @override
+  String get taskObjective => 'Objective';
+
+  @override
+  String get taskEstimatedTime => 'Estimated Time';
+
+  @override
+  String get taskCompletionCriteria => 'Completion Criteria';
+
+  @override
+  String get taskSteps => 'Steps';
+
+  @override
+  String get taskKeyPoints => 'Key Points';
+
+  @override
+  String get taskStartFocus => 'Start Focus';
+
+  @override
+  String get taskOpenAiAssistant => 'Open AI Assistant';
+
+  @override
+  String get taskAiGenerate => 'AI Generate';
+
+  @override
+  String get knowledgeMasteryLevelMastered => 'Mastered';
+
+  @override
+  String get knowledgeMasteryLevelPracticing => 'Practicing';
+
+  @override
+  String get knowledgeMasteryLevelBeginner => 'Beginner';
+
+  @override
+  String get knowledgeMasteryLevelUntouched => 'Not Started';
+
+  @override
+  String get executionStatusDraft => 'Draft';
+
+  @override
+  String get executionStatusReady => 'Ready';
+
+  @override
+  String get executionStatusQueued => 'Queued';
+
+  @override
+  String get executionStatusDispatched => 'Dispatched';
+
+  @override
+  String get executionStatusRunning => 'Running';
+
+  @override
+  String get executionStatusWaitingApproval => 'Waiting Approval';
+
+  @override
+  String get executionStatusSucceeded => 'Succeeded';
+
+  @override
+  String get executionStatusPartial => 'Partial';
+
+  @override
+  String get executionStatusFailed => 'Failed';
+
+  @override
+  String get executionStatusCanceled => 'Canceled';
+
+  @override
+  String get executionStatusTimedOut => 'Timed Out';
+
+  @override
+  String get executionStatusHandedBack => 'Handed Back';
+
+  @override
+  String get executionStatusUnknown => 'Unknown';
+
+  @override
+  String get stuckHelpTitle => 'Don\'t worry, let\'s see where you\'re stuck';
+
+  @override
+  String get stuckHelpAskAi => 'Want to ask AI for help?';
+
+  @override
+  String get stuckHelpChatWithSparkle => 'Chat with Sparkle about this';
+
+  @override
+  String get stuckHelpContinue => 'OK, continue';
+
+  @override
+  String get stuckHelpSuggestion1 => 'Write down exactly where you\'re stuck';
+
+  @override
+  String get stuckHelpSuggestion2 => 'Try a smaller sub-problem';
+
+  @override
+  String get stuckHelpSuggestion3 => 'Complete what you do know first';
+
+  @override
+  String get stuckHelpSuggestion4 => 'Give yourself a 5-minute timer';
+
+  @override
+  String get stuckHelpSuggestion5 =>
+      'Mark this point and continue with other parts';
+
+  @override
+  String get stuckHelpAuroraSteps => 'Aurora Two-Step Help';
+
+  @override
+  String get stuckHelpFallbackOrder => 'Fallback order when stuck';
+
+  @override
+  String get stuckHelpWhatToDo => 'What to do';
+
+  @override
+  String get stuckHelpDiagnose => 'Diagnose';
+
+  @override
+  String get stuckHelpFix => 'Precise Fix';
+
+  @override
+  String get taskQuickActionSnoozed =>
+      'Snoozed until tomorrow. Lighter day ahead.';
+
+  @override
+  String get taskQuickActionTooHard =>
+      'Broken down. Start with the first small step.';
+
+  @override
+  String get taskQuickActionSkipped =>
+      'Skipped. This card won\'t bother you for now.';
+
+  @override
+  String get taskQuickActionAdjusted => 'All set.';
+
+  @override
+  String get taskQuickActionSnoozing => 'Moving it to tomorrow...';
+
+  @override
+  String get taskQuickActionSimplifying =>
+      'Breaking this card into smaller pieces...';
+
+  @override
+  String get taskQuickActionSkipping => 'Got it, removing it from today...';
+
+  @override
+  String get executionResultNoText => 'No text result available.';
+
+  @override
+  String get executionResultNoStructured => 'No structured result fields.';
+
+  @override
+  String get executionResultNoCode => 'No code result available.';
+
+  @override
+  String get executionResultNoLinks => 'No links available.';
+
+  @override
+  String get executionResultArtifacts => 'Artifacts';
+
+  @override
+  String executionResultMoreFields(Object count) {
+    return '$count more fields';
+  }
+
+  @override
+  String executionResultNoPreview(Object type) {
+    return 'Current artifact type is $type. No detailed preview available yet.';
+  }
+
+  @override
+  String get executionResultLinkCopied => 'Link copied';
+
+  @override
+  String get executionResultCopyLink => 'Copy Link';
+
+  @override
+  String executionResultArtifactType(Object type) {
+    return 'Type: $type';
+  }
+
+  @override
+  String get executionResultArtifactFallback => 'Attachment';
+
+  @override
+  String get onboardingVoiceInput => 'Voice Input';
+
+  @override
+  String get onboardingVoiceInputEn => 'Voice Input';
+
+  @override
+  String get onboardingVoiceInputDesc =>
+      'Enable the microphone so you can speak goals and questions naturally.';
+
+  @override
+  String get onboardingVoiceInputDescEn =>
+      'Enable the microphone so you can speak goals and questions naturally.';
+
+  @override
+  String get onboardingPermissionEnable => 'Enable';
+
+  @override
+  String get onboardingPermissionEnabled => 'Enabled';
+
+  @override
+  String get onboardingPermissionReady =>
+      'Ready to go, and you can change this later in Settings';
+
+  @override
+  String get onboardingPermissionPending =>
+      'You can turn this on later in Settings';
+
+  @override
+  String get onboardingPermissionWorking => 'Working...';
+
+  @override
+  String homeNotificationUnreadMessages(int count) {
+    return '$count unread messages';
+  }
+
+  @override
+  String homeNotificationUnreadNotifications(int count) {
+    return '$count unread notifications';
+  }
+
+  @override
+  String get splashSubtitle =>
+      'From the first second, step into a learning journey that\'s smarter and warmer.';
+
+  @override
+  String get taskGuidePanelCollapse => 'Collapse Guide';
+
+  @override
+  String get taskGuidePanelExpand => 'Expand Guide';
+
+  @override
+  String get taskGuidePanelEstimatedTimeCustom =>
+      'Estimated time: at your own pace';
+
+  @override
+  String taskGuidePanelEstimatedTimeMinutes(int minutes) {
+    return 'Estimated time: $minutes min';
+  }
+
+  @override
+  String get taskGuidePanelTodayFocus => 'Today\'s Focus';
+
+  @override
+  String get taskGuidePanelSteps => 'Steps';
+
+  @override
+  String get taskGuidePanelKeyHints => 'Key Hints';
+
+  @override
+  String get taskGuidePanelCompletionCriteria => 'Completion Criteria';
+
+  @override
+  String get taskGuidePanelTapToMark => 'Tap to mark completed criteria.';
+
+  @override
+  String get taskGuidePanelCommonMistakes => 'Common Traps';
+
+  @override
+  String get taskGuidePanelNoDetailedGuide =>
+      'No detailed guide yet. Start with one small step you can determine.';
+
+  @override
+  String get taskGuidePanelFailSafeRule => 'Fail-Safe Rule';
+
+  @override
+  String taskGuidePanelFailSafeRuleContent(String rule) {
+    return 'Fail-safe: $rule';
+  }
+
+  @override
+  String get taskGuidePanelAskAiTriggers => 'Ask AI when these happen';
+
+  @override
+  String get taskGuidePanelStepInProgress => 'In Progress';
+
+  @override
+  String taskGuidePanelCompletedSteps(int completed, int total) {
+    return '$completed/$total completed';
+  }
+
+  @override
+  String taskGuidePanelCompletedCriteria(int completed, int total) {
+    return '$completed/$total';
+  }
+
+  @override
+  String taskGuidePanelExpectedOutput(String output) {
+    return 'Expected output: $output';
+  }
+
+  @override
+  String taskGuidePanelFallbackLastStep(String output) {
+    return 'Finally do a minimal check with $output.';
+  }
+
+  @override
+  String get taskGuidePanelFallbackLastStepDefault =>
+      'Finally do a minimal check to confirm you really got it.';
+
+  @override
+  String get taskGuidePanelFallbackSplitStep =>
+      'Break this step into something you can start right now.';
+
+  @override
+  String get taskGuidePanelFallbackOutput1 =>
+      'Leave the starting framework or keywords for this step.';
+
+  @override
+  String get taskGuidePanelFallbackOutput2 =>
+      'Complete one independent output without looking at the answer.';
+
+  @override
+  String get taskGuidePanelFallbackOutput3 =>
+      'Mark the key gaps and add a reminder.';
+
+  @override
+  String taskGuidePanelFallbackOutputCheck(String check) {
+    return 'Complete minimal check: $check.';
+  }
+
+  @override
+  String get taskGuidePanelFallbackOutputCheckDefault =>
+      'Complete the minimal check. Make sure it\'s not just comprehension.';
+
+  @override
+  String get reviewPlanHubTitle => 'Review Plan Hub';
+
+  @override
+  String get reviewPlanHubTodayList => 'Today\'s Review List';
+
+  @override
+  String get reviewPlanHubNightlyReview => 'Nightly Review';
+
+  @override
+  String get reviewPlanHubNoActivePlan => 'No Active Plan Yet';
+
+  @override
+  String get reviewPlanHubStartToday => 'Start Today\'s Review';
+
+  @override
+  String get reviewPlanHubOpenReview => 'Open Review Page';
+
+  @override
+  String get reviewPlanHubViewReview => 'View Review Page';
+
+  @override
+  String get reviewPlanHubViewTonight => 'View Tonight\'s Review';
+
+  @override
+  String get reviewPlanHubCreatePlan => 'Create a Plan';
+
+  @override
+  String get reviewPlanHubStartTodayReview => 'Start Today\'s Review';
+
+  @override
+  String get reviewPlanHubHeroDescription =>
+      'Combine error reviews, nightly review, and plan tasks in one place.';
+
+  @override
+  String get reviewPlanHubHeroSubtitle =>
+      'This doesn\'t replace the review page. It prioritizes what\'s worth revisiting today.';
+
+  @override
+  String get reviewPlanHubPlanIntegration => 'Plan Integration';
+
+  @override
+  String get reviewPlanHubTodayPlanTasks => 'Today\'s Priority Plan Tasks';
+
+  @override
+  String get reviewPlanHubNoDueErrors =>
+      'No errors due today. You can still check plan tasks and nightly review.';
+
+  @override
+  String reviewPlanHubHasErrors(int count) {
+    return '$count errors due for review today. Prioritize high-urgency reviews.';
+  }
+
+  @override
+  String get reviewPlanHubNoNightlyReview =>
+      'No nightly review generated yet. Main review is fine for now.';
+
+  @override
+  String get reviewPlanHubHasNightlyReview =>
+      'The system has generated a nightly review. Good for wrapping up.';
+
+  @override
+  String get reviewPlanHubNightlyUnavailable =>
+      'Nightly review unavailable. Continue with today\'s review.';
+
+  @override
+  String reviewPlanHubLoadFailed(String error) {
+    return 'Review list temporarily failed to load: $error';
+  }
+
+  @override
+  String get reviewPlanHubCreatePlanFirst =>
+      'Create a growth or sprint plan first. The review hub will then connect plan tasks with your review rhythm.';
+
+  @override
+  String get reviewPlanHubNoPlanTasks =>
+      'No plan-linked tasks for today. Review errors or add tasks to your plan.';
+
+  @override
+  String reviewPlanHubSprintProgress(int percent, int days) {
+    return 'Sprint $percent% · $days days left';
+  }
+
+  @override
+  String reviewPlanHubGrowthProgress(int percent, int mastery) {
+    return 'Growth $percent% · Mastery $mastery%';
+  }
+
+  @override
+  String get reviewPlanHubPlanTask => 'Plan Task';
+
+  @override
+  String reviewPlanHubTaskSubtitle(String plan, int minutes) {
+    return '$plan · $minutes min';
+  }
+
+  @override
+  String get taskQuickActionSnooze => 'Snooze until tomorrow';
+
+  @override
+  String get taskQuickActionTooHardLabel => 'Mark as too hard';
+
+  @override
+  String get taskQuickActionSkip => 'Skip';
+
+  @override
+  String get taskQuickActionHelp => 'Ask for help';
 }

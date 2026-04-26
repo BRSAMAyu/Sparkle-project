@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -46,7 +47,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('复习计划中心'),
+        title: Text(context.l10n.reviewPlanHubTitle),
       ),
       child: ContentConstraint(
         child: ListView(
@@ -59,19 +60,19 @@ class ReviewPlanHubScreen extends ConsumerWidget {
             reviewAsync.when(
               data: (items) => _SummaryCard(
                 icon: Icons.auto_stories_rounded,
-                title: '今日复习清单',
+                title: context.l10n.reviewPlanHubTodayList,
                 subtitle: items.isEmpty
-                    ? '今天没有到期错题，但仍然可以检查计划任务与夜间复盘。'
-                    : '今天有 ${items.length} 条待复习错题，适合先完成高优先级回看。',
-                actionLabel: '开始今日复习',
+                    ? context.l10n.reviewPlanHubNoDueErrors
+                    : context.l10n.reviewPlanHubHasErrors(items.length),
+                actionLabel: context.l10n.reviewPlanHubStartToday,
                 onAction: () => context.push('/review?mode=today'),
               ),
-              loading: () => const _LoadingCard(title: '今日复习清单'),
+              loading: () => const _LoadingCard(title: context.l10n.reviewPlanHubTodayList),
               error: (error, _) => _SummaryCard(
                 icon: Icons.auto_stories_rounded,
-                title: '今日复习清单',
-                subtitle: '复习列表暂时加载失败：$error',
-                actionLabel: '打开错题复习',
+                title: context.l10n.reviewPlanHubTodayList,
+                subtitle: context.l10n.reviewPlanHubLoadFailed(error),
+                actionLabel: context.l10n.reviewPlanHubOpenReview,
                 onAction: () => context.push('/review?mode=today'),
               ),
             ),
@@ -82,28 +83,28 @@ class ReviewPlanHubScreen extends ConsumerWidget {
                     payload?.widgetPayload?.data['summary']?.toString();
                 return _SummaryCard(
                   icon: Icons.nights_stay_outlined,
-                  title: '夜间回顾',
+                  title: context.l10n.reviewPlanHubNightlyReview,
                   subtitle: summary?.isNotEmpty ?? false
                       ? summary!
                       : (payload == null
-                          ? '今晚还没有生成夜间回顾，先完成主线复习也可以。'
-                          : '系统已经生成夜间回顾，适合在收尾时统一查看。'),
+                          ? context.l10n.reviewPlanHubNoNightlyReview
+                          : context.l10n.reviewPlanHubHasNightlyReview),
                   actionLabel: payload == null ? '查看复习页' : '查看今晚回顾',
                   onAction: () => context.push('/review?mode=today'),
                 );
               },
-              loading: () => const _LoadingCard(title: '夜间回顾'),
+              loading: () => const _LoadingCard(title: context.l10n.reviewPlanHubNightlyReview),
               error: (_, __) => _SummaryCard(
                 icon: Icons.nights_stay_outlined,
-                title: '夜间回顾',
-                subtitle: '夜间回顾暂不可用，先按计划推进今日复习。',
-                actionLabel: '打开复习页',
+                title: context.l10n.reviewPlanHubNightlyReview,
+                subtitle: context.l10n.reviewPlanHubNightlyUnavailable,
+                actionLabel: context.l10n.reviewPlanHubOpenReview,
                 onAction: () => context.push('/review?mode=today'),
               ),
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '和长期/冲刺计划联动',
+              context.l10n.reviewPlanHubPlanIntegration,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: DS.spacing12),
@@ -111,7 +112,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
               _PlanBridgeCard(
                 title: dashboard.sprint!.name,
                 subtitle:
-                    '冲刺进度 ${(dashboard.sprint!.progress * 100).toInt()}% · 剩余 ${dashboard.sprint!.daysLeft} 天',
+                    context.l10n.reviewPlanHubSprintProgress((dashboard.sprint!.progress * 100).toInt(), dashboard.sprint!.daysLeft),
                 icon: Icons.flash_on_rounded,
                 onTap: () => context.push('/sprint'),
               ),
@@ -120,7 +121,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
               _PlanBridgeCard(
                 title: dashboard.growth!.name,
                 subtitle:
-                    '成长进度 ${(dashboard.growth!.progress * 100).toInt()}% · 掌握 ${(dashboard.growth!.masteryLevel * 100).toInt()}%',
+                    context.l10n.reviewPlanHubGrowthProgress((dashboard.growth!.progress * 100).toInt(), (dashboard.growth!.masteryLevel * 100).toInt()),
                 icon: Icons.trending_up_rounded,
                 onTap: () => context.push('/growth'),
               ),
@@ -128,14 +129,14 @@ class ReviewPlanHubScreen extends ConsumerWidget {
             if (dashboard.sprint == null && dashboard.growth == null)
               _SummaryCard(
                 icon: Icons.layers_clear_outlined,
-                title: '还没有活跃计划',
-                subtitle: '先创建成长计划或冲刺计划，复习计划中心才会把计划任务和复习节奏串起来。',
-                actionLabel: '去创建计划',
+                title: context.l10n.reviewPlanHubNoActivePlan,
+                subtitle: context.l10n.reviewPlanHubCreatePlanFirst,
+                actionLabel: context.l10n.reviewPlanHubCreatePlan,
                 onAction: () => context.push('/plans/new?type=growth'),
               ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '今天建议优先回看的计划任务',
+              context.l10n.reviewPlanHubTodayPlanTasks,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: DS.spacing12),
@@ -148,7 +149,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
                   border: Border.all(color: DS.borderSubtle),
                 ),
                 child: Text(
-                  '今天没有关联到计划的待推进任务，可以先做错题复习或回到计划里补任务。',
+                  context.l10n.reviewPlanHubNoPlanTasks,
                   style: DS.bodyMedium.copyWith(color: DS.textSecondary),
                 ),
               )
@@ -198,14 +199,14 @@ class _HeroCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '把错题复习、夜间回顾和计划任务放在同一个入口里管理。',
+              context.l10n.reviewPlanHubHeroDescription,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '这里不会替代原有复习页，而是把今天值得回看的东西先排好，再带你进入具体执行。',
+              context.l10n.reviewPlanHubHeroSubtitle,
               style:
                   DS.bodyMedium.copyWith(color: DS.textSecondary, height: 1.5),
             ),
@@ -213,7 +214,7 @@ class _HeroCard extends StatelessWidget {
             SparkleButton(
               onPressed: onStartToday,
               icon: const Icon(Icons.play_arrow_rounded),
-              label: '开始今天的复习',
+              label: context.l10n.reviewPlanHubStartTodayReview,
             ),
           ],
         ),

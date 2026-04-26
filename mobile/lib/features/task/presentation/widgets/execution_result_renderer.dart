@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
@@ -70,7 +71,7 @@ class ExecutionResultRenderer extends StatelessWidget {
           Divider(color: DS.borderSubtle, height: 1),
           const SizedBox(height: DS.spacing12),
           Text(
-            '附件产物',
+            context.l10n.executionResultArtifacts,
             style: DS.bodySmall.copyWith(
               fontWeight: DS.fontWeightBold,
               color: DS.textSecondary,
@@ -136,7 +137,7 @@ class _PlainTextBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SelectableText(
-      text.isEmpty ? '暂无文本结果。' : text,
+      text.isEmpty ? context.l10n.executionResultNoText : text,
       style: DS.bodySmall.copyWith(
         color: DS.textPrimary,
         height: 1.5,
@@ -169,7 +170,7 @@ class _StructuredBlock extends StatelessWidget {
     final visibleEntries = expanded ? entries : entries.take(5).toList();
     if (entries.isEmpty) {
       return Text(
-        '暂无结构化结果字段。',
+        context.l10n.executionResultNoStructured,
         style: DS.bodySmall.copyWith(color: DS.textSecondary),
       );
     }
@@ -204,7 +205,7 @@ class _StructuredBlock extends StatelessWidget {
         ),
         if (!expanded && entries.length > visibleEntries.length)
           Text(
-            '还有 ${entries.length - visibleEntries.length} 个字段',
+            context.l10n.executionResultMoreFields(entries.length - visibleEntries.length),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
       ],
@@ -292,7 +293,7 @@ class _CodeBlock extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: SelectableText(
-        text.isEmpty ? '暂无代码结果。' : text,
+        text.isEmpty ? context.l10n.executionResultNoCode : text,
         style: DS.bodySmall.copyWith(
           color: DS.textPrimary,
           height: 1.5,
@@ -341,7 +342,7 @@ class _LinkListBlock extends StatelessWidget {
     final links = _extractLinks();
     if (links.isEmpty) {
       return Text(
-        '暂无链接结果。',
+        context.l10n.executionResultNoLinks,
         style: DS.bodySmall.copyWith(color: DS.textSecondary),
       );
     }
@@ -478,7 +479,7 @@ class _ArtifactTile extends StatelessWidget {
         artifact['name']?.toString() ??
         artifact['filename']?.toString() ??
         artifact['path']?.toString() ??
-        '附件';
+        context.l10n.executionResultArtifactFallback;
     final size = artifact['size']?.toString();
 
     return Padding(
@@ -642,7 +643,7 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
                   }
                 },
                 icon: const Icon(Icons.copy_rounded),
-                label: const Text('复制链接'),
+                label: Text(context.l10n.executionResultCopyLink),
               ),
             ),
           ),
@@ -674,7 +675,7 @@ class _ArtifactPreviewSheet extends StatelessWidget {
     if (pages is List && pages.isNotEmpty) {
       return pages.take(3).map((item) => '$item').join('\n');
     }
-    return '当前附件类型为 ${type.isEmpty ? 'unknown' : type}，还没有更详细的预览内容。';
+    return context.l10n.executionResultNoPreview(type.isEmpty ? context.l10n.commonUnknown : type);
   }
 
   @override
@@ -695,7 +696,7 @@ class _ArtifactPreviewSheet extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '类型：${type.isEmpty ? '未知附件' : type}',
+              context.l10n.executionResultArtifactType(type.isEmpty ? context.l10n.commonUnknown : type),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             if (url.isNotEmpty) ...[
@@ -738,12 +739,12 @@ class _ArtifactPreviewSheet extends StatelessWidget {
                       }
                     },
                     icon: const Icon(Icons.copy_rounded),
-                    label: const Text('复制链接'),
+                    label: Text(context.l10n.executionResultCopyLink),
                   ),
                 const Spacer(),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('完成'),
+                  child: Text(context.l10n.commonDone),
                 ),
               ],
             ),

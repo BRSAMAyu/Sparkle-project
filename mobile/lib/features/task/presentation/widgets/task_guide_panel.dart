@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskGuidePanel extends StatefulWidget {
@@ -107,7 +108,7 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
                     ),
                     const SizedBox(height: DS.spacing4),
                     Text(
-                      _estimatedTimeLabel(task.estimatedMinutes),
+                      _estimatedTimeLabel(context.l10n, task.estimatedMinutes),
                       style: DS.bodySmall.copyWith(color: DS.textSecondary),
                     ),
                   ],
@@ -140,7 +141,7 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
                 child: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
               ),
               label: Text(
-                _expanded ? '收起指南' : '展开指南',
+                _expanded ? context.l10n.taskGuidePanelCollapse : context.l10n.taskGuidePanelExpand,
                 style: DS.bodySmall.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -172,7 +173,7 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
                       onAuroraTriggerPressed: widget.onAuroraTriggerPressed,
                     )
                   : Text(
-                      '这张卡还没有更细的指南，先从你能确定的一小步开始。',
+                      context.l10n.taskGuidePanelNoDetailedGuide,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -218,9 +219,9 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
     });
   }
 
-  String _estimatedTimeLabel(int minutes) {
-    if (minutes <= 0) return '预估时间：按自己的节奏';
-    return '预估时间：$minutes 分钟';
+  String _estimatedTimeLabel(AppLocalizations l10n, int minutes) {
+    if (minutes <= 0) return context.l10n.taskGuidePanelEstimatedTimeCustom;
+    return l10n.taskGuidePanelEstimatedTimeMinutes(minutes);
   }
 }
 
@@ -267,7 +268,7 @@ class _GuideBody extends StatelessWidget {
       children: [
         if (todayFocus.isNotEmpty)
           _GuideSection(
-            title: '今日焦点',
+            title: context.l10n.taskGuidePanelTodayFocus,
             child: Text(
               todayFocus,
               style: DS.bodyMedium.copyWith(
@@ -278,9 +279,9 @@ class _GuideBody extends StatelessWidget {
           ),
         if (steps.isNotEmpty)
           _GuideSection(
-            title: '步骤',
+            title: context.l10n.taskGuidePanelSteps,
             trailing: _ProgressPill(
-              label: '已完成 $completedStepCount/${steps.length}',
+              label: context.l10n.taskGuidePanelCompletedSteps(completedStepCount, steps.length),
             ),
             child: Column(
               children: [
@@ -300,7 +301,7 @@ class _GuideBody extends StatelessWidget {
           _FailSafeRuleCard(failSafeRule: failSafeRule),
         if (keyPoints.isNotEmpty)
           _GuideSection(
-            title: '关键提示',
+            title: context.l10n.taskGuidePanelKeyHints,
             child: Column(
               children: [
                 for (final point in keyPoints)
@@ -310,9 +311,9 @@ class _GuideBody extends StatelessWidget {
           ),
         if (doneCriteria.isNotEmpty)
           _GuideSection(
-            title: '完成标准',
+            title: context.l10n.taskGuidePanelCompletionCriteria,
             trailing: _ProgressPill(
-              label: '$completedCriteriaCount/${doneCriteria.length}',
+              label: context.l10n.taskGuidePanelCompletedCriteria(completedCriteriaCount, doneCriteria.length),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +332,7 @@ class _GuideBody extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.spacing10),
                 Text(
-                  '点一下就能标记你已经完成的标准。',
+                  context.l10n.taskGuidePanelTapToMark,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -432,7 +433,7 @@ class _FailSafeRuleCard extends StatelessWidget {
                 size: 20,
               ),
               title: Text(
-                '失手时降压规则',
+                context.l10n.taskGuidePanelFailSafeRule,
                 style: DS.bodyMedium.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
@@ -443,7 +444,7 @@ class _FailSafeRuleCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     key: const Key('fail-safe-rule-content'),
-                    '失手规则：$failSafeRule',
+                    context.l10n.taskGuidePanelFailSafeRuleContent(failSafeRule),
                     style: DS.bodySmall.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -474,7 +475,7 @@ class _AuroraTriggersSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '遇到这些情况时问 AI',
+              context.l10n.taskGuidePanelAskAiTriggers,
               style: DS.bodyMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -702,11 +703,11 @@ class _StructuredStepCard extends StatelessWidget {
                             children: [
                               _StepMetaChip(
                                 icon: Icons.schedule_rounded,
-                                label: '${step.durationMin} 分钟',
+                                label: context.l10n.taskDetailStepMinutesValue(step.durationMin),
                               ),
                               if (isCurrent) ...[
                                 const SizedBox(width: DS.spacing8),
-                                const _StepStatusChip(label: '当前进行中'),
+                                const _StepStatusChip(label: context.l10n.taskGuidePanelStepInProgress),
                               ],
                             ],
                           ),
@@ -718,7 +719,7 @@ class _StructuredStepCard extends StatelessWidget {
                 if (step.output.isNotEmpty) ...[
                   const SizedBox(height: DS.spacing10),
                   Text(
-                    '期望产出：${step.output}',
+                    context.l10n.taskGuidePanelExpectedOutput(step.output),
                     style: DS.bodySmall.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -907,7 +908,7 @@ class _CommonMistakesSection extends StatelessWidget {
           tilePadding: EdgeInsets.zero,
           childrenPadding: EdgeInsets.zero,
           title: Text(
-            '常见陷阱',
+            context.l10n.taskGuidePanelCommonMistakes,
             style: DS.bodyMedium.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
@@ -975,11 +976,11 @@ List<_GuideStepData> _readStructuredSteps(
     if (stepNames.length == 3) {
       stepNames.add(
         minimumOutput.isNotEmpty
-            ? '最后用 $minimumOutput 做一个最小检查。'
-            : '最后做一个最小检查，确认今天真的会了。',
+            ? context.l10n.taskGuidePanelFallbackLastStep(minimumOutput)
+            : context.l10n.taskGuidePanelFallbackLastStepDefault,
       );
     } else {
-      stepNames.add('把这一小步拆成你现在能立刻开始的版本。');
+      stepNames.add(context.l10n.taskGuidePanelFallbackSplitStep);
     }
   }
   final normalizedSteps = stepNames.take(4).toList(growable: false);
@@ -988,13 +989,13 @@ List<_GuideStepData> _readStructuredSteps(
     normalizedSteps.length,
   );
   final outputs = <String>[
-    '留下这一步的起手框架或关键词。',
-    '完成一次不看答案的独立输出。',
-    '标出关键缺口，并补一句提醒。',
+    context.l10n.taskGuidePanelFallbackOutput1,
+    context.l10n.taskGuidePanelFallbackOutput2,
+    context.l10n.taskGuidePanelFallbackOutput3,
     if (minimumOutput.isNotEmpty)
-      '完成最小检查：$minimumOutput。'
+      context.l10n.taskGuidePanelFallbackOutputCheck(minimumOutput)
     else
-      '完成最小检查，确认不是只看懂。',
+      context.l10n.taskGuidePanelFallbackOutputCheckDefault,
   ];
   return [
     for (var index = 0; index < normalizedSteps.length; index++)

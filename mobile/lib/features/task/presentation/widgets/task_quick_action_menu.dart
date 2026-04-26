@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -34,7 +35,7 @@ Future<void> showTaskQuickActionMenu({
       await _runTaskAction(
         context: context,
         action: () => ref.read(taskListProvider.notifier).snoozeTask(task.id),
-        loadingMessage: '好，我先把它挪到明天。',
+        loadingMessage: context.l10n.taskQuickActionSnoozing,
         onChanged: onChanged,
       );
       return;
@@ -43,9 +44,9 @@ Future<void> showTaskQuickActionMenu({
         context: context,
         action: () => ref.read(taskListProvider.notifier).markTaskTooHard(
               task.id,
-              reason: '用户从任务卡长按菜单标记为太难',
+              reason: 'user_marked_too_hard_via_long_press',
             ),
-        loadingMessage: '我来把这张卡拆小一点。',
+        loadingMessage: context.l10n.taskQuickActionSimplifying,
         onChanged: onChanged,
       );
       if (result != null && result.subtasks.isNotEmpty) {
@@ -56,7 +57,7 @@ Future<void> showTaskQuickActionMenu({
       await _runTaskAction(
         context: context,
         action: () => ref.read(taskListProvider.notifier).skipTask(task.id),
-        loadingMessage: '收到，我先把它从今天拿开。',
+        loadingMessage: context.l10n.taskQuickActionSkipping,
         onChanged: onChanged,
       );
       return;
@@ -94,10 +95,10 @@ String _feedbackMessage(TaskQuickActionResult result) {
     return result.message.trim();
   }
   return switch (result.action) {
-    'snooze' => '已推迟到明天，今天轻一点。',
-    'too_hard' => '拆好了，先做第一小步。',
-    'skip' => '已跳过，这张卡先不打扰你。',
-    _ => '已经帮你调整好了。',
+    'snooze' => context.l10n.taskQuickActionSnoozed,
+    'too_hard' => context.l10n.taskQuickActionTooHard,
+    'skip' => context.l10n.taskQuickActionSkipped,
+    _ => context.l10n.taskQuickActionAdjusted,
   };
 }
 
@@ -173,23 +174,23 @@ class _TaskQuickActionSheet extends StatelessWidget {
               ),
               _QuickActionTile(
                 icon: Icons.event_repeat_rounded,
-                label: '推迟到明天',
+                label: context.l10n.taskQuickActionSnooze,
                 onTap: () => Navigator.of(context).pop(_TaskQuickAction.snooze),
               ),
               _QuickActionTile(
                 icon: Icons.auto_fix_high_rounded,
-                label: '标记为太难',
+                label: context.l10n.taskQuickActionTooHardLabel,
                 onTap: () =>
                     Navigator.of(context).pop(_TaskQuickAction.tooHard),
               ),
               _QuickActionTile(
                 icon: Icons.not_interested_rounded,
-                label: '跳过',
+                label: context.l10n.taskQuickActionSkip,
                 onTap: () => Navigator.of(context).pop(_TaskQuickAction.skip),
               ),
               _QuickActionTile(
                 icon: Icons.chat_bubble_outline_rounded,
-                label: '寻求帮助',
+                label: context.l10n.taskQuickActionHelp,
                 onTap: () => Navigator.of(context).pop(_TaskQuickAction.help),
               ),
             ],

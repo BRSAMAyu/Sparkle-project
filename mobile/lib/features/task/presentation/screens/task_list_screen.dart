@@ -160,7 +160,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         ),
         actions: [
           PopupMenuButton<TaskPriorityFilterOptions>(
-            tooltip: '优先级筛选',
+            tooltip: context.l10n.taskListFilterTooltip,
             initialValue: priorityFilter,
             onSelected: (value) {
               ref.read(taskPriorityFilterProvider.notifier).state = value;
@@ -263,7 +263,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     ),
                   ),
                   child: Text(
-                    '部分数据刷新失败，当前先显示已加载的任务。',
+                    context.l10n.taskListPartialErrorHint,
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: DS.fontSizeSm,
@@ -287,8 +287,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       color: DS.info.withValues(alpha: 0.24),
                     ),
                   ),
-                  child: const Text(
-                    '拖拽排序仅在“全部任务”列表中可用。',
+                  child: Text(
+                    context.l10n.taskListReorderDisabledHint,
                   ),
                 ),
               Expanded(
@@ -334,9 +334,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       } else {
         return EmptyState(
           type: EmptyStateType.noTasks,
-          title: '今天还没有待办事项',
-          description: '先放进一件最想推进的小事，系统会帮你把今天逐步铺开。',
-          actionText: '创建第一项任务',
+          title: context.l10n.taskListEmptyTitle,
+          description: context.l10n.taskListEmptyDescription,
+          actionText: context.l10n.taskListEmptyAction,
           onAction: () {
             context.push('/tasks/new');
           },
@@ -504,28 +504,30 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   }
 
   String _getPriorityFilterLabel(TaskPriorityFilterOptions filter) {
+    final l10n = context.l10n;
     switch (filter) {
       case TaskPriorityFilterOptions.all:
-        return '全部优先级';
+        return l10n.taskFilterAll;
       case TaskPriorityFilterOptions.high:
-        return '高优先级';
+        return l10n.taskPriorityHigh;
       case TaskPriorityFilterOptions.medium:
-        return '中优先级';
+        return l10n.taskPriorityMedium;
       case TaskPriorityFilterOptions.low:
-        return '低优先级';
+        return l10n.taskPriorityLow;
     }
   }
 
   String _getPriorityFilterShortLabel(TaskPriorityFilterOptions filter) {
+    final l10n = context.l10n;
     switch (filter) {
       case TaskPriorityFilterOptions.high:
-        return '高';
+        return l10n.taskPriorityHighShort;
       case TaskPriorityFilterOptions.medium:
-        return '中';
+        return l10n.taskPriorityMediumShort;
       case TaskPriorityFilterOptions.low:
-        return '低';
+        return l10n.taskPriorityLowShort;
       case TaskPriorityFilterOptions.all:
-        return '全部';
+        return l10n.taskFilterAll;
     }
   }
 }
@@ -635,7 +637,9 @@ class _TaskListSummary extends StatelessWidget {
   final int completedCount;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
@@ -646,25 +650,26 @@ class _TaskListSummary extends StatelessWidget {
           spacing: DS.spacing8,
           runSpacing: DS.spacing6,
           children: [
-            _TaskMetricChip(label: '全部', value: totalCount, tone: DS.info),
+            _TaskMetricChip(label: l10n.taskFilterAll, value: totalCount, tone: DS.info),
             _TaskMetricChip(
-              label: '待开始',
+              label: l10n.taskStatusPending,
               value: pendingCount,
               tone: DS.brandPrimary,
             ),
             _TaskMetricChip(
-              label: '进行中',
+              label: l10n.taskStatusInProgress,
               value: inProgressCount,
               tone: DS.warning,
             ),
             _TaskMetricChip(
-              label: '已完成',
+              label: l10n.taskStatusCompleted,
               value: completedCount,
               tone: DS.semanticSuccess,
             ),
           ],
         ),
       );
+  }
 }
 
 class _TaskMetricChip extends StatelessWidget {

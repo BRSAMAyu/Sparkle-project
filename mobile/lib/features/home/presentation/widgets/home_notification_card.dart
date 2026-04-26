@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
@@ -27,9 +28,9 @@ class HomeNotificationCard extends ConsumerWidget {
             icon: Icons.forum_outlined,
             iconColor: DS.capsuleAccent,
             summary: unreadMessageCount > 99
-                ? '99+ 条未读消息'
-                : '$unreadMessageCount 条未读消息',
-            actionLabel: '查看',
+                ? context.l10n.homeNotificationUnreadMessages(99)
+                : context.l10n.homeNotificationUnreadMessages(unreadMessageCount),
+            actionLabel: context.l10n.viewDetails,
             onTap: () => context.go('/community'),
           ),
         ),
@@ -54,9 +55,9 @@ class HomeNotificationCard extends ConsumerWidget {
               icon: _getIcon(notifications.first.type),
               iconColor: _getIconColor(notifications.first.type),
               summary: notifications.length == 1
-                  ? '1 条未读通知'
-                  : '${notifications.length} 条未读通知',
-              actionLabel: '查看',
+                  ? context.l10n.homeNotificationUnreadNotifications(1)
+                  : context.l10n.homeNotificationUnreadNotifications(notifications.length),
+              actionLabel: context.l10n.viewDetails,
               onTap: () => context.push('/notifications'),
             ),
           ),

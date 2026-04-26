@@ -8,7 +8,9 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -104,19 +106,20 @@ class _TaskCardState extends ConsumerState<TaskCard> {
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.dragDrop),
         );
+        final l10n = context.l10n;
         return await showDialog<bool>(
               context: context,
               builder: (dialogContext) => AlertDialog(
-                title: const Text('确认完成任务？'),
-                content: Text('将“${widget.task.title}”标记为已完成。'),
+                title: Text(l10n.taskConfirmCompleteTitle),
+                content: Text(l10n.taskConfirmCompleteBody(widget.task.title)),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: const Text('取消'),
+                    child: Text(l10n.cancel),
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
-                    child: const Text('确认'),
+                    child: Text(l10n.confirm),
                   ),
                 ],
               ),
@@ -158,7 +161,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
               ),
               const SizedBox(width: DS.spacing6),
               Text(
-                '完成',
+                context.l10n.taskActionComplete,
                 style: TextStyle(
                   color: _success(context),
                   fontWeight: DS.fontWeightBold,
@@ -310,6 +313,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                       TaskPill(
                                                         type: widget.task.type,
                                                         label: _statusLabel(
+                                                          context.l10n,
                                                           widget.task.status,
                                                         ),
                                                         tone: _statusTone(
@@ -373,7 +377,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            '${widget.task.estimatedMinutes} 分钟',
+                                            context.l10n.taskEstimatedMinutesValue(widget.task.estimatedMinutes),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
@@ -590,17 +594,17 @@ String _typeLabel(TaskType type) {
   }
 }
 
-String _statusLabel(TaskStatus status) {
+String _statusLabel(AppLocalizations l10n, TaskStatus status) {
   switch (status) {
     case TaskStatus.pending:
-      return '待开始';
+      return l10n.taskStatusPending;
     case TaskStatus.inProgress:
-      return '进行中';
+      return l10n.taskStatusInProgress;
     case TaskStatus.stuck:
-      return '卡住了';
+      return l10n.taskStatusStuck;
     case TaskStatus.completed:
-      return '已完成';
+      return l10n.taskStatusCompleted;
     case TaskStatus.abandoned:
-      return '已放弃';
+      return l10n.taskStatusAbandoned;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
@@ -54,7 +55,7 @@ class SplashScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '从第一秒开始，进入更聪明也更有温度的学习旅程。',
+                    context.l10n.splashSubtitle,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15,
