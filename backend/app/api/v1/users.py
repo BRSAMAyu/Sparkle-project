@@ -99,6 +99,8 @@ def _build_user_profile(user: User, push_pref: PushPreference | None) -> UserPro
         flame_brightness=user.flame_brightness,
         depth_preference=user.depth_preference,
         curiosity_preference=user.curiosity_preference,
+        schedule_preferences=user.schedule_preferences,
+        weather_preferences=user.weather_preferences,
         is_active=user.is_active,
         status=user.status,
         created_at=user.created_at.isoformat() if user.created_at else "",

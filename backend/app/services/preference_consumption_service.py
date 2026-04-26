@@ -19,6 +19,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import PushPreference
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.user_settings import UserSettings
 from app.models.user_push_opt_in import UserPushOptIn
@@ -101,8 +102,10 @@ class PreferenceConsumptionService:
     async def get_schedule_context(self, user_id: UUID) -> dict[str, Any]:
         """Get current time slot context from weekly schedule preferences."""
         prefs = await self._pref_service.get_preferences(user_id)
-        schedule = (prefs.explicit or {}).get("schedule_preferences", {})
+        explicit = prefs.explicit or {}
+        schedule = explicit.get("schedule_preferences", {})
         grid = schedule.get("grid") if isinstance(schedule, dict) else None
+        user_timezone = await self._resolve_timezone(user_id, explicit)
 
         if not grid or not isinstance(grid, list) or len(grid) != 168:
             return {
@@ -111,12 +114,13 @@ class PreferenceConsumptionService:
                 "is_relax": False,
                 "is_fragmented": False,
                 "schedule_available": False,
+                "timezone": user_timezone,
             }
 
-        now = datetime.now(timezone.utc)
+        now = self._local_now(user_timezone)
         day_of_week = now.weekday()
         hour = now.hour
-        slot_index = day_of_week * 24 + hour
+        slot_index = hour * 7 + day_of_week
 
         slot_type = str(grid[slot_index]) if 0 <= slot_index < len(grid) else "relax"
 
@@ -127,24 +131,25 @@ class PreferenceConsumptionService:
             "is_fragmented": slot_type == "fragmented",
             "schedule_available": True,
             "slot_index": slot_index,
+            "timezone": user_timezone,
+            "local_time": now.isoformat(),
         }
 
     async def should_suppress_push(self, user_id: UUID) -> bool:
         """Check if push notifications should be suppressed based on schedule + notification prefs."""
-        now = _utcnow()
-
         prefs = await self._pref_service.get_preferences(user_id)
         explicit = prefs.explicit or {}
+        user_timezone = await self._resolve_timezone(user_id, explicit)
+        now = self._local_now(user_timezone)
 
-        notification_prefs_str = explicit.get("notification_preferences")
-        notification_prefs: dict[str, Any] = {}
-        if isinstance(notification_prefs_str, dict):
-            notification_prefs = notification_prefs_str
-        elif isinstance(notification_prefs_str, str):
-            try:
-                notification_prefs = json.loads(notification_prefs_str)
-            except (json.JSONDecodeError, TypeError):
-                notification_prefs = {}
+        notification_prefs = await self.get_notification_config(user_id)
+
+        if notification_prefs.get("push_enabled") is False:
+            return True
+
+        push_opt_in = notification_prefs.get("push_opt_in")
+        if isinstance(push_opt_in, dict) and push_opt_in.get("enabled") is False:
+            return True
 
         quiet_hours_enabled = notification_prefs.get("quiet_hours_enabled", False)
         if quiet_hours_enabled:
@@ -168,16 +173,11 @@ class PreferenceConsumptionService:
             except (ValueError, IndexError):
                 pass
 
-        disabled_types = set(notification_prefs.get("disabled_types", []) or [])
-
         schedule = await self.get_schedule_context(user_id)
         if schedule.get("is_busy"):
             return True
 
-        busy_categories = set(explicit.get("push_busy_categories", []) or [])
-        has_active_busy_rules = len(busy_categories) > 0 or schedule.get("is_busy")
-
-        return has_active_busy_rules
+        return False
 
     async def get_schedule_for_date(self, user_id: UUID, date: datetime | None = None) -> list[dict[str, Any]]:
         """Get schedule grid for a specific date as structured slots."""
@@ -190,11 +190,13 @@ class PreferenceConsumptionService:
 
         if date is None:
             date = _utcnow()
+        user_timezone = await self._resolve_timezone(user_id, prefs.explicit or {})
+        local_date = self._as_local_datetime(date, user_timezone)
 
-        day_of_week = date.weekday()
+        day_of_week = local_date.weekday()
         slots = []
         for hour in range(24):
-            slot_index = day_of_week * 24 + hour
+            slot_index = hour * 7 + day_of_week
             slot_type = str(grid[slot_index]) if 0 <= slot_index < len(grid) else "relax"
             slots.append({
                 "hour": hour,
@@ -360,6 +362,59 @@ class PreferenceConsumptionService:
             "task_reminders_enabled": True,
             "task_reminder_times": [1440, 60, 15],
         }
+
+    async def _resolve_timezone(self, user_id: UUID, explicit: dict[str, Any]) -> str:
+        raw_timezone = explicit.get("timezone")
+        if isinstance(raw_timezone, str) and raw_timezone.strip():
+            return raw_timezone.strip()
+
+        try:
+            result = await self.db.execute(
+                select(PushPreference.timezone).where(PushPreference.user_id == user_id)
+            )
+            push_timezone = result.scalar_one_or_none()
+            if isinstance(push_timezone, str) and push_timezone.strip():
+                return push_timezone.strip()
+        except Exception:
+            pass
+
+        try:
+            result = await self.db.execute(
+                select(UserPushOptIn.timezone).where(UserPushOptIn.user_id == user_id)
+            )
+            opt_in_timezone = result.scalar_one_or_none()
+            if isinstance(opt_in_timezone, str) and opt_in_timezone.strip():
+                return opt_in_timezone.strip()
+        except Exception:
+            pass
+
+        return "Asia/Shanghai"
+
+    @staticmethod
+    def _local_now(timezone_name: str) -> datetime:
+        try:
+            from zoneinfo import ZoneInfo
+
+            return datetime.now(ZoneInfo(timezone_name))
+        except Exception:
+            from zoneinfo import ZoneInfo
+
+            return datetime.now(ZoneInfo("Asia/Shanghai"))
+
+    @staticmethod
+    def _as_local_datetime(value: datetime, timezone_name: str) -> datetime:
+        try:
+            from zoneinfo import ZoneInfo
+
+            tz = ZoneInfo(timezone_name)
+        except Exception:
+            from zoneinfo import ZoneInfo
+
+            tz = ZoneInfo("Asia/Shanghai")
+
+        if value.tzinfo is None:
+            return value.replace(tzinfo=tz)
+        return value.astimezone(tz)
 
     async def get_complete_preference_profile(self, user_id: UUID) -> dict[str, Any]:
         """Get complete preference profile for AI profiling and personalization."""

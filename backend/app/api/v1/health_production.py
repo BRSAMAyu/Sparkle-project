@@ -20,7 +20,7 @@ from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_superuser
+from app.api.deps import get_current_active_superuser, get_current_user
 from app.config import settings
 from app.core.cache import cache_service
 from app.db.session import get_db
@@ -65,7 +65,7 @@ async def health_check(
 
     # 1. 检查数据库连接
     try:
-        await db.execute("SELECT 1")
+        await db.execute(text("SELECT 1"))
         checks["database"] = {"status": "ok", "latency_ms": 0}
     except Exception as e:
         status = "unhealthy"
@@ -168,7 +168,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """
     try:
         # 检查关键依赖
-        await db.execute("SELECT 1")
+        await db.execute(text("SELECT 1"))
 
         redis_client = cache_service.redis
         if redis_client:

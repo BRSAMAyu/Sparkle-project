@@ -51,6 +51,7 @@ from app.services.traits_coldstart_service import (
     COLDSTART_QUESTIONS,
     TraitsColdStartService,
 )
+from app.services.user_settings_service import UserSettingsService
 from app.services.user_insight_transparency_service import (
     UserInsightTransparencyService,
 )
@@ -814,6 +815,86 @@ def _build_preference_entries(
     return entries
 
 
+async def _get_transparency_level(db: AsyncSession, user_id: UUID) -> int:
+    try:
+        settings = await UserSettingsService(db).get_or_create(user_id)
+        return max(0, min(3, int(settings.transparency_level or 0)))
+    except Exception:
+        return 0
+
+
+def _apply_insight_transparency_level(payload: dict[str, Any], level: int) -> dict[str, Any]:
+    if level >= 3:
+        return {**payload, "transparency": {"enabled": True, "level": level, "scope": "advanced"}}
+    if level == 2:
+        return {**payload, "transparency": {"enabled": True, "level": level, "scope": "standard"}}
+
+    claims = list(payload.get("claims") or [])
+    predictions = list(payload.get("predictions") or [])
+    recent_changes = list(payload.get("recent_changes") or [])
+    unknowns = list(payload.get("unknowns") or [])
+    hidden_count = len(claims) + len(predictions) + len(recent_changes) + len(unknowns)
+
+    if level <= 0:
+        return {
+            "claims": [],
+            "predictions": [],
+            "recent_changes": [],
+            "unknowns": [],
+            "calibration": {},
+            "current_profile": {},
+            "hidden_item_count": hidden_count,
+            "transparency": {"enabled": False, "level": 0, "scope": "off"},
+        }
+
+    visible_claims = [item for item in claims if float(item.get("confidence") or 0.0) >= 0.75][:5]
+    visible_changes = recent_changes[:2]
+    return {
+        **payload,
+        "claims": visible_claims,
+        "predictions": [],
+        "recent_changes": visible_changes,
+        "unknowns": [],
+        "hidden_item_count": hidden_count - len(visible_claims) - len(visible_changes),
+        "transparency": {"enabled": True, "level": level, "scope": "basic"},
+    }
+
+
+def _apply_legacy_transparency_level(payload: dict[str, Any], level: int) -> dict[str, Any]:
+    if level >= 2:
+        return {**payload, "transparency": {"enabled": True, "level": level}}
+
+    layer_1 = dict(payload.get("layer_1") or {})
+    layer_2 = dict(payload.get("layer_2") or {})
+    layer_3 = dict(payload.get("layer_3") or {})
+    hidden_count = (
+        len(layer_2.get("patterns") or [])
+        + len(layer_3.get("patterns") or [])
+        + len(layer_3.get("fragments") or [])
+    )
+
+    if level <= 0:
+        return {
+            "layer_1": {"preferences": [], "goals": []},
+            "layer_2": {"persona": {"tags": []}, "editable": False},
+            "layer_3": {"patterns": [], "fragments": []},
+            "hidden_item_count": hidden_count
+            + len(layer_1.get("preferences") or [])
+            + len(layer_1.get("goals") or []),
+            "transparency": {"enabled": False, "level": 0},
+        }
+
+    persona = dict(layer_2.get("persona") or {})
+    persona["tags"] = list(persona.get("tags") or [])[:5]
+    return {
+        "layer_1": layer_1,
+        "layer_2": {"persona": persona, "editable": layer_2.get("editable", False)},
+        "layer_3": {"patterns": [], "fragments": []},
+        "hidden_item_count": hidden_count,
+        "transparency": {"enabled": True, "level": level},
+    }
+
+
 @router.get("/transparent")
 async def get_profile_transparent(
     db: AsyncSession = Depends(get_db),
@@ -830,6 +911,7 @@ async def get_profile_transparent(
     profile_context = await profile_context_service.get_profile_context(current_user.id)
     patterns = profile_context.cognitive_summary.active_patterns
     fragments = await cognitive_service.get_fragments(current_user.id, limit=5)
+    transparency_level = await _get_transparency_level(db, current_user.id)
 
     layer_1 = {
         "preferences": _build_preference_entries(prefs_center.explicit or {}, preferences),
@@ -926,11 +1008,11 @@ async def get_profile_transparent(
         ],
     }
 
-    return {
+    return _apply_legacy_transparency_level({
         "layer_1": layer_1,
         "layer_2": layer_2,
         "layer_3": layer_3,
-    }
+    }, transparency_level)
 
 
 @router.get("/context")
@@ -952,10 +1034,14 @@ async def get_profile_context(
     payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
     user_insight_state = getattr(context, "user_insight_state", None)
     if user_insight_state is not None:
-        payload["user_insight_transparency"] = UserInsightTransparencyService().build_payload(
-            state=user_insight_state,
-            merged_preferences=merged_preferences,
-            inferred_backups=inferred_backups,
+        transparency_level = await _get_transparency_level(db, current_user.id)
+        payload["user_insight_transparency"] = _apply_insight_transparency_level(
+            UserInsightTransparencyService().build_payload(
+                state=user_insight_state,
+                merged_preferences=merged_preferences,
+                inferred_backups=inferred_backups,
+            ),
+            transparency_level,
         )
     partnership_result = await db.execute(
         select(AccountabilityPartnership)
@@ -1024,20 +1110,24 @@ async def get_profile_insights(
     inferred_backups = await profile_write_service.list_inferred_backups(current_user.id)
 
     state = context.user_insight_state
+    transparency_level = await _get_transparency_level(db, current_user.id)
     if state is None:
-        return {
+        return _apply_insight_transparency_level({
             "claims": [],
             "predictions": [],
             "recent_changes": [],
             "unknowns": [],
             "calibration": {},
             "current_profile": {},
-        }
+        }, transparency_level)
 
-    return UserInsightTransparencyService().build_payload(
-        state=state,
-        merged_preferences=merged_preferences,
-        inferred_backups=inferred_backups,
+    return _apply_insight_transparency_level(
+        UserInsightTransparencyService().build_payload(
+            state=state,
+            merged_preferences=merged_preferences,
+            inferred_backups=inferred_backups,
+        ),
+        transparency_level,
     )
 
 

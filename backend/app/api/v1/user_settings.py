@@ -30,28 +30,13 @@ async def get_user_settings(
     service = UserSettingsService(db)
     record = await service.get_or_create(current_user.id)
 
-    # Include notification preferences from UserPreferencesCenter
-    notification_prefs: dict[str, Any] = {}
-    try:
-        from app.services.personalization.preference_service import PreferenceService
-        pref_service = PreferenceService(db, cache_service.redis)
-        prefs_center = await pref_service.get_preferences(current_user.id)
-        explicit = prefs_center.explicit or {}
-        notif_raw = explicit.get("notification_preferences", {})
-        if isinstance(notif_raw, dict):
-            notification_prefs = notif_raw
-        elif isinstance(notif_raw, str):
-            notification_prefs = json.loads(notif_raw)
-    except Exception:
-        pass
-
     return UserSettingsResponse(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
         ai_reasoning_mode=record.ai_reasoning_mode,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
-        notification_preferences=notification_prefs,
+        notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
@@ -64,29 +49,34 @@ async def _update_user_settings_impl(
 ) -> UserSettingsResponse:
     service = UserSettingsService(db)
 
-    # Get old record to detect changes
     old_record = await service.get_or_create(current_user.id)
+    old_values = {
+        "transparency_level": old_record.transparency_level,
+        "system_update_level": old_record.system_update_level,
+        "ai_reasoning_mode": old_record.ai_reasoning_mode,
+        "task_reminders_enabled": old_record.task_reminders_enabled,
+        "task_reminder_times": old_record.task_reminder_times,
+    }
+    submitted = payload.model_dump(exclude_none=True)
 
-    # Update settings
-    record = await service.update_settings(current_user.id, payload.model_dump())
+    record = await service.update_settings(current_user.id, submitted)
 
-    # Detect changes and send notifications
     try:
-        if old_record.transparency_level != payload.transparency_level:
+        if "transparency_level" in submitted and old_values["transparency_level"] != record.transparency_level:
             await state_notification_service.notify_user_settings_updated(
                 user_id=str(current_user.id),
                 setting_field="transparency_level",
-                old_value=old_record.transparency_level,
-                new_value=payload.transparency_level,
+                old_value=old_values["transparency_level"],
+                new_value=record.transparency_level,
                 impact_description="这将影响你未来的学习体验",
                 intervention_level="toast",
             )
-        elif old_record.system_update_level != payload.system_update_level:
+        elif "system_update_level" in submitted and old_values["system_update_level"] != record.system_update_level:
             await state_notification_service.notify_user_settings_updated(
                 user_id=str(current_user.id),
                 setting_field="system_update_level",
-                old_value=old_record.system_update_level,
-                new_value=payload.system_update_level,
+                old_value=old_values["system_update_level"],
+                new_value=record.system_update_level,
                 impact_description="这将影响系统自动更新的频率",
                 intervention_level="toast",
             )
@@ -100,9 +90,27 @@ async def _update_user_settings_impl(
         ai_reasoning_mode=record.ai_reasoning_mode,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
+        notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
+
+
+async def _load_notification_preferences(user_id, db: AsyncSession) -> dict[str, Any]:
+    try:
+        from app.services.personalization.preference_service import PreferenceService
+
+        pref_service = PreferenceService(db, cache_service.redis)
+        prefs_center = await pref_service.get_preferences(user_id)
+        notif_raw = (prefs_center.explicit or {}).get("notification_preferences", {})
+        if isinstance(notif_raw, dict):
+            return notif_raw
+        if isinstance(notif_raw, str):
+            parsed = json.loads(notif_raw)
+            return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        pass
+    return {}
 
 
 @router.post("/settings", response_model=UserSettingsResponse)

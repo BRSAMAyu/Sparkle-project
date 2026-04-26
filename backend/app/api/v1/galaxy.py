@@ -112,6 +112,9 @@ async def sync_node_mastery(
     return result
 
 
+@router.post("/node/{node_id}/mastery")
+@router.post("/node/{node_id}/update-mastery")
+@router.post("/nodes/{node_id}/mastery")
 @router.post("/nodes/{node_id}/update-mastery")
 async def update_node_mastery(
     node_id: UUID,
@@ -217,6 +220,7 @@ async def create_galaxy_node(
 
 
 @router.post("/node/{node_id}/spark", response_model=SparkResult)
+@router.post("/nodes/{node_id}/spark", response_model=SparkResult)
 async def spark_node(
     node_id: UUID,
     request: SparkRequest | None = None,
@@ -238,6 +242,7 @@ async def spark_node(
 
 
 @router.get("/node/{node_id}/history", response_model=NodeHistoryResponse)
+@router.get("/nodes/{node_id}/history", response_model=NodeHistoryResponse)
 async def get_node_history(
     node_id: str,
     user_id_query: str | None = Query(None, alias="user_id", description="验收/调试场景可显式指定用户 ID"),
@@ -280,6 +285,7 @@ async def get_node_history(
 
 
 @router.get("/node/{node_id}")
+@router.get("/nodes/{node_id}")
 async def get_node_detail(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -451,6 +457,7 @@ async def get_node_detail(
 
 
 @router.post("/node/{node_id}/expansion/candidates", response_model=NodeExpansionCandidatesResponse)
+@router.post("/nodes/{node_id}/expansion/candidates", response_model=NodeExpansionCandidatesResponse)
 async def generate_node_expansion_candidates(
     node_id: UUID,
     request: NodeExpansionCandidateRequest,
@@ -475,6 +482,7 @@ async def generate_node_expansion_candidates(
 
 
 @router.post("/node/{node_id}/expansion/apply", response_model=ApplyNodeExpansionResponse)
+@router.post("/nodes/{node_id}/expansion/apply", response_model=ApplyNodeExpansionResponse)
 async def apply_node_expansion_candidates(
     node_id: UUID,
     request: ApplyNodeExpansionRequest,
@@ -575,6 +583,7 @@ async def get_review_suggestions(
 
 
 @router.post("/node/{node_id}/decay/pause")
+@router.post("/nodes/{node_id}/decay/pause")
 async def pause_node_decay(
     node_id: UUID,
     pause: bool = Query(True),
@@ -592,6 +601,7 @@ async def pause_node_decay(
 
 
 @router.post("/node/{node_id}/favorite")
+@router.post("/nodes/{node_id}/favorite")
 async def toggle_node_favorite(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -790,6 +800,7 @@ async def create_vocabulary_node(
 
 
 @router.delete("/node/{node_id}/draft")
+@router.delete("/nodes/{node_id}/draft")
 async def delete_draft_node(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -820,6 +831,7 @@ class UpdateNodeContentRequest(BaseModel):
 
 
 @router.patch("/node/{node_id}/content")
+@router.patch("/nodes/{node_id}/content")
 async def update_node_content(
     node_id: UUID,
     request: UpdateNodeContentRequest,
@@ -907,6 +919,7 @@ async def update_node_positions(
 
 
 @router.post("/node/{node_id}/autolink")
+@router.post("/nodes/{node_id}/autolink")
 async def trigger_auto_link(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
