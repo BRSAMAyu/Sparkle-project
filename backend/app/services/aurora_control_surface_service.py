@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from app.aurora.predicted_reply_engine import PredictedReplyOptionEngine
 from app.aurora.runtime_v1.control_surface import ControlSurfaceService
 from app.aurora.runtime_v1.persistence import AuroraPersistenceStore
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
@@ -157,6 +158,21 @@ class AuroraControlSurfaceService:
                 else "fallback"
             )
 
+        # Build predicted reply options from current Aurora state
+        tensions_payload = [
+            t.model_dump() if hasattr(t, "model_dump") else dict(t)
+            for t in getattr(runtime_state, "informational_tensions", []) or []
+        ]
+        user_model_meta = self._extract_user_model_meta(profile_context)
+        predicted_reply_options = PredictedReplyOptionEngine().generate(
+            band_status=band_status,
+            facets=facets,
+            informational_tensions=tensions_payload,
+            energy_level=energy.current_level,
+            wake_eligibility=wake_eligibility.model_dump(),
+            user_model_meta=user_model_meta,
+        )
+
         return {
             "aurora_active": aurora_active,
             "runtime_enabled": bool(control_surface.runtime_enabled),
@@ -170,6 +186,7 @@ class AuroraControlSurfaceService:
                 "total": len(facets),
             },
             "wake_eligibility": wake_eligibility.model_dump(),
+            "predicted_reply_options": predicted_reply_options,
             "conversation_id": matched_conversation_id or normalized_requested or None,
             "requested_conversation_id": normalized_requested or None,
             "scene_alignment": scene_alignment,
@@ -616,6 +633,20 @@ class AuroraControlSurfaceService:
             "cooling_down": "Aurora 深度校准刚完成，正在冷却中。可以先做快速校准。",
         }
         return summaries.get(band_status, summaries["sensing"])
+
+    def _extract_user_model_meta(self, profile_context: ProfileContext) -> dict[str, Any]:
+        """Extract lightweight user model metadata for predicted reply option generation."""
+        insight = profile_context.user_insight_state
+        if not insight:
+            return {}
+        return {
+            "available_time_confirmed": bool(
+                _as_dict(getattr(insight, "current_state", None)).get("available_time")
+            ),
+            "goal_type_confirmed": bool(
+                _as_list(getattr(profile_context.goal_context, "goals", None))
+            ),
+        }
 
     def _collect_wake_reasons(self, facets: list[dict], recalibrating: bool) -> list[str]:
         reasons: list[str] = []

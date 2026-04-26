@@ -24,7 +24,10 @@ Future<void> launchTool(
   String? taskId,
   ValueChanged<String>? onTextResult,
 }) async {
-  final tool = ToolRegistry.getById(toolId);
+  final tool = ToolRegistry.tryGetById(toolId);
+  if (tool == null) {
+    return;
+  }
   final request = ToolLaunchRequest(
     context: launchContext,
     surface: preference == ToolOpenPreference.sheet

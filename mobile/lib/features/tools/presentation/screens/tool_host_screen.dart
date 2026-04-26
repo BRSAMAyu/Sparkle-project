@@ -18,7 +18,37 @@ class ToolHostScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tool = ToolRegistry.getById(toolId);
+    final tool = ToolRegistry.tryGetById(toolId);
+    if (tool == null) {
+      return SparklePageScaffold(
+        role: SparklePageRole.content,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline_rounded, size: 48, color: DS.error),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                'Tool not found: $toolId',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: DS.spacing16),
+              SparkleButton(
+                label: 'Go Back',
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final request = ToolLaunchRequest(
       context: launchContext,
       surface: ToolSurface.page,

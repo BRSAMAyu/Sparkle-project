@@ -81,6 +81,7 @@ class DocumentStatusResponse(BaseModel):
     progress_percent: int
     stage: str
     nodes_found: int | None = None
+    drafts_pending: int | None = None
     error: str | None = None
 
 
@@ -413,13 +414,55 @@ async def get_document_status(
             )
             nodes_found = int(chunk_count or 0)
 
+    drafts_pending = None
+    if status_value == "done":
+        draft_count = await db.scalar(
+            select(func.count(KnowledgeNode.id)).where(
+                KnowledgeNode.source_file_id == file_id,
+                KnowledgeNode.status == "draft",
+                KnowledgeNode.not_deleted_filter(),
+            )
+        )
+        drafts_pending = int(draft_count or 0)
+
     return DocumentStatusResponse(
         status=status_value,
         progress_percent=progress_percent,
         stage=stage,
         nodes_found=nodes_found,
+        drafts_pending=drafts_pending,
         error=error,
     )
+
+
+class DraftsSummaryResponse(BaseModel):
+    total_drafts: int
+    files_with_drafts: list[dict[str, object]]
+
+
+@router.get("/drafts/summary", response_model=DraftsSummaryResponse, summary="Get pending draft nodes summary")
+async def get_drafts_summary(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = await db.execute(
+        select(
+            KnowledgeNode.source_file_id,
+            func.count(KnowledgeNode.id).label("draft_count"),
+        )
+        .where(
+            KnowledgeNode.user_id == current_user.id,
+            KnowledgeNode.status == "draft",
+            KnowledgeNode.not_deleted_filter(),
+        )
+        .group_by(KnowledgeNode.source_file_id)
+    )
+    files = []
+    total = 0
+    for row in rows:
+        files.append({"file_id": str(row.source_file_id), "draft_count": row.draft_count})
+        total += row.draft_count
+    return DraftsSummaryResponse(total_drafts=total, files_with_drafts=files)
 
 
 @router.post("/feedback/citation", response_model=CitationFeedbackResponse, summary="Submit document citation feedback")

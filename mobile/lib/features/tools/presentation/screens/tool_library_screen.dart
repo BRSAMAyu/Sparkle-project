@@ -225,7 +225,10 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
   }
 
   Widget _buildManageTab(BuildContext context, ToolPreferences prefs) {
-    final pinned = prefs.pinnedToolIds.map(ToolRegistry.getById).toList();
+    final pinned = prefs.pinnedToolIds
+        .map(ToolRegistry.tryGetById)
+        .whereType<ToolDefinition>()
+        .toList();
     final l10n = context.l10n;
 
     return Column(
