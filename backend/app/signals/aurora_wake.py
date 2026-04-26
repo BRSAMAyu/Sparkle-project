@@ -54,12 +54,16 @@ _DEFAULT_COOLDOWN_MINUTES = 60
 
 class AuroraWakeJudge:
     """
-    P1-2: 判断是否可以唤醒完整 Aurora Session。
+    P1-2: Spine 管线专用的 Aurora 唤醒资格判断（简化版）。
+
+    注意：完整的唤醒策略由 aurora/runtime_v1/wake_policy.py 的
+    AuroraWakePolicyService 管理（含 Redis 冷却、配额追踪）。
+    本模块是 Spine 管线的入口判断，不替代 Aurora 内部实现。
 
     唤醒条件（满足任一即可，但需通过冷却和配额检查）：
     1. strategy_recalibration — 策略连续失效（≥2 次负向 outcome）
     2. deep_review — 用户主动请求深度复盘
-    3. motivation_check — 成就动量停滞 + 用户情绪低落信号
+    3. motivation_check — 成就动量停滞
 
     禁止：
     - 无理由唤醒
@@ -77,7 +81,6 @@ class AuroraWakeJudge:
         consecutive_negative_outcomes: int = 0,
         user_requested_deep_review: bool = False,
         momentum_stalled: bool = False,
-        active_signals: list[dict[str, Any]] | None = None,
     ) -> AuroraWakeEligibility:
         """
         判断唤醒资格。
@@ -90,13 +93,12 @@ class AuroraWakeJudge:
             consecutive_negative_outcomes: 连续负向结果次数
             user_requested_deep_review: 用户是否主动请求深度复盘
             momentum_stalled: 成就动量是否停滞
-            active_signals: 当前活跃信号
         """
         wake_reasons: list[str] = []
         session_type = "strategy_recalibration"
         scope = ""
 
-        # 检查唤醒理由
+        # 检查唤醒理由（按优先级排列，后者不覆盖前者）
         if consecutive_negative_outcomes >= 2:
             wake_reasons.append("consecutive_strategy_failure")
             session_type = "strategy_recalibration"
@@ -105,13 +107,13 @@ class AuroraWakeJudge:
         if user_requested_deep_review:
             wake_reasons.append("user_requested_deep_review")
             session_type = "deep_review"
-            scope = "用户主动请求深度复盘"
+            scope = scope or "用户主动请求深度复盘"
 
         if momentum_stalled:
             wake_reasons.append("momentum_stalled")
-            if not wake_reasons or len(wake_reasons) == 1:
+            if len(wake_reasons) == 1:
                 session_type = "motivation_check"
-            scope = "成就动量停滞，可能需要重新对齐目标"
+            scope = scope or "成就动量停滞，可能需要重新对齐目标"
 
         # 没有唤醒理由 → 不可唤醒
         if not wake_reasons:

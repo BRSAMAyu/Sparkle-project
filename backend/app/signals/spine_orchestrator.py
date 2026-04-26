@@ -16,6 +16,8 @@ from app.signals.causal_trace_store import CausalTraceStore
 from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
 from app.signals.policy_engine import PolicyEngine
 from app.signals.task_timeout_detector import TaskTimeoutDetector
+from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
+from app.signals.recall_opportunity import RecallOpportunityDetector
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -45,6 +47,8 @@ class SpineOrchestrator:
         self.trace_store = CausalTraceStore(redis_client)
         self.timeout_detector = TaskTimeoutDetector(redis_client)
         self.policy_engine = PolicyEngine()
+        self.achievement_consumer = AchievementReinforcementConsumer()
+        self.recall_detector = RecallOpportunityDetector()
 
     async def on_task_completed(
         self,

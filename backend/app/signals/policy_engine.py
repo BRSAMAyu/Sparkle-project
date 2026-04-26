@@ -174,6 +174,33 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "快考试了，我帮你快速过一遍最可能考的要点。",
         },
     },
+    "community_cohort_pattern": {
+        "cohort_mistake_detected": {
+            "primary_strategy": "show_cohort_hint",
+            "secondary_strategy": None,
+            "hard_constraints": {},
+            "soft_biases": {
+                "tone": "youre_not_alone",
+                "message_strategy": "shared_explanation_offer",
+            },
+            "visibility": "inline_hint",
+            "requires_user_confirmation": False,
+            "reasoning_template": "这个知识点不少同学都容易搞混，你不是一个人。来看看常见陷阱？",
+        },
+    },
+    "community_resource_recommendation": {
+        "shared_resource_relevant": {
+            "primary_strategy": "show_peer_resource",
+            "secondary_strategy": None,
+            "hard_constraints": {},
+            "soft_biases": {
+                "message_strategy": "peer_curated_recommendation",
+            },
+            "visibility": "inline_hint",
+            "requires_user_confirmation": False,
+            "reasoning_template": "跟你同考的同学在看这个资料，也许对你也有帮助。",
+        },
+    },
 }
 
 _DIRECTIVE_TARGET_MODULE = "task_generator"

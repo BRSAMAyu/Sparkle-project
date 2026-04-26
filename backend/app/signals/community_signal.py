@@ -106,7 +106,7 @@ class CommunitySignalDetector:
         if cohort_size < _MIN_COHORT_SIZE:
             return None
 
-        frequency_ratio = error_count / cohort_size
+        frequency_ratio = min(1.0, error_count / cohort_size)
         if frequency_ratio < _MIN_FREQUENCY_RATIO:
             return None
 
@@ -160,18 +160,22 @@ class CommunitySignalDetector:
         社群信号优先级永远 <= medium（铁律）。
         """
         if isinstance(source, CohortMistakePattern):
+            # 纵深防御：重新验证隐私阈值
+            if source.cohort_size < _MIN_COHORT_SIZE:
+                raise ValueError(f"cohort_size={source.cohort_size} below minimum {_MIN_COHORT_SIZE}")
+            clamped_ratio = min(1.0, source.frequency_ratio)
             return ActionableSignal(
                 signal_id=_uid("sig"),
                 source_event_ids=["community_cohort_mistake"],
                 source_system="community_signal",
                 state_key="community_cohort_pattern",
                 claim="cohort_mistake_detected",
-                confidence=min(0.85, source.frequency_ratio),
+                confidence=min(0.85, clamped_ratio),
                 scope="current_sprint",
                 ttl_hours=24,
                 evidence_summary=(
                     f"在{source.subject}的{source.knowledge_node_id}节点，"
-                    f"有{source.cohort_size}位同学中{int(source.frequency_ratio * 100)}%在此出错。"
+                    f"有{source.cohort_size}位同学中{int(clamped_ratio * 100)}%在此出错。"
                     f"常见误解：{source.common_misconception}"
                 ),
                 possible_effects=[
@@ -181,22 +185,24 @@ class CommunitySignalDetector:
                 priority="medium",
             )
 
-        # SharedResourceRecommendation
-        return ActionableSignal(
-            signal_id=_uid("sig"),
-            source_event_ids=["community_shared_resource"],
-            source_system="community_signal",
-            state_key="community_resource_recommendation",
-            claim="shared_resource_relevant",
-            confidence=source.relevance_score,
-            scope="current_sprint",
-            ttl_hours=48,
-            evidence_summary=(
-                f"跟你同考{source.subject}的{source.peer_count}位同学"
-                f"都在看「{source.resource_title}」"
-            ),
-            possible_effects=[
-                "show_resource_recommendation",
-            ],
-            priority="low",
-        )
+        if isinstance(source, SharedResourceRecommendation):
+            return ActionableSignal(
+                signal_id=_uid("sig"),
+                source_event_ids=["community_shared_resource"],
+                source_system="community_signal",
+                state_key="community_resource_recommendation",
+                claim="shared_resource_relevant",
+                confidence=source.relevance_score,
+                scope="current_sprint",
+                ttl_hours=48,
+                evidence_summary=(
+                    f"跟你同考{source.subject}的{source.peer_count}位同学"
+                    f"都在看「{source.resource_title}」"
+                ),
+                possible_effects=[
+                    "show_resource_recommendation",
+                ],
+                priority="low",
+            )
+
+        raise TypeError(f"Unknown source type: {type(source).__name__}")
