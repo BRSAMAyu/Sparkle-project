@@ -2700,3 +2700,361 @@ async def test_state_register_clear_scope_empty(state_register):
     assert count == 0
 
 
+# ── Layer 6: PlanDirective Tests ──────────────────────────────────────
+
+def _policy_and_signal(state_key="task_granularity_fit", claim="recent_task_too_large", confidence=0.8):
+    """Helper: build signal + policy decision for directive builder tests."""
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key=state_key, claim=claim,
+        confidence=confidence, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    decision = PolicyDecision(
+        policy_decision_id="pd_test", primary_strategy="test_strategy",
+        secondary_strategy=None, hard_constraints={}, soft_biases={},
+        visibility="receipt", requires_user_confirmation=False,
+        reasoning_summary="test",
+    )
+    return signal, decision
+
+
+def test_plan_directive_task_timeout():
+    """task_granularity_fit/recent_task_too_large → local_replan with recovery task."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("task_granularity_fit", "recent_task_too_large")
+    pd = engine.build_plan_directive(decision, signal)
+    assert pd is not None
+    assert pd.plan_action == "local_replan"
+    assert pd.scope == "next_48h"
+    assert pd.constraints["do_not_rebuild_entire_plan"] is True
+    assert pd.constraints["insert_recovery_task"] is True
+
+
+def test_plan_directive_transfer_failure():
+    """knowledge_transfer/transfer_failure → local_replan with practice task."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("knowledge_transfer", "transfer_failure")
+    pd = engine.build_plan_directive(decision, signal)
+    assert pd is not None
+    assert pd.plan_action == "local_replan"
+    assert pd.constraints["avoid_new_chapter"] is True
+    assert pd.constraints["insert_practice_task"] is True
+
+
+def test_plan_directive_exam_rescue():
+    """goal_mode/exam_rescue_detected → full_replan."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("goal_mode", "exam_rescue_detected")
+    pd = engine.build_plan_directive(decision, signal)
+    assert pd is not None
+    assert pd.plan_action == "full_replan"
+    assert pd.constraints["prefer_high_yield"] is True
+
+
+def test_plan_directive_momentum_stalled():
+    """growth_momentum/momentum_stalled → local_replan with easy win."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("growth_momentum", "momentum_stalled")
+    pd = engine.build_plan_directive(decision, signal)
+    assert pd is not None
+    assert pd.plan_action == "local_replan"
+    assert pd.constraints["insert_easy_win"] is True
+
+
+def test_plan_directive_no_match():
+    """Unmatched signal → None."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("material_utilization", "material_underutilized")
+    pd = engine.build_plan_directive(decision, signal)
+    assert pd is None
+
+
+def test_plan_directive_serialization():
+    """PlanDirective round-trips through to_dict/from_dict."""
+    from app.signals.types import PlanDirective
+    pd = PlanDirective(
+        directive_id="pld_test", policy_decision_id="pd_test",
+        plan_action="local_replan", scope="next_48h",
+        constraints={"do_not_rebuild_entire_plan": True},
+    )
+    d = pd.to_dict()
+    pd2 = PlanDirective.from_dict(d)
+    assert pd2.plan_action == "local_replan"
+    assert pd2.constraints["do_not_rebuild_entire_plan"] is True
+
+
+@pytest.mark.asyncio
+async def test_spine_pipeline_stores_plan_directive(spine):
+    """Spine pipeline 处理 task_timeout 后存储 PlanDirective。"""
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    await spine._run_signal_pipeline(user_id="u_pd", signal=signal)
+    pd = await spine.get_plan_directive("u_pd")
+    assert pd is not None
+    assert pd.plan_action == "local_replan"
+
+
+# ── Layer 6: ModelWriteDirective Tests ────────────────────────────────
+
+def test_model_write_directive_task_timeout():
+    """task_granularity_fit → 2 writes (user_state + sparkle_self_model)."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("task_granularity_fit", "recent_task_too_large")
+    mwd = engine.build_model_write_directive(decision, signal)
+    assert mwd is not None
+    assert len(mwd.writes) == 2
+    assert mwd.writes[0].target_model == "user_state"
+    assert mwd.writes[1].target_model == "sparkle_self_model"
+    # Second write has degraded confidence
+    assert mwd.writes[1].confidence < signal.confidence
+
+
+def test_model_write_directive_transfer_failure():
+    """knowledge_transfer/transfer_failure → 1 write (user_state)."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("knowledge_transfer", "transfer_failure")
+    mwd = engine.build_model_write_directive(decision, signal)
+    assert mwd is not None
+    assert len(mwd.writes) == 1
+    assert mwd.writes[0].target_model == "user_state"
+
+
+def test_model_write_directive_exam_rescue():
+    """exam_rescue → 1 write needing user confirmation."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("goal_mode", "exam_rescue_detected")
+    mwd = engine.build_model_write_directive(decision, signal)
+    assert mwd is not None
+    assert len(mwd.writes) == 1
+    assert mwd.writes[0].needs_user_confirmation is True
+
+
+def test_model_write_directive_momentum_high():
+    """growth_momentum/momentum_high → self_model write."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("growth_momentum", "momentum_high", confidence=0.85)
+    mwd = engine.build_model_write_directive(decision, signal)
+    assert mwd is not None
+    assert mwd.writes[0].target_model == "sparkle_self_model"
+
+
+def test_model_write_directive_no_match():
+    """Unmatched signal → None."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("recall_needed", "task_missed")
+    mwd = engine.build_model_write_directive(decision, signal)
+    assert mwd is None
+
+
+def test_model_write_directive_serialization():
+    """ModelWriteDirective round-trips through to_dict/from_dict."""
+    from app.signals.types import ModelWriteDirective, ModelWriteEntry
+    mwd = ModelWriteDirective(
+        directive_id="mwd_test", policy_decision_id="pd_test",
+        writes=[
+            ModelWriteEntry(target_model="user_state", claim="test claim",
+                          scope="current_sprint", confidence=0.8),
+        ],
+    )
+    d = mwd.to_dict()
+    assert len(d["writes"]) == 1
+    mwd2 = ModelWriteDirective.from_dict(d)
+    assert len(mwd2.writes) == 1
+    assert mwd2.writes[0].target_model == "user_state"
+
+
+@pytest.mark.asyncio
+async def test_spine_pipeline_stores_model_write_directive(spine):
+    """Spine pipeline stores ModelWriteDirective for task timeout."""
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    await spine._run_signal_pipeline(user_id="u_mwd", signal=signal)
+    mwd = await spine.get_model_write_directive("u_mwd")
+    assert mwd is not None
+    assert len(mwd.writes) == 2
+
+
+# ── Layer 6: UXDirective Tests ────────────────────────────────────────
+
+def test_ux_directive_task_timeout():
+    """task_granularity_fit → risk_detected status band + strategy receipt."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("task_granularity_fit", "recent_task_too_large")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "risk_detected"
+    assert uxd.show_strategy_receipt is True
+    assert uxd.allow_full_aurora_wake is False
+
+
+def test_ux_directive_exam_rescue():
+    """exam_rescue → strategy_active + full aurora wake allowed."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("goal_mode", "exam_rescue_detected")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "strategy_active"
+    assert uxd.allow_full_aurora_wake is True
+
+
+def test_ux_directive_momentum_high():
+    """momentum_high → milestone status band."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("growth_momentum", "momentum_high")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "milestone"
+
+
+def test_ux_directive_momentum_stalled():
+    """momentum_stalled → risk_detected."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("growth_momentum", "momentum_stalled")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "risk_detected"
+
+
+def test_ux_directive_undigested_material():
+    """undigested_material → normal status + context receipt."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("recall_needed", "undigested_material")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "normal"
+    assert uxd.show_context_receipt is True
+
+
+def test_ux_directive_no_match_status_band():
+    """Unmatched signal with status_band visibility → default UXDirective."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("material_utilization", "material_underutilized")
+    decision.visibility = "status_band"
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "normal"
+
+
+def test_ux_directive_no_match_receipt():
+    """Unmatched signal with receipt visibility → None."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("material_utilization", "material_underutilized")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is None
+
+
+def test_ux_directive_serialization():
+    """UXDirective round-trips through to_dict/from_dict."""
+    from app.signals.types import UXDirective
+    uxd = UXDirective(
+        directive_id="uxd_test", policy_decision_id="pd_test",
+        status_band_state="risk_detected",
+        show_strategy_receipt=True,
+        allow_full_aurora_wake=False,
+    )
+    d = uxd.to_dict()
+    uxd2 = UXDirective.from_dict(d)
+    assert uxd2.status_band_state == "risk_detected"
+    assert uxd2.show_strategy_receipt is True
+
+
+@pytest.mark.asyncio
+async def test_spine_pipeline_stores_ux_directive(spine):
+    """Spine pipeline stores UXDirective for task timeout."""
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    await spine._run_signal_pipeline(user_id="u_uxd", signal=signal)
+    uxd = await spine.get_ux_directive("u_uxd")
+    assert uxd is not None
+    assert uxd.status_band_state == "risk_detected"
+
+
+# ── RetrievalDirective Tests ─────────────────────────────────────────
+
+def test_retrieval_directive_roundtrip():
+    """RetrievalDirective serialization round-trip."""
+    from app.signals.types import RetrievalDirective
+    rd = RetrievalDirective(
+        directive_id="rtd_001",
+        policy_decision_id="pd_001",
+        retrieval_mode="targeted_source_rag",
+        source_scope="user_selected",
+        must_load=["source_slice:sl_p32"],
+        do_not_load=["full_course_slides"],
+        token_budget=3600,
+        pollution_guard="strict",
+        reason_for_user="test",
+    )
+    d = rd.to_dict()
+    restored = RetrievalDirective.from_dict(d)
+    assert restored.retrieval_mode == "targeted_source_rag"
+    assert restored.must_load == ["source_slice:sl_p32"]
+    assert restored.do_not_load == ["full_course_slides"]
+
+
+@pytest.mark.asyncio
+async def test_build_retrieval_directive_material():
+    """material_underutilized → RetrievalDirective with targeted_source_rag."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="material_utilization", claim="material_underutilized",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    rd = engine.build_retrieval_directive(decision, signal)
+    assert rd is not None
+    assert rd.retrieval_mode == "targeted_source_rag"
+    assert rd.source_scope == "user_selected"
+
+
+@pytest.mark.asyncio
+async def test_build_retrieval_directive_exam_rescue():
+    """exam_rescue → RetrievalDirective with task_bound_graph_rag."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="goal_mode", claim="exam_rescue_detected",
+        confidence=0.9, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    rd = engine.build_retrieval_directive(decision, signal)
+    assert rd is not None
+    assert rd.retrieval_mode == "task_bound_graph_rag"
+
+
+@pytest.mark.asyncio
+async def test_build_retrieval_directive_no_match():
+    """growth_momentum signal → no RetrievalDirective."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="growth_momentum", claim="momentum_high",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="low",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    rd = engine.build_retrieval_directive(decision, signal)
+    assert rd is None
+

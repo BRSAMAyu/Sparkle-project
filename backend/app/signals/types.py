@@ -252,9 +252,48 @@ class NotificationDirective:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
-# ── 4d. PlanDirective ────────────────────────────────────────────────────
-# 控制计划和重规划。
-# 用户可见变化：计划不被无故推倒重来，错过的任务有恢复路径。
+# ── 4d2. RetrievalDirective ─────────────────────────────────────────────
+# 控制资料、RAG、知识星图、社群信号如何进入上下文。
+# 用户可见变化：ContextReceipt 显示用了什么/没用什么/为什么。
+
+@dataclass
+class RetrievalDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "retrieval_service"
+    retrieval_mode: str = "targeted_source_rag"   # targeted_source_rag / task_bound_graph_rag / full_rag / no_rag
+    source_scope: str = "user_selected"            # user_selected / task_bound / full_library
+    must_load: list[str] = field(default_factory=list)
+    may_load: list[str] = field(default_factory=list)
+    do_not_load: list[str] = field(default_factory=list)
+    token_budget: int = 3600
+    citation_required: bool = True
+    pollution_guard: str = "strict"                # strict / permissive / off
+    scope: str = "turn"
+    reason_for_user: str = ""
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "retrieval_mode": self.retrieval_mode,
+            "source_scope": self.source_scope,
+            "must_load": self.must_load,
+            "may_load": self.may_load,
+            "do_not_load": self.do_not_load,
+            "token_budget": self.token_budget,
+            "citation_required": self.citation_required,
+            "pollution_guard": self.pollution_guard,
+            "scope": self.scope,
+            "reason_for_user": self.reason_for_user,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> RetrievalDirective:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 @dataclass
 class PlanDirective:

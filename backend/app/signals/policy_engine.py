@@ -25,6 +25,7 @@ from app.signals.types import (
     PlanDirective,
     PolicyDecision,
     ResponseDirective,
+    RetrievalDirective,
     UXDirective,
     _uid,
 )
@@ -380,6 +381,54 @@ class PolicyEngine:
             message_strategy=params["message_strategy"],
             max_frequency=params["max_frequency"],
             scope="today",
+        )
+
+    # Signal → retrieval mode mapping
+    _RETRIEVAL_MAP: dict[str, dict[str, Any]] = {
+        "material_underutilized": {
+            "retrieval_mode": "targeted_source_rag",
+            "source_scope": "user_selected",
+            "pollution_guard": "strict",
+            "reason": "你上传的课件最近几轮没被用到，我来按课件内容回答。",
+        },
+        "exam_rescue_detected": {
+            "retrieval_mode": "task_bound_graph_rag",
+            "source_scope": "task_bound",
+            "pollution_guard": "strict",
+            "reason": "考试抢救模式下只加载与任务直接相关的资料。",
+        },
+        "transfer_failure": {
+            "retrieval_mode": "task_bound_graph_rag",
+            "source_scope": "task_bound",
+            "pollution_guard": "strict",
+            "reason": "这个知识点需要巩固，只加载相关错因和例题。",
+        },
+        "pre_exam_silence": {
+            "retrieval_mode": "task_bound_graph_rag",
+            "source_scope": "task_bound",
+            "pollution_guard": "permissive",
+            "reason": "考前快速复习，加载高收益资料。",
+        },
+    }
+
+    def build_retrieval_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> RetrievalDirective | None:
+        """从 PolicyDecision 构建 RetrievalDirective — 控制 RAG 资料调用。"""
+        params = self._RETRIEVAL_MAP.get(signal.claim)
+        if not params:
+            return None
+
+        return RetrievalDirective(
+            directive_id=_uid("rtd"),
+            policy_decision_id=decision.policy_decision_id,
+            retrieval_mode=params["retrieval_mode"],
+            source_scope=params["source_scope"],
+            pollution_guard=params["pollution_guard"],
+            reason_for_user=params["reason"],
+            scope="turn",
         )
 
     # Signal → plan action mapping
