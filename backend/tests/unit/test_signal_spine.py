@@ -775,3 +775,135 @@ def test_stale_guard_time_context_serialization():
     d = ctx.to_dict()
     assert d["deadline_phase"] == "high_pressure"
     assert d["active_task_id"] == "task_001"
+
+
+# ── P0-3: ActionableStatePacket v1 Tests ─────────────────────────
+
+from app.signals.state_packet_builder import ActionableStatePacketBuilder
+
+
+def test_state_packet_builds_from_signals():
+    """从活跃信号构建 ActionableStatePacket。"""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id=_uid("sig"), source_event_ids=["e1"], source_system="task_service",
+            state_key="task_granularity_fit", claim="recent_task_too_large",
+            confidence=0.72, scope="current_sprint", ttl_hours=72,
+            evidence_summary="连续 2 次超时", possible_effects=["cap_duration"],
+            priority="high",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+
+    assert packet.user_id == "u1"
+    assert len(packet.top_states) == 1
+    assert packet.top_states[0].state_key == "task_granularity_fit"
+    assert packet.top_states[0].confidence == 0.72
+    assert "task_granularity_fit:recent_task_too_large" in packet.risk_flags
+
+
+def test_state_packet_with_directive():
+    """有活跃 directive 时 next_best_action 应该引用它。"""
+    builder = ActionableStatePacketBuilder()
+    directive = ExecutionDirective(
+        directive_id="ed_001", policy_decision_id="pd_001",
+        target_module="task_generator", scope="today",
+        hard_constraints={"max_task_duration_min": 25},
+        user_visible_reason="test",
+    )
+    packet = builder.build(user_id="u1", active_directive=directive)
+
+    assert packet.next_best_action is not None
+    assert packet.next_best_action["type"] == "apply_directive"
+    assert packet.next_best_action["directive_id"] == "ed_001"
+    assert "task_duration_capped:25min" in packet.risk_flags
+
+
+def test_state_packet_deduplicates_state_keys():
+    """多个同 state_key 的信号只保留一个。"""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id=_uid("sig"), source_event_ids=["e1"], source_system="task_service",
+            state_key="task_granularity_fit", claim="too_large",
+            confidence=0.6, scope="sprint", ttl_hours=72,
+            evidence_summary="test", possible_effects=[], priority="high",
+        ),
+        ActionableSignal(
+            signal_id=_uid("sig"), source_event_ids=["e2"], source_system="task_service",
+            state_key="task_granularity_fit", claim="too_large_v2",
+            confidence=0.8, scope="sprint", ttl_hours=72,
+            evidence_summary="test2", possible_effects=[], priority="high",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+    assert len(packet.top_states) == 1
+
+
+def test_state_packet_bottleneck_from_mistake():
+    """知识迁移失败信号应该产生瓶颈。"""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id=_uid("sig"), source_event_ids=["e1"], source_system="error_book",
+            state_key="knowledge_transfer", claim="transfer_failure",
+            confidence=0.8, scope="current_sprint", ttl_hours=72,
+            evidence_summary="知识节点 cn.tcp.congestion_control 连续 3 次出错",
+            possible_effects=["avoid_new_chapter"], priority="high",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+
+    assert packet.current_bottleneck is not None
+    assert packet.current_bottleneck["type"] == "transfer_failure"
+    assert packet.current_bottleneck["node_id"] == "cn.tcp.congestion_control"
+
+
+def test_state_packet_goal_frame_from_exam_rescue():
+    """exam_rescue 信号应该填充 goal_frame。"""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id=_uid("sig"), source_event_ids=["m1"], source_system="first_minute",
+            state_key="goal_mode", claim="exam_rescue_detected",
+            confidence=0.85, scope="current_sprint", ttl_hours=168,
+            evidence_summary="7 天计网抢救", possible_effects=["exam_rescue_mode"],
+            priority="high",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+
+    assert packet.goal_frame.get("mode") == "exam_rescue"
+    assert packet.goal_frame.get("target") == "minimum_pass"
+
+
+def test_state_packet_empty_inputs():
+    """无信号无 directive 应该产生空包。"""
+    builder = ActionableStatePacketBuilder()
+    packet = builder.build(user_id="u1")
+
+    assert packet.user_id == "u1"
+    assert len(packet.top_states) == 0
+    assert len(packet.risk_flags) == 0
+    assert packet.current_bottleneck is None
+    assert packet.next_best_action is None
+
+
+def test_state_packet_serialization():
+    """ActionableStatePacket to_dict 可序列化。"""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id="sig_001", source_event_ids=[], source_system="test",
+            state_key="test_key", claim="test_claim",
+            confidence=0.5, scope="test", ttl_hours=1,
+            evidence_summary="test", possible_effects=[], priority="low",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+    d = packet.to_dict()
+
+    assert d["user_id"] == "u1"
+    assert len(d["top_states"]) == 1
+    assert d["top_states"][0]["state_key"] == "test_key"
