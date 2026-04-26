@@ -8507,6 +8507,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDetailTodayFocus => 'Today\'s Focus';
 
   @override
+  String get planDetailSprintFocus => 'Sprint Focus';
+
+  @override
   String get planDetailWhyNowErrorFix =>
       'Fix this error now to prevent later tasks from being held back by the same gap.';
 
@@ -9381,6 +9384,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskExecutionSyncFailed => 'Task Execution Sync Failed';
+
+  @override
+  String get taskExecutionFreeFocusCompleted => 'Free focus completed';
 
   @override
   String get taskExecutionTapToContinue => 'Task Execution Tap To Continue';
@@ -10777,12 +10783,264 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardUpdatesInsights => 'Updates & Insights';
 
   @override
-  String get taskExecutionFreeFocusCompleted => 'Free focus session completed.';
+  String planEditTypeTitle(String type) {
+    return 'Edit $type';
+  }
 
   @override
-  String taskExecutionAuroraDiagnosticUnavailable(String error) {
-    return 'Aurora real-time diagnostics unavailable: $error';
+  String get planUpdated => 'Plan updated';
+
+  @override
+  String get planGuideFillNameAndGoalFirst =>
+      'Fill in the plan name and goal first, then generate the AI guide';
+
+  @override
+  String get planGuideGeneratedHuman => 'Human execution guide generated';
+
+  @override
+  String get planGuideGeneratedAi => 'AI execution version generated';
+
+  @override
+  String planGuideGenerationFailed(String error) {
+    return 'Failed to generate plan guide: $error';
   }
+
+  @override
+  String get planSuggestedGrowthTask1 => 'Set up this week\'s main task list';
+
+  @override
+  String get planSuggestedGrowthTask2 => 'Complete a milestone review';
+
+  @override
+  String get planSuggestedSprintTask1 =>
+      'Confirm sprint goals and acceptance criteria';
+
+  @override
+  String get planSuggestedSprintTask2 => 'Complete key sprint milestones';
+
+  @override
+  String get planSave => 'Save plan';
+
+  @override
+  String get planStepBasics => 'Plan setup';
+
+  @override
+  String get planStepSchedule => 'Schedule';
+
+  @override
+  String get planStepTasks => 'Tasks';
+
+  @override
+  String get planStepGuide => 'Boundaries & guide';
+
+  @override
+  String get planStepReview => 'Review';
+
+  @override
+  String get planAiVersionCopied => 'AI version copied';
+
+  @override
+  String get planBasicsDescription =>
+      'Define this as a real plan card, not just a regular task.';
+
+  @override
+  String get planBasicsNameHint =>
+      'e.g., 6-week English speaking improvement / midterm sprint wrap-up';
+
+  @override
+  String get planBasicsNameRequired => 'Please fill in the plan name first';
+
+  @override
+  String get planBasicsSubjectLabel => 'Subject';
+
+  @override
+  String get planBasicsSubjectHint =>
+      'English, Flutter, GRE Math, paper reading...';
+
+  @override
+  String get planBasicsGoalLabelGrowth => 'Long-term goal';
+
+  @override
+  String get planBasicsGoalLabelSprint => 'Sprint goal';
+
+  @override
+  String get planBasicsGoalHintGrowth =>
+      'Describe the ability, habit, or outcome this growth plan aims to achieve.';
+
+  @override
+  String get planBasicsGoalHintSprint =>
+      'Describe the sprint outcome, acceptance criteria, and non-negotiable focus.';
+
+  @override
+  String get planBasicsGoalRequired =>
+      'Please describe the goal of this plan card';
+
+  @override
+  String get planBasicsPriorityLabel => 'Plan priority';
+
+  @override
+  String get planPriorityNormalValue => 'Normal';
+
+  @override
+  String get planPriorityCriticalValue => 'Critical';
+
+  @override
+  String get planScheduleDescription =>
+      'Set your duration, daily effort, and reminder rhythm all at once.';
+
+  @override
+  String get planScheduleDailyMinutesLabel => 'Daily available time';
+
+  @override
+  String planScheduleMinutesUnit(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String planScheduleTotalHours(String hours) {
+    return 'Total estimated: ${hours}h';
+  }
+
+  @override
+  String get planScheduleTargetDateUnset => 'Not set';
+
+  @override
+  String get planScheduleReminderTime => 'Daily reminder';
+
+  @override
+  String get planScheduleStageLabel => 'Current plan stage';
+
+  @override
+  String get planScheduleStageSprint => 'Sprint push';
+
+  @override
+  String get planScheduleStageDaily => 'Daily execution';
+
+  @override
+  String get planScheduleStageReview => 'Review & adjust';
+
+  @override
+  String get planScheduleStagePaused => 'Paused';
+
+  @override
+  String get planScheduleChipWeekday => 'Weekday push, weekend review';
+
+  @override
+  String get planScheduleChipMorning => 'Morning start, evening wrap-up';
+
+  @override
+  String get planScheduleChipAfternoon =>
+      'Afternoon focus, light evening review';
+
+  @override
+  String get planScheduleRhythmLabel => 'Rhythm notes';
+
+  @override
+  String get planScheduleRhythmHint =>
+      'e.g., Mon-Fri push, Sat review, Sun catch-up';
+
+  @override
+  String get planTasksDescription =>
+      'This step determines what actions the plan will carry. Existing tasks are for reference; new tasks will be linked to the plan.';
+
+  @override
+  String get planTasksBlueprintLabel => 'Task blueprint';
+
+  @override
+  String get planTasksBlueprintHint =>
+      'e.g., build framework first, push daily progress, then review and fill gaps.';
+
+  @override
+  String get planTasksRefExisting => 'Reference existing tasks';
+
+  @override
+  String planTasksMinutesDifficulty(int minutes, int difficulty) {
+    return '$minutes min · difficulty $difficulty';
+  }
+
+  @override
+  String get planTasksCopyToPlan => 'Copy to plan';
+
+  @override
+  String get planTasksNewTaskLabel => 'New plan task';
+
+  @override
+  String get planTasksNewTaskHint => 'e.g., Complete a chapter review';
+
+  @override
+  String get planTasksDurationLabel => 'Duration';
+
+  @override
+  String get planTasksAddToPlan => 'Add to plan';
+
+  @override
+  String get planTasksEmpty => 'No plan tasks yet';
+
+  @override
+  String get planGuideScopeLabel => 'Boundaries & notes';
+
+  @override
+  String get planGuideScopeHint =>
+      'e.g., this plan excludes ad-hoc tasks and focuses only on exam prep; push one main action per day.';
+
+  @override
+  String get planGuidePerspectiveLabel => 'Guide perspective';
+
+  @override
+  String get planGuideForHuman => 'For myself';
+
+  @override
+  String get planGuideForAi => 'For AI';
+
+  @override
+  String get planGuideHumanInfo =>
+      'The human version is saved as the default execution guide on the plan card, helping you push forward directly.';
+
+  @override
+  String get planGuideAiInfo =>
+      'The AI version is generated only when needed for Sparkle\'s internal task assistant and is not persisted by default.';
+
+  @override
+  String get planGuideHumanTitle => 'Human execution guide';
+
+  @override
+  String get planGuideAiTitle => 'AI execution version';
+
+  @override
+  String get planGuideGenerating => 'Generating';
+
+  @override
+  String get planGuideGenerateHuman => 'Generate human version';
+
+  @override
+  String get planGuideGenerateAi => 'Generate AI version';
+
+  @override
+  String get planGuideHumanHint =>
+      'After generation, you\'ll see the plan\'s main thread, daily rhythm, risk reminders, and today\'s starting action.';
+
+  @override
+  String get planGuideAiEmpty =>
+      'No AI version yet. Only generated when explicitly needed to avoid wasting tokens.';
+
+  @override
+  String get planGuideCopyAi => 'Copy AI version';
+
+  @override
+  String planReviewSummary(String planType, int minutes, String hours) {
+    return '$planType · $minutes min/day · ${hours}h';
+  }
+
+  @override
+  String get planReviewEditInfo =>
+      'Saving will update the plan description and create new tasks for added drafts.';
+
+  @override
+  String get planReviewCreateInfo =>
+      'Creating will generate a more complete plan card and create plan tasks.';
+
+  @override
+  String get planReviewFinalDescription => 'Final plan description';
 
   @override
   String get taskExecutionChatAboutStuckPoint =>
@@ -10834,6 +11092,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskExecutionStuckLabel => 'Stuck?';
+
+  @override
+  String taskExecutionAuroraDiagnosticUnavailable(String error) {
+    return 'Aurora diagnostic is temporarily unavailable: $error';
+  }
 
   @override
   String get taskExecutionResetTimer => 'Reset';
@@ -11110,4 +11373,135 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskExecutionUserRetrievedTask => 'User retrieved task';
+
+  @override
+  String planDetailTaskLoadFailed(Object error) {
+    return 'Failed to load tasks: $error';
+  }
+
+  @override
+  String get planDetailNoExternalTasks =>
+      'No unassigned or external tasks available';
+
+  @override
+  String get planDetailAddExistingTaskTitle => 'Add existing task to this plan';
+
+  @override
+  String get planDetailTaskUnassigned => 'Unassigned';
+
+  @override
+  String get planDetailTaskInAnotherPlan => 'Currently in another plan';
+
+  @override
+  String get planDetailGroupUnassigned => 'Unassigned tasks';
+
+  @override
+  String get planDetailGroupOtherPlans => 'Tasks from other plans';
+
+  @override
+  String get planDetailTaskAdded => 'Task added to plan';
+
+  @override
+  String planDetailAddTaskFailed(Object error) {
+    return 'Add task failed: $error';
+  }
+
+  @override
+  String planDetailDayLabel(int day) {
+    return 'Day $day';
+  }
+
+  @override
+  String planDetailWeightedProgress(int percent) {
+    return 'Weighted progress $percent%';
+  }
+
+  @override
+  String get planDetailCreatePhaseTitle => 'Create phase';
+
+  @override
+  String get planDetailPhaseNameLabel => 'Phase name';
+
+  @override
+  String get planDetailPhaseNameHint => 'Foundation / Build / Review';
+
+  @override
+  String get planDetailPhaseCreated => 'Phase created';
+
+  @override
+  String planDetailCreatePhaseFailed(Object error) {
+    return 'Create phase failed: $error';
+  }
+
+  @override
+  String get planDetailPhaseActivated => 'Phase activated';
+
+  @override
+  String planDetailActivatePhaseFailed(Object error) {
+    return 'Activate failed: $error';
+  }
+
+  @override
+  String get planDetailPhaseNeedsFeedback =>
+      'This phase needs feedback before advancing';
+
+  @override
+  String get planDetailPhaseCompleted => 'Phase completed';
+
+  @override
+  String planDetailCompletePhaseFailed(Object error) {
+    return 'Complete phase failed: $error';
+  }
+
+  @override
+  String planDetailPhaseFeedbackTitle(Object title) {
+    return 'Phase feedback · $title';
+  }
+
+  @override
+  String get planDetailPhaseAlignmentQuestion =>
+      'How aligned did this phase feel?';
+
+  @override
+  String get planDetailPhaseReflectionLabel => 'Reflection';
+
+  @override
+  String get planDetailPhaseReflectionHint =>
+      'What worked, what failed, what changed?';
+
+  @override
+  String get planDetailPhaseBlocked => 'I felt blocked this phase';
+
+  @override
+  String get planDetailPhaseLifeChanged => 'My life conditions changed';
+
+  @override
+  String get planDetailPhaseRequestReview => 'Request compass review';
+
+  @override
+  String get planDetailPhaseActivate => 'Activate';
+
+  @override
+  String get planDetailPhaseComplete => 'Complete';
+
+  @override
+  String get planDetailPhaseFeedback => 'Feedback';
+
+  @override
+  String get planDetailFeedbackSavedWithReview =>
+      'Feedback saved, compass review suggested';
+
+  @override
+  String get planDetailFeedbackSaved => 'Feedback saved';
+
+  @override
+  String planDetailSubmitFeedbackFailed(Object error) {
+    return 'Submit feedback failed: $error';
+  }
+
+  @override
+  String planDetailPhaseStats(
+      int progress, int completed, int occurrences, int tasks) {
+    return '$progress% · $completed/$occurrences occurrences · $tasks tasks';
+  }
 }

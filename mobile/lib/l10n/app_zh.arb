@@ -3124,6 +3124,7 @@
     }
   },
   "planDetailTodayFocus": "今日聚焦",
+  "planDetailSprintFocus": "冲刺聚焦",
   "planDetailWhyNowErrorFix": "现在修这个错因，能避免后面的任务被同一个漏洞反复拖住。",
   "planDetailWhyNowLearning": "现在先处理它，是为了把今天的学习推进变成一个看得见的输出。",
   "planDetailWhyNowOcr": "现在处理资料，能先把可用信息变成后续任务的入口。",
@@ -3386,6 +3387,7 @@
   "taskExecutionStartFailed": "{arg0}",
   "taskExecutionStartNow": "立即开始",
   "taskExecutionSyncFailed": "同步失败",
+  "taskExecutionFreeFocusCompleted": "自由专注已完成",
   "taskExecutionTapToContinue": "点击继续",
   "taskExecutionTimerLabel": "计时器",
   "taskExitCancelStep1": "取消退出",
@@ -4178,10 +4180,7 @@
   },
   "planReviewEditInfo": "保存后会更新计划描述，并为新增草案创建新的计划任务。",
   "planReviewCreateInfo": "创建后会生成一张更完整的计划卡，并同步创建计划任务。",
-  "planReviewFinalDescription": "最终写入的计划描述"
-}
-    }
-  },
+  "planReviewFinalDescription": "最终写入的计划描述",
   "taskExecutionChatAboutStuckPoint": "和 Sparkle 聊聊这个卡点",
   "taskExecutionSentToAurora": "已发送给 Aurora",
   "taskExecutionStuckPromptIntro": "我在做这个任务时卡住了，想和你一起拆一下具体卡点。",
@@ -4236,6 +4235,14 @@
   "taskExecutionStuckClarifyPrompt": "请先问我一个最关键的澄清问题，然后把下一步缩小到5分钟内能开始。",
   "taskExecutionStuckTooltip": "卡住了？",
   "taskExecutionStuckLabel": "卡住了?",
+  "taskExecutionAuroraDiagnosticUnavailable": "Aurora 诊断暂时不可用：{error}",
+  "@taskExecutionAuroraDiagnosticUnavailable": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "taskExecutionResetTimer": "重置",
   "taskExecutionAiHandoffFailed": "AI 执行发起失败",
   "taskExecutionAiCompleted": "AI 已完成本次执行",
@@ -4394,5 +4401,105 @@
   "taskExecutionRejectAdditionalNote": "补充说明",
   "taskExecutionRejectNoteHint": "例如：缺少来源、结论太武断、我想保留自己的表达方式",
   "taskExecutionRejectConfirm": "确认退回",
-  "taskExecutionUserRetrievedTask": "用户取回任务"
+  "taskExecutionUserRetrievedTask": "用户取回任务",
+  "planDetailTaskLoadFailed": "加载任务失败: {error}",
+  "@planDetailTaskLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailNoExternalTasks": "没有可添加的外部任务",
+  "planDetailAddExistingTaskTitle": "将已有任务添加到本计划",
+  "planDetailTaskUnassigned": "未分配",
+  "planDetailTaskInAnotherPlan": "当前在其他计划中",
+  "planDetailGroupUnassigned": "未分配的任务",
+  "planDetailGroupOtherPlans": "来自其他计划的任务",
+  "planDetailTaskAdded": "任务已添加到计划",
+  "planDetailAddTaskFailed": "添加任务失败: {error}",
+  "@planDetailAddTaskFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailDayLabel": "第 {day} 天",
+  "@planDetailDayLabel": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "planDetailWeightedProgress": "加权进度 {percent}%",
+  "@planDetailWeightedProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "planDetailCreatePhaseTitle": "创建阶段",
+  "planDetailPhaseNameLabel": "阶段名称",
+  "planDetailPhaseNameHint": "基础 / 构建 / 复习",
+  "planDetailPhaseCreated": "阶段已创建",
+  "planDetailCreatePhaseFailed": "创建阶段失败: {error}",
+  "@planDetailCreatePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseActivated": "阶段已激活",
+  "planDetailActivatePhaseFailed": "激活失败: {error}",
+  "@planDetailActivatePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseNeedsFeedback": "此阶段需要反馈后才能推进",
+  "planDetailPhaseCompleted": "阶段已完成",
+  "planDetailCompletePhaseFailed": "完成阶段失败: {error}",
+  "@planDetailCompletePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseFeedbackTitle": "阶段反馈 · {title}",
+  "@planDetailPhaseFeedbackTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "planDetailPhaseAlignmentQuestion": "你觉得这个阶段的契合度如何？",
+  "planDetailPhaseReflectionLabel": "反思",
+  "planDetailPhaseReflectionHint": "哪些做得好，哪些失败了，发生了什么变化？",
+  "planDetailPhaseBlocked": "我在这个阶段遇到了阻碍",
+  "planDetailPhaseLifeChanged": "我的生活状况发生了变化",
+  "planDetailPhaseRequestReview": "请求 compass 审阅",
+  "planDetailPhaseActivate": "激活",
+  "planDetailPhaseComplete": "完成",
+  "planDetailPhaseFeedback": "反馈",
+  "planDetailFeedbackSavedWithReview": "反馈已保存，已建议 compass 审阅",
+  "planDetailFeedbackSaved": "反馈已保存",
+  "planDetailSubmitFeedbackFailed": "提交反馈失败: {error}",
+  "@planDetailSubmitFeedbackFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseStats": "{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务",
+  "@planDetailPhaseStats": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      },
+      "completed": {
+        "type": "int"
+      },
+      "occurrences": {
+        "type": "int"
+      },
+      "tasks": {
+        "type": "int"
+      }
+    }
+  }
 }

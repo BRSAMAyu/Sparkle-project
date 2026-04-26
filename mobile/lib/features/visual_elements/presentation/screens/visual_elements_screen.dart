@@ -153,16 +153,16 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              DS.surfacePrimary,
-              Color.lerp(DS.surfaceSecondary, DS.info, 0.04) ??
-                  DS.surfaceSecondary,
+              _VisualInk.moonless,
+              _VisualInk.inkBlue,
+              _VisualInk.surface,
             ],
           ),
           boxShadow: [
             BoxShadow(
-              color: DS.textPrimary.withValues(alpha: 0.04),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
+              color: _VisualInk.cyan.withValues(alpha: 0.08),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
             ),
           ],
         ),
@@ -189,7 +189,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       style: TextStyle(
                         fontSize: DS.fontSizeXl,
                         fontWeight: DS.fontWeightBold,
-                        color: DS.textPrimary,
+                        color: _VisualInk.textPrimary,
                       ),
                     ),
                   ),
@@ -225,17 +225,18 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              DS.surfaceSecondary,
-              Color.lerp(DS.surfacePrimary, DS.info, 0.03) ?? DS.surfacePrimary,
+              _VisualInk.panel,
+              _VisualInk.surface,
+              _VisualInk.blueWash,
             ],
           ),
           borderRadius: DS.borderRadius16,
-          border: Border.all(color: DS.border.withValues(alpha: 0.5)),
+          border: Border.all(color: _VisualInk.hairline),
           boxShadow: [
             BoxShadow(
-              color: DS.textPrimary.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 28,
+              offset: const Offset(0, 16),
             ),
           ],
         ),
@@ -262,7 +263,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: DS.fontSizeSm,
-                          color: DS.textSecondary,
+                          color: _VisualInk.textSecondary,
                         ),
                       ),
                       const SizedBox(height: DS.spacing8),
@@ -270,8 +271,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         borderRadius: DS.borderRadius8,
                         child: LinearProgressIndicator(
                           value: stats.unlockProgress,
-                          backgroundColor: DS.surfaceTertiary,
-                          valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
+                          backgroundColor:
+                              _VisualInk.textPrimary.withValues(alpha: 0.08),
+                          valueColor: AlwaysStoppedAnimation(_VisualInk.gold),
                           minHeight: 8,
                         ),
                       ),
@@ -281,7 +283,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         style: TextStyle(
                           fontSize: DS.fontSizeSm,
                           fontWeight: DS.fontWeightMedium,
-                          color: DS.textPrimary,
+                          color: _VisualInk.textPrimary,
                         ),
                       ),
                     ],
@@ -298,20 +300,20 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        DS.brandPrimary10,
-                        DS.info.withValues(alpha: 0.08),
+                        _VisualInk.gold.withValues(alpha: 0.18),
+                        _VisualInk.cyan.withValues(alpha: 0.08),
                       ],
                     ),
                     borderRadius: DS.borderRadius12,
                     border: Border.all(
-                      color: DS.brandPrimary.withValues(alpha: 0.16),
+                      color: _VisualInk.gold.withValues(alpha: 0.32),
                     ),
                   ),
                   child: Column(
                     children: [
                       Icon(
                         Icons.check_circle,
-                        color: DS.brandPrimary,
+                        color: _VisualInk.gold,
                         size: DS.iconSizeMd,
                       ),
                       const SizedBox(height: DS.spacing4),
@@ -320,7 +322,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         style: TextStyle(
                           fontSize: DS.fontSizeLg,
                           fontWeight: DS.fontWeightBold,
-                          color: DS.brandPrimary,
+                          color: _VisualInk.textPrimary,
                         ),
                       ),
                       Text(
@@ -330,7 +332,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
-                          color: DS.brandPrimary,
+                          color: _VisualInk.textSecondary,
                         ),
                       ),
                     ],
@@ -354,15 +356,15 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         width: double.infinity,
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
+          color: _VisualInk.panel,
           borderRadius: DS.borderRadius16,
-          border: Border.all(color: DS.border.withValues(alpha: 0.5)),
+          border: Border.all(color: _VisualInk.hairline),
         ),
         child: Text(
           '当前还没有成型的荣耀套装，去解锁并装备一组更有存在感的外观吧。',
           style: TextStyle(
             fontSize: DS.fontSizeSm,
-            color: DS.textSecondary,
+            color: _VisualInk.textSecondary,
           ),
         ),
       );
@@ -391,13 +393,21 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _elementAccent(primary).withValues(alpha: 0.18),
-            DS.surfaceSecondary,
+            _elementAccent(primary).withValues(alpha: 0.28),
+            _VisualInk.panel,
+            _VisualInk.surface,
           ],
         ),
         borderRadius: DS.borderRadius16,
         border:
-            Border.all(color: _elementAccent(primary).withValues(alpha: 0.26)),
+            Border.all(color: _elementAccent(primary).withValues(alpha: 0.34)),
+        boxShadow: [
+          BoxShadow(
+            color: _elementAccent(primary).withValues(alpha: 0.14),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +417,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             style: TextStyle(
               fontSize: DS.fontSizeBase,
               fontWeight: DS.fontWeightBold,
-              color: DS.textPrimary,
+              color: _VisualInk.textPrimary,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -424,7 +434,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             title,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
-              color: DS.textSecondary,
+              color: _VisualInk.textSecondary,
             ),
           ),
         ],
@@ -474,11 +484,26 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   padding:
                       EdgeInsets.all(compact ? DS.spacing12 : DS.spacing16),
                   decoration: BoxDecoration(
-                    color: DS.surfaceSecondary,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _elementAccent(element).withValues(alpha: 0.22),
+                        _VisualInk.panel,
+                        _VisualInk.surface,
+                      ],
+                    ),
                     borderRadius: DS.borderRadius16,
                     border: Border.all(
-                      color: _elementAccent(element).withValues(alpha: 0.24),
+                      color: _elementAccent(element).withValues(alpha: 0.34),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _elementAccent(element).withValues(alpha: 0.10),
+                        blurRadius: 22,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,7 +533,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         style: TextStyle(
                           fontSize: DS.fontSizeBase,
                           fontWeight: DS.fontWeightBold,
-                          color: DS.textPrimary,
+                          color: _VisualInk.textPrimary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -518,7 +543,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         element.description ?? '高曝光荣耀装扮套组',
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
-                          color: DS.textSecondary,
+                          color: _VisualInk.textSecondary,
                         ),
                         maxLines: compact ? 3 : 2,
                         overflow: TextOverflow.ellipsis,
@@ -541,8 +566,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withValues(alpha: 0.15),
           borderRadius: DS.borderRadius12,
+          border: Border.all(color: color.withValues(alpha: 0.24)),
         ),
         child: Text(
           label,
@@ -550,22 +576,38 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: color,
+            color: Color.lerp(color, _VisualInk.textPrimary, 0.18),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
       );
 
   Color _elementAccent(VisualElementModel element) {
-    final gradient = element.config['gradient'] as List<dynamic>?;
+    final gradientConfig = element.config['gradient'];
+    final gradient = gradientConfig is List<dynamic>
+        ? gradientConfig
+        : gradientConfig is Map<String, dynamic>
+            ? gradientConfig['colors'] as List<dynamic>?
+            : null;
     final colors = element.config['colors'] as List<dynamic>?;
-    final raw = (gradient != null && gradient.isNotEmpty)
-        ? gradient.first
-        : (colors != null && colors.isNotEmpty ? colors.first : '#7B68EE');
+    final aurora = element.config['aurora_colors'] as List<dynamic>?;
+    final nebula = element.config['nebula_colors'] as List<dynamic>?;
+    final neon = element.config['neon_colors'] as List<dynamic>?;
+    final raw = (aurora != null && aurora.isNotEmpty)
+        ? aurora.first
+        : (nebula != null && nebula.isNotEmpty)
+            ? nebula.first
+            : (neon != null && neon.isNotEmpty)
+                ? neon.first
+                : (colors != null && colors.isNotEmpty)
+                    ? colors.first
+                    : (gradient != null && gradient.isNotEmpty
+                        ? gradient.last
+                        : '#8FB8C8');
     final hex = raw.toString().replaceFirst('#', '');
     final normalized = hex.length == 6 ? 'FF$hex' : hex;
     final value = int.tryParse(normalized, radix: 16);
-    return value == null ? DS.brandPrimary : Color(value);
+    return value == null ? _VisualInk.cyan : Color(value);
   }
 
   Widget _buildTabBar(BuildContext context, AppLocalizations l10n) {
@@ -579,12 +621,19 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           tabAlignment: TabAlignment.start,
           indicatorSize: TabBarIndicatorSize.label,
           indicator: BoxDecoration(
-            color: DS.brandPrimary,
+            color: _VisualInk.gold.withValues(alpha: 0.92),
             borderRadius: DS.borderRadius8,
+            boxShadow: [
+              BoxShadow(
+                color: _VisualInk.gold.withValues(alpha: 0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           indicatorPadding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-          labelColor: DS.textOnPrimary,
-          unselectedLabelColor: DS.textSecondary,
+          labelColor: _VisualInk.moonless,
+          unselectedLabelColor: _VisualInk.textSecondary,
           labelStyle: const TextStyle(
             fontSize: DS.fontSizeSm,
             fontWeight: DS.fontWeightMedium,
@@ -739,7 +788,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       unlockedElementIds: ref.read(visualElementsNotifierProvider).unlockedIds,
       isUnlocked: isUnlocked,
       isEquipped: isEquipped,
-      onEquip: isUnlocked ? () => _equipElement(element.id) : null,
+      onEquip: isUnlocked
+          ? () => element.isBundle
+              ? _equipBundle(element)
+              : _equipElement(element.id)
+          : null,
       onUnequip: isEquipped
           ? () => element.isBundle
               ? _unequipBundle(element)
@@ -808,6 +861,42 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _equipBundle(VisualElementModel bundle) async {
+    final notifier = ref.read(visualElementsNotifierProvider.notifier);
+    final state = ref.read(visualElementsNotifierProvider);
+    final unlockedIds = state.unlockedIds;
+    final pieces = bundle.bundlePieceIds
+        .where((pieceId) => unlockedIds.contains(pieceId))
+        .toList();
+
+    if (pieces.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('还没有集齐这套荣耀装扮的部件'),
+            backgroundColor: DS.warning,
+          ),
+        );
+      }
+      return;
+    }
+
+    final results = <bool>[];
+    for (final pieceId in pieces) {
+      results.add(await notifier.equipElement(pieceId));
+    }
+    final success = results.isNotEmpty && results.every((result) => result);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? '已装备荣耀套装' : '装备套装时出现问题'),
+          backgroundColor: success ? DS.success : DS.error,
+        ),
+      );
     }
   }
 
@@ -1063,12 +1152,20 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            DS.brandPrimary.withValues(alpha: 0.12),
-            DS.brandSecondary.withValues(alpha: 0.08),
+            _VisualInk.gold.withValues(alpha: 0.18),
+            _VisualInk.cyan.withValues(alpha: 0.10),
+            _VisualInk.panel,
           ],
         ),
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.25)),
+        border: Border.all(color: _VisualInk.gold.withValues(alpha: 0.34)),
+        boxShadow: [
+          BoxShadow(
+            color: _VisualInk.gold.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1077,7 +1174,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             children: [
               Icon(
                 Icons.timer_outlined,
-                color: DS.brandPrimary,
+                color: _VisualInk.gold,
                 size: DS.iconSizeSm,
               ),
               const SizedBox(width: DS.spacing8),
@@ -1087,7 +1184,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   style: TextStyle(
                     fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightBold,
-                    color: DS.textPrimary,
+                    color: _VisualInk.textPrimary,
                   ),
                 ),
               ),
@@ -1098,14 +1195,17 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     vertical: DS.spacing4,
                   ),
                   decoration: BoxDecoration(
-                    color: DS.surfacePrimary.withValues(alpha: 0.7),
+                    color: _VisualInk.moonless.withValues(alpha: 0.58),
                     borderRadius: DS.borderRadius8,
+                    border: Border.all(
+                      color: _VisualInk.gold.withValues(alpha: 0.20),
+                    ),
                   ),
                   child: Text(
                     countdownText,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: DS.textSecondary,
+                      color: _VisualInk.textSecondary,
                     ),
                   ),
                 ),
@@ -1270,24 +1370,35 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        accent.withValues(alpha: 0.18),
-                        DS.surfaceSecondary,
+                        accent.withValues(alpha: 0.22),
+                        _VisualInk.panel,
+                        _VisualInk.surface,
                       ],
                     ),
                     borderRadius: DS.borderRadius16,
-                    border: Border.all(color: accent.withValues(alpha: 0.26)),
+                    border: Border.all(color: accent.withValues(alpha: 0.30)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _miniChip(lead.displaySlotLabel, accent),
-                      if (!compact) const Spacer() else const SizedBox(height: DS.spacing8),
+                      if (!compact)
+                        const Spacer()
+                      else
+                        const SizedBox(height: DS.spacing8),
                       Text(
                         '${elements.length} 种风格',
                         style: TextStyle(
                           fontSize: DS.fontSizeLg,
                           fontWeight: DS.fontWeightBold,
-                          color: DS.textPrimary,
+                          color: _VisualInk.textPrimary,
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
@@ -1297,7 +1408,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: DS.fontSizeSm,
-                          color: DS.textSecondary,
+                          color: _VisualInk.textSecondary,
                         ),
                       ),
                       const SizedBox(height: DS.spacing8),
@@ -1348,11 +1459,19 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             end: Alignment.bottomRight,
             colors: [
               accent.withValues(alpha: 0.16),
-              DS.surfaceSecondary,
+              _VisualInk.panel,
+              _VisualInk.surface,
             ],
           ),
           borderRadius: DS.borderRadius16,
-          border: Border.all(color: accent.withValues(alpha: 0.24)),
+          border: Border.all(color: accent.withValues(alpha: 0.30)),
+          boxShadow: [
+            BoxShadow(
+              color: accent.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1364,7 +1483,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 fontWeight: DS.fontWeightBold,
-                color: DS.textPrimary,
+                color: _VisualInk.textPrimary,
               ),
             ),
             const SizedBox(height: DS.spacing4),
@@ -1374,7 +1493,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
-                color: DS.textSecondary,
+                color: _VisualInk.textSecondary,
               ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -1406,9 +1525,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
-        color: DS.brandPrimary.withValues(alpha: 0.08),
+        color: _VisualInk.cyan.withValues(alpha: 0.08),
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
+        border: Border.all(color: _VisualInk.cyan.withValues(alpha: 0.22)),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -1423,7 +1542,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightBold,
-                  color: DS.textPrimary,
+                  color: _VisualInk.textPrimary,
                 ),
               ),
               const SizedBox(height: DS.spacing4),
@@ -1433,7 +1552,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
-                  color: DS.textSecondary,
+                  color: _VisualInk.textSecondary,
                 ),
               ),
             ],
@@ -1517,6 +1636,19 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 }
 
+class _VisualInk {
+  static const Color moonless = Color(0xFF050A12);
+  static const Color inkBlue = Color(0xFF071523);
+  static const Color surface = Color(0xFF0B1D2C);
+  static const Color panel = Color(0xFF10283A);
+  static const Color blueWash = Color(0xFF14384A);
+  static const Color cyan = Color(0xFF8FB8C8);
+  static const Color gold = Color(0xFFD9B66F);
+  static const Color textPrimary = Color(0xFFEAF3F5);
+  static const Color textSecondary = Color(0xFF9CB4BD);
+  static const Color hairline = Color(0x334F7D8F);
+}
+
 /// 粘性 TabBar 代理
 class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   _StickyTabBarDelegate(this.tabBar);
@@ -1536,7 +1668,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) =>
       Container(
-        color: DS.surfacePrimary,
+        color: _VisualInk.surface,
         child: tabBar,
       );
 
@@ -1907,11 +2039,26 @@ class _RecommendationCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colors.border.withValues(alpha: 0.18),
+              _VisualInk.panel,
+              _VisualInk.surface,
+            ],
+          ),
           borderRadius: DS.borderRadius16,
           border: Border.all(
-            color: DS.brandPrimary.withValues(alpha: 0.3),
+            color: colors.border.withValues(alpha: 0.28),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: colors.border.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Stack(
           children: [
@@ -1926,8 +2073,11 @@ class _RecommendationCard extends StatelessWidget {
                       vertical: DS.spacing4,
                     ),
                     decoration: BoxDecoration(
-                      color: DS.brandPrimary.withValues(alpha: 0.12),
+                      color: colors.border.withValues(alpha: 0.13),
                       borderRadius: DS.borderRadius8,
+                      border: Border.all(
+                        color: colors.border.withValues(alpha: 0.22),
+                      ),
                     ),
                     child: Wrap(
                       spacing: DS.spacing4,
@@ -1937,7 +2087,7 @@ class _RecommendationCard extends StatelessWidget {
                         Icon(
                           _reasonIcon(reason),
                           size: DS.iconSizeXs,
-                          color: DS.brandPrimary,
+                          color: colors.text,
                         ),
                         Text(
                           reasonText,
@@ -1945,7 +2095,7 @@ class _RecommendationCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: DS.fontSizeXs,
-                            color: DS.brandPrimary,
+                            color: colors.text,
                             fontWeight: DS.fontWeightMedium,
                           ),
                         ),
@@ -1965,7 +2115,7 @@ class _RecommendationCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: DS.fontSizeSm,
                               fontWeight: DS.fontWeightSemibold,
-                              color: DS.textPrimary,
+                              color: _VisualInk.textPrimary,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -1978,7 +2128,7 @@ class _RecommendationCard extends StatelessWidget {
                               if (element.prestigeLabel != null)
                                 _miniInfoChip(
                                   element.prestigeLabel!,
-                                  DS.brandPrimary,
+                                  colors.border,
                                 ),
                               _miniInfoChip(
                                 element.displaySlotLabel,
@@ -2012,6 +2162,9 @@ class _RecommendationCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: colors.background,
                           borderRadius: DS.borderRadius6,
+                          border: Border.all(
+                            color: colors.border.withValues(alpha: 0.28),
+                          ),
                         ),
                         child: Icon(
                           _getRarityIcon(element.rarity),
@@ -2029,7 +2182,7 @@ class _RecommendationCard extends StatelessWidget {
                               vertical: DS.spacing4,
                             ),
                             decoration: BoxDecoration(
-                              color: DS.brandPrimary,
+                              color: _VisualInk.gold,
                               borderRadius: DS.borderRadius8,
                             ),
                             child: Text(
@@ -2039,7 +2192,7 @@ class _RecommendationCard extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: DS.fontSizeXs,
-                                color: DS.textOnPrimary,
+                                color: _VisualInk.moonless,
                                 fontWeight: DS.fontWeightMedium,
                               ),
                             ),
@@ -2055,14 +2208,14 @@ class _RecommendationCard extends StatelessWidget {
                 child: IgnorePointer(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: DS.surfacePrimary.withValues(alpha: 0.75),
+                      color: _VisualInk.moonless.withValues(alpha: 0.76),
                       borderRadius: DS.borderRadius16,
                     ),
                     child: Center(
                       child: Icon(
                         Icons.lock,
                         size: DS.iconSizeMd,
-                        color: DS.textTertiary,
+                        color: _VisualInk.textSecondary,
                       ),
                     ),
                   ),
@@ -2078,27 +2231,27 @@ class _RecommendationCard extends StatelessWidget {
     switch (rarity) {
       case VisualElementRarity.common:
         return _RarityColors(
-          background: DS.rarityCommonBg,
-          border: DS.rarityCommon,
-          text: DS.rarityCommonText,
+          background: const Color(0xFF102436),
+          border: const Color(0xFF668696),
+          text: const Color(0xFFC6D6DB),
         );
       case VisualElementRarity.rare:
         return _RarityColors(
-          background: DS.rarityRareBg,
-          border: DS.rarityRare,
-          text: DS.rarityRareText,
+          background: const Color(0xFF0C2A37),
+          border: const Color(0xFF58C0D7),
+          text: const Color(0xFFC6F2F7),
         );
       case VisualElementRarity.epic:
         return _RarityColors(
-          background: DS.rarityEpicBg,
-          border: DS.rarityEpic,
-          text: DS.rarityEpicText,
+          background: const Color(0xFF17253A),
+          border: const Color(0xFF91A9FF),
+          text: const Color(0xFFDCE5FF),
         );
       case VisualElementRarity.legendary:
         return _RarityColors(
-          background: DS.rarityLegendaryBg,
-          border: DS.rarityLegendary,
-          text: DS.rarityLegendaryText,
+          background: const Color(0xFF312813),
+          border: const Color(0xFFD9B66F),
+          text: const Color(0xFFFFE7A8),
         );
     }
   }
@@ -2138,8 +2291,9 @@ class _RecommendationCard extends StatelessWidget {
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withValues(alpha: 0.13),
           borderRadius: DS.borderRadius8,
+          border: Border.all(color: color.withValues(alpha: 0.22)),
         ),
         child: Text(
           label,
@@ -2147,7 +2301,7 @@ class _RecommendationCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: color,
+            color: Color.lerp(color, _VisualInk.textPrimary, 0.12),
             fontWeight: DS.fontWeightMedium,
           ),
         ),

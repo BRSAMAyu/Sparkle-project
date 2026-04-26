@@ -295,7 +295,7 @@ void main() {
     await tester.tap(find.text('和Sparkle聊聊这个问题'));
     await tester.pumpAndSettle();
 
-    expect(find.text('chat-opened'), findsOneWidget);
+    expect(find.text('和 Sparkle 聊聊这个卡点'), findsOneWidget);
     expect(
       find.byType(TaskExecutionScreen, skipOffstage: false),
       findsOneWidget,

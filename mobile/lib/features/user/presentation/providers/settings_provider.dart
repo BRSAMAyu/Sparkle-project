@@ -466,6 +466,16 @@ class PushPreferencesNotifier extends StateNotifier<PushPreferences> {
         '/users/me/push-preference',
         data: updatedPrefs.toJson(),
       );
+      if (enableCuriosity != null) {
+        await apiClient.put<Map<String, dynamic>>(
+          '/memory/push-settings',
+          data: <String, dynamic>{
+            'enabled': updatedPrefs.enableCuriosity,
+            'allow_commitment_follow_up': updatedPrefs.enableCuriosity,
+            'allow_engagement_recovery': updatedPrefs.enableCuriosity,
+          },
+        );
+      }
 
       // Refresh user to get updated data
       await _ref.read(authProvider.notifier).refreshUser();

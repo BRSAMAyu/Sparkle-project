@@ -62,8 +62,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               ..showSnackBar(
                 SparkleSnackBar.error(
                   context.l10n.planLoadFailed(message),
-                  onRetry: () =>
-                      ref.refresh(planDetailProvider(widget.planId)),
+                  onRetry: () => ref.refresh(planDetailProvider(widget.planId)),
                   retryLabel: context.l10n.retry,
                 ),
               );
@@ -108,7 +107,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               orElse: () => const SizedBox.shrink(),
             ),
             planAsync.maybeWhen(
-              data: (plan) =>               Tooltip(
+              data: (plan) => Tooltip(
                 message: l10n.planDetailEdit,
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
@@ -169,14 +168,6 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
       return l10n.planDetailLoadErrorEmpty;
     }
     return l10n.planDetailLoadErrorGeneric(raw);
-  }
-    if (normalized.contains('timeout')) {
-      return '加载计划超时了，请检查网络后再试一次。';
-    }
-    if (raw.isEmpty) {
-      return '计划详情暂时没加载出来，请重试一次。';
-    }
-    return '计划详情暂时没加载出来：$raw';
   }
 
   Future<void> _showShareSheet(BuildContext context, PlanModel plan) async {
@@ -320,148 +311,152 @@ class _PlanOverviewTab extends ConsumerWidget {
                 builder: (context, ref, child) {
                   final progressAsync = ref.watch(
                     learningPathProgressProvider(plan.id),
-                );
-                return progressAsync.when(
-                  data: (progress) => Padding(
-                    padding: const EdgeInsets.only(bottom: DS.lg),
-                    child: LearningPathProgressBar(progress: progress),
-                  ),
-                  loading: () => const Padding(
-                    padding: EdgeInsets.only(bottom: DS.lg),
-                    child: Center(child: LoadingIndicator()),
-                  ),
-                  error: (err, _) => Padding(
-                    padding: const EdgeInsets.only(bottom: DS.lg),
-                    child: _InlinePlanSectionError(
-                      message: l10n.planDetailLearningPathLoadError(err.toString()),
-                      onRetry: () =>
-                          ref.invalidate(learningPathProgressProvider(plan.id)),
+                  );
+                  return progressAsync.when(
+                    data: (progress) => Padding(
+                      padding: const EdgeInsets.only(bottom: DS.lg),
+                      child: LearningPathProgressBar(progress: progress),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
-          GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: [
-                    _PlanMetaChip(
-                      icon: Icons.flag_outlined,
-                      label: plan.subject ?? l10n.planTabOverview,
+                    loading: () => const Padding(
+                      padding: EdgeInsets.only(bottom: DS.lg),
+                      child: Center(child: LoadingIndicator()),
                     ),
-                    _PlanMetaChip(
-                      icon: Icons.task_alt_rounded,
-                      label:
-                          l10n.planDetailTaskCount(
-                            plan.tasks?.where((task) => task.status == TaskStatus.completed).length ?? 0,
-                            plan.tasks?.length ?? 0,
-                          ),
+                    error: (err, _) => Padding(
+                      padding: const EdgeInsets.only(bottom: DS.lg),
+                      child: _InlinePlanSectionError(
+                        message: l10n
+                            .planDetailLearningPathLoadError(err.toString()),
+                        onRetry: () => ref
+                            .invalidate(learningPathProgressProvider(plan.id)),
+                      ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: DS.spacing12),
-                Text(
-                  plan.name,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                if (parsedDescription.overview.isNotEmpty) ...[
-                  const SizedBox(height: DS.sm),
-                  Text(
-                    parsedDescription.overview,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ] else if (plan.description != null &&
-                    plan.description!.isNotEmpty) ...[
-                  const SizedBox(height: DS.sm),
-                  Text(
-                    plan.description!,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-                const SizedBox(height: DS.lg),
-                LinearProgressIndicator(
-                  value: plan.progress,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                const SizedBox(height: DS.sm),
-                Text(
-                  l10n.planProgressPercent(
-                    (plan.progress * 100).toStringAsFixed(0),
-                  ),
-                ),
-                if (plan.healthScore != null) ...[
-                  const SizedBox(height: DS.md),
-                  _PlanHealthIndicator(plan: plan),
-                ],
-                if (targetDate != null) ...[
-                  const SizedBox(height: DS.md),
-                  Row(
+                  );
+                },
+              ),
+            ],
+            GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
                     children: [
-                      Icon(Icons.event, size: 16, color: DS.textSecondary),
-                      const SizedBox(width: DS.xs),
-                      Text(l10n.planTargetDate(targetDate)),
+                      _PlanMetaChip(
+                        icon: Icons.flag_outlined,
+                        label: plan.subject ?? l10n.planTabOverview,
+                      ),
+                      _PlanMetaChip(
+                        icon: Icons.task_alt_rounded,
+                        label: l10n.planDetailTaskCount(
+                          plan.tasks
+                                  ?.where((task) =>
+                                      task.status == TaskStatus.completed)
+                                  .length ??
+                              0,
+                          plan.tasks?.length ?? 0,
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: DS.spacing12),
+                  Text(
+                    plan.name,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  if (parsedDescription.overview.isNotEmpty) ...[
+                    const SizedBox(height: DS.sm),
+                    Text(
+                      parsedDescription.overview,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ] else if (plan.description != null &&
+                      plan.description!.isNotEmpty) ...[
+                    const SizedBox(height: DS.sm),
+                    Text(
+                      plan.description!,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                  const SizedBox(height: DS.lg),
+                  LinearProgressIndicator(
+                    value: plan.progress,
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    l10n.planProgressPercent(
+                      (plan.progress * 100).toStringAsFixed(0),
+                    ),
+                  ),
+                  if (plan.healthScore != null) ...[
+                    const SizedBox(height: DS.md),
+                    _PlanHealthIndicator(plan: plan),
+                  ],
+                  if (targetDate != null) ...[
+                    const SizedBox(height: DS.md),
+                    Row(
+                      children: [
+                        Icon(Icons.event, size: 16, color: DS.textSecondary),
+                        const SizedBox(width: DS.xs),
+                        Text(l10n.planTargetDate(targetDate)),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: DS.lg),
-          if (_isLast24hMode(plan)) ...[
-            _Last24hSprintBanner(plan: plan),
             const SizedBox(height: DS.lg),
-          ],
-          if (_hasExamSprintContext(plan, mergedTasks)) ...[
-            _ExamSprintContextSection(
+            if (_isLast24hMode(plan)) ...[
+              _Last24hSprintBanner(plan: plan),
+              const SizedBox(height: DS.lg),
+            ],
+            if (_hasExamSprintContext(plan, mergedTasks)) ...[
+              _ExamSprintContextSection(
+                plan: plan,
+                tasks: mergedTasks,
+              ),
+              const SizedBox(height: DS.lg),
+            ],
+            _PlanExecutionSection(
               plan: plan,
-              tasks: mergedTasks,
+              onAddNewTask: () => context.push(
+                '/tasks/new?planId=${plan.id}&planName=${Uri.encodeComponent(plan.name)}',
+              ),
+              onAddExistingTask: () =>
+                  unawaited(_showAddExistingTaskPicker(context, ref)),
             ),
             const SizedBox(height: DS.lg),
-          ],
-          _PlanExecutionSection(
-            plan: plan,
-            onAddNewTask: () => context.push(
-              '/tasks/new?planId=${plan.id}&planName=${Uri.encodeComponent(plan.name)}',
-            ),
-            onAddExistingTask: () =>
-                unawaited(_showAddExistingTaskPicker(context, ref)),
-          ),
-          const SizedBox(height: DS.lg),
-          _PlanPhaseSection(plan: plan),
-          if (parsedDescription.hasStructuredSections) ...[
-            const SizedBox(height: DS.lg),
-            if (parsedDescription.schedule.isNotEmpty)
-              _PlanRichSection(
-                title: l10n.planDetailDailyRhythm,
-                icon: Icons.schedule_rounded,
-                content: parsedDescription.schedule,
-              ),
-            if (parsedDescription.scope.isNotEmpty)
-              _PlanRichSection(
-                title: l10n.planDetailPlanScope,
-                icon: Icons.rule_folder_outlined,
-                content: parsedDescription.scope,
-              ),
-            if (parsedDescription.taskBlueprint.isNotEmpty)
-              _PlanRichSection(
-                title: l10n.planDetailTaskBlueprint,
-                icon: Icons.account_tree_outlined,
-                content: parsedDescription.taskBlueprint,
-              ),
-            if (parsedDescription.guide.isNotEmpty)
-              _PlanRichSection(
-                title: l10n.planDetailAiGuide,
-                icon: Icons.auto_awesome_rounded,
-                content: parsedDescription.guide,
-              ),
-          ],
+            _PlanPhaseSection(plan: plan),
+            if (parsedDescription.hasStructuredSections) ...[
+              const SizedBox(height: DS.lg),
+              if (parsedDescription.schedule.isNotEmpty)
+                _PlanRichSection(
+                  title: l10n.planDetailDailyRhythm,
+                  icon: Icons.schedule_rounded,
+                  content: parsedDescription.schedule,
+                ),
+              if (parsedDescription.scope.isNotEmpty)
+                _PlanRichSection(
+                  title: l10n.planDetailPlanScope,
+                  icon: Icons.rule_folder_outlined,
+                  content: parsedDescription.scope,
+                ),
+              if (parsedDescription.taskBlueprint.isNotEmpty)
+                _PlanRichSection(
+                  title: l10n.planDetailTaskBlueprint,
+                  icon: Icons.account_tree_outlined,
+                  content: parsedDescription.taskBlueprint,
+                ),
+              if (parsedDescription.guide.isNotEmpty)
+                _PlanRichSection(
+                  title: l10n.planDetailAiGuide,
+                  icon: Icons.auto_awesome_rounded,
+                  content: parsedDescription.guide,
+                ),
+            ],
             _buildArchiveActions(context, ref),
           ],
         ),
@@ -559,7 +554,7 @@ class _PlanOverviewTab extends ConsumerWidget {
         tasks.addAll(response.items);
       } catch (e) {
         if (!context.mounted) return;
-        AppFeedback.error(context, 'Failed to load tasks: $e');
+        AppFeedback.error(context, context.l10n.planDetailTaskLoadFailed(e.toString()));
         return;
       }
     }
@@ -572,24 +567,24 @@ class _PlanOverviewTab extends ConsumerWidget {
       ..sort((a, b) => a.title.compareTo(b.title));
 
     if (candidateTasks.isEmpty) {
-      AppFeedback.info(context, 'No unassigned or external tasks available');
+      AppFeedback.info(context, context.l10n.planDetailNoExternalTasks);
       return;
     }
 
     final selectedTaskId = await CardPickerSheet.show(
       context,
-      title: 'Add existing task to this plan',
+      title: context.l10n.planDetailAddExistingTaskTitle,
       options: candidateTasks
           .map(
             (task) => CardPickerOption(
               id: task.id,
               title: task.title,
               subtitle: task.planId == null
-                  ? 'Unassigned'
-                  : 'Currently in another plan',
+                  ? context.l10n.planDetailTaskUnassigned
+                  : context.l10n.planDetailTaskInAnotherPlan,
               group: task.planId == null
-                  ? 'Unassigned tasks'
-                  : 'Tasks from other plans',
+                  ? context.l10n.planDetailGroupUnassigned
+                  : context.l10n.planDetailGroupOtherPlans,
               icon: Icons.task_alt_rounded,
             ),
           )
@@ -609,10 +604,10 @@ class _PlanOverviewTab extends ConsumerWidget {
           );
       if (!context.mounted) return;
       ref.invalidate(planDetailProvider(plan.id));
-      AppFeedback.success(context, 'Task added to plan');
+      AppFeedback.success(context, context.l10n.planDetailTaskAdded);
     } catch (e) {
       if (!context.mounted) return;
-      AppFeedback.error(context, 'Add task failed: $e');
+      AppFeedback.error(context, context.l10n.planDetailAddTaskFailed(e.toString()));
     }
   }
 }
@@ -640,7 +635,9 @@ class _PlanExecutionSection extends StatelessWidget {
           children: [
             Expanded(
               child: _SectionHeader(
-                title: isLast24hMode ? context.l10n.planDetailSprintFocus : context.l10n.planDetailTodayFocus,
+                title: isLast24hMode
+                    ? context.l10n.planDetailSprintFocus
+                    : context.l10n.planDetailTodayFocus,
               ),
             ),
             if (!context.isMobile && !isLast24hMode)
@@ -874,7 +871,8 @@ class _AdaptiveCompressionBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: DS.spacing6),
                   Text(
-                    context.l10n.planDetailCompressionDesc(summary.taskCount, summary.totalMinutes),
+                    context.l10n.planDetailCompressionDesc(
+                        summary.taskCount, summary.totalMinutes),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
@@ -1153,7 +1151,8 @@ class _TodayTaskCard extends StatelessWidget {
               ),
               _TaskMetaPill(
                 icon: Icons.bolt_rounded,
-                label: l10n.planDetailTaskDifficulty(task.difficulty.toString()),
+                label:
+                    l10n.planDetailTaskDifficulty(task.difficulty.toString()),
               ),
               _TaskMetaPill(
                 icon: _taskStatusIcon(task.status),
@@ -1243,13 +1242,14 @@ class _PlanDayExpansion extends StatelessWidget {
           shape: const Border(),
           collapsedShape: const Border(),
           title: Text(
-            'Day ${group.day}',
+            context.l10n.planDetailDayLabel(group.day),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
           ),
           subtitle: Text(
-            context.l10n.planDetailDayGroupSubtitle(group.tasks.length, group.totalMinutes),
+            context.l10n.planDetailDayGroupSubtitle(
+                group.tasks.length, group.totalMinutes),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -1614,7 +1614,8 @@ String? _sprintPackName(PlanModel plan) {
   return name.isEmpty ? null : name;
 }
 
-String _sprintModeLabel(AppLocalizations l10n, PlanModel plan, List<TaskModel> tasks) {
+String _sprintModeLabel(
+    AppLocalizations l10n, PlanModel plan, List<TaskModel> tasks) {
   final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
   final intake = metadata['exam_sprint_intake'];
   if (intake is Map) {
@@ -1636,7 +1637,9 @@ String _sprintModeLabel(AppLocalizations l10n, PlanModel plan, List<TaskModel> t
   final totalDays = tasks
       .map(_taskDay)
       .fold<int>(0, (maxDay, day) => day > maxDay ? day : maxDay);
-  return totalDays >= 7 ? l10n.planDetailSprintMode7Day : l10n.planDetailSprintModeExam;
+  return totalDays >= 7
+      ? l10n.planDetailSprintMode7Day
+      : l10n.planDetailSprintModeExam;
 }
 
 String _sprintPackNodeLabel(TaskModel task) {
@@ -1820,7 +1823,9 @@ String _highlightRecommendation(
 ) {
   final serverText = plan.dayHighlights?.recommendation.trim();
   if (serverText != null && serverText.isNotEmpty) return serverText;
-  final thingLabel = tasks.length == 1 ? l10n.planDetailThingCount1 : l10n.planDetailThingCountN(tasks.length);
+  final thingLabel = tasks.length == 1
+      ? l10n.planDetailThingCount1
+      : l10n.planDetailThingCountN(tasks.length);
   if (day == 1) {
     return l10n.planDetailRecommendationDay1(thingLabel);
   }
@@ -1983,7 +1988,8 @@ class _PlanHealthIndicator extends StatelessWidget {
     return DS.error;
   }
 
-  static String _planHealthLabel(AppLocalizations l10n, String? status, double score) {
+  static String _planHealthLabel(
+      AppLocalizations l10n, String? status, double score) {
     final normalized = status?.trim().toLowerCase();
     if (normalized == 'critical') return l10n.planDetailHealthNeedReplan;
     if (normalized == 'warning') return l10n.planDetailHealthNeedAttention;
@@ -2005,7 +2011,9 @@ class _PlanHealthIndicator extends StatelessWidget {
         return l10n.planDetailHealthReasonProgressLag;
       default:
         final normalized = reason.trim();
-        return normalized.isEmpty ? l10n.planDetailHealthReasonDefault : normalized;
+        return normalized.isEmpty
+            ? l10n.planDetailHealthReasonDefault
+            : normalized;
     }
   }
 
@@ -2453,7 +2461,9 @@ class _PlanPhaseSection extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Expanded(child: _SectionHeader(title: context.l10n.planDetailPhasesTitle)),
+                Expanded(
+                    child: _SectionHeader(
+                        title: context.l10n.planDetailPhasesTitle)),
                 SparkleButton.ghost(
                   onPressed: () => _showCreatePhaseDialog(context, ref, bundle),
                   label: context.l10n.planDetailAddPhase,
@@ -2466,7 +2476,7 @@ class _PlanPhaseSection extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing12),
                 child: Text(
-                  'Weighted progress ${(bundle.weightedProgress! * 100).round()}%',
+                  context.l10n.planDetailWeightedProgress((bundle.weightedProgress! * 100).round()),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -2506,28 +2516,29 @@ class _PlanPhaseSection extends ConsumerWidget {
     WidgetRef ref,
     PlanPhaseBundle bundle,
   ) async {
+    final l10n = context.l10n;
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Create phase'),
+        title: Text(l10n.planDetailCreatePhaseTitle),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Phase name',
-            hintText: 'Foundation / Build / Review',
+          decoration: InputDecoration(
+            labelText: l10n.planDetailPhaseNameLabel,
+            hintText: l10n.planDetailPhaseNameHint,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: const Text('Create'),
+            child: Text(l10n.planCreateAction),
           ),
         ],
       ),
@@ -2541,11 +2552,11 @@ class _PlanPhaseSection extends ConsumerWidget {
             phaseIndex: bundle.phases.length + 1,
           );
       if (context.mounted) {
-        AppFeedback.success(context, 'Phase created');
+        AppFeedback.success(context, l10n.planDetailPhaseCreated);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, 'Create phase failed: $e');
+        AppFeedback.error(context, l10n.planDetailCreatePhaseFailed(e.toString()));
       }
     }
   }
@@ -2561,11 +2572,11 @@ class _PlanPhaseSection extends ConsumerWidget {
             phase.cardId,
           );
       if (context.mounted) {
-        AppFeedback.success(context, 'Phase activated');
+        AppFeedback.success(context, context.l10n.planDetailPhaseActivated);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, 'Activate failed: $e');
+        AppFeedback.error(context, context.l10n.planDetailActivatePhaseFailed(e.toString()));
       }
     }
   }
@@ -2583,13 +2594,13 @@ class _PlanPhaseSection extends ConsumerWidget {
       if (!context.mounted) return;
       final status = result['status']?.toString();
       if (status == 'NEEDS_FEEDBACK') {
-        AppFeedback.info(context, 'This phase needs feedback before advancing');
+        AppFeedback.info(context, context.l10n.planDetailPhaseNeedsFeedback);
       } else {
-        AppFeedback.success(context, 'Phase completed');
+        AppFeedback.success(context, context.l10n.planDetailPhaseCompleted);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, 'Complete phase failed: $e');
+        AppFeedback.error(context, context.l10n.planDetailCompletePhaseFailed(e.toString()));
       }
     }
   }
@@ -2605,18 +2616,19 @@ class _PlanPhaseSection extends ConsumerWidget {
     var requestCompassReview = false;
     final reflectionController = TextEditingController();
 
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) => AlertDialog(
-          title: Text('Phase feedback · ${phase.title}'),
+          title: Text(l10n.planDetailPhaseFeedbackTitle(phase.title)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How aligned did this phase feel?',
+                  l10n.planDetailPhaseAlignmentQuestion,
                   style: Theme.of(dialogContext).textTheme.bodyMedium,
                 ),
                 Slider(
@@ -2631,9 +2643,9 @@ class _PlanPhaseSection extends ConsumerWidget {
                   controller: reflectionController,
                   minLines: 3,
                   maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Reflection',
-                    hintText: 'What worked, what failed, what changed?',
+                  decoration: InputDecoration(
+                    labelText: l10n.planDetailPhaseReflectionLabel,
+                    hintText: l10n.planDetailPhaseReflectionHint,
                   ),
                 ),
                 CheckboxListTile(
@@ -2641,14 +2653,14 @@ class _PlanPhaseSection extends ConsumerWidget {
                   onChanged: (value) =>
                       setState(() => blocked = value ?? false),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('I felt blocked this phase'),
+                  title: Text(l10n.planDetailPhaseBlocked),
                 ),
                 CheckboxListTile(
                   value: lifeChanged,
                   onChanged: (value) =>
                       setState(() => lifeChanged = value ?? false),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('My life conditions changed'),
+                  title: Text(l10n.planDetailPhaseLifeChanged),
                 ),
                 CheckboxListTile(
                   value: requestCompassReview,
@@ -2656,7 +2668,7 @@ class _PlanPhaseSection extends ConsumerWidget {
                     () => requestCompassReview = value ?? false,
                   ),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Request compass review'),
+                  title: Text(l10n.planDetailPhaseRequestReview),
                 ),
               ],
             ),
@@ -2664,11 +2676,11 @@ class _PlanPhaseSection extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Submit'),
+              child: Text(l10n.commonSubmit),
             ),
           ],
         ),
@@ -2692,12 +2704,12 @@ class _PlanPhaseSection extends ConsumerWidget {
       AppFeedback.success(
         context,
         triggered
-            ? 'Feedback saved, compass review suggested'
-            : 'Feedback saved',
+            ? l10n.planDetailFeedbackSavedWithReview
+            : l10n.planDetailFeedbackSaved,
       );
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, 'Submit feedback failed: $e');
+        AppFeedback.error(context, l10n.planDetailSubmitFeedbackFailed(e.toString()));
       }
     }
   }
@@ -2811,7 +2823,12 @@ class _PhaseCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '${(phase.progress * 100).round()}% · ${phase.completedOccurrenceCount}/${phase.occurrenceCount} occurrences · ${phase.taskCount} tasks',
+            context.l10n.planDetailPhaseStats(
+              (phase.progress * 100).round(),
+              phase.completedOccurrenceCount,
+              phase.occurrenceCount,
+              phase.taskCount,
+            ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -2833,19 +2850,19 @@ class _PhaseCard extends StatelessWidget {
               if (!isCurrent && phase.lifecycleStatus != 'COMPLETED')
                 SparkleButton.secondary(
                   onPressed: onActivate,
-                  label: 'Activate',
+                  label: context.l10n.planDetailPhaseActivate,
                   icon: const Icon(Icons.play_arrow_rounded),
                 ),
               if (phase.lifecycleStatus == 'ACTIVE')
                 SparkleButton.ghost(
                   onPressed: onComplete,
-                  label: 'Complete',
+                  label: context.l10n.planDetailPhaseComplete,
                   icon: const Icon(Icons.check_rounded),
                 ),
               if (phase.needsFeedback || phase.lifecycleStatus == 'ACTIVE')
                 SparkleButton.ghost(
                   onPressed: onFeedback,
-                  label: 'Feedback',
+                  label: context.l10n.planDetailPhaseFeedback,
                   icon: const Icon(Icons.rate_review_outlined),
                 ),
             ],

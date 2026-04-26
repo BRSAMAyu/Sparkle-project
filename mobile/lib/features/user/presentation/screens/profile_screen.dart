@@ -1,14 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
@@ -191,7 +187,8 @@ class ProfileScreen extends ConsumerWidget {
             runSpacing: DS.spacing8,
             children: [
               _buildIdentityChip(
-                  label: equippedTitle?.titleDisplay ?? context.l10n.profileNoTitleEquipped,
+                label: equippedTitle?.titleDisplay ??
+                    context.l10n.profileNoTitleEquipped,
                 color: prestigeColor,
               ),
               if (equippedBackground != null)
@@ -334,9 +331,15 @@ class ProfileScreen extends ConsumerWidget {
                   'id': 'q1',
                   'title': context.l10n.profileTraitQ1Title,
                   'options': [
-                    {'id': 'structured', 'label': context.l10n.profileTraitQ1Structured},
+                    {
+                      'id': 'structured',
+                      'label': context.l10n.profileTraitQ1Structured
+                    },
                     {'id': 'mixed', 'label': context.l10n.profileTraitQ1Mixed},
-                    {'id': 'explore', 'label': context.l10n.profileTraitQ1Explore},
+                    {
+                      'id': 'explore',
+                      'label': context.l10n.profileTraitQ1Explore
+                    },
                     {'id': 'skip', 'label': context.l10n.profileTraitSkip},
                   ],
                 },
@@ -345,7 +348,10 @@ class ProfileScreen extends ConsumerWidget {
                   'title': context.l10n.profileTraitQ2Title,
                   'options': [
                     {'id': 'solo', 'label': context.l10n.profileTraitQ2Solo},
-                    {'id': 'small_group', 'label': context.l10n.profileTraitQ2SmallGroup},
+                    {
+                      'id': 'small_group',
+                      'label': context.l10n.profileTraitQ2SmallGroup
+                    },
                     {'id': 'group', 'label': context.l10n.profileTraitQ2Group},
                     {'id': 'skip', 'label': context.l10n.profileTraitSkip},
                   ],
@@ -354,7 +360,10 @@ class ProfileScreen extends ConsumerWidget {
                   'id': 'q3',
                   'title': context.l10n.profileTraitQ3Title,
                   'options': [
-                    {'id': 'replan', 'label': context.l10n.profileTraitQ3Replan},
+                    {
+                      'id': 'replan',
+                      'label': context.l10n.profileTraitQ3Replan
+                    },
                     {'id': 'pause', 'label': context.l10n.profileTraitQ3Pause},
                     {'id': 'swing', 'label': context.l10n.profileTraitQ3Swing},
                     {'id': 'skip', 'label': context.l10n.profileTraitSkip},
@@ -669,7 +678,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.palette_outlined,
                   title: l10n.visualElementsTitle,
-                  accentColor: const Color(0xFF7B68EE),
+                  accentColor: const Color(0xFFD9B66F),
                   onTap: () => context.push(VisualElementsRoutes.basePath),
                 ),
                 const Divider(height: 1, indent: 60),
@@ -768,8 +777,9 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.download_rounded,
                   title: l10n.profileExportData,
+                  subtitle: '下载账号、学习与记忆相关数据',
                   accentColor: const Color(0xFF5A7FA0),
-                  onTap: () => unawaited(_exportData(context, ref)),
+                  onTap: () => context.push(UserRoutes.exportData),
                 ),
               ],
             ),
@@ -804,30 +814,6 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       );
-
-  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
-    AppFeedback.info(context, context.l10n.profileExportPreparing);
-    try {
-      final bytes = await ref.read(userRepositoryProvider).exportUserData();
-      if (bytes.isEmpty) throw Exception(context.l10n.profileExportEmptyFile);
-      final dir = await getTemporaryDirectory();
-      final now = DateTime.now();
-      final filename =
-          'sparkle_export_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.zip';
-      final file = File('${dir.path}/$filename');
-      await file.writeAsBytes(bytes, flush: true);
-      if (!context.mounted) return;
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path, mimeType: 'application/zip')],
-          subject: context.l10n.profileExportShareSubject,
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      AppFeedback.error(context, context.l10n.profileExportFailed(e.toString()));
-    }
-  }
 
   void _showLogoutDialog(
     BuildContext context,

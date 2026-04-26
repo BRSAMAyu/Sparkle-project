@@ -546,7 +546,11 @@ class NotificationPermissionStatusNotifier
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final notificationService = ref.read(notificationServiceProvider);
-      return notificationService.checkPermissionStatus();
+      final status = await notificationService.checkPermissionStatus();
+      if (!status.hasPermission) {
+        await _syncPushOptIn(enabled: false);
+      }
+      return status;
     });
   }
 
@@ -554,7 +558,23 @@ class NotificationPermissionStatusNotifier
   Future<bool> requestPermission() async {
     final notificationService = ref.read(notificationServiceProvider);
     final granted = await notificationService.requestPermission();
+    await _syncPushOptIn(enabled: granted);
     await refresh();
     return granted;
+  }
+
+  Future<void> _syncPushOptIn({required bool enabled}) async {
+    try {
+      await ref.read(apiClientProvider).put<Map<String, dynamic>>(
+        '/memory/push-settings',
+        data: <String, dynamic>{
+          'enabled': enabled,
+          'allow_commitment_follow_up': enabled,
+          'allow_engagement_recovery': enabled,
+        },
+      );
+    } catch (_) {
+      // Permission state is still useful locally when the user is offline or signed out.
+    }
   }
 }

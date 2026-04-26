@@ -1,12 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ErrorOperations galaxy refresh', () {
     late ProviderContainer container;
 
@@ -15,6 +18,9 @@ void main() {
         overrides: [
           errorBookRepositoryProvider.overrideWithValue(
             _FakeErrorBookRepository(),
+          ),
+          notificationServiceProvider.overrideWith(
+            _TestNotificationService.new,
           ),
         ],
       );
@@ -25,35 +31,27 @@ void main() {
     });
 
     test('submitReview increments galaxyRefreshTriggerProvider', () async {
-      final triggerBefore =
-          container.read(galaxyRefreshTriggerProvider);
+      final triggerBefore = container.read(galaxyRefreshTriggerProvider);
 
-      await container
-          .read(errorOperationsProvider.notifier)
-          .submitReview(
+      await container.read(errorOperationsProvider.notifier).submitReview(
             errorId: 'err-1',
             performance: 'remembered',
           );
 
-      final triggerAfter =
-          container.read(galaxyRefreshTriggerProvider);
+      final triggerAfter = container.read(galaxyRefreshTriggerProvider);
 
       expect(triggerAfter, triggerBefore + 1);
     });
 
     test('createError increments galaxyRefreshTriggerProvider', () async {
-      final triggerBefore =
-          container.read(galaxyRefreshTriggerProvider);
+      final triggerBefore = container.read(galaxyRefreshTriggerProvider);
 
-      await container
-          .read(errorOperationsProvider.notifier)
-          .createError(
+      await container.read(errorOperationsProvider.notifier).createError(
             questionText: 'What is 2+2?',
             subject: 'math',
           );
 
-      final triggerAfter =
-          container.read(galaxyRefreshTriggerProvider);
+      final triggerAfter = container.read(galaxyRefreshTriggerProvider);
 
       expect(triggerAfter, triggerBefore + 1);
     });
@@ -101,4 +99,15 @@ class _FakeErrorBookRepository extends ErrorBookRepository {
         createdAt: DateTime(2026, 4, 26),
         updatedAt: DateTime(2026, 4, 26),
       );
+}
+
+class _TestNotificationService extends NotificationService {
+  _TestNotificationService(super.ref) : super(autoInitialize: false);
+
+  @override
+  Future<NotificationPermissionStatus> checkPermissionStatus() async =>
+      NotificationPermissionStatus.denied(reason: 'test');
+
+  @override
+  Future<bool> requestPermission() async => false;
 }

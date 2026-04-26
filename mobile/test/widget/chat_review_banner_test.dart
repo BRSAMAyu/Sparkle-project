@@ -13,6 +13,7 @@ import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_r
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
@@ -109,9 +110,21 @@ class _BannerChatNotifier extends ChatNotifier {
   @override
   Future<void> warmUpConnection() async {}
 
-  @override
   Future<void> switchPlanSession(String? planId,
       {BuildContext? context}) async {}
+}
+
+class _QuietAuroraStatusNotifier extends AuroraStatusNotifier {
+  _QuietAuroraStatusNotifier() : super(_NoopApiClient());
+
+  @override
+  Future<void> refresh() async {}
+
+  @override
+  void startPeriodicRefresh() {}
+
+  @override
+  void stopPeriodicRefresh() {}
 }
 
 void main() {
@@ -137,6 +150,9 @@ void main() {
           ),
           chatProvider.overrideWith(
             (ref) => _BannerChatNotifier(_FakeChatRepository(), ref),
+          ),
+          auroraStatusProvider.overrideWith(
+            (ref) => _QuietAuroraStatusNotifier(),
           ),
         ],
         child: const MaterialApp(

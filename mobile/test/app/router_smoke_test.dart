@@ -60,6 +60,7 @@ import 'package:sparkle/features/tools/presentation/screens/tool_library_screen.
 import 'package:sparkle/features/translation/presentation/screens/translation_history_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/export_data_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/password_reset_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
@@ -294,6 +295,7 @@ void main() {
       await expectRoute('/profile/system-updates', SystemUpdatesScreen);
       await expectRoute('/profile/password-reset', PasswordResetScreen);
       await expectRoute('/profile/memory-settings', MemorySettingsScreen);
+      await expectRoute('/profile/export-data', ExportDataScreen);
       await expectRoute('/profile/sync-center', SyncCenterScreen);
       await expectRoute('/memory', MemoryPanelScreen);
       await expectRoute('/memory/settings', MemorySettingsScreen);

@@ -414,10 +414,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       PerformanceService.instance.currentTier.removeListener(tierListener);
     }
     unawaited(_milestoneController.close());
-    // Do not stop monitoring here as it might be used by other parts or singleton lifecycle
-    // But for this screen it's probably fine. Let's keep it running for now or stop it?
-    // If GalaxyScreen is the only consumer, we could stop it.
-    // GalaxyPerformanceMonitor.instance.stopMonitoring();
+    GalaxyPerformanceMonitor.instance.stopMonitoring();
     super.dispose();
   }
 

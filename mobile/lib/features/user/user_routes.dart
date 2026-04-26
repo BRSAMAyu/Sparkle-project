@@ -15,6 +15,7 @@ import 'package:sparkle/features/user/presentation/screens/admin_operations_scre
 import 'package:sparkle/features/user/presentation/screens/bgm_library_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/delete_account_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/export_data_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/guest_upgrade_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/learning_mode_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
@@ -49,6 +50,7 @@ class UserRoutes {
   static const String securityLog = '/profile/security-log';
   static const String accountSecurity = '/profile/account-security';
   static const String deleteAccount = '/profile/delete-account';
+  static const String exportData = '/profile/export-data';
   static const String guestUpgrade = '/profile/upgrade-guest';
   static const String adminOperations = '/profile/admin-operations';
   static const String taskReminders = '/profile/task-reminders';
@@ -180,6 +182,14 @@ class UserRoutes {
           pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const MemorySettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: exportData,
+          name: 'profileExportData',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: const ExportDataScreen(),
           ),
         ),
         GoRoute(

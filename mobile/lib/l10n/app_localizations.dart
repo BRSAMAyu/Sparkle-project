@@ -15212,6 +15212,12 @@ abstract class AppLocalizations {
   /// **'今日聚焦'**
   String get planDetailTodayFocus;
 
+  /// No description provided for @planDetailSprintFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺聚焦'**
+  String get planDetailSprintFocus;
+
   /// No description provided for @planDetailWhyNowErrorFix.
   ///
   /// In zh, this message translates to:
@@ -16783,6 +16789,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'同步失败'**
   String get taskExecutionSyncFailed;
+
+  /// No description provided for @taskExecutionFreeFocusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'自由专注已完成'**
+  String get taskExecutionFreeFocusCompleted;
 
   /// No description provided for @taskExecutionTapToContinue.
   ///
@@ -19143,17 +19155,461 @@ abstract class AppLocalizations {
   /// **'更新与洞察'**
   String get dashboardUpdatesInsights;
 
-  /// No description provided for @taskExecutionFreeFocusCompleted.
+  /// No description provided for @planEditTypeTitle.
   ///
   /// In zh, this message translates to:
-  /// **'本次自由专注已完成。'**
-  String get taskExecutionFreeFocusCompleted;
+  /// **'编辑{type}'**
+  String planEditTypeTitle(String type);
 
-  /// No description provided for @taskExecutionAuroraDiagnosticUnavailable.
+  /// No description provided for @planUpdated.
   ///
   /// In zh, this message translates to:
-  /// **'Aurora 实时诊断暂不可用：{error}'**
-  String taskExecutionAuroraDiagnosticUnavailable(String error);
+  /// **'计划已更新'**
+  String get planUpdated;
+
+  /// No description provided for @planGuideFillNameAndGoalFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'先填写计划名称和计划目标，再生成 AI 指南'**
+  String get planGuideFillNameAndGoalFirst;
+
+  /// No description provided for @planGuideGeneratedHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'已生成给用户看的执行指南'**
+  String get planGuideGeneratedHuman;
+
+  /// No description provided for @planGuideGeneratedAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'已生成给 AI 使用的执行版本'**
+  String get planGuideGeneratedAi;
+
+  /// No description provided for @planGuideGenerationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划指南生成失败：{error}'**
+  String planGuideGenerationFailed(String error);
+
+  /// No description provided for @planSuggestedGrowthTask1.
+  ///
+  /// In zh, this message translates to:
+  /// **'建立本周主线推进清单'**
+  String get planSuggestedGrowthTask1;
+
+  /// No description provided for @planSuggestedGrowthTask2.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成一次阶段复盘'**
+  String get planSuggestedGrowthTask2;
+
+  /// No description provided for @planSuggestedSprintTask1.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认冲刺目标与验收标准'**
+  String get planSuggestedSprintTask1;
+
+  /// No description provided for @planSuggestedSprintTask2.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成冲刺关键里程碑'**
+  String get planSuggestedSprintTask2;
+
+  /// No description provided for @planSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存计划'**
+  String get planSave;
+
+  /// No description provided for @planStepBasics.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划定位'**
+  String get planStepBasics;
+
+  /// No description provided for @planStepSchedule.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间结构'**
+  String get planStepSchedule;
+
+  /// No description provided for @planStepTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务编排'**
+  String get planStepTasks;
+
+  /// No description provided for @planStepGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划边界与指南'**
+  String get planStepGuide;
+
+  /// No description provided for @planStepReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认预览'**
+  String get planStepReview;
+
+  /// No description provided for @planAiVersionCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 版本已复制'**
+  String get planAiVersionCopied;
+
+  /// No description provided for @planBasicsDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'先定义这是一张真正的计划卡，而不是普通任务。'**
+  String get planBasicsDescription;
+
+  /// No description provided for @planBasicsNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：6 周英语口语提升 / 期中冲刺收束'**
+  String get planBasicsNameHint;
+
+  /// No description provided for @planBasicsNameRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先填写计划名称'**
+  String get planBasicsNameRequired;
+
+  /// No description provided for @planBasicsSubjectLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题方向'**
+  String get planBasicsSubjectLabel;
+
+  /// No description provided for @planBasicsSubjectHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'英语、Flutter、考研数学、论文阅读...'**
+  String get planBasicsSubjectHint;
+
+  /// No description provided for @planBasicsGoalLabelGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'长期目标'**
+  String get planBasicsGoalLabelGrowth;
+
+  /// No description provided for @planBasicsGoalLabelSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺目标'**
+  String get planBasicsGoalLabelSprint;
+
+  /// No description provided for @planBasicsGoalHintGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'写清楚这个成长计划最终想形成什么能力、习惯或成果。'**
+  String get planBasicsGoalHintGrowth;
+
+  /// No description provided for @planBasicsGoalHintSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'写清楚这次冲刺的结果、验收标准和不能偏离的主线。'**
+  String get planBasicsGoalHintSprint;
+
+  /// No description provided for @planBasicsGoalRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请写出这张计划卡的目标'**
+  String get planBasicsGoalRequired;
+
+  /// No description provided for @planBasicsPriorityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划优先级'**
+  String get planBasicsPriorityLabel;
+
+  /// No description provided for @planPriorityNormalValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'正常'**
+  String get planPriorityNormalValue;
+
+  /// No description provided for @planPriorityCriticalValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键'**
+  String get planPriorityCriticalValue;
+
+  /// No description provided for @planScheduleDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'把持续时间、每日投入和提醒节奏一次性定清楚。'**
+  String get planScheduleDescription;
+
+  /// No description provided for @planScheduleDailyMinutesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日可投入时长'**
+  String get planScheduleDailyMinutesLabel;
+
+  /// No description provided for @planScheduleMinutesUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String planScheduleMinutesUnit(int minutes);
+
+  /// No description provided for @planScheduleTotalHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'总预估工时 {hours} 小时'**
+  String planScheduleTotalHours(String hours);
+
+  /// No description provided for @planScheduleTargetDateUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未设置'**
+  String get planScheduleTargetDateUnset;
+
+  /// No description provided for @planScheduleReminderTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日提醒时间'**
+  String get planScheduleReminderTime;
+
+  /// No description provided for @planScheduleStageLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前计划阶段'**
+  String get planScheduleStageLabel;
+
+  /// No description provided for @planScheduleStageSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺推进'**
+  String get planScheduleStageSprint;
+
+  /// No description provided for @planScheduleStageDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'日常执行'**
+  String get planScheduleStageDaily;
+
+  /// No description provided for @planScheduleStageReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘调优'**
+  String get planScheduleStageReview;
+
+  /// No description provided for @planScheduleStagePaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时暂停'**
+  String get planScheduleStagePaused;
+
+  /// No description provided for @planScheduleChipWeekday.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作日推进，周末复盘'**
+  String get planScheduleChipWeekday;
+
+  /// No description provided for @planScheduleChipMorning.
+  ///
+  /// In zh, this message translates to:
+  /// **'早晨启动，晚上收束'**
+  String get planScheduleChipMorning;
+
+  /// No description provided for @planScheduleChipAfternoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'午后主攻，夜间轻复盘'**
+  String get planScheduleChipAfternoon;
+
+  /// No description provided for @planScheduleRhythmLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'节奏说明'**
+  String get planScheduleRhythmLabel;
+
+  /// No description provided for @planScheduleRhythmHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：周一到周五推进，周六复盘，周日补缺'**
+  String get planScheduleRhythmHint;
+
+  /// No description provided for @planTasksDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。'**
+  String get planTasksDescription;
+
+  /// No description provided for @planTasksBlueprintLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务编排说明'**
+  String get planTasksBlueprintLabel;
+
+  /// No description provided for @planTasksBlueprintHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：先搭框架，再每天推进主线，最后统一复盘补漏。'**
+  String get planTasksBlueprintHint;
+
+  /// No description provided for @planTasksRefExisting.
+  ///
+  /// In zh, this message translates to:
+  /// **'参考已有任务'**
+  String get planTasksRefExisting;
+
+  /// No description provided for @planTasksMinutesDifficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟 · 难度 {difficulty}'**
+  String planTasksMinutesDifficulty(int minutes, int difficulty);
+
+  /// No description provided for @planTasksCopyToPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制进计划'**
+  String get planTasksCopyToPlan;
+
+  /// No description provided for @planTasksNewTaskLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增计划任务'**
+  String get planTasksNewTaskLabel;
+
+  /// No description provided for @planTasksNewTaskHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：完成一轮章节梳理'**
+  String get planTasksNewTaskHint;
+
+  /// No description provided for @planTasksDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'时长'**
+  String get planTasksDurationLabel;
+
+  /// No description provided for @planTasksAddToPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入计划任务'**
+  String get planTasksAddToPlan;
+
+  /// No description provided for @planTasksEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前还没有计划任务'**
+  String get planTasksEmpty;
+
+  /// No description provided for @planGuideScopeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划边界与注意事项'**
+  String get planGuideScopeLabel;
+
+  /// No description provided for @planGuideScopeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。'**
+  String get planGuideScopeHint;
+
+  /// No description provided for @planGuidePerspectiveLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务指南视角'**
+  String get planGuidePerspectiveLabel;
+
+  /// No description provided for @planGuideForHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'给自己看'**
+  String get planGuideForHuman;
+
+  /// No description provided for @planGuideForAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'给 AI 用'**
+  String get planGuideForAi;
+
+  /// No description provided for @planGuideHumanInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。'**
+  String get planGuideHumanInfo;
+
+  /// No description provided for @planGuideAiInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。'**
+  String get planGuideAiInfo;
+
+  /// No description provided for @planGuideHumanTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户版执行指南'**
+  String get planGuideHumanTitle;
+
+  /// No description provided for @planGuideAiTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'给 AI 的执行版本'**
+  String get planGuideAiTitle;
+
+  /// No description provided for @planGuideGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成中'**
+  String get planGuideGenerating;
+
+  /// No description provided for @planGuideGenerateHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成用户版'**
+  String get planGuideGenerateHuman;
+
+  /// No description provided for @planGuideGenerateAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成 AI 版'**
+  String get planGuideGenerateAi;
+
+  /// No description provided for @planGuideHumanHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。'**
+  String get planGuideHumanHint;
+
+  /// No description provided for @planGuideAiEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。'**
+  String get planGuideAiEmpty;
+
+  /// No description provided for @planGuideCopyAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制 AI 版'**
+  String get planGuideCopyAi;
+
+  /// No description provided for @planReviewSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{planType} · {minutes} 分钟/天 · {hours} 小时'**
+  String planReviewSummary(String planType, int minutes, String hours);
+
+  /// No description provided for @planReviewEditInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存后会更新计划描述，并为新增草案创建新的计划任务。'**
+  String get planReviewEditInfo;
+
+  /// No description provided for @planReviewCreateInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建后会生成一张更完整的计划卡，并同步创建计划任务。'**
+  String get planReviewCreateInfo;
+
+  /// No description provided for @planReviewFinalDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'最终写入的计划描述'**
+  String get planReviewFinalDescription;
 
   /// No description provided for @taskExecutionChatAboutStuckPoint.
   ///
@@ -19226,6 +19682,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'卡住了?'**
   String get taskExecutionStuckLabel;
+
+  /// No description provided for @taskExecutionAuroraDiagnosticUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 诊断暂时不可用：{error}'**
+  String taskExecutionAuroraDiagnosticUnavailable(String error);
 
   /// No description provided for @taskExecutionResetTimer.
   ///
@@ -19682,6 +20144,217 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'用户取回任务'**
   String get taskExecutionUserRetrievedTask;
+
+  /// No description provided for @planDetailTaskLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载任务失败: {error}'**
+  String planDetailTaskLoadFailed(Object error);
+
+  /// No description provided for @planDetailNoExternalTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有可添加的外部任务'**
+  String get planDetailNoExternalTasks;
+
+  /// No description provided for @planDetailAddExistingTaskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'将已有任务添加到本计划'**
+  String get planDetailAddExistingTaskTitle;
+
+  /// No description provided for @planDetailTaskUnassigned.
+  ///
+  /// In zh, this message translates to:
+  /// **'未分配'**
+  String get planDetailTaskUnassigned;
+
+  /// No description provided for @planDetailTaskInAnotherPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前在其他计划中'**
+  String get planDetailTaskInAnotherPlan;
+
+  /// No description provided for @planDetailGroupUnassigned.
+  ///
+  /// In zh, this message translates to:
+  /// **'未分配的任务'**
+  String get planDetailGroupUnassigned;
+
+  /// No description provided for @planDetailGroupOtherPlans.
+  ///
+  /// In zh, this message translates to:
+  /// **'来自其他计划的任务'**
+  String get planDetailGroupOtherPlans;
+
+  /// No description provided for @planDetailTaskAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务已添加到计划'**
+  String get planDetailTaskAdded;
+
+  /// No description provided for @planDetailAddTaskFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加任务失败: {error}'**
+  String planDetailAddTaskFailed(Object error);
+
+  /// No description provided for @planDetailDayLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {day} 天'**
+  String planDetailDayLabel(int day);
+
+  /// No description provided for @planDetailWeightedProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'加权进度 {percent}%'**
+  String planDetailWeightedProgress(int percent);
+
+  /// No description provided for @planDetailCreatePhaseTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建阶段'**
+  String get planDetailCreatePhaseTitle;
+
+  /// No description provided for @planDetailPhaseNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段名称'**
+  String get planDetailPhaseNameLabel;
+
+  /// No description provided for @planDetailPhaseNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础 / 构建 / 复习'**
+  String get planDetailPhaseNameHint;
+
+  /// No description provided for @planDetailPhaseCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段已创建'**
+  String get planDetailPhaseCreated;
+
+  /// No description provided for @planDetailCreatePhaseFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建阶段失败: {error}'**
+  String planDetailCreatePhaseFailed(Object error);
+
+  /// No description provided for @planDetailPhaseActivated.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段已激活'**
+  String get planDetailPhaseActivated;
+
+  /// No description provided for @planDetailActivatePhaseFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'激活失败: {error}'**
+  String planDetailActivatePhaseFailed(Object error);
+
+  /// No description provided for @planDetailPhaseNeedsFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'此阶段需要反馈后才能推进'**
+  String get planDetailPhaseNeedsFeedback;
+
+  /// No description provided for @planDetailPhaseCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段已完成'**
+  String get planDetailPhaseCompleted;
+
+  /// No description provided for @planDetailCompletePhaseFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成阶段失败: {error}'**
+  String planDetailCompletePhaseFailed(Object error);
+
+  /// No description provided for @planDetailPhaseFeedbackTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段反馈 · {title}'**
+  String planDetailPhaseFeedbackTitle(Object title);
+
+  /// No description provided for @planDetailPhaseAlignmentQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'你觉得这个阶段的契合度如何？'**
+  String get planDetailPhaseAlignmentQuestion;
+
+  /// No description provided for @planDetailPhaseReflectionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'反思'**
+  String get planDetailPhaseReflectionLabel;
+
+  /// No description provided for @planDetailPhaseReflectionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'哪些做得好，哪些失败了，发生了什么变化？'**
+  String get planDetailPhaseReflectionHint;
+
+  /// No description provided for @planDetailPhaseBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'我在这个阶段遇到了阻碍'**
+  String get planDetailPhaseBlocked;
+
+  /// No description provided for @planDetailPhaseLifeChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的生活状况发生了变化'**
+  String get planDetailPhaseLifeChanged;
+
+  /// No description provided for @planDetailPhaseRequestReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求 compass 审阅'**
+  String get planDetailPhaseRequestReview;
+
+  /// No description provided for @planDetailPhaseActivate.
+  ///
+  /// In zh, this message translates to:
+  /// **'激活'**
+  String get planDetailPhaseActivate;
+
+  /// No description provided for @planDetailPhaseComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get planDetailPhaseComplete;
+
+  /// No description provided for @planDetailPhaseFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈'**
+  String get planDetailPhaseFeedback;
+
+  /// No description provided for @planDetailFeedbackSavedWithReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已保存，已建议 compass 审阅'**
+  String get planDetailFeedbackSavedWithReview;
+
+  /// No description provided for @planDetailFeedbackSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已保存'**
+  String get planDetailFeedbackSaved;
+
+  /// No description provided for @planDetailSubmitFeedbackFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交反馈失败: {error}'**
+  String planDetailSubmitFeedbackFailed(Object error);
+
+  /// No description provided for @planDetailPhaseStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务'**
+  String planDetailPhaseStats(
+      int progress, int completed, int occurrences, int tasks);
 }
 
 class _AppLocalizationsDelegate

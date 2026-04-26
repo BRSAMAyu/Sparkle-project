@@ -383,7 +383,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       });
     }
 
-    final graphChanged = previous == null ||
+    final graphChanged = _graph == null ||
+        previous == null ||
+        previous.isLoading != next.isLoading ||
         !identical(previous.nodes, next.nodes) ||
         !identical(previous.edges, next.edges) ||
         previous.userFlameIntensity != next.userFlameIntensity;
@@ -414,7 +416,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _attachRouteRefreshListener() {
-    final router = GoRouter.of(context);
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      _router?.routeInformationProvider.removeListener(
+        _handleRouteVisibilityChanged,
+      );
+      _router = null;
+      _lastObservedRoutePath = null;
+      return;
+    }
     if (identical(_router, router)) {
       return;
     }
@@ -2566,7 +2576,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverFillRemaining(
-                hasScrollBody: false,
+                hasScrollBody: true,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     _updateViewportSize(

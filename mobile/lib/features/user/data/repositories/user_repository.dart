@@ -34,21 +34,15 @@ class UserRepository {
   }
 
   /// 更新推送偏好
-  Future<UserModel> updatePushPreferences(PushPreferences prefs) async {
+  Future<void> updatePushPreferences(PushPreferences prefs) async {
     if (DemoDataService.isDemoMode) {
-      return DemoDataService().demoUser; // Mock update
+      return;
     }
     try {
-      // Assuming a dedicated endpoint or patching the user profile
-      final response = await _apiClient.put<Map<String, dynamic>>(
+      await _apiClient.put<Map<String, dynamic>>(
         '/users/me/push-preference',
         data: prefs.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(
-        response.data,
-        action: 'updatePushPreferences',
-      );
-      return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
     }

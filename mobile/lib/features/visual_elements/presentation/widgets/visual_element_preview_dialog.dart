@@ -103,6 +103,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
       parent: _crossfadeController,
       curve: Curves.easeInOut,
     );
+    _crossfadeController.value = 1.0;
   }
 
   @override
@@ -120,6 +121,15 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
     Future.delayed(const Duration(milliseconds: 300), widget.onEquip);
   }
 
+  void _togglePreviewMode() {
+    if (_isPreviewing) {
+      _crossfadeController.reverse(from: 1.0);
+    } else {
+      _crossfadeController.forward(from: 0.0);
+    }
+    setState(() => _isPreviewing = !_isPreviewing);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -129,8 +139,13 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
       children: [
         Container(
           decoration: BoxDecoration(
-            color: DS.surfacePrimary,
+            color: _InkStagePalette.moonless,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(
+              top: BorderSide(
+                color: colors.border.withValues(alpha: 0.36),
+              ),
+            ),
           ),
           child: Column(
             children: [
@@ -140,7 +155,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: DS.neutral300,
+                  color: _InkStagePalette.textSecondary.withValues(alpha: 0.38),
                   borderRadius: DS.borderRadiusFull,
                 ),
               ),
@@ -160,10 +175,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                           colors: colors,
                           isPreviewing: _isPreviewing,
                           crossfadeAnimation: _crossfadeAnimation,
-                          onTogglePreview: () {
-                            _crossfadeController.forward(from: 0);
-                            setState(() => _isPreviewing = !_isPreviewing);
-                          },
+                          onTogglePreview: _togglePreviewMode,
                         ),
                       ),
                     ),
@@ -189,7 +201,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                         style: TextStyle(
                                           fontSize: DS.fontSizeLg,
                                           fontWeight: DS.fontWeightBold,
-                                          color: DS.textPrimary,
+                                          color: _InkStagePalette.textPrimary,
                                           height: 1.15,
                                         ),
                                         maxLines: 4,
@@ -213,7 +225,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                         style: TextStyle(
                                           fontSize: DS.fontSizeLg,
                                           fontWeight: DS.fontWeightBold,
-                                          color: DS.textPrimary,
+                                          color: _InkStagePalette.textPrimary,
                                           height: 1.15,
                                         ),
                                         maxLines: 3,
@@ -238,7 +250,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                   widget.element.description!,
                                   style: TextStyle(
                                     fontSize: DS.fontSizeSm,
-                                    color: DS.textSecondary,
+                                    color: _InkStagePalette.textSecondary,
                                     height: 1.5,
                                   ),
                                 ),
@@ -267,7 +279,9 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                             ),
 
                             const SizedBox(height: DS.spacing16),
-                            const Divider(),
+                            Divider(
+                              color: _InkStagePalette.hairline,
+                            ),
                             const SizedBox(height: DS.spacing16),
 
                             // 详细信息
@@ -364,9 +378,9 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           MediaQuery.of(context).padding.bottom + DS.spacing12,
         ),
         decoration: BoxDecoration(
-          color: DS.surfacePrimary,
+          color: _InkStagePalette.moonless,
           border: Border(
-            top: BorderSide(color: DS.border.withValues(alpha: 0.5)),
+            top: BorderSide(color: _InkStagePalette.hairline),
           ),
         ),
         child: SafeArea(
@@ -421,8 +435,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: DS.textSecondary,
-            side: BorderSide(color: DS.border),
+            foregroundColor: _InkStagePalette.textSecondary,
+            side: BorderSide(color: _InkStagePalette.hairline),
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -446,8 +460,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: DS.brandPrimary,
-            foregroundColor: DS.textOnPrimary,
+            backgroundColor: _InkStagePalette.gold,
+            foregroundColor: _InkStagePalette.moonless,
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -467,8 +481,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: DS.textSecondary,
-            side: BorderSide(color: DS.border),
+            foregroundColor: _InkStagePalette.textSecondary,
+            side: BorderSide(color: _InkStagePalette.hairline),
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -488,8 +502,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: DS.surfaceTertiary,
-            foregroundColor: DS.textTertiary,
+            backgroundColor: _InkStagePalette.panel,
+            foregroundColor: _InkStagePalette.textSecondary,
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -576,27 +590,27 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
     switch (rarity) {
       case VisualElementRarity.common:
         return _RarityColors(
-          background: DS.rarityCommonBg,
-          border: DS.rarityCommon,
-          text: DS.rarityCommonText,
+          background: const Color(0xFF102436),
+          border: const Color(0xFF668696),
+          text: const Color(0xFFC6D6DB),
         );
       case VisualElementRarity.rare:
         return _RarityColors(
-          background: DS.rarityRareBg,
-          border: DS.rarityRare,
-          text: DS.rarityRareText,
+          background: const Color(0xFF0C2A37),
+          border: const Color(0xFF58C0D7),
+          text: const Color(0xFFC6F2F7),
         );
       case VisualElementRarity.epic:
         return _RarityColors(
-          background: DS.rarityEpicBg,
-          border: DS.rarityEpic,
-          text: DS.rarityEpicText,
+          background: const Color(0xFF17253A),
+          border: const Color(0xFF91A9FF),
+          text: const Color(0xFFDCE5FF),
         );
       case VisualElementRarity.legendary:
         return _RarityColors(
-          background: DS.rarityLegendaryBg,
-          border: DS.rarityLegendary,
-          text: DS.rarityLegendaryText,
+          background: const Color(0xFF312813),
+          border: const Color(0xFFD9B66F),
+          text: const Color(0xFFFFE7A8),
         );
     }
   }
@@ -659,9 +673,9 @@ class _MetaChip extends StatelessWidget {
           vertical: DS.spacing6,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withValues(alpha: 0.13),
           borderRadius: DS.borderRadiusFull,
-          border: Border.all(color: color.withValues(alpha: 0.22)),
+          border: Border.all(color: color.withValues(alpha: 0.24)),
         ),
         child: Text(
           label,
@@ -669,9 +683,237 @@ class _MetaChip extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: color,
+            color: Color.lerp(color, _InkStagePalette.textPrimary, 0.12),
             fontWeight: DS.fontWeightMedium,
           ),
+        ),
+      );
+}
+
+class _StageChip extends StatelessWidget {
+  const _StageChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: DS.borderRadiusFull,
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing10,
+              vertical: DS.spacing6,
+            ),
+            decoration: BoxDecoration(
+              color: _InkStagePalette.moonless.withValues(alpha: 0.58),
+              borderRadius: DS.borderRadiusFull,
+              border: Border.all(color: color.withValues(alpha: 0.28)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: DS.iconSizeXs, color: color),
+                const SizedBox(width: DS.spacing4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    color:
+                        Color.lerp(color, _InkStagePalette.textPrimary, 0.18),
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _PreviewSurfaceMock extends StatelessWidget {
+  const _PreviewSurfaceMock({
+    required this.element,
+    required this.colors,
+    required this.isPreviewing,
+  });
+
+  final VisualElementModel element;
+  final _RarityColors colors;
+  final bool isPreviewing;
+
+  @override
+  Widget build(BuildContext context) {
+    final compactStage = MediaQuery.sizeOf(context).width < 380;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            compactStage ? DS.spacing12 : DS.spacing18,
+            compactStage ? 58 : 72,
+            compactStage ? DS.spacing12 : DS.spacing18,
+            compactStage ? DS.spacing12 : DS.spacing18,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Spacer(),
+              ClipRRect(
+                borderRadius: DS.borderRadius16,
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(
+                      compactStage ? DS.spacing10 : DS.spacing14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _InkStagePalette.moonless.withValues(alpha: 0.52),
+                      borderRadius: DS.borderRadius16,
+                      border: Border.all(
+                        color: colors.border.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 320;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: compactStage ? 34 : 42,
+                                  height: compactStage ? 34 : 42,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        colors.border.withValues(alpha: 0.85),
+                                        colors.border.withValues(alpha: 0.16),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                    border: Border.all(
+                                      color:
+                                          colors.text.withValues(alpha: 0.42),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.person_outline_rounded,
+                                    color: _InkStagePalette.textPrimary,
+                                    size: DS.iconSizeSm,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width:
+                                      compactStage ? DS.spacing8 : DS.spacing10,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        element.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: DS.fontSizeSm,
+                                          fontWeight: DS.fontWeightBold,
+                                          color: _InkStagePalette.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: DS.spacing4),
+                                      Text(
+                                        element.affectedSurfaceLabels
+                                            .take(2)
+                                            .join(' · '),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: DS.fontSizeXs,
+                                          color: _InkStagePalette.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(
+                              height: compactStage ? DS.spacing8 : DS.spacing12,
+                            ),
+                            Wrap(
+                              spacing: DS.spacing8,
+                              runSpacing: DS.spacing8,
+                              children: [
+                                _surfacePill(Icons.home_rounded, '主页', colors),
+                                _surfacePill(
+                                  Icons.account_tree_rounded,
+                                  '星图',
+                                  colors,
+                                ),
+                                if (!compact && !compactStage)
+                                  _surfacePill(
+                                    Icons.emoji_events_rounded,
+                                    '成就',
+                                    colors,
+                                  ),
+                                _surfacePill(
+                                  isPreviewing
+                                      ? Icons.flash_on_rounded
+                                      : Icons.pause_circle_outline_rounded,
+                                  isPreviewing ? '即时预览' : '当前配置',
+                                  colors,
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _surfacePill(IconData icon, String label, _RarityColors colors) =>
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: colors.border.withValues(alpha: 0.13),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: colors.border.withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: DS.iconSizeXs, color: colors.text),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: colors.text,
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ],
         ),
       );
 }
@@ -728,11 +970,30 @@ class _PreviewAreaState extends State<_PreviewArea>
     final previewConfig = _resolvePreviewConfig();
 
     return Container(
-      height: 240,
+      height: MediaQuery.sizeOf(context).width < 380 ? 300 : 340,
       margin: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: widget.colors.border, width: 2),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            widget.colors.border.withValues(alpha: 0.24),
+            _InkStagePalette.panel,
+            _InkStagePalette.surface,
+          ],
+        ),
+        border: Border.all(
+          color: widget.colors.border.withValues(alpha: 0.42),
+          width: 1.4,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: widget.colors.border.withValues(alpha: 0.14),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
       ),
       child: Stack(
         children: [
@@ -768,7 +1029,7 @@ class _PreviewAreaState extends State<_PreviewArea>
                 child: Container(
                   padding: const EdgeInsets.all(DS.spacing8),
                   decoration: BoxDecoration(
-                    color: DS.surfacePrimary.withValues(alpha: 0.9),
+                    color: _InkStagePalette.moonless.withValues(alpha: 0.72),
                     borderRadius: DS.borderRadius8,
                   ),
                   child: Icon(
@@ -776,7 +1037,7 @@ class _PreviewAreaState extends State<_PreviewArea>
                         ? Icons.visibility_off
                         : Icons.visibility,
                     size: DS.iconSizeSm,
-                    color: DS.textSecondary,
+                    color: _InkStagePalette.textSecondary,
                   ),
                 ),
               ),
@@ -887,7 +1148,7 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
     final baseConfig = _resolvePreviewConfig(false);
 
     return Container(
-      height: 240,
+      height: MediaQuery.sizeOf(context).width < 380 ? 300 : 340,
       margin: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         borderRadius: DS.borderRadius16,
@@ -914,6 +1175,51 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                   ),
                   child: _buildPreviewLayers(previewConfig),
                 ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          _InkStagePalette.moonless.withValues(alpha: 0.10),
+                          _InkStagePalette.moonless.withValues(alpha: 0.42),
+                        ],
+                        stops: const [0.0, 0.58, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                _PreviewSurfaceMock(
+                  element: widget.element,
+                  colors: widget.colors,
+                  isPreviewing: widget.isPreviewing,
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: DS.spacing12,
+            top: DS.spacing12,
+            right: DS.spacing12,
+            child: Row(
+              children: [
+                _StageChip(
+                  icon: widget.isPreviewing
+                      ? Icons.auto_awesome_rounded
+                      : Icons.dashboard_customize_outlined,
+                  label: widget.isPreviewing ? '正在体验' : '当前外观',
+                  color: widget.isPreviewing
+                      ? widget.colors.border
+                      : _InkStagePalette.textSecondary,
+                ),
+                const Spacer(),
+                _StageChip(
+                  icon: Icons.touch_app_rounded,
+                  label: '点按切换',
+                  color: _InkStagePalette.gold,
+                ),
               ],
             ),
           ),
@@ -926,17 +1232,37 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                 onTap: widget.onTogglePreview,
                 borderRadius: DS.borderRadius8,
                 child: Container(
-                  padding: const EdgeInsets.all(DS.spacing8),
-                  decoration: BoxDecoration(
-                    color: DS.surfacePrimary.withValues(alpha: 0.9),
-                    borderRadius: DS.borderRadius8,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing8,
                   ),
-                  child: Icon(
-                    widget.isPreviewing
-                        ? Icons.visibility_off
-                        : Icons.visibility,
-                    size: DS.iconSizeSm,
-                    color: DS.textSecondary,
+                  decoration: BoxDecoration(
+                    color: _InkStagePalette.moonless.withValues(alpha: 0.72),
+                    borderRadius: DS.borderRadiusFull,
+                    border: Border.all(
+                      color: widget.colors.border.withValues(alpha: 0.32),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        widget.isPreviewing
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        size: DS.iconSizeSm,
+                        color: _InkStagePalette.textPrimary,
+                      ),
+                      const SizedBox(width: DS.spacing6),
+                      Text(
+                        widget.isPreviewing ? '查看当前' : '体验此装扮',
+                        style: const TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: _InkStagePalette.textPrimary,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -953,11 +1279,15 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
           BackgroundLayer(
             element: config.equippedBackground,
             mainAnimation: _mainController,
+            tint: _InkStagePalette.moonless,
+            tintOpacity: 0.06,
           ),
           ParticleLayer(
             element: config.equippedParticle,
             particleAnimation: _particleController,
             mainAnimation: _mainController,
+            density: 1.25,
+            speedMultiplier: 0.9,
           ),
           EffectLayer(
             element: config.equippedEffect,
@@ -1030,9 +1360,9 @@ class _RarityBadge extends StatelessWidget {
           vertical: DS.spacing6,
         ),
         decoration: BoxDecoration(
-          color: colors.background,
+          color: colors.background.withValues(alpha: 0.92),
           borderRadius: DS.borderRadius8,
-          border: Border.all(color: colors.border),
+          border: Border.all(color: colors.border.withValues(alpha: 0.55)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1104,7 +1434,7 @@ class _InfoRow extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
-                  color: DS.textSecondary,
+                  color: _InkStagePalette.textSecondary,
                 ),
               ),
             ),
@@ -1118,7 +1448,7 @@ class _InfoRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightMedium,
-                  color: DS.textPrimary,
+                  color: _InkStagePalette.textPrimary,
                 ),
               ),
             ),
@@ -1141,16 +1471,16 @@ class _UnlockRequirement extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
+          color: _InkStagePalette.panel,
           borderRadius: DS.borderRadius12,
-          border: Border.all(color: DS.border.withValues(alpha: 0.5)),
+          border: Border.all(color: _InkStagePalette.hairline),
         ),
         child: Row(
           children: [
             Icon(
               Icons.lock_outline,
               size: DS.iconSizeSm,
-              color: DS.textTertiary,
+              color: _InkStagePalette.textSecondary,
             ),
             const SizedBox(width: DS.spacing12),
             Expanded(
@@ -1158,7 +1488,7 @@ class _UnlockRequirement extends StatelessWidget {
                 _getRequirementText(),
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
-                  color: DS.textSecondary,
+                  color: _InkStagePalette.textSecondary,
                 ),
               ),
             ),
@@ -1189,6 +1519,16 @@ class _UnlockRequirement extends StatelessWidget {
         return l10n.visualElementUnlockHintSeason;
     }
   }
+}
+
+class _InkStagePalette {
+  static const Color moonless = Color(0xFF050A12);
+  static const Color surface = Color(0xFF0B1D2C);
+  static const Color panel = Color(0xFF10283A);
+  static const Color gold = Color(0xFFD9B66F);
+  static const Color textPrimary = Color(0xFFEAF3F5);
+  static const Color textSecondary = Color(0xFF9CB4BD);
+  static const Color hairline = Color(0x334F7D8F);
 }
 
 class _RarityColors {

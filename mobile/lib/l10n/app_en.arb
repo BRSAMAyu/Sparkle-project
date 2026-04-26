@@ -3131,6 +3131,7 @@
     }
   },
   "planDetailTodayFocus": "Today's Focus",
+  "planDetailSprintFocus": "Sprint Focus",
   "planDetailWhyNowErrorFix": "Fix this error now to prevent later tasks from being held back by the same gap.",
   "planDetailWhyNowLearning": "Handle this now to turn today's learning progress into a tangible output.",
   "planDetailWhyNowOcr": "Process materials now to turn available info into an entry point for upcoming tasks.",
@@ -3393,6 +3394,7 @@
   "taskExecutionStartFailed": "{arg0}",
   "taskExecutionStartNow": "Task Execution Start Now",
   "taskExecutionSyncFailed": "Task Execution Sync Failed",
+  "taskExecutionFreeFocusCompleted": "Free focus completed",
   "taskExecutionTapToContinue": "Task Execution Tap To Continue",
   "taskExecutionTimerLabel": "Task Execution Timer Label",
   "taskExitCancelStep1": "Task Exit Cancel Step1",
@@ -4185,10 +4187,7 @@
   },
   "planReviewEditInfo": "Saving will update the plan description and create new tasks for added drafts.",
   "planReviewCreateInfo": "Creating will generate a more complete plan card and create plan tasks.",
-  "planReviewFinalDescription": "Final plan description"
-}
-    }
-  },
+  "planReviewFinalDescription": "Final plan description",
   "taskExecutionChatAboutStuckPoint": "Chat with Sparkle about this blocker",
   "taskExecutionSentToAurora": "Sent to Aurora",
   "taskExecutionStuckPromptIntro": "I'm stuck on this task and would like to break down the specific blockers with you.",
@@ -4243,6 +4242,14 @@
   "taskExecutionStuckClarifyPrompt": "Please ask me one key clarifying question, then narrow the next step to something I can start within 5 minutes.",
   "taskExecutionStuckTooltip": "Stuck?",
   "taskExecutionStuckLabel": "Stuck?",
+  "taskExecutionAuroraDiagnosticUnavailable": "Aurora diagnostic is temporarily unavailable: {error}",
+  "@taskExecutionAuroraDiagnosticUnavailable": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "taskExecutionResetTimer": "Reset",
   "taskExecutionAiHandoffFailed": "Failed to start AI execution",
   "taskExecutionAiCompleted": "AI completed this execution",
@@ -4401,5 +4408,105 @@
   "taskExecutionRejectAdditionalNote": "Additional notes",
   "taskExecutionRejectNoteHint": "E.g., missing source, too assertive, I want to keep my own wording",
   "taskExecutionRejectConfirm": "Confirm rejection",
-  "taskExecutionUserRetrievedTask": "User retrieved task"
+  "taskExecutionUserRetrievedTask": "User retrieved task",
+  "planDetailTaskLoadFailed": "Failed to load tasks: {error}",
+  "@planDetailTaskLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailNoExternalTasks": "No unassigned or external tasks available",
+  "planDetailAddExistingTaskTitle": "Add existing task to this plan",
+  "planDetailTaskUnassigned": "Unassigned",
+  "planDetailTaskInAnotherPlan": "Currently in another plan",
+  "planDetailGroupUnassigned": "Unassigned tasks",
+  "planDetailGroupOtherPlans": "Tasks from other plans",
+  "planDetailTaskAdded": "Task added to plan",
+  "planDetailAddTaskFailed": "Add task failed: {error}",
+  "@planDetailAddTaskFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailDayLabel": "Day {day}",
+  "@planDetailDayLabel": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "planDetailWeightedProgress": "Weighted progress {percent}%",
+  "@planDetailWeightedProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "planDetailCreatePhaseTitle": "Create phase",
+  "planDetailPhaseNameLabel": "Phase name",
+  "planDetailPhaseNameHint": "Foundation / Build / Review",
+  "planDetailPhaseCreated": "Phase created",
+  "planDetailCreatePhaseFailed": "Create phase failed: {error}",
+  "@planDetailCreatePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseActivated": "Phase activated",
+  "planDetailActivatePhaseFailed": "Activate failed: {error}",
+  "@planDetailActivatePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseNeedsFeedback": "This phase needs feedback before advancing",
+  "planDetailPhaseCompleted": "Phase completed",
+  "planDetailCompletePhaseFailed": "Complete phase failed: {error}",
+  "@planDetailCompletePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseFeedbackTitle": "Phase feedback · {title}",
+  "@planDetailPhaseFeedbackTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "planDetailPhaseAlignmentQuestion": "How aligned did this phase feel?",
+  "planDetailPhaseReflectionLabel": "Reflection",
+  "planDetailPhaseReflectionHint": "What worked, what failed, what changed?",
+  "planDetailPhaseBlocked": "I felt blocked this phase",
+  "planDetailPhaseLifeChanged": "My life conditions changed",
+  "planDetailPhaseRequestReview": "Request compass review",
+  "planDetailPhaseActivate": "Activate",
+  "planDetailPhaseComplete": "Complete",
+  "planDetailPhaseFeedback": "Feedback",
+  "planDetailFeedbackSavedWithReview": "Feedback saved, compass review suggested",
+  "planDetailFeedbackSaved": "Feedback saved",
+  "planDetailSubmitFeedbackFailed": "Submit feedback failed: {error}",
+  "@planDetailSubmitFeedbackFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseStats": "{progress}% · {completed}/{occurrences} occurrences · {tasks} tasks",
+  "@planDetailPhaseStats": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      },
+      "completed": {
+        "type": "int"
+      },
+      "occurrences": {
+        "type": "int"
+      },
+      "tasks": {
+        "type": "int"
+      }
+    }
+  }
 }

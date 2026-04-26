@@ -8185,6 +8185,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planDetailTodayFocus => '今日聚焦';
 
   @override
+  String get planDetailSprintFocus => '冲刺聚焦';
+
+  @override
   String get planDetailWhyNowErrorFix => '现在修这个错因，能避免后面的任务被同一个漏洞反复拖住。';
 
   @override
@@ -9027,6 +9030,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskExecutionSyncFailed => '同步失败';
+
+  @override
+  String get taskExecutionFreeFocusCompleted => '自由专注已完成';
 
   @override
   String get taskExecutionTapToContinue => '点击继续';
@@ -10331,12 +10337,244 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dashboardUpdatesInsights => '更新与洞察';
 
   @override
-  String get taskExecutionFreeFocusCompleted => '本次自由专注已完成。';
+  String planEditTypeTitle(String type) {
+    return '编辑$type';
+  }
 
   @override
-  String taskExecutionAuroraDiagnosticUnavailable(String error) {
-    return 'Aurora 实时诊断暂不可用：$error';
+  String get planUpdated => '计划已更新';
+
+  @override
+  String get planGuideFillNameAndGoalFirst => '先填写计划名称和计划目标，再生成 AI 指南';
+
+  @override
+  String get planGuideGeneratedHuman => '已生成给用户看的执行指南';
+
+  @override
+  String get planGuideGeneratedAi => '已生成给 AI 使用的执行版本';
+
+  @override
+  String planGuideGenerationFailed(String error) {
+    return '计划指南生成失败：$error';
   }
+
+  @override
+  String get planSuggestedGrowthTask1 => '建立本周主线推进清单';
+
+  @override
+  String get planSuggestedGrowthTask2 => '完成一次阶段复盘';
+
+  @override
+  String get planSuggestedSprintTask1 => '确认冲刺目标与验收标准';
+
+  @override
+  String get planSuggestedSprintTask2 => '完成冲刺关键里程碑';
+
+  @override
+  String get planSave => '保存计划';
+
+  @override
+  String get planStepBasics => '计划定位';
+
+  @override
+  String get planStepSchedule => '时间结构';
+
+  @override
+  String get planStepTasks => '任务编排';
+
+  @override
+  String get planStepGuide => '计划边界与指南';
+
+  @override
+  String get planStepReview => '确认预览';
+
+  @override
+  String get planAiVersionCopied => 'AI 版本已复制';
+
+  @override
+  String get planBasicsDescription => '先定义这是一张真正的计划卡，而不是普通任务。';
+
+  @override
+  String get planBasicsNameHint => '例如：6 周英语口语提升 / 期中冲刺收束';
+
+  @override
+  String get planBasicsNameRequired => '请先填写计划名称';
+
+  @override
+  String get planBasicsSubjectLabel => '主题方向';
+
+  @override
+  String get planBasicsSubjectHint => '英语、Flutter、考研数学、论文阅读...';
+
+  @override
+  String get planBasicsGoalLabelGrowth => '长期目标';
+
+  @override
+  String get planBasicsGoalLabelSprint => '冲刺目标';
+
+  @override
+  String get planBasicsGoalHintGrowth => '写清楚这个成长计划最终想形成什么能力、习惯或成果。';
+
+  @override
+  String get planBasicsGoalHintSprint => '写清楚这次冲刺的结果、验收标准和不能偏离的主线。';
+
+  @override
+  String get planBasicsGoalRequired => '请写出这张计划卡的目标';
+
+  @override
+  String get planBasicsPriorityLabel => '计划优先级';
+
+  @override
+  String get planPriorityNormalValue => '正常';
+
+  @override
+  String get planPriorityCriticalValue => '关键';
+
+  @override
+  String get planScheduleDescription => '把持续时间、每日投入和提醒节奏一次性定清楚。';
+
+  @override
+  String get planScheduleDailyMinutesLabel => '每日可投入时长';
+
+  @override
+  String planScheduleMinutesUnit(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String planScheduleTotalHours(String hours) {
+    return '总预估工时 $hours 小时';
+  }
+
+  @override
+  String get planScheduleTargetDateUnset => '暂未设置';
+
+  @override
+  String get planScheduleReminderTime => '每日提醒时间';
+
+  @override
+  String get planScheduleStageLabel => '当前计划阶段';
+
+  @override
+  String get planScheduleStageSprint => '冲刺推进';
+
+  @override
+  String get planScheduleStageDaily => '日常执行';
+
+  @override
+  String get planScheduleStageReview => '复盘调优';
+
+  @override
+  String get planScheduleStagePaused => '暂时暂停';
+
+  @override
+  String get planScheduleChipWeekday => '工作日推进，周末复盘';
+
+  @override
+  String get planScheduleChipMorning => '早晨启动，晚上收束';
+
+  @override
+  String get planScheduleChipAfternoon => '午后主攻，夜间轻复盘';
+
+  @override
+  String get planScheduleRhythmLabel => '节奏说明';
+
+  @override
+  String get planScheduleRhythmHint => '例如：周一到周五推进，周六复盘，周日补缺';
+
+  @override
+  String get planTasksDescription => '这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。';
+
+  @override
+  String get planTasksBlueprintLabel => '任务编排说明';
+
+  @override
+  String get planTasksBlueprintHint => '例如：先搭框架，再每天推进主线，最后统一复盘补漏。';
+
+  @override
+  String get planTasksRefExisting => '参考已有任务';
+
+  @override
+  String planTasksMinutesDifficulty(int minutes, int difficulty) {
+    return '$minutes 分钟 · 难度 $difficulty';
+  }
+
+  @override
+  String get planTasksCopyToPlan => '复制进计划';
+
+  @override
+  String get planTasksNewTaskLabel => '新增计划任务';
+
+  @override
+  String get planTasksNewTaskHint => '例如：完成一轮章节梳理';
+
+  @override
+  String get planTasksDurationLabel => '时长';
+
+  @override
+  String get planTasksAddToPlan => '加入计划任务';
+
+  @override
+  String get planTasksEmpty => '当前还没有计划任务';
+
+  @override
+  String get planGuideScopeLabel => '计划边界与注意事项';
+
+  @override
+  String get planGuideScopeHint => '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。';
+
+  @override
+  String get planGuidePerspectiveLabel => '任务指南视角';
+
+  @override
+  String get planGuideForHuman => '给自己看';
+
+  @override
+  String get planGuideForAi => '给 AI 用';
+
+  @override
+  String get planGuideHumanInfo => '用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。';
+
+  @override
+  String get planGuideAiInfo => 'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。';
+
+  @override
+  String get planGuideHumanTitle => '用户版执行指南';
+
+  @override
+  String get planGuideAiTitle => '给 AI 的执行版本';
+
+  @override
+  String get planGuideGenerating => '生成中';
+
+  @override
+  String get planGuideGenerateHuman => '生成用户版';
+
+  @override
+  String get planGuideGenerateAi => '生成 AI 版';
+
+  @override
+  String get planGuideHumanHint => '生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。';
+
+  @override
+  String get planGuideAiEmpty => '还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。';
+
+  @override
+  String get planGuideCopyAi => '复制 AI 版';
+
+  @override
+  String planReviewSummary(String planType, int minutes, String hours) {
+    return '$planType · $minutes 分钟/天 · $hours 小时';
+  }
+
+  @override
+  String get planReviewEditInfo => '保存后会更新计划描述，并为新增草案创建新的计划任务。';
+
+  @override
+  String get planReviewCreateInfo => '创建后会生成一张更完整的计划卡，并同步创建计划任务。';
+
+  @override
+  String get planReviewFinalDescription => '最终写入的计划描述';
 
   @override
   String get taskExecutionChatAboutStuckPoint => '和 Sparkle 聊聊这个卡点';
@@ -10386,6 +10624,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskExecutionStuckLabel => '卡住了?';
+
+  @override
+  String taskExecutionAuroraDiagnosticUnavailable(String error) {
+    return 'Aurora 诊断暂时不可用：$error';
+  }
 
   @override
   String get taskExecutionResetTimer => '重置';
@@ -10648,4 +10891,130 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskExecutionUserRetrievedTask => '用户取回任务';
+
+  @override
+  String planDetailTaskLoadFailed(Object error) {
+    return '加载任务失败: $error';
+  }
+
+  @override
+  String get planDetailNoExternalTasks => '没有可添加的外部任务';
+
+  @override
+  String get planDetailAddExistingTaskTitle => '将已有任务添加到本计划';
+
+  @override
+  String get planDetailTaskUnassigned => '未分配';
+
+  @override
+  String get planDetailTaskInAnotherPlan => '当前在其他计划中';
+
+  @override
+  String get planDetailGroupUnassigned => '未分配的任务';
+
+  @override
+  String get planDetailGroupOtherPlans => '来自其他计划的任务';
+
+  @override
+  String get planDetailTaskAdded => '任务已添加到计划';
+
+  @override
+  String planDetailAddTaskFailed(Object error) {
+    return '添加任务失败: $error';
+  }
+
+  @override
+  String planDetailDayLabel(int day) {
+    return '第 $day 天';
+  }
+
+  @override
+  String planDetailWeightedProgress(int percent) {
+    return '加权进度 $percent%';
+  }
+
+  @override
+  String get planDetailCreatePhaseTitle => '创建阶段';
+
+  @override
+  String get planDetailPhaseNameLabel => '阶段名称';
+
+  @override
+  String get planDetailPhaseNameHint => '基础 / 构建 / 复习';
+
+  @override
+  String get planDetailPhaseCreated => '阶段已创建';
+
+  @override
+  String planDetailCreatePhaseFailed(Object error) {
+    return '创建阶段失败: $error';
+  }
+
+  @override
+  String get planDetailPhaseActivated => '阶段已激活';
+
+  @override
+  String planDetailActivatePhaseFailed(Object error) {
+    return '激活失败: $error';
+  }
+
+  @override
+  String get planDetailPhaseNeedsFeedback => '此阶段需要反馈后才能推进';
+
+  @override
+  String get planDetailPhaseCompleted => '阶段已完成';
+
+  @override
+  String planDetailCompletePhaseFailed(Object error) {
+    return '完成阶段失败: $error';
+  }
+
+  @override
+  String planDetailPhaseFeedbackTitle(Object title) {
+    return '阶段反馈 · $title';
+  }
+
+  @override
+  String get planDetailPhaseAlignmentQuestion => '你觉得这个阶段的契合度如何？';
+
+  @override
+  String get planDetailPhaseReflectionLabel => '反思';
+
+  @override
+  String get planDetailPhaseReflectionHint => '哪些做得好，哪些失败了，发生了什么变化？';
+
+  @override
+  String get planDetailPhaseBlocked => '我在这个阶段遇到了阻碍';
+
+  @override
+  String get planDetailPhaseLifeChanged => '我的生活状况发生了变化';
+
+  @override
+  String get planDetailPhaseRequestReview => '请求 compass 审阅';
+
+  @override
+  String get planDetailPhaseActivate => '激活';
+
+  @override
+  String get planDetailPhaseComplete => '完成';
+
+  @override
+  String get planDetailPhaseFeedback => '反馈';
+
+  @override
+  String get planDetailFeedbackSavedWithReview => '反馈已保存，已建议 compass 审阅';
+
+  @override
+  String get planDetailFeedbackSaved => '反馈已保存';
+
+  @override
+  String planDetailSubmitFeedbackFailed(Object error) {
+    return '提交反馈失败: $error';
+  }
+
+  @override
+  String planDetailPhaseStats(
+      int progress, int completed, int occurrences, int tasks) {
+    return '$progress% · $completed/$occurrences 次发生 · $tasks 个任务';
+  }
 }

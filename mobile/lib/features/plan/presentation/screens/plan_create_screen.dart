@@ -159,6 +159,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       return;
     }
 
+    final l10n = context.l10n;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     setState(() => _isSubmitting = true);
 
@@ -211,7 +212,10 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
             energyCost: draft.type == PlanType.sprint ? 3 : 2,
             planId: persistedPlan.id,
             tags: <String>[
-              if (draft.type == PlanType.growth) context.l10n.planTypeGrowth else context.l10n.planTypeSprint,
+              if (draft.type == PlanType.growth)
+                context.l10n.planTypeGrowth
+              else
+                context.l10n.planTypeSprint,
               if (draft.subject.trim().isNotEmpty) draft.subject.trim(),
             ],
             dueDate: taskDraft.dueDate,
@@ -227,7 +231,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       }
       AppFeedback.success(
         context,
-        _isEditMode ? l10n.planUpdated : context.l10n.planCreateSuccess,
+        _isEditMode ? l10n.planUpdated : l10n.planCreateSuccess,
       );
       context.go('/plans/${persistedPlan.id}');
     } catch (e) {
@@ -289,7 +293,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   Future<void> _generateGuide() async {
     if (_goalController.text.trim().isEmpty ||
         _nameController.text.trim().isEmpty) {
-      AppFeedback.info(context, '先填写计划名称和计划目标，再生成 AI 指南');
+      AppFeedback.info(context, context.l10n.planGuideFillNameAndGoalFirst);
       return;
     }
 
@@ -312,12 +316,12 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       AppFeedback.success(
         context,
         _selectedGuideAudience == PlanGuideAudience.human
-            ? '已生成给用户看的执行指南'
-            : '已生成给 AI 使用的执行版本',
+            ? context.l10n.planGuideGeneratedHuman
+            : context.l10n.planGuideGeneratedAi,
       );
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '计划指南生成失败：$e');
+        AppFeedback.error(context, context.l10n.planGuideGenerationFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -327,27 +331,28 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   }
 
   void _seedSuggestedTasks({required bool replaceExisting}) {
+    final l10n = context.l10n;
     final suggestions = _selectedType == PlanType.growth
-        ? const <PlanTaskDraft>[
+        ? <PlanTaskDraft>[
             PlanTaskDraft(
-              title: '建立本周主线推进清单',
+              title: l10n.planSuggestedGrowthTask1,
               estimatedMinutes: 30,
               difficulty: 2,
             ),
             PlanTaskDraft(
-              title: '完成一次阶段复盘',
+              title: l10n.planSuggestedGrowthTask2,
               estimatedMinutes: 20,
               difficulty: 1,
             ),
           ]
-        : const <PlanTaskDraft>[
+        : <PlanTaskDraft>[
             PlanTaskDraft(
-              title: '确认冲刺目标与验收标准',
+              title: l10n.planSuggestedSprintTask1,
               estimatedMinutes: 25,
               difficulty: 2,
             ),
             PlanTaskDraft(
-              title: '完成冲刺关键里程碑',
+              title: l10n.planSuggestedSprintTask2,
               estimatedMinutes: 45,
               difficulty: 3,
             ),

@@ -80,6 +80,19 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     unawaited(_loadSettings());
   }
 
+  void _goBack() {
+    final navigator = Navigator.maybeOf(context);
+    if (navigator?.canPop() ?? false) {
+      navigator!.pop();
+    } else {
+      try {
+        context.go('/profile');
+      } catch (_) {
+        // The screen can be rendered in isolated widget tests without GoRouter.
+      }
+    }
+  }
+
   Future<void> _loadSettings() async {
     if (!AppFeatureFlags.enableUserMemoryControls) {
       setState(() {
@@ -229,8 +242,9 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            onPressed: _goBack,
             variant: ButtonVariant.ghost,
+            semanticLabel: '返回',
           ),
           title: Text(
             '记忆控制',
