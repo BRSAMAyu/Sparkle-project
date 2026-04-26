@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-164/164 tests passing:
+171/171 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -185,6 +185,42 @@
 - Layer 3 SignalRanker: 11 tests (9 standalone + 2 integration)
 - Layer 4 StateRegister: 21 tests (16 standalone + 5 integration/edge)
 - Layer 6 ResponseDirective: 7 tests (5 standalone + 2 integration)
+- Layer 6 NotificationDirective: 8 tests (6 standalone + 2 integration)
+
+---
+
+## Layer 6: NotificationDirective
+
+**目标**: 8 层架构第 6 层 — 控制推送通知：是否允许、渠道、静默时间、触发条件、频率
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `NotificationDirective` 数据结构 | allowed / channel / respect_quiet_hours / trigger / message_strategy / max_frequency |
+| `PolicyEngine.build_notification_directive()` | 从 PolicyDecision + signal 构建通知指令 |
+| `SpineOrchestrator.get_notification_directive()` | 供 notification service 消费 |
+
+### 触发映射
+
+| 信号 | trigger | message_strategy | max_frequency |
+|------|---------|-----------------|---------------|
+| recall_needed/undigested_material | undigested_material | low_effort_next_step | 1_per_day |
+| recall_needed/task_not_started | first_task_not_started | low_effort_next_step | 1_per_day |
+| recall_needed/task_missed | task_missed | recovery_offer | 2_per_day |
+| recall_needed/pre_exam_silence | pre_exam_silence | quick_review_offer | 2_per_day |
+| goal_mode/exam_rescue | exam_rescue_urgent | quick_review_offer | 2_per_day |
+
+### 验收标准
+
+- [x] NotificationDirective 包含 allowed / channel / respect_quiet_hours / trigger / message_strategy / max_frequency
+- [x] recall_needed/undigested_material → trigger=undigested_material, max_frequency=1_per_day
+- [x] recall_needed/task_missed → trigger=task_missed, message_strategy=recovery_offer
+- [x] recall_needed/pre_exam_silence → trigger=pre_exam_silence, requires_user_confirmation=True
+- [x] 非 recall_needed / 非 goal_mode 信号 → 不生成 NotificationDirective
+- [x] goal_mode/exam_rescue → exam_rescue_urgent trigger
+- [x] SpineOrchestrator pipeline 自动存储和读取
+- [x] 序列化正确
 
 ---
 
@@ -482,6 +518,8 @@
 | SignalRanker + RankingResult | ✅ 完成 | `signals/signal_ranker.py` |
 | StateRegister | ✅ 完成 | `signals/state_register.py` |
 | StateEntry | ✅ 完成 | `signals/types.py` |
+| ResponseDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
+| NotificationDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
 
 ### 架构原则检查清单
 

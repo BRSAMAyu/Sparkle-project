@@ -214,6 +214,44 @@ class ResponseDirective:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
+# ── 4c. NotificationDirective ────────────────────────────────────────────
+# 控制推送通知：是否允许、渠道、静默时间、触发条件、频率。
+# 用户可见变化：收到或不收到合适的提醒。
+
+@dataclass
+class NotificationDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "notification_service"
+    allowed: bool = True
+    channel: str = "push"                       # push / in_app / silent
+    respect_quiet_hours: bool = True
+    trigger: str = ""                           # first_task_not_started / undigested_material / pre_exam_silence / task_missed
+    message_strategy: str = "low_effort_next_step"  # low_effort_next_step / recovery_offer / quick_review_offer
+    max_frequency: str = "1_per_day"            # 1_per_day / 2_per_day / 1_per_sprint
+    scope: str = "today"
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "allowed": self.allowed,
+            "channel": self.channel,
+            "respect_quiet_hours": self.respect_quiet_hours,
+            "trigger": self.trigger,
+            "message_strategy": self.message_strategy,
+            "max_frequency": self.max_frequency,
+            "scope": self.scope,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> NotificationDirective:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
 # ── 5. DirectiveApplicationAudit ───────────────────────────────────────
 # 不是日志装饰。验证输出是否满足 directive。
 # 用户可见变化：团队/开发者能审计为什么变了。

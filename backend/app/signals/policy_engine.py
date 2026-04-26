@@ -19,6 +19,7 @@ from loguru import logger
 from app.signals.types import (
     ActionableSignal,
     ExecutionDirective,
+    NotificationDirective,
     PolicyDecision,
     ResponseDirective,
     _uid,
@@ -314,4 +315,65 @@ class PolicyEngine:
             avoid=avoid,
             include_user_options=decision.requires_user_confirmation,
             scope="turn",
+        )
+
+    # Trigger → notification params mapping
+    _NOTIFICATION_MAP: dict[str, dict[str, str]] = {
+        "undigested_material": {
+            "trigger": "undigested_material",
+            "message_strategy": "low_effort_next_step",
+            "max_frequency": "1_per_day",
+        },
+        "task_not_started": {
+            "trigger": "first_task_not_started",
+            "message_strategy": "low_effort_next_step",
+            "max_frequency": "1_per_day",
+        },
+        "task_missed": {
+            "trigger": "task_missed",
+            "message_strategy": "recovery_offer",
+            "max_frequency": "2_per_day",
+        },
+        "pre_exam_silence": {
+            "trigger": "pre_exam_silence",
+            "message_strategy": "quick_review_offer",
+            "max_frequency": "2_per_day",
+        },
+    }
+
+    def build_notification_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> NotificationDirective | None:
+        """
+        从 PolicyDecision 构建通知指令。
+        只对 recall_needed 和特定策略生成。
+        """
+        if signal.state_key not in ("recall_needed", "deadline_pressure", "goal_mode"):
+            return None
+
+        claim = signal.claim
+        params = self._NOTIFICATION_MAP.get(claim)
+        if not params:
+            # goal_mode/exam_rescue → allow urgent notifications
+            if signal.state_key == "goal_mode" and "exam" in claim:
+                params = {
+                    "trigger": "exam_rescue_urgent",
+                    "message_strategy": "quick_review_offer",
+                    "max_frequency": "2_per_day",
+                }
+            else:
+                return None
+
+        return NotificationDirective(
+            directive_id=_uid("nd"),
+            policy_decision_id=decision.policy_decision_id,
+            allowed=True,
+            channel="push",
+            respect_quiet_hours=True,
+            trigger=params["trigger"],
+            message_strategy=params["message_strategy"],
+            max_frequency=params["max_frequency"],
+            scope="today",
         )

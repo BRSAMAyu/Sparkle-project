@@ -2562,6 +2562,136 @@ async def test_spine_pipeline_stores_response_directive(spine):
     assert rd.tone == "direct_but_reassuring"
 
 
+# ── Layer 6: NotificationDirective ───────────────────────────────────────
+
+from app.signals.types import NotificationDirective
+
+
+def test_notification_directive_creation():
+    """NotificationDirective 基本创建和序列化。"""
+    nd = NotificationDirective(
+        directive_id="nd_001",
+        policy_decision_id="pd_001",
+        allowed=True,
+        channel="push",
+        trigger="first_task_not_started",
+        message_strategy="low_effort_next_step",
+        max_frequency="1_per_day",
+    )
+    d = nd.to_dict()
+    assert d["allowed"] is True
+    assert d["trigger"] == "first_task_not_started"
+    assert d["max_frequency"] == "1_per_day"
+
+    restored = NotificationDirective.from_dict(d)
+    assert restored.trigger == "first_task_not_started"
+    assert restored.respect_quiet_hours is True
+
+
+@pytest.mark.asyncio
+async def test_notification_directive_recall_undigested():
+    """recall_needed/undigested_material → NotificationDirective。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="undigested_material",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="uploaded no diagnostic", possible_effects=[], priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    nd = engine.build_notification_directive(decision, signal)
+    assert nd is not None
+    assert nd.trigger == "undigested_material"
+    assert nd.message_strategy == "low_effort_next_step"
+    assert nd.max_frequency == "1_per_day"
+
+
+@pytest.mark.asyncio
+async def test_notification_directive_task_missed():
+    """recall_needed/task_missed → notification with recovery_offer。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="task_missed",
+        confidence=0.9, scope="current_sprint", ttl_hours=72,
+        evidence_summary="deadline passed", possible_effects=[], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    nd = engine.build_notification_directive(decision, signal)
+    assert nd is not None
+    assert nd.trigger == "task_missed"
+    assert nd.message_strategy == "recovery_offer"
+    assert nd.max_frequency == "2_per_day"
+
+
+@pytest.mark.asyncio
+async def test_notification_directive_pre_exam():
+    """recall_needed/pre_exam_silence → quick_review_offer。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="pre_exam_silence",
+        confidence=0.9, scope="current_sprint", ttl_hours=72,
+        evidence_summary="48h before exam, 5h silent", possible_effects=[], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    nd = engine.build_notification_directive(decision, signal)
+    assert nd is not None
+    assert nd.trigger == "pre_exam_silence"
+    assert nd.message_strategy == "quick_review_offer"
+
+
+@pytest.mark.asyncio
+async def test_notification_directive_no_task_signal():
+    """task_granularity_fit → no NotificationDirective。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    nd = engine.build_notification_directive(decision, signal)
+    assert nd is None
+
+
+@pytest.mark.asyncio
+async def test_notification_directive_exam_rescue():
+    """goal_mode/exam_rescue → notification with exam_rescue_urgent。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="goal_mode", claim="exam_rescue_detected",
+        confidence=0.9, scope="current_sprint", ttl_hours=72,
+        evidence_summary="exam detected", possible_effects=[], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    nd = engine.build_notification_directive(decision, signal)
+    assert nd is not None
+    assert nd.trigger == "exam_rescue_urgent"
+
+
+@pytest.mark.asyncio
+async def test_spine_pipeline_stores_notification_directive(spine):
+    """Spine pipeline 处理 recall_needed 后存储 NotificationDirective。"""
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="undigested_material",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="medium",
+    )
+    await spine._run_signal_pipeline(user_id="u_nd", signal=signal)
+    nd = await spine.get_notification_directive("u_nd")
+    assert nd is not None
+    assert nd.trigger == "undigested_material"
+
+
 @pytest.mark.asyncio
 async def test_state_register_clear_scope_empty(state_register):
     """clear_scope 无匹配 → 0。"""

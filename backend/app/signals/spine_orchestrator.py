@@ -31,6 +31,7 @@ from app.signals.types import (
     ActionableSignal,
     CausalTrace,
     DirectiveApplicationAudit,
+    NotificationDirective,
     ExecutionDirective,
     PolicyDecision,
     ResponseDirective,
@@ -134,6 +135,11 @@ class SpineOrchestrator:
         response_dir = self.policy_engine.build_response_directive(decision, signal)
         if response_dir:
             await self._store_response_directive(user_id, response_dir)
+
+        # Step 4c: Build and store NotificationDirective
+        notif_dir = self.policy_engine.build_notification_directive(decision, signal)
+        if notif_dir:
+            await self._store_notification_directive(user_id, notif_dir)
 
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":
@@ -371,6 +377,11 @@ class SpineOrchestrator:
         response_dir = self.policy_engine.build_response_directive(decision, signal)
         if response_dir:
             await self._store_response_directive(user_id, response_dir)
+
+        # Build and store NotificationDirective
+        notif_dir = self.policy_engine.build_notification_directive(decision, signal)
+        if notif_dir:
+            await self._store_notification_directive(user_id, notif_dir)
 
         if decision.visibility == "receipt":
             receipt = UserVisibleReceipt(
@@ -622,3 +633,17 @@ class SpineOrchestrator:
         if not raw:
             return None
         return ResponseDirective.from_dict(json.loads(raw))
+
+    async def _store_notification_directive(self, user_id: str, nd: NotificationDirective) -> None:
+        """存储 NotificationDirective 供通知服务消费。"""
+        import json
+        key = f"spine:notification_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(nd.to_dict()), ex=72 * 3600)
+
+    async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
+        """获取用户当前 NotificationDirective。"""
+        import json
+        raw = await self.redis.get(f"spine:notification_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return NotificationDirective.from_dict(json.loads(raw))
