@@ -21,6 +21,8 @@ enum ChatRunPhase {
 enum DocumentContextMode {
   auto,
   userSelected,
+  taskScope,
+  goalScope,
   off,
 }
 

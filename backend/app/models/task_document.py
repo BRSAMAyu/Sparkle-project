@@ -18,6 +18,8 @@ class TaskDocument(BaseModel):
     task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
     file_id = Column(GUID(), ForeignKey("stored_files.id", ondelete="CASCADE"), nullable=False, index=True)
     linked_by = Column(String(16), nullable=False, default="user")
+    source_reason = Column(String(500), nullable=True)
+    fallback_action = Column(String(500), nullable=True)
 
     task = relationship("Task", back_populates="document_links")
     file = relationship("StoredFile")

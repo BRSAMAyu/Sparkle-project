@@ -1118,6 +1118,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'reasoning_mode': reasoningMode,
         'guidance_mode': _ref.read(guidanceModeProvider).name,
         'use_document_context': useDocumentContext,
+        'document_context_scope': state.documentContextMode.name,
         'seed_library_enabled': seedLibraryEnabled,
         if (seedLibraryEnabled) ...{
           'active_seed_library_ids':

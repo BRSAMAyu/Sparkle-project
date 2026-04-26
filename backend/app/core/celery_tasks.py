@@ -2105,3 +2105,24 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
     except Exception as exc:
         logger.error("scan_aurora_scheduled_wakes failed: %s", exc)
         raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="aggregate_community_error_patterns")
+def aggregate_community_error_patterns(self):
+    """Periodically aggregate anonymous community error patterns onto knowledge nodes."""
+
+    async def _run():
+        from app.db.session import AsyncSessionLocal
+        from app.services.community_error_aggregation_service import CommunityErrorAggregationService
+
+        async with AsyncSessionLocal() as session:
+            svc = CommunityErrorAggregationService(session)
+            updated = await svc.aggregate_for_nodes_with_recent_errors()
+            logger.info(f"Community error aggregation: {updated} nodes updated")
+            return {"updated_nodes": updated}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error(f"aggregate_community_error_patterns failed: {exc}")
+        raise self.retry(exc=exc, countdown=300)

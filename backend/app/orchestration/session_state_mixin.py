@@ -687,6 +687,11 @@ class SessionStateMixin:
             user_message=user_message,
             route_intent=route_intent,
         )
+        await self._apply_calibration_check(
+            user_id=user_id,
+            state=state,
+            active_db=active_db,
+        )
         await self._persist_context_plan(
             user_id=user_id,
             state=state,
@@ -763,6 +768,9 @@ class SessionStateMixin:
             route_intent=route_intent,
             context=user_context_payload,
             aurora_doc_context_mode=str(getattr(settings, "AURORA_DOC_CONTEXT_MODE", "auto") or "auto"),
+            document_context_scope=str(
+                user_context_payload.get("document_context_scope", "auto") or "auto"
+            ),
             budgets=RetrievalIntentBudgets(
                 aggressive=int(getattr(settings, "AURORA_DOC_CONTEXT_AGGRESSIVE_BUDGET_TOKENS", 2200) or 2200),
                 selective=int(getattr(settings, "AURORA_DOC_CONTEXT_SELECTIVE_BUDGET_TOKENS", 900) or 900),
@@ -788,6 +796,32 @@ class SessionStateMixin:
             decision.reason,
         )
         return payload
+
+    async def _apply_calibration_check(
+        self,
+        *,
+        user_id: str,
+        state: WorkflowState | None,
+        active_db: AsyncSession | None,
+    ) -> None:
+        """Check if Aurora self-calibration is needed based on consecutive errors."""
+        if state is None or active_db is None:
+            return
+        context_plan = state.context_data.get("context_plan")
+        if not isinstance(context_plan, dict) or not context_plan.get("should_retrieve"):
+            return
+        try:
+            from app.services.aurora_calibration_service import AuroraCalibrationService
+
+            svc = AuroraCalibrationService(active_db)
+            needed, question = await svc.check_calibration_needed(uuid.UUID(str(user_id)))
+            if needed and question:
+                context_plan["calibration_needed"] = True
+                context_plan["calibration_question"] = question
+                state.context_data["context_plan"] = context_plan
+                logger.info(f"Calibration triggered for user {user_id}")
+        except Exception as exc:
+            logger.debug(f"Calibration check skipped: {exc}")
 
     async def _persist_context_plan(
         self,

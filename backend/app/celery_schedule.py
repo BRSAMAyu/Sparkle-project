@@ -23,3 +23,11 @@ def setup_periodic_tasks(sender, **kwargs):
         scan_aurora_scheduled_wakes.s(),
         name='scan-aurora-scheduled-wakes-every-15min'
     )
+
+    # Community error pattern aggregation — every 6 hours
+    from app.core.celery_tasks import aggregate_community_error_patterns
+    sender.add_periodic_task(
+        21600.0,
+        aggregate_community_error_patterns.s(),
+        name='aggregate-community-errors-every-6h'
+    )

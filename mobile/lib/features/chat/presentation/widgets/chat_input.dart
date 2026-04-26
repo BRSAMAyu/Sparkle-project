@@ -538,6 +538,14 @@ class _SourceTrayPill extends StatelessWidget {
           Icons.playlist_add_check_rounded,
           'My Sources',
         ),
+      DocumentContextMode.taskScope => (
+          Icons.task_alt_rounded,
+          'Task Scope',
+        ),
+      DocumentContextMode.goalScope => (
+          Icons.flag_rounded,
+          'Goal Scope',
+        ),
       DocumentContextMode.off => (
           Icons.menu_book_outlined,
           context.l10n.chatStudyMaterialsPaused,
@@ -551,7 +559,9 @@ class _SourceTrayPill extends StatelessWidget {
           ? () {
               final next = switch (mode) {
                 DocumentContextMode.auto => DocumentContextMode.userSelected,
-                DocumentContextMode.userSelected => DocumentContextMode.off,
+                DocumentContextMode.userSelected => DocumentContextMode.taskScope,
+                DocumentContextMode.taskScope => DocumentContextMode.goalScope,
+                DocumentContextMode.goalScope => DocumentContextMode.off,
                 DocumentContextMode.off => DocumentContextMode.auto,
               };
               onModeChanged?.call(next);

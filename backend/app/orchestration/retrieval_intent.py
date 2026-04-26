@@ -246,11 +246,13 @@ class RetrievalIntentClassifier:
         context: dict[str, Any] | None = None,
         use_document_context: bool | None = None,
         aurora_doc_context_mode: str = "auto",
+        document_context_scope: str = "auto",
         budgets: RetrievalIntentBudgets | None = None,
     ) -> RetrievalDecision:
         budgets = budgets or RetrievalIntentBudgets()
         text = _normalize_text(message)
         mode_override = _normalize_text(aurora_doc_context_mode) or "auto"
+        scope = _normalize_text(document_context_scope) or "auto"
 
         if mode_override in {"off", "skip", "disabled", "false", "0"}:
             return ContextPlan(
@@ -276,7 +278,7 @@ class RetrievalIntentClassifier:
                 reason="empty_message",
             )
 
-        base = self._classify_without_overrides(text, route_intent=route_intent, context=context, budgets=budgets)
+        base = self._classify_without_overrides(text, route_intent=route_intent, context=context, budgets=budgets, scope=scope)
         if not base.should_retrieve:
             return base
 
@@ -312,10 +314,21 @@ class RetrievalIntentClassifier:
         route_intent: str | None,
         context: dict[str, Any] | None,
         budgets: RetrievalIntentBudgets,
+        scope: str = "auto",
     ) -> ContextPlan:
         route = _normalize_text(route_intent)
         scores = _prototype_scores(text)
         linked_docs = _has_linked_documents(context)
+
+        # Map Flutter scope to ContextPlan source_scope
+        scope_map: dict[str, str] = {
+            "auto": "auto",
+            "userselected": "user_selected",
+            "taskscope": "task_bound",
+            "goalscope": "goal_bound",
+            "off": "auto",
+        }
+        source_scope = scope_map.get(scope, "auto")
 
         if _matches_any(text, _EMOTIONAL_PATTERNS) or _matches_any(text, _SOCIAL_PATTERNS) or scores["emotional"] >= 0.30:
             return ContextPlan(
@@ -355,6 +368,7 @@ class RetrievalIntentClassifier:
                 should_retrieve=True,
                 budget_tokens=budgets.selective,
                 reason=reason,
+                source_scope=source_scope,
                 pollution_guard="moderate",
                 citation_required=False,
                 user_visible_receipt=True,
@@ -367,6 +381,7 @@ class RetrievalIntentClassifier:
                 should_retrieve=True,
                 budget_tokens=budgets.aggressive,
                 reason="knowledge_query_targeted_rag",
+                source_scope=source_scope,
                 pollution_guard="strict",
                 citation_required=True,
                 user_visible_receipt=True,
@@ -383,6 +398,7 @@ class RetrievalIntentClassifier:
                 should_retrieve=True,
                 budget_tokens=budget,
                 reason=reason,
+                source_scope=source_scope,
                 pollution_guard="moderate",
                 citation_required=False,
                 user_visible_receipt=True,
@@ -408,6 +424,7 @@ def build_retrieval_decision(
     route_intent: str | None = None,
     context: dict[str, Any] | None = None,
     aurora_doc_context_mode: str = "auto",
+    document_context_scope: str = "auto",
     budgets: RetrievalIntentBudgets | None = None,
 ) -> RetrievalDecision:
     return default_retrieval_intent_classifier.classify(
@@ -416,5 +433,6 @@ def build_retrieval_decision(
         context=context,
         use_document_context=extract_use_document_context(context),
         aurora_doc_context_mode=aurora_doc_context_mode,
+        document_context_scope=document_context_scope,
         budgets=budgets,
     )

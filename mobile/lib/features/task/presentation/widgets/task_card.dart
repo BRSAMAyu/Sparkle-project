@@ -444,6 +444,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                               ),
                                         ),
                                       ],
+                                      if (widget.task.knowledgeNodeId != null) ...[
+                                        const SizedBox(height: 8),
+                                        _SourceContextChip(task: widget.task),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -606,5 +610,39 @@ String _statusLabel(AppLocalizations l10n, TaskStatus status) {
       return l10n.taskStatusCompleted;
     case TaskStatus.abandoned:
       return l10n.taskStatusAbandoned;
+  }
+}
+
+class _SourceContextChip extends StatelessWidget {
+  const _SourceContextChip({required this.task});
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasGuide = (task.guideContent ?? '').isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_stories, size: 14, color: DS.brandPrimary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              hasGuide ? 'Linked to knowledge source' : 'Knowledge-linked task',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DS.brandPrimary,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
