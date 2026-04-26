@@ -47,6 +47,7 @@ from app.models.accountability import (
 )
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.documents import StoredFile
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.seed_content import SeedItem, SeedLibrary
@@ -4241,3 +4242,50 @@ async def retry_offline_messages(
         "retried_count": len(messages),
         "message_ids": [str(m.id) for m in messages]
     }
+
+
+@router.get("/recommended-resources", summary="Get recommended shared resources from user's groups")
+async def get_recommended_resources(
+    limit: int = Query(default=5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Recommend high-quality community resources the user hasn't adopted yet."""
+    from app.models.community import GroupMembership
+
+    user_groups = await db.execute(
+        select(GroupMembership.group_id).where(
+            GroupMembership.user_id == current_user.id,
+            GroupMembership.deleted_at.is_(None),
+        )
+    )
+    group_ids = [row[0] for row in user_groups]
+    if not group_ids:
+        return {"recommendations": []}
+
+    high_quality = await db.execute(
+        select(GroupFile)
+        .where(
+            GroupFile.group_id.in_(group_ids),
+            GroupFile.deleted_at.is_(None),
+            GroupFile.trust_level.in_(["verified", "high"]),
+        )
+        .order_by(GroupFile.created_at.desc())
+        .limit(limit)
+    )
+
+    recommendations = []
+    for gf in high_quality.scalars():
+        file_record = await db.get(StoredFile, gf.file_id)
+        if not file_record or file_record.is_deleted:
+            continue
+        recommendations.append({
+            "file_id": str(gf.file_id),
+            "filename": file_record.file_name,
+            "group_id": str(gf.group_id),
+            "shared_by": str(gf.shared_by_id),
+            "trust_level": str(gf.trust_level),
+            "recommendation_reason": "High quality community resource from your study group",
+        })
+
+    return {"recommendations": recommendations, "count": len(recommendations)}
