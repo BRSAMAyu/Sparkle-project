@@ -18,6 +18,21 @@
     "validation_status": "Validation results: status={status}, score={score}, aborted={aborted}",
     "main_issues": "Main issues: {issues}"
   },
+  "cognitive": {
+    "guidance_procrastination": "Note if this is avoiding a concept or starting action. Build a bridge first, then give tasks.",
+    "guidance_perfectionism": "Be more supportive and low-pressure. Help the user start, don't make the first step too heavy.",
+    "guidance_blindspot": "Prioritize clarifying understanding gaps and conceptual stuck points before pushing execution advice.",
+    "guidance_overload": "Lower the psychological load and cognitive friction before pushing high-demand tasks.",
+    "guidance_default": "Tighten suggestions to be more acceptable and closer to the real resistance of the next step."
+  },
+  "context": {
+    "no_progress_record": "No clear completion record was left when you last left.",
+    "last_progress": "You progressed to the step \"{step}\" last time.",
+    "overdue_tasks": "{count} tasks entered the deadline window during your absence.",
+    "overdue_tasks_with_next": "{count} tasks entered the deadline window during your absence, the most recent being \"{title}\".",
+    "welcome_back": "{progress}{due} Welcome back, we can continue from here.",
+    "rollback_reason": "2 consecutive rejections, need to re-collect information"
+  },
   "synthesis": {
     "deep_analysis": "You are a Deep Analysis Synthesizer. Please output: Key Conclusions, Evidence Chain, Counter-arguments & Boundaries, Application Suggestions.",
     "study_plan": "You are a Study Plan Synthesizer. Please output: Goals, Milestones, Weekly Plan, Daily Execution Template, Review Mechanism.",

@@ -2934,6 +2934,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get statisticsAggregationNone => 'Original Data';
+
+  @override
+  String get statisticsAggregationHourly => 'Hourly';
+
+  @override
+  String get statisticsAggregationDaily => 'Daily';
+
+  @override
+  String get statisticsAggregationWeekly => 'Weekly';
+
+  @override
+  String get statisticsAggregationMonthly => 'Monthly';
+
+  @override
   String get learningModeDepthHigh => 'Depth+';
 
   @override
@@ -5299,6 +5314,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatHelpful => 'Helpful';
 
   @override
+  String get chatCitationExcerptUnavailable =>
+      'This citation does not include an excerpt yet.';
+
+  @override
+  String get chatCitationHelpfulPrompt => 'Was this citation helpful?';
+
+  @override
+  String get chatCitationOpenDocument => 'Go to document';
+
+  @override
   String get chatNotHelpful => 'Not helpful';
 
   @override
@@ -5897,6 +5922,79 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get friendsMyFriends => 'My Friends';
+
+  @override
+  String get friendsFriendRequests => 'Friend Requests';
+
+  @override
+  String get friendsDiscoverFriends => 'Discover Friends';
+
+  @override
+  String get friendsDeleteFriend => 'Delete Friend';
+
+  @override
+  String friendsConfirmDeleteFriend(String name) {
+    return 'Are you sure you want to remove $name from your friends?';
+  }
+
+  @override
+  String get friendsCancel => 'Cancel';
+
+  @override
+  String get friendsDelete => 'Delete';
+
+  @override
+  String friendsFriendDeleted(String name) {
+    return '$name has been removed from your friends';
+  }
+
+  @override
+  String friendsDeleteFailed(String error) {
+    return 'Failed to delete friend: $error';
+  }
+
+  @override
+  String get friendsBlockUser => 'Block User';
+
+  @override
+  String friendsAfterBlockingHint(String name) {
+    return 'After blocking $name:';
+  }
+
+  @override
+  String get friendsRemoveFromFriendList =>
+      'Will be removed from your friend list';
+
+  @override
+  String get friendsCannotMessageYou => 'Cannot send you messages';
+
+  @override
+  String get friendsCannotSendRequest => 'Cannot send you friend requests';
+
+  @override
+  String get friendsBlock => 'Block';
+
+  @override
+  String friendsBlockedSuccess(String name) {
+    return '$name has been blocked';
+  }
+
+  @override
+  String friendsBlockFailed(String error) {
+    return 'Failed to block user: $error';
+  }
+
+  @override
+  String get friendsBlockedUsersManagement => 'Manage Blocked Users';
+
+  @override
+  String get friendsNoPendingRequests => 'No pending requests';
+
+  @override
+  String get friendsWantsToBeYourFriend => 'wants to be your friend';
+
+  @override
   String get taskMonitorTitle => 'Background Tasks';
 
   @override
@@ -6062,6 +6160,74 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get knowledgeRelatedNodes => 'Related Nodes';
+
+  @override
+  String get knowledgeSourceMaterialsTitle => 'Source Materials';
+
+  @override
+  String knowledgeSourceMaterialsSummary(int documents, int chunks) {
+    return '$documents documents · $chunks knowledge chunks';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsPersonalBadge => 'Personal upload';
+
+  @override
+  String get knowledgeSourceMaterialsSystemBadge =>
+      'No personal notes attached yet';
+
+  @override
+  String knowledgeSourceMaterialsUploadDate(Object date) {
+    return 'Uploaded $date';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsChunkUnit => 'chunks';
+
+  @override
+  String get knowledgeSourceMaterialsEmptyTitle =>
+      'Trace this node back to your own notes';
+
+  @override
+  String knowledgeSourceMaterialsEmptyBody(Object topic) {
+    return 'Add your own notes about $topic to make this knowledge node traceable.';
+  }
+
+  @override
+  String knowledgeSourceMaterialsAddNotes(Object topic) {
+    return 'Add notes about $topic';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsReadMore => 'Read more';
+
+  @override
+  String get knowledgeSourceMaterialsNoPreview =>
+      'No excerpt preview is available yet.';
+
+  @override
+  String get knowledgeSourceMaterialsOpenFailed =>
+      'Unable to open the source material right now.';
+
+  @override
+  String knowledgeSourceMaterialsUploadSaved(Object filename) {
+    return '$filename uploaded. It will appear here after processing and attachment.';
+  }
+
+  @override
+  String knowledgeSourceMaterialsPage(int page) {
+    return 'Page $page';
+  }
+
+  @override
+  String knowledgeSourceMaterialsPages(Object pages) {
+    return 'Pages $pages';
+  }
+
+  @override
+  String knowledgeSourceMaterialsChunk(int index) {
+    return 'Excerpt $index';
+  }
 
   @override
   String get knowledgePrerequisites => 'Prerequisites';
@@ -7316,6 +7482,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInterventionViewSettings => 'Chat Intervention View Settings';
 
   @override
+  String get chatOpenStudyMaterialsLibrary => 'Open study materials library';
+
+  @override
   String get chatKnowledgeCitationBody => 'Chat Knowledge Citation Body';
 
   @override
@@ -7557,6 +7726,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSourcesUnavailable => 'Chat Sources Unavailable';
 
   @override
+  String get chatStudyMaterialsEmptySubtitle =>
+      'Upload notes, slides, or PDFs to make them available in chat.';
+
+  @override
+  String chatStudyMaterialsAvailable(int count) {
+    return '$count documents available';
+  }
+
+  @override
+  String chatStudyMaterialsKnowledgeNodes(int count) {
+    return '$count knowledge nodes';
+  }
+
+  @override
+  String get chatStudyMaterialsLabel => 'Study materials';
+
+  @override
+  String get chatStudyMaterialsPaused => 'Study materials paused';
+
+  @override
+  String get chatStudyMaterialsPausedDescription =>
+      'Document retrieval is paused for the next turn.';
+
+  @override
+  String get chatStudyMaterialsReady => 'Ready';
+
+  @override
   String chatStreakSummary(Object arg0, Object arg1) {
     return '$arg0 $arg1';
   }
@@ -7764,6 +7960,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String communityGroupMembersCount(Object arg0) {
     return '$arg0';
+  }
+
+  @override
+  String get groupKnowledgeBase => 'Knowledge Base';
+
+  @override
+  String get groupFiles => 'Study Materials';
+
+  @override
+  String get saveToMyLibrary => 'Save to My Library';
+
+  @override
+  String get savedToLibrary => 'Saved to your library';
+
+  @override
+  String get markAsOfficial => 'Mark as Official';
+
+  @override
+  String get officialResource => 'Official';
+
+  @override
+  String get noGroupFiles => 'No study materials yet';
+
+  @override
+  String get noGroupFilesSubtitle => 'Share your notes to help the group!';
+
+  @override
+  String get shareFile => 'Share File';
+
+  @override
+  String groupFilesCount(int count) {
+    return '$count files';
   }
 
   @override
@@ -12803,8 +13031,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String examSprintDaysLeft(int days) {
-    return '$days days left';
+  String examSprintDaysLeft(String days) {
+    return '$days left until the exam';
   }
 
   @override
@@ -15115,357 +15343,1512 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get reportLearningAnalysisReport => '学习分析报告';
+  String get recommendationTargetFallback => 'Recommended';
 
   @override
-  String get reportContinuationSubtitle => '继续查看本次学习旅程的分析报告';
+  String get recommendationThisItem => 'This recommendation';
 
   @override
-  String get reportPartialDataDisclaimer => '部分数据，仅供参考';
+  String recommendationFeedbackAbout(String target, String stage) {
+    return '$stage feedback about $target';
+  }
 
   @override
-  String get reportPartialDataMessage => '当前基于部分学习记录生成，结果可能不够全面。';
+  String get recommendationFeedbackHint =>
+      'Your feedback will directly update the next round of recommendation weights';
 
   @override
-  String get reportDiagnosisPanelEyebrow => '学习诊断面板';
+  String get recommendationStartCalibration => 'Start Calibration';
 
   @override
-  String get reportOpenGalaxy => '打开知识星图';
+  String get recommendationFriendPreferenceTitle =>
+      'Your Partner Matching Preferences';
+
+  @override
+  String get recommendationGroupPreferenceTitle => 'Your Community Preferences';
+
+  @override
+  String recommendationRecentCount(int count) {
+    return 'Last $count times';
+  }
+
+  @override
+  String get recommendationFriendLearningHint =>
+      'The system is learning whether you value similarity, complementarity, or collaboration comfort more.';
+
+  @override
+  String get recommendationGroupLearningHint =>
+      'The system is learning whether you prefer interest matching, active atmosphere, or fresh discoveries.';
+
+  @override
+  String recommendationSystemAvoiding(String signals) {
+    return 'System is avoiding: $signals';
+  }
+
+  @override
+  String recommendationCurrentlyBiasing(String metrics) {
+    return 'Currently leaning toward: $metrics';
+  }
+
+  @override
+  String get recommendationListSeparator => ', ';
+
+  @override
+  String get recommendationCalibrateTitle =>
+      'Help us calibrate recommendations';
+
+  @override
+  String recommendationFeedbackSubtitle(String subject) {
+    return 'Your rating of $subject will directly influence the recommendation algorithm.';
+  }
+
+  @override
+  String get recommendationScoreOverall => 'Overall impression';
+
+  @override
+  String get recommendationScoreExplanationClarity =>
+      'Recommendation reason clarity';
+
+  @override
+  String get recommendationScoreActionability => 'Willingness to act';
+
+  @override
+  String get recommendationScoreRelevance => 'Relevance';
+
+  @override
+  String get recommendationScoreSimilarity => 'Similarity quality';
+
+  @override
+  String get recommendationScoreComplementary => 'Complementary quality';
+
+  @override
+  String get recommendationScoreComfort => 'Collaboration comfort';
+
+  @override
+  String get recommendationScoreInterestMatch => 'Interest match';
+
+  @override
+  String get recommendationScoreActivity => 'Activity level fit';
+
+  @override
+  String get recommendationScoreAtmosphere => 'Community atmosphere';
+
+  @override
+  String get recommendationIssuesTitle => 'What didn\'t feel right';
+
+  @override
+  String get recommendationStrengthsTitle => 'What went well';
+
+  @override
+  String get recommendationFreeTextLabel => 'Additional comments';
+
+  @override
+  String get recommendationFriendHint =>
+      'e.g., I\'d prefer a partner with a similar pace, but who can push me when I procrastinate.';
+
+  @override
+  String get recommendationGroupHint =>
+      'e.g., I\'d like a more relevant group, preferably active but not too noisy.';
+
+  @override
+  String get recommendationPrivacyNotice =>
+      'We only use your scores and summaries to optimize recommendations. Your private raw data is never exposed to other users.';
+
+  @override
+  String get recommendationLater => 'Later';
+
+  @override
+  String get recommendationSubmitFeedback => 'Submit feedback';
+
+  @override
+  String recommendationMatchingStrategy(String name) {
+    return 'Matching strategy: $name';
+  }
+
+  @override
+  String recommendationGroupSubtitle(String count, String tags) {
+    return '$count members · $tags';
+  }
+
+  @override
+  String get recommendationPublicGroup => 'Public community';
+
+  @override
+  String get recommendationStageImmediate => 'Immediate';
+
+  @override
+  String get recommendationStageFollowUp => 'Follow-up';
+
+  @override
+  String get recommendationStageOutcome => 'Outcome';
+
+  @override
+  String get recommendationReasonSubjectOverlap => 'Subject overlap';
+
+  @override
+  String get recommendationReasonPreferenceAlignment => 'Similar learning pace';
+
+  @override
+  String get recommendationReasonTagOverlap => 'Interest match';
+
+  @override
+  String get recommendationReasonTrending => 'Recently active';
+
+  @override
+  String get recommendationMetricOverall => 'Overall';
+
+  @override
+  String get recommendationMetricSimilarity => 'Similarity';
+
+  @override
+  String get recommendationMetricComfort => 'Comfort';
+
+  @override
+  String get recommendationMetricInterestMatch => 'Interest match';
+
+  @override
+  String get recommendationMetricActivity => 'Activity';
+
+  @override
+  String get recommendationMetricSubjectSimilarity => 'Subject similarity';
+
+  @override
+  String get recommendationMetricRelationshipReadiness =>
+      'Relationship readiness';
+
+  @override
+  String get recommendationMetricTagMatch => 'Tag match';
+
+  @override
+  String get recommendationMetricQuality => 'Quality';
+
+  @override
+  String get recommendationSignalTooDissimilar => 'Too dissimilar';
+
+  @override
+  String get recommendationSignalWantMoreTagMatch => 'Interests not aligned';
+
+  @override
+  String get recommendationSignalTrustworthy => 'Reliable collaborator';
+
+  @override
+  String get recommendationSignalGoodInterestMatch => 'Interest match';
+
+  @override
+  String get recommendationIssueNotSimilar => 'Not similar enough';
+
+  @override
+  String get recommendationIssueNotComplementary => 'Lacks complementarity';
+
+  @override
+  String get recommendationIssueNotProactive => 'Not proactive enough';
+
+  @override
+  String get recommendationIssueTooMuchPressure => 'Too much pressure';
+
+  @override
+  String get recommendationIssueNotFamiliar => 'Not familiar enough';
+
+  @override
+  String get recommendationIssueInaccurateTags => 'Inaccurate tags';
+
+  @override
+  String get recommendationIssueTooQuiet => 'Too quiet';
+
+  @override
+  String get recommendationIssueTooCrowded => 'Too crowded';
+
+  @override
+  String get recommendationIssueMediocreVibe => 'Mediocre atmosphere';
+
+  @override
+  String get recommendationIssueUnsuitableThreshold => 'Unsuitable threshold';
+
+  @override
+  String get recommendationStrengthGreatFit => 'Great fit';
+
+  @override
+  String get recommendationStrengthComplementary => 'Complementary';
+
+  @override
+  String get recommendationStrengthReliable => 'Reliable';
+
+  @override
+  String get recommendationStrengthClearReason => 'Clear reasoning';
+
+  @override
+  String get recommendationStrengthInterestMatch => 'Interest match';
+
+  @override
+  String get recommendationStrengthGreatVibe => 'Great atmosphere';
+
+  @override
+  String get recommendationStrengthActiveFit => 'Activity level fits';
+
+  @override
+  String get personaRefreshPersona => 'Refresh persona';
+
+  @override
+  String get personaProfileInterpretation => 'Profile Interpretation';
+
+  @override
+  String get personaProfileInterpretationSubtitle =>
+      'Natural language summary first, expand for underlying structure if needed';
+
+  @override
+  String get personaL3Subtitle =>
+      'System-summarized actionable conclusions shown first';
+
+  @override
+  String get personaL1Subtitle =>
+      'Goals and preferences you explicitly told the system';
+
+  @override
+  String get personaL2Subtitle =>
+      'Tags and capability assessments calibrated through collaboration';
+
+  @override
+  String get personaInferenceTitle => 'System Inference & Policies';
+
+  @override
+  String get personaInferenceSubtitle =>
+      'More technical inferred preferences and current policies, collapsed by default';
+
+  @override
+  String get personaQuickAccessSystemUpdates => 'System Updates';
+
+  @override
+  String get personaQuickAccessMemorySettings => 'Memory Settings';
+
+  @override
+  String get personaCoreProfileUnavailable =>
+      'Core profile temporarily unavailable';
+
+  @override
+  String personaDegradedMode(String message) {
+    return 'Switched to degraded display. You can still browse and refresh other sections.\n$message';
+  }
+
+  @override
+  String get personaRetryFullProfile => 'Retry full profile';
+
+  @override
+  String personaActiveGoal(String goalTitle) {
+    return 'Your most active goal right now: $goalTitle.';
+  }
+
+  @override
+  String personaLearningPreference(String learningStyle, String responseDepth) {
+    return 'Your learning style is closer to $learningStyle, response depth tends toward $responseDepth.';
+  }
+
+  @override
+  String personaObservedPattern(String pattern) {
+    return 'The most recent pattern observed by the system: $pattern.';
+  }
+
+  @override
+  String personaCognitiveClueCount(int count) {
+    return '$count cognitive clues accumulated for personalized recommendations.';
+  }
+
+  @override
+  String get personaProfileSparse =>
+      'Your profile is still sparse. Keep using the system and this will become a more natural, specific summary.';
+
+  @override
+  String get personaSimplifiedUnderstanding =>
+      'Here\'s the system\'s simplified understanding of you:';
+
+  @override
+  String get personaSectionRefresh => 'Refresh';
+
+  @override
+  String get personaSectionLoading => 'Loading…';
+
+  @override
+  String personaLoadFailedError(String error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get personaPreferenceVersionReason =>
+      'Current explicit preferences and profile context version.';
+
+  @override
+  String get personaActivePreferencesReason =>
+      'Explicit preferences currently used for AI and system integration.';
+
+  @override
+  String get personaKnowledgeSummaryReason =>
+      'Knowledge mastery and active learning topics summary.';
+
+  @override
+  String get personaCognitiveSummaryReason =>
+      'Current cognitive patterns and risk signals summary.';
+
+  @override
+  String get personaInferredDefaultReason =>
+      'The system will keep updating this inference based on recent behavior.';
+
+  @override
+  String get personaViewRecord => 'View Record';
+
+  @override
+  String get personaUpdate => 'Update';
+
+  @override
+  String get personaAdjust => 'Adjust';
+
+  @override
+  String get personaManualOverride => 'Manual Override';
+
+  @override
+  String get personaPolicy => 'Policy';
+
+  @override
+  String personaSourcePattern(String pattern) {
+    return 'Source pattern: $pattern';
+  }
+
+  @override
+  String get personaActivePolicyReason => 'Currently active system policy.';
+
+  @override
+  String personaCorrectionSubmitFailed(String error) {
+    return 'Correction submission failed: $error';
+  }
+
+  @override
+  String get personaPreferenceUpdated => 'Preference updated';
+
+  @override
+  String personaPreferenceUpdateFailed(String error) {
+    return 'Preference update failed: $error';
+  }
+
+  @override
+  String get personaRolledBack => 'Rolled back to previous version';
+
+  @override
+  String personaRollbackFailed(String error) {
+    return 'Rollback failed: $error';
+  }
+
+  @override
+  String get personaGoalUpdated => 'Goal updated';
+
+  @override
+  String personaGoalUpdateFailed(String error) {
+    return 'Goal update failed: $error';
+  }
+
+  @override
+  String get personaInferredAdjusted => 'Inferred preference adjusted';
+
+  @override
+  String personaAdjustFailed(String error) {
+    return 'Adjustment failed: $error';
+  }
+
+  @override
+  String get personaInferredReset => 'Restored to system inferred value';
+
+  @override
+  String personaRestoreFailed(String error) {
+    return 'Restore failed: $error';
+  }
+
+  @override
+  String get personaUnknownError => 'Unknown error';
+
+  @override
+  String get personaHintDecimalRange => 'Enter a number between 0.0 and 1.0';
+
+  @override
+  String get personaHintStudyMinutes => 'Enter study duration (minutes)';
+
+  @override
+  String get personaHintPositiveMinutes => 'Enter a positive number of minutes';
+
+  @override
+  String get personaHintValidPreference => 'Enter a valid preference value';
+
+  @override
+  String get examSprintTitle => 'Exam Sprint Setup';
+
+  @override
+  String examSprintMinutesPerDay(int minutes) {
+    return '$minutes min/day';
+  }
+
+  @override
+  String get examSprintStep1Subject => '1. Which course?';
+
+  @override
+  String get examSprintSubjectHint =>
+      'e.g., Computer Networks / Calculus / CET-4';
+
+  @override
+  String get examSprintSubjectRequired =>
+      'Tell me which course you\'re sprinting for';
+
+  @override
+  String get examSprintStep2Date => '2. When is the exam?';
+
+  @override
+  String get examSprintSelectDate => 'Select exam date';
+
+  @override
+  String get examSprintDateHint =>
+      'The date determines sprint duration and pace';
+
+  @override
+  String get examSprintStep3Target => '3. Pass, maintain, or aim high?';
+
+  @override
+  String get examSprintStep4Scope => '4. Any exam scope or teacher highlights?';
+
+  @override
+  String get examSprintStep4Subtitle =>
+      'Paste key points or upload PDF / DOCX / PPT / TXT.';
+
+  @override
+  String get examSprintScopeHint =>
+      'e.g., Focus on transport layer and network layer; teacher said short answer and calculation questions.';
+
+  @override
+  String get examSprintUpload => 'Upload Materials';
+
+  @override
+  String get examSprintNoUpload => 'No materials uploaded yet';
+
+  @override
+  String examSprintUploadedCount(int count) {
+    return '$count materials uploaded';
+  }
+
+  @override
+  String get examSprintStep5Baseline =>
+      '5. How much do you know? Which chapters worry you?';
+
+  @override
+  String get examSprintWeakChapters => 'Which chapters worry you most?';
+
+  @override
+  String get examSprintStep6Daily =>
+      '6. How long can you realistically study each day?';
+
+  @override
+  String examSprintMinutesPerDayLabel(int minutes) {
+    return '$minutes min / day';
+  }
+
+  @override
+  String examSprintMinutesLabel(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get examSprintDailyHint =>
+      'Use the time you can realistically stick to, not the ideal.';
+
+  @override
+  String get examSprintGenerate => 'Generate My First Day Tasks';
+
+  @override
+  String get examSprintSubmitHint =>
+      'After submission, you\'ll get an initial assessment within 3 seconds and be taken to the plan or first day tasks.';
+
+  @override
+  String get examSprintHeroTitle =>
+      'Not a survey — let\'s find your starting point together';
+
+  @override
+  String get examSprintHeroSubtitle =>
+      'Answer these 6 questions and I\'ll give you an initial assessment, recommended strategy, and first day tasks.';
+
+  @override
+  String get examSprintUploadSuccess => 'Material uploaded';
+
+  @override
+  String get examSprintSelectDateFirst => 'Please select the exam date first';
+
+  @override
+  String get examSprintAssessmentComplete => 'Initial assessment complete';
+
+  @override
+  String examSprintPassProbability(int percent) {
+    return 'Pass probability $percent%';
+  }
+
+  @override
+  String examSprintRecommendedMode(String mode) {
+    return 'Recommended mode $mode';
+  }
+
+  @override
+  String get examSprintFirstDayFocus => 'What to do on day one';
+
+  @override
+  String get examSprintStartFirstDay => 'Start first day tasks';
+
+  @override
+  String get examSprintViewPlan => 'View plan';
+
+  @override
+  String get examSprintViewFullPlan => 'View full plan';
+
+  @override
+  String get examSprintBaselineAlmostZero => 'Starting almost from scratch';
+
+  @override
+  String get examSprintBaselineUnstable =>
+      'Attended class, but foundation is shaky';
+
+  @override
+  String get examSprintBaselinePartial =>
+      'Have some basics, can patch and push simultaneously';
+
+  @override
+  String get examSprintBaselineSolid =>
+      'Solid foundation, focus on score optimization';
+
+  @override
+  String examSprintDayCount(int count) {
+    return '$count days';
+  }
+
+  @override
+  String get examSprintTargetPass => 'Pass';
+
+  @override
+  String get examSprintTargetHold => 'Maintain';
+
+  @override
+  String get examSprintTargetHighScore => 'Aim high';
+
+  @override
+  String get memorySettingsTitle => 'Memory Control';
+
+  @override
+  String get memorySettingsBack => 'Back';
+
+  @override
+  String get memorySettingsDisabled => 'Memory controls are not enabled';
+
+  @override
+  String memorySettingsLoadError(String error) {
+    return 'Failed to load memory settings: $error';
+  }
+
+  @override
+  String memorySettingsSaveError(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get memorySettingsSaveSuccess => 'Memory settings updated';
+
+  @override
+  String get memorySettingsUnavailable => 'Memory control unavailable';
+
+  @override
+  String get memorySettingsEnabledChip => 'Memory enabled';
+
+  @override
+  String get memorySettingsDisabledChip => 'Memory paused';
+
+  @override
+  String get memorySettingsControllableChip => 'Preferences controllable';
+
+  @override
+  String get memorySettingsDescription =>
+      'Control how long-term memory learns your preferences, goals, and experiences. Defaults to conservative — only truly valuable information for future decisions should be retained.';
+
+  @override
+  String get memorySettingsEnableTitle => 'Enable long-term memory';
+
+  @override
+  String get memorySettingsEnableDesc =>
+      'Disabling pauses new memory writes but does not delete history.';
+
+  @override
+  String get memorySettingsSocialTitle => 'Social semantics toggles';
+
+  @override
+  String get memorySettingsSocialDesc =>
+      'Stage 17 only handles memory declarations and front-door reads. Disabling a category hides that social semantic type at the front door.';
+
+  @override
+  String get memorySettingsSocialSelf => 'Self memory';
+
+  @override
+  String get memorySettingsSocialPersonMention => 'Person mentions';
+
+  @override
+  String get memorySettingsSocialRelationship => 'Relationship dynamics';
+
+  @override
+  String get memorySettingsSocialCommitment => 'Commitments';
+
+  @override
+  String get memorySettingsPushTitle => 'Proactive Reminders';
+
+  @override
+  String get memorySettingsPushDesc =>
+      'Stage 18 is off by default. Only after you explicitly enable it will the system send commitment follow-ups or engagement recovery reminders.';
+
+  @override
+  String get memorySettingsPushEnableTitle => 'Enable proactive reminders';
+
+  @override
+  String get memorySettingsPushEnableDesc =>
+      'Master switch. When off, all Stage 18 proactive reminders are disabled.';
+
+  @override
+  String get memorySettingsPushFollowUpTitle => 'Commitment follow-up';
+
+  @override
+  String get memorySettingsPushFollowUpDesc =>
+      'Only for commitments you explicitly made and are overdue.';
+
+  @override
+  String get memorySettingsPushRecoveryTitle => 'Engagement recovery';
+
+  @override
+  String get memorySettingsPushRecoveryDesc =>
+      'Only for users who were consistently active and haven\'t been active for 72 hours.';
+
+  @override
+  String get memorySettingsQuietHoursTitle => 'Quiet hours';
+
+  @override
+  String get memorySettingsQuietHoursDesc =>
+      'You can narrow the system default of 22:00-08:00, but cannot expand reminders into this period.';
+
+  @override
+  String get memorySettingsStartTime => 'Start time';
+
+  @override
+  String get memorySettingsEndTime => 'End time';
+
+  @override
+  String memorySettingsCurrentTimezone(String timezone) {
+    return 'Current timezone: $timezone';
+  }
+
+  @override
+  String get memorySettingsViewInbox => 'View reminder inbox';
+
+  @override
+  String get memorySettingsTypeTitle => 'Memory types';
+
+  @override
+  String get memorySettingsTypeDesc =>
+      'Determines which content is stored long-term.';
+
+  @override
+  String get memorySettingsPreferenceTitle => 'Preferences';
+
+  @override
+  String get memorySettingsPreferenceDesc =>
+      'Records response style, learning pace, and common preferences.';
+
+  @override
+  String get memorySettingsGoalTitle => 'Goals';
+
+  @override
+  String get memorySettingsGoalDesc =>
+      'Records confirmed long-term goals and stage intentions.';
+
+  @override
+  String get memorySettingsEpisodicTitle => 'Experiences';
+
+  @override
+  String get memorySettingsEpisodicDesc =>
+      'Records key events and feedback helpful for future decisions.';
+
+  @override
+  String get memorySettingsInferredTitle => 'AI auto memory';
+
+  @override
+  String get memorySettingsInferredDesc =>
+      'Allows the system to infer short-term experiences from chats; each entry must be visible and revocable.';
+
+  @override
+  String get memorySettingsCaptureTitle => 'Capture intensity';
+
+  @override
+  String get memorySettingsCaptureDesc =>
+      'Higher is more aggressive, but also captures more context.';
+
+  @override
+  String get memorySettingsCaptureLow => 'Low';
+
+  @override
+  String get memorySettingsCaptureMedium => 'Medium';
+
+  @override
+  String get memorySettingsCaptureHigh => 'High';
+
+  @override
+  String get memorySettingsBlockPrefTitle => 'Block preferences';
+
+  @override
+  String get memorySettingsBlockPrefDesc =>
+      'Disable preference items you don\'t want stored long-term.';
+
+  @override
+  String get memorySettingsBlockSourceTitle => 'Block sources';
+
+  @override
+  String get memorySettingsBlockSourceDesc =>
+      'Restrict which entry points won\'t write to long-term memory.';
+
+  @override
+  String get memorySettingsSaveButton => 'Save settings';
+
+  @override
+  String get memorySettingsSaving => 'Saving...';
+
+  @override
+  String get reportLearningAnalysisReport => 'Learning Analysis Report';
+
+  @override
+  String get reportContinuationSubtitle =>
+      'Continue viewing the analysis report for this learning journey';
+
+  @override
+  String get reportPartialDataDisclaimer => 'Partial data, for reference only';
+
+  @override
+  String get reportPartialDataMessage =>
+      'Generated from partial learning records. Results may not be comprehensive.';
+
+  @override
+  String get reportDiagnosisPanelEyebrow => 'Learning Diagnosis Panel';
+
+  @override
+  String get reportOpenGalaxy => 'Open Knowledge Galaxy';
 
   @override
   String reportPrioritizeNode(String nodeName) {
-    return '优先处理 $nodeName';
+    return 'Prioritize $nodeName';
   }
 
   @override
-  String get reportRangeWeek => '本周';
+  String get reportRangeWeek => 'This Week';
 
   @override
-  String get reportRangeMonth => '本月';
+  String get reportRangeMonth => 'This Month';
 
   @override
-  String get reportRangeAll => '全部';
+  String get reportRangeAll => 'All';
 
   @override
-  String get reportCurrentLearningTopic => '当前学习主题';
+  String get reportCurrentLearningTopic => 'Current learning topic';
 
   @override
-  String get reportMasteryTrendTitle => '掌握度趋势';
+  String get reportMasteryTrendTitle => 'Mastery Trend';
 
   @override
-  String get reportPartialDataPill => '部分数据，仅供参考';
+  String get reportPartialDataPill => 'Partial data, for reference only';
 
   @override
-  String get reportTrendEmptyTitle => '完成更多学习后将在此展示趋势分析';
+  String get reportTrendEmptyTitle =>
+      'Trend analysis will appear after more learning';
 
   @override
-  String get reportTrendEmptyMessage => '当前还没有足够的真实学习记录来生成趋势，请先完成学习任务、练习或复盘。';
+  String get reportTrendEmptyMessage =>
+      'Not enough real learning records to generate a trend yet. Complete learning tasks, exercises, or reviews first.';
 
   @override
-  String get reportTrendChartHint => '拖动或点按时间点，就能把这条线和当时的学习投入一起看清楚。';
+  String get reportTrendChartHint =>
+      'Drag or tap a data point to see the trend line alongside study effort at that time.';
 
   @override
-  String get reportRadarChartTitle => '掌握度雷达图';
+  String get reportRadarChartTitle => 'Mastery Radar Chart';
 
   @override
-  String get reportRadarSubtitleInsufficient => '完成更多学习后将在此展示掌握度分析';
+  String get reportRadarSubtitleInsufficient =>
+      'Mastery analysis will appear after more learning';
 
   @override
-  String get reportRadarSubtitleNoComparison => '点击任一维度查看更细的掌握情况';
+  String get reportRadarSubtitleNoComparison =>
+      'Tap any dimension for detailed mastery info';
 
   @override
-  String get reportRadarSubtitleWithComparison => '当前报告已叠加上次轮廓，可点击维度查看详情';
+  String get reportRadarSubtitleWithComparison =>
+      'Previous outline overlaid. Tap dimensions for details.';
 
   @override
-  String get reportRadarEmptyMessage => '掌握度雷达图需要真实学习记录支撑，先开始一次学习并留下结果。';
+  String get reportRadarEmptyMessage =>
+      'The radar chart needs real learning records. Start a learning session first.';
 
   @override
-  String get reportKeyMetricsTitle => '关键指标';
+  String get reportKeyMetricsTitle => 'Key Metrics';
 
   @override
-  String get reportMetricTotalMastery => '总掌握度';
+  String get reportMetricTotalMastery => 'Total Mastery';
 
   @override
-  String get reportMetricKnowledgeCount => '知识点数';
+  String get reportMetricKnowledgeCount => 'Knowledge Points';
 
   @override
-  String get reportMetricStrengths => '强项';
+  String get reportMetricStrengths => 'Strengths';
 
   @override
-  String get reportMetricWeaknesses => '薄弱点';
+  String get reportMetricWeaknesses => 'Weaknesses';
 
   @override
-  String get reportExecutionProfileLoadFailed => '执行画像暂时没有加载出来，不影响你先阅读本次学习报告。';
+  String get reportExecutionProfileLoadFailed =>
+      'Execution profile couldn\'t load. You can still read the learning report.';
 
   @override
-  String get reportKeyDimensionsTitle => '重点知识维度';
+  String get reportKeyDimensionsTitle => 'Key Knowledge Dimensions';
 
   @override
-  String get reportAiAnalysisTitle => 'AI 分析报告';
+  String get reportAiAnalysisTitle => 'AI Analysis Report';
 
   @override
-  String get reportBackToGalaxy => '回到 Galaxy';
+  String get reportBackToGalaxy => 'Back to Galaxy';
 
   @override
-  String get reportViewSprintHistory => '查看 Sprint 历史';
+  String get reportViewSprintHistory => 'View Sprint History';
 
   @override
   String reportShareTitle(int mastery) {
-    return '学习报告 · 平均掌握度 $mastery%';
+    return 'Learning Report · Avg Mastery $mastery%';
   }
 
   @override
-  String get reportShareSubtitleSummary => '本轮学习分析摘要';
+  String get reportShareSubtitleSummary => 'Learning analysis summary';
 
   @override
   String reportShareSubtitlePriority(String nodeName) {
-    return '优先补强 $nodeName';
+    return 'Priority: Strengthen $nodeName';
   }
 
   @override
   String reportShareMetadataDimensions(int count) {
-    return '$count 个维度';
+    return '$count dimensions';
   }
 
   @override
   String reportShareMessageWithMastery(int mastery) {
-    return '我刚在 Sparkle 生成了一份学习分析报告，平均掌握度 $mastery%。';
+    return 'I just generated a learning analysis report on Sparkle. Average mastery: $mastery%.';
   }
 
   @override
   String reportShareMessageWithNode(String nodeName) {
-    return '我刚在 Sparkle 生成了一份学习分析报告，当前优先补强的是 $nodeName。';
+    return 'I just generated a learning analysis report on Sparkle. Current priority: strengthen $nodeName.';
   }
 
   @override
   String reportHeroTitlePriority(String nodeName) {
-    return '当前最该先收口的是 $nodeName';
+    return 'The first thing to close out is $nodeName';
   }
 
   @override
-  String get reportHeroTitleStable => '你的稳定区已经开始成形';
+  String get reportHeroTitleStable => 'Your stable zone is taking shape';
 
   @override
-  String get reportHeroTitleBuild => '先用真实学习记录建立分析基础';
+  String get reportHeroTitleBuild =>
+      'Build a foundation with real learning records first';
 
   @override
   String reportHeroSubtitleDeltaUp(String nodeName) {
-    return '整体掌握度还在抬升，但 $nodeName 依然是最容易拖慢进度的环节，优先补它最划算。';
+    return 'Mastery is still rising, but $nodeName remains the biggest drag on progress. Prioritize it for the best return.';
   }
 
   @override
   String reportHeroSubtitleDeltaDown(String nodeName) {
-    return '最近节奏有一点回落，先别继续铺开范围，优先把 $nodeName 重新拉稳。';
+    return 'There\'s been a slight dip. Don\'t expand scope — stabilize $nodeName first.';
   }
 
   @override
   String get reportHeroSubtitleStrong =>
-      '这份报告已经把当前强项、薄弱点和趋势放到同一个面板里，先看重点，再决定下一步。';
+      'This report puts your strengths, weaknesses, and trends on one panel. Focus on what matters, then decide your next step.';
 
   @override
-  String get reportHeroSubtitleDefault => '先用这份报告确认方向，后续随着更多记录补齐，趋势会越来越清楚。';
+  String get reportHeroSubtitleDefault =>
+      'Use this report to confirm your direction. As more records come in, trends will get clearer.';
 
   @override
-  String get reportMetricAvgMastery => '平均掌握度';
+  String get reportMetricAvgMastery => 'Avg Mastery';
 
   @override
-  String get reportMetricPriority => '优先补强';
+  String get reportMetricPriority => 'Priority';
 
   @override
-  String get reportMetricCurrentStrength => '当前强项';
+  String get reportMetricCurrentStrength => 'Current Strength';
 
   @override
-  String get reportMetricTrendChange => '变化趋势';
+  String get reportMetricTrendChange => 'Trend Change';
 
   @override
-  String get reportPlaceholderEmpty => '暂无学习报告数据。';
+  String get reportPlaceholderEmpty => 'No learning report data yet.';
 
   @override
-  String get reportContinueReading => '继续阅读报告';
+  String get reportContinueReading => 'Continue Reading Report';
 
   @override
-  String get reportEvidenceAndAdvice => '证据与建议';
+  String get reportEvidenceAndAdvice => 'Evidence & Suggestions';
 
   @override
-  String get reportGotIt => '知道了';
+  String get reportGotIt => 'Got it';
 
   @override
-  String get reportMasteryStable => '掌握稳定';
+  String get reportMasteryStable => 'Stable';
 
   @override
-  String get reportMasteryConsolidate => '仍可巩固';
+  String get reportMasteryConsolidate => 'Can Consolidate';
 
   @override
-  String get reportMasteryNeedFocus => '需要重点补强';
+  String get reportMasteryNeedFocus => 'Needs Focus';
 
   @override
-  String get reportGuidanceStable => '这个知识点已经比较稳，可以更多地通过应用题和迁移练习来保持熟练度。';
+  String get reportGuidanceStable =>
+      'This topic is fairly solid. Keep it sharp with application and transfer exercises.';
 
   @override
   String get reportGuidanceConsolidate =>
-      '这个知识点理解基本建立，但在连续推理或综合题里可能还会波动，适合再补一轮刻意练习。';
+      'The basics are in place, but performance may waver in multi-step problems. Another round of deliberate practice would help.';
 
   @override
   String get reportGuidanceNeedFocus =>
-      '这个知识点当前是明显薄弱环节，建议先回到定义、例题和前置概念，再重新做相关练习。';
+      'This is a clear weak spot. Go back to definitions, examples, and prerequisites before reattempting exercises.';
 
   @override
-  String get reportChartFirstReport => '第一份报告已经准备好了。下次再来看，这里就会出现你的趋势变化线。';
+  String get reportChartFirstReport =>
+      'Your first report is ready. Come back next time and a trend line will appear here.';
 
   @override
   String reportChartMasteryLabel(int mastery) {
-    return '掌握度 $mastery%';
+    return 'Mastery $mastery%';
   }
 
   @override
   String reportChartStudyMinutes(int minutes) {
-    return '学习时长 $minutes 分钟';
+    return 'Study time $minutes min';
   }
 
   @override
   String reportChartMinutesShort(int count) {
-    return '$count分';
+    return '$count min';
   }
 
   @override
-  String get reportChartZeroMinutes => '0分';
+  String get reportChartZeroMinutes => '0 min';
 
   @override
-  String get reportLegendMastery => '掌握度';
+  String get reportLegendMastery => 'Mastery';
 
   @override
-  String get reportLegendStudyDuration => '学习时长';
+  String get reportLegendStudyDuration => 'Study Duration';
 
   @override
-  String get reportDiagnosisSummaryTitle => '诊断摘要';
+  String get reportDiagnosisSummaryTitle => 'Diagnosis Summary';
 
   @override
   String get reportDiagnosisSummaryDesc =>
-      '先回答三个最关键的问题：你现在最稳的地方在哪里、最该补的地方在哪里、整体是在上升还是停滞。';
+      'Three key questions: where are you strongest, where should you focus, and are you trending up or stalling?';
 
   @override
-  String get reportDiagnosisTitleStrength => '当前强项';
+  String get reportDiagnosisTitleStrength => 'Current Strength';
 
   @override
-  String get reportDiagnosisTitleWeakness => '主要短板';
+  String get reportDiagnosisTitleWeakness => 'Main Weakness';
 
   @override
-  String get reportDiagnosisTitleTrend => '整体趋势';
+  String get reportDiagnosisTitleTrend => 'Overall Trend';
 
   @override
-  String get reportDiagnosisHeadlinePending => '待生成';
+  String get reportDiagnosisHeadlinePending => 'Pending';
 
   @override
-  String get reportDiagnosisStrengthBodyPending => '生成更多学习记录后，这里会出现最稳的知识点。';
+  String get reportDiagnosisStrengthBodyPending =>
+      'Once more learning records are generated, your strongest knowledge point will appear here.';
 
   @override
-  String get reportDiagnosisStrengthBodyData => '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。';
+  String get reportDiagnosisStrengthBodyData =>
+      'Use it as leverage for transfer practice to shore up related topics.';
 
   @override
-  String get reportDiagnosisWeaknessBodyPending => '当前还没有足够数据定位短板。';
+  String get reportDiagnosisWeaknessBodyPending =>
+      'Not enough data to pinpoint a weakness yet.';
 
   @override
-  String get reportDiagnosisWeaknessBodyData => '这是最值得先补的切入口，优先回到定义、例题和前置关系。';
+  String get reportDiagnosisWeaknessBodyData =>
+      'This is the best place to start. Go back to definitions, examples, and prerequisites.';
 
   @override
-  String get reportDiagnosisWeaknessFallback => '薄弱项';
+  String get reportDiagnosisWeaknessFallback => 'Weakness';
 
   @override
-  String get reportDiagnosisTrendWaitingComparison => '等待历史对比';
+  String get reportDiagnosisTrendWaitingComparison => 'Awaiting comparison';
 
   @override
-  String get reportDiagnosisTrendBodyPending => '再积累一到两份报告后，这里会显示你的连续变化趋势。';
+  String get reportDiagnosisTrendBodyPending =>
+      'After one or two more reports, your trend will appear here.';
 
   @override
-  String get reportDiagnosisTrendBodyUp => '掌握度在继续抬升，接下来更适合做巩固和迁移。';
+  String get reportDiagnosisTrendBodyUp =>
+      'Mastery is rising. Focus on consolidation and transfer.';
 
   @override
-  String get reportDiagnosisTrendBodyDown => '最近有回落迹象，建议减少铺开面，先收口当前薄弱点。';
+  String get reportDiagnosisTrendBodyDown =>
+      'Slight dip recently. Narrow your scope and close current gaps first.';
 
   @override
-  String get reportTagConsolidate => '可继续巩固';
+  String get reportTagConsolidate => 'Keep consolidating';
 
   @override
-  String get reportTagProcessFirst => '建议先处理';
+  String get reportTagProcessFirst => 'Process first';
 
   @override
-  String get reportTagProcessSoon => '建议尽快处理';
+  String get reportTagProcessSoon => 'Process soon';
 
   @override
-  String get reportTagKeepRhythm => '保持当前节奏';
+  String get reportTagKeepRhythm => 'Keep current rhythm';
 
   @override
-  String get reportTagCloseGap => '建议尽快收口';
+  String get reportTagCloseGap => 'Close the gap';
 
   @override
-  String get reportTagAwaitMore => '等待更多记录';
+  String get reportTagAwaitMore => 'Awaiting more data';
 
   @override
-  String get reportTagObserve => '建议继续观察';
+  String get reportTagObserve => 'Keep observing';
 
   @override
-  String get reportActionTitle => '下一步行动';
+  String get reportActionTitle => 'Next Steps';
 
   @override
   String get reportActionDescNoWeakness =>
-      '先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。';
+      'Visit Knowledge Galaxy to confirm your current structure, then generate more practice data for sharper suggestions.';
 
   @override
   String reportActionDescWithWeakness(String weakNode, String strongNode) {
-    return '优先围绕 $weakNode 收口，再用 $strongNode 做迁移练习，能更快把整体掌握度拉起来。';
+    return 'Close out $weakNode first, then use $strongNode for transfer practice to raise overall mastery faster.';
   }
 
   @override
   String reportActionExploreNode(String nodeName) {
-    return '推演 $nodeName';
+    return 'Explore $nodeName';
   }
 
   @override
-  String get reportActionWeaknessFallback => '薄弱项';
+  String get reportActionWeaknessFallback => 'Weakness';
 
   @override
-  String get reportActionStrengthFallback => '当前强项';
+  String get reportActionStrengthFallback => 'Current Strength';
 
   @override
-  String get reportActionEnterSimulation => '进入学习仿真';
+  String get reportActionEnterSimulation => 'Enter Simulation';
 
   @override
-  String get reportTrendAutoFillTitle => '趋势会随着更多报告自动补全';
+  String get reportTrendAutoFillTitle =>
+      'Trends will fill in as more reports are generated';
 
   @override
   String get reportTrendFirstReportMessage =>
-      '第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。';
+      'Your first report is ready. Focus on weak spots based on this diagnosis. Next time, a trend line will start to form.';
 
   @override
-  String get reportTrendLoadingHistory => '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。';
+  String get reportTrendLoadingHistory =>
+      'Loading your learning report history. Mastery trends will appear here shortly.';
 
   @override
-  String get reportAiExecutionAssistant => 'AI执行助手';
+  String get reportAiExecutionAssistant => 'AI Execution Assistant';
 
   @override
   String get reportAiExecutionDesc =>
-      'Sparkle 会记住哪些任务更适合交给 AI，以及这些委派实际帮你节省了多少时间。';
+      'Sparkle remembers which tasks are better handled by AI and how much time those delegations actually saved you.';
 
   @override
-  String get reportStatTotalExecutions => '总执行';
+  String get reportStatTotalExecutions => 'Total Executions';
 
   @override
-  String get reportStatUnitTimes => '次';
+  String get reportStatUnitTimes => 'times';
 
   @override
-  String get reportStatSuccessRate => '成功率';
+  String get reportStatSuccessRate => 'Success Rate';
 
   @override
-  String get reportStatTimeSaved => '节省时间';
+  String get reportStatTimeSaved => 'Time Saved';
 
   @override
-  String get reportStatUnitHours => '小时';
+  String get reportStatUnitHours => 'hrs';
 
   @override
-  String get reportStatUnitMinutes => '分钟';
+  String get reportStatUnitMinutes => 'min';
 
   @override
   String reportStatByTypeFormat(String key, int count, int rate) {
-    return '$key: $count次 · $rate%';
+    return '$key: $count times · $rate%';
   }
+
+  @override
+  String get bgmLibraryTitle => 'BGM Library & Player';
+
+  @override
+  String get bgmLibraryRefresh => 'Refresh';
+
+  @override
+  String get bgmLibraryNoImport => 'No new tracks imported';
+
+  @override
+  String bgmLibraryImportedCount(int count) {
+    return 'Imported $count local tracks';
+  }
+
+  @override
+  String bgmLibraryPlayingSwitched(String title) {
+    return 'Playing $title, switched to player mode';
+  }
+
+  @override
+  String bgmLibraryRemoved(String title) {
+    return 'Removed $title';
+  }
+
+  @override
+  String get bgmLibraryEmptyFilter =>
+      'No tracks match the current filter. Try changing the filter or importing local music.';
+
+  @override
+  String get bgmLibraryNotPlaying => 'Not playing';
+
+  @override
+  String get bgmLibraryWaitingPlay => 'Waiting to play';
+
+  @override
+  String get bgmLibraryBrowseHint =>
+      'You can play any track from the library directly here';
+
+  @override
+  String get bgmLibraryNowPlaying => 'Now Playing';
+
+  @override
+  String get bgmLibraryPlayerMode => 'Player Mode';
+
+  @override
+  String get bgmLibraryPlayerModeDesc =>
+      'In player mode, music won\'t be interrupted by page navigation. Great for using Sparkle as an ambient music player.';
+
+  @override
+  String get bgmLibraryEnableBgm => 'Enable Background Music';
+
+  @override
+  String get bgmLibraryDisableHint =>
+      'When off, the player page won\'t play background music either';
+
+  @override
+  String get bgmLibraryQuickStrategy => 'Quick Strategy';
+
+  @override
+  String get bgmLibraryQuickStrategyDesc =>
+      'The most common adjustments are here. Full settings are still available in the Settings page.';
+
+  @override
+  String get bgmLibraryStyleOrientation => 'Style Orientation';
+
+  @override
+  String get bgmLibraryIntensityLabel => 'Ambience Intensity';
+
+  @override
+  String get bgmLibraryVarietyLabel => 'Rotation Rhythm';
+
+  @override
+  String get bgmLibraryStats => 'Library Status';
+
+  @override
+  String get bgmLibraryTotalTracks => 'Total Tracks';
+
+  @override
+  String get bgmLibraryCurated => 'Curated';
+
+  @override
+  String get bgmLibraryImportedLabel => 'Local Import';
+
+  @override
+  String get bgmLibraryBundled => 'System Fallback';
+
+  @override
+  String bgmLibraryImportDir(String path) {
+    return 'Local import directory: $path';
+  }
+
+  @override
+  String bgmLibraryCacheDir(String path) {
+    return 'Download cache directory: $path';
+  }
+
+  @override
+  String get bgmLibraryDirReadyNote =>
+      'Both directories are ready. This supports a lightweight approach where only a few tracks are bundled, and the rest are downloaded from the server.';
+
+  @override
+  String get bgmLibraryImportManage => 'Import & Manage';
+
+  @override
+  String get bgmLibraryImportManageDesc =>
+      'Import your own ambient music. Playing any track will automatically switch to player mode, and navigation won\'t interrupt playback.';
+
+  @override
+  String get bgmLibraryImportLocal => 'Import Local Songs';
+
+  @override
+  String get bgmLibrarySearchHint => 'Search tracks, albums, or scene tags';
+
+  @override
+  String get bgmLibraryFilterAll => 'All';
+
+  @override
+  String get bgmLibraryPlaying => 'Playing';
+
+  @override
+  String get bgmLibraryPlay => 'Play';
+
+  @override
+  String get bgmLibraryRemove => 'Remove';
+
+  @override
+  String get bgmLibraryTags => 'Tags';
+
+  @override
+  String get bgmLibraryStyle => 'Style';
+
+  @override
+  String get bgmLibraryEnergy => 'Energy';
+
+  @override
+  String get bgmLibraryDensity => 'Density';
+
+  @override
+  String get bgmLibraryModeAdaptive => 'Follow Page';
+
+  @override
+  String get bgmLibraryModeContinuous => 'Player Mode';
+
+  @override
+  String get bgmLibraryModeFocusOnly => 'Focus Only';
+
+  @override
+  String get bgmLibraryModeSilent => 'Silent';
+
+  @override
+  String get bgmLibraryPaletteAdaptive => 'Adaptive';
+
+  @override
+  String get bgmLibraryPaletteClassical => 'Classical';
+
+  @override
+  String get bgmLibraryPalettePiano => 'Piano';
+
+  @override
+  String get bgmLibraryPaletteAiry => 'Airy';
+
+  @override
+  String get bgmLibraryPaletteWarm => 'Warm';
+
+  @override
+  String get bgmLibraryIntensityGentle => 'Gentle';
+
+  @override
+  String get bgmLibraryIntensityBalanced => 'Balanced';
+
+  @override
+  String get bgmLibraryIntensityLush => 'Lush';
+
+  @override
+  String get bgmLibraryVarietySteady => 'Steady';
+
+  @override
+  String get bgmLibraryVarietyBalanced => 'Balanced';
+
+  @override
+  String get bgmLibraryVarietyDynamic => 'Dynamic';
+
+  @override
+  String get bgmLibrarySourceCurated => 'Curated';
+
+  @override
+  String get bgmLibrarySourceImported => 'Local Import';
+
+  @override
+  String get bgmLibrarySourceBundled => 'System Fallback';
+
+  @override
+  String get galaxyDraftReviewScreenTitle => 'Review knowledge stars';
+
+  @override
+  String galaxyDraftReviewPromptTitle(int count, String documentName) {
+    return 'We found $count knowledge stars in your $documentName! Review them?';
+  }
+
+  @override
+  String get galaxyDraftReviewPromptBody =>
+      'You decide what belongs in your galaxy. Approve, skip, merge, or rename each draft before it becomes part of your map.';
+
+  @override
+  String get galaxyDraftReviewNow => 'Review now';
+
+  @override
+  String get galaxyDraftReviewLater => 'Later';
+
+  @override
+  String galaxyDraftPendingIndicator(int batchCount, int draftCount) {
+    return '$batchCount pending review · $draftCount stars';
+  }
+
+  @override
+  String galaxyDraftReviewProgress(int current, int total) {
+    return 'Star $current of $total';
+  }
+
+  @override
+  String get galaxyDraftCompletionReady =>
+      'Ready to send them into your galaxy';
+
+  @override
+  String get galaxyDraftLongPressHint =>
+      'Swipe right to approve, swipe left to skip, or long-press to rename the draft before you keep it.';
+
+  @override
+  String get galaxyDraftLongPressShort => 'Long-press to edit';
+
+  @override
+  String get galaxyDraftApprove => 'Approve';
+
+  @override
+  String get galaxyDraftSkip => 'Skip';
+
+  @override
+  String get galaxyDraftMerge => 'Merge';
+
+  @override
+  String get galaxyDraftExcerpts => 'What this star contains';
+
+  @override
+  String galaxyDraftSimilarityLabel(String nodeName, int percent) {
+    return 'Similar to existing node: $nodeName ($percent%)';
+  }
+
+  @override
+  String get galaxyDraftEditTitle => 'Tune this knowledge star';
+
+  @override
+  String get galaxyDraftNameLabel => 'Node name';
+
+  @override
+  String get galaxyDraftDescriptionLabel => 'Description';
+
+  @override
+  String get galaxyDraftEditSave => 'Save changes';
+
+  @override
+  String get galaxyDraftReviewEmptyTitle => 'No pending stars right now';
+
+  @override
+  String get galaxyDraftReviewEmptyBody =>
+      'When document processing finishes, draft knowledge stars will land here for your approval.';
+
+  @override
+  String get galaxyDraftBackToGalaxy => 'Back to galaxy';
+
+  @override
+  String galaxyDraftCompletionTitle(int accepted, int total) {
+    return '$accepted of $total knowledge stars added';
+  }
+
+  @override
+  String galaxyDraftCompletionBody(String documentName) {
+    return 'The stars you kept from $documentName are ready to fly into your map.';
+  }
+
+  @override
+  String get galaxyDraftCompletionNothingAdded =>
+      'You skipped these drafts for now. They can always come back later.';
+
+  @override
+  String galaxyDraftCompletionSummary(int accepted, int total) {
+    return '$accepted of $total knowledge stars added to your galaxy!';
+  }
+
+  @override
+  String get galaxyUploadFabLabel => 'Add study material';
+
+  @override
+  String get galaxyUploadDocumentHere => 'Upload document here';
+
+  @override
+  String get galaxyNodeAddMaterial => 'Add material to this node';
+
+  @override
+  String get galaxyUploadTargetGalaxyCore => 'Galaxy core';
+
+  @override
+  String get galaxyUploadTargetSelectedConstellation => 'this constellation';
+
+  @override
+  String get galaxyUploadAlreadyInProgress =>
+      'A study material is already joining your constellation.';
+
+  @override
+  String get galaxyUploadStatusUploading => 'Uploading...';
+
+  @override
+  String get galaxyUploadStatusQueued => 'Upload complete. Holding orbit...';
+
+  @override
+  String get galaxyUploadStatusExtracting => 'Extracting content...';
+
+  @override
+  String get galaxyUploadStatusFindingKnowledge => 'Finding knowledge...';
+
+  @override
+  String get galaxyUploadStatusBuildingNodes => 'Weaving new stars...';
+
+  @override
+  String get galaxyUploadSuccessTitle => 'Processing complete!';
+
+  @override
+  String galaxyUploadSuccessBody(int count) {
+    return 'Processing complete! $count knowledge concepts found.';
+  }
+
+  @override
+  String galaxyUploadSuccessChip(int count) {
+    return '$count concepts found';
+  }
+
+  @override
+  String get galaxyUploadFailedTitle => 'That star didn\'t quite land';
+
+  @override
+  String get galaxyUploadFailedBody =>
+      'The document slipped out of the constellation before it could settle. Try again when you\'re ready.';
+
+  @override
+  String get galaxyUploadRetry => 'Retry upload';
+
+  @override
+  String galaxyUploadHeadingTo(String target) {
+    return 'Heading toward $target';
+  }
+
+  @override
+  String get galaxyUploadStepUpload => 'Upload';
+
+  @override
+  String get galaxyUploadStepExtract => 'Extract';
+
+  @override
+  String get galaxyUploadStepFind => 'Find';
+
+  @override
+  String get galaxyUploadStepComplete => 'Complete';
 }

@@ -5300,6 +5300,36 @@ abstract class AppLocalizations {
   /// **'学习指数 {value}'**
   String statisticsLearningIndex(Object value);
 
+  /// No description provided for @statisticsAggregationNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'原始数据'**
+  String get statisticsAggregationNone;
+
+  /// No description provided for @statisticsAggregationHourly.
+  ///
+  /// In zh, this message translates to:
+  /// **'按小时'**
+  String get statisticsAggregationHourly;
+
+  /// No description provided for @statisticsAggregationDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'按天'**
+  String get statisticsAggregationDaily;
+
+  /// No description provided for @statisticsAggregationWeekly.
+  ///
+  /// In zh, this message translates to:
+  /// **'按周'**
+  String get statisticsAggregationWeekly;
+
+  /// No description provided for @statisticsAggregationMonthly.
+  ///
+  /// In zh, this message translates to:
+  /// **'按月'**
+  String get statisticsAggregationMonthly;
+
   /// No description provided for @learningModeDepthHigh.
   ///
   /// In zh, this message translates to:
@@ -9482,6 +9512,24 @@ abstract class AppLocalizations {
   /// **'有帮助'**
   String get chatHelpful;
 
+  /// No description provided for @chatCitationExcerptUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条引用暂时还没有可展示的原文摘录。'**
+  String get chatCitationExcerptUnavailable;
+
+  /// No description provided for @chatCitationHelpfulPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条引用对你有帮助吗？'**
+  String get chatCitationHelpfulPrompt;
+
+  /// No description provided for @chatCitationOpenDocument.
+  ///
+  /// In zh, this message translates to:
+  /// **'前往文档'**
+  String get chatCitationOpenDocument;
+
   /// No description provided for @chatNotHelpful.
   ///
   /// In zh, this message translates to:
@@ -10586,6 +10634,126 @@ abstract class AppLocalizations {
   /// **'{count} 成员'**
   String communityMembers(int count);
 
+  /// No description provided for @friendsMyFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的好友'**
+  String get friendsMyFriends;
+
+  /// No description provided for @friendsFriendRequests.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友请求'**
+  String get friendsFriendRequests;
+
+  /// No description provided for @friendsDiscoverFriends.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现好友'**
+  String get friendsDiscoverFriends;
+
+  /// No description provided for @friendsDeleteFriend.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除好友'**
+  String get friendsDeleteFriend;
+
+  /// No description provided for @friendsConfirmDeleteFriend.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除好友 {name} 吗？'**
+  String friendsConfirmDeleteFriend(String name);
+
+  /// No description provided for @friendsCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get friendsCancel;
+
+  /// No description provided for @friendsDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get friendsDelete;
+
+  /// No description provided for @friendsFriendDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将 {name} 从好友列表中移除'**
+  String friendsFriendDeleted(String name);
+
+  /// No description provided for @friendsDeleteFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除好友失败：{error}'**
+  String friendsDeleteFailed(String error);
+
+  /// No description provided for @friendsBlockUser.
+  ///
+  /// In zh, this message translates to:
+  /// **'拉黑用户'**
+  String get friendsBlockUser;
+
+  /// No description provided for @friendsAfterBlockingHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'拉黑 {name} 后：'**
+  String friendsAfterBlockingHint(String name);
+
+  /// No description provided for @friendsRemoveFromFriendList.
+  ///
+  /// In zh, this message translates to:
+  /// **'将从你的好友列表中移除'**
+  String get friendsRemoveFromFriendList;
+
+  /// No description provided for @friendsCannotMessageYou.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法给你发送消息'**
+  String get friendsCannotMessageYou;
+
+  /// No description provided for @friendsCannotSendRequest.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法向你发送好友请求'**
+  String get friendsCannotSendRequest;
+
+  /// No description provided for @friendsBlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'拉黑'**
+  String get friendsBlock;
+
+  /// No description provided for @friendsBlockedSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已拉黑 {name}'**
+  String friendsBlockedSuccess(String name);
+
+  /// No description provided for @friendsBlockFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'拉黑用户失败：{error}'**
+  String friendsBlockFailed(String error);
+
+  /// No description provided for @friendsBlockedUsersManagement.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理黑名单'**
+  String get friendsBlockedUsersManagement;
+
+  /// No description provided for @friendsNoPendingRequests.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无待处理请求'**
+  String get friendsNoPendingRequests;
+
+  /// No description provided for @friendsWantsToBeYourFriend.
+  ///
+  /// In zh, this message translates to:
+  /// **'想成为你的好友'**
+  String get friendsWantsToBeYourFriend;
+
   /// No description provided for @taskMonitorTitle.
   ///
   /// In zh, this message translates to:
@@ -10909,6 +11077,102 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'相关节点'**
   String get knowledgeRelatedNodes;
+
+  /// No description provided for @knowledgeSourceMaterialsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源资料'**
+  String get knowledgeSourceMaterialsTitle;
+
+  /// No description provided for @knowledgeSourceMaterialsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{documents} 份文档 · {chunks} 个知识片段'**
+  String knowledgeSourceMaterialsSummary(int documents, int chunks);
+
+  /// No description provided for @knowledgeSourceMaterialsPersonalBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的上传'**
+  String get knowledgeSourceMaterialsPersonalBadge;
+
+  /// No description provided for @knowledgeSourceMaterialsSystemBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未附带个人笔记'**
+  String get knowledgeSourceMaterialsSystemBadge;
+
+  /// No description provided for @knowledgeSourceMaterialsUploadDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传于 {date}'**
+  String knowledgeSourceMaterialsUploadDate(Object date);
+
+  /// No description provided for @knowledgeSourceMaterialsChunkUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'片段'**
+  String get knowledgeSourceMaterialsChunkUnit;
+
+  /// No description provided for @knowledgeSourceMaterialsEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'让这个节点回到你的真实资料里'**
+  String get knowledgeSourceMaterialsEmptyTitle;
+
+  /// No description provided for @knowledgeSourceMaterialsEmptyBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'为「{topic}」补充自己的讲义或笔记，让这条知识真正可追溯。'**
+  String knowledgeSourceMaterialsEmptyBody(Object topic);
+
+  /// No description provided for @knowledgeSourceMaterialsAddNotes.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加关于「{topic}」的笔记'**
+  String knowledgeSourceMaterialsAddNotes(Object topic);
+
+  /// No description provided for @knowledgeSourceMaterialsReadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'阅读更多'**
+  String get knowledgeSourceMaterialsReadMore;
+
+  /// No description provided for @knowledgeSourceMaterialsNoPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份资料暂时还没有可展示的片段。'**
+  String get knowledgeSourceMaterialsNoPreview;
+
+  /// No description provided for @knowledgeSourceMaterialsOpenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法打开来源资料。'**
+  String get knowledgeSourceMaterialsOpenFailed;
+
+  /// No description provided for @knowledgeSourceMaterialsUploadSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'{filename} 已上传，处理并挂接后会显示在这里。'**
+  String knowledgeSourceMaterialsUploadSaved(Object filename);
+
+  /// No description provided for @knowledgeSourceMaterialsPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {page} 页'**
+  String knowledgeSourceMaterialsPage(int page);
+
+  /// No description provided for @knowledgeSourceMaterialsPages.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {pages} 页'**
+  String knowledgeSourceMaterialsPages(Object pages);
+
+  /// No description provided for @knowledgeSourceMaterialsChunk.
+  ///
+  /// In zh, this message translates to:
+  /// **'片段 {index}'**
+  String knowledgeSourceMaterialsChunk(int index);
 
   /// No description provided for @knowledgePrerequisites.
   ///
@@ -13148,6 +13412,12 @@ abstract class AppLocalizations {
   /// **'查看设置'**
   String get chatInterventionViewSettings;
 
+  /// No description provided for @chatOpenStudyMaterialsLibrary.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开学习资料库'**
+  String get chatOpenStudyMaterialsLibrary;
+
   /// No description provided for @chatKnowledgeCitationBody.
   ///
   /// In zh, this message translates to:
@@ -13562,6 +13832,48 @@ abstract class AppLocalizations {
   /// **'无可用来源'**
   String get chatSourcesUnavailable;
 
+  /// No description provided for @chatStudyMaterialsEmptySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传你的笔记、课件或 PDF 后，就能在聊天里作为学习资料使用。'**
+  String get chatStudyMaterialsEmptySubtitle;
+
+  /// No description provided for @chatStudyMaterialsAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 份资料可用'**
+  String chatStudyMaterialsAvailable(int count);
+
+  /// No description provided for @chatStudyMaterialsKnowledgeNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个知识节点'**
+  String chatStudyMaterialsKnowledgeNodes(int count);
+
+  /// No description provided for @chatStudyMaterialsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习资料'**
+  String get chatStudyMaterialsLabel;
+
+  /// No description provided for @chatStudyMaterialsPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习资料已暂停'**
+  String get chatStudyMaterialsPaused;
+
+  /// No description provided for @chatStudyMaterialsPausedDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一轮对话将暂停文档检索。'**
+  String get chatStudyMaterialsPausedDescription;
+
+  /// No description provided for @chatStudyMaterialsReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'已就绪'**
+  String get chatStudyMaterialsReady;
+
   /// No description provided for @chatStreakSummary.
   ///
   /// In zh, this message translates to:
@@ -13915,6 +14227,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{arg0}'**
   String communityGroupMembersCount(Object arg0);
+
+  /// No description provided for @groupKnowledgeBase.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识库'**
+  String get groupKnowledgeBase;
+
+  /// No description provided for @groupFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习资料'**
+  String get groupFiles;
+
+  /// No description provided for @saveToMyLibrary.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到我的库'**
+  String get saveToMyLibrary;
+
+  /// No description provided for @savedToLibrary.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存到你的库'**
+  String get savedToLibrary;
+
+  /// No description provided for @markAsOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记为官方'**
+  String get markAsOfficial;
+
+  /// No description provided for @officialResource.
+  ///
+  /// In zh, this message translates to:
+  /// **'官方'**
+  String get officialResource;
+
+  /// No description provided for @noGroupFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无学习资料'**
+  String get noGroupFiles;
+
+  /// No description provided for @noGroupFilesSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享你的笔记，帮助群组成员！'**
+  String get noGroupFilesSubtitle;
+
+  /// No description provided for @shareFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享文件'**
+  String get shareFile;
+
+  /// No description provided for @groupFilesCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个文件'**
+  String groupFilesCount(int count);
 
   /// No description provided for @communityMessageFallback.
   ///
@@ -22558,8 +22930,8 @@ abstract class AppLocalizations {
   /// No description provided for @examSprintDaysLeft.
   ///
   /// In zh, this message translates to:
-  /// **'还有 {days} 天'**
-  String examSprintDaysLeft(int days);
+  /// **'离考试还有 {days}'**
+  String examSprintDaysLeft(String days);
 
   /// No description provided for @examSprintTodayDone.
   ///
@@ -26406,6 +26778,1320 @@ abstract class AppLocalizations {
   /// **'导入失败：{error}'**
   String seedLibraryDetailImportFailed(String error);
 
+  /// No description provided for @recommendationTargetFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐对象'**
+  String get recommendationTargetFallback;
+
+  /// No description provided for @recommendationThisItem.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条推荐'**
+  String get recommendationThisItem;
+
+  /// No description provided for @recommendationFeedbackAbout.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于 {target} 的{stage}反馈'**
+  String recommendationFeedbackAbout(String target, String stage);
+
+  /// No description provided for @recommendationFeedbackHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的反馈会直接更新下一轮推荐权重'**
+  String get recommendationFeedbackHint;
+
+  /// No description provided for @recommendationStartCalibration.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始校准'**
+  String get recommendationStartCalibration;
+
+  /// No description provided for @recommendationFriendPreferenceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的伙伴匹配偏好'**
+  String get recommendationFriendPreferenceTitle;
+
+  /// No description provided for @recommendationGroupPreferenceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的社群推荐偏好'**
+  String get recommendationGroupPreferenceTitle;
+
+  /// No description provided for @recommendationRecentCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 {count} 次'**
+  String recommendationRecentCount(int count);
+
+  /// No description provided for @recommendationFriendLearningHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统正在学习你更看重相似度、互补性还是合作舒适度。'**
+  String get recommendationFriendLearningHint;
+
+  /// No description provided for @recommendationGroupLearningHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统正在学习你更偏好兴趣对口、活跃氛围还是新鲜发现。'**
+  String get recommendationGroupLearningHint;
+
+  /// No description provided for @recommendationSystemAvoiding.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统在回避：{signals}'**
+  String recommendationSystemAvoiding(String signals);
+
+  /// No description provided for @recommendationCurrentlyBiasing.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前更偏向：{metrics}'**
+  String recommendationCurrentlyBiasing(String metrics);
+
+  /// No description provided for @recommendationListSeparator.
+  ///
+  /// In zh, this message translates to:
+  /// **'、'**
+  String get recommendationListSeparator;
+
+  /// No description provided for @recommendationCalibrateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮我们校准推荐'**
+  String get recommendationCalibrateTitle;
+
+  /// No description provided for @recommendationFeedbackSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你对 {subject} 的评价会直接作用到接下来的推荐算法。'**
+  String recommendationFeedbackSubtitle(String subject);
+
+  /// No description provided for @recommendationScoreOverall.
+  ///
+  /// In zh, this message translates to:
+  /// **'整体感受'**
+  String get recommendationScoreOverall;
+
+  /// No description provided for @recommendationScoreExplanationClarity.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐理由清晰度'**
+  String get recommendationScoreExplanationClarity;
+
+  /// No description provided for @recommendationScoreActionability.
+  ///
+  /// In zh, this message translates to:
+  /// **'采取行动的意愿'**
+  String get recommendationScoreActionability;
+
+  /// No description provided for @recommendationScoreRelevance.
+  ///
+  /// In zh, this message translates to:
+  /// **'契合度'**
+  String get recommendationScoreRelevance;
+
+  /// No description provided for @recommendationScoreSimilarity.
+  ///
+  /// In zh, this message translates to:
+  /// **'相似度是否到位'**
+  String get recommendationScoreSimilarity;
+
+  /// No description provided for @recommendationScoreComplementary.
+  ///
+  /// In zh, this message translates to:
+  /// **'互补性是否成立'**
+  String get recommendationScoreComplementary;
+
+  /// No description provided for @recommendationScoreComfort.
+  ///
+  /// In zh, this message translates to:
+  /// **'合作舒适度'**
+  String get recommendationScoreComfort;
+
+  /// No description provided for @recommendationScoreInterestMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'兴趣匹配度'**
+  String get recommendationScoreInterestMatch;
+
+  /// No description provided for @recommendationScoreActivity.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃度是否合适'**
+  String get recommendationScoreActivity;
+
+  /// No description provided for @recommendationScoreAtmosphere.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群氛围'**
+  String get recommendationScoreAtmosphere;
+
+  /// No description provided for @recommendationIssuesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'哪里不够对味'**
+  String get recommendationIssuesTitle;
+
+  /// No description provided for @recommendationStrengthsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'哪些地方做得好'**
+  String get recommendationStrengthsTitle;
+
+  /// No description provided for @recommendationFreeTextLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'自然语言补充'**
+  String get recommendationFreeTextLabel;
+
+  /// No description provided for @recommendationFriendHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：我更希望责任伙伴跟我节奏接近，但也能在拖延时推我一把。'**
+  String get recommendationFriendHint;
+
+  /// No description provided for @recommendationGroupHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：我想找更对口的小组，最好活跃但不要太嘈杂。'**
+  String get recommendationGroupHint;
+
+  /// No description provided for @recommendationPrivacyNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'我们只使用你填写的分数和总结来优化推荐，不会把私密原始数据直接暴露给其他用户。'**
+  String get recommendationPrivacyNotice;
+
+  /// No description provided for @recommendationLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'稍后再说'**
+  String get recommendationLater;
+
+  /// No description provided for @recommendationSubmitFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交反馈'**
+  String get recommendationSubmitFeedback;
+
+  /// No description provided for @recommendationMatchingStrategy.
+  ///
+  /// In zh, this message translates to:
+  /// **'匹配策略：{name}'**
+  String recommendationMatchingStrategy(String name);
+
+  /// No description provided for @recommendationGroupSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人 · {tags}'**
+  String recommendationGroupSubtitle(String count, String tags);
+
+  /// No description provided for @recommendationPublicGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开社群'**
+  String get recommendationPublicGroup;
+
+  /// No description provided for @recommendationStageImmediate.
+  ///
+  /// In zh, this message translates to:
+  /// **'即时'**
+  String get recommendationStageImmediate;
+
+  /// No description provided for @recommendationStageFollowUp.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟进'**
+  String get recommendationStageFollowUp;
+
+  /// No description provided for @recommendationStageOutcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'结果'**
+  String get recommendationStageOutcome;
+
+  /// No description provided for @recommendationReasonSubjectOverlap.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题重合'**
+  String get recommendationReasonSubjectOverlap;
+
+  /// No description provided for @recommendationReasonPreferenceAlignment.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习节奏接近'**
+  String get recommendationReasonPreferenceAlignment;
+
+  /// No description provided for @recommendationReasonTagOverlap.
+  ///
+  /// In zh, this message translates to:
+  /// **'兴趣命中'**
+  String get recommendationReasonTagOverlap;
+
+  /// No description provided for @recommendationReasonTrending.
+  ///
+  /// In zh, this message translates to:
+  /// **'近期活跃'**
+  String get recommendationReasonTrending;
+
+  /// No description provided for @recommendationMetricOverall.
+  ///
+  /// In zh, this message translates to:
+  /// **'整体'**
+  String get recommendationMetricOverall;
+
+  /// No description provided for @recommendationMetricSimilarity.
+  ///
+  /// In zh, this message translates to:
+  /// **'相似度'**
+  String get recommendationMetricSimilarity;
+
+  /// No description provided for @recommendationMetricComfort.
+  ///
+  /// In zh, this message translates to:
+  /// **'舒适度'**
+  String get recommendationMetricComfort;
+
+  /// No description provided for @recommendationMetricInterestMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'兴趣匹配'**
+  String get recommendationMetricInterestMatch;
+
+  /// No description provided for @recommendationMetricActivity.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃度'**
+  String get recommendationMetricActivity;
+
+  /// No description provided for @recommendationMetricSubjectSimilarity.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题相似'**
+  String get recommendationMetricSubjectSimilarity;
+
+  /// No description provided for @recommendationMetricRelationshipReadiness.
+  ///
+  /// In zh, this message translates to:
+  /// **'关系熟悉度'**
+  String get recommendationMetricRelationshipReadiness;
+
+  /// No description provided for @recommendationMetricTagMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签匹配'**
+  String get recommendationMetricTagMatch;
+
+  /// No description provided for @recommendationMetricQuality.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量'**
+  String get recommendationMetricQuality;
+
+  /// No description provided for @recommendationSignalTooDissimilar.
+  ///
+  /// In zh, this message translates to:
+  /// **'不够相似'**
+  String get recommendationSignalTooDissimilar;
+
+  /// No description provided for @recommendationSignalWantMoreTagMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'兴趣不够对口'**
+  String get recommendationSignalWantMoreTagMatch;
+
+  /// No description provided for @recommendationSignalTrustworthy.
+  ///
+  /// In zh, this message translates to:
+  /// **'合作感靠谱'**
+  String get recommendationSignalTrustworthy;
+
+  /// No description provided for @recommendationSignalGoodInterestMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'兴趣对口'**
+  String get recommendationSignalGoodInterestMatch;
+
+  /// No description provided for @recommendationIssueNotSimilar.
+  ///
+  /// In zh, this message translates to:
+  /// **'不够相似'**
+  String get recommendationIssueNotSimilar;
+
+  /// No description provided for @recommendationIssueNotComplementary.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少互补'**
+  String get recommendationIssueNotComplementary;
+
+  /// No description provided for @recommendationIssueNotProactive.
+  ///
+  /// In zh, this message translates to:
+  /// **'不够主动'**
+  String get recommendationIssueNotProactive;
+
+  /// No description provided for @recommendationIssueTooMuchPressure.
+  ///
+  /// In zh, this message translates to:
+  /// **'压力太大'**
+  String get recommendationIssueTooMuchPressure;
+
+  /// No description provided for @recommendationIssueNotFamiliar.
+  ///
+  /// In zh, this message translates to:
+  /// **'不够熟悉'**
+  String get recommendationIssueNotFamiliar;
+
+  /// No description provided for @recommendationIssueInaccurateTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签不准'**
+  String get recommendationIssueInaccurateTags;
+
+  /// No description provided for @recommendationIssueTooQuiet.
+  ///
+  /// In zh, this message translates to:
+  /// **'太冷清'**
+  String get recommendationIssueTooQuiet;
+
+  /// No description provided for @recommendationIssueTooCrowded.
+  ///
+  /// In zh, this message translates to:
+  /// **'太拥挤'**
+  String get recommendationIssueTooCrowded;
+
+  /// No description provided for @recommendationIssueMediocreVibe.
+  ///
+  /// In zh, this message translates to:
+  /// **'氛围一般'**
+  String get recommendationIssueMediocreVibe;
+
+  /// No description provided for @recommendationIssueUnsuitableThreshold.
+  ///
+  /// In zh, this message translates to:
+  /// **'门槛不合适'**
+  String get recommendationIssueUnsuitableThreshold;
+
+  /// No description provided for @recommendationStrengthGreatFit.
+  ///
+  /// In zh, this message translates to:
+  /// **'很契合'**
+  String get recommendationStrengthGreatFit;
+
+  /// No description provided for @recommendationStrengthComplementary.
+  ///
+  /// In zh, this message translates to:
+  /// **'很互补'**
+  String get recommendationStrengthComplementary;
+
+  /// No description provided for @recommendationStrengthReliable.
+  ///
+  /// In zh, this message translates to:
+  /// **'很靠谱'**
+  String get recommendationStrengthReliable;
+
+  /// No description provided for @recommendationStrengthClearReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'理由清楚'**
+  String get recommendationStrengthClearReason;
+
+  /// No description provided for @recommendationStrengthInterestMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'兴趣对口'**
+  String get recommendationStrengthInterestMatch;
+
+  /// No description provided for @recommendationStrengthGreatVibe.
+  ///
+  /// In zh, this message translates to:
+  /// **'氛围很好'**
+  String get recommendationStrengthGreatVibe;
+
+  /// No description provided for @recommendationStrengthActiveFit.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃合适'**
+  String get recommendationStrengthActiveFit;
+
+  /// No description provided for @personaRefreshPersona.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新画像'**
+  String get personaRefreshPersona;
+
+  /// No description provided for @personaProfileInterpretation.
+  ///
+  /// In zh, this message translates to:
+  /// **'画像解读'**
+  String get personaProfileInterpretation;
+
+  /// No description provided for @personaProfileInterpretationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先看自然语言总结，再决定要不要展开底层结构'**
+  String get personaProfileInterpretationSubtitle;
+
+  /// No description provided for @personaL3Subtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先展示系统已经总结出的可感知结论'**
+  String get personaL3Subtitle;
+
+  /// No description provided for @personaL1Subtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你明确告诉系统的目标和偏好'**
+  String get personaL1Subtitle;
+
+  /// No description provided for @personaL2Subtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统与你协作校准后的标签与能力判断'**
+  String get personaL2Subtitle;
+
+  /// No description provided for @personaInferenceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统推断与策略'**
+  String get personaInferenceTitle;
+
+  /// No description provided for @personaInferenceSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'更技术性的推断偏好与当前策略，默认收起'**
+  String get personaInferenceSubtitle;
+
+  /// No description provided for @personaQuickAccessSystemUpdates.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统更新'**
+  String get personaQuickAccessSystemUpdates;
+
+  /// No description provided for @personaQuickAccessMemorySettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆设置'**
+  String get personaQuickAccessMemorySettings;
+
+  /// No description provided for @personaCoreProfileUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'核心画像暂时不可用'**
+  String get personaCoreProfileUnavailable;
+
+  /// No description provided for @personaDegradedMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'已切换为降级展示，你仍然可以查看和刷新其它分区。\n{message}'**
+  String personaDegradedMode(String message);
+
+  /// No description provided for @personaRetryFullProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试完整画像'**
+  String get personaRetryFullProfile;
+
+  /// No description provided for @personaActiveGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'你当前最明确的目标是：{goalTitle}。'**
+  String personaActiveGoal(String goalTitle);
+
+  /// No description provided for @personaLearningPreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的学习偏好更接近{learningStyle}，系统回答深度倾向{responseDepth}。'**
+  String personaLearningPreference(String learningStyle, String responseDepth);
+
+  /// No description provided for @personaObservedPattern.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统最近观察到的主要模式是：{pattern}。'**
+  String personaObservedPattern(String pattern);
+
+  /// No description provided for @personaCognitiveClueCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'画像里已积累 {count} 条可用于个性化推荐的认知线索。'**
+  String personaCognitiveClueCount(int count);
+
+  /// No description provided for @personaProfileSparse.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。'**
+  String get personaProfileSparse;
+
+  /// No description provided for @personaSimplifiedUnderstanding.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是系统目前对你的简化理解：'**
+  String get personaSimplifiedUnderstanding;
+
+  /// No description provided for @personaSectionRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get personaSectionRefresh;
+
+  /// No description provided for @personaSectionLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中…'**
+  String get personaSectionLoading;
+
+  /// No description provided for @personaLoadFailedError.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败：{error}'**
+  String personaLoadFailedError(String error);
+
+  /// No description provided for @personaPreferenceVersionReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前显式偏好与画像上下文版本。'**
+  String get personaPreferenceVersionReason;
+
+  /// No description provided for @personaActivePreferencesReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前用于 AI 与系统联动的显式偏好。'**
+  String get personaActivePreferencesReason;
+
+  /// No description provided for @personaKnowledgeSummaryReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识掌握度与当前活跃学习主题摘要。'**
+  String get personaKnowledgeSummaryReason;
+
+  /// No description provided for @personaCognitiveSummaryReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前认知模式与风险信号摘要。'**
+  String get personaCognitiveSummaryReason;
+
+  /// No description provided for @personaInferredDefaultReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统会根据最近行为持续更新这项推断。'**
+  String get personaInferredDefaultReason;
+
+  /// No description provided for @personaViewRecord.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看记录'**
+  String get personaViewRecord;
+
+  /// No description provided for @personaUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新'**
+  String get personaUpdate;
+
+  /// No description provided for @personaAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整'**
+  String get personaAdjust;
+
+  /// No description provided for @personaManualOverride.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动覆盖'**
+  String get personaManualOverride;
+
+  /// No description provided for @personaPolicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'策略'**
+  String get personaPolicy;
+
+  /// No description provided for @personaSourcePattern.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源模式：{pattern}'**
+  String personaSourcePattern(String pattern);
+
+  /// No description provided for @personaActivePolicyReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已生效的系统策略。'**
+  String get personaActivePolicyReason;
+
+  /// No description provided for @personaCorrectionSubmitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交修正失败：{error}'**
+  String personaCorrectionSubmitFailed(String error);
+
+  /// No description provided for @personaPreferenceUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好已更新'**
+  String get personaPreferenceUpdated;
+
+  /// No description provided for @personaPreferenceUpdateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好更新失败：{error}'**
+  String personaPreferenceUpdateFailed(String error);
+
+  /// No description provided for @personaRolledBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'已回滚到上一版本'**
+  String get personaRolledBack;
+
+  /// No description provided for @personaRollbackFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'回滚失败：{error}'**
+  String personaRollbackFailed(String error);
+
+  /// No description provided for @personaGoalUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标已更新'**
+  String get personaGoalUpdated;
+
+  /// No description provided for @personaGoalUpdateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标更新失败：{error}'**
+  String personaGoalUpdateFailed(String error);
+
+  /// No description provided for @personaInferredAdjusted.
+  ///
+  /// In zh, this message translates to:
+  /// **'推断偏好已调整'**
+  String get personaInferredAdjusted;
+
+  /// No description provided for @personaAdjustFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整失败：{error}'**
+  String personaAdjustFailed(String error);
+
+  /// No description provided for @personaInferredReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复系统推断值'**
+  String get personaInferredReset;
+
+  /// No description provided for @personaRestoreFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复失败：{error}'**
+  String personaRestoreFailed(String error);
+
+  /// No description provided for @personaUnknownError.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知错误'**
+  String get personaUnknownError;
+
+  /// No description provided for @personaHintDecimalRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入 0.0 到 1.0 之间的数字'**
+  String get personaHintDecimalRange;
+
+  /// No description provided for @personaHintStudyMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入学习时长（分钟）'**
+  String get personaHintStudyMinutes;
+
+  /// No description provided for @personaHintPositiveMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入大于 0 的分钟数'**
+  String get personaHintPositiveMinutes;
+
+  /// No description provided for @personaHintValidPreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的偏好值'**
+  String get personaHintValidPreference;
+
+  /// No description provided for @examSprintTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试冲刺设置'**
+  String get examSprintTitle;
+
+  /// No description provided for @examSprintMinutesPerDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟/天'**
+  String examSprintMinutesPerDay(int minutes);
+
+  /// No description provided for @examSprintStep1Subject.
+  ///
+  /// In zh, this message translates to:
+  /// **'1. 哪门课？'**
+  String get examSprintStep1Subject;
+
+  /// No description provided for @examSprintSubjectHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：计算机网络 / 高数 / 英语四级'**
+  String get examSprintSubjectHint;
+
+  /// No description provided for @examSprintSubjectRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'先告诉我你要冲刺哪门课'**
+  String get examSprintSubjectRequired;
+
+  /// No description provided for @examSprintStep2Date.
+  ///
+  /// In zh, this message translates to:
+  /// **'2. 考试哪天？'**
+  String get examSprintStep2Date;
+
+  /// No description provided for @examSprintSelectDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择考试日期'**
+  String get examSprintSelectDate;
+
+  /// No description provided for @examSprintDateHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'日期会决定冲刺天数和节奏'**
+  String get examSprintDateHint;
+
+  /// No description provided for @examSprintStep3Target.
+  ///
+  /// In zh, this message translates to:
+  /// **'3. 目标是通过、保分还是冲高分？'**
+  String get examSprintStep3Target;
+
+  /// No description provided for @examSprintStep4Scope.
+  ///
+  /// In zh, this message translates to:
+  /// **'4. 考试范围 / 老师重点有吗？'**
+  String get examSprintStep4Scope;
+
+  /// No description provided for @examSprintStep4Subtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。'**
+  String get examSprintStep4Subtitle;
+
+  /// No description provided for @examSprintScopeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：重点看传输层、网络层；老师说会考简答和计算题。'**
+  String get examSprintScopeHint;
+
+  /// No description provided for @examSprintUpload.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传资料'**
+  String get examSprintUpload;
+
+  /// No description provided for @examSprintNoUpload.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没上传资料'**
+  String get examSprintNoUpload;
+
+  /// No description provided for @examSprintUploadedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已上传 {count} 份资料'**
+  String examSprintUploadedCount(int count);
+
+  /// No description provided for @examSprintStep5Baseline.
+  ///
+  /// In zh, this message translates to:
+  /// **'5. 你现在大概会多少？最怕哪几章？'**
+  String get examSprintStep5Baseline;
+
+  /// No description provided for @examSprintWeakChapters.
+  ///
+  /// In zh, this message translates to:
+  /// **'最怕哪几章？'**
+  String get examSprintWeakChapters;
+
+  /// No description provided for @examSprintStep6Daily.
+  ///
+  /// In zh, this message translates to:
+  /// **'6. 每天真实能学多久？'**
+  String get examSprintStep6Daily;
+
+  /// No description provided for @examSprintMinutesPerDayLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟 / 天'**
+  String examSprintMinutesPerDayLabel(int minutes);
+
+  /// No description provided for @examSprintMinutesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String examSprintMinutesLabel(int minutes);
+
+  /// No description provided for @examSprintDailyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'用「你大概率能坚持」的时间，不用理想状态。'**
+  String get examSprintDailyHint;
+
+  /// No description provided for @examSprintGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成我的第一天任务'**
+  String get examSprintGenerate;
+
+  /// No description provided for @examSprintSubmitHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。'**
+  String get examSprintSubmitHint;
+
+  /// No description provided for @examSprintHeroTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是填问卷，是一起确定起点'**
+  String get examSprintHeroTitle;
+
+  /// No description provided for @examSprintHeroSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。'**
+  String get examSprintHeroSubtitle;
+
+  /// No description provided for @examSprintUploadSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料已上传'**
+  String get examSprintUploadSuccess;
+
+  /// No description provided for @examSprintSelectDateFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选择考试日期'**
+  String get examSprintSelectDateFirst;
+
+  /// No description provided for @examSprintAssessmentComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'初步评估已完成'**
+  String get examSprintAssessmentComplete;
+
+  /// No description provided for @examSprintPassProbability.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过概率 {percent}%'**
+  String examSprintPassProbability(int percent);
+
+  /// No description provided for @examSprintRecommendedMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议模式 {mode}'**
+  String examSprintRecommendedMode(String mode);
+
+  /// No description provided for @examSprintFirstDayFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一天先做什么'**
+  String get examSprintFirstDayFocus;
+
+  /// No description provided for @examSprintStartFirstDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始第一天任务'**
+  String get examSprintStartFirstDay;
+
+  /// No description provided for @examSprintViewPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看计划'**
+  String get examSprintViewPlan;
+
+  /// No description provided for @examSprintViewFullPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看整个计划'**
+  String get examSprintViewFullPlan;
+
+  /// No description provided for @examSprintBaselineAlmostZero.
+  ///
+  /// In zh, this message translates to:
+  /// **'几乎要从零开始'**
+  String get examSprintBaselineAlmostZero;
+
+  /// No description provided for @examSprintBaselineUnstable.
+  ///
+  /// In zh, this message translates to:
+  /// **'上过课，但基础还不稳'**
+  String get examSprintBaselineUnstable;
+
+  /// No description provided for @examSprintBaselinePartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'有一部分基础，可以边补边冲'**
+  String get examSprintBaselinePartial;
+
+  /// No description provided for @examSprintBaselineSolid.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础不错，重点是提分校准'**
+  String get examSprintBaselineSolid;
+
+  /// No description provided for @examSprintDayCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天'**
+  String examSprintDayCount(int count);
+
+  /// No description provided for @examSprintTargetPass.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过'**
+  String get examSprintTargetPass;
+
+  /// No description provided for @examSprintTargetHold.
+  ///
+  /// In zh, this message translates to:
+  /// **'保分'**
+  String get examSprintTargetHold;
+
+  /// No description provided for @examSprintTargetHighScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲高分'**
+  String get examSprintTargetHighScore;
+
+  /// No description provided for @memorySettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆控制'**
+  String get memorySettingsTitle;
+
+  /// No description provided for @memorySettingsBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回'**
+  String get memorySettingsBack;
+
+  /// No description provided for @memorySettingsDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆控制未启用'**
+  String get memorySettingsDisabled;
+
+  /// No description provided for @memorySettingsLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载记忆设置失败: {error}'**
+  String memorySettingsLoadError(String error);
+
+  /// No description provided for @memorySettingsSaveError.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败: {error}'**
+  String memorySettingsSaveError(String error);
+
+  /// No description provided for @memorySettingsSaveSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆设置已更新'**
+  String get memorySettingsSaveSuccess;
+
+  /// No description provided for @memorySettingsUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆控制不可用'**
+  String get memorySettingsUnavailable;
+
+  /// No description provided for @memorySettingsEnabledChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆已启用'**
+  String get memorySettingsEnabledChip;
+
+  /// No description provided for @memorySettingsDisabledChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆已暂停'**
+  String get memorySettingsDisabledChip;
+
+  /// No description provided for @memorySettingsControllableChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好可控'**
+  String get memorySettingsControllableChip;
+
+  /// No description provided for @memorySettingsDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。'**
+  String get memorySettingsDescription;
+
+  /// No description provided for @memorySettingsEnableTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用长期记忆'**
+  String get memorySettingsEnableTitle;
+
+  /// No description provided for @memorySettingsEnableDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭后会暂停新的记忆写入，但不会删除历史记录。'**
+  String get memorySettingsEnableDesc;
+
+  /// No description provided for @memorySettingsSocialTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'社交语义子开关'**
+  String get memorySettingsSocialTitle;
+
+  /// No description provided for @memorySettingsSocialDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。'**
+  String get memorySettingsSocialDesc;
+
+  /// No description provided for @memorySettingsSocialSelf.
+  ///
+  /// In zh, this message translates to:
+  /// **'自我记忆'**
+  String get memorySettingsSocialSelf;
+
+  /// No description provided for @memorySettingsSocialPersonMention.
+  ///
+  /// In zh, this message translates to:
+  /// **'人物提及'**
+  String get memorySettingsSocialPersonMention;
+
+  /// No description provided for @memorySettingsSocialRelationship.
+  ///
+  /// In zh, this message translates to:
+  /// **'关系动态'**
+  String get memorySettingsSocialRelationship;
+
+  /// No description provided for @memorySettingsSocialCommitment.
+  ///
+  /// In zh, this message translates to:
+  /// **'承诺事项'**
+  String get memorySettingsSocialCommitment;
+
+  /// No description provided for @memorySettingsPushTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'主动提醒'**
+  String get memorySettingsPushTitle;
+
+  /// No description provided for @memorySettingsPushDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。'**
+  String get memorySettingsPushDesc;
+
+  /// No description provided for @memorySettingsPushEnableTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用主动提醒'**
+  String get memorySettingsPushEnableTitle;
+
+  /// No description provided for @memorySettingsPushEnableDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'总开关。关闭后 Stage 18 主动提醒会全部停用。'**
+  String get memorySettingsPushEnableDesc;
+
+  /// No description provided for @memorySettingsPushFollowUpTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'承诺跟进'**
+  String get memorySettingsPushFollowUpTitle;
+
+  /// No description provided for @memorySettingsPushFollowUpDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'只针对你明确表达过、且已经逾期的承诺事项。'**
+  String get memorySettingsPushFollowUpDesc;
+
+  /// No description provided for @memorySettingsPushRecoveryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃恢复'**
+  String get memorySettingsPushRecoveryTitle;
+
+  /// No description provided for @memorySettingsPushRecoveryDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'只针对曾经连续活跃、且 72 小时未活跃的情况。'**
+  String get memorySettingsPushRecoveryDesc;
+
+  /// No description provided for @memorySettingsQuietHoursTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'静默时段'**
+  String get memorySettingsQuietHoursTitle;
+
+  /// No description provided for @memorySettingsQuietHoursDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。'**
+  String get memorySettingsQuietHoursDesc;
+
+  /// No description provided for @memorySettingsStartTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始时间'**
+  String get memorySettingsStartTime;
+
+  /// No description provided for @memorySettingsEndTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束时间'**
+  String get memorySettingsEndTime;
+
+  /// No description provided for @memorySettingsCurrentTimezone.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前时区：{timezone}'**
+  String memorySettingsCurrentTimezone(String timezone);
+
+  /// No description provided for @memorySettingsViewInbox.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看提醒收件箱'**
+  String get memorySettingsViewInbox;
+
+  /// No description provided for @memorySettingsTypeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆类型'**
+  String get memorySettingsTypeTitle;
+
+  /// No description provided for @memorySettingsTypeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'决定哪些内容会被长期记住。'**
+  String get memorySettingsTypeDesc;
+
+  /// No description provided for @memorySettingsPreferenceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好'**
+  String get memorySettingsPreferenceTitle;
+
+  /// No description provided for @memorySettingsPreferenceDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录回答风格、学习节奏和常见偏好。'**
+  String get memorySettingsPreferenceDesc;
+
+  /// No description provided for @memorySettingsGoalTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标'**
+  String get memorySettingsGoalTitle;
+
+  /// No description provided for @memorySettingsGoalDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录已确认的长期目标和阶段意图。'**
+  String get memorySettingsGoalDesc;
+
+  /// No description provided for @memorySettingsEpisodicTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'经历'**
+  String get memorySettingsEpisodicTitle;
+
+  /// No description provided for @memorySettingsEpisodicDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录对后续决策有帮助的关键事件与反馈。'**
+  String get memorySettingsEpisodicDesc;
+
+  /// No description provided for @memorySettingsInferredTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 自动记忆'**
+  String get memorySettingsInferredTitle;
+
+  /// No description provided for @memorySettingsInferredDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'允许系统从聊天中推断短期经历；每条都必须可见、可撤销。'**
+  String get memorySettingsInferredDesc;
+
+  /// No description provided for @memorySettingsCaptureTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'捕获强度'**
+  String get memorySettingsCaptureTitle;
+
+  /// No description provided for @memorySettingsCaptureDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'越高越积极，但也会记录更多上下文。'**
+  String get memorySettingsCaptureDesc;
+
+  /// No description provided for @memorySettingsCaptureLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低'**
+  String get memorySettingsCaptureLow;
+
+  /// No description provided for @memorySettingsCaptureMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中'**
+  String get memorySettingsCaptureMedium;
+
+  /// No description provided for @memorySettingsCaptureHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高'**
+  String get memorySettingsCaptureHigh;
+
+  /// No description provided for @memorySettingsBlockPrefTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽偏好'**
+  String get memorySettingsBlockPrefTitle;
+
+  /// No description provided for @memorySettingsBlockPrefDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'不希望长期存储的偏好项可以在这里关闭。'**
+  String get memorySettingsBlockPrefDesc;
+
+  /// No description provided for @memorySettingsBlockSourceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽来源'**
+  String get memorySettingsBlockSourceTitle;
+
+  /// No description provided for @memorySettingsBlockSourceDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'限制哪些入口不会写入长期记忆。'**
+  String get memorySettingsBlockSourceDesc;
+
+  /// No description provided for @memorySettingsSaveButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存设置'**
+  String get memorySettingsSaveButton;
+
+  /// No description provided for @memorySettingsSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存中...'**
+  String get memorySettingsSaving;
+
   /// No description provided for @reportLearningAnalysisReport.
   ///
   /// In zh, this message translates to:
@@ -27041,6 +28727,642 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{key}: {count}次 · {rate}%'**
   String reportStatByTypeFormat(String key, int count, int rate);
+
+  /// No description provided for @bgmLibraryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'BGM 曲库与播放器'**
+  String get bgmLibraryTitle;
+
+  /// No description provided for @bgmLibraryRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get bgmLibraryRefresh;
+
+  /// No description provided for @bgmLibraryNoImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有导入新曲目'**
+  String get bgmLibraryNoImport;
+
+  /// No description provided for @bgmLibraryImportedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 {count} 首本地音乐'**
+  String bgmLibraryImportedCount(int count);
+
+  /// No description provided for @bgmLibraryPlayingSwitched.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在播放 {title}，已切换到播放器模式'**
+  String bgmLibraryPlayingSwitched(String title);
+
+  /// No description provided for @bgmLibraryRemoved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已移除 {title}'**
+  String bgmLibraryRemoved(String title);
+
+  /// No description provided for @bgmLibraryEmptyFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前筛选下没有曲目，可以尝试切换筛选或导入本地音乐。'**
+  String get bgmLibraryEmptyFilter;
+
+  /// No description provided for @bgmLibraryNotPlaying.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前未播放'**
+  String get bgmLibraryNotPlaying;
+
+  /// No description provided for @bgmLibraryWaitingPlay.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待播放中'**
+  String get bgmLibraryWaitingPlay;
+
+  /// No description provided for @bgmLibraryBrowseHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'你可以在这里直接点播曲库里的任意曲目'**
+  String get bgmLibraryBrowseHint;
+
+  /// No description provided for @bgmLibraryNowPlaying.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前播放'**
+  String get bgmLibraryNowPlaying;
+
+  /// No description provided for @bgmLibraryPlayerMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放器模式'**
+  String get bgmLibraryPlayerMode;
+
+  /// No description provided for @bgmLibraryPlayerModeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放器模式下音乐不会因页面跳转而被打断，适合把 Sparkle 当成舒缓音乐播放器来用。'**
+  String get bgmLibraryPlayerModeDesc;
+
+  /// No description provided for @bgmLibraryEnableBgm.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用背景音乐'**
+  String get bgmLibraryEnableBgm;
+
+  /// No description provided for @bgmLibraryDisableHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭后播放器页也不会继续播放背景音乐'**
+  String get bgmLibraryDisableHint;
+
+  /// No description provided for @bgmLibraryQuickStrategy.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速策略调节'**
+  String get bgmLibraryQuickStrategy;
+
+  /// No description provided for @bgmLibraryQuickStrategyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里保留最常用的调节项，完整细项仍然可以在设置页里继续调整。'**
+  String get bgmLibraryQuickStrategyDesc;
+
+  /// No description provided for @bgmLibraryStyleOrientation.
+  ///
+  /// In zh, this message translates to:
+  /// **'风格取向'**
+  String get bgmLibraryStyleOrientation;
+
+  /// No description provided for @bgmLibraryIntensityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'氛围强度'**
+  String get bgmLibraryIntensityLabel;
+
+  /// No description provided for @bgmLibraryVarietyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'轮换节奏'**
+  String get bgmLibraryVarietyLabel;
+
+  /// No description provided for @bgmLibraryStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'曲库状态'**
+  String get bgmLibraryStats;
+
+  /// No description provided for @bgmLibraryTotalTracks.
+  ///
+  /// In zh, this message translates to:
+  /// **'总曲目'**
+  String get bgmLibraryTotalTracks;
+
+  /// No description provided for @bgmLibraryCurated.
+  ///
+  /// In zh, this message translates to:
+  /// **'精选曲库'**
+  String get bgmLibraryCurated;
+
+  /// No description provided for @bgmLibraryImportedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地导入'**
+  String get bgmLibraryImportedLabel;
+
+  /// No description provided for @bgmLibraryBundled.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统兜底'**
+  String get bgmLibraryBundled;
+
+  /// No description provided for @bgmLibraryImportDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地导入目录：{path}'**
+  String bgmLibraryImportDir(String path);
+
+  /// No description provided for @bgmLibraryCacheDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载缓存目录：{path}'**
+  String bgmLibraryCacheDir(String path);
+
+  /// No description provided for @bgmLibraryDirReadyNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'这两个目录已经准备好，后续可以直接接“默认只打包少量曲目，其余从服务器下载到本地”的轻量化方案。'**
+  String get bgmLibraryDirReadyNote;
+
+  /// No description provided for @bgmLibraryImportManage.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入与管理'**
+  String get bgmLibraryImportManage;
+
+  /// No description provided for @bgmLibraryImportManageDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'你可以把自己的舒缓音乐直接导入进来。点播任意曲目时，系统会自动切换到播放器模式，后续跳页也不会中断。'**
+  String get bgmLibraryImportManageDesc;
+
+  /// No description provided for @bgmLibraryImportLocal.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入本地歌曲'**
+  String get bgmLibraryImportLocal;
+
+  /// No description provided for @bgmLibrarySearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索曲目、专辑或场景标签'**
+  String get bgmLibrarySearchHint;
+
+  /// No description provided for @bgmLibraryFilterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get bgmLibraryFilterAll;
+
+  /// No description provided for @bgmLibraryPlaying.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放中'**
+  String get bgmLibraryPlaying;
+
+  /// No description provided for @bgmLibraryPlay.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放'**
+  String get bgmLibraryPlay;
+
+  /// No description provided for @bgmLibraryRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get bgmLibraryRemove;
+
+  /// No description provided for @bgmLibraryTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get bgmLibraryTags;
+
+  /// No description provided for @bgmLibraryStyle.
+  ///
+  /// In zh, this message translates to:
+  /// **'风格'**
+  String get bgmLibraryStyle;
+
+  /// No description provided for @bgmLibraryEnergy.
+  ///
+  /// In zh, this message translates to:
+  /// **'能量'**
+  String get bgmLibraryEnergy;
+
+  /// No description provided for @bgmLibraryDensity.
+  ///
+  /// In zh, this message translates to:
+  /// **'密度'**
+  String get bgmLibraryDensity;
+
+  /// No description provided for @bgmLibraryModeAdaptive.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随页面'**
+  String get bgmLibraryModeAdaptive;
+
+  /// No description provided for @bgmLibraryModeContinuous.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放器模式'**
+  String get bgmLibraryModeContinuous;
+
+  /// No description provided for @bgmLibraryModeFocusOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅专注'**
+  String get bgmLibraryModeFocusOnly;
+
+  /// No description provided for @bgmLibraryModeSilent.
+  ///
+  /// In zh, this message translates to:
+  /// **'静音'**
+  String get bgmLibraryModeSilent;
+
+  /// No description provided for @bgmLibraryPaletteAdaptive.
+  ///
+  /// In zh, this message translates to:
+  /// **'自适应'**
+  String get bgmLibraryPaletteAdaptive;
+
+  /// No description provided for @bgmLibraryPaletteClassical.
+  ///
+  /// In zh, this message translates to:
+  /// **'精选古典'**
+  String get bgmLibraryPaletteClassical;
+
+  /// No description provided for @bgmLibraryPalettePiano.
+  ///
+  /// In zh, this message translates to:
+  /// **'钢琴优先'**
+  String get bgmLibraryPalettePiano;
+
+  /// No description provided for @bgmLibraryPaletteAiry.
+  ///
+  /// In zh, this message translates to:
+  /// **'空灵氛围'**
+  String get bgmLibraryPaletteAiry;
+
+  /// No description provided for @bgmLibraryPaletteWarm.
+  ///
+  /// In zh, this message translates to:
+  /// **'温暖轻快'**
+  String get bgmLibraryPaletteWarm;
+
+  /// No description provided for @bgmLibraryIntensityGentle.
+  ///
+  /// In zh, this message translates to:
+  /// **'柔和'**
+  String get bgmLibraryIntensityGentle;
+
+  /// No description provided for @bgmLibraryIntensityBalanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'平衡'**
+  String get bgmLibraryIntensityBalanced;
+
+  /// No description provided for @bgmLibraryIntensityLush.
+  ///
+  /// In zh, this message translates to:
+  /// **'丰盈'**
+  String get bgmLibraryIntensityLush;
+
+  /// No description provided for @bgmLibraryVarietySteady.
+  ///
+  /// In zh, this message translates to:
+  /// **'稳定'**
+  String get bgmLibraryVarietySteady;
+
+  /// No description provided for @bgmLibraryVarietyBalanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'均衡'**
+  String get bgmLibraryVarietyBalanced;
+
+  /// No description provided for @bgmLibraryVarietyDynamic.
+  ///
+  /// In zh, this message translates to:
+  /// **'灵动'**
+  String get bgmLibraryVarietyDynamic;
+
+  /// No description provided for @bgmLibrarySourceCurated.
+  ///
+  /// In zh, this message translates to:
+  /// **'精选曲库'**
+  String get bgmLibrarySourceCurated;
+
+  /// No description provided for @bgmLibrarySourceImported.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地导入'**
+  String get bgmLibrarySourceImported;
+
+  /// No description provided for @bgmLibrarySourceBundled.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统兜底'**
+  String get bgmLibrarySourceBundled;
+
+  /// No description provided for @galaxyDraftReviewScreenTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'审核知识星'**
+  String get galaxyDraftReviewScreenTitle;
+
+  /// No description provided for @galaxyDraftReviewPromptTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我们从 {documentName} 里找到了 {count} 颗知识星，要现在看看吗？'**
+  String galaxyDraftReviewPromptTitle(int count, String documentName);
+
+  /// No description provided for @galaxyDraftReviewPromptBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。'**
+  String get galaxyDraftReviewPromptBody;
+
+  /// No description provided for @galaxyDraftReviewNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在审核'**
+  String get galaxyDraftReviewNow;
+
+  /// No description provided for @galaxyDraftReviewLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'稍后再看'**
+  String get galaxyDraftReviewLater;
+
+  /// No description provided for @galaxyDraftPendingIndicator.
+  ///
+  /// In zh, this message translates to:
+  /// **'{batchCount} 份待审核 · {draftCount} 颗星'**
+  String galaxyDraftPendingIndicator(int batchCount, int draftCount);
+
+  /// No description provided for @galaxyDraftReviewProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {current} / {total} 颗'**
+  String galaxyDraftReviewProgress(int current, int total);
+
+  /// No description provided for @galaxyDraftCompletionReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'准备把它们送进你的星图'**
+  String get galaxyDraftCompletionReady;
+
+  /// No description provided for @galaxyDraftLongPressHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'右滑通过，左滑跳过，长按还能先改一下名字或描述。'**
+  String get galaxyDraftLongPressHint;
+
+  /// No description provided for @galaxyDraftLongPressShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按可编辑'**
+  String get galaxyDraftLongPressShort;
+
+  /// No description provided for @galaxyDraftApprove.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过'**
+  String get galaxyDraftApprove;
+
+  /// No description provided for @galaxyDraftSkip.
+  ///
+  /// In zh, this message translates to:
+  /// **'跳过'**
+  String get galaxyDraftSkip;
+
+  /// No description provided for @galaxyDraftMerge.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并'**
+  String get galaxyDraftMerge;
+
+  /// No description provided for @galaxyDraftExcerpts.
+  ///
+  /// In zh, this message translates to:
+  /// **'这颗星里装着什么'**
+  String get galaxyDraftExcerpts;
+
+  /// No description provided for @galaxyDraftSimilarityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'与已有节点相似：{nodeName}（{percent}%）'**
+  String galaxyDraftSimilarityLabel(String nodeName, int percent);
+
+  /// No description provided for @galaxyDraftEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整这颗知识星'**
+  String get galaxyDraftEditTitle;
+
+  /// No description provided for @galaxyDraftNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'节点名称'**
+  String get galaxyDraftNameLabel;
+
+  /// No description provided for @galaxyDraftDescriptionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'节点描述'**
+  String get galaxyDraftDescriptionLabel;
+
+  /// No description provided for @galaxyDraftEditSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存修改'**
+  String get galaxyDraftEditSave;
+
+  /// No description provided for @galaxyDraftReviewEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在没有待确认的知识星'**
+  String get galaxyDraftReviewEmptyTitle;
+
+  /// No description provided for @galaxyDraftReviewEmptyBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。'**
+  String get galaxyDraftReviewEmptyBody;
+
+  /// No description provided for @galaxyDraftBackToGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到星图'**
+  String get galaxyDraftBackToGalaxy;
+
+  /// No description provided for @galaxyDraftCompletionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认 {accepted} / {total} 颗知识星'**
+  String galaxyDraftCompletionTitle(int accepted, int total);
+
+  /// No description provided for @galaxyDraftCompletionBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'{documentName} 里的这些知识星，已经准备好飞进你的星图。'**
+  String galaxyDraftCompletionBody(String documentName);
+
+  /// No description provided for @galaxyDraftCompletionNothingAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'这批草稿先放一放也没关系，之后随时还能回来继续看。'**
+  String get galaxyDraftCompletionNothingAdded;
+
+  /// No description provided for @galaxyDraftCompletionSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{accepted} / {total} 颗知识星已加入你的星图！'**
+  String galaxyDraftCompletionSummary(int accepted, int total);
+
+  /// No description provided for @galaxyUploadFabLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加学习资料'**
+  String get galaxyUploadFabLabel;
+
+  /// No description provided for @galaxyUploadDocumentHere.
+  ///
+  /// In zh, this message translates to:
+  /// **'在这里上传文档'**
+  String get galaxyUploadDocumentHere;
+
+  /// No description provided for @galaxyNodeAddMaterial.
+  ///
+  /// In zh, this message translates to:
+  /// **'将资料添加到这个节点'**
+  String get galaxyNodeAddMaterial;
+
+  /// No description provided for @galaxyUploadTargetGalaxyCore.
+  ///
+  /// In zh, this message translates to:
+  /// **'银河核心'**
+  String get galaxyUploadTargetGalaxyCore;
+
+  /// No description provided for @galaxyUploadTargetSelectedConstellation.
+  ///
+  /// In zh, this message translates to:
+  /// **'这片星域'**
+  String get galaxyUploadTargetSelectedConstellation;
+
+  /// No description provided for @galaxyUploadAlreadyInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'已经有一份学习资料正在飞向你的星图。'**
+  String get galaxyUploadAlreadyInProgress;
+
+  /// No description provided for @galaxyUploadStatusUploading.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传中...'**
+  String get galaxyUploadStatusUploading;
+
+  /// No description provided for @galaxyUploadStatusQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传完成，正在进入轨道...'**
+  String get galaxyUploadStatusQueued;
+
+  /// No description provided for @galaxyUploadStatusExtracting.
+  ///
+  /// In zh, this message translates to:
+  /// **'提取内容中...'**
+  String get galaxyUploadStatusExtracting;
+
+  /// No description provided for @galaxyUploadStatusFindingKnowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'寻找知识中...'**
+  String get galaxyUploadStatusFindingKnowledge;
+
+  /// No description provided for @galaxyUploadStatusBuildingNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'编织新星中...'**
+  String get galaxyUploadStatusBuildingNodes;
+
+  /// No description provided for @galaxyUploadSuccessTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理完成！'**
+  String get galaxyUploadSuccessTitle;
+
+  /// No description provided for @galaxyUploadSuccessBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理完成！共发现 {count} 个知识概念。'**
+  String galaxyUploadSuccessBody(int count);
+
+  /// No description provided for @galaxyUploadSuccessChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现了 {count} 个概念'**
+  String galaxyUploadSuccessChip(int count);
+
+  /// No description provided for @galaxyUploadFailedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这颗星还没落稳'**
+  String get galaxyUploadFailedTitle;
+
+  /// No description provided for @galaxyUploadFailedBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'文档在落入星图前滑了出去，准备好时再试一次就好。'**
+  String get galaxyUploadFailedBody;
+
+  /// No description provided for @galaxyUploadRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新上传'**
+  String get galaxyUploadRetry;
+
+  /// No description provided for @galaxyUploadHeadingTo.
+  ///
+  /// In zh, this message translates to:
+  /// **'正飞向 {target}'**
+  String galaxyUploadHeadingTo(String target);
+
+  /// No description provided for @galaxyUploadStepUpload.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传'**
+  String get galaxyUploadStepUpload;
+
+  /// No description provided for @galaxyUploadStepExtract.
+  ///
+  /// In zh, this message translates to:
+  /// **'提取'**
+  String get galaxyUploadStepExtract;
+
+  /// No description provided for @galaxyUploadStepFind.
+  ///
+  /// In zh, this message translates to:
+  /// **'寻知'**
+  String get galaxyUploadStepFind;
+
+  /// No description provided for @galaxyUploadStepComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get galaxyUploadStepComplete;
 }
 
 class _AppLocalizationsDelegate

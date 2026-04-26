@@ -2804,6 +2804,21 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get statisticsAggregationNone => '原始数据';
+
+  @override
+  String get statisticsAggregationHourly => '按小时';
+
+  @override
+  String get statisticsAggregationDaily => '按天';
+
+  @override
+  String get statisticsAggregationWeekly => '按周';
+
+  @override
+  String get statisticsAggregationMonthly => '按月';
+
+  @override
   String get learningModeDepthHigh => '深度+';
 
   @override
@@ -5079,6 +5094,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatHelpful => '有帮助';
 
   @override
+  String get chatCitationExcerptUnavailable => '这条引用暂时还没有可展示的原文摘录。';
+
+  @override
+  String get chatCitationHelpfulPrompt => '这条引用对你有帮助吗？';
+
+  @override
+  String get chatCitationOpenDocument => '前往文档';
+
+  @override
   String get chatNotHelpful => '没帮助';
 
   @override
@@ -5665,6 +5689,78 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get friendsMyFriends => '我的好友';
+
+  @override
+  String get friendsFriendRequests => '好友请求';
+
+  @override
+  String get friendsDiscoverFriends => '发现好友';
+
+  @override
+  String get friendsDeleteFriend => '删除好友';
+
+  @override
+  String friendsConfirmDeleteFriend(String name) {
+    return '确定要删除好友 $name 吗？';
+  }
+
+  @override
+  String get friendsCancel => '取消';
+
+  @override
+  String get friendsDelete => '删除';
+
+  @override
+  String friendsFriendDeleted(String name) {
+    return '已将 $name 从好友列表中移除';
+  }
+
+  @override
+  String friendsDeleteFailed(String error) {
+    return '删除好友失败：$error';
+  }
+
+  @override
+  String get friendsBlockUser => '拉黑用户';
+
+  @override
+  String friendsAfterBlockingHint(String name) {
+    return '拉黑 $name 后：';
+  }
+
+  @override
+  String get friendsRemoveFromFriendList => '将从你的好友列表中移除';
+
+  @override
+  String get friendsCannotMessageYou => '无法给你发送消息';
+
+  @override
+  String get friendsCannotSendRequest => '无法向你发送好友请求';
+
+  @override
+  String get friendsBlock => '拉黑';
+
+  @override
+  String friendsBlockedSuccess(String name) {
+    return '已拉黑 $name';
+  }
+
+  @override
+  String friendsBlockFailed(String error) {
+    return '拉黑用户失败：$error';
+  }
+
+  @override
+  String get friendsBlockedUsersManagement => '管理黑名单';
+
+  @override
+  String get friendsNoPendingRequests => '暂无待处理请求';
+
+  @override
+  String get friendsWantsToBeYourFriend => '想成为你的好友';
+
+  @override
   String get taskMonitorTitle => '后台任务监控';
 
   @override
@@ -5827,6 +5923,70 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get knowledgeRelatedNodes => '相关节点';
+
+  @override
+  String get knowledgeSourceMaterialsTitle => '来源资料';
+
+  @override
+  String knowledgeSourceMaterialsSummary(int documents, int chunks) {
+    return '$documents 份文档 · $chunks 个知识片段';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsPersonalBadge => '我的上传';
+
+  @override
+  String get knowledgeSourceMaterialsSystemBadge => '暂未附带个人笔记';
+
+  @override
+  String knowledgeSourceMaterialsUploadDate(Object date) {
+    return '上传于 $date';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsChunkUnit => '片段';
+
+  @override
+  String get knowledgeSourceMaterialsEmptyTitle => '让这个节点回到你的真实资料里';
+
+  @override
+  String knowledgeSourceMaterialsEmptyBody(Object topic) {
+    return '为「$topic」补充自己的讲义或笔记，让这条知识真正可追溯。';
+  }
+
+  @override
+  String knowledgeSourceMaterialsAddNotes(Object topic) {
+    return '添加关于「$topic」的笔记';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsReadMore => '阅读更多';
+
+  @override
+  String get knowledgeSourceMaterialsNoPreview => '这份资料暂时还没有可展示的片段。';
+
+  @override
+  String get knowledgeSourceMaterialsOpenFailed => '暂时无法打开来源资料。';
+
+  @override
+  String knowledgeSourceMaterialsUploadSaved(Object filename) {
+    return '$filename 已上传，处理并挂接后会显示在这里。';
+  }
+
+  @override
+  String knowledgeSourceMaterialsPage(int page) {
+    return '第 $page 页';
+  }
+
+  @override
+  String knowledgeSourceMaterialsPages(Object pages) {
+    return '第 $pages 页';
+  }
+
+  @override
+  String knowledgeSourceMaterialsChunk(int index) {
+    return '片段 $index';
+  }
 
   @override
   String get knowledgePrerequisites => '前置知识';
@@ -7042,6 +7202,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInterventionViewSettings => '查看设置';
 
   @override
+  String get chatOpenStudyMaterialsLibrary => '打开学习资料库';
+
+  @override
   String get chatKnowledgeCitationBody => '知识引用';
 
   @override
@@ -7275,6 +7438,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSourcesUnavailable => '无可用来源';
 
   @override
+  String get chatStudyMaterialsEmptySubtitle =>
+      '上传你的笔记、课件或 PDF 后，就能在聊天里作为学习资料使用。';
+
+  @override
+  String chatStudyMaterialsAvailable(int count) {
+    return '$count 份资料可用';
+  }
+
+  @override
+  String chatStudyMaterialsKnowledgeNodes(int count) {
+    return '$count 个知识节点';
+  }
+
+  @override
+  String get chatStudyMaterialsLabel => '学习资料';
+
+  @override
+  String get chatStudyMaterialsPaused => '学习资料已暂停';
+
+  @override
+  String get chatStudyMaterialsPausedDescription => '下一轮对话将暂停文档检索。';
+
+  @override
+  String get chatStudyMaterialsReady => '已就绪';
+
+  @override
   String chatStreakSummary(Object arg0, Object arg1) {
     return '$arg0 $arg1';
   }
@@ -7475,6 +7664,38 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String communityGroupMembersCount(Object arg0) {
     return '$arg0';
+  }
+
+  @override
+  String get groupKnowledgeBase => '知识库';
+
+  @override
+  String get groupFiles => '学习资料';
+
+  @override
+  String get saveToMyLibrary => '保存到我的库';
+
+  @override
+  String get savedToLibrary => '已保存到你的库';
+
+  @override
+  String get markAsOfficial => '标记为官方';
+
+  @override
+  String get officialResource => '官方';
+
+  @override
+  String get noGroupFiles => '暂无学习资料';
+
+  @override
+  String get noGroupFilesSubtitle => '分享你的笔记，帮助群组成员！';
+
+  @override
+  String get shareFile => '分享文件';
+
+  @override
+  String groupFilesCount(int count) {
+    return '$count 个文件';
   }
 
   @override
@@ -12267,8 +12488,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String examSprintDaysLeft(int days) {
-    return '还有 $days 天';
+  String examSprintDaysLeft(String days) {
+    return '离考试还有 $days';
   }
 
   @override
@@ -14473,6 +14694,729 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get recommendationTargetFallback => '推荐对象';
+
+  @override
+  String get recommendationThisItem => '这条推荐';
+
+  @override
+  String recommendationFeedbackAbout(String target, String stage) {
+    return '关于 $target 的$stage反馈';
+  }
+
+  @override
+  String get recommendationFeedbackHint => '你的反馈会直接更新下一轮推荐权重';
+
+  @override
+  String get recommendationStartCalibration => '开始校准';
+
+  @override
+  String get recommendationFriendPreferenceTitle => '你的伙伴匹配偏好';
+
+  @override
+  String get recommendationGroupPreferenceTitle => '你的社群推荐偏好';
+
+  @override
+  String recommendationRecentCount(int count) {
+    return '近 $count 次';
+  }
+
+  @override
+  String get recommendationFriendLearningHint => '系统正在学习你更看重相似度、互补性还是合作舒适度。';
+
+  @override
+  String get recommendationGroupLearningHint => '系统正在学习你更偏好兴趣对口、活跃氛围还是新鲜发现。';
+
+  @override
+  String recommendationSystemAvoiding(String signals) {
+    return '系统在回避：$signals';
+  }
+
+  @override
+  String recommendationCurrentlyBiasing(String metrics) {
+    return '当前更偏向：$metrics';
+  }
+
+  @override
+  String get recommendationListSeparator => '、';
+
+  @override
+  String get recommendationCalibrateTitle => '帮我们校准推荐';
+
+  @override
+  String recommendationFeedbackSubtitle(String subject) {
+    return '你对 $subject 的评价会直接作用到接下来的推荐算法。';
+  }
+
+  @override
+  String get recommendationScoreOverall => '整体感受';
+
+  @override
+  String get recommendationScoreExplanationClarity => '推荐理由清晰度';
+
+  @override
+  String get recommendationScoreActionability => '采取行动的意愿';
+
+  @override
+  String get recommendationScoreRelevance => '契合度';
+
+  @override
+  String get recommendationScoreSimilarity => '相似度是否到位';
+
+  @override
+  String get recommendationScoreComplementary => '互补性是否成立';
+
+  @override
+  String get recommendationScoreComfort => '合作舒适度';
+
+  @override
+  String get recommendationScoreInterestMatch => '兴趣匹配度';
+
+  @override
+  String get recommendationScoreActivity => '活跃度是否合适';
+
+  @override
+  String get recommendationScoreAtmosphere => '社群氛围';
+
+  @override
+  String get recommendationIssuesTitle => '哪里不够对味';
+
+  @override
+  String get recommendationStrengthsTitle => '哪些地方做得好';
+
+  @override
+  String get recommendationFreeTextLabel => '自然语言补充';
+
+  @override
+  String get recommendationFriendHint => '例如：我更希望责任伙伴跟我节奏接近，但也能在拖延时推我一把。';
+
+  @override
+  String get recommendationGroupHint => '例如：我想找更对口的小组，最好活跃但不要太嘈杂。';
+
+  @override
+  String get recommendationPrivacyNotice =>
+      '我们只使用你填写的分数和总结来优化推荐，不会把私密原始数据直接暴露给其他用户。';
+
+  @override
+  String get recommendationLater => '稍后再说';
+
+  @override
+  String get recommendationSubmitFeedback => '提交反馈';
+
+  @override
+  String recommendationMatchingStrategy(String name) {
+    return '匹配策略：$name';
+  }
+
+  @override
+  String recommendationGroupSubtitle(String count, String tags) {
+    return '$count 人 · $tags';
+  }
+
+  @override
+  String get recommendationPublicGroup => '公开社群';
+
+  @override
+  String get recommendationStageImmediate => '即时';
+
+  @override
+  String get recommendationStageFollowUp => '跟进';
+
+  @override
+  String get recommendationStageOutcome => '结果';
+
+  @override
+  String get recommendationReasonSubjectOverlap => '主题重合';
+
+  @override
+  String get recommendationReasonPreferenceAlignment => '学习节奏接近';
+
+  @override
+  String get recommendationReasonTagOverlap => '兴趣命中';
+
+  @override
+  String get recommendationReasonTrending => '近期活跃';
+
+  @override
+  String get recommendationMetricOverall => '整体';
+
+  @override
+  String get recommendationMetricSimilarity => '相似度';
+
+  @override
+  String get recommendationMetricComfort => '舒适度';
+
+  @override
+  String get recommendationMetricInterestMatch => '兴趣匹配';
+
+  @override
+  String get recommendationMetricActivity => '活跃度';
+
+  @override
+  String get recommendationMetricSubjectSimilarity => '主题相似';
+
+  @override
+  String get recommendationMetricRelationshipReadiness => '关系熟悉度';
+
+  @override
+  String get recommendationMetricTagMatch => '标签匹配';
+
+  @override
+  String get recommendationMetricQuality => '质量';
+
+  @override
+  String get recommendationSignalTooDissimilar => '不够相似';
+
+  @override
+  String get recommendationSignalWantMoreTagMatch => '兴趣不够对口';
+
+  @override
+  String get recommendationSignalTrustworthy => '合作感靠谱';
+
+  @override
+  String get recommendationSignalGoodInterestMatch => '兴趣对口';
+
+  @override
+  String get recommendationIssueNotSimilar => '不够相似';
+
+  @override
+  String get recommendationIssueNotComplementary => '缺少互补';
+
+  @override
+  String get recommendationIssueNotProactive => '不够主动';
+
+  @override
+  String get recommendationIssueTooMuchPressure => '压力太大';
+
+  @override
+  String get recommendationIssueNotFamiliar => '不够熟悉';
+
+  @override
+  String get recommendationIssueInaccurateTags => '标签不准';
+
+  @override
+  String get recommendationIssueTooQuiet => '太冷清';
+
+  @override
+  String get recommendationIssueTooCrowded => '太拥挤';
+
+  @override
+  String get recommendationIssueMediocreVibe => '氛围一般';
+
+  @override
+  String get recommendationIssueUnsuitableThreshold => '门槛不合适';
+
+  @override
+  String get recommendationStrengthGreatFit => '很契合';
+
+  @override
+  String get recommendationStrengthComplementary => '很互补';
+
+  @override
+  String get recommendationStrengthReliable => '很靠谱';
+
+  @override
+  String get recommendationStrengthClearReason => '理由清楚';
+
+  @override
+  String get recommendationStrengthInterestMatch => '兴趣对口';
+
+  @override
+  String get recommendationStrengthGreatVibe => '氛围很好';
+
+  @override
+  String get recommendationStrengthActiveFit => '活跃合适';
+
+  @override
+  String get personaRefreshPersona => '刷新画像';
+
+  @override
+  String get personaProfileInterpretation => '画像解读';
+
+  @override
+  String get personaProfileInterpretationSubtitle => '先看自然语言总结，再决定要不要展开底层结构';
+
+  @override
+  String get personaL3Subtitle => '优先展示系统已经总结出的可感知结论';
+
+  @override
+  String get personaL1Subtitle => '你明确告诉系统的目标和偏好';
+
+  @override
+  String get personaL2Subtitle => '系统与你协作校准后的标签与能力判断';
+
+  @override
+  String get personaInferenceTitle => '系统推断与策略';
+
+  @override
+  String get personaInferenceSubtitle => '更技术性的推断偏好与当前策略，默认收起';
+
+  @override
+  String get personaQuickAccessSystemUpdates => '系统更新';
+
+  @override
+  String get personaQuickAccessMemorySettings => '记忆设置';
+
+  @override
+  String get personaCoreProfileUnavailable => '核心画像暂时不可用';
+
+  @override
+  String personaDegradedMode(String message) {
+    return '已切换为降级展示，你仍然可以查看和刷新其它分区。\n$message';
+  }
+
+  @override
+  String get personaRetryFullProfile => '重试完整画像';
+
+  @override
+  String personaActiveGoal(String goalTitle) {
+    return '你当前最明确的目标是：$goalTitle。';
+  }
+
+  @override
+  String personaLearningPreference(String learningStyle, String responseDepth) {
+    return '你的学习偏好更接近$learningStyle，系统回答深度倾向$responseDepth。';
+  }
+
+  @override
+  String personaObservedPattern(String pattern) {
+    return '系统最近观察到的主要模式是：$pattern。';
+  }
+
+  @override
+  String personaCognitiveClueCount(int count) {
+    return '画像里已积累 $count 条可用于个性化推荐的认知线索。';
+  }
+
+  @override
+  String get personaProfileSparse => '当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。';
+
+  @override
+  String get personaSimplifiedUnderstanding => '这是系统目前对你的简化理解：';
+
+  @override
+  String get personaSectionRefresh => '刷新';
+
+  @override
+  String get personaSectionLoading => '加载中…';
+
+  @override
+  String personaLoadFailedError(String error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get personaPreferenceVersionReason => '当前显式偏好与画像上下文版本。';
+
+  @override
+  String get personaActivePreferencesReason => '当前用于 AI 与系统联动的显式偏好。';
+
+  @override
+  String get personaKnowledgeSummaryReason => '知识掌握度与当前活跃学习主题摘要。';
+
+  @override
+  String get personaCognitiveSummaryReason => '当前认知模式与风险信号摘要。';
+
+  @override
+  String get personaInferredDefaultReason => '系统会根据最近行为持续更新这项推断。';
+
+  @override
+  String get personaViewRecord => '查看记录';
+
+  @override
+  String get personaUpdate => '更新';
+
+  @override
+  String get personaAdjust => '调整';
+
+  @override
+  String get personaManualOverride => '手动覆盖';
+
+  @override
+  String get personaPolicy => '策略';
+
+  @override
+  String personaSourcePattern(String pattern) {
+    return '来源模式：$pattern';
+  }
+
+  @override
+  String get personaActivePolicyReason => '当前已生效的系统策略。';
+
+  @override
+  String personaCorrectionSubmitFailed(String error) {
+    return '提交修正失败：$error';
+  }
+
+  @override
+  String get personaPreferenceUpdated => '偏好已更新';
+
+  @override
+  String personaPreferenceUpdateFailed(String error) {
+    return '偏好更新失败：$error';
+  }
+
+  @override
+  String get personaRolledBack => '已回滚到上一版本';
+
+  @override
+  String personaRollbackFailed(String error) {
+    return '回滚失败：$error';
+  }
+
+  @override
+  String get personaGoalUpdated => '目标已更新';
+
+  @override
+  String personaGoalUpdateFailed(String error) {
+    return '目标更新失败：$error';
+  }
+
+  @override
+  String get personaInferredAdjusted => '推断偏好已调整';
+
+  @override
+  String personaAdjustFailed(String error) {
+    return '调整失败：$error';
+  }
+
+  @override
+  String get personaInferredReset => '已恢复系统推断值';
+
+  @override
+  String personaRestoreFailed(String error) {
+    return '恢复失败：$error';
+  }
+
+  @override
+  String get personaUnknownError => '未知错误';
+
+  @override
+  String get personaHintDecimalRange => '请输入 0.0 到 1.0 之间的数字';
+
+  @override
+  String get personaHintStudyMinutes => '请输入学习时长（分钟）';
+
+  @override
+  String get personaHintPositiveMinutes => '请输入大于 0 的分钟数';
+
+  @override
+  String get personaHintValidPreference => '请输入有效的偏好值';
+
+  @override
+  String get examSprintTitle => '考试冲刺设置';
+
+  @override
+  String examSprintMinutesPerDay(int minutes) {
+    return '$minutes 分钟/天';
+  }
+
+  @override
+  String get examSprintStep1Subject => '1. 哪门课？';
+
+  @override
+  String get examSprintSubjectHint => '例如：计算机网络 / 高数 / 英语四级';
+
+  @override
+  String get examSprintSubjectRequired => '先告诉我你要冲刺哪门课';
+
+  @override
+  String get examSprintStep2Date => '2. 考试哪天？';
+
+  @override
+  String get examSprintSelectDate => '选择考试日期';
+
+  @override
+  String get examSprintDateHint => '日期会决定冲刺天数和节奏';
+
+  @override
+  String get examSprintStep3Target => '3. 目标是通过、保分还是冲高分？';
+
+  @override
+  String get examSprintStep4Scope => '4. 考试范围 / 老师重点有吗？';
+
+  @override
+  String get examSprintStep4Subtitle =>
+      '可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。';
+
+  @override
+  String get examSprintScopeHint => '例如：重点看传输层、网络层；老师说会考简答和计算题。';
+
+  @override
+  String get examSprintUpload => '上传资料';
+
+  @override
+  String get examSprintNoUpload => '还没上传资料';
+
+  @override
+  String examSprintUploadedCount(int count) {
+    return '已上传 $count 份资料';
+  }
+
+  @override
+  String get examSprintStep5Baseline => '5. 你现在大概会多少？最怕哪几章？';
+
+  @override
+  String get examSprintWeakChapters => '最怕哪几章？';
+
+  @override
+  String get examSprintStep6Daily => '6. 每天真实能学多久？';
+
+  @override
+  String examSprintMinutesPerDayLabel(int minutes) {
+    return '$minutes 分钟 / 天';
+  }
+
+  @override
+  String examSprintMinutesLabel(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get examSprintDailyHint => '用「你大概率能坚持」的时间，不用理想状态。';
+
+  @override
+  String get examSprintGenerate => '生成我的第一天任务';
+
+  @override
+  String get examSprintSubmitHint => '提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。';
+
+  @override
+  String get examSprintHeroTitle => '不是填问卷，是一起确定起点';
+
+  @override
+  String get examSprintHeroSubtitle => '填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。';
+
+  @override
+  String get examSprintUploadSuccess => '资料已上传';
+
+  @override
+  String get examSprintSelectDateFirst => '先选择考试日期';
+
+  @override
+  String get examSprintAssessmentComplete => '初步评估已完成';
+
+  @override
+  String examSprintPassProbability(int percent) {
+    return '通过概率 $percent%';
+  }
+
+  @override
+  String examSprintRecommendedMode(String mode) {
+    return '建议模式 $mode';
+  }
+
+  @override
+  String get examSprintFirstDayFocus => '第一天先做什么';
+
+  @override
+  String get examSprintStartFirstDay => '开始第一天任务';
+
+  @override
+  String get examSprintViewPlan => '查看计划';
+
+  @override
+  String get examSprintViewFullPlan => '查看整个计划';
+
+  @override
+  String get examSprintBaselineAlmostZero => '几乎要从零开始';
+
+  @override
+  String get examSprintBaselineUnstable => '上过课，但基础还不稳';
+
+  @override
+  String get examSprintBaselinePartial => '有一部分基础，可以边补边冲';
+
+  @override
+  String get examSprintBaselineSolid => '基础不错，重点是提分校准';
+
+  @override
+  String examSprintDayCount(int count) {
+    return '$count 天';
+  }
+
+  @override
+  String get examSprintTargetPass => '通过';
+
+  @override
+  String get examSprintTargetHold => '保分';
+
+  @override
+  String get examSprintTargetHighScore => '冲高分';
+
+  @override
+  String get memorySettingsTitle => '记忆控制';
+
+  @override
+  String get memorySettingsBack => '返回';
+
+  @override
+  String get memorySettingsDisabled => '记忆控制未启用';
+
+  @override
+  String memorySettingsLoadError(String error) {
+    return '加载记忆设置失败: $error';
+  }
+
+  @override
+  String memorySettingsSaveError(String error) {
+    return '保存失败: $error';
+  }
+
+  @override
+  String get memorySettingsSaveSuccess => '记忆设置已更新';
+
+  @override
+  String get memorySettingsUnavailable => '记忆控制不可用';
+
+  @override
+  String get memorySettingsEnabledChip => '记忆已启用';
+
+  @override
+  String get memorySettingsDisabledChip => '记忆已暂停';
+
+  @override
+  String get memorySettingsControllableChip => '偏好可控';
+
+  @override
+  String get memorySettingsDescription =>
+      '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。';
+
+  @override
+  String get memorySettingsEnableTitle => '启用长期记忆';
+
+  @override
+  String get memorySettingsEnableDesc => '关闭后会暂停新的记忆写入，但不会删除历史记录。';
+
+  @override
+  String get memorySettingsSocialTitle => '社交语义子开关';
+
+  @override
+  String get memorySettingsSocialDesc =>
+      'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。';
+
+  @override
+  String get memorySettingsSocialSelf => '自我记忆';
+
+  @override
+  String get memorySettingsSocialPersonMention => '人物提及';
+
+  @override
+  String get memorySettingsSocialRelationship => '关系动态';
+
+  @override
+  String get memorySettingsSocialCommitment => '承诺事项';
+
+  @override
+  String get memorySettingsPushTitle => '主动提醒';
+
+  @override
+  String get memorySettingsPushDesc =>
+      'Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。';
+
+  @override
+  String get memorySettingsPushEnableTitle => '启用主动提醒';
+
+  @override
+  String get memorySettingsPushEnableDesc => '总开关。关闭后 Stage 18 主动提醒会全部停用。';
+
+  @override
+  String get memorySettingsPushFollowUpTitle => '承诺跟进';
+
+  @override
+  String get memorySettingsPushFollowUpDesc => '只针对你明确表达过、且已经逾期的承诺事项。';
+
+  @override
+  String get memorySettingsPushRecoveryTitle => '活跃恢复';
+
+  @override
+  String get memorySettingsPushRecoveryDesc => '只针对曾经连续活跃、且 72 小时未活跃的情况。';
+
+  @override
+  String get memorySettingsQuietHoursTitle => '静默时段';
+
+  @override
+  String get memorySettingsQuietHoursDesc =>
+      '你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。';
+
+  @override
+  String get memorySettingsStartTime => '开始时间';
+
+  @override
+  String get memorySettingsEndTime => '结束时间';
+
+  @override
+  String memorySettingsCurrentTimezone(String timezone) {
+    return '当前时区：$timezone';
+  }
+
+  @override
+  String get memorySettingsViewInbox => '查看提醒收件箱';
+
+  @override
+  String get memorySettingsTypeTitle => '记忆类型';
+
+  @override
+  String get memorySettingsTypeDesc => '决定哪些内容会被长期记住。';
+
+  @override
+  String get memorySettingsPreferenceTitle => '偏好';
+
+  @override
+  String get memorySettingsPreferenceDesc => '记录回答风格、学习节奏和常见偏好。';
+
+  @override
+  String get memorySettingsGoalTitle => '目标';
+
+  @override
+  String get memorySettingsGoalDesc => '记录已确认的长期目标和阶段意图。';
+
+  @override
+  String get memorySettingsEpisodicTitle => '经历';
+
+  @override
+  String get memorySettingsEpisodicDesc => '记录对后续决策有帮助的关键事件与反馈。';
+
+  @override
+  String get memorySettingsInferredTitle => 'AI 自动记忆';
+
+  @override
+  String get memorySettingsInferredDesc => '允许系统从聊天中推断短期经历；每条都必须可见、可撤销。';
+
+  @override
+  String get memorySettingsCaptureTitle => '捕获强度';
+
+  @override
+  String get memorySettingsCaptureDesc => '越高越积极，但也会记录更多上下文。';
+
+  @override
+  String get memorySettingsCaptureLow => '低';
+
+  @override
+  String get memorySettingsCaptureMedium => '中';
+
+  @override
+  String get memorySettingsCaptureHigh => '高';
+
+  @override
+  String get memorySettingsBlockPrefTitle => '屏蔽偏好';
+
+  @override
+  String get memorySettingsBlockPrefDesc => '不希望长期存储的偏好项可以在这里关闭。';
+
+  @override
+  String get memorySettingsBlockSourceTitle => '屏蔽来源';
+
+  @override
+  String get memorySettingsBlockSourceDesc => '限制哪些入口不会写入长期记忆。';
+
+  @override
+  String get memorySettingsSaveButton => '保存设置';
+
+  @override
+  String get memorySettingsSaving => '保存中...';
+
+  @override
   String get reportLearningAnalysisReport => '学习分析报告';
 
   @override
@@ -14826,4 +15770,356 @@ class AppLocalizationsZh extends AppLocalizations {
   String reportStatByTypeFormat(String key, int count, int rate) {
     return '$key: $count次 · $rate%';
   }
+
+  @override
+  String get bgmLibraryTitle => 'BGM 曲库与播放器';
+
+  @override
+  String get bgmLibraryRefresh => '刷新';
+
+  @override
+  String get bgmLibraryNoImport => '没有导入新曲目';
+
+  @override
+  String bgmLibraryImportedCount(int count) {
+    return '已导入 $count 首本地音乐';
+  }
+
+  @override
+  String bgmLibraryPlayingSwitched(String title) {
+    return '正在播放 $title，已切换到播放器模式';
+  }
+
+  @override
+  String bgmLibraryRemoved(String title) {
+    return '已移除 $title';
+  }
+
+  @override
+  String get bgmLibraryEmptyFilter => '当前筛选下没有曲目，可以尝试切换筛选或导入本地音乐。';
+
+  @override
+  String get bgmLibraryNotPlaying => '当前未播放';
+
+  @override
+  String get bgmLibraryWaitingPlay => '等待播放中';
+
+  @override
+  String get bgmLibraryBrowseHint => '你可以在这里直接点播曲库里的任意曲目';
+
+  @override
+  String get bgmLibraryNowPlaying => '当前播放';
+
+  @override
+  String get bgmLibraryPlayerMode => '播放器模式';
+
+  @override
+  String get bgmLibraryPlayerModeDesc =>
+      '播放器模式下音乐不会因页面跳转而被打断，适合把 Sparkle 当成舒缓音乐播放器来用。';
+
+  @override
+  String get bgmLibraryEnableBgm => '启用背景音乐';
+
+  @override
+  String get bgmLibraryDisableHint => '关闭后播放器页也不会继续播放背景音乐';
+
+  @override
+  String get bgmLibraryQuickStrategy => '快速策略调节';
+
+  @override
+  String get bgmLibraryQuickStrategyDesc => '这里保留最常用的调节项，完整细项仍然可以在设置页里继续调整。';
+
+  @override
+  String get bgmLibraryStyleOrientation => '风格取向';
+
+  @override
+  String get bgmLibraryIntensityLabel => '氛围强度';
+
+  @override
+  String get bgmLibraryVarietyLabel => '轮换节奏';
+
+  @override
+  String get bgmLibraryStats => '曲库状态';
+
+  @override
+  String get bgmLibraryTotalTracks => '总曲目';
+
+  @override
+  String get bgmLibraryCurated => '精选曲库';
+
+  @override
+  String get bgmLibraryImportedLabel => '本地导入';
+
+  @override
+  String get bgmLibraryBundled => '系统兜底';
+
+  @override
+  String bgmLibraryImportDir(String path) {
+    return '本地导入目录：$path';
+  }
+
+  @override
+  String bgmLibraryCacheDir(String path) {
+    return '下载缓存目录：$path';
+  }
+
+  @override
+  String get bgmLibraryDirReadyNote =>
+      '这两个目录已经准备好，后续可以直接接“默认只打包少量曲目，其余从服务器下载到本地”的轻量化方案。';
+
+  @override
+  String get bgmLibraryImportManage => '导入与管理';
+
+  @override
+  String get bgmLibraryImportManageDesc =>
+      '你可以把自己的舒缓音乐直接导入进来。点播任意曲目时，系统会自动切换到播放器模式，后续跳页也不会中断。';
+
+  @override
+  String get bgmLibraryImportLocal => '导入本地歌曲';
+
+  @override
+  String get bgmLibrarySearchHint => '搜索曲目、专辑或场景标签';
+
+  @override
+  String get bgmLibraryFilterAll => '全部';
+
+  @override
+  String get bgmLibraryPlaying => '播放中';
+
+  @override
+  String get bgmLibraryPlay => '播放';
+
+  @override
+  String get bgmLibraryRemove => '移除';
+
+  @override
+  String get bgmLibraryTags => '标签';
+
+  @override
+  String get bgmLibraryStyle => '风格';
+
+  @override
+  String get bgmLibraryEnergy => '能量';
+
+  @override
+  String get bgmLibraryDensity => '密度';
+
+  @override
+  String get bgmLibraryModeAdaptive => '跟随页面';
+
+  @override
+  String get bgmLibraryModeContinuous => '播放器模式';
+
+  @override
+  String get bgmLibraryModeFocusOnly => '仅专注';
+
+  @override
+  String get bgmLibraryModeSilent => '静音';
+
+  @override
+  String get bgmLibraryPaletteAdaptive => '自适应';
+
+  @override
+  String get bgmLibraryPaletteClassical => '精选古典';
+
+  @override
+  String get bgmLibraryPalettePiano => '钢琴优先';
+
+  @override
+  String get bgmLibraryPaletteAiry => '空灵氛围';
+
+  @override
+  String get bgmLibraryPaletteWarm => '温暖轻快';
+
+  @override
+  String get bgmLibraryIntensityGentle => '柔和';
+
+  @override
+  String get bgmLibraryIntensityBalanced => '平衡';
+
+  @override
+  String get bgmLibraryIntensityLush => '丰盈';
+
+  @override
+  String get bgmLibraryVarietySteady => '稳定';
+
+  @override
+  String get bgmLibraryVarietyBalanced => '均衡';
+
+  @override
+  String get bgmLibraryVarietyDynamic => '灵动';
+
+  @override
+  String get bgmLibrarySourceCurated => '精选曲库';
+
+  @override
+  String get bgmLibrarySourceImported => '本地导入';
+
+  @override
+  String get bgmLibrarySourceBundled => '系统兜底';
+
+  @override
+  String get galaxyDraftReviewScreenTitle => '审核知识星';
+
+  @override
+  String galaxyDraftReviewPromptTitle(int count, String documentName) {
+    return '我们从 $documentName 里找到了 $count 颗知识星，要现在看看吗？';
+  }
+
+  @override
+  String get galaxyDraftReviewPromptBody =>
+      '你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。';
+
+  @override
+  String get galaxyDraftReviewNow => '现在审核';
+
+  @override
+  String get galaxyDraftReviewLater => '稍后再看';
+
+  @override
+  String galaxyDraftPendingIndicator(int batchCount, int draftCount) {
+    return '$batchCount 份待审核 · $draftCount 颗星';
+  }
+
+  @override
+  String galaxyDraftReviewProgress(int current, int total) {
+    return '第 $current / $total 颗';
+  }
+
+  @override
+  String get galaxyDraftCompletionReady => '准备把它们送进你的星图';
+
+  @override
+  String get galaxyDraftLongPressHint => '右滑通过，左滑跳过，长按还能先改一下名字或描述。';
+
+  @override
+  String get galaxyDraftLongPressShort => '长按可编辑';
+
+  @override
+  String get galaxyDraftApprove => '通过';
+
+  @override
+  String get galaxyDraftSkip => '跳过';
+
+  @override
+  String get galaxyDraftMerge => '合并';
+
+  @override
+  String get galaxyDraftExcerpts => '这颗星里装着什么';
+
+  @override
+  String galaxyDraftSimilarityLabel(String nodeName, int percent) {
+    return '与已有节点相似：$nodeName（$percent%）';
+  }
+
+  @override
+  String get galaxyDraftEditTitle => '调整这颗知识星';
+
+  @override
+  String get galaxyDraftNameLabel => '节点名称';
+
+  @override
+  String get galaxyDraftDescriptionLabel => '节点描述';
+
+  @override
+  String get galaxyDraftEditSave => '保存修改';
+
+  @override
+  String get galaxyDraftReviewEmptyTitle => '现在没有待确认的知识星';
+
+  @override
+  String get galaxyDraftReviewEmptyBody => '等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。';
+
+  @override
+  String get galaxyDraftBackToGalaxy => '回到星图';
+
+  @override
+  String galaxyDraftCompletionTitle(int accepted, int total) {
+    return '已确认 $accepted / $total 颗知识星';
+  }
+
+  @override
+  String galaxyDraftCompletionBody(String documentName) {
+    return '$documentName 里的这些知识星，已经准备好飞进你的星图。';
+  }
+
+  @override
+  String get galaxyDraftCompletionNothingAdded => '这批草稿先放一放也没关系，之后随时还能回来继续看。';
+
+  @override
+  String galaxyDraftCompletionSummary(int accepted, int total) {
+    return '$accepted / $total 颗知识星已加入你的星图！';
+  }
+
+  @override
+  String get galaxyUploadFabLabel => '添加学习资料';
+
+  @override
+  String get galaxyUploadDocumentHere => '在这里上传文档';
+
+  @override
+  String get galaxyNodeAddMaterial => '将资料添加到这个节点';
+
+  @override
+  String get galaxyUploadTargetGalaxyCore => '银河核心';
+
+  @override
+  String get galaxyUploadTargetSelectedConstellation => '这片星域';
+
+  @override
+  String get galaxyUploadAlreadyInProgress => '已经有一份学习资料正在飞向你的星图。';
+
+  @override
+  String get galaxyUploadStatusUploading => '上传中...';
+
+  @override
+  String get galaxyUploadStatusQueued => '上传完成，正在进入轨道...';
+
+  @override
+  String get galaxyUploadStatusExtracting => '提取内容中...';
+
+  @override
+  String get galaxyUploadStatusFindingKnowledge => '寻找知识中...';
+
+  @override
+  String get galaxyUploadStatusBuildingNodes => '编织新星中...';
+
+  @override
+  String get galaxyUploadSuccessTitle => '处理完成！';
+
+  @override
+  String galaxyUploadSuccessBody(int count) {
+    return '处理完成！共发现 $count 个知识概念。';
+  }
+
+  @override
+  String galaxyUploadSuccessChip(int count) {
+    return '发现了 $count 个概念';
+  }
+
+  @override
+  String get galaxyUploadFailedTitle => '这颗星还没落稳';
+
+  @override
+  String get galaxyUploadFailedBody => '文档在落入星图前滑了出去，准备好时再试一次就好。';
+
+  @override
+  String get galaxyUploadRetry => '重新上传';
+
+  @override
+  String galaxyUploadHeadingTo(String target) {
+    return '正飞向 $target';
+  }
+
+  @override
+  String get galaxyUploadStepUpload => '上传';
+
+  @override
+  String get galaxyUploadStepExtract => '提取';
+
+  @override
+  String get galaxyUploadStepFind => '寻知';
+
+  @override
+  String get galaxyUploadStepComplete => '完成';
 }

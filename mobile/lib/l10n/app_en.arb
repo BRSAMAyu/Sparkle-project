@@ -922,6 +922,11 @@
   "avatarPresetPet": "Buddy",
   "statisticsWeeklyGrowthTrend": "Weekly growth trend",
   "statisticsLearningIndex": "Learning index {value}",
+  "statisticsAggregationNone": "Original Data",
+  "statisticsAggregationHourly": "Hourly",
+  "statisticsAggregationDaily": "Daily",
+  "statisticsAggregationWeekly": "Weekly",
+  "statisticsAggregationMonthly": "Monthly",
   "learningModeDepthHigh": "Depth+",
   "learningModeDepthLow": "Depth-",
   "learningModeCuriosityHigh": "Curiosity+",
@@ -1916,6 +1921,9 @@
   "chatPromptDefault2": "Give me a 3-step action list first",
   "chatPromptDefault3": "Continue based on my current plan",
   "chatHelpful": "Helpful",
+  "chatCitationExcerptUnavailable": "This citation does not include an excerpt yet.",
+  "chatCitationHelpfulPrompt": "Was this citation helpful?",
+  "chatCitationOpenDocument": "Go to document",
   "chatNotHelpful": "Not helpful",
   "chatQuote": "Quote",
   "chatUndo": "Undo",
@@ -2225,6 +2233,68 @@
       }
     }
   },
+  "friendsMyFriends": "My Friends",
+  "friendsFriendRequests": "Friend Requests",
+  "friendsDiscoverFriends": "Discover Friends",
+  "friendsDeleteFriend": "Delete Friend",
+  "friendsConfirmDeleteFriend": "Are you sure you want to remove {name} from your friends?",
+  "@friendsConfirmDeleteFriend": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsCancel": "Cancel",
+  "friendsDelete": "Delete",
+  "friendsFriendDeleted": "{name} has been removed from your friends",
+  "@friendsFriendDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsDeleteFailed": "Failed to delete friend: {error}",
+  "@friendsDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsBlockUser": "Block User",
+  "friendsAfterBlockingHint": "After blocking {name}:",
+  "@friendsAfterBlockingHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsRemoveFromFriendList": "Will be removed from your friend list",
+  "friendsCannotMessageYou": "Cannot send you messages",
+  "friendsCannotSendRequest": "Cannot send you friend requests",
+  "friendsBlock": "Block",
+  "friendsBlockedSuccess": "{name} has been blocked",
+  "@friendsBlockedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsBlockFailed": "Failed to block user: {error}",
+  "@friendsBlockFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsBlockedUsersManagement": "Manage Blocked Users",
+  "friendsNoPendingRequests": "No pending requests",
+  "friendsWantsToBeYourFriend": "wants to be your friend",
   "taskMonitorTitle": "Background Tasks",
   "taskMonitorFilterAll": "All",
   "taskMonitorFilterRunning": "Running",
@@ -2286,6 +2356,71 @@
   "knowledgeDescription": "Description",
   "knowledgeNoDescription": "No description",
   "knowledgeRelatedNodes": "Related Nodes",
+  "knowledgeSourceMaterialsTitle": "Source Materials",
+  "knowledgeSourceMaterialsSummary": "{documents} documents · {chunks} knowledge chunks",
+  "@knowledgeSourceMaterialsSummary": {
+    "placeholders": {
+      "documents": {
+        "type": "int"
+      },
+      "chunks": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeSourceMaterialsPersonalBadge": "Personal upload",
+  "knowledgeSourceMaterialsSystemBadge": "No personal notes attached yet",
+  "knowledgeSourceMaterialsUploadDate": "Uploaded {date}",
+  "@knowledgeSourceMaterialsUploadDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "knowledgeSourceMaterialsChunkUnit": "chunks",
+  "knowledgeSourceMaterialsEmptyTitle": "Trace this node back to your own notes",
+  "knowledgeSourceMaterialsEmptyBody": "Add your own notes about {topic} to make this knowledge node traceable.",
+  "@knowledgeSourceMaterialsEmptyBody": {
+    "placeholders": {
+      "topic": {}
+    }
+  },
+  "knowledgeSourceMaterialsAddNotes": "Add notes about {topic}",
+  "@knowledgeSourceMaterialsAddNotes": {
+    "placeholders": {
+      "topic": {}
+    }
+  },
+  "knowledgeSourceMaterialsReadMore": "Read more",
+  "knowledgeSourceMaterialsNoPreview": "No excerpt preview is available yet.",
+  "knowledgeSourceMaterialsOpenFailed": "Unable to open the source material right now.",
+  "knowledgeSourceMaterialsUploadSaved": "{filename} uploaded. It will appear here after processing and attachment.",
+  "@knowledgeSourceMaterialsUploadSaved": {
+    "placeholders": {
+      "filename": {}
+    }
+  },
+  "knowledgeSourceMaterialsPage": "Page {page}",
+  "@knowledgeSourceMaterialsPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeSourceMaterialsPages": "Pages {pages}",
+  "@knowledgeSourceMaterialsPages": {
+    "placeholders": {
+      "pages": {}
+    }
+  },
+  "knowledgeSourceMaterialsChunk": "Excerpt {index}",
+  "@knowledgeSourceMaterialsChunk": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgePrerequisites": "Prerequisites",
   "knowledgeMasteryProgress": "Mastery Progress",
   "knowledgeKeywords": "Keywords",
@@ -2722,6 +2857,7 @@
   "chatInputDocumentClean": "Chat Input Document Clean",
   "chatInterventionViewPlan": "Chat Intervention View Plan",
   "chatInterventionViewSettings": "Chat Intervention View Settings",
+  "chatOpenStudyMaterialsLibrary": "Open study materials library",
   "chatKnowledgeCitationBody": "Chat Knowledge Citation Body",
   "chatKnowledgeCitationTitle": "{arg0}",
   "chatModeCustomTeam": "Chat Mode Custom Team",
@@ -2791,6 +2927,27 @@
   "chatSourceUntitled": "Chat Source Untitled",
   "chatSourcesAvailable": "Chat Sources Available",
   "chatSourcesUnavailable": "Chat Sources Unavailable",
+  "chatStudyMaterialsEmptySubtitle": "Upload notes, slides, or PDFs to make them available in chat.",
+  "chatStudyMaterialsAvailable": "{count} documents available",
+  "@chatStudyMaterialsAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatStudyMaterialsKnowledgeNodes": "{count} knowledge nodes",
+  "@chatStudyMaterialsKnowledgeNodes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatStudyMaterialsLabel": "Study materials",
+  "chatStudyMaterialsPaused": "Study materials paused",
+  "chatStudyMaterialsPausedDescription": "Document retrieval is paused for the next turn.",
+  "chatStudyMaterialsReady": "Ready",
   "chatStreakSummary": "{arg0} {arg1}",
   "chatSubmitFeedback": "Chat Submit Feedback",
   "chatSynthesisSuggestions": "Chat Synthesis Suggestions",
@@ -2850,6 +3007,23 @@
   "communityFileSharedSuccess": "Community File Shared Success",
   "communityGroupFiles": "Community Group Files",
   "communityGroupMembersCount": "{arg0}",
+  "groupKnowledgeBase": "Knowledge Base",
+  "groupFiles": "Study Materials",
+  "saveToMyLibrary": "Save to My Library",
+  "savedToLibrary": "Saved to your library",
+  "markAsOfficial": "Mark as Official",
+  "officialResource": "Official",
+  "noGroupFiles": "No study materials yet",
+  "noGroupFilesSubtitle": "Share your notes to help the group!",
+  "shareFile": "Share File",
+  "groupFilesCount": "{count} files",
+  "@groupFilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "communityMessageFallback": "Community Message Fallback",
   "communityMessageInputHint": "Community Message Input Hint",
   "communitySearchGroupMessages": "Community Search Group Messages",
@@ -6150,14 +6324,442 @@
         }
     }
   },
-   "seedLibraryDetailImportFailed": "Import failed: {error}",
-   "@seedLibraryDetailImportFailed": {
-     "placeholders": {
-         "error": {
-           "type": "String"
-         }
-     }
-   },
+  "seedLibraryDetailImportFailed": "Import failed: {error}",
+  "@seedLibraryDetailImportFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "recommendationTargetFallback": "Recommended",
+  "recommendationThisItem": "This recommendation",
+  "recommendationFeedbackAbout": "{stage} feedback about {target}",
+  "@recommendationFeedbackAbout": {
+    "placeholders": {
+      "target": { "type": "String" },
+      "stage": { "type": "String" }
+    }
+  },
+  "recommendationFeedbackHint": "Your feedback will directly update the next round of recommendation weights",
+  "recommendationStartCalibration": "Start Calibration",
+  "recommendationFriendPreferenceTitle": "Your Partner Matching Preferences",
+  "recommendationGroupPreferenceTitle": "Your Community Preferences",
+  "recommendationRecentCount": "Last {count} times",
+  "@recommendationRecentCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "recommendationFriendLearningHint": "The system is learning whether you value similarity, complementarity, or collaboration comfort more.",
+  "recommendationGroupLearningHint": "The system is learning whether you prefer interest matching, active atmosphere, or fresh discoveries.",
+  "recommendationSystemAvoiding": "System is avoiding: {signals}",
+  "@recommendationSystemAvoiding": {
+    "placeholders": {
+      "signals": { "type": "String" }
+    }
+  },
+  "recommendationCurrentlyBiasing": "Currently leaning toward: {metrics}",
+  "@recommendationCurrentlyBiasing": {
+    "placeholders": {
+      "metrics": { "type": "String" }
+    }
+  },
+  "recommendationListSeparator": ", ",
+  "recommendationCalibrateTitle": "Help us calibrate recommendations",
+  "recommendationFeedbackSubtitle": "Your rating of {subject} will directly influence the recommendation algorithm.",
+  "@recommendationFeedbackSubtitle": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "recommendationScoreOverall": "Overall impression",
+  "recommendationScoreExplanationClarity": "Recommendation reason clarity",
+  "recommendationScoreActionability": "Willingness to act",
+  "recommendationScoreRelevance": "Relevance",
+  "recommendationScoreSimilarity": "Similarity quality",
+  "recommendationScoreComplementary": "Complementary quality",
+  "recommendationScoreComfort": "Collaboration comfort",
+  "recommendationScoreInterestMatch": "Interest match",
+  "recommendationScoreActivity": "Activity level fit",
+  "recommendationScoreAtmosphere": "Community atmosphere",
+  "recommendationIssuesTitle": "What didn't feel right",
+  "recommendationStrengthsTitle": "What went well",
+  "recommendationFreeTextLabel": "Additional comments",
+  "recommendationFriendHint": "e.g., I'd prefer a partner with a similar pace, but who can push me when I procrastinate.",
+  "recommendationGroupHint": "e.g., I'd like a more relevant group, preferably active but not too noisy.",
+  "recommendationPrivacyNotice": "We only use your scores and summaries to optimize recommendations. Your private raw data is never exposed to other users.",
+  "recommendationLater": "Later",
+  "recommendationSubmitFeedback": "Submit feedback",
+  "recommendationMatchingStrategy": "Matching strategy: {name}",
+  "@recommendationMatchingStrategy": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "recommendationGroupSubtitle": "{count} members · {tags}",
+  "@recommendationGroupSubtitle": {
+    "placeholders": {
+      "count": { "type": "String" },
+      "tags": { "type": "String" }
+    }
+  },
+  "recommendationPublicGroup": "Public community",
+  "recommendationStageImmediate": "Immediate",
+  "recommendationStageFollowUp": "Follow-up",
+  "recommendationStageOutcome": "Outcome",
+  "recommendationReasonSubjectOverlap": "Subject overlap",
+  "recommendationReasonPreferenceAlignment": "Similar learning pace",
+  "recommendationReasonTagOverlap": "Interest match",
+  "recommendationReasonTrending": "Recently active",
+  "recommendationMetricOverall": "Overall",
+  "recommendationMetricSimilarity": "Similarity",
+  "recommendationMetricComfort": "Comfort",
+  "recommendationMetricInterestMatch": "Interest match",
+  "recommendationMetricActivity": "Activity",
+  "recommendationMetricSubjectSimilarity": "Subject similarity",
+  "recommendationMetricRelationshipReadiness": "Relationship readiness",
+  "recommendationMetricTagMatch": "Tag match",
+  "recommendationMetricQuality": "Quality",
+  "recommendationSignalTooDissimilar": "Too dissimilar",
+  "recommendationSignalWantMoreTagMatch": "Interests not aligned",
+  "recommendationSignalTrustworthy": "Reliable collaborator",
+  "recommendationSignalGoodInterestMatch": "Interest match",
+  "recommendationIssueNotSimilar": "Not similar enough",
+  "recommendationIssueNotComplementary": "Lacks complementarity",
+  "recommendationIssueNotProactive": "Not proactive enough",
+  "recommendationIssueTooMuchPressure": "Too much pressure",
+  "recommendationIssueNotFamiliar": "Not familiar enough",
+  "recommendationIssueInaccurateTags": "Inaccurate tags",
+  "recommendationIssueTooQuiet": "Too quiet",
+  "recommendationIssueTooCrowded": "Too crowded",
+  "recommendationIssueMediocreVibe": "Mediocre atmosphere",
+  "recommendationIssueUnsuitableThreshold": "Unsuitable threshold",
+  "recommendationStrengthGreatFit": "Great fit",
+  "recommendationStrengthComplementary": "Complementary",
+  "recommendationStrengthReliable": "Reliable",
+  "recommendationStrengthClearReason": "Clear reasoning",
+  "recommendationStrengthInterestMatch": "Interest match",
+  "recommendationStrengthGreatVibe": "Great atmosphere",
+  "recommendationStrengthActiveFit": "Activity level fits",
+  "personaRefreshPersona": "Refresh persona",
+  "personaProfileInterpretation": "Profile Interpretation",
+  "personaProfileInterpretationSubtitle": "Natural language summary first, expand for underlying structure if needed",
+  "personaL3Subtitle": "System-summarized actionable conclusions shown first",
+  "personaL1Subtitle": "Goals and preferences you explicitly told the system",
+  "personaL2Subtitle": "Tags and capability assessments calibrated through collaboration",
+  "personaInferenceTitle": "System Inference & Policies",
+  "personaInferenceSubtitle": "More technical inferred preferences and current policies, collapsed by default",
+  "personaQuickAccessSystemUpdates": "System Updates",
+  "personaQuickAccessMemorySettings": "Memory Settings",
+  "personaCoreProfileUnavailable": "Core profile temporarily unavailable",
+  "personaDegradedMode": "Switched to degraded display. You can still browse and refresh other sections.\n{message}",
+  "@personaDegradedMode": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "personaRetryFullProfile": "Retry full profile",
+  "personaActiveGoal": "Your most active goal right now: {goalTitle}.",
+  "@personaActiveGoal": {
+    "placeholders": {
+      "goalTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "personaLearningPreference": "Your learning style is closer to {learningStyle}, response depth tends toward {responseDepth}.",
+  "@personaLearningPreference": {
+    "placeholders": {
+      "learningStyle": {
+        "type": "String"
+      },
+      "responseDepth": {
+        "type": "String"
+      }
+    }
+  },
+  "personaObservedPattern": "The most recent pattern observed by the system: {pattern}.",
+  "@personaObservedPattern": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "personaCognitiveClueCount": "{count} cognitive clues accumulated for personalized recommendations.",
+  "@personaCognitiveClueCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "personaProfileSparse": "Your profile is still sparse. Keep using the system and this will become a more natural, specific summary.",
+  "personaSimplifiedUnderstanding": "Here's the system's simplified understanding of you:",
+  "personaSectionRefresh": "Refresh",
+  "personaSectionLoading": "Loading…",
+  "personaLoadFailedError": "Load failed: {error}",
+  "@personaLoadFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaPreferenceVersionReason": "Current explicit preferences and profile context version.",
+  "personaActivePreferencesReason": "Explicit preferences currently used for AI and system integration.",
+  "personaKnowledgeSummaryReason": "Knowledge mastery and active learning topics summary.",
+  "personaCognitiveSummaryReason": "Current cognitive patterns and risk signals summary.",
+  "personaInferredDefaultReason": "The system will keep updating this inference based on recent behavior.",
+  "personaViewRecord": "View Record",
+  "personaUpdate": "Update",
+  "personaAdjust": "Adjust",
+  "personaManualOverride": "Manual Override",
+  "personaPolicy": "Policy",
+  "personaSourcePattern": "Source pattern: {pattern}",
+  "@personaSourcePattern": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "personaActivePolicyReason": "Currently active system policy.",
+  "personaCorrectionSubmitFailed": "Correction submission failed: {error}",
+  "@personaCorrectionSubmitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaPreferenceUpdated": "Preference updated",
+  "personaPreferenceUpdateFailed": "Preference update failed: {error}",
+  "@personaPreferenceUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaRolledBack": "Rolled back to previous version",
+  "personaRollbackFailed": "Rollback failed: {error}",
+  "@personaRollbackFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaGoalUpdated": "Goal updated",
+  "personaGoalUpdateFailed": "Goal update failed: {error}",
+  "@personaGoalUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaInferredAdjusted": "Inferred preference adjusted",
+  "personaAdjustFailed": "Adjustment failed: {error}",
+  "@personaAdjustFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaInferredReset": "Restored to system inferred value",
+  "personaRestoreFailed": "Restore failed: {error}",
+  "@personaRestoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaUnknownError": "Unknown error",
+  "personaHintDecimalRange": "Enter a number between 0.0 and 1.0",
+  "personaHintStudyMinutes": "Enter study duration (minutes)",
+  "personaHintPositiveMinutes": "Enter a positive number of minutes",
+  "personaHintValidPreference": "Enter a valid preference value",
+  "examSprintTitle": "Exam Sprint Setup",
+  "examSprintMinutesPerDay": "{minutes} min/day",
+  "@examSprintMinutesPerDay": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintStep1Subject": "1. Which course?",
+  "examSprintSubjectHint": "e.g., Computer Networks / Calculus / CET-4",
+  "examSprintSubjectRequired": "Tell me which course you're sprinting for",
+  "examSprintStep2Date": "2. When is the exam?",
+  "examSprintSelectDate": "Select exam date",
+  "examSprintDateHint": "The date determines sprint duration and pace",
+  "examSprintDaysLeft": "{days} left until the exam",
+  "@examSprintDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "examSprintStep3Target": "3. Pass, maintain, or aim high?",
+  "examSprintStep4Scope": "4. Any exam scope or teacher highlights?",
+  "examSprintStep4Subtitle": "Paste key points or upload PDF / DOCX / PPT / TXT.",
+  "examSprintScopeHint": "e.g., Focus on transport layer and network layer; teacher said short answer and calculation questions.",
+  "examSprintUpload": "Upload Materials",
+  "examSprintNoUpload": "No materials uploaded yet",
+  "examSprintUploadedCount": "{count} materials uploaded",
+  "@examSprintUploadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintStep5Baseline": "5. How much do you know? Which chapters worry you?",
+  "examSprintWeakChapters": "Which chapters worry you most?",
+  "examSprintStep6Daily": "6. How long can you realistically study each day?",
+  "examSprintMinutesPerDayLabel": "{minutes} min / day",
+  "@examSprintMinutesPerDayLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintMinutesLabel": "{minutes} min",
+  "@examSprintMinutesLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintDailyHint": "Use the time you can realistically stick to, not the ideal.",
+  "examSprintGenerate": "Generate My First Day Tasks",
+  "examSprintSubmitHint": "After submission, you'll get an initial assessment within 3 seconds and be taken to the plan or first day tasks.",
+  "examSprintHeroTitle": "Not a survey — let's find your starting point together",
+  "examSprintHeroSubtitle": "Answer these 6 questions and I'll give you an initial assessment, recommended strategy, and first day tasks.",
+  "examSprintUploadSuccess": "Material uploaded",
+  "examSprintSelectDateFirst": "Please select the exam date first",
+  "examSprintAssessmentComplete": "Initial assessment complete",
+  "examSprintPassProbability": "Pass probability {percent}%",
+  "@examSprintPassProbability": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintRecommendedMode": "Recommended mode {mode}",
+  "@examSprintRecommendedMode": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "examSprintFirstDayFocus": "What to do on day one",
+  "examSprintStartFirstDay": "Start first day tasks",
+  "examSprintViewPlan": "View plan",
+  "examSprintViewFullPlan": "View full plan",
+  "examSprintBaselineAlmostZero": "Starting almost from scratch",
+  "examSprintBaselineUnstable": "Attended class, but foundation is shaky",
+  "examSprintBaselinePartial": "Have some basics, can patch and push simultaneously",
+  "examSprintBaselineSolid": "Solid foundation, focus on score optimization",
+  "examSprintDayCount": "{count} days",
+  "@examSprintDayCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintTargetPass": "Pass",
+  "examSprintTargetHold": "Maintain",
+  "examSprintTargetHighScore": "Aim high",
+  "memorySettingsTitle": "Memory Control",
+  "memorySettingsBack": "Back",
+  "memorySettingsDisabled": "Memory controls are not enabled",
+  "memorySettingsLoadError": "Failed to load memory settings: {error}",
+  "@memorySettingsLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memorySettingsSaveError": "Save failed: {error}",
+  "@memorySettingsSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memorySettingsSaveSuccess": "Memory settings updated",
+  "memorySettingsUnavailable": "Memory control unavailable",
+  "memorySettingsEnabledChip": "Memory enabled",
+  "memorySettingsDisabledChip": "Memory paused",
+  "memorySettingsControllableChip": "Preferences controllable",
+  "memorySettingsDescription": "Control how long-term memory learns your preferences, goals, and experiences. Defaults to conservative — only truly valuable information for future decisions should be retained.",
+  "memorySettingsEnableTitle": "Enable long-term memory",
+  "memorySettingsEnableDesc": "Disabling pauses new memory writes but does not delete history.",
+  "memorySettingsSocialTitle": "Social semantics toggles",
+  "memorySettingsSocialDesc": "Stage 17 only handles memory declarations and front-door reads. Disabling a category hides that social semantic type at the front door.",
+  "memorySettingsSocialSelf": "Self memory",
+  "memorySettingsSocialPersonMention": "Person mentions",
+  "memorySettingsSocialRelationship": "Relationship dynamics",
+  "memorySettingsSocialCommitment": "Commitments",
+  "memorySettingsPushTitle": "Proactive Reminders",
+  "memorySettingsPushDesc": "Stage 18 is off by default. Only after you explicitly enable it will the system send commitment follow-ups or engagement recovery reminders.",
+  "memorySettingsPushEnableTitle": "Enable proactive reminders",
+  "memorySettingsPushEnableDesc": "Master switch. When off, all Stage 18 proactive reminders are disabled.",
+  "memorySettingsPushFollowUpTitle": "Commitment follow-up",
+  "memorySettingsPushFollowUpDesc": "Only for commitments you explicitly made and are overdue.",
+  "memorySettingsPushRecoveryTitle": "Engagement recovery",
+  "memorySettingsPushRecoveryDesc": "Only for users who were consistently active and haven't been active for 72 hours.",
+  "memorySettingsQuietHoursTitle": "Quiet hours",
+  "memorySettingsQuietHoursDesc": "You can narrow the system default of 22:00-08:00, but cannot expand reminders into this period.",
+  "memorySettingsStartTime": "Start time",
+  "memorySettingsEndTime": "End time",
+  "memorySettingsCurrentTimezone": "Current timezone: {timezone}",
+  "@memorySettingsCurrentTimezone": {
+    "placeholders": {
+      "timezone": {
+        "type": "String"
+      }
+    }
+  },
+  "memorySettingsViewInbox": "View reminder inbox",
+  "memorySettingsTypeTitle": "Memory types",
+  "memorySettingsTypeDesc": "Determines which content is stored long-term.",
+  "memorySettingsPreferenceTitle": "Preferences",
+  "memorySettingsPreferenceDesc": "Records response style, learning pace, and common preferences.",
+  "memorySettingsGoalTitle": "Goals",
+  "memorySettingsGoalDesc": "Records confirmed long-term goals and stage intentions.",
+  "memorySettingsEpisodicTitle": "Experiences",
+  "memorySettingsEpisodicDesc": "Records key events and feedback helpful for future decisions.",
+  "memorySettingsInferredTitle": "AI auto memory",
+  "memorySettingsInferredDesc": "Allows the system to infer short-term experiences from chats; each entry must be visible and revocable.",
+  "memorySettingsCaptureTitle": "Capture intensity",
+  "memorySettingsCaptureDesc": "Higher is more aggressive, but also captures more context.",
+  "memorySettingsCaptureLow": "Low",
+  "memorySettingsCaptureMedium": "Medium",
+  "memorySettingsCaptureHigh": "High",
+  "memorySettingsBlockPrefTitle": "Block preferences",
+  "memorySettingsBlockPrefDesc": "Disable preference items you don't want stored long-term.",
+  "memorySettingsBlockSourceTitle": "Block sources",
+  "memorySettingsBlockSourceDesc": "Restrict which entry points won't write to long-term memory.",
+  "memorySettingsSaveButton": "Save settings",
+  "memorySettingsSaving": "Saving...",
    "reportLearningAnalysisReport": "Learning Analysis Report",
    "reportContinuationSubtitle": "Continue viewing the analysis report for this learning journey",
    "reportPartialDataDisclaimer": "Partial data, for reference only",
@@ -6377,5 +6979,234 @@
          "type": "int"
        }
      }
-   }
+   },
+   "bgmLibraryTitle": "BGM Library & Player",
+   "bgmLibraryRefresh": "Refresh",
+   "bgmLibraryNoImport": "No new tracks imported",
+   "bgmLibraryImportedCount": "Imported {count} local tracks",
+   "@bgmLibraryImportedCount": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "bgmLibraryPlayingSwitched": "Playing {title}, switched to player mode",
+   "@bgmLibraryPlayingSwitched": {
+     "placeholders": {
+       "title": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryRemoved": "Removed {title}",
+   "@bgmLibraryRemoved": {
+     "placeholders": {
+       "title": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryEmptyFilter": "No tracks match the current filter. Try changing the filter or importing local music.",
+   "bgmLibraryNotPlaying": "Not playing",
+   "bgmLibraryWaitingPlay": "Waiting to play",
+   "bgmLibraryBrowseHint": "You can play any track from the library directly here",
+   "bgmLibraryNowPlaying": "Now Playing",
+   "bgmLibraryPlayerMode": "Player Mode",
+   "bgmLibraryPlayerModeDesc": "In player mode, music won't be interrupted by page navigation. Great for using Sparkle as an ambient music player.",
+   "bgmLibraryEnableBgm": "Enable Background Music",
+   "bgmLibraryDisableHint": "When off, the player page won't play background music either",
+   "bgmLibraryQuickStrategy": "Quick Strategy",
+   "bgmLibraryQuickStrategyDesc": "The most common adjustments are here. Full settings are still available in the Settings page.",
+   "bgmLibraryStyleOrientation": "Style Orientation",
+   "bgmLibraryIntensityLabel": "Ambience Intensity",
+   "bgmLibraryVarietyLabel": "Rotation Rhythm",
+   "bgmLibraryStats": "Library Status",
+   "bgmLibraryTotalTracks": "Total Tracks",
+   "bgmLibraryCurated": "Curated",
+   "bgmLibraryImportedLabel": "Local Import",
+   "bgmLibraryBundled": "System Fallback",
+   "bgmLibraryImportDir": "Local import directory: {path}",
+   "@bgmLibraryImportDir": {
+     "placeholders": {
+       "path": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryCacheDir": "Download cache directory: {path}",
+   "@bgmLibraryCacheDir": {
+     "placeholders": {
+       "path": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryDirReadyNote": "Both directories are ready. This supports a lightweight approach where only a few tracks are bundled, and the rest are downloaded from the server.",
+   "bgmLibraryImportManage": "Import & Manage",
+   "bgmLibraryImportManageDesc": "Import your own ambient music. Playing any track will automatically switch to player mode, and navigation won't interrupt playback.",
+   "bgmLibraryImportLocal": "Import Local Songs",
+   "bgmLibrarySearchHint": "Search tracks, albums, or scene tags",
+   "bgmLibraryFilterAll": "All",
+   "bgmLibraryPlaying": "Playing",
+   "bgmLibraryPlay": "Play",
+   "bgmLibraryRemove": "Remove",
+   "bgmLibraryTags": "Tags",
+   "bgmLibraryStyle": "Style",
+   "bgmLibraryEnergy": "Energy",
+   "bgmLibraryDensity": "Density",
+   "bgmLibraryModeAdaptive": "Follow Page",
+   "bgmLibraryModeContinuous": "Player Mode",
+   "bgmLibraryModeFocusOnly": "Focus Only",
+   "bgmLibraryModeSilent": "Silent",
+   "bgmLibraryPaletteAdaptive": "Adaptive",
+   "bgmLibraryPaletteClassical": "Classical",
+   "bgmLibraryPalettePiano": "Piano",
+   "bgmLibraryPaletteAiry": "Airy",
+   "bgmLibraryPaletteWarm": "Warm",
+   "bgmLibraryIntensityGentle": "Gentle",
+   "bgmLibraryIntensityBalanced": "Balanced",
+   "bgmLibraryIntensityLush": "Lush",
+   "bgmLibraryVarietySteady": "Steady",
+   "bgmLibraryVarietyBalanced": "Balanced",
+   "bgmLibraryVarietyDynamic": "Dynamic",
+   "bgmLibrarySourceCurated": "Curated",
+   "bgmLibrarySourceImported": "Local Import",
+   "bgmLibrarySourceBundled": "System Fallback",
+   "galaxyDraftReviewScreenTitle": "Review knowledge stars",
+   "galaxyDraftReviewPromptTitle": "We found {count} knowledge stars in your {documentName}! Review them?",
+   "@galaxyDraftReviewPromptTitle": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       },
+       "documentName": {
+         "type": "String"
+       }
+     }
+   },
+   "galaxyDraftReviewPromptBody": "You decide what belongs in your galaxy. Approve, skip, merge, or rename each draft before it becomes part of your map.",
+   "galaxyDraftReviewNow": "Review now",
+   "galaxyDraftReviewLater": "Later",
+   "galaxyDraftPendingIndicator": "{batchCount} pending review · {draftCount} stars",
+   "@galaxyDraftPendingIndicator": {
+     "placeholders": {
+       "batchCount": {
+         "type": "int"
+       },
+       "draftCount": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftReviewProgress": "Star {current} of {total}",
+   "@galaxyDraftReviewProgress": {
+     "placeholders": {
+       "current": {
+         "type": "int"
+       },
+       "total": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftCompletionReady": "Ready to send them into your galaxy",
+   "galaxyDraftLongPressHint": "Swipe right to approve, swipe left to skip, or long-press to rename the draft before you keep it.",
+   "galaxyDraftLongPressShort": "Long-press to edit",
+   "galaxyDraftApprove": "Approve",
+   "galaxyDraftSkip": "Skip",
+   "galaxyDraftMerge": "Merge",
+   "galaxyDraftExcerpts": "What this star contains",
+   "galaxyDraftSimilarityLabel": "Similar to existing node: {nodeName} ({percent}%)",
+   "@galaxyDraftSimilarityLabel": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       },
+       "percent": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftEditTitle": "Tune this knowledge star",
+   "galaxyDraftNameLabel": "Node name",
+   "galaxyDraftDescriptionLabel": "Description",
+   "galaxyDraftEditSave": "Save changes",
+   "galaxyDraftReviewEmptyTitle": "No pending stars right now",
+   "galaxyDraftReviewEmptyBody": "When document processing finishes, draft knowledge stars will land here for your approval.",
+   "galaxyDraftBackToGalaxy": "Back to galaxy",
+   "galaxyDraftCompletionTitle": "{accepted} of {total} knowledge stars added",
+   "@galaxyDraftCompletionTitle": {
+     "placeholders": {
+       "accepted": {
+         "type": "int"
+       },
+       "total": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftCompletionBody": "The stars you kept from {documentName} are ready to fly into your map.",
+   "@galaxyDraftCompletionBody": {
+     "placeholders": {
+       "documentName": {
+         "type": "String"
+       }
+     }
+   },
+   "galaxyDraftCompletionNothingAdded": "You skipped these drafts for now. They can always come back later.",
+   "galaxyDraftCompletionSummary": "{accepted} of {total} knowledge stars added to your galaxy!",
+   "@galaxyDraftCompletionSummary": {
+     "placeholders": {
+       "accepted": {
+         "type": "int"
+       },
+       "total": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyUploadFabLabel": "Add study material",
+   "galaxyUploadDocumentHere": "Upload document here",
+   "galaxyNodeAddMaterial": "Add material to this node",
+   "galaxyUploadTargetGalaxyCore": "Galaxy core",
+   "galaxyUploadTargetSelectedConstellation": "this constellation",
+   "galaxyUploadAlreadyInProgress": "A study material is already joining your constellation.",
+   "galaxyUploadStatusUploading": "Uploading...",
+   "galaxyUploadStatusQueued": "Upload complete. Holding orbit...",
+   "galaxyUploadStatusExtracting": "Extracting content...",
+   "galaxyUploadStatusFindingKnowledge": "Finding knowledge...",
+   "galaxyUploadStatusBuildingNodes": "Weaving new stars...",
+   "galaxyUploadSuccessTitle": "Processing complete!",
+   "galaxyUploadSuccessBody": "Processing complete! {count} knowledge concepts found.",
+   "@galaxyUploadSuccessBody": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyUploadSuccessChip": "{count} concepts found",
+   "@galaxyUploadSuccessChip": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyUploadFailedTitle": "That star didn't quite land",
+   "galaxyUploadFailedBody": "The document slipped out of the constellation before it could settle. Try again when you're ready.",
+   "galaxyUploadRetry": "Retry upload",
+   "galaxyUploadHeadingTo": "Heading toward {target}",
+   "@galaxyUploadHeadingTo": {
+     "placeholders": {
+       "target": {
+         "type": "String"
+       }
+     }
+   },
+   "galaxyUploadStepUpload": "Upload",
+   "galaxyUploadStepExtract": "Extract",
+   "galaxyUploadStepFind": "Find",
+   "galaxyUploadStepComplete": "Complete"
 }

@@ -1,0 +1,17 @@
+{
+    "chat": {
+        "round_finished": "This round of processing has finished.",
+        "tool_executed": "{tool} executed",
+        "update_success": "Related results have been updated.",
+        "tool_failed": "{tool} execution failed",
+        "impact_partial": "This step did not finish successfully, results may be partially affected.",
+        "partial_no_data": "Execution finished, but no displayable details were returned.",
+        "next_action_default": "Continue viewing final response",
+        "next_action_retry": "Retry after providing more info, or continue in another way",
+        "understanding": "I will first understand your question",
+        "planning": "I am organizing your goals and thoughts",
+        "retrieving": "I am searching for relevant basis and context",
+        "executing": "I am executing the necessary steps for you",
+        "answering": "I am organizing the final answer"
+    }
+}

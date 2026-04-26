@@ -922,6 +922,11 @@
   "avatarPresetPet": "萌友",
   "statisticsWeeklyGrowthTrend": "本周成长趋势",
   "statisticsLearningIndex": "学习指数 {value}",
+  "statisticsAggregationNone": "原始数据",
+  "statisticsAggregationHourly": "按小时",
+  "statisticsAggregationDaily": "按天",
+  "statisticsAggregationWeekly": "按周",
+  "statisticsAggregationMonthly": "按月",
   "learningModeDepthHigh": "深度+",
   "learningModeDepthLow": "深度-",
   "learningModeCuriosityHigh": "好奇+",
@@ -1916,6 +1921,9 @@
   "chatPromptDefault2": "先给我 3 步执行清单",
   "chatPromptDefault3": "结合我当前计划继续推进",
   "chatHelpful": "有帮助",
+  "chatCitationExcerptUnavailable": "这条引用暂时还没有可展示的原文摘录。",
+  "chatCitationHelpfulPrompt": "这条引用对你有帮助吗？",
+  "chatCitationOpenDocument": "前往文档",
   "chatNotHelpful": "没帮助",
   "chatQuote": "引用",
   "chatUndo": "撤销",
@@ -2225,6 +2233,68 @@
       }
     }
   },
+  "friendsMyFriends": "我的好友",
+  "friendsFriendRequests": "好友请求",
+  "friendsDiscoverFriends": "发现好友",
+  "friendsDeleteFriend": "删除好友",
+  "friendsConfirmDeleteFriend": "确定要删除好友 {name} 吗？",
+  "@friendsConfirmDeleteFriend": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsCancel": "取消",
+  "friendsDelete": "删除",
+  "friendsFriendDeleted": "已将 {name} 从好友列表中移除",
+  "@friendsFriendDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsDeleteFailed": "删除好友失败：{error}",
+  "@friendsDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsBlockUser": "拉黑用户",
+  "friendsAfterBlockingHint": "拉黑 {name} 后：",
+  "@friendsAfterBlockingHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsRemoveFromFriendList": "将从你的好友列表中移除",
+  "friendsCannotMessageYou": "无法给你发送消息",
+  "friendsCannotSendRequest": "无法向你发送好友请求",
+  "friendsBlock": "拉黑",
+  "friendsBlockedSuccess": "已拉黑 {name}",
+  "@friendsBlockedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsBlockFailed": "拉黑用户失败：{error}",
+  "@friendsBlockFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsBlockedUsersManagement": "管理黑名单",
+  "friendsNoPendingRequests": "暂无待处理请求",
+  "friendsWantsToBeYourFriend": "想成为你的好友",
   "taskMonitorTitle": "后台任务监控",
   "taskMonitorFilterAll": "全部",
   "taskMonitorFilterRunning": "运行中",
@@ -2286,6 +2356,71 @@
   "knowledgeDescription": "描述",
   "knowledgeNoDescription": "暂无描述",
   "knowledgeRelatedNodes": "相关节点",
+  "knowledgeSourceMaterialsTitle": "来源资料",
+  "knowledgeSourceMaterialsSummary": "{documents} 份文档 · {chunks} 个知识片段",
+  "@knowledgeSourceMaterialsSummary": {
+    "placeholders": {
+      "documents": {
+        "type": "int"
+      },
+      "chunks": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeSourceMaterialsPersonalBadge": "我的上传",
+  "knowledgeSourceMaterialsSystemBadge": "暂未附带个人笔记",
+  "knowledgeSourceMaterialsUploadDate": "上传于 {date}",
+  "@knowledgeSourceMaterialsUploadDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "knowledgeSourceMaterialsChunkUnit": "片段",
+  "knowledgeSourceMaterialsEmptyTitle": "让这个节点回到你的真实资料里",
+  "knowledgeSourceMaterialsEmptyBody": "为「{topic}」补充自己的讲义或笔记，让这条知识真正可追溯。",
+  "@knowledgeSourceMaterialsEmptyBody": {
+    "placeholders": {
+      "topic": {}
+    }
+  },
+  "knowledgeSourceMaterialsAddNotes": "添加关于「{topic}」的笔记",
+  "@knowledgeSourceMaterialsAddNotes": {
+    "placeholders": {
+      "topic": {}
+    }
+  },
+  "knowledgeSourceMaterialsReadMore": "阅读更多",
+  "knowledgeSourceMaterialsNoPreview": "这份资料暂时还没有可展示的片段。",
+  "knowledgeSourceMaterialsOpenFailed": "暂时无法打开来源资料。",
+  "knowledgeSourceMaterialsUploadSaved": "{filename} 已上传，处理并挂接后会显示在这里。",
+  "@knowledgeSourceMaterialsUploadSaved": {
+    "placeholders": {
+      "filename": {}
+    }
+  },
+  "knowledgeSourceMaterialsPage": "第 {page} 页",
+  "@knowledgeSourceMaterialsPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "knowledgeSourceMaterialsPages": "第 {pages} 页",
+  "@knowledgeSourceMaterialsPages": {
+    "placeholders": {
+      "pages": {}
+    }
+  },
+  "knowledgeSourceMaterialsChunk": "片段 {index}",
+  "@knowledgeSourceMaterialsChunk": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "knowledgePrerequisites": "前置知识",
   "knowledgeMasteryProgress": "掌握进度",
   "knowledgeKeywords": "关键词",
@@ -2715,6 +2850,7 @@
   "chatInputDocumentClean": "清理文档",
   "chatInterventionViewPlan": "查看计划",
   "chatInterventionViewSettings": "查看设置",
+  "chatOpenStudyMaterialsLibrary": "打开学习资料库",
   "chatKnowledgeCitationBody": "知识引用",
   "chatKnowledgeCitationTitle": "{arg0}",
   "chatModeCustomTeam": "自定义团队",
@@ -2784,6 +2920,27 @@
   "chatSourceUntitled": "无标题",
   "chatSourcesAvailable": "有可用来源",
   "chatSourcesUnavailable": "无可用来源",
+  "chatStudyMaterialsEmptySubtitle": "上传你的笔记、课件或 PDF 后，就能在聊天里作为学习资料使用。",
+  "chatStudyMaterialsAvailable": "{count} 份资料可用",
+  "@chatStudyMaterialsAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatStudyMaterialsKnowledgeNodes": "{count} 个知识节点",
+  "@chatStudyMaterialsKnowledgeNodes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatStudyMaterialsLabel": "学习资料",
+  "chatStudyMaterialsPaused": "学习资料已暂停",
+  "chatStudyMaterialsPausedDescription": "下一轮对话将暂停文档检索。",
+  "chatStudyMaterialsReady": "已就绪",
   "chatStreakSummary": "{arg0} {arg1}",
   "chatSubmitFeedback": "提交反馈",
   "chatSynthesisSuggestions": "综合建议",
@@ -2843,6 +3000,23 @@
   "communityFileSharedSuccess": "文件分享成功",
   "communityGroupFiles": "群文件",
   "communityGroupMembersCount": "{arg0}",
+  "groupKnowledgeBase": "知识库",
+  "groupFiles": "学习资料",
+  "saveToMyLibrary": "保存到我的库",
+  "savedToLibrary": "已保存到你的库",
+  "markAsOfficial": "标记为官方",
+  "officialResource": "官方",
+  "noGroupFiles": "暂无学习资料",
+  "noGroupFilesSubtitle": "分享你的笔记，帮助群组成员！",
+  "shareFile": "分享文件",
+  "groupFilesCount": "{count} 个文件",
+  "@groupFilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "communityMessageFallback": "消息加载中...",
   "communityMessageInputHint": "输入消息...",
   "communitySearchGroupMessages": "搜索群消息",
@@ -6143,14 +6317,442 @@
         }
     }
   },
-   "seedLibraryDetailImportFailed": "导入失败：{error}",
-   "@seedLibraryDetailImportFailed": {
-     "placeholders": {
-         "error": {
-           "type": "String"
-         }
-     }
-   },
+  "seedLibraryDetailImportFailed": "导入失败：{error}",
+  "@seedLibraryDetailImportFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "recommendationTargetFallback": "推荐对象",
+  "recommendationThisItem": "这条推荐",
+  "recommendationFeedbackAbout": "关于 {target} 的{stage}反馈",
+  "@recommendationFeedbackAbout": {
+    "placeholders": {
+      "target": { "type": "String" },
+      "stage": { "type": "String" }
+    }
+  },
+  "recommendationFeedbackHint": "你的反馈会直接更新下一轮推荐权重",
+  "recommendationStartCalibration": "开始校准",
+  "recommendationFriendPreferenceTitle": "你的伙伴匹配偏好",
+  "recommendationGroupPreferenceTitle": "你的社群推荐偏好",
+  "recommendationRecentCount": "近 {count} 次",
+  "@recommendationRecentCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "recommendationFriendLearningHint": "系统正在学习你更看重相似度、互补性还是合作舒适度。",
+  "recommendationGroupLearningHint": "系统正在学习你更偏好兴趣对口、活跃氛围还是新鲜发现。",
+  "recommendationSystemAvoiding": "系统在回避：{signals}",
+  "@recommendationSystemAvoiding": {
+    "placeholders": {
+      "signals": { "type": "String" }
+    }
+  },
+  "recommendationCurrentlyBiasing": "当前更偏向：{metrics}",
+  "@recommendationCurrentlyBiasing": {
+    "placeholders": {
+      "metrics": { "type": "String" }
+    }
+  },
+  "recommendationListSeparator": "、",
+  "recommendationCalibrateTitle": "帮我们校准推荐",
+  "recommendationFeedbackSubtitle": "你对 {subject} 的评价会直接作用到接下来的推荐算法。",
+  "@recommendationFeedbackSubtitle": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "recommendationScoreOverall": "整体感受",
+  "recommendationScoreExplanationClarity": "推荐理由清晰度",
+  "recommendationScoreActionability": "采取行动的意愿",
+  "recommendationScoreRelevance": "契合度",
+  "recommendationScoreSimilarity": "相似度是否到位",
+  "recommendationScoreComplementary": "互补性是否成立",
+  "recommendationScoreComfort": "合作舒适度",
+  "recommendationScoreInterestMatch": "兴趣匹配度",
+  "recommendationScoreActivity": "活跃度是否合适",
+  "recommendationScoreAtmosphere": "社群氛围",
+  "recommendationIssuesTitle": "哪里不够对味",
+  "recommendationStrengthsTitle": "哪些地方做得好",
+  "recommendationFreeTextLabel": "自然语言补充",
+  "recommendationFriendHint": "例如：我更希望责任伙伴跟我节奏接近，但也能在拖延时推我一把。",
+  "recommendationGroupHint": "例如：我想找更对口的小组，最好活跃但不要太嘈杂。",
+  "recommendationPrivacyNotice": "我们只使用你填写的分数和总结来优化推荐，不会把私密原始数据直接暴露给其他用户。",
+  "recommendationLater": "稍后再说",
+  "recommendationSubmitFeedback": "提交反馈",
+  "recommendationMatchingStrategy": "匹配策略：{name}",
+  "@recommendationMatchingStrategy": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "recommendationGroupSubtitle": "{count} 人 · {tags}",
+  "@recommendationGroupSubtitle": {
+    "placeholders": {
+      "count": { "type": "String" },
+      "tags": { "type": "String" }
+    }
+  },
+  "recommendationPublicGroup": "公开社群",
+  "recommendationStageImmediate": "即时",
+  "recommendationStageFollowUp": "跟进",
+  "recommendationStageOutcome": "结果",
+  "recommendationReasonSubjectOverlap": "主题重合",
+  "recommendationReasonPreferenceAlignment": "学习节奏接近",
+  "recommendationReasonTagOverlap": "兴趣命中",
+  "recommendationReasonTrending": "近期活跃",
+  "recommendationMetricOverall": "整体",
+  "recommendationMetricSimilarity": "相似度",
+  "recommendationMetricComfort": "舒适度",
+  "recommendationMetricInterestMatch": "兴趣匹配",
+  "recommendationMetricActivity": "活跃度",
+  "recommendationMetricSubjectSimilarity": "主题相似",
+  "recommendationMetricRelationshipReadiness": "关系熟悉度",
+  "recommendationMetricTagMatch": "标签匹配",
+  "recommendationMetricQuality": "质量",
+  "recommendationSignalTooDissimilar": "不够相似",
+  "recommendationSignalWantMoreTagMatch": "兴趣不够对口",
+  "recommendationSignalTrustworthy": "合作感靠谱",
+  "recommendationSignalGoodInterestMatch": "兴趣对口",
+  "recommendationIssueNotSimilar": "不够相似",
+  "recommendationIssueNotComplementary": "缺少互补",
+  "recommendationIssueNotProactive": "不够主动",
+  "recommendationIssueTooMuchPressure": "压力太大",
+  "recommendationIssueNotFamiliar": "不够熟悉",
+  "recommendationIssueInaccurateTags": "标签不准",
+  "recommendationIssueTooQuiet": "太冷清",
+  "recommendationIssueTooCrowded": "太拥挤",
+  "recommendationIssueMediocreVibe": "氛围一般",
+  "recommendationIssueUnsuitableThreshold": "门槛不合适",
+  "recommendationStrengthGreatFit": "很契合",
+  "recommendationStrengthComplementary": "很互补",
+  "recommendationStrengthReliable": "很靠谱",
+  "recommendationStrengthClearReason": "理由清楚",
+  "recommendationStrengthInterestMatch": "兴趣对口",
+  "recommendationStrengthGreatVibe": "氛围很好",
+  "recommendationStrengthActiveFit": "活跃合适",
+  "personaRefreshPersona": "刷新画像",
+  "personaProfileInterpretation": "画像解读",
+  "personaProfileInterpretationSubtitle": "先看自然语言总结，再决定要不要展开底层结构",
+  "personaL3Subtitle": "优先展示系统已经总结出的可感知结论",
+  "personaL1Subtitle": "你明确告诉系统的目标和偏好",
+  "personaL2Subtitle": "系统与你协作校准后的标签与能力判断",
+  "personaInferenceTitle": "系统推断与策略",
+  "personaInferenceSubtitle": "更技术性的推断偏好与当前策略，默认收起",
+  "personaQuickAccessSystemUpdates": "系统更新",
+  "personaQuickAccessMemorySettings": "记忆设置",
+  "personaCoreProfileUnavailable": "核心画像暂时不可用",
+  "personaDegradedMode": "已切换为降级展示，你仍然可以查看和刷新其它分区。\n{message}",
+  "@personaDegradedMode": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "personaRetryFullProfile": "重试完整画像",
+  "personaActiveGoal": "你当前最明确的目标是：{goalTitle}。",
+  "@personaActiveGoal": {
+    "placeholders": {
+      "goalTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "personaLearningPreference": "你的学习偏好更接近{learningStyle}，系统回答深度倾向{responseDepth}。",
+  "@personaLearningPreference": {
+    "placeholders": {
+      "learningStyle": {
+        "type": "String"
+      },
+      "responseDepth": {
+        "type": "String"
+      }
+    }
+  },
+  "personaObservedPattern": "系统最近观察到的主要模式是：{pattern}。",
+  "@personaObservedPattern": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "personaCognitiveClueCount": "画像里已积累 {count} 条可用于个性化推荐的认知线索。",
+  "@personaCognitiveClueCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "personaProfileSparse": "当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。",
+  "personaSimplifiedUnderstanding": "这是系统目前对你的简化理解：",
+  "personaSectionRefresh": "刷新",
+  "personaSectionLoading": "加载中…",
+  "personaLoadFailedError": "加载失败：{error}",
+  "@personaLoadFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaPreferenceVersionReason": "当前显式偏好与画像上下文版本。",
+  "personaActivePreferencesReason": "当前用于 AI 与系统联动的显式偏好。",
+  "personaKnowledgeSummaryReason": "知识掌握度与当前活跃学习主题摘要。",
+  "personaCognitiveSummaryReason": "当前认知模式与风险信号摘要。",
+  "personaInferredDefaultReason": "系统会根据最近行为持续更新这项推断。",
+  "personaViewRecord": "查看记录",
+  "personaUpdate": "更新",
+  "personaAdjust": "调整",
+  "personaManualOverride": "手动覆盖",
+  "personaPolicy": "策略",
+  "personaSourcePattern": "来源模式：{pattern}",
+  "@personaSourcePattern": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "personaActivePolicyReason": "当前已生效的系统策略。",
+  "personaCorrectionSubmitFailed": "提交修正失败：{error}",
+  "@personaCorrectionSubmitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaPreferenceUpdated": "偏好已更新",
+  "personaPreferenceUpdateFailed": "偏好更新失败：{error}",
+  "@personaPreferenceUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaRolledBack": "已回滚到上一版本",
+  "personaRollbackFailed": "回滚失败：{error}",
+  "@personaRollbackFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaGoalUpdated": "目标已更新",
+  "personaGoalUpdateFailed": "目标更新失败：{error}",
+  "@personaGoalUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaInferredAdjusted": "推断偏好已调整",
+  "personaAdjustFailed": "调整失败：{error}",
+  "@personaAdjustFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaInferredReset": "已恢复系统推断值",
+  "personaRestoreFailed": "恢复失败：{error}",
+  "@personaRestoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "personaUnknownError": "未知错误",
+  "personaHintDecimalRange": "请输入 0.0 到 1.0 之间的数字",
+  "personaHintStudyMinutes": "请输入学习时长（分钟）",
+  "personaHintPositiveMinutes": "请输入大于 0 的分钟数",
+  "personaHintValidPreference": "请输入有效的偏好值",
+  "examSprintTitle": "考试冲刺设置",
+  "examSprintMinutesPerDay": "{minutes} 分钟/天",
+  "@examSprintMinutesPerDay": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintStep1Subject": "1. 哪门课？",
+  "examSprintSubjectHint": "例如：计算机网络 / 高数 / 英语四级",
+  "examSprintSubjectRequired": "先告诉我你要冲刺哪门课",
+  "examSprintStep2Date": "2. 考试哪天？",
+  "examSprintSelectDate": "选择考试日期",
+  "examSprintDateHint": "日期会决定冲刺天数和节奏",
+  "examSprintDaysLeft": "离考试还有 {days}",
+  "@examSprintDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "examSprintStep3Target": "3. 目标是通过、保分还是冲高分？",
+  "examSprintStep4Scope": "4. 考试范围 / 老师重点有吗？",
+  "examSprintStep4Subtitle": "可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。",
+  "examSprintScopeHint": "例如：重点看传输层、网络层；老师说会考简答和计算题。",
+  "examSprintUpload": "上传资料",
+  "examSprintNoUpload": "还没上传资料",
+  "examSprintUploadedCount": "已上传 {count} 份资料",
+  "@examSprintUploadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintStep5Baseline": "5. 你现在大概会多少？最怕哪几章？",
+  "examSprintWeakChapters": "最怕哪几章？",
+  "examSprintStep6Daily": "6. 每天真实能学多久？",
+  "examSprintMinutesPerDayLabel": "{minutes} 分钟 / 天",
+  "@examSprintMinutesPerDayLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintMinutesLabel": "{minutes} 分钟",
+  "@examSprintMinutesLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintDailyHint": "用「你大概率能坚持」的时间，不用理想状态。",
+  "examSprintGenerate": "生成我的第一天任务",
+  "examSprintSubmitHint": "提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。",
+  "examSprintHeroTitle": "不是填问卷，是一起确定起点",
+  "examSprintHeroSubtitle": "填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。",
+  "examSprintUploadSuccess": "资料已上传",
+  "examSprintSelectDateFirst": "先选择考试日期",
+  "examSprintAssessmentComplete": "初步评估已完成",
+  "examSprintPassProbability": "通过概率 {percent}%",
+  "@examSprintPassProbability": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintRecommendedMode": "建议模式 {mode}",
+  "@examSprintRecommendedMode": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "examSprintFirstDayFocus": "第一天先做什么",
+  "examSprintStartFirstDay": "开始第一天任务",
+  "examSprintViewPlan": "查看计划",
+  "examSprintViewFullPlan": "查看整个计划",
+  "examSprintBaselineAlmostZero": "几乎要从零开始",
+  "examSprintBaselineUnstable": "上过课，但基础还不稳",
+  "examSprintBaselinePartial": "有一部分基础，可以边补边冲",
+  "examSprintBaselineSolid": "基础不错，重点是提分校准",
+  "examSprintDayCount": "{count} 天",
+  "@examSprintDayCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "examSprintTargetPass": "通过",
+  "examSprintTargetHold": "保分",
+  "examSprintTargetHighScore": "冲高分",
+  "memorySettingsTitle": "记忆控制",
+  "memorySettingsBack": "返回",
+  "memorySettingsDisabled": "记忆控制未启用",
+  "memorySettingsLoadError": "加载记忆设置失败: {error}",
+  "@memorySettingsLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memorySettingsSaveError": "保存失败: {error}",
+  "@memorySettingsSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memorySettingsSaveSuccess": "记忆设置已更新",
+  "memorySettingsUnavailable": "记忆控制不可用",
+  "memorySettingsEnabledChip": "记忆已启用",
+  "memorySettingsDisabledChip": "记忆已暂停",
+  "memorySettingsControllableChip": "偏好可控",
+  "memorySettingsDescription": "控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。",
+  "memorySettingsEnableTitle": "启用长期记忆",
+  "memorySettingsEnableDesc": "关闭后会暂停新的记忆写入，但不会删除历史记录。",
+  "memorySettingsSocialTitle": "社交语义子开关",
+  "memorySettingsSocialDesc": "Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。",
+  "memorySettingsSocialSelf": "自我记忆",
+  "memorySettingsSocialPersonMention": "人物提及",
+  "memorySettingsSocialRelationship": "关系动态",
+  "memorySettingsSocialCommitment": "承诺事项",
+  "memorySettingsPushTitle": "主动提醒",
+  "memorySettingsPushDesc": "Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。",
+  "memorySettingsPushEnableTitle": "启用主动提醒",
+  "memorySettingsPushEnableDesc": "总开关。关闭后 Stage 18 主动提醒会全部停用。",
+  "memorySettingsPushFollowUpTitle": "承诺跟进",
+  "memorySettingsPushFollowUpDesc": "只针对你明确表达过、且已经逾期的承诺事项。",
+  "memorySettingsPushRecoveryTitle": "活跃恢复",
+  "memorySettingsPushRecoveryDesc": "只针对曾经连续活跃、且 72 小时未活跃的情况。",
+  "memorySettingsQuietHoursTitle": "静默时段",
+  "memorySettingsQuietHoursDesc": "你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。",
+  "memorySettingsStartTime": "开始时间",
+  "memorySettingsEndTime": "结束时间",
+  "memorySettingsCurrentTimezone": "当前时区：{timezone}",
+  "@memorySettingsCurrentTimezone": {
+    "placeholders": {
+      "timezone": {
+        "type": "String"
+      }
+    }
+  },
+  "memorySettingsViewInbox": "查看提醒收件箱",
+  "memorySettingsTypeTitle": "记忆类型",
+  "memorySettingsTypeDesc": "决定哪些内容会被长期记住。",
+  "memorySettingsPreferenceTitle": "偏好",
+  "memorySettingsPreferenceDesc": "记录回答风格、学习节奏和常见偏好。",
+  "memorySettingsGoalTitle": "目标",
+  "memorySettingsGoalDesc": "记录已确认的长期目标和阶段意图。",
+  "memorySettingsEpisodicTitle": "经历",
+  "memorySettingsEpisodicDesc": "记录对后续决策有帮助的关键事件与反馈。",
+  "memorySettingsInferredTitle": "AI 自动记忆",
+  "memorySettingsInferredDesc": "允许系统从聊天中推断短期经历；每条都必须可见、可撤销。",
+  "memorySettingsCaptureTitle": "捕获强度",
+  "memorySettingsCaptureDesc": "越高越积极，但也会记录更多上下文。",
+  "memorySettingsCaptureLow": "低",
+  "memorySettingsCaptureMedium": "中",
+  "memorySettingsCaptureHigh": "高",
+  "memorySettingsBlockPrefTitle": "屏蔽偏好",
+  "memorySettingsBlockPrefDesc": "不希望长期存储的偏好项可以在这里关闭。",
+  "memorySettingsBlockSourceTitle": "屏蔽来源",
+  "memorySettingsBlockSourceDesc": "限制哪些入口不会写入长期记忆。",
+  "memorySettingsSaveButton": "保存设置",
+   "memorySettingsSaving": "保存中...",
    "reportLearningAnalysisReport": "学习分析报告",
    "reportContinuationSubtitle": "继续查看本次学习旅程的分析报告",
    "reportPartialDataDisclaimer": "部分数据，仅供参考",
@@ -6370,5 +6972,234 @@
          "type": "int"
        }
      }
-   }
+   },
+   "bgmLibraryTitle": "BGM 曲库与播放器",
+   "bgmLibraryRefresh": "刷新",
+   "bgmLibraryNoImport": "没有导入新曲目",
+   "bgmLibraryImportedCount": "已导入 {count} 首本地音乐",
+   "@bgmLibraryImportedCount": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "bgmLibraryPlayingSwitched": "正在播放 {title}，已切换到播放器模式",
+   "@bgmLibraryPlayingSwitched": {
+     "placeholders": {
+       "title": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryRemoved": "已移除 {title}",
+   "@bgmLibraryRemoved": {
+     "placeholders": {
+       "title": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryEmptyFilter": "当前筛选下没有曲目，可以尝试切换筛选或导入本地音乐。",
+   "bgmLibraryNotPlaying": "当前未播放",
+   "bgmLibraryWaitingPlay": "等待播放中",
+   "bgmLibraryBrowseHint": "你可以在这里直接点播曲库里的任意曲目",
+   "bgmLibraryNowPlaying": "当前播放",
+   "bgmLibraryPlayerMode": "播放器模式",
+   "bgmLibraryPlayerModeDesc": "播放器模式下音乐不会因页面跳转而被打断，适合把 Sparkle 当成舒缓音乐播放器来用。",
+   "bgmLibraryEnableBgm": "启用背景音乐",
+   "bgmLibraryDisableHint": "关闭后播放器页也不会继续播放背景音乐",
+   "bgmLibraryQuickStrategy": "快速策略调节",
+   "bgmLibraryQuickStrategyDesc": "这里保留最常用的调节项，完整细项仍然可以在设置页里继续调整。",
+   "bgmLibraryStyleOrientation": "风格取向",
+   "bgmLibraryIntensityLabel": "氛围强度",
+   "bgmLibraryVarietyLabel": "轮换节奏",
+   "bgmLibraryStats": "曲库状态",
+   "bgmLibraryTotalTracks": "总曲目",
+   "bgmLibraryCurated": "精选曲库",
+   "bgmLibraryImportedLabel": "本地导入",
+   "bgmLibraryBundled": "系统兜底",
+   "bgmLibraryImportDir": "本地导入目录：{path}",
+   "@bgmLibraryImportDir": {
+     "placeholders": {
+       "path": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryCacheDir": "下载缓存目录：{path}",
+   "@bgmLibraryCacheDir": {
+     "placeholders": {
+       "path": {
+         "type": "String"
+       }
+     }
+   },
+   "bgmLibraryDirReadyNote": "这两个目录已经准备好，后续可以直接接“默认只打包少量曲目，其余从服务器下载到本地”的轻量化方案。",
+   "bgmLibraryImportManage": "导入与管理",
+   "bgmLibraryImportManageDesc": "你可以把自己的舒缓音乐直接导入进来。点播任意曲目时，系统会自动切换到播放器模式，后续跳页也不会中断。",
+   "bgmLibraryImportLocal": "导入本地歌曲",
+   "bgmLibrarySearchHint": "搜索曲目、专辑或场景标签",
+   "bgmLibraryFilterAll": "全部",
+   "bgmLibraryPlaying": "播放中",
+   "bgmLibraryPlay": "播放",
+   "bgmLibraryRemove": "移除",
+   "bgmLibraryTags": "标签",
+   "bgmLibraryStyle": "风格",
+   "bgmLibraryEnergy": "能量",
+   "bgmLibraryDensity": "密度",
+   "bgmLibraryModeAdaptive": "跟随页面",
+   "bgmLibraryModeContinuous": "播放器模式",
+   "bgmLibraryModeFocusOnly": "仅专注",
+   "bgmLibraryModeSilent": "静音",
+   "bgmLibraryPaletteAdaptive": "自适应",
+   "bgmLibraryPaletteClassical": "精选古典",
+   "bgmLibraryPalettePiano": "钢琴优先",
+   "bgmLibraryPaletteAiry": "空灵氛围",
+   "bgmLibraryPaletteWarm": "温暖轻快",
+   "bgmLibraryIntensityGentle": "柔和",
+   "bgmLibraryIntensityBalanced": "平衡",
+   "bgmLibraryIntensityLush": "丰盈",
+   "bgmLibraryVarietySteady": "稳定",
+   "bgmLibraryVarietyBalanced": "均衡",
+   "bgmLibraryVarietyDynamic": "灵动",
+   "bgmLibrarySourceCurated": "精选曲库",
+   "bgmLibrarySourceImported": "本地导入",
+   "bgmLibrarySourceBundled": "系统兜底",
+   "galaxyDraftReviewScreenTitle": "审核知识星",
+   "galaxyDraftReviewPromptTitle": "我们从 {documentName} 里找到了 {count} 颗知识星，要现在看看吗？",
+   "@galaxyDraftReviewPromptTitle": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       },
+       "documentName": {
+         "type": "String"
+       }
+     }
+   },
+   "galaxyDraftReviewPromptBody": "你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。",
+   "galaxyDraftReviewNow": "现在审核",
+   "galaxyDraftReviewLater": "稍后再看",
+   "galaxyDraftPendingIndicator": "{batchCount} 份待审核 · {draftCount} 颗星",
+   "@galaxyDraftPendingIndicator": {
+     "placeholders": {
+       "batchCount": {
+         "type": "int"
+       },
+       "draftCount": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftReviewProgress": "第 {current} / {total} 颗",
+   "@galaxyDraftReviewProgress": {
+     "placeholders": {
+       "current": {
+         "type": "int"
+       },
+       "total": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftCompletionReady": "准备把它们送进你的星图",
+   "galaxyDraftLongPressHint": "右滑通过，左滑跳过，长按还能先改一下名字或描述。",
+   "galaxyDraftLongPressShort": "长按可编辑",
+   "galaxyDraftApprove": "通过",
+   "galaxyDraftSkip": "跳过",
+   "galaxyDraftMerge": "合并",
+   "galaxyDraftExcerpts": "这颗星里装着什么",
+   "galaxyDraftSimilarityLabel": "与已有节点相似：{nodeName}（{percent}%）",
+   "@galaxyDraftSimilarityLabel": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       },
+       "percent": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftEditTitle": "调整这颗知识星",
+   "galaxyDraftNameLabel": "节点名称",
+   "galaxyDraftDescriptionLabel": "节点描述",
+   "galaxyDraftEditSave": "保存修改",
+   "galaxyDraftReviewEmptyTitle": "现在没有待确认的知识星",
+   "galaxyDraftReviewEmptyBody": "等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。",
+   "galaxyDraftBackToGalaxy": "回到星图",
+   "galaxyDraftCompletionTitle": "已确认 {accepted} / {total} 颗知识星",
+   "@galaxyDraftCompletionTitle": {
+     "placeholders": {
+       "accepted": {
+         "type": "int"
+       },
+       "total": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyDraftCompletionBody": "{documentName} 里的这些知识星，已经准备好飞进你的星图。",
+   "@galaxyDraftCompletionBody": {
+     "placeholders": {
+       "documentName": {
+         "type": "String"
+       }
+     }
+   },
+   "galaxyDraftCompletionNothingAdded": "这批草稿先放一放也没关系，之后随时还能回来继续看。",
+   "galaxyDraftCompletionSummary": "{accepted} / {total} 颗知识星已加入你的星图！",
+   "@galaxyDraftCompletionSummary": {
+     "placeholders": {
+       "accepted": {
+         "type": "int"
+       },
+       "total": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyUploadFabLabel": "添加学习资料",
+   "galaxyUploadDocumentHere": "在这里上传文档",
+   "galaxyNodeAddMaterial": "将资料添加到这个节点",
+   "galaxyUploadTargetGalaxyCore": "银河核心",
+   "galaxyUploadTargetSelectedConstellation": "这片星域",
+   "galaxyUploadAlreadyInProgress": "已经有一份学习资料正在飞向你的星图。",
+   "galaxyUploadStatusUploading": "上传中...",
+   "galaxyUploadStatusQueued": "上传完成，正在进入轨道...",
+   "galaxyUploadStatusExtracting": "提取内容中...",
+   "galaxyUploadStatusFindingKnowledge": "寻找知识中...",
+   "galaxyUploadStatusBuildingNodes": "编织新星中...",
+   "galaxyUploadSuccessTitle": "处理完成！",
+   "galaxyUploadSuccessBody": "处理完成！共发现 {count} 个知识概念。",
+   "@galaxyUploadSuccessBody": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyUploadSuccessChip": "发现了 {count} 个概念",
+   "@galaxyUploadSuccessChip": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "galaxyUploadFailedTitle": "这颗星还没落稳",
+   "galaxyUploadFailedBody": "文档在落入星图前滑了出去，准备好时再试一次就好。",
+   "galaxyUploadRetry": "重新上传",
+   "galaxyUploadHeadingTo": "正飞向 {target}",
+   "@galaxyUploadHeadingTo": {
+     "placeholders": {
+       "target": {
+         "type": "String"
+       }
+     }
+   },
+   "galaxyUploadStepUpload": "上传",
+   "galaxyUploadStepExtract": "提取",
+   "galaxyUploadStepFind": "寻知",
+   "galaxyUploadStepComplete": "完成"
 }

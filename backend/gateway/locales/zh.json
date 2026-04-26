@@ -1,0 +1,17 @@
+{
+    "chat": {
+        "round_finished": "这轮处理已经完成",
+        "tool_executed": "{tool} 已执行",
+        "update_success": "已更新相关结果。",
+        "tool_failed": "{tool} 执行失败",
+        "impact_partial": "这一步没有成功完成，结果可能部分受影响。",
+        "partial_no_data": "执行已完成，但暂时没有返回可展示的详细对象。",
+        "next_action_default": "继续查看最终回答",
+        "next_action_retry": "补充信息后重试，或换一种方式继续",
+        "understanding": "我先理解你的问题",
+        "planning": "我在整理你的目标和思路",
+        "retrieving": "我在查找相关依据和上下文",
+        "executing": "我在替你执行需要的步骤",
+        "answering": "我在组织最终回答"
+    }
+}

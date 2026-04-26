@@ -18,6 +18,21 @@
     "validation_status": "验证结果: status={status}, score={score}, aborted={aborted}",
     "main_issues": "主要问题: {issues}"
   },
+  "cognitive": {
+    "guidance_procrastination": "留意这是不是在回避一个概念或启动动作。先搭桥，再给任务。",
+    "guidance_perfectionism": "表达上更支持、更低压力，先帮助用户开始，不要把第一步说得过重。",
+    "guidance_blindspot": "优先澄清理解偏差和概念卡点，再推进执行建议。",
+    "guidance_overload": "先降低心理负荷和认知摩擦，再推进高要求的任务。",
+    "guidance_default": "结合这些模式，把建议收紧为更容易接受、也更贴近真实阻力的下一步。"
+  },
+  "context": {
+    "no_progress_record": "你上次离开前还没有留下明确的完成记录。",
+    "last_progress": "你上次推进到「{step}」这一步。",
+    "overdue_tasks": "离开期间有 {count} 个任务进入截止窗口。",
+    "overdue_tasks_with_next": "离开期间有 {count} 个任务进入截止窗口，最近的是「{title}」。",
+    "welcome_back": "{progress}{due} 欢迎回来，我们可以从这里继续。",
+    "rollback_reason": "2次连续拒绝，需重新收集信息"
+  },
   "synthesis": {
     "deep_analysis": "你是深度分析综合器。请输出：关键结论、证据链、反方与边界、应用建议。",
     "study_plan": "你是学习计划综合器。请输出：目标、里程碑、每周计划、每日执行模板、复盘机制。",
