@@ -653,7 +653,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     ),
                     const SizedBox(height: DS.spacing12),
                     if (connection.queuedRequests.isEmpty)
-                      const OpenClawMetricPill(
+                      OpenClawMetricPill(
                         icon: Icons.inbox_rounded,
                         label: context.l10n.openclawHubQueueEmptyLabel,
                       )

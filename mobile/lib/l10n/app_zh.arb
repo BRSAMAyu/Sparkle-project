@@ -5661,6 +5661,9 @@
   "openclawQueuedRequestCount": "{count} 个待处理",
   "openclawQuickConnect": "快速接入",
   "openclawCustomConfig": "自定义配置",
+  "openclawCustomConfigDesc": "使用自定义网关地址和令牌连接",
+  "openclawGuestMainDesc": "使用本地网关直连",
+  "openclawGuestMainLabel": "本地网关",
   "openclawImportFromClipboard": "从剪贴板导入",
   "openclawPastePairingString": "粘贴配对串",
   "openclawScanToPair": "扫码配对",
@@ -5794,5 +5797,358 @@
   "accountabilityOperationFailed": "操作失败",
   "accountabilityLikeFailed": "点赞失败",
   "accountabilitySendFailed": "发送失败",
-  "accountabilityCheckinFailed": "打卡失败"
+  "accountabilityCheckinFailed": "打卡失败",
+  "openclawHubGatewayNoPermission": "当前网关可访问，但没有执行权限，暂时无法重试队列",
+  "openclawHubEndpointUnavailable": "当前网关可访问，但执行入口不可用，暂时无法重试队列",
+  "openclawHubEngineNotConnected": "执行引擎尚未连接，暂时无法重试队列",
+  "openclawHubNoRetryQueuedItems": "当前没有可重试的排队任务",
+  "openclawHubQueueCleared": "等待队列已清空",
+  "openclawHubConnectedDiagnostics": "OpenClaw 已连接，点击查看诊断",
+  "openclawHubGatewayNoPermissionDiagnostics": "网关可达但缺少执行权限，点击查看诊断",
+  "openclawHubEndpointIssueDiagnostics": "网关可达但执行入口异常，点击查看诊断",
+  "openclawHubQueuedTasksDiagnostics": "当前有排队任务，点击查看诊断",
+  "openclawHubNotConnectedDiagnostics": "OpenClaw 连接未完成，点击查看诊断",
+  "openclawHubOverviewGatewayNoPermission": "网关在线，但没有执行权限",
+  "openclawHubOverviewEndpointIssue": "网关在线，但执行入口不可用",
+  "openclawHubOverviewReady": "OpenClaw 已准备好接手",
+  "openclawHubOverviewTasksWaiting": "已有任务在等它恢复",
+  "openclawHubOverviewConfigSaved": "连接信息已保存，当前还没连上",
+  "openclawHubOverviewConnectFirst": "先接入 OpenClaw，再开始稳定委派",
+  "openclawHubOverviewGatewayNoPermissionDesc": "当前这台网关可以访问，但真正执行会被权限拦住。先补可写 scope，或改用设备配对 + WebSocket，才算闭环接通。",
+  "openclawHubOverviewEndpointIssueDesc": "当前地址本身可访问，但执行接口还没准备好。优先检查 `/v1/responses`、代理转发和 transport 选择是否一致。",
+  "openclawHubOverviewConnectedDesc": "连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。",
+  "openclawHubOverviewDefaultDesc": "连接完成后，首页、聊天和任务页会共享同一个执行中心，不再四处寻找入口。",
+  "openclawHubActionHintPermission": "现在最值得先做的是更换具备执行权限的令牌，或切到已配对的 WebSocket 连接。",
+  "openclawHubActionHintEndpoint": "现在最值得先做的是检查执行接口与 transport，让网关从“可达”变成“可执行”。",
+  "openclawHubActionHintRetryQueue": "现在最值得先做的是把等待队列重新提交。",
+  "openclawHubActionHintReconnect": "现在最值得先做的是恢复连接，让已排队的任务继续执行。",
+  "openclawHubActionHintNewDelegation": "现在最值得先做的是回到聊天或任务页发起新的委派。",
+  "openclawHubActionHintCompleteConnection": "现在最值得先做的是完成连接，让 OpenClaw 真正成为你的执行伴侣。",
+  "openclawHubAppBarTitle": "OpenClaw 执行中心",
+  "openclawHubMetricConnectedNoPermission": "已连接但无执行权限",
+  "openclawHubMetricConnectedEndpointIssue": "已连接但执行入口异常",
+  "openclawHubMetricConnected": "已连接",
+  "openclawHubMetricNotConnected": "未连接",
+  "openclawHubMetricPairedDevice": "已配对设备",
+  "openclawHubMetricTokenAuth": "令牌认证",
+  "openclawHubButtonContinueSetup": "继续设置",
+  "openclawHubButtonViewQueue": "查看队列",
+  "openclawHubButtonAutomation": "自动化",
+  "openclawHubButtonEnterChat": "进入聊天",
+  "openclawHubButtonViewTasks": "查看任务",
+  "openclawHubSectionConnectionTitle": "连接与控制",
+  "openclawHubSectionConnectionSubtitle": "先用摘要看清当前连接，再决定是否展开编辑，避免一进来就被整张表单打断。",
+  "openclawHubCollapseConnectionEdit": "收起连接编辑",
+  "openclawHubExpandConnectionEdit": "编辑连接方式",
+  "openclawHubGatewayUrlEmpty": "尚未填写网关地址",
+  "openclawHubConnectionSummaryPermission": "这台网关已经能访问，但当前认证没有真正发起执行的权限；更适合先修权限，再统一重试队列。",
+  "openclawHubConnectionSummaryEndpoint": "网关本身可达，但执行接口还没准备好；先检查 transport 和 `/v1/responses` 会更有效。",
+  "openclawHubConnectionSummaryConnected": "当前连接保持稳定，适合继续使用现有方式直接委派。",
+  "openclawHubConnectionSummaryConfigured": "配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。",
+  "openclawHubConnectionSummaryFirstTime": "第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。",
+  "openclawHubSectionDevicesTitle": "设备与亲和性",
+  "openclawHubSectionDevicesSubtitle": "把“哪类任务优先发到哪台设备”显式配置出来，避免每次都让系统猜你的偏好。",
+  "openclawHubCollapseDeviceDetails": "收起设备详情",
+  "openclawHubExpandDeviceDetails": "查看设备与偏好",
+  "openclawHubDevicesSummaryEmpty": "节点列表会在成功接入 OpenClaw 后自动出现。设备越清晰，后面的多节点调度和降级体验就越稳定。",
+  "openclawHubSectionQueueTitle": "队列与委派",
+  "openclawHubSectionQueueSubtitle": "让你先知道现在最该做什么，再决定是否展开看完整队列和模板能力。",
+  "openclawHubCollapseQueueDetails": "收起队列详情",
+  "openclawHubExpandQueueDetails": "查看全部队列",
+  "openclawHubQueueSummaryConnected": "你现在最适合先把排队任务重新提交，等引擎把积压处理完再发起新的委派。",
+  "openclawHubQueueSummaryNotConnected": "你已经把任务排好了，下一步先恢复连接，之后就能一口气继续执行。",
+  "openclawHubQueueSummaryConnectedEmpty": "当前没有等待中的任务，最适合回到聊天或任务页发起新的委派。",
+  "openclawHubQueueSummaryNotConnectedEmpty": "当前也没有排队任务，可以先完成连接，再决定要不要开始第一笔委派。",
+  "openclawHubQueueEmptyLabel": "等待队列当前为空",
+  "openclawHubButtonRetryQueue": "重试队列",
+  "openclawHubButtonClearQueue": "清空队列",
+  "openclawHubAvailableTemplates": "可用模板 / 能力说明",
+  "openclawHubTemplatesEmptyHint": "模板会在你打开具体任务后按需加载；现在可以先把连接、队列和最近活动整理顺，再回到具体任务开始委派。",
+  "openclawHubSectionAutomationTitle": "自动化与批量",
+  "openclawHubSectionAutomationSubtitle": "把一次性的批量执行和长期的定时/条件执行放进同一个操作台，避免执行能力只停留在单次点击。",
+  "openclawHubCollapseAutomationDetails": "收起自动化详情",
+  "openclawHubExpandAutomationDetails": "查看自动化能力",
+  "openclawHubAutomationSummaryEmpty": "你还没有任何自动化。展开后可以创建每天定时执行、事件触发或条件轮询，并直接从这里发起批量委派。",
+  "openclawHubSectionActivityTitle": "最近活动",
+  "openclawHubSectionActivitySubtitle": "用高密度时间线看最近的委派，不需要再在不同任务页之间来回翻找。",
+  "openclawHubCollapseActivityDetails": "收起活动详情",
+  "openclawHubExpandActivityDetails": "查看全部活动",
+  "openclawHubActivityEmptyHint": "暂时还没有最近执行。你可以从首页卡牌、任务执行页或聊天入口发起第一笔委派。",
+  "openclawHubActivityHint": "可继续查看该任务的执行详情。",
+  "openclawHubActivityOpenTask": "打开任务执行",
+  "openclawHubStatusRecorded": "已记录",
+  "openclawHubRetryQueuedSuccess": "已重新提交 {count} 个排队任务",
+  "@openclawHubRetryQueuedSuccess": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubLastExecutionStatus": "最近一次执行状态是“{status}”，你可以从这里继续查看连接、队列和活动。",
+  "@openclawHubLastExecutionStatus": {
+    "placeholders": {
+        "status": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubPendingDelegationsDesc": "你已经有 {count} 个委派在等待恢复连接，先把引擎重新连上会最有效。",
+  "@openclawHubPendingDelegationsDesc": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubQueuedTasksCount": "{count} 个排队任务",
+  "@openclawHubQueuedTasksCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubNodeCount": "{count} 个节点",
+  "@openclawHubNodeCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubAutomationCount": "{count} 条自动化",
+  "@openclawHubAutomationCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubLatestBatch": "最近批量 {completed}/{total}",
+  "@openclawHubLatestBatch": {
+    "placeholders": {
+        "completed": {
+          "type": "int"
+        },
+        "total": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubLastTrustLabel": "最近一次信任判断：{label}",
+  "@openclawHubLastTrustLabel": {
+    "placeholders": {
+        "label": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubDevicesSummaryActiveWithCount": "当前已发现 {count} 台节点。你可以在这里为浏览器、终端、文档和接口任务指定偏好设备，离线时 Sparkle 会自动找备用节点。",
+  "@openclawHubDevicesSummaryActiveWithCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubAutomationSummaryActiveWithCount": "当前已有 {count} 条自动化在运行。批量委派摘要和定时任务状态也会持续在这里汇总。",
+  "@openclawHubAutomationSummaryActiveWithCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubTaskLabel": "任务 {taskId}",
+  "@openclawHubTaskLabel": {
+    "placeholders": {
+        "taskId": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubTaskLabelTemplate": "模板 {templateId}",
+  "@openclawHubTaskLabelTemplate": {
+    "placeholders": {
+        "templateId": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubTaskLabelSource": "来源 {source}",
+  "@openclawHubTaskLabelSource": {
+    "placeholders": {
+        "source": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailFriendlyError": "系统暂时没能完成这次应用，请稍后再试",
+  "seedLibraryDetailUserRatings": "用户评分",
+  "seedLibraryDetailQualityBreakdown": "质量评分拆解",
+  "seedLibraryDetailQualityBreakdownDesc": "列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。",
+  "seedLibraryDetailQualityComprehensive": "综合",
+  "seedLibraryDetailQualitySystem": "系统",
+  "seedLibraryDetailQualityUser": "用户",
+  "seedLibraryDetailApplyToSystem": "应用到系统",
+  "seedLibraryDetailAppliedSuccess": "已应用到系统",
+  "seedLibraryDetailPausedSuccess": "已暂停使用该种子库",
+  "seedLibraryDetailStatusUpdated": "种子库状态已更新",
+  "seedLibraryDetailPauseUse": "暂停使用",
+  "seedLibraryDetailApplyLibrary": "应用种子库",
+  "seedLibraryDetailSetPrimarySuccess": "已设为优先使用",
+  "seedLibraryDetailSetPrimary": "设为主用",
+  "seedLibraryDetailMarkedNotSuitableSuccess": "已记录“此种子不适合我”",
+  "seedLibraryDetailMarkNotSuitable": "此种子不适合我",
+  "seedLibraryDetailEditRating": "修改评分",
+  "seedLibraryDetailGiveRating": "给个评分",
+  "seedLibraryDetailSubscriptionStatusEnabled": "已启用",
+  "seedLibraryDetailSubscriptionStatusDisabled": "已订阅未启用",
+  "seedLibraryDetailActiveSubscriptions": "协同中的种子库",
+  "seedLibraryDetailActiveSubscriptionsDesc": "你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。",
+  "seedLibraryDetailFallbackName": "种子库",
+  "seedLibraryDetailNoResultsUnderFilter": "当前筛选条件下没有内容",
+  "seedLibraryDetailUsageFewShot": "用于增强 AI 在相似任务中的回答风格和示例质量",
+  "seedLibraryDetailUsageTeachingContent": "用于给学习计划、任务说明和知识讲解提供高质量教学内容",
+  "seedLibraryDetailUsageReplyTemplate": "用于改善系统回复模板和表达稳定性",
+  "seedLibraryDetailUsageCustom": "用于你自己的内容偏好和专属示例沉淀",
+  "seedLibraryDetailFilterTitle": "筛选内容",
+  "seedLibraryDetailFilterDesc": "按内容类型、难度和启用状态筛选当前种子库里的条目。",
+  "seedLibraryDetailFilterContentType": "内容类型",
+  "seedLibraryDetailFilterAll": "全部",
+  "seedLibraryDetailFilterDifficulty": "难度",
+  "seedLibraryDetailFilterShowInactive": "显示已停用内容",
+  "seedLibraryDetailFilterShowInactiveDesc": "关闭时仅展示当前仍在使用的条目",
+  "seedLibraryDetailFilterReset": "重置",
+  "seedLibraryDetailFilterDone": "完成",
+  "seedLibraryDetailRatingTitle": "给这个种子库评分",
+  "seedLibraryDetailRatingDescription": "你的评分会影响这个种子库的展示质量分。",
+  "seedLibraryDetailRatingCommentLabel": "评价说明（可选）",
+  "seedLibraryDetailRatingSubmitted": "评分已提交",
+  "seedLibraryDetailSubmitRating": "提交评分",
+  "seedLibraryDetailContentBody": "正文",
+  "seedLibraryDetailStructuredContent": "结构化内容",
+  "seedLibraryDetailEditLibrary": "编辑种子库",
+  "seedLibraryDetailEditName": "名称",
+  "seedLibraryDetailEditNameEmpty": "名称不能为空",
+  "seedLibraryDetailEditDescriptionOptional": "描述（可选）",
+  "seedLibraryDetailEditCancel": "取消",
+  "seedLibraryDetailEditSave": "保存",
+  "seedLibraryDetailLibraryUpdated": "种子库已更新",
+  "seedLibraryDetailAddItem": "添加种子内容",
+  "seedLibraryDetailAddItemType": "内容类型",
+  "seedLibraryDetailAddItemTitle": "标题",
+  "seedLibraryDetailAddItemContent": "内容",
+  "seedLibraryDetailAddItemSubject": "主题/学科",
+  "seedLibraryDetailAddItemDifficulty": "难度",
+  "seedLibraryDetailAddItemUnset": "未设置",
+  "seedLibraryDetailAddItemTags": "标签（逗号分隔）",
+  "seedLibraryDetailAddItemSave": "保存内容",
+  "seedLibraryDetailAddItemSuccess": "种子内容已添加",
+  "seedLibraryDetailImportCannotRead": "无法读取文件内容",
+  "seedLibraryDetailImportInvalidJson": "JSON 格式无效，需为数组或 [items:[...]]",
+  "seedLibraryDetailImportNoItems": "文件中没有可导入的内容项",
+  "seedLibraryDetailApplyFailed": "应用失败：{error}",
+  "@seedLibraryDetailApplyFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailSetPrimaryFailed": "设置失败：{error}",
+  "@seedLibraryDetailSetPrimaryFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailMarkNotSuitableFailed": "记录失败：{error}",
+  "@seedLibraryDetailMarkNotSuitableFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailCurrentStatus": "当前状态：{status} · 优先级 {priority}",
+  "@seedLibraryDetailCurrentStatus": {
+    "placeholders": {
+        "status": {
+          "type": "String"
+        },
+        "priority": {
+          "type": "int"
+        }
+    }
+  },
+  "seedLibraryDetailUsageAppliedEnabled": "当前已生效。{hint}；系统会按优先级把它与其他启用中的种子库一起使用。",
+  "@seedLibraryDetailUsageAppliedEnabled": {
+    "placeholders": {
+        "hint": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailUsageSubscribedNotEnabled": "当前已订阅但未启用。启用后，{hint}。",
+  "@seedLibraryDetailUsageSubscribedNotEnabled": {
+    "placeholders": {
+        "hint": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailUsageNotApplied": "当前尚未应用。应用后，{hint}。",
+  "@seedLibraryDetailUsageNotApplied": {
+    "placeholders": {
+        "hint": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailCurrentRating": "当前评分：{score} / 10",
+  "@seedLibraryDetailCurrentRating": {
+    "placeholders": {
+        "score": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailRatingFailed": "评分失败：{error}",
+  "@seedLibraryDetailRatingFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailAddItemFailed": "添加失败：{error}",
+  "@seedLibraryDetailAddItemFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailImportResult": "导入完成：成功 {imported} 条，失败 {failed} 条",
+  "@seedLibraryDetailImportResult": {
+    "placeholders": {
+        "imported": {
+          "type": "int"
+        },
+        "failed": {
+          "type": "int"
+        }
+    }
+  },
+  "seedLibraryDetailImportFailed": "导入失败：{error}",
+  "@seedLibraryDetailImportFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  }
 }

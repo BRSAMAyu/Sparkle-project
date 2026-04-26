@@ -1239,7 +1239,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       actionCards: report.actionCards,
       trendOverview: report.trendOverview,
       triggerSummary: report.triggerSummary ??
-          const LearningReportTriggerSummary(
+          LearningReportTriggerSummary(
             mode: 'simulation_bridge',
             title: context.l10n.simulationReportTitle,
             summary: context.l10n.simulationReportSummary,
@@ -1894,394 +1894,15 @@ class _SimulationInlineInteractionSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      context.l10n.simulationYourTurnTitle,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      localizeSimulationText(prompt),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.textSecondary,
-                            height: 1.4,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Icon(Icons.expand_more_rounded),
-            ],
-          ),
-        ),
-      );
-    }
-    return GraphiteCardSurface(
-      surfaceRole: SparkleSurfaceRole.card,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  context.l10n.simulationYourResponseArea,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: onCollapse,
-                icon: const Icon(Icons.expand_less_rounded),
-                label: Text(context.l10n.simulationCollapse),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _InlineErrorBanner extends StatelessWidget {
-  const _InlineErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: scheme.errorContainer.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: scheme.error),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.error,
-                    fontWeight: DS.fontWeightBold,
-                    height: 1.4,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SimulationInteractionCard extends StatelessWidget {
-  const _SimulationInteractionCard({
-    required this.prompt,
-    required this.textController,
-    required this.suggestedReplies,
-    required this.options,
-    required this.isSubmitting,
-    required this.onReplySelected,
-    required this.onSubmitText,
-    required this.onContinueInChat,
-    this.interactionType,
-  });
-
-  final String prompt;
-  final String? interactionType;
-  final TextEditingController textController;
-  final List<String> suggestedReplies;
-  final List<String> options;
-  final bool isSubmitting;
-  final ValueChanged<String> onReplySelected;
-  final VoidCallback onSubmitText;
-  final ValueChanged<String> onContinueInChat;
-
-  Color _interactionAccent(String? raw) {
-    switch (raw) {
-      case 'challenge':
-        return DS.warning;
-      case 'forced_choice':
-      case 'vote':
-        return DS.brandPrimary;
-      default:
-        return DS.info;
-    }
-  }
-
-  IconData _interactionIcon(String? raw) {
-    switch (raw) {
-      case 'challenge':
-        return Icons.bolt_rounded;
-      case 'forced_choice':
-      case 'vote':
-        return Icons.rule_rounded;
-      default:
-        return Icons.record_voice_over_rounded;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = _interactionAccent(interactionType);
-    final localizedPrompt = localizeSimulationText(prompt);
-    final localizedSuggestedReplies = suggestedReplies
-        .map(localizeSimulationText)
-        .where((item) => item.trim().isNotEmpty)
-        .toList();
-    final localizedOptions = options
-        .map(localizeSimulationText)
-        .where((item) => item.trim().isNotEmpty)
-        .toList();
-    return GraphiteCardSurface(
-      surfaceRole: SparkleSurfaceRole.card,
-      borderColor: accent.withValues(alpha: 0.18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  _interactionIcon(interactionType),
-                  color: accent,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  context.l10n.simulationJoinDiscussion,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
           Text(
-            context.l10n.simulationInteractionExplain,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.textSecondary,
-                  height: 1.4,
-                ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            localizedPrompt,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.5,
-                ),
-          ),
-          if ((interactionType ?? '').isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _StatusBadge(
-              icon: Icons.touch_app_rounded,
-              label: context.l10n.simulationInteractionModeFormat(_interactionLabel(interactionType)),
-            ),
-          ],
-          if (localizedOptions.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: localizedOptions
-                  .take(4)
-                  .map(
-                    (option) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: accent.withValues(alpha: 0.14),
-                        ),
-                      ),
-                      child: Text(
-                        option,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: accent,
-                              fontWeight: DS.fontWeightBold,
-                            ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: localizedSuggestedReplies
-                .take(3)
-                .map(
-                  (reply) => ActionChip(
-                    label: Text(reply),
-                    onPressed:
-                        isSubmitting ? null : () => onReplySelected(reply),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: textController,
-            enabled: !isSubmitting,
-            minLines: 1,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: context.l10n.simulationOrInputJudgment,
-              hintText: context.l10n.simulationJudgeExampleHint,
-              border: const OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => onSubmitText(),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: isSubmitting ? null : onSubmitText,
-                icon: const Icon(Icons.send_rounded),
-                label: Text(isSubmitting ? context.l10n.simulationSubmitting : context.l10n.simulationSubmitJudgment),
-              ),
-              if (localizedSuggestedReplies.isNotEmpty)
-                OutlinedButton.icon(
-                  onPressed: isSubmitting
-                      ? null
-                      : () {
-                          final draft = textController.text.trim();
-                          onContinueInChat(
-                            draft.isNotEmpty
-                                ? draft
-                                : localizedSuggestedReplies.first,
-                          );
-                        },
-                  icon: const Icon(Icons.chat_bubble_outline_rounded),
-                  label: Text(context.l10n.simulationContinueInChat),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.textSecondary,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _interactionLabel(String? raw) {
-    switch (raw) {
-      case 'open_question':
-        return '开放追问';
-      case 'challenge':
-        return '观点挑战';
-      case 'forced_choice':
-      case 'vote':
-        return '二选一判断';
-      default:
-        return '选择判断';
-    }
-  }
-}
-
-class _SimulationCompactSetupPanel extends StatelessWidget {
-  const _SimulationCompactSetupPanel({
-    required this.topicController,
-    required this.customParticipantController,
-    required this.selectedScenarioKey,
-    required this.scenarioLabels,
-    required this.scenarioDescriptions,
-    required this.isLoading,
-    required this.facilitationStyle,
-    required this.facilitationLabels,
-    required this.facilitationDescriptions,
-    required this.plannedRoundCount,
-    required this.maxRoundCount,
-    required this.selectedParticipantNames,
-    required this.availableParticipantNames,
-    required this.isHistoricalRoleplay,
-    required this.onScenarioSelected,
-    required this.onFacilitationStyleSelected,
-    required this.onRoundCountChanged,
-    required this.onParticipantToggled,
-    required this.onCustomParticipantAdded,
-    required this.onResetParticipants,
-    required this.onRun,
-  });
-
-  final TextEditingController topicController;
-  final TextEditingController customParticipantController;
-  final String selectedScenarioKey;
-  final Map<String, String> scenarioLabels;
-  final Map<String, String> scenarioDescriptions;
-  final bool isLoading;
-  final String facilitationStyle;
-  final Map<String, String> facilitationLabels;
-  final Map<String, String> facilitationDescriptions;
-  final int plannedRoundCount;
-  final int maxRoundCount;
-  final List<String> selectedParticipantNames;
-  final List<String> availableParticipantNames;
-  final bool isHistoricalRoleplay;
-  final ValueChanged<String> onScenarioSelected;
-  final ValueChanged<String> onFacilitationStyleSelected;
-  final ValueChanged<int> onRoundCountChanged;
-  final ValueChanged<String> onParticipantToggled;
-  final ValueChanged<String> onCustomParticipantAdded;
-  final VoidCallback onResetParticipants;
-  final VoidCallback onRun;
-
-  @override
-  Widget build(BuildContext context) => GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.card,
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-                  Text(
-                      context.l10n.simulationRecommendedScenarios,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: onRefresh,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: Text(seeds.isEmpty ? context.l10n.simulationGenerate : context.l10n.simulationRefresh),
+              context.l10n.simulationAdjustSimulation,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
             ),
             const SizedBox(height: 4),
             Text(
-              '这里可以完整调整主题、场景、轮数、展开方式和参与角色，开始后讨论会按这套设置运行。',
+              context.l10n.simulationDiscussionNote,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,
@@ -2296,10 +1917,10 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                   onRun();
                 }
               },
-              decoration: const InputDecoration(
-                labelText: '输入一个知识点或主题',
-                hintText: '例如：特征值与特征向量',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.l10n.simulationTopicHint,
+                hintText: context.l10n.simulationTopicHintExample,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -2335,7 +1956,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               ),
               child: Text(
                 scenarioDescriptions[selectedScenarioKey] ??
-                    '调整场景后，讨论的角色关系与推进方式也会一起变化。',
+                    context.l10n.simulationScenarioAdjustHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -2347,7 +1968,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '讨论轮数',
+                    context.l10n.simulationDiscussionRounds,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -2355,7 +1976,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                 ),
                 _StatusBadge(
                   icon: Icons.timelapse_rounded,
-                  label: '$plannedRoundCount / $maxRoundCount 轮',
+                  label: context.l10n.simulationRoundFormatLabel(plannedRoundCount.toString(), maxRoundCount.toString()),
                 ),
               ],
             ),
@@ -2365,12 +1986,12 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               min: 3,
               max: maxRoundCount.toDouble(),
               divisions: math.max(0, maxRoundCount - 3),
-              label: '$plannedRoundCount 轮',
+              label: context.l10n.simulationRoundSliderLabel(plannedRoundCount),
               onChanged: (value) => onRoundCountChanged(value.round()),
             ),
             const SizedBox(height: 8),
             Text(
-              '展开方式',
+              context.l10n.simulationFacilitationStyleTitle,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -2396,7 +2017,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              facilitationDescriptions[facilitationStyle] ?? '让讨论更贴合当前主题。',
+              facilitationDescriptions[facilitationStyle] ?? context.l10n.simulationFacilitationFitHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,
@@ -2407,7 +2028,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '参与角色',
+                    context.l10n.simulationParticipantsTitle,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -2416,13 +2037,13 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                 TextButton.icon(
                   onPressed: isLoading ? null : onResetParticipants,
                   icon: const Icon(Icons.restart_alt_rounded),
-                  label: const Text('恢复推荐'),
+                  label: Text(context.l10n.simulationRestoreDefault),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              '你可以明确指定想邀请谁参与这场讨论。至少保留 1 位，最多 6 位角色。',
+              context.l10n.simulationParticipantHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,
@@ -2451,10 +2072,10 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                       controller: customParticipantController,
                       textInputAction: TextInputAction.done,
                       onSubmitted: onCustomParticipantAdded,
-                      decoration: const InputDecoration(
-                        labelText: '自定义历史人物',
-                        hintText: '例如：张居正 / 俾斯麦',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.simulationCustomHistoricalRole,
+                        hintText: context.l10n.simulationCustomFigureHint,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -2464,7 +2085,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                       customParticipantController.text,
                     ),
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('添加'),
+                    label: Text(context.l10n.simulationAdd),
                   ),
                 ],
               ),
@@ -2472,8 +2093,8 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               selectedParticipantNames.isEmpty
-                  ? '当前将按系统默认角色运行。'
-                  : '当前参与：${selectedParticipantNames.join('、')}',
+                  ? context.l10n.simulationParticipantDefaultStatus
+                  : context.l10n.simulationParticipantCurrentStatus(selectedParticipantNames.join('、')),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,
@@ -2485,7 +2106,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: isLoading ? null : onRun,
                 icon: const Icon(Icons.refresh_rounded),
-                label: Text(isLoading ? '模拟进行中...' : '重新开始这场模拟'),
+                label: Text(isLoading ? context.l10n.simulationRunning : context.l10n.simulationRestartSim),
               ),
             ),
           ],
@@ -2535,9 +2156,9 @@ class _SimulationStatusCard extends StatelessWidget {
                       Text(
                         isRunning
                             ? roundCount > 0
-                                ? '正在第 $roundCount/$expectedRounds 轮'
-                                : '正在召集参与者'
-                            : '等待开始',
+                                ? context.l10n.simulationRunningRoundN(roundCount.toString(), expectedRounds.toString())
+                                : context.l10n.simulationGatheringParticipants
+                            : context.l10n.simulationAwaitingStart,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
@@ -2557,7 +2178,7 @@ class _SimulationStatusCard extends StatelessWidget {
                   icon: Icon(
                     isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                   ),
-                  label: Text(isPaused ? '继续' : '暂停'),
+                  label: Text(isPaused ? context.l10n.simulationContinue : context.l10n.simulationPause),
                 ),
               ],
             ),
@@ -2576,25 +2197,25 @@ class _SimulationStatusCard extends StatelessWidget {
               children: [
                 _StatusBadge(
                   icon: Icons.forum_rounded,
-                  label: roundCount == 0 ? '等待首轮' : '$roundCount 轮观点',
+                  label: roundCount == 0 ? context.l10n.simulationWaitingFirstRound : context.l10n.simulationRoundViewpoints(roundCount.toString()),
                 ),
                 _StatusBadge(
                   icon: Icons.groups_rounded,
                   label: participants.isEmpty
-                      ? '角色待加入'
-                      : '${participants.length} 位角色',
+                      ? context.l10n.simulationRolesPending
+                      : context.l10n.simulationRoleCountLong(participants.length),
                 ),
                 if (isPaused)
                   _StatusBadge(
                     icon: hasBufferedUpdates
                         ? Icons.sync_rounded
                         : Icons.pause_circle_outline_rounded,
-                    label: hasBufferedUpdates ? '后台仍在继续生成' : '前台已暂停播放',
+                    label: hasBufferedUpdates ? context.l10n.simulationGeneratingInBackground : context.l10n.simulationPausedForeground,
                   ),
                 if ((activeSpeaker ?? '').isNotEmpty)
                   _StatusBadge(
                     icon: Icons.mic_rounded,
-                    label: '当前焦点：$activeSpeaker',
+                    label: context.l10n.simulationCurrentFocusLabel(activeSpeaker!),
                   ),
               ],
             ),
@@ -2764,7 +2385,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '沉浸讨论流',
+                        context.l10n.simulationImmersiveDiscussion,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
@@ -2772,10 +2393,10 @@ class _SimulationTimelineCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         topic.isEmpty
-                            ? '开始后会实时出现每一轮讨论。'
+                            ? context.l10n.simulationWillAppearLive
                             : activeSpeaker == null
-                                ? '主题：$topic'
-                                : '主题：$topic · 当前发言 ${localizeSimulationText(activeSpeaker!)}',
+                                ? context.l10n.simulationTopicFormat(topic)
+                                : context.l10n.simulationTopicCurrentFocusFormat(topic, localizeSimulationText(activeSpeaker!)),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2806,7 +2427,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      immersive ? '沉浸讨论流' : '当前讨论流',
+                      immersive ? context.l10n.simulationImmersiveDiscussion : context.l10n.simulationRoleCurrentDiscussionTitle,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -2814,12 +2435,12 @@ class _SimulationTimelineCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       topic.isEmpty
-                          ? '开始后会实时出现每一轮讨论。'
+                          ? context.l10n.simulationWillAppearLive
                           : activeSpeaker == null
-                              ? '主题：$topic'
+                              ? context.l10n.simulationTopicFormat(topic)
                               : immersive
-                                  ? '当前焦点：${localizeSimulationText(activeSpeaker!)}'
-                                  : '主题：$topic · 当前发言 ${localizeSimulationText(activeSpeaker!)}',
+                                  ? context.l10n.simulationCurrentFocusLabel(localizeSimulationText(activeSpeaker!))
+                                  : context.l10n.simulationImmersiveTopicAndFocus(topic, localizeSimulationText(activeSpeaker!)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2897,9 +2518,9 @@ class _SimulationInsightTray extends StatelessWidget {
   Widget build(BuildContext context) {
     final bulletPoints =
         session == null ? const <String>[] : _buildBulletPoints(session!);
-    final structuredSummary = _parseStructuredSimulationInsight(summary);
+    final structuredSummary = _parseStructuredSimulationInsight(context, summary);
     final previewText = summary.isEmpty
-        ? '暂未生成洞察总结。'
+        ? context.l10n.simulationNoInsightYet
         : (structuredSummary?.previewText ?? summary);
 
     return GraphiteCardSurface(
@@ -2920,7 +2541,7 @@ class _SimulationInsightTray extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '洞察总结',
+                          context.l10n.simulationInsightSummaryTitle,
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w800,
@@ -3008,17 +2629,17 @@ class _SimulationInsightTray extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.article_outlined),
-                  label: Text(isGeneratingReport ? '生成中...' : '生成学习报告'),
+                  label: Text(isGeneratingReport ? context.l10n.simulationGeneratingReport : context.l10n.simulationGenerateLearningReport),
                 ),
                 FilledButton.tonalIcon(
                   onPressed: onOpenTheater,
                   icon: const Icon(Icons.auto_graph_rounded),
-                  label: const Text('以此推演'),
+                  label: Text(context.l10n.simulationContinueToTheater),
                 ),
                 OutlinedButton.icon(
                   onPressed: onShare,
                   icon: const Icon(Icons.share_outlined),
-                  label: const Text('分享洞察'),
+                  label: Text(context.l10n.simulationShareInsight),
                 ),
               ],
             ),
@@ -3030,12 +2651,12 @@ class _SimulationInsightTray extends StatelessWidget {
 
   List<String> _buildBulletPoints(SimulationSessionModel session) {
     final points = <String>[
-      '参与者：${session.participants.map((item) => item.name).join('、')}',
-      '总轮次：${session.rounds.length} 轮，适合沉淀为下一步推演或复盘报告。',
+      context.l10n.simulationBulletParticipants(session.participants.map((item) => item.name).join('、')),
+      context.l10n.simulationBulletRounds(session.rounds.length.toString()),
     ];
     if (session.rounds.isNotEmpty) {
       points
-          .add('开场重点：${localizeSimulationText(session.rounds.first.message)}');
+          .add(context.l10n.simulationBulletOpeningFormat(localizeSimulationText(session.rounds.first.message)));
     }
     return points.take(3).toList();
   }
@@ -3094,39 +2715,39 @@ _StructuredSimulationInsight? _parseStructuredSimulationInsight(
       decoded['user_contributions']?.toString().trim() ?? '';
   final previewText = keyArguments.isNotEmpty
       ? keyArguments.first
-      : (userContribution.isNotEmpty ? userContribution : '已生成结构化洞察总结。');
+      : (userContribution.isNotEmpty ? userContribution : context.l10n.simulationStructuredInsightGenerated);
   final sections = <_StructuredInsightSectionData>[
     if (keyArguments.isNotEmpty)
       _StructuredInsightSectionData(
-        title: '核心论点',
+        title: context.l10n.simulationCoreArguments,
         entries: <String>[],
         icon: Icons.lightbulb_outline_rounded,
         accent: DS.info,
       ).copyWithEntries(keyArguments),
     if (unresolved.isNotEmpty)
       _StructuredInsightSectionData(
-        title: '未解决的分歧',
+        title: context.l10n.simulationUnresolvedDisagreements,
         entries: <String>[],
         icon: Icons.call_split_rounded,
         accent: DS.warning,
       ).copyWithEntries(unresolved),
     if (userContribution.isNotEmpty)
       _StructuredInsightSectionData(
-        title: '你的贡献',
+        title: context.l10n.simulationYourContribution,
         entries: <String>[],
         icon: Icons.person_outline_rounded,
         accent: DS.success,
       ).copyWithEntries(<String>[userContribution]),
     if (gaps.isNotEmpty)
       _StructuredInsightSectionData(
-        title: '暴露的知识盲区',
+        title: context.l10n.simulationExposedKnowledgeGaps,
         entries: <String>[],
         icon: Icons.help_outline_rounded,
         accent: DS.error,
       ).copyWithEntries(gaps),
     if (nextSteps.isNotEmpty)
       _StructuredInsightSectionData(
-        title: '建议下一步',
+        title: context.l10n.simulationSuggestedNextSteps,
         entries: <String>[],
         icon: Icons.flag_outlined,
         accent: DS.success,

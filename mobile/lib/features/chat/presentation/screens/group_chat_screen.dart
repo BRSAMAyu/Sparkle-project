@@ -548,7 +548,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               context,
               agentState: agentState,
               groupInfo: groupInfoState.valueOrNull,
-              messages: chatState.valueOrNull ?? const [],
+              messages: chatState.valueOrNull ?? [],
             ),
             CommunityChatInput(
               enabled: !_agentMode || !agentState.isSending,

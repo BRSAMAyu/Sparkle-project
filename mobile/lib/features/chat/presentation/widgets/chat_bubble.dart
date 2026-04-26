@@ -1645,7 +1645,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     Map<String, dynamic> preview,
   ) {
     final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
-    final paths = (preview['paths'] as List<dynamic>? ?? const [])
+    final paths = (preview['paths'] as List<dynamic>? ?? [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
@@ -1715,7 +1715,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     Map<String, dynamic> preview,
   ) {
     final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
-    final rounds = (preview['round_preview'] as List<dynamic>? ?? const [])
+    final rounds = (preview['round_preview'] as List<dynamic>? ?? [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
@@ -1772,7 +1772,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     Map<String, dynamic> preview,
   ) {
     final report = LearningReport.fromJson(preview);
-    final highlight = (preview['highlights'] as List<dynamic>? ?? const [])
+    final highlight = (preview['highlights'] as List<dynamic>? ?? [])
         .map((item) => item.toString())
         .where((item) => item.isNotEmpty)
         .cast<String?>()
@@ -1840,7 +1840,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required String? sourceChatSessionId,
   }) {
     final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
-    final paths = (preview['paths'] as List<dynamic>? ?? const [])
+    final paths = (preview['paths'] as List<dynamic>? ?? [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
@@ -1923,7 +1923,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required String? sourceChatSessionId,
   }) {
     final report = LearningReport.fromJson(preview);
-    final highlights = (preview['highlights'] as List<dynamic>? ?? const [])
+    final highlights = (preview['highlights'] as List<dynamic>? ?? [])
         .map((item) => item.toString())
         .where((item) => item.isNotEmpty)
         .toList();

@@ -13433,6 +13433,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openclawCustomConfig => '自定义配置';
 
   @override
+  String get openclawCustomConfigDesc => '使用自定义网关地址和令牌连接';
+
+  @override
+  String get openclawGuestMainDesc => '使用本地网关直连';
+
+  @override
+  String get openclawGuestMainLabel => '本地网关';
+
+  @override
   String get openclawImportFromClipboard => '从剪贴板导入';
 
   @override
@@ -13876,4 +13885,590 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountabilityCheckinFailed => '打卡失败';
+
+  @override
+  String get openclawHubGatewayNoPermission => '当前网关可访问，但没有执行权限，暂时无法重试队列';
+
+  @override
+  String get openclawHubEndpointUnavailable => '当前网关可访问，但执行入口不可用，暂时无法重试队列';
+
+  @override
+  String get openclawHubEngineNotConnected => '执行引擎尚未连接，暂时无法重试队列';
+
+  @override
+  String get openclawHubNoRetryQueuedItems => '当前没有可重试的排队任务';
+
+  @override
+  String get openclawHubQueueCleared => '等待队列已清空';
+
+  @override
+  String get openclawHubConnectedDiagnostics => 'OpenClaw 已连接，点击查看诊断';
+
+  @override
+  String get openclawHubGatewayNoPermissionDiagnostics => '网关可达但缺少执行权限，点击查看诊断';
+
+  @override
+  String get openclawHubEndpointIssueDiagnostics => '网关可达但执行入口异常，点击查看诊断';
+
+  @override
+  String get openclawHubQueuedTasksDiagnostics => '当前有排队任务，点击查看诊断';
+
+  @override
+  String get openclawHubNotConnectedDiagnostics => 'OpenClaw 连接未完成，点击查看诊断';
+
+  @override
+  String get openclawHubOverviewGatewayNoPermission => '网关在线，但没有执行权限';
+
+  @override
+  String get openclawHubOverviewEndpointIssue => '网关在线，但执行入口不可用';
+
+  @override
+  String get openclawHubOverviewReady => 'OpenClaw 已准备好接手';
+
+  @override
+  String get openclawHubOverviewTasksWaiting => '已有任务在等它恢复';
+
+  @override
+  String get openclawHubOverviewConfigSaved => '连接信息已保存，当前还没连上';
+
+  @override
+  String get openclawHubOverviewConnectFirst => '先接入 OpenClaw，再开始稳定委派';
+
+  @override
+  String get openclawHubOverviewGatewayNoPermissionDesc =>
+      '当前这台网关可以访问，但真正执行会被权限拦住。先补可写 scope，或改用设备配对 + WebSocket，才算闭环接通。';
+
+  @override
+  String get openclawHubOverviewEndpointIssueDesc =>
+      '当前地址本身可访问，但执行接口还没准备好。优先检查 `/v1/responses`、代理转发和 transport 选择是否一致。';
+
+  @override
+  String get openclawHubOverviewConnectedDesc =>
+      '连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。';
+
+  @override
+  String get openclawHubOverviewDefaultDesc =>
+      '连接完成后，首页、聊天和任务页会共享同一个执行中心，不再四处寻找入口。';
+
+  @override
+  String get openclawHubActionHintPermission =>
+      '现在最值得先做的是更换具备执行权限的令牌，或切到已配对的 WebSocket 连接。';
+
+  @override
+  String get openclawHubActionHintEndpoint =>
+      '现在最值得先做的是检查执行接口与 transport，让网关从“可达”变成“可执行”。';
+
+  @override
+  String get openclawHubActionHintRetryQueue => '现在最值得先做的是把等待队列重新提交。';
+
+  @override
+  String get openclawHubActionHintReconnect => '现在最值得先做的是恢复连接，让已排队的任务继续执行。';
+
+  @override
+  String get openclawHubActionHintNewDelegation => '现在最值得先做的是回到聊天或任务页发起新的委派。';
+
+  @override
+  String get openclawHubActionHintCompleteConnection =>
+      '现在最值得先做的是完成连接，让 OpenClaw 真正成为你的执行伴侣。';
+
+  @override
+  String get openclawHubAppBarTitle => 'OpenClaw 执行中心';
+
+  @override
+  String get openclawHubMetricConnectedNoPermission => '已连接但无执行权限';
+
+  @override
+  String get openclawHubMetricConnectedEndpointIssue => '已连接但执行入口异常';
+
+  @override
+  String get openclawHubMetricConnected => '已连接';
+
+  @override
+  String get openclawHubMetricNotConnected => '未连接';
+
+  @override
+  String get openclawHubMetricPairedDevice => '已配对设备';
+
+  @override
+  String get openclawHubMetricTokenAuth => '令牌认证';
+
+  @override
+  String get openclawHubButtonContinueSetup => '继续设置';
+
+  @override
+  String get openclawHubButtonViewQueue => '查看队列';
+
+  @override
+  String get openclawHubButtonAutomation => '自动化';
+
+  @override
+  String get openclawHubButtonEnterChat => '进入聊天';
+
+  @override
+  String get openclawHubButtonViewTasks => '查看任务';
+
+  @override
+  String get openclawHubSectionConnectionTitle => '连接与控制';
+
+  @override
+  String get openclawHubSectionConnectionSubtitle =>
+      '先用摘要看清当前连接，再决定是否展开编辑，避免一进来就被整张表单打断。';
+
+  @override
+  String get openclawHubCollapseConnectionEdit => '收起连接编辑';
+
+  @override
+  String get openclawHubExpandConnectionEdit => '编辑连接方式';
+
+  @override
+  String get openclawHubGatewayUrlEmpty => '尚未填写网关地址';
+
+  @override
+  String get openclawHubConnectionSummaryPermission =>
+      '这台网关已经能访问，但当前认证没有真正发起执行的权限；更适合先修权限，再统一重试队列。';
+
+  @override
+  String get openclawHubConnectionSummaryEndpoint =>
+      '网关本身可达，但执行接口还没准备好；先检查 transport 和 `/v1/responses` 会更有效。';
+
+  @override
+  String get openclawHubConnectionSummaryConnected =>
+      '当前连接保持稳定，适合继续使用现有方式直接委派。';
+
+  @override
+  String get openclawHubConnectionSummaryConfigured =>
+      '配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。';
+
+  @override
+  String get openclawHubConnectionSummaryFirstTime =>
+      '第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。';
+
+  @override
+  String get openclawHubSectionDevicesTitle => '设备与亲和性';
+
+  @override
+  String get openclawHubSectionDevicesSubtitle =>
+      '把“哪类任务优先发到哪台设备”显式配置出来，避免每次都让系统猜你的偏好。';
+
+  @override
+  String get openclawHubCollapseDeviceDetails => '收起设备详情';
+
+  @override
+  String get openclawHubExpandDeviceDetails => '查看设备与偏好';
+
+  @override
+  String get openclawHubDevicesSummaryEmpty =>
+      '节点列表会在成功接入 OpenClaw 后自动出现。设备越清晰，后面的多节点调度和降级体验就越稳定。';
+
+  @override
+  String get openclawHubSectionQueueTitle => '队列与委派';
+
+  @override
+  String get openclawHubSectionQueueSubtitle =>
+      '让你先知道现在最该做什么，再决定是否展开看完整队列和模板能力。';
+
+  @override
+  String get openclawHubCollapseQueueDetails => '收起队列详情';
+
+  @override
+  String get openclawHubExpandQueueDetails => '查看全部队列';
+
+  @override
+  String get openclawHubQueueSummaryConnected =>
+      '你现在最适合先把排队任务重新提交，等引擎把积压处理完再发起新的委派。';
+
+  @override
+  String get openclawHubQueueSummaryNotConnected =>
+      '你已经把任务排好了，下一步先恢复连接，之后就能一口气继续执行。';
+
+  @override
+  String get openclawHubQueueSummaryConnectedEmpty =>
+      '当前没有等待中的任务，最适合回到聊天或任务页发起新的委派。';
+
+  @override
+  String get openclawHubQueueSummaryNotConnectedEmpty =>
+      '当前也没有排队任务，可以先完成连接，再决定要不要开始第一笔委派。';
+
+  @override
+  String get openclawHubQueueEmptyLabel => '等待队列当前为空';
+
+  @override
+  String get openclawHubButtonRetryQueue => '重试队列';
+
+  @override
+  String get openclawHubButtonClearQueue => '清空队列';
+
+  @override
+  String get openclawHubAvailableTemplates => '可用模板 / 能力说明';
+
+  @override
+  String get openclawHubTemplatesEmptyHint =>
+      '模板会在你打开具体任务后按需加载；现在可以先把连接、队列和最近活动整理顺，再回到具体任务开始委派。';
+
+  @override
+  String get openclawHubSectionAutomationTitle => '自动化与批量';
+
+  @override
+  String get openclawHubSectionAutomationSubtitle =>
+      '把一次性的批量执行和长期的定时/条件执行放进同一个操作台，避免执行能力只停留在单次点击。';
+
+  @override
+  String get openclawHubCollapseAutomationDetails => '收起自动化详情';
+
+  @override
+  String get openclawHubExpandAutomationDetails => '查看自动化能力';
+
+  @override
+  String get openclawHubAutomationSummaryEmpty =>
+      '你还没有任何自动化。展开后可以创建每天定时执行、事件触发或条件轮询，并直接从这里发起批量委派。';
+
+  @override
+  String get openclawHubSectionActivityTitle => '最近活动';
+
+  @override
+  String get openclawHubSectionActivitySubtitle =>
+      '用高密度时间线看最近的委派，不需要再在不同任务页之间来回翻找。';
+
+  @override
+  String get openclawHubCollapseActivityDetails => '收起活动详情';
+
+  @override
+  String get openclawHubExpandActivityDetails => '查看全部活动';
+
+  @override
+  String get openclawHubActivityEmptyHint =>
+      '暂时还没有最近执行。你可以从首页卡牌、任务执行页或聊天入口发起第一笔委派。';
+
+  @override
+  String get openclawHubActivityHint => '可继续查看该任务的执行详情。';
+
+  @override
+  String get openclawHubActivityOpenTask => '打开任务执行';
+
+  @override
+  String get openclawHubStatusRecorded => '已记录';
+
+  @override
+  String openclawHubRetryQueuedSuccess(int count) {
+    return '已重新提交 $count 个排队任务';
+  }
+
+  @override
+  String openclawHubLastExecutionStatus(String status) {
+    return '最近一次执行状态是“$status”，你可以从这里继续查看连接、队列和活动。';
+  }
+
+  @override
+  String openclawHubPendingDelegationsDesc(int count) {
+    return '你已经有 $count 个委派在等待恢复连接，先把引擎重新连上会最有效。';
+  }
+
+  @override
+  String openclawHubQueuedTasksCount(int count) {
+    return '$count 个排队任务';
+  }
+
+  @override
+  String openclawHubNodeCount(int count) {
+    return '$count 个节点';
+  }
+
+  @override
+  String openclawHubAutomationCount(int count) {
+    return '$count 条自动化';
+  }
+
+  @override
+  String openclawHubLatestBatch(int completed, int total) {
+    return '最近批量 $completed/$total';
+  }
+
+  @override
+  String openclawHubLastTrustLabel(String label) {
+    return '最近一次信任判断：$label';
+  }
+
+  @override
+  String openclawHubDevicesSummaryActiveWithCount(int count) {
+    return '当前已发现 $count 台节点。你可以在这里为浏览器、终端、文档和接口任务指定偏好设备，离线时 Sparkle 会自动找备用节点。';
+  }
+
+  @override
+  String openclawHubAutomationSummaryActiveWithCount(int count) {
+    return '当前已有 $count 条自动化在运行。批量委派摘要和定时任务状态也会持续在这里汇总。';
+  }
+
+  @override
+  String openclawHubTaskLabel(String taskId) {
+    return '任务 $taskId';
+  }
+
+  @override
+  String openclawHubTaskLabelTemplate(String templateId) {
+    return '模板 $templateId';
+  }
+
+  @override
+  String openclawHubTaskLabelSource(String source) {
+    return '来源 $source';
+  }
+
+  @override
+  String get seedLibraryDetailFriendlyError => '系统暂时没能完成这次应用，请稍后再试';
+
+  @override
+  String get seedLibraryDetailUserRatings => '用户评分';
+
+  @override
+  String get seedLibraryDetailQualityBreakdown => '质量评分拆解';
+
+  @override
+  String get seedLibraryDetailQualityBreakdownDesc =>
+      '列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。';
+
+  @override
+  String get seedLibraryDetailQualityComprehensive => '综合';
+
+  @override
+  String get seedLibraryDetailQualitySystem => '系统';
+
+  @override
+  String get seedLibraryDetailQualityUser => '用户';
+
+  @override
+  String get seedLibraryDetailApplyToSystem => '应用到系统';
+
+  @override
+  String get seedLibraryDetailAppliedSuccess => '已应用到系统';
+
+  @override
+  String get seedLibraryDetailPausedSuccess => '已暂停使用该种子库';
+
+  @override
+  String get seedLibraryDetailStatusUpdated => '种子库状态已更新';
+
+  @override
+  String get seedLibraryDetailPauseUse => '暂停使用';
+
+  @override
+  String get seedLibraryDetailApplyLibrary => '应用种子库';
+
+  @override
+  String get seedLibraryDetailSetPrimarySuccess => '已设为优先使用';
+
+  @override
+  String get seedLibraryDetailSetPrimary => '设为主用';
+
+  @override
+  String get seedLibraryDetailMarkedNotSuitableSuccess => '已记录“此种子不适合我”';
+
+  @override
+  String get seedLibraryDetailMarkNotSuitable => '此种子不适合我';
+
+  @override
+  String get seedLibraryDetailEditRating => '修改评分';
+
+  @override
+  String get seedLibraryDetailGiveRating => '给个评分';
+
+  @override
+  String get seedLibraryDetailSubscriptionStatusEnabled => '已启用';
+
+  @override
+  String get seedLibraryDetailSubscriptionStatusDisabled => '已订阅未启用';
+
+  @override
+  String get seedLibraryDetailActiveSubscriptions => '协同中的种子库';
+
+  @override
+  String get seedLibraryDetailActiveSubscriptionsDesc =>
+      '你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。';
+
+  @override
+  String get seedLibraryDetailFallbackName => '种子库';
+
+  @override
+  String get seedLibraryDetailNoResultsUnderFilter => '当前筛选条件下没有内容';
+
+  @override
+  String get seedLibraryDetailUsageFewShot => '用于增强 AI 在相似任务中的回答风格和示例质量';
+
+  @override
+  String get seedLibraryDetailUsageTeachingContent =>
+      '用于给学习计划、任务说明和知识讲解提供高质量教学内容';
+
+  @override
+  String get seedLibraryDetailUsageReplyTemplate => '用于改善系统回复模板和表达稳定性';
+
+  @override
+  String get seedLibraryDetailUsageCustom => '用于你自己的内容偏好和专属示例沉淀';
+
+  @override
+  String get seedLibraryDetailFilterTitle => '筛选内容';
+
+  @override
+  String get seedLibraryDetailFilterDesc => '按内容类型、难度和启用状态筛选当前种子库里的条目。';
+
+  @override
+  String get seedLibraryDetailFilterContentType => '内容类型';
+
+  @override
+  String get seedLibraryDetailFilterAll => '全部';
+
+  @override
+  String get seedLibraryDetailFilterDifficulty => '难度';
+
+  @override
+  String get seedLibraryDetailFilterShowInactive => '显示已停用内容';
+
+  @override
+  String get seedLibraryDetailFilterShowInactiveDesc => '关闭时仅展示当前仍在使用的条目';
+
+  @override
+  String get seedLibraryDetailFilterReset => '重置';
+
+  @override
+  String get seedLibraryDetailFilterDone => '完成';
+
+  @override
+  String get seedLibraryDetailRatingTitle => '给这个种子库评分';
+
+  @override
+  String get seedLibraryDetailRatingDescription => '你的评分会影响这个种子库的展示质量分。';
+
+  @override
+  String get seedLibraryDetailRatingCommentLabel => '评价说明（可选）';
+
+  @override
+  String get seedLibraryDetailRatingSubmitted => '评分已提交';
+
+  @override
+  String get seedLibraryDetailSubmitRating => '提交评分';
+
+  @override
+  String get seedLibraryDetailContentBody => '正文';
+
+  @override
+  String get seedLibraryDetailStructuredContent => '结构化内容';
+
+  @override
+  String get seedLibraryDetailEditLibrary => '编辑种子库';
+
+  @override
+  String get seedLibraryDetailEditName => '名称';
+
+  @override
+  String get seedLibraryDetailEditNameEmpty => '名称不能为空';
+
+  @override
+  String get seedLibraryDetailEditDescriptionOptional => '描述（可选）';
+
+  @override
+  String get seedLibraryDetailEditCancel => '取消';
+
+  @override
+  String get seedLibraryDetailEditSave => '保存';
+
+  @override
+  String get seedLibraryDetailLibraryUpdated => '种子库已更新';
+
+  @override
+  String get seedLibraryDetailAddItem => '添加种子内容';
+
+  @override
+  String get seedLibraryDetailAddItemType => '内容类型';
+
+  @override
+  String get seedLibraryDetailAddItemTitle => '标题';
+
+  @override
+  String get seedLibraryDetailAddItemContent => '内容';
+
+  @override
+  String get seedLibraryDetailAddItemSubject => '主题/学科';
+
+  @override
+  String get seedLibraryDetailAddItemDifficulty => '难度';
+
+  @override
+  String get seedLibraryDetailAddItemUnset => '未设置';
+
+  @override
+  String get seedLibraryDetailAddItemTags => '标签（逗号分隔）';
+
+  @override
+  String get seedLibraryDetailAddItemSave => '保存内容';
+
+  @override
+  String get seedLibraryDetailAddItemSuccess => '种子内容已添加';
+
+  @override
+  String get seedLibraryDetailImportCannotRead => '无法读取文件内容';
+
+  @override
+  String get seedLibraryDetailImportInvalidJson =>
+      'JSON 格式无效，需为数组或 [items:[...]]';
+
+  @override
+  String get seedLibraryDetailImportNoItems => '文件中没有可导入的内容项';
+
+  @override
+  String seedLibraryDetailApplyFailed(String error) {
+    return '应用失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailSetPrimaryFailed(String error) {
+    return '设置失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailMarkNotSuitableFailed(String error) {
+    return '记录失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailCurrentStatus(String status, int priority) {
+    return '当前状态：$status · 优先级 $priority';
+  }
+
+  @override
+  String seedLibraryDetailUsageAppliedEnabled(String hint) {
+    return '当前已生效。$hint；系统会按优先级把它与其他启用中的种子库一起使用。';
+  }
+
+  @override
+  String seedLibraryDetailUsageSubscribedNotEnabled(String hint) {
+    return '当前已订阅但未启用。启用后，$hint。';
+  }
+
+  @override
+  String seedLibraryDetailUsageNotApplied(String hint) {
+    return '当前尚未应用。应用后，$hint。';
+  }
+
+  @override
+  String seedLibraryDetailCurrentRating(String score) {
+    return '当前评分：$score / 10';
+  }
+
+  @override
+  String seedLibraryDetailRatingFailed(String error) {
+    return '评分失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailAddItemFailed(String error) {
+    return '添加失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailImportResult(int imported, int failed) {
+    return '导入完成：成功 $imported 条，失败 $failed 条';
+  }
+
+  @override
+  String seedLibraryDetailImportFailed(String error) {
+    return '导入失败：$error';
+  }
 }

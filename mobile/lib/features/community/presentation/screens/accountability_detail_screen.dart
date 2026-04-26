@@ -68,7 +68,7 @@ class _AccountabilityDetailScreenState
                 unawaited(_confirmEnd());
               }
             },
-            itemBuilder: (_) => const [
+            itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'end',
                 child: Text(context.l10n.accountabilityEndPartnership),
@@ -223,8 +223,8 @@ class _AccountabilityDetailScreenState
     final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(context.l10n.accountabilityEndPartnership),
-        content: const Text(context.l10n.accountabilityEndPartnershipConfirm),
+        title: Text(context.l10n.accountabilityEndPartnership),
+        content: Text(context.l10n.accountabilityEndPartnershipConfirm),
         actions: [
           SparkleButton.ghost(
             label: context.l10n.cancel,
@@ -439,7 +439,7 @@ class _DashboardView extends StatelessWidget {
                         DateTime.now().year,
                     heatmap: ((dashboard.heatmap['heatmap']
                                 as List<dynamic>?) ??
-                            const [])
+                            [])
                         .map((item) => Map<String, dynamic>.from(item as Map))
                         .toList(),
                   ),
@@ -1026,7 +1026,7 @@ class _ForesightHintCard extends StatelessWidget {
     final hintText = summary?.hintText;
     final generatedAt = summary?.generatedAt;
     final deviationCount = summary?.deviationCount ?? 0;
-    final confidenceItems = summary?.attractorConfidences ?? const [];
+    final confidenceItems = summary?.attractorConfidences ?? [];
     final subtitle = [
       if (deviationCount > 0) context.l10n.accountabilityDeviationsDetected(deviationCount),
       if (generatedAt != null) context.l10n.accountabilityUpdatedAt(DateFormat('M月d日 HH:mm').format(generatedAt)),
@@ -1276,12 +1276,12 @@ class _CheckinTile extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () => _likeCheckin(context, ref),
                   icon: const Icon(Icons.thumb_up_alt_outlined, size: 16),
-                  label: const Text(context.l10n.accountabilityLike),
+                  label: Text(context.l10n.accountabilityLike),
                 ),
                 TextButton.icon(
                   onPressed: () => _encourageCheckin(context, ref),
                   icon: const Icon(Icons.bolt_outlined, size: 16),
-                  label: const Text(context.l10n.accountabilityEncourage),
+                  label: Text(context.l10n.accountabilityEncourage),
                 ),
               ],
             ],
@@ -1338,11 +1338,11 @@ class _CheckinTile extends ConsumerWidget {
     final message = await showSensoryDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(context.l10n.accountabilitySendEncourage),
+        title: Text(context.l10n.accountabilitySendEncourage),
         content: TextField(
           controller: controller,
           maxLines: 3,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: context.l10n.accountabilityEncourageHint,
             border: OutlineInputBorder(),
           ),
@@ -1354,7 +1354,7 @@ class _CheckinTile extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text(context.l10n.accountabilitySend),
+            child: Text(context.l10n.accountabilitySend),
           ),
         ],
       ),
@@ -1370,7 +1370,7 @@ class _CheckinTile extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '发送失败: $e');
+        AppFeedback.error(context, '${context.l10n.accountabilitySendFailed}: $e');
       }
     }
   }
@@ -1425,7 +1425,7 @@ class _AccountabilityCheckinSheetState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 context.l10n.accountabilityCheckInToday,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -1435,7 +1435,7 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
               TextField(
                 controller: _contentController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: context.l10n.accountabilityTodayProgressHint,
                   border: OutlineInputBorder(),
                 ),
@@ -1443,7 +1443,7 @@ class _AccountabilityCheckinSheetState
                 autofocus: true,
               ),
               const SizedBox(height: DS.spacing16),
-              const Text(
+              Text(
                 context.l10n.accountabilityTodayMood,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -1548,7 +1548,7 @@ class _AccountabilityCheckinSheetState
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '打卡失败: $e');
+        AppFeedback.error(context, '${context.l10n.accountabilityCheckinFailed}: $e');
       }
     } finally {
       if (mounted) {

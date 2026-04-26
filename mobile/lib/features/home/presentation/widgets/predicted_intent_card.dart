@@ -76,11 +76,12 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     _recordImpressionIfNeeded(forecast);
 
     final l10n = context.l10n;
+    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
     final confidencePercent = (forecast.confidence * 100).round();
-    final sourceLabel = _sourceLabel(forecast.predictionSource);
-    final windowLabel = _windowLabel(forecast.predictedWindow);
-    final actionLabel = _actionLabel(forecast.predictedActionType);
-    final freshnessLabel = _freshnessLabel(forecast.generatedAt);
+    final sourceLabel = _sourceLabel(forecast.predictionSource, isChinese: isChinese);
+    final windowLabel = _windowLabel(forecast.predictedWindow, isChinese: isChinese);
+    final actionLabel = _actionLabel(forecast.predictedActionType, isChinese: isChinese);
+    final freshnessLabel = _freshnessLabel(forecast.generatedAt, isChinese: isChinese);
     final primaryAction = forecast.recommendedActions.isNotEmpty
         ? forecast.recommendedActions.first
         : null;
@@ -200,7 +201,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isChinese ? '建议接续' : 'Suggested Continuation',
+                      l10n.predictedIntentSuggestedCont,
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textTertiary,
                         fontWeight: DS.fontWeightBold,
@@ -209,9 +210,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     const SizedBox(height: DS.spacing6),
                     Text(
                       promptPreview.isEmpty
-                          ? (isChinese
-                              ? '预测结果已生成，等待可继续指令'
-                              : 'The prediction is ready and waiting for a follow-up prompt.')
+                          ? (l10n.predictedIntentWaiting)
                           : promptPreview,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -227,7 +226,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                 const SizedBox(height: DS.spacing12),
                 _WithinCategoryPreferencePanel(
                   preference: forecast.withinCategoryPreference!,
-                  isChinese: isChinese,
+                  l10n: l10n,
                   isDark: isDark,
                 ),
               ],
@@ -288,7 +287,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isChinese ? '为什么这样预测' : 'Why the system predicts this',
+                        l10n.predictedIntentWhy,
                         style: context.sparkleTypography.labelSmall.copyWith(
                           color: DS.textTertiary,
                           fontWeight: DS.fontWeightBold,
@@ -335,10 +334,10 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
               const SizedBox(height: 14),
               SparkleButton(
                 label: _isContinuing
-                    ? (isChinese ? '正在衔接…' : 'Continuing...')
+                    ? (l10n.predictedIntentContinuing)
                     : ((primaryAction?.label.isNotEmpty ?? false)
                         ? primaryAction!.label
-                        : (isChinese ? '按这个继续' : 'Continue With This')),
+                        : (l10n.predictedIntentContinue)),
                 icon: Icon(
                   _isContinuing
                       ? Icons.sync_rounded
@@ -457,15 +456,9 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
       ref.invalidate(dashboardProvider);
     } catch (_) {
       if (mounted) {
-        final isChinese = Localizations.localeOf(context)
-            .languageCode
-            .toLowerCase()
-            .startsWith('zh');
         AppFeedback.error(
           context,
-          isChinese
-              ? '继续对话时出现问题，请稍后重试'
-              : 'Something went wrong while continuing. Please try again.',
+          context.l10n.predictedIntentError,
         );
       }
     } finally {
@@ -492,40 +485,40 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     switch (actionType) {
       case 'resume_priority_task':
       case 'resume_task':
-        return isChinese ? '继续重点任务' : 'Resume Priority Task';
+        return l10n.predictedActionResumePriority;
       case 'study_plan':
-        return isChinese ? '生成学习计划' : 'Build Study Plan';
+        return l10n.predictedActionStudyPlan;
       case 'error_diagnosis':
-        return isChinese ? '问题诊断' : 'Diagnose Issue';
+        return l10n.predictedActionDiagnose;
       case 'create_task':
-        return isChinese ? '落成任务' : 'Turn Into Task';
+        return l10n.predictedActionCreateTask;
       case 'translate':
-        return isChinese ? '即时结果' : 'Instant Result';
+        return l10n.predictedActionInstantResult;
       case 'review_progress':
-        return isChinese ? '复盘进展' : 'Review Progress';
+        return l10n.predictedActionReviewProgress;
       case 'plan_next_step':
-        return isChinese ? '规划下一步' : 'Plan Next Step';
+        return l10n.predictedActionPlanNext;
       case 'reflection':
-        return isChinese ? '快速反思' : 'Quick Reflection';
+        return l10n.predictedActionReflection;
       default:
-        return isChinese ? '预测意图' : 'Predicted Intent';
+        return l10n.predictedActionDefault;
     }
   }
 
   String _windowLabel(String window, {required bool isChinese}) {
     switch (window) {
       case 'now':
-        return isChinese ? '就是现在' : 'Right Now';
+        return l10n is not available, keep isChineseNow;
       case 'next_30m':
-        return isChinese ? '未来 30 分钟' : 'Next 30 Minutes';
+        return l10n is not available, keep isChinese30m;
       case 'next_1h':
-        return isChinese ? '未来 1 小时' : 'Next Hour';
+        return l10n is not available, keep isChinese1h;
       case 'next_2h':
-        return isChinese ? '未来 2 小时' : 'Next 2 Hours';
+        return l10n is not available, keep isChinese2h;
       case 'next_6h':
-        return isChinese ? '未来 6 小时' : 'Next 6 Hours';
+        return l10n is not available, keep isChinese6h;
       case 'today':
-        return isChinese ? '今天内' : 'Later Today';
+        return l10n is not available, keep isChineseToday;
       default:
         return window.replaceAll('_', ' ');
     }
@@ -534,9 +527,9 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
   String _sourceLabel(String source, {required bool isChinese}) {
     switch (source) {
       case 'glm_batch':
-        return isChinese ? '长期预测' : 'Long-Range Forecast';
+        return l10n is not availableLongRange;
       case 'rules':
-        return isChinese ? '规则兜底' : 'Rules Fallback';
+        return l10n is not availableFallback;
       default:
         return source;
     }
@@ -546,15 +539,15 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     if (generatedAt == null) return null;
     final diff = DateTime.now().difference(generatedAt);
     if (diff.inMinutes < 1) {
-      return isChinese ? '刚刚更新' : 'just now';
+      return l10n is not availableJustNow;
     }
     if (diff.inHours < 1) {
-      return isChinese ? '${diff.inMinutes} 分钟前' : '${diff.inMinutes} min ago';
+      return l10n is not availableMinutesAgo('${diff.inMinutes}');
     }
     if (diff.inDays < 1) {
-      return isChinese ? '${diff.inHours} 小时前' : '${diff.inHours} hr ago';
+      return l10n is not availableHoursAgo('${diff.inHours}');
     }
-    return isChinese ? '${diff.inDays} 天前' : '${diff.inDays} d ago';
+    return l10n is not availableDaysAgo('${diff.inDays}');
   }
 }
 
@@ -615,11 +608,11 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
   String _hintText() {
     final categoryLabel = _categoryLabel(
       preference.requestCategory,
-      isChinese: isChinese,
+      l10n: l10n,
     );
     final toolLabel = _toolLabel(
       preference.preferredTool,
-      isChinese: isChinese,
+      l10n: l10n,
     );
     if (isChinese) {
       return '在$categoryLabel里，近期结果更常把「$toolLabel」推到前面。';

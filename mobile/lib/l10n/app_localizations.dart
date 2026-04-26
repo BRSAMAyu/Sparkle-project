@@ -24570,6 +24570,24 @@ abstract class AppLocalizations {
   /// **'自定义配置'**
   String get openclawCustomConfig;
 
+  /// No description provided for @openclawCustomConfigDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用自定义网关地址和令牌连接'**
+  String get openclawCustomConfigDesc;
+
+  /// No description provided for @openclawGuestMainDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用本地网关直连'**
+  String get openclawGuestMainDesc;
+
+  /// No description provided for @openclawGuestMainLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地网关'**
+  String get openclawGuestMainLabel;
+
   /// No description provided for @openclawImportFromClipboard.
   ///
   /// In zh, this message translates to:
@@ -25373,6 +25391,1020 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'打卡失败'**
   String get accountabilityCheckinFailed;
+
+  /// No description provided for @openclawHubGatewayNoPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前网关可访问，但没有执行权限，暂时无法重试队列'**
+  String get openclawHubGatewayNoPermission;
+
+  /// No description provided for @openclawHubEndpointUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前网关可访问，但执行入口不可用，暂时无法重试队列'**
+  String get openclawHubEndpointUnavailable;
+
+  /// No description provided for @openclawHubEngineNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行引擎尚未连接，暂时无法重试队列'**
+  String get openclawHubEngineNotConnected;
+
+  /// No description provided for @openclawHubNoRetryQueuedItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有可重试的排队任务'**
+  String get openclawHubNoRetryQueuedItems;
+
+  /// No description provided for @openclawHubQueueCleared.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待队列已清空'**
+  String get openclawHubQueueCleared;
+
+  /// No description provided for @openclawHubConnectedDiagnostics.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 已连接，点击查看诊断'**
+  String get openclawHubConnectedDiagnostics;
+
+  /// No description provided for @openclawHubGatewayNoPermissionDiagnostics.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关可达但缺少执行权限，点击查看诊断'**
+  String get openclawHubGatewayNoPermissionDiagnostics;
+
+  /// No description provided for @openclawHubEndpointIssueDiagnostics.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关可达但执行入口异常，点击查看诊断'**
+  String get openclawHubEndpointIssueDiagnostics;
+
+  /// No description provided for @openclawHubQueuedTasksDiagnostics.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前有排队任务，点击查看诊断'**
+  String get openclawHubQueuedTasksDiagnostics;
+
+  /// No description provided for @openclawHubNotConnectedDiagnostics.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 连接未完成，点击查看诊断'**
+  String get openclawHubNotConnectedDiagnostics;
+
+  /// No description provided for @openclawHubOverviewGatewayNoPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关在线，但没有执行权限'**
+  String get openclawHubOverviewGatewayNoPermission;
+
+  /// No description provided for @openclawHubOverviewEndpointIssue.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关在线，但执行入口不可用'**
+  String get openclawHubOverviewEndpointIssue;
+
+  /// No description provided for @openclawHubOverviewReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 已准备好接手'**
+  String get openclawHubOverviewReady;
+
+  /// No description provided for @openclawHubOverviewTasksWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有任务在等它恢复'**
+  String get openclawHubOverviewTasksWaiting;
+
+  /// No description provided for @openclawHubOverviewConfigSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接信息已保存，当前还没连上'**
+  String get openclawHubOverviewConfigSaved;
+
+  /// No description provided for @openclawHubOverviewConnectFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'先接入 OpenClaw，再开始稳定委派'**
+  String get openclawHubOverviewConnectFirst;
+
+  /// No description provided for @openclawHubOverviewGatewayNoPermissionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前这台网关可以访问，但真正执行会被权限拦住。先补可写 scope，或改用设备配对 + WebSocket，才算闭环接通。'**
+  String get openclawHubOverviewGatewayNoPermissionDesc;
+
+  /// No description provided for @openclawHubOverviewEndpointIssueDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前地址本身可访问，但执行接口还没准备好。优先检查 `/v1/responses`、代理转发和 transport 选择是否一致。'**
+  String get openclawHubOverviewEndpointIssueDesc;
+
+  /// No description provided for @openclawHubOverviewConnectedDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。'**
+  String get openclawHubOverviewConnectedDesc;
+
+  /// No description provided for @openclawHubOverviewDefaultDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接完成后，首页、聊天和任务页会共享同一个执行中心，不再四处寻找入口。'**
+  String get openclawHubOverviewDefaultDesc;
+
+  /// No description provided for @openclawHubActionHintPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在最值得先做的是更换具备执行权限的令牌，或切到已配对的 WebSocket 连接。'**
+  String get openclawHubActionHintPermission;
+
+  /// No description provided for @openclawHubActionHintEndpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在最值得先做的是检查执行接口与 transport，让网关从“可达”变成“可执行”。'**
+  String get openclawHubActionHintEndpoint;
+
+  /// No description provided for @openclawHubActionHintRetryQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在最值得先做的是把等待队列重新提交。'**
+  String get openclawHubActionHintRetryQueue;
+
+  /// No description provided for @openclawHubActionHintReconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在最值得先做的是恢复连接，让已排队的任务继续执行。'**
+  String get openclawHubActionHintReconnect;
+
+  /// No description provided for @openclawHubActionHintNewDelegation.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在最值得先做的是回到聊天或任务页发起新的委派。'**
+  String get openclawHubActionHintNewDelegation;
+
+  /// No description provided for @openclawHubActionHintCompleteConnection.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在最值得先做的是完成连接，让 OpenClaw 真正成为你的执行伴侣。'**
+  String get openclawHubActionHintCompleteConnection;
+
+  /// No description provided for @openclawHubAppBarTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 执行中心'**
+  String get openclawHubAppBarTitle;
+
+  /// No description provided for @openclawHubMetricConnectedNoPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连接但无执行权限'**
+  String get openclawHubMetricConnectedNoPermission;
+
+  /// No description provided for @openclawHubMetricConnectedEndpointIssue.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连接但执行入口异常'**
+  String get openclawHubMetricConnectedEndpointIssue;
+
+  /// No description provided for @openclawHubMetricConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连接'**
+  String get openclawHubMetricConnected;
+
+  /// No description provided for @openclawHubMetricNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'未连接'**
+  String get openclawHubMetricNotConnected;
+
+  /// No description provided for @openclawHubMetricPairedDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配对设备'**
+  String get openclawHubMetricPairedDevice;
+
+  /// No description provided for @openclawHubMetricTokenAuth.
+  ///
+  /// In zh, this message translates to:
+  /// **'令牌认证'**
+  String get openclawHubMetricTokenAuth;
+
+  /// No description provided for @openclawHubButtonContinueSetup.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续设置'**
+  String get openclawHubButtonContinueSetup;
+
+  /// No description provided for @openclawHubButtonViewQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看队列'**
+  String get openclawHubButtonViewQueue;
+
+  /// No description provided for @openclawHubButtonAutomation.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动化'**
+  String get openclawHubButtonAutomation;
+
+  /// No description provided for @openclawHubButtonEnterChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入聊天'**
+  String get openclawHubButtonEnterChat;
+
+  /// No description provided for @openclawHubButtonViewTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看任务'**
+  String get openclawHubButtonViewTasks;
+
+  /// No description provided for @openclawHubSectionConnectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接与控制'**
+  String get openclawHubSectionConnectionTitle;
+
+  /// No description provided for @openclawHubSectionConnectionSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先用摘要看清当前连接，再决定是否展开编辑，避免一进来就被整张表单打断。'**
+  String get openclawHubSectionConnectionSubtitle;
+
+  /// No description provided for @openclawHubCollapseConnectionEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起连接编辑'**
+  String get openclawHubCollapseConnectionEdit;
+
+  /// No description provided for @openclawHubExpandConnectionEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑连接方式'**
+  String get openclawHubExpandConnectionEdit;
+
+  /// No description provided for @openclawHubGatewayUrlEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未填写网关地址'**
+  String get openclawHubGatewayUrlEmpty;
+
+  /// No description provided for @openclawHubConnectionSummaryPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'这台网关已经能访问，但当前认证没有真正发起执行的权限；更适合先修权限，再统一重试队列。'**
+  String get openclawHubConnectionSummaryPermission;
+
+  /// No description provided for @openclawHubConnectionSummaryEndpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关本身可达，但执行接口还没准备好；先检查 transport 和 `/v1/responses` 会更有效。'**
+  String get openclawHubConnectionSummaryEndpoint;
+
+  /// No description provided for @openclawHubConnectionSummaryConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前连接保持稳定，适合继续使用现有方式直接委派。'**
+  String get openclawHubConnectionSummaryConnected;
+
+  /// No description provided for @openclawHubConnectionSummaryConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。'**
+  String get openclawHubConnectionSummaryConfigured;
+
+  /// No description provided for @openclawHubConnectionSummaryFirstTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。'**
+  String get openclawHubConnectionSummaryFirstTime;
+
+  /// No description provided for @openclawHubSectionDevicesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备与亲和性'**
+  String get openclawHubSectionDevicesTitle;
+
+  /// No description provided for @openclawHubSectionDevicesSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把“哪类任务优先发到哪台设备”显式配置出来，避免每次都让系统猜你的偏好。'**
+  String get openclawHubSectionDevicesSubtitle;
+
+  /// No description provided for @openclawHubCollapseDeviceDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起设备详情'**
+  String get openclawHubCollapseDeviceDetails;
+
+  /// No description provided for @openclawHubExpandDeviceDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看设备与偏好'**
+  String get openclawHubExpandDeviceDetails;
+
+  /// No description provided for @openclawHubDevicesSummaryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'节点列表会在成功接入 OpenClaw 后自动出现。设备越清晰，后面的多节点调度和降级体验就越稳定。'**
+  String get openclawHubDevicesSummaryEmpty;
+
+  /// No description provided for @openclawHubSectionQueueTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'队列与委派'**
+  String get openclawHubSectionQueueTitle;
+
+  /// No description provided for @openclawHubSectionQueueSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'让你先知道现在最该做什么，再决定是否展开看完整队列和模板能力。'**
+  String get openclawHubSectionQueueSubtitle;
+
+  /// No description provided for @openclawHubCollapseQueueDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起队列详情'**
+  String get openclawHubCollapseQueueDetails;
+
+  /// No description provided for @openclawHubExpandQueueDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部队列'**
+  String get openclawHubExpandQueueDetails;
+
+  /// No description provided for @openclawHubQueueSummaryConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'你现在最适合先把排队任务重新提交，等引擎把积压处理完再发起新的委派。'**
+  String get openclawHubQueueSummaryConnected;
+
+  /// No description provided for @openclawHubQueueSummaryNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'你已经把任务排好了，下一步先恢复连接，之后就能一口气继续执行。'**
+  String get openclawHubQueueSummaryNotConnected;
+
+  /// No description provided for @openclawHubQueueSummaryConnectedEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有等待中的任务，最适合回到聊天或任务页发起新的委派。'**
+  String get openclawHubQueueSummaryConnectedEmpty;
+
+  /// No description provided for @openclawHubQueueSummaryNotConnectedEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前也没有排队任务，可以先完成连接，再决定要不要开始第一笔委派。'**
+  String get openclawHubQueueSummaryNotConnectedEmpty;
+
+  /// No description provided for @openclawHubQueueEmptyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待队列当前为空'**
+  String get openclawHubQueueEmptyLabel;
+
+  /// No description provided for @openclawHubButtonRetryQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试队列'**
+  String get openclawHubButtonRetryQueue;
+
+  /// No description provided for @openclawHubButtonClearQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空队列'**
+  String get openclawHubButtonClearQueue;
+
+  /// No description provided for @openclawHubAvailableTemplates.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用模板 / 能力说明'**
+  String get openclawHubAvailableTemplates;
+
+  /// No description provided for @openclawHubTemplatesEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'模板会在你打开具体任务后按需加载；现在可以先把连接、队列和最近活动整理顺，再回到具体任务开始委派。'**
+  String get openclawHubTemplatesEmptyHint;
+
+  /// No description provided for @openclawHubSectionAutomationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动化与批量'**
+  String get openclawHubSectionAutomationTitle;
+
+  /// No description provided for @openclawHubSectionAutomationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把一次性的批量执行和长期的定时/条件执行放进同一个操作台，避免执行能力只停留在单次点击。'**
+  String get openclawHubSectionAutomationSubtitle;
+
+  /// No description provided for @openclawHubCollapseAutomationDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起自动化详情'**
+  String get openclawHubCollapseAutomationDetails;
+
+  /// No description provided for @openclawHubExpandAutomationDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看自动化能力'**
+  String get openclawHubExpandAutomationDetails;
+
+  /// No description provided for @openclawHubAutomationSummaryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'你还没有任何自动化。展开后可以创建每天定时执行、事件触发或条件轮询，并直接从这里发起批量委派。'**
+  String get openclawHubAutomationSummaryEmpty;
+
+  /// No description provided for @openclawHubSectionActivityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近活动'**
+  String get openclawHubSectionActivityTitle;
+
+  /// No description provided for @openclawHubSectionActivitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'用高密度时间线看最近的委派，不需要再在不同任务页之间来回翻找。'**
+  String get openclawHubSectionActivitySubtitle;
+
+  /// No description provided for @openclawHubCollapseActivityDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起活动详情'**
+  String get openclawHubCollapseActivityDetails;
+
+  /// No description provided for @openclawHubExpandActivityDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部活动'**
+  String get openclawHubExpandActivityDetails;
+
+  /// No description provided for @openclawHubActivityEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时还没有最近执行。你可以从首页卡牌、任务执行页或聊天入口发起第一笔委派。'**
+  String get openclawHubActivityEmptyHint;
+
+  /// No description provided for @openclawHubActivityHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'可继续查看该任务的执行详情。'**
+  String get openclawHubActivityHint;
+
+  /// No description provided for @openclawHubActivityOpenTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开任务执行'**
+  String get openclawHubActivityOpenTask;
+
+  /// No description provided for @openclawHubStatusRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录'**
+  String get openclawHubStatusRecorded;
+
+  /// No description provided for @openclawHubRetryQueuedSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已重新提交 {count} 个排队任务'**
+  String openclawHubRetryQueuedSuccess(int count);
+
+  /// No description provided for @openclawHubLastExecutionStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近一次执行状态是“{status}”，你可以从这里继续查看连接、队列和活动。'**
+  String openclawHubLastExecutionStatus(String status);
+
+  /// No description provided for @openclawHubPendingDelegationsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'你已经有 {count} 个委派在等待恢复连接，先把引擎重新连上会最有效。'**
+  String openclawHubPendingDelegationsDesc(int count);
+
+  /// No description provided for @openclawHubQueuedTasksCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个排队任务'**
+  String openclawHubQueuedTasksCount(int count);
+
+  /// No description provided for @openclawHubNodeCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个节点'**
+  String openclawHubNodeCount(int count);
+
+  /// No description provided for @openclawHubAutomationCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条自动化'**
+  String openclawHubAutomationCount(int count);
+
+  /// No description provided for @openclawHubLatestBatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近批量 {completed}/{total}'**
+  String openclawHubLatestBatch(int completed, int total);
+
+  /// No description provided for @openclawHubLastTrustLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近一次信任判断：{label}'**
+  String openclawHubLastTrustLabel(String label);
+
+  /// No description provided for @openclawHubDevicesSummaryActiveWithCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已发现 {count} 台节点。你可以在这里为浏览器、终端、文档和接口任务指定偏好设备，离线时 Sparkle 会自动找备用节点。'**
+  String openclawHubDevicesSummaryActiveWithCount(int count);
+
+  /// No description provided for @openclawHubAutomationSummaryActiveWithCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已有 {count} 条自动化在运行。批量委派摘要和定时任务状态也会持续在这里汇总。'**
+  String openclawHubAutomationSummaryActiveWithCount(int count);
+
+  /// No description provided for @openclawHubTaskLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务 {taskId}'**
+  String openclawHubTaskLabel(String taskId);
+
+  /// No description provided for @openclawHubTaskLabelTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'模板 {templateId}'**
+  String openclawHubTaskLabelTemplate(String templateId);
+
+  /// No description provided for @openclawHubTaskLabelSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源 {source}'**
+  String openclawHubTaskLabelSource(String source);
+
+  /// No description provided for @seedLibraryDetailFriendlyError.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统暂时没能完成这次应用，请稍后再试'**
+  String get seedLibraryDetailFriendlyError;
+
+  /// No description provided for @seedLibraryDetailUserRatings.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户评分'**
+  String get seedLibraryDetailUserRatings;
+
+  /// No description provided for @seedLibraryDetailQualityBreakdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量评分拆解'**
+  String get seedLibraryDetailQualityBreakdown;
+
+  /// No description provided for @seedLibraryDetailQualityBreakdownDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。'**
+  String get seedLibraryDetailQualityBreakdownDesc;
+
+  /// No description provided for @seedLibraryDetailQualityComprehensive.
+  ///
+  /// In zh, this message translates to:
+  /// **'综合'**
+  String get seedLibraryDetailQualityComprehensive;
+
+  /// No description provided for @seedLibraryDetailQualitySystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统'**
+  String get seedLibraryDetailQualitySystem;
+
+  /// No description provided for @seedLibraryDetailQualityUser.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户'**
+  String get seedLibraryDetailQualityUser;
+
+  /// No description provided for @seedLibraryDetailApplyToSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用到系统'**
+  String get seedLibraryDetailApplyToSystem;
+
+  /// No description provided for @seedLibraryDetailAppliedSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已应用到系统'**
+  String get seedLibraryDetailAppliedSuccess;
+
+  /// No description provided for @seedLibraryDetailPausedSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已暂停使用该种子库'**
+  String get seedLibraryDetailPausedSuccess;
+
+  /// No description provided for @seedLibraryDetailStatusUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库状态已更新'**
+  String get seedLibraryDetailStatusUpdated;
+
+  /// No description provided for @seedLibraryDetailPauseUse.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停使用'**
+  String get seedLibraryDetailPauseUse;
+
+  /// No description provided for @seedLibraryDetailApplyLibrary.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用种子库'**
+  String get seedLibraryDetailApplyLibrary;
+
+  /// No description provided for @seedLibraryDetailSetPrimarySuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已设为优先使用'**
+  String get seedLibraryDetailSetPrimarySuccess;
+
+  /// No description provided for @seedLibraryDetailSetPrimary.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为主用'**
+  String get seedLibraryDetailSetPrimary;
+
+  /// No description provided for @seedLibraryDetailMarkedNotSuitableSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录“此种子不适合我”'**
+  String get seedLibraryDetailMarkedNotSuitableSuccess;
+
+  /// No description provided for @seedLibraryDetailMarkNotSuitable.
+  ///
+  /// In zh, this message translates to:
+  /// **'此种子不适合我'**
+  String get seedLibraryDetailMarkNotSuitable;
+
+  /// No description provided for @seedLibraryDetailEditRating.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改评分'**
+  String get seedLibraryDetailEditRating;
+
+  /// No description provided for @seedLibraryDetailGiveRating.
+  ///
+  /// In zh, this message translates to:
+  /// **'给个评分'**
+  String get seedLibraryDetailGiveRating;
+
+  /// No description provided for @seedLibraryDetailSubscriptionStatusEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已启用'**
+  String get seedLibraryDetailSubscriptionStatusEnabled;
+
+  /// No description provided for @seedLibraryDetailSubscriptionStatusDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已订阅未启用'**
+  String get seedLibraryDetailSubscriptionStatusDisabled;
+
+  /// No description provided for @seedLibraryDetailActiveSubscriptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'协同中的种子库'**
+  String get seedLibraryDetailActiveSubscriptions;
+
+  /// No description provided for @seedLibraryDetailActiveSubscriptionsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。'**
+  String get seedLibraryDetailActiveSubscriptionsDesc;
+
+  /// No description provided for @seedLibraryDetailFallbackName.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库'**
+  String get seedLibraryDetailFallbackName;
+
+  /// No description provided for @seedLibraryDetailNoResultsUnderFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前筛选条件下没有内容'**
+  String get seedLibraryDetailNoResultsUnderFilter;
+
+  /// No description provided for @seedLibraryDetailUsageFewShot.
+  ///
+  /// In zh, this message translates to:
+  /// **'用于增强 AI 在相似任务中的回答风格和示例质量'**
+  String get seedLibraryDetailUsageFewShot;
+
+  /// No description provided for @seedLibraryDetailUsageTeachingContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'用于给学习计划、任务说明和知识讲解提供高质量教学内容'**
+  String get seedLibraryDetailUsageTeachingContent;
+
+  /// No description provided for @seedLibraryDetailUsageReplyTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'用于改善系统回复模板和表达稳定性'**
+  String get seedLibraryDetailUsageReplyTemplate;
+
+  /// No description provided for @seedLibraryDetailUsageCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'用于你自己的内容偏好和专属示例沉淀'**
+  String get seedLibraryDetailUsageCustom;
+
+  /// No description provided for @seedLibraryDetailFilterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选内容'**
+  String get seedLibraryDetailFilterTitle;
+
+  /// No description provided for @seedLibraryDetailFilterDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'按内容类型、难度和启用状态筛选当前种子库里的条目。'**
+  String get seedLibraryDetailFilterDesc;
+
+  /// No description provided for @seedLibraryDetailFilterContentType.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容类型'**
+  String get seedLibraryDetailFilterContentType;
+
+  /// No description provided for @seedLibraryDetailFilterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get seedLibraryDetailFilterAll;
+
+  /// No description provided for @seedLibraryDetailFilterDifficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度'**
+  String get seedLibraryDetailFilterDifficulty;
+
+  /// No description provided for @seedLibraryDetailFilterShowInactive.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示已停用内容'**
+  String get seedLibraryDetailFilterShowInactive;
+
+  /// No description provided for @seedLibraryDetailFilterShowInactiveDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭时仅展示当前仍在使用的条目'**
+  String get seedLibraryDetailFilterShowInactiveDesc;
+
+  /// No description provided for @seedLibraryDetailFilterReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置'**
+  String get seedLibraryDetailFilterReset;
+
+  /// No description provided for @seedLibraryDetailFilterDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get seedLibraryDetailFilterDone;
+
+  /// No description provided for @seedLibraryDetailRatingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'给这个种子库评分'**
+  String get seedLibraryDetailRatingTitle;
+
+  /// No description provided for @seedLibraryDetailRatingDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的评分会影响这个种子库的展示质量分。'**
+  String get seedLibraryDetailRatingDescription;
+
+  /// No description provided for @seedLibraryDetailRatingCommentLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'评价说明（可选）'**
+  String get seedLibraryDetailRatingCommentLabel;
+
+  /// No description provided for @seedLibraryDetailRatingSubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'评分已提交'**
+  String get seedLibraryDetailRatingSubmitted;
+
+  /// No description provided for @seedLibraryDetailSubmitRating.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交评分'**
+  String get seedLibraryDetailSubmitRating;
+
+  /// No description provided for @seedLibraryDetailContentBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'正文'**
+  String get seedLibraryDetailContentBody;
+
+  /// No description provided for @seedLibraryDetailStructuredContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'结构化内容'**
+  String get seedLibraryDetailStructuredContent;
+
+  /// No description provided for @seedLibraryDetailEditLibrary.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑种子库'**
+  String get seedLibraryDetailEditLibrary;
+
+  /// No description provided for @seedLibraryDetailEditName.
+  ///
+  /// In zh, this message translates to:
+  /// **'名称'**
+  String get seedLibraryDetailEditName;
+
+  /// No description provided for @seedLibraryDetailEditNameEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'名称不能为空'**
+  String get seedLibraryDetailEditNameEmpty;
+
+  /// No description provided for @seedLibraryDetailEditDescriptionOptional.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述（可选）'**
+  String get seedLibraryDetailEditDescriptionOptional;
+
+  /// No description provided for @seedLibraryDetailEditCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get seedLibraryDetailEditCancel;
+
+  /// No description provided for @seedLibraryDetailEditSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get seedLibraryDetailEditSave;
+
+  /// No description provided for @seedLibraryDetailLibraryUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库已更新'**
+  String get seedLibraryDetailLibraryUpdated;
+
+  /// No description provided for @seedLibraryDetailAddItem.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加种子内容'**
+  String get seedLibraryDetailAddItem;
+
+  /// No description provided for @seedLibraryDetailAddItemType.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容类型'**
+  String get seedLibraryDetailAddItemType;
+
+  /// No description provided for @seedLibraryDetailAddItemTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'标题'**
+  String get seedLibraryDetailAddItemTitle;
+
+  /// No description provided for @seedLibraryDetailAddItemContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容'**
+  String get seedLibraryDetailAddItemContent;
+
+  /// No description provided for @seedLibraryDetailAddItemSubject.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题/学科'**
+  String get seedLibraryDetailAddItemSubject;
+
+  /// No description provided for @seedLibraryDetailAddItemDifficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度'**
+  String get seedLibraryDetailAddItemDifficulty;
+
+  /// No description provided for @seedLibraryDetailAddItemUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置'**
+  String get seedLibraryDetailAddItemUnset;
+
+  /// No description provided for @seedLibraryDetailAddItemTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签（逗号分隔）'**
+  String get seedLibraryDetailAddItemTags;
+
+  /// No description provided for @seedLibraryDetailAddItemSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存内容'**
+  String get seedLibraryDetailAddItemSave;
+
+  /// No description provided for @seedLibraryDetailAddItemSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子内容已添加'**
+  String get seedLibraryDetailAddItemSuccess;
+
+  /// No description provided for @seedLibraryDetailImportCannotRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法读取文件内容'**
+  String get seedLibraryDetailImportCannotRead;
+
+  /// No description provided for @seedLibraryDetailImportInvalidJson.
+  ///
+  /// In zh, this message translates to:
+  /// **'JSON 格式无效，需为数组或 [items:[...]]'**
+  String get seedLibraryDetailImportInvalidJson;
+
+  /// No description provided for @seedLibraryDetailImportNoItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件中没有可导入的内容项'**
+  String get seedLibraryDetailImportNoItems;
+
+  /// No description provided for @seedLibraryDetailApplyFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用失败：{error}'**
+  String seedLibraryDetailApplyFailed(String error);
+
+  /// No description provided for @seedLibraryDetailSetPrimaryFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置失败：{error}'**
+  String seedLibraryDetailSetPrimaryFailed(String error);
+
+  /// No description provided for @seedLibraryDetailMarkNotSuitableFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录失败：{error}'**
+  String seedLibraryDetailMarkNotSuitableFailed(String error);
+
+  /// No description provided for @seedLibraryDetailCurrentStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前状态：{status} · 优先级 {priority}'**
+  String seedLibraryDetailCurrentStatus(String status, int priority);
+
+  /// No description provided for @seedLibraryDetailUsageAppliedEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已生效。{hint}；系统会按优先级把它与其他启用中的种子库一起使用。'**
+  String seedLibraryDetailUsageAppliedEnabled(String hint);
+
+  /// No description provided for @seedLibraryDetailUsageSubscribedNotEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已订阅但未启用。启用后，{hint}。'**
+  String seedLibraryDetailUsageSubscribedNotEnabled(String hint);
+
+  /// No description provided for @seedLibraryDetailUsageNotApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前尚未应用。应用后，{hint}。'**
+  String seedLibraryDetailUsageNotApplied(String hint);
+
+  /// No description provided for @seedLibraryDetailCurrentRating.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前评分：{score} / 10'**
+  String seedLibraryDetailCurrentRating(String score);
+
+  /// No description provided for @seedLibraryDetailRatingFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'评分失败：{error}'**
+  String seedLibraryDetailRatingFailed(String error);
+
+  /// No description provided for @seedLibraryDetailAddItemFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加失败：{error}'**
+  String seedLibraryDetailAddItemFailed(String error);
+
+  /// No description provided for @seedLibraryDetailImportResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入完成：成功 {imported} 条，失败 {failed} 条'**
+  String seedLibraryDetailImportResult(int imported, int failed);
+
+  /// No description provided for @seedLibraryDetailImportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入失败：{error}'**
+  String seedLibraryDetailImportFailed(String error);
 }
 
 class _AppLocalizationsDelegate

@@ -244,14 +244,14 @@ class _OpenClawConnectionPanelState
     final raw = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(context.l10n.openclawImportPairingString),
+        title: Text(context.l10n.openclawImportPairingString),
         content: SizedBox(
           width: 520,
           child: TextField(
             controller: controller,
             maxLines: 8,
             autofocus: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: context.l10n.openclawPairingOrQrLabel,
               hintText:
                   context.l10n.openclawPairingPasteHint,
@@ -265,7 +265,7 @@ class _OpenClawConnectionPanelState
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text(context.l10n.openclawImportAndSave),
+            child: Text(context.l10n.openclawImportAndSave),
           ),
         ],
       ),
@@ -373,7 +373,7 @@ class _OpenClawConnectionPanelState
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text(context.l10n.openclawApplyWizard),
+            child: Text(context.l10n.openclawApplyWizard),
           ),
         ],
       ),
@@ -518,8 +518,8 @@ class _OpenClawConnectionPanelState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(context.l10n.openclawDisconnect),
-        content: const Text(context.l10n.openclawDisconnectConfirmBody),
+        title: Text(context.l10n.openclawDisconnect),
+        content: Text(context.l10n.openclawDisconnectConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -527,7 +527,7 @@ class _OpenClawConnectionPanelState
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(context.l10n.openclawDisconnectAction),
+            child: Text(context.l10n.openclawDisconnectAction),
           ),
         ],
       ),
@@ -722,7 +722,7 @@ class _OpenClawConnectionPanelState
             showToggle: false,
             metrics: [
               if (_formDirty)
-                const OpenClawMetricPill(
+                OpenClawMetricPill(
                   icon: Icons.edit_rounded,
                   label: context.l10n.openclawUnsavedChanges,
                   tone: OpenClawVisualTone.attention,
@@ -770,7 +770,7 @@ class _OpenClawConnectionPanelState
             runSpacing: DS.spacing8,
             children: [
               ChoiceChip(
-                label: const Text(context.l10n.openclawCustomConfig),
+                label: Text(context.l10n.openclawCustomConfig),
                 selected: _selectedPresetId == 'custom',
                 onSelected: (_) {
                   setState(() {
@@ -806,17 +806,17 @@ class _OpenClawConnectionPanelState
                 onPressed: () =>
                     unawaited(_importPairingPayloadFromClipboard(service)),
                 icon: const Icon(Icons.content_paste_go_rounded),
-                label: const Text(context.l10n.openclawImportFromClipboard),
+                label: Text(context.l10n.openclawImportFromClipboard),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(_showPairingImportDialog(service)),
                 icon: const Icon(Icons.qr_code_2_rounded),
-                label: const Text(context.l10n.openclawPastePairingString),
+                label: Text(context.l10n.openclawPastePairingString),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(_scanPairingPayload(service)),
                 icon: const Icon(Icons.qr_code_scanner_rounded),
-                label: const Text(context.l10n.openclawScanToPair),
+                label: Text(context.l10n.openclawScanToPair),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(
@@ -838,7 +838,7 @@ class _OpenClawConnectionPanelState
                   ),
                 ),
                 icon: const Icon(Icons.hub_rounded),
-                label: const Text(context.l10n.openclawTailscaleLabel),
+                label: Text(context.l10n.openclawTailscaleLabel),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(
@@ -858,7 +858,7 @@ class _OpenClawConnectionPanelState
                   ),
                 ),
                 icon: const Icon(Icons.cloud_rounded),
-                label: const Text(context.l10n.openclawCloudflareLabel),
+                label: Text(context.l10n.openclawCloudflareLabel),
               ),
             ],
           ),
@@ -899,7 +899,7 @@ class _OpenClawConnectionPanelState
             TextField(
               controller: _gatewayController,
               onChanged: (_) => _markDirty(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: context.l10n.openclawGatewayAddress,
                 hintText: context.l10n.openclawGatewayHint,
               ),
@@ -911,7 +911,7 @@ class _OpenClawConnectionPanelState
             ),
             const SizedBox(height: DS.spacing8),
             SegmentedButton<String>(
-              segments: const [
+              segments: [
                 ButtonSegment<String>(
                   value: 'token',
                   label: Text(context.l10n.openclawTokenAuth),
@@ -945,7 +945,7 @@ class _OpenClawConnectionPanelState
                 controller: _tokenController,
                 onChanged: (_) => _markDirty(),
                 obscureText: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: context.l10n.openclawAuthToken,
                   hintText: context.l10n.openclawAuthTokenHint,
                 ),
@@ -954,7 +954,7 @@ class _OpenClawConnectionPanelState
               TextField(
                 controller: _deviceTokenController,
                 onChanged: (_) => _markDirty(),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: context.l10n.openclawDeviceToken,
                   hintText: context.l10n.openclawDeviceTokenHint,
                 ),
@@ -1034,16 +1034,16 @@ class _OpenClawConnectionPanelState
                 children: [
                   TextButton(
                     onPressed: () => unawaited(_startPairing(service)),
-                    child: const Text(context.l10n.openclawGeneratePairingCode),
+                    child: Text(context.l10n.openclawGeneratePairingCode),
                   ),
                   TextButton(
                     onPressed: () => unawaited(_completePairing(service)),
-                    child: const Text(context.l10n.openclawCompletePairing),
+                    child: Text(context.l10n.openclawCompletePairing),
                   ),
                   if (pairingSession != null)
                     TextButton(
                       onPressed: () => unawaited(service.cancelPairing()),
-                      child: const Text(context.l10n.openclawCancelPairing),
+                      child: Text(context.l10n.openclawCancelPairing),
                     ),
                 ],
               ),
@@ -1055,7 +1055,7 @@ class _OpenClawConnectionPanelState
             ),
             const SizedBox(height: DS.spacing8),
             SegmentedButton<String>(
-              segments: const [
+              segments: [
                 ButtonSegment<String>(
                   value: 'responses_http',
                   label: Text('HTTP'),
@@ -1085,7 +1085,7 @@ class _OpenClawConnectionPanelState
             ),
             SizedBox(height: spacing),
           ] else ...[
-            const OpenClawMetricPill(
+            OpenClawMetricPill(
               icon: Icons.login_rounded,
               label: context.l10n.openclawDefaultConnectionReady,
               tone: OpenClawVisualTone.connected,
@@ -1106,7 +1106,7 @@ class _OpenClawConnectionPanelState
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text(context.l10n.openclawTestConnection),
+                      : Text(context.l10n.openclawTestConnection),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -1126,7 +1126,7 @@ class _OpenClawConnectionPanelState
                             ),
                           ),
                         )
-                      : const Text(context.l10n.openclawSaveConfig),
+                      : Text(context.l10n.openclawSaveConfig),
                 ),
               ),
             ],
@@ -1158,7 +1158,7 @@ class _OpenClawConnectionPanelState
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text(context.l10n.openclawRetryQueue),
+                        : Text(context.l10n.openclawRetryQueue),
                   ),
                 ),
               if (service.queuedRequests.isNotEmpty &&

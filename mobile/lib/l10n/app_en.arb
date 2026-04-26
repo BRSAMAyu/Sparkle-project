@@ -5668,6 +5668,9 @@
   "openclawQueuedRequestCount": "{count} pending",
   "openclawQuickConnect": "Quick Connect",
   "openclawCustomConfig": "Custom Config",
+  "openclawCustomConfigDesc": "Connect using a custom gateway URL and token",
+  "openclawGuestMainDesc": "Use the local gateway for direct connection",
+  "openclawGuestMainLabel": "Local Gateway",
   "openclawImportFromClipboard": "Import from Clipboard",
   "openclawPastePairingString": "Paste Pairing String",
   "openclawScanToPair": "Scan to Pair",
@@ -5801,5 +5804,358 @@
   "accountabilityOperationFailed": "Operation failed",
   "accountabilityLikeFailed": "Like failed",
   "accountabilitySendFailed": "Send failed",
-  "accountabilityCheckinFailed": "Check-in failed"
+  "accountabilityCheckinFailed": "Check-in failed",
+  "openclawHubGatewayNoPermission": "Gateway is reachable but lacks execution permission; cannot retry queue yet",
+  "openclawHubEndpointUnavailable": "Gateway is reachable but execution endpoint is unavailable; cannot retry queue yet",
+  "openclawHubEngineNotConnected": "Execution engine not connected yet; cannot retry queue",
+  "openclawHubNoRetryQueuedItems": "No queued items to retry",
+  "openclawHubQueueCleared": "Queue cleared",
+  "openclawHubConnectedDiagnostics": "OpenClaw connected. Tap to view diagnostics",
+  "openclawHubGatewayNoPermissionDiagnostics": "Gateway reachable but missing execution permission. Tap to view diagnostics",
+  "openclawHubEndpointIssueDiagnostics": "Gateway reachable but execution endpoint issue. Tap to view diagnostics",
+  "openclawHubQueuedTasksDiagnostics": "Tasks are queued. Tap to view diagnostics",
+  "openclawHubNotConnectedDiagnostics": "OpenClaw connection incomplete. Tap to view diagnostics",
+  "openclawHubOverviewGatewayNoPermission": "Gateway online, but no execution permission",
+  "openclawHubOverviewEndpointIssue": "Gateway online, but execution endpoint unavailable",
+  "openclawHubOverviewReady": "OpenClaw is ready to take over",
+  "openclawHubOverviewTasksWaiting": "Tasks are waiting for OpenClaw to come back",
+  "openclawHubOverviewConfigSaved": "Connection info saved, not yet connected",
+  "openclawHubOverviewConnectFirst": "Connect OpenClaw first, then start delegating steadily",
+  "openclawHubOverviewGatewayNoPermissionDesc": "The gateway is reachable, but actual execution is blocked by permissions. Add writable scopes, or switch to device pairing + WebSocket to close the loop.",
+  "openclawHubOverviewEndpointIssueDesc": "The address is reachable, but the execution interface is not ready. Check `/v1/responses`, proxy forwarding, and that the transport selection is consistent.",
+  "openclawHubOverviewConnectedDesc": "Connection is stable. You can delegate web research, organization, and scraping tasks from the task or chat page.",
+  "openclawHubOverviewDefaultDesc": "Once connected, home, chat, and task pages will share the same execution center — no more hunting around.",
+  "openclawHubActionHintPermission": "The top priority now is to replace the token with one that has execution permission, or switch to a paired WebSocket connection.",
+  "openclawHubActionHintEndpoint": "The top priority now is to check the execution interface and transport, making the gateway go from \"reachable\" to \"executable\".",
+  "openclawHubActionHintRetryQueue": "The top priority now is to resubmit the waiting queue.",
+  "openclawHubActionHintReconnect": "The top priority now is to restore the connection so queued tasks can resume.",
+  "openclawHubActionHintNewDelegation": "The top priority now is to go back to chat or tasks and start a new delegation.",
+  "openclawHubActionHintCompleteConnection": "The top priority now is to complete the connection so OpenClaw becomes your true execution companion.",
+  "openclawHubAppBarTitle": "OpenClaw Hub",
+  "openclawHubMetricConnectedNoPermission": "Connected, no exec permission",
+  "openclawHubMetricConnectedEndpointIssue": "Connected, endpoint issue",
+  "openclawHubMetricConnected": "Connected",
+  "openclawHubMetricNotConnected": "Not connected",
+  "openclawHubMetricPairedDevice": "Paired device",
+  "openclawHubMetricTokenAuth": "Token auth",
+  "openclawHubButtonContinueSetup": "Continue Setup",
+  "openclawHubButtonViewQueue": "View Queue",
+  "openclawHubButtonAutomation": "Automation",
+  "openclawHubButtonEnterChat": "Open Chat",
+  "openclawHubButtonViewTasks": "View Tasks",
+  "openclawHubSectionConnectionTitle": "Connection & Control",
+  "openclawHubSectionConnectionSubtitle": "Review the connection summary first, then decide whether to expand the full editor — so you aren't hit by the full form on arrival.",
+  "openclawHubCollapseConnectionEdit": "Collapse editor",
+  "openclawHubExpandConnectionEdit": "Edit connection",
+  "openclawHubGatewayUrlEmpty": "Gateway URL not set",
+  "openclawHubConnectionSummaryPermission": "This gateway is reachable, but the current auth doesn't grant real execution permission. Fix permissions first, then retry the queue.",
+  "openclawHubConnectionSummaryEndpoint": "The gateway is reachable, but the execution interface isn't ready. Check transport and `/v1/responses` first for a faster fix.",
+  "openclawHubConnectionSummaryConnected": "The connection is stable. Continue using the current method for direct delegation.",
+  "openclawHubConnectionSummaryConfigured": "Configuration is saved locally. Expand to fine-tune auth, protocol, and pairing flow.",
+  "openclawHubConnectionSummaryFirstTime": "First-time setup usually only needs the address, then pick token auth or device pairing.",
+  "openclawHubSectionDevicesTitle": "Devices & Affinity",
+  "openclawHubSectionDevicesSubtitle": "Explicitly configure which tasks go to which device, so the system doesn't have to guess your preferences every time.",
+  "openclawHubCollapseDeviceDetails": "Collapse device details",
+  "openclawHubExpandDeviceDetails": "View devices & preferences",
+  "openclawHubDevicesSummaryEmpty": "Node list will appear automatically after a successful OpenClaw connection. Clearer device setup means more stable multi-node scheduling and fallback.",
+  "openclawHubSectionQueueTitle": "Queue & Delegation",
+  "openclawHubSectionQueueSubtitle": "First see what needs your attention most, then decide whether to expand the full queue and template catalog.",
+  "openclawHubCollapseQueueDetails": "Collapse queue details",
+  "openclawHubExpandQueueDetails": "View full queue",
+  "openclawHubQueueSummaryConnected": "Your best move right now is to resubmit the queued tasks first, then start new delegations once the engine clears the backlog.",
+  "openclawHubQueueSummaryNotConnected": "You've already queued tasks. Next step is to restore the connection so they can all resume at once.",
+  "openclawHubQueueSummaryConnectedEmpty": "No queued tasks right now. This is a great time to go back to chat or tasks and start a new delegation.",
+  "openclawHubQueueSummaryNotConnectedEmpty": "No queued tasks either. Complete the connection first, then decide whether to start your first delegation.",
+  "openclawHubQueueEmptyLabel": "Queue is currently empty",
+  "openclawHubButtonRetryQueue": "Retry Queue",
+  "openclawHubButtonClearQueue": "Clear Queue",
+  "openclawHubAvailableTemplates": "Available Templates / Capabilities",
+  "openclawHubTemplatesEmptyHint": "Templates will load on demand when you open a specific task. For now, tidy up the connection, queue, and recent activity first.",
+  "openclawHubSectionAutomationTitle": "Automation & Batch",
+  "openclawHubSectionAutomationSubtitle": "Put one-off batch execution and long-term scheduled/conditional execution on the same console, so your execution capability goes beyond single clicks.",
+  "openclawHubCollapseAutomationDetails": "Collapse automation details",
+  "openclawHubExpandAutomationDetails": "View automation capabilities",
+  "openclawHubAutomationSummaryEmpty": "No automations yet. Expand to create daily scheduled, event-triggered, or conditional polling automations, and launch batch delegations from here.",
+  "openclawHubSectionActivityTitle": "Recent Activity",
+  "openclawHubSectionActivitySubtitle": "A high-density timeline of recent delegations, so you don't have to flip between task pages.",
+  "openclawHubCollapseActivityDetails": "Collapse activity details",
+  "openclawHubExpandActivityDetails": "View all activity",
+  "openclawHubActivityEmptyHint": "No recent executions yet. Start your first delegation from a home card, the task execution page, or the chat entry point.",
+  "openclawHubActivityHint": "View this task's execution details.",
+  "openclawHubActivityOpenTask": "Open Task Execution",
+  "openclawHubStatusRecorded": "Recorded",
+  "openclawHubRetryQueuedSuccess": "{count} queued tasks resubmitted",
+  "@openclawHubRetryQueuedSuccess": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubLastExecutionStatus": "Last execution status is \"{status}\". Continue reviewing connection, queue, and activity from here.",
+  "@openclawHubLastExecutionStatus": {
+    "placeholders": {
+        "status": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubPendingDelegationsDesc": "You have {count} delegations waiting for the connection to come back. Reconnecting the engine first will be most effective.",
+  "@openclawHubPendingDelegationsDesc": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubQueuedTasksCount": "{count} queued tasks",
+  "@openclawHubQueuedTasksCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubNodeCount": "{count} nodes",
+  "@openclawHubNodeCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubAutomationCount": "{count} automations",
+  "@openclawHubAutomationCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubLatestBatch": "Latest batch {completed}/{total}",
+  "@openclawHubLatestBatch": {
+    "placeholders": {
+        "completed": {
+          "type": "int"
+        },
+        "total": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubLastTrustLabel": "Last trust assessment: {label}",
+  "@openclawHubLastTrustLabel": {
+    "placeholders": {
+        "label": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubDevicesSummaryActiveWithCount": "Currently discovered {count} nodes. You can assign preferred devices for browser, terminal, document, and API tasks here. When offline, Sparkle will automatically find fallback nodes.",
+  "@openclawHubDevicesSummaryActiveWithCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubAutomationSummaryActiveWithCount": "{count} automations are currently running. Batch delegation summaries and scheduled task statuses will continuously aggregate here.",
+  "@openclawHubAutomationSummaryActiveWithCount": {
+    "placeholders": {
+        "count": {
+          "type": "int"
+        }
+    }
+  },
+  "openclawHubTaskLabel": "Task {taskId}",
+  "@openclawHubTaskLabel": {
+    "placeholders": {
+        "taskId": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubTaskLabelTemplate": "Template {templateId}",
+  "@openclawHubTaskLabelTemplate": {
+    "placeholders": {
+        "templateId": {
+          "type": "String"
+        }
+    }
+  },
+  "openclawHubTaskLabelSource": "Source {source}",
+  "@openclawHubTaskLabelSource": {
+    "placeholders": {
+        "source": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailFriendlyError": "The system couldn't complete this operation right now. Please try again later.",
+  "seedLibraryDetailUserRatings": "User Ratings",
+  "seedLibraryDetailQualityBreakdown": "Quality Score Breakdown",
+  "seedLibraryDetailQualityBreakdownDesc": "The list shows the composite quality score. Here you can also see the system base score and average user rating to help you decide if this seed library is worth keeping active long-term.",
+  "seedLibraryDetailQualityComprehensive": "Overall",
+  "seedLibraryDetailQualitySystem": "System",
+  "seedLibraryDetailQualityUser": "User",
+  "seedLibraryDetailApplyToSystem": "Apply to System",
+  "seedLibraryDetailAppliedSuccess": "Applied to system",
+  "seedLibraryDetailPausedSuccess": "Paused using this seed library",
+  "seedLibraryDetailStatusUpdated": "Seed library status updated",
+  "seedLibraryDetailPauseUse": "Pause",
+  "seedLibraryDetailApplyLibrary": "Apply Library",
+  "seedLibraryDetailSetPrimarySuccess": "Set as primary",
+  "seedLibraryDetailSetPrimary": "Set as Primary",
+  "seedLibraryDetailMarkedNotSuitableSuccess": "Recorded \"this library isn't a fit for me\"",
+  "seedLibraryDetailMarkNotSuitable": "Not a Fit for Me",
+  "seedLibraryDetailEditRating": "Edit Rating",
+  "seedLibraryDetailGiveRating": "Rate It",
+  "seedLibraryDetailSubscriptionStatusEnabled": "Enabled",
+  "seedLibraryDetailSubscriptionStatusDisabled": "Subscribed, not enabled",
+  "seedLibraryDetailActiveSubscriptions": "Active Seed Libraries",
+  "seedLibraryDetailActiveSubscriptionsDesc": "You can enable multiple seed libraries at once. The system will prioritize high-priority libraries, then blend in content from other enabled libraries.",
+  "seedLibraryDetailFallbackName": "Seed Library",
+  "seedLibraryDetailNoResultsUnderFilter": "No content under current filters",
+  "seedLibraryDetailUsageFewShot": "Enhances AI response style and example quality for similar tasks",
+  "seedLibraryDetailUsageTeachingContent": "Provides high-quality teaching content for study plans, task descriptions, and knowledge explanations",
+  "seedLibraryDetailUsageReplyTemplate": "Improves system reply template and expression stability",
+  "seedLibraryDetailUsageCustom": "Captures your own content preferences and curated examples",
+  "seedLibraryDetailFilterTitle": "Filter Content",
+  "seedLibraryDetailFilterDesc": "Filter entries in this seed library by content type, difficulty, and enabled status.",
+  "seedLibraryDetailFilterContentType": "Content Type",
+  "seedLibraryDetailFilterAll": "All",
+  "seedLibraryDetailFilterDifficulty": "Difficulty",
+  "seedLibraryDetailFilterShowInactive": "Show Inactive Content",
+  "seedLibraryDetailFilterShowInactiveDesc": "When off, only show currently active entries",
+  "seedLibraryDetailFilterReset": "Reset",
+  "seedLibraryDetailFilterDone": "Done",
+  "seedLibraryDetailRatingTitle": "Rate This Seed Library",
+  "seedLibraryDetailRatingDescription": "Your rating affects this seed library's display quality score.",
+  "seedLibraryDetailRatingCommentLabel": "Comment (optional)",
+  "seedLibraryDetailRatingSubmitted": "Rating submitted",
+  "seedLibraryDetailSubmitRating": "Submit Rating",
+  "seedLibraryDetailContentBody": "Body",
+  "seedLibraryDetailStructuredContent": "Structured Content",
+  "seedLibraryDetailEditLibrary": "Edit Seed Library",
+  "seedLibraryDetailEditName": "Name",
+  "seedLibraryDetailEditNameEmpty": "Name cannot be empty",
+  "seedLibraryDetailEditDescriptionOptional": "Description (optional)",
+  "seedLibraryDetailEditCancel": "Cancel",
+  "seedLibraryDetailEditSave": "Save",
+  "seedLibraryDetailLibraryUpdated": "Seed library updated",
+  "seedLibraryDetailAddItem": "Add Seed Content",
+  "seedLibraryDetailAddItemType": "Content Type",
+  "seedLibraryDetailAddItemTitle": "Title",
+  "seedLibraryDetailAddItemContent": "Content",
+  "seedLibraryDetailAddItemSubject": "Subject",
+  "seedLibraryDetailAddItemDifficulty": "Difficulty",
+  "seedLibraryDetailAddItemUnset": "Not set",
+  "seedLibraryDetailAddItemTags": "Tags (comma separated)",
+  "seedLibraryDetailAddItemSave": "Save Content",
+  "seedLibraryDetailAddItemSuccess": "Seed content added",
+  "seedLibraryDetailImportCannotRead": "Cannot read file content",
+  "seedLibraryDetailImportInvalidJson": "Invalid JSON format, expected an array or [items:[...]]",
+  "seedLibraryDetailImportNoItems": "No importable items found in file",
+  "seedLibraryDetailApplyFailed": "Apply failed: {error}",
+  "@seedLibraryDetailApplyFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailSetPrimaryFailed": "Set primary failed: {error}",
+  "@seedLibraryDetailSetPrimaryFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailMarkNotSuitableFailed": "Record failed: {error}",
+  "@seedLibraryDetailMarkNotSuitableFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailCurrentStatus": "Current status: {status} · Priority {priority}",
+  "@seedLibraryDetailCurrentStatus": {
+    "placeholders": {
+        "status": {
+          "type": "String"
+        },
+        "priority": {
+          "type": "int"
+        }
+    }
+  },
+  "seedLibraryDetailUsageAppliedEnabled": "Now in effect. {hint} The system will use it alongside other active seed libraries by priority.",
+  "@seedLibraryDetailUsageAppliedEnabled": {
+    "placeholders": {
+        "hint": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailUsageSubscribedNotEnabled": "Subscribed but not enabled. Once enabled, {hint}.",
+  "@seedLibraryDetailUsageSubscribedNotEnabled": {
+    "placeholders": {
+        "hint": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailUsageNotApplied": "Not yet applied. Once applied, {hint}.",
+  "@seedLibraryDetailUsageNotApplied": {
+    "placeholders": {
+        "hint": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailCurrentRating": "Current rating: {score} / 10",
+  "@seedLibraryDetailCurrentRating": {
+    "placeholders": {
+        "score": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailRatingFailed": "Rating failed: {error}",
+  "@seedLibraryDetailRatingFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailAddItemFailed": "Add failed: {error}",
+  "@seedLibraryDetailAddItemFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  },
+  "seedLibraryDetailImportResult": "Import complete: {imported} succeeded, {failed} failed",
+  "@seedLibraryDetailImportResult": {
+    "placeholders": {
+        "imported": {
+          "type": "int"
+        },
+        "failed": {
+          "type": "int"
+        }
+    }
+  },
+  "seedLibraryDetailImportFailed": "Import failed: {error}",
+  "@seedLibraryDetailImportFailed": {
+    "placeholders": {
+        "error": {
+          "type": "String"
+        }
+    }
+  }
 }

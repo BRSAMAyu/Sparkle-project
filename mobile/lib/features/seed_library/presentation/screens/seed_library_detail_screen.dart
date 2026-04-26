@@ -924,7 +924,7 @@ class _SeedLibraryDetailScreenState
                 controller: commentController,
                 minLines: 2,
                 maxLines: 4,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: context.l10n.seedLibraryDetailRatingCommentLabel,
                   border: OutlineInputBorder(),
                 ),
@@ -1021,7 +1021,7 @@ class _SeedLibraryDetailScreenState
                 if (item.contentData != null &&
                     item.contentData!.isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
-                  Text('结构化内容', style: Theme.of(context).textTheme.titleMedium),
+                  Text(context.l10n.seedLibraryDetailStructuredContent, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: DS.spacing8),
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.panel,
@@ -1053,7 +1053,7 @@ class _SeedLibraryDetailScreenState
       showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('编辑种子库'),
+          title: Text(context.l10n.seedLibraryDetailEditLibrary),
           content: Form(
             key: formKey,
             child: Column(
@@ -1061,14 +1061,14 @@ class _SeedLibraryDetailScreenState
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: '名称'),
+                  decoration: InputDecoration(labelText: context.l10n.seedLibraryDetailEditName),
                   validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? '名称不能为空' : null,
+                      (v == null || v.trim().isEmpty) ? context.l10n.seedLibraryDetailEditNameEmpty : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: '描述（可选）'),
+                  decoration: InputDecoration(labelText: context.l10n.seedLibraryDetailEditDescriptionOptional),
                   maxLines: 3,
                 ),
               ],
@@ -1077,7 +1077,7 @@ class _SeedLibraryDetailScreenState
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
+              child: Text(context.l10n.seedLibraryDetailEditCancel),
             ),
             TextButton(
               onPressed: () async {
@@ -1094,7 +1094,7 @@ class _SeedLibraryDetailScreenState
                             : descController.text.trim(),
                       );
                   if (!context.mounted) return;
-                  AppFeedback.success(context, '种子库已更新');
+                  AppFeedback.success(context, context.l10n.seedLibraryDetailLibraryUpdated);
                 } catch (e) {
                   if (!context.mounted) return;
                   AppFeedback.error(
@@ -1103,7 +1103,7 @@ class _SeedLibraryDetailScreenState
                   );
                 }
               },
-              child: const Text('保存'),
+              child: Text(context.l10n.seedLibraryDetailEditSave),
             ),
           ],
         ),
@@ -1181,14 +1181,14 @@ class _SeedLibraryDetailScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '添加种子内容',
+                    context.l10n.seedLibraryDetailAddItem,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: DS.spacing16),
                   DropdownButtonFormField<ItemType>(
                     initialValue: itemType,
-                    decoration: const InputDecoration(
-                      labelText: '内容类型',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.seedLibraryDetailAddItemType,
                       border: OutlineInputBorder(),
                     ),
                     items: ItemType.values
@@ -1208,16 +1208,16 @@ class _SeedLibraryDetailScreenState
                   const SizedBox(height: DS.spacing12),
                   TextFormField(
                     controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: '标题',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.seedLibraryDetailAddItemTitle,
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: DS.spacing12),
                   TextFormField(
                     controller: contentController,
-                    decoration: const InputDecoration(
-                      labelText: '内容',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.seedLibraryDetailAddItemContent,
                       border: OutlineInputBorder(),
                     ),
                     minLines: 3,
@@ -1226,21 +1226,21 @@ class _SeedLibraryDetailScreenState
                   const SizedBox(height: DS.spacing12),
                   TextFormField(
                     controller: subjectController,
-                    decoration: const InputDecoration(
-                      labelText: '主题/学科',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.seedLibraryDetailAddItemSubject,
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: DS.spacing12),
                   DropdownButtonFormField<DifficultyLevel?>(
                     initialValue: difficultyLevel,
-                    decoration: const InputDecoration(
-                      labelText: '难度',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.seedLibraryDetailAddItemDifficulty,
                       border: OutlineInputBorder(),
                     ),
                     items: [
                       const DropdownMenuItem<DifficultyLevel?>(
-                        child: Text('未设置'),
+                        child: Text(context.l10n.seedLibraryDetailAddItemUnset),
                       ),
                       ...DifficultyLevel.values.map(
                         (level) => DropdownMenuItem(
@@ -1256,8 +1256,8 @@ class _SeedLibraryDetailScreenState
                   const SizedBox(height: DS.spacing12),
                   TextFormField(
                     controller: tagsController,
-                    decoration: const InputDecoration(
-                      labelText: '标签（逗号分隔）',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.seedLibraryDetailAddItemTags,
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -1265,7 +1265,7 @@ class _SeedLibraryDetailScreenState
                   SizedBox(
                     width: double.infinity,
                     child: SparkleButton(
-                      label: '保存内容',
+                      label: context.l10n.seedLibraryDetailAddItemSave,
                       onPressed: () async {
                         try {
                           final tags = tagsController.text
@@ -1292,10 +1292,10 @@ class _SeedLibraryDetailScreenState
                               );
                           if (!context.mounted) return;
                           Navigator.pop(context);
-                          AppFeedback.success(context, '种子内容已添加');
+                          AppFeedback.success(context, context.l10n.seedLibraryDetailAddItemSuccess);
                         } catch (e) {
                           if (!context.mounted) return;
-                          AppFeedback.error(context, '添加失败：$e');
+                          AppFeedback.error(context, context.l10n.seedLibraryDetailAddItemFailed(e.toString()));
                         }
                       },
                       expand: true,
@@ -1326,7 +1326,7 @@ class _SeedLibraryDetailScreenState
       final file = result.files.single;
       final bytes = file.bytes;
       if (bytes == null) {
-        AppFeedback.error(context, '无法读取文件内容');
+        AppFeedback.error(context, context.l10n.seedLibraryDetailImportCannotRead);
         return;
       }
       final decoded = jsonDecode(utf8.decode(bytes));
@@ -1336,7 +1336,7 @@ class _SeedLibraryDetailScreenState
         return;
       }
       if (rawItems is! List) {
-        AppFeedback.error(context, 'JSON 格式无效，需为数组或 {items:[...]}');
+        AppFeedback.error(context, context.l10n.seedLibraryDetailImportInvalidJson);
         return;
       }
 
@@ -1345,7 +1345,7 @@ class _SeedLibraryDetailScreenState
           .map(Map<String, dynamic>.from)
           .toList();
       if (items.isEmpty) {
-        AppFeedback.info(context, '文件中没有可导入的内容项');
+        AppFeedback.info(context, context.l10n.seedLibraryDetailImportNoItems);
         return;
       }
 
@@ -1357,11 +1357,11 @@ class _SeedLibraryDetailScreenState
       final failedCount = resultData['failed_count'] ?? 0;
       AppFeedback.success(
         context,
-        '导入完成：成功 $importedCount 条，失败 $failedCount 条',
+        context.l10n.seedLibraryDetailImportResult(importedCount, failedCount),
       );
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '导入失败：$e');
+      AppFeedback.error(context, context.l10n.seedLibraryDetailImportFailed(e.toString()));
     }
   }
 }

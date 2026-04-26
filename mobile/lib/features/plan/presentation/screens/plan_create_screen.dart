@@ -222,8 +222,6 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
           ),
           generateGuide: taskDraft.generateGuide,
       );
-  }
-}
 
       await ref.read(planListProvider.notifier).refresh();
       await ref.read(taskListProvider.notifier).refreshTasks();

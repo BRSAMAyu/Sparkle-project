@@ -14020,6 +14020,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openclawCustomConfig => 'Custom Config';
 
   @override
+  String get openclawCustomConfigDesc =>
+      'Connect using a custom gateway URL and token';
+
+  @override
+  String get openclawGuestMainDesc =>
+      'Use the local gateway for direct connection';
+
+  @override
+  String get openclawGuestMainLabel => 'Local Gateway';
+
+  @override
   String get openclawImportFromClipboard => 'Import from Clipboard';
 
   @override
@@ -14483,4 +14494,623 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountabilityCheckinFailed => 'Check-in failed';
+
+  @override
+  String get openclawHubGatewayNoPermission =>
+      'Gateway is reachable but lacks execution permission; cannot retry queue yet';
+
+  @override
+  String get openclawHubEndpointUnavailable =>
+      'Gateway is reachable but execution endpoint is unavailable; cannot retry queue yet';
+
+  @override
+  String get openclawHubEngineNotConnected =>
+      'Execution engine not connected yet; cannot retry queue';
+
+  @override
+  String get openclawHubNoRetryQueuedItems => 'No queued items to retry';
+
+  @override
+  String get openclawHubQueueCleared => 'Queue cleared';
+
+  @override
+  String get openclawHubConnectedDiagnostics =>
+      'OpenClaw connected. Tap to view diagnostics';
+
+  @override
+  String get openclawHubGatewayNoPermissionDiagnostics =>
+      'Gateway reachable but missing execution permission. Tap to view diagnostics';
+
+  @override
+  String get openclawHubEndpointIssueDiagnostics =>
+      'Gateway reachable but execution endpoint issue. Tap to view diagnostics';
+
+  @override
+  String get openclawHubQueuedTasksDiagnostics =>
+      'Tasks are queued. Tap to view diagnostics';
+
+  @override
+  String get openclawHubNotConnectedDiagnostics =>
+      'OpenClaw connection incomplete. Tap to view diagnostics';
+
+  @override
+  String get openclawHubOverviewGatewayNoPermission =>
+      'Gateway online, but no execution permission';
+
+  @override
+  String get openclawHubOverviewEndpointIssue =>
+      'Gateway online, but execution endpoint unavailable';
+
+  @override
+  String get openclawHubOverviewReady => 'OpenClaw is ready to take over';
+
+  @override
+  String get openclawHubOverviewTasksWaiting =>
+      'Tasks are waiting for OpenClaw to come back';
+
+  @override
+  String get openclawHubOverviewConfigSaved =>
+      'Connection info saved, not yet connected';
+
+  @override
+  String get openclawHubOverviewConnectFirst =>
+      'Connect OpenClaw first, then start delegating steadily';
+
+  @override
+  String get openclawHubOverviewGatewayNoPermissionDesc =>
+      'The gateway is reachable, but actual execution is blocked by permissions. Add writable scopes, or switch to device pairing + WebSocket to close the loop.';
+
+  @override
+  String get openclawHubOverviewEndpointIssueDesc =>
+      'The address is reachable, but the execution interface is not ready. Check `/v1/responses`, proxy forwarding, and that the transport selection is consistent.';
+
+  @override
+  String get openclawHubOverviewConnectedDesc =>
+      'Connection is stable. You can delegate web research, organization, and scraping tasks from the task or chat page.';
+
+  @override
+  String get openclawHubOverviewDefaultDesc =>
+      'Once connected, home, chat, and task pages will share the same execution center — no more hunting around.';
+
+  @override
+  String get openclawHubActionHintPermission =>
+      'The top priority now is to replace the token with one that has execution permission, or switch to a paired WebSocket connection.';
+
+  @override
+  String get openclawHubActionHintEndpoint =>
+      'The top priority now is to check the execution interface and transport, making the gateway go from \"reachable\" to \"executable\".';
+
+  @override
+  String get openclawHubActionHintRetryQueue =>
+      'The top priority now is to resubmit the waiting queue.';
+
+  @override
+  String get openclawHubActionHintReconnect =>
+      'The top priority now is to restore the connection so queued tasks can resume.';
+
+  @override
+  String get openclawHubActionHintNewDelegation =>
+      'The top priority now is to go back to chat or tasks and start a new delegation.';
+
+  @override
+  String get openclawHubActionHintCompleteConnection =>
+      'The top priority now is to complete the connection so OpenClaw becomes your true execution companion.';
+
+  @override
+  String get openclawHubAppBarTitle => 'OpenClaw Hub';
+
+  @override
+  String get openclawHubMetricConnectedNoPermission =>
+      'Connected, no exec permission';
+
+  @override
+  String get openclawHubMetricConnectedEndpointIssue =>
+      'Connected, endpoint issue';
+
+  @override
+  String get openclawHubMetricConnected => 'Connected';
+
+  @override
+  String get openclawHubMetricNotConnected => 'Not connected';
+
+  @override
+  String get openclawHubMetricPairedDevice => 'Paired device';
+
+  @override
+  String get openclawHubMetricTokenAuth => 'Token auth';
+
+  @override
+  String get openclawHubButtonContinueSetup => 'Continue Setup';
+
+  @override
+  String get openclawHubButtonViewQueue => 'View Queue';
+
+  @override
+  String get openclawHubButtonAutomation => 'Automation';
+
+  @override
+  String get openclawHubButtonEnterChat => 'Open Chat';
+
+  @override
+  String get openclawHubButtonViewTasks => 'View Tasks';
+
+  @override
+  String get openclawHubSectionConnectionTitle => 'Connection & Control';
+
+  @override
+  String get openclawHubSectionConnectionSubtitle =>
+      'Review the connection summary first, then decide whether to expand the full editor — so you aren\'t hit by the full form on arrival.';
+
+  @override
+  String get openclawHubCollapseConnectionEdit => 'Collapse editor';
+
+  @override
+  String get openclawHubExpandConnectionEdit => 'Edit connection';
+
+  @override
+  String get openclawHubGatewayUrlEmpty => 'Gateway URL not set';
+
+  @override
+  String get openclawHubConnectionSummaryPermission =>
+      'This gateway is reachable, but the current auth doesn\'t grant real execution permission. Fix permissions first, then retry the queue.';
+
+  @override
+  String get openclawHubConnectionSummaryEndpoint =>
+      'The gateway is reachable, but the execution interface isn\'t ready. Check transport and `/v1/responses` first for a faster fix.';
+
+  @override
+  String get openclawHubConnectionSummaryConnected =>
+      'The connection is stable. Continue using the current method for direct delegation.';
+
+  @override
+  String get openclawHubConnectionSummaryConfigured =>
+      'Configuration is saved locally. Expand to fine-tune auth, protocol, and pairing flow.';
+
+  @override
+  String get openclawHubConnectionSummaryFirstTime =>
+      'First-time setup usually only needs the address, then pick token auth or device pairing.';
+
+  @override
+  String get openclawHubSectionDevicesTitle => 'Devices & Affinity';
+
+  @override
+  String get openclawHubSectionDevicesSubtitle =>
+      'Explicitly configure which tasks go to which device, so the system doesn\'t have to guess your preferences every time.';
+
+  @override
+  String get openclawHubCollapseDeviceDetails => 'Collapse device details';
+
+  @override
+  String get openclawHubExpandDeviceDetails => 'View devices & preferences';
+
+  @override
+  String get openclawHubDevicesSummaryEmpty =>
+      'Node list will appear automatically after a successful OpenClaw connection. Clearer device setup means more stable multi-node scheduling and fallback.';
+
+  @override
+  String get openclawHubSectionQueueTitle => 'Queue & Delegation';
+
+  @override
+  String get openclawHubSectionQueueSubtitle =>
+      'First see what needs your attention most, then decide whether to expand the full queue and template catalog.';
+
+  @override
+  String get openclawHubCollapseQueueDetails => 'Collapse queue details';
+
+  @override
+  String get openclawHubExpandQueueDetails => 'View full queue';
+
+  @override
+  String get openclawHubQueueSummaryConnected =>
+      'Your best move right now is to resubmit the queued tasks first, then start new delegations once the engine clears the backlog.';
+
+  @override
+  String get openclawHubQueueSummaryNotConnected =>
+      'You\'ve already queued tasks. Next step is to restore the connection so they can all resume at once.';
+
+  @override
+  String get openclawHubQueueSummaryConnectedEmpty =>
+      'No queued tasks right now. This is a great time to go back to chat or tasks and start a new delegation.';
+
+  @override
+  String get openclawHubQueueSummaryNotConnectedEmpty =>
+      'No queued tasks either. Complete the connection first, then decide whether to start your first delegation.';
+
+  @override
+  String get openclawHubQueueEmptyLabel => 'Queue is currently empty';
+
+  @override
+  String get openclawHubButtonRetryQueue => 'Retry Queue';
+
+  @override
+  String get openclawHubButtonClearQueue => 'Clear Queue';
+
+  @override
+  String get openclawHubAvailableTemplates =>
+      'Available Templates / Capabilities';
+
+  @override
+  String get openclawHubTemplatesEmptyHint =>
+      'Templates will load on demand when you open a specific task. For now, tidy up the connection, queue, and recent activity first.';
+
+  @override
+  String get openclawHubSectionAutomationTitle => 'Automation & Batch';
+
+  @override
+  String get openclawHubSectionAutomationSubtitle =>
+      'Put one-off batch execution and long-term scheduled/conditional execution on the same console, so your execution capability goes beyond single clicks.';
+
+  @override
+  String get openclawHubCollapseAutomationDetails =>
+      'Collapse automation details';
+
+  @override
+  String get openclawHubExpandAutomationDetails =>
+      'View automation capabilities';
+
+  @override
+  String get openclawHubAutomationSummaryEmpty =>
+      'No automations yet. Expand to create daily scheduled, event-triggered, or conditional polling automations, and launch batch delegations from here.';
+
+  @override
+  String get openclawHubSectionActivityTitle => 'Recent Activity';
+
+  @override
+  String get openclawHubSectionActivitySubtitle =>
+      'A high-density timeline of recent delegations, so you don\'t have to flip between task pages.';
+
+  @override
+  String get openclawHubCollapseActivityDetails => 'Collapse activity details';
+
+  @override
+  String get openclawHubExpandActivityDetails => 'View all activity';
+
+  @override
+  String get openclawHubActivityEmptyHint =>
+      'No recent executions yet. Start your first delegation from a home card, the task execution page, or the chat entry point.';
+
+  @override
+  String get openclawHubActivityHint => 'View this task\'s execution details.';
+
+  @override
+  String get openclawHubActivityOpenTask => 'Open Task Execution';
+
+  @override
+  String get openclawHubStatusRecorded => 'Recorded';
+
+  @override
+  String openclawHubRetryQueuedSuccess(int count) {
+    return '$count queued tasks resubmitted';
+  }
+
+  @override
+  String openclawHubLastExecutionStatus(String status) {
+    return 'Last execution status is \"$status\". Continue reviewing connection, queue, and activity from here.';
+  }
+
+  @override
+  String openclawHubPendingDelegationsDesc(int count) {
+    return 'You have $count delegations waiting for the connection to come back. Reconnecting the engine first will be most effective.';
+  }
+
+  @override
+  String openclawHubQueuedTasksCount(int count) {
+    return '$count queued tasks';
+  }
+
+  @override
+  String openclawHubNodeCount(int count) {
+    return '$count nodes';
+  }
+
+  @override
+  String openclawHubAutomationCount(int count) {
+    return '$count automations';
+  }
+
+  @override
+  String openclawHubLatestBatch(int completed, int total) {
+    return 'Latest batch $completed/$total';
+  }
+
+  @override
+  String openclawHubLastTrustLabel(String label) {
+    return 'Last trust assessment: $label';
+  }
+
+  @override
+  String openclawHubDevicesSummaryActiveWithCount(int count) {
+    return 'Currently discovered $count nodes. You can assign preferred devices for browser, terminal, document, and API tasks here. When offline, Sparkle will automatically find fallback nodes.';
+  }
+
+  @override
+  String openclawHubAutomationSummaryActiveWithCount(int count) {
+    return '$count automations are currently running. Batch delegation summaries and scheduled task statuses will continuously aggregate here.';
+  }
+
+  @override
+  String openclawHubTaskLabel(String taskId) {
+    return 'Task $taskId';
+  }
+
+  @override
+  String openclawHubTaskLabelTemplate(String templateId) {
+    return 'Template $templateId';
+  }
+
+  @override
+  String openclawHubTaskLabelSource(String source) {
+    return 'Source $source';
+  }
+
+  @override
+  String get seedLibraryDetailFriendlyError =>
+      'The system couldn\'t complete this operation right now. Please try again later.';
+
+  @override
+  String get seedLibraryDetailUserRatings => 'User Ratings';
+
+  @override
+  String get seedLibraryDetailQualityBreakdown => 'Quality Score Breakdown';
+
+  @override
+  String get seedLibraryDetailQualityBreakdownDesc =>
+      'The list shows the composite quality score. Here you can also see the system base score and average user rating to help you decide if this seed library is worth keeping active long-term.';
+
+  @override
+  String get seedLibraryDetailQualityComprehensive => 'Overall';
+
+  @override
+  String get seedLibraryDetailQualitySystem => 'System';
+
+  @override
+  String get seedLibraryDetailQualityUser => 'User';
+
+  @override
+  String get seedLibraryDetailApplyToSystem => 'Apply to System';
+
+  @override
+  String get seedLibraryDetailAppliedSuccess => 'Applied to system';
+
+  @override
+  String get seedLibraryDetailPausedSuccess => 'Paused using this seed library';
+
+  @override
+  String get seedLibraryDetailStatusUpdated => 'Seed library status updated';
+
+  @override
+  String get seedLibraryDetailPauseUse => 'Pause';
+
+  @override
+  String get seedLibraryDetailApplyLibrary => 'Apply Library';
+
+  @override
+  String get seedLibraryDetailSetPrimarySuccess => 'Set as primary';
+
+  @override
+  String get seedLibraryDetailSetPrimary => 'Set as Primary';
+
+  @override
+  String get seedLibraryDetailMarkedNotSuitableSuccess =>
+      'Recorded \"this library isn\'t a fit for me\"';
+
+  @override
+  String get seedLibraryDetailMarkNotSuitable => 'Not a Fit for Me';
+
+  @override
+  String get seedLibraryDetailEditRating => 'Edit Rating';
+
+  @override
+  String get seedLibraryDetailGiveRating => 'Rate It';
+
+  @override
+  String get seedLibraryDetailSubscriptionStatusEnabled => 'Enabled';
+
+  @override
+  String get seedLibraryDetailSubscriptionStatusDisabled =>
+      'Subscribed, not enabled';
+
+  @override
+  String get seedLibraryDetailActiveSubscriptions => 'Active Seed Libraries';
+
+  @override
+  String get seedLibraryDetailActiveSubscriptionsDesc =>
+      'You can enable multiple seed libraries at once. The system will prioritize high-priority libraries, then blend in content from other enabled libraries.';
+
+  @override
+  String get seedLibraryDetailFallbackName => 'Seed Library';
+
+  @override
+  String get seedLibraryDetailNoResultsUnderFilter =>
+      'No content under current filters';
+
+  @override
+  String get seedLibraryDetailUsageFewShot =>
+      'Enhances AI response style and example quality for similar tasks';
+
+  @override
+  String get seedLibraryDetailUsageTeachingContent =>
+      'Provides high-quality teaching content for study plans, task descriptions, and knowledge explanations';
+
+  @override
+  String get seedLibraryDetailUsageReplyTemplate =>
+      'Improves system reply template and expression stability';
+
+  @override
+  String get seedLibraryDetailUsageCustom =>
+      'Captures your own content preferences and curated examples';
+
+  @override
+  String get seedLibraryDetailFilterTitle => 'Filter Content';
+
+  @override
+  String get seedLibraryDetailFilterDesc =>
+      'Filter entries in this seed library by content type, difficulty, and enabled status.';
+
+  @override
+  String get seedLibraryDetailFilterContentType => 'Content Type';
+
+  @override
+  String get seedLibraryDetailFilterAll => 'All';
+
+  @override
+  String get seedLibraryDetailFilterDifficulty => 'Difficulty';
+
+  @override
+  String get seedLibraryDetailFilterShowInactive => 'Show Inactive Content';
+
+  @override
+  String get seedLibraryDetailFilterShowInactiveDesc =>
+      'When off, only show currently active entries';
+
+  @override
+  String get seedLibraryDetailFilterReset => 'Reset';
+
+  @override
+  String get seedLibraryDetailFilterDone => 'Done';
+
+  @override
+  String get seedLibraryDetailRatingTitle => 'Rate This Seed Library';
+
+  @override
+  String get seedLibraryDetailRatingDescription =>
+      'Your rating affects this seed library\'s display quality score.';
+
+  @override
+  String get seedLibraryDetailRatingCommentLabel => 'Comment (optional)';
+
+  @override
+  String get seedLibraryDetailRatingSubmitted => 'Rating submitted';
+
+  @override
+  String get seedLibraryDetailSubmitRating => 'Submit Rating';
+
+  @override
+  String get seedLibraryDetailContentBody => 'Body';
+
+  @override
+  String get seedLibraryDetailStructuredContent => 'Structured Content';
+
+  @override
+  String get seedLibraryDetailEditLibrary => 'Edit Seed Library';
+
+  @override
+  String get seedLibraryDetailEditName => 'Name';
+
+  @override
+  String get seedLibraryDetailEditNameEmpty => 'Name cannot be empty';
+
+  @override
+  String get seedLibraryDetailEditDescriptionOptional =>
+      'Description (optional)';
+
+  @override
+  String get seedLibraryDetailEditCancel => 'Cancel';
+
+  @override
+  String get seedLibraryDetailEditSave => 'Save';
+
+  @override
+  String get seedLibraryDetailLibraryUpdated => 'Seed library updated';
+
+  @override
+  String get seedLibraryDetailAddItem => 'Add Seed Content';
+
+  @override
+  String get seedLibraryDetailAddItemType => 'Content Type';
+
+  @override
+  String get seedLibraryDetailAddItemTitle => 'Title';
+
+  @override
+  String get seedLibraryDetailAddItemContent => 'Content';
+
+  @override
+  String get seedLibraryDetailAddItemSubject => 'Subject';
+
+  @override
+  String get seedLibraryDetailAddItemDifficulty => 'Difficulty';
+
+  @override
+  String get seedLibraryDetailAddItemUnset => 'Not set';
+
+  @override
+  String get seedLibraryDetailAddItemTags => 'Tags (comma separated)';
+
+  @override
+  String get seedLibraryDetailAddItemSave => 'Save Content';
+
+  @override
+  String get seedLibraryDetailAddItemSuccess => 'Seed content added';
+
+  @override
+  String get seedLibraryDetailImportCannotRead => 'Cannot read file content';
+
+  @override
+  String get seedLibraryDetailImportInvalidJson =>
+      'Invalid JSON format, expected an array or [items:[...]]';
+
+  @override
+  String get seedLibraryDetailImportNoItems =>
+      'No importable items found in file';
+
+  @override
+  String seedLibraryDetailApplyFailed(String error) {
+    return 'Apply failed: $error';
+  }
+
+  @override
+  String seedLibraryDetailSetPrimaryFailed(String error) {
+    return 'Set primary failed: $error';
+  }
+
+  @override
+  String seedLibraryDetailMarkNotSuitableFailed(String error) {
+    return 'Record failed: $error';
+  }
+
+  @override
+  String seedLibraryDetailCurrentStatus(String status, int priority) {
+    return 'Current status: $status · Priority $priority';
+  }
+
+  @override
+  String seedLibraryDetailUsageAppliedEnabled(String hint) {
+    return 'Now in effect. $hint The system will use it alongside other active seed libraries by priority.';
+  }
+
+  @override
+  String seedLibraryDetailUsageSubscribedNotEnabled(String hint) {
+    return 'Subscribed but not enabled. Once enabled, $hint.';
+  }
+
+  @override
+  String seedLibraryDetailUsageNotApplied(String hint) {
+    return 'Not yet applied. Once applied, $hint.';
+  }
+
+  @override
+  String seedLibraryDetailCurrentRating(String score) {
+    return 'Current rating: $score / 10';
+  }
+
+  @override
+  String seedLibraryDetailRatingFailed(String error) {
+    return 'Rating failed: $error';
+  }
+
+  @override
+  String seedLibraryDetailAddItemFailed(String error) {
+    return 'Add failed: $error';
+  }
+
+  @override
+  String seedLibraryDetailImportResult(int imported, int failed) {
+    return 'Import complete: $imported succeeded, $failed failed';
+  }
+
+  @override
+  String seedLibraryDetailImportFailed(String error) {
+    return 'Import failed: $error';
+  }
 }
