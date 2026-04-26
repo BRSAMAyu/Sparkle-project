@@ -13032,4 +13032,848 @@ class AppLocalizationsZh extends AppLocalizations {
   String simulationImmersiveTopicAndFocus(String topic, String speaker) {
     return '主题：$topic · 当前发言 $speaker';
   }
+
+  @override
+  String get simulationWaitingInput => '等待输入';
+
+  @override
+  String get simulationScenarioDescStudyGroup =>
+      '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。';
+
+  @override
+  String get simulationScenarioDescKnowledgeDebate =>
+      '让不同立场直接碰撞，适合验证观点、证据和边界条件。';
+
+  @override
+  String get simulationScenarioDescHistoricalRoleplay =>
+      '带入人物与时代约束，让讨论像真实历史现场一样推进。';
+
+  @override
+  String get simulationScenarioDescSocraticDialogue =>
+      '通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。';
+
+  @override
+  String get simulationScenarioDescCaseAnalysis => '围绕具体案例做拆解、诊断和决策，适合实务型主题。';
+
+  @override
+  String get simulationScenarioDescWhatIfPath => '比较不同学习或行动路线，适合规划、取舍与资源分配。';
+
+  @override
+  String get simulationScenarioDescConceptMapBuild =>
+      '把知识点织成结构图，适合建立全局框架与连接关系。';
+
+  @override
+  String get simulationScenarioDescErrorDiagnosis => '专注识别错因、纠偏路径与验证方式，适合查漏补缺。';
+
+  @override
+  String get simulationFacilitationDescBalanced =>
+      '适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。';
+
+  @override
+  String get simulationFacilitationDescDebate => '主动放大争议和证据冲突，更适合需要碰撞观点的主题。';
+
+  @override
+  String get simulationFacilitationDescGuided => '更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。';
+
+  @override
+  String get simulationFacilitationDescPractical => '优先讨论行动、验证和现实约束，适合技能与方案推演。';
+
+  @override
+  String get simulationRoleHonorsStudent => '优等生';
+
+  @override
+  String get simulationRoleMidStudent => '中等生';
+
+  @override
+  String get simulationRoleQuestioner => '提问者';
+
+  @override
+  String get simulationRoleSummarizer => '总结者';
+
+  @override
+  String get simulationRolePracticeCoach => '练习教练';
+
+  @override
+  String get simulationRoleProExpert => '正方专家';
+
+  @override
+  String get simulationRoleConExpert => '反方专家';
+
+  @override
+  String get simulationRoleModerator => '主持人';
+
+  @override
+  String get simulationRoleEvidenceReviewer => '证据审查员';
+
+  @override
+  String get simulationRolePursuer => '追问者';
+
+  @override
+  String get simulationRoleHistoryMentor => '历史导师';
+
+  @override
+  String get simulationRoleKeyFigure => '关键人物';
+
+  @override
+  String get simulationRoleEraObserver => '时代观察者';
+
+  @override
+  String get simulationRoleStrategyAdvisor => '策略顾问';
+
+  @override
+  String get simulationRoleRecorder => '记录官';
+
+  @override
+  String get simulationRoleSocrates => '苏格拉底';
+
+  @override
+  String get simulationRoleSkeptic => '怀疑者';
+
+  @override
+  String get simulationRoleDeconstructor => '拆解者';
+
+  @override
+  String get simulationRoleApplier => '应用者';
+
+  @override
+  String get simulationRoleCaseMentor => '案例导师';
+
+  @override
+  String get simulationRoleDiagnostician => '诊断官';
+
+  @override
+  String get simulationRolePractitioner => '实践派';
+
+  @override
+  String get simulationRoleCounterExample => '反例提出者';
+
+  @override
+  String get simulationRoleDecisionRecorder => '决策记录官';
+
+  @override
+  String get simulationRoleCurrentRoute => '当前路线';
+
+  @override
+  String get simulationRoleRadicalRoute => '激进路线';
+
+  @override
+  String get simulationRoleRiskObserver => '风险观察者';
+
+  @override
+  String get simulationRoleResourceScheduler => '资源调度者';
+
+  @override
+  String get simulationRoleVerifier => '验证者';
+
+  @override
+  String get simulationRoleStructurer => '结构师';
+
+  @override
+  String get simulationRoleConnector => '连接者';
+
+  @override
+  String get simulationRoleCounterExampleChecker => '反例检查员';
+
+  @override
+  String get simulationRoleBridgeBuilder => '桥梁构建者';
+
+  @override
+  String get simulationRoleErrorAnalyst => '错因分析师';
+
+  @override
+  String get simulationRoleCorrectionCoach => '纠偏教练';
+
+  @override
+  String get simulationRoleQuestionDeconstructor => '题面解构者';
+
+  @override
+  String get simulationRoleMigrationCoach => '迁移教练';
+
+  @override
+  String get simulationRoleStudyBuddy => '学习伙伴';
+
+  @override
+  String get simulationRoleCurrentDiscussionTitle => '当前讨论流';
+
+  @override
+  String simulationBulletOpeningFormat(String message) {
+    return '开场重点：$message';
+  }
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault0 => '学习伙伴';
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault1 => '提问者';
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault2 => '总结者';
+
+  @override
+  String get simulationScenarioLabelStudyGroup => '学习小组';
+
+  @override
+  String get simulationScenarioLabelKnowledgeDebate => '知识辩论';
+
+  @override
+  String get simulationScenarioLabelHistoricalRoleplay => '历史角色扮演';
+
+  @override
+  String get simulationScenarioLabelSocraticDialogue => '苏格拉底对话';
+
+  @override
+  String get simulationScenarioLabelCaseAnalysis => '案例分析';
+
+  @override
+  String get simulationScenarioLabelWhatIfPath => '如果路径';
+
+  @override
+  String get simulationScenarioLabelConceptMapBuild => '概念图构建';
+
+  @override
+  String get simulationScenarioLabelErrorDiagnosis => '错误诊断';
+
+  @override
+  String get openclawPairImportedSaved => '已导入并保存 OpenClaw 配对配置';
+
+  @override
+  String get openclawPairImportedVerifyFailed => '配对配置已导入，但当前连接验证失败';
+
+  @override
+  String get openclawClipboardNoPairingPayload =>
+      '剪贴板里没有识别到 OpenClaw 配对串或二维码 JSON';
+
+  @override
+  String get openclawImportedFromClipboard => '已从剪贴板导入 OpenClaw 配对配置';
+
+  @override
+  String openclawConnectedToDevice(Object deviceName) {
+    return '已连接到 $deviceName';
+  }
+
+  @override
+  String openclawImportedDevicePairing(Object deviceName) {
+    return '已导入 $deviceName 的配对配置';
+  }
+
+  @override
+  String get openclawScannedPairingImported => '已扫码导入 OpenClaw 配对配置';
+
+  @override
+  String openclawScannedConnectedToDevice(Object deviceName) {
+    return '已扫码连接到 $deviceName';
+  }
+
+  @override
+  String get openclawUnrecognizedContent =>
+      '无法识别这段内容，请检查是否包含 gateway_url 与 token';
+
+  @override
+  String get openclawCameraPermissionNeeded =>
+      '需要相机权限才能扫码配对。你也可以改用\"从剪贴板导入\"或\"粘贴配对串\"。';
+
+  @override
+  String get openclawQrNotPairingContent => '扫到的二维码不是可识别的 OpenClaw 配对内容';
+
+  @override
+  String get openclawRemoteTemplateFilled => '已填入远程连接模板，接下来补入授权令牌或导入配对串即可';
+
+  @override
+  String get openclawPairingCodeExpired => '配对码已过期';
+
+  @override
+  String openclawPairingExpiresSeconds(Object seconds) {
+    return '请在 $seconds 秒内完成配对';
+  }
+
+  @override
+  String openclawPairingExpiresMinutes(Object minutes, Object seconds) {
+    return '请在 $minutes 分 $seconds 秒内完成配对';
+  }
+
+  @override
+  String get openclawInvalidUrlFormat =>
+      '请输入以 http://、https://、ws:// 或 wss:// 开头的地址';
+
+  @override
+  String get openclawValidAddressRequired => '请输入有效的 OpenClaw 地址';
+
+  @override
+  String get openclawDisconnected => '已断开 OpenClaw 连接';
+
+  @override
+  String openclawPairingCodeGenerated(Object code) {
+    return '已生成配对码 $code';
+  }
+
+  @override
+  String get openclawDeviceTokenRequired => '请输入设备令牌后再完成配对';
+
+  @override
+  String get openclawDevicePairingComplete => '设备配对已完成';
+
+  @override
+  String get openclawNoExecutionPermission => '当前网关可访问，但没有执行权限，暂时无法重试队列';
+
+  @override
+  String get openclawExecutionEndpointUnavailable =>
+      '当前网关可访问，但执行入口不可用，暂时无法重试队列';
+
+  @override
+  String get openclawExecutionEngineNotConnected => '执行引擎尚未连接，暂时无法重试队列';
+
+  @override
+  String openclawQueuedTasksResubmitted(Object count) {
+    return '已重新提交 $count 个排队任务';
+  }
+
+  @override
+  String get openclawNoRetryableTasks => '当前没有可重试的排队任务';
+
+  @override
+  String get openclawPairingCodeCopied => '配对码已复制';
+
+  @override
+  String get openclawImportPairingString => '导入配对串';
+
+  @override
+  String get openclawPairingOrQrLabel => '配对串或二维码内容';
+
+  @override
+  String get openclawPairingPasteHint =>
+      '粘贴 OpenClaw 桌面端分享的 JSON、openclaw://pair?... 链接，或包含 gateway_url / pair_token 的文本';
+
+  @override
+  String get openclawImportAndSave => '导入并保存';
+
+  @override
+  String get openclawApplyWizard => '应用向导';
+
+  @override
+  String get openclawDisconnect => '断开连接';
+
+  @override
+  String get openclawDisconnectConfirmBody => '这会清除本地保存的 OpenClaw 连接配置。';
+
+  @override
+  String get openclawDisconnectAction => '断开';
+
+  @override
+  String get openclawGatewayOnlineNoExecPermission => '网关在线，但当前令牌没有执行权限';
+
+  @override
+  String get openclawGatewayOnlineExecNotReady => '网关在线，但执行接口没有准备好';
+
+  @override
+  String get openclawNeedExecutionChainCheck => '需要补一层执行链路排查';
+
+  @override
+  String get openclawTroubleshootNoPermissionBody =>
+      '当前状态说明健康检查能通过，但真正发起执行会被拒绝。优先更换具备 `operator.write` scope 的令牌，或改用设备配对 + WebSocket。';
+
+  @override
+  String get openclawTroubleshootMissingEndpointBody =>
+      '当前地址可访问，但缺少 `/v1/responses` 执行入口。请确认 OpenClaw 网关版本、代理转发和 transport 选择是否一致。';
+
+  @override
+  String get openclawTroubleshootGenericBody =>
+      '建议先重新测试连接，再检查网关地址、认证方式和 transport 是否与 OpenClaw 当前实例一致。';
+
+  @override
+  String get openclawStatusReadyForTasks => '已准备好接手任务';
+
+  @override
+  String get openclawStatusConfirmingConnection => '正在确认连接状态';
+
+  @override
+  String get openclawStatusOnlineNoPermission => '网关在线，但没有执行权限';
+
+  @override
+  String get openclawStatusNotConnected => '暂时还没连上';
+
+  @override
+  String get openclawStatusNotConfigured => '还没有接入 OpenClaw';
+
+  @override
+  String get openclawStatusConnectedSubtitle =>
+      '连接保持正常，你可以直接从任务页或聊天页把工作交给 OpenClaw。';
+
+  @override
+  String get openclawStatusConnectingSubtitle => '我们正在确认引擎状态，保存后的结果会同步显示在这里。';
+
+  @override
+  String get openclawStatusNoPermissionSubtitle =>
+      '当前令牌能访问网关，但真正执行会被拒绝。这里需要处理权限，而不是单纯重填地址。';
+
+  @override
+  String get openclawStatusErrorSubtitleFallback => '先检查地址、认证方式和传输协议，再重新测试连接。';
+
+  @override
+  String get openclawStatusDisconnectedSubtitle =>
+      '完成一次连接后，之后的委派、排队和最近活动都会在各入口自动联动。';
+
+  @override
+  String get openclawUnsavedChanges => '未保存更改';
+
+  @override
+  String get openclawDevicePairing => '设备配对';
+
+  @override
+  String get openclawTokenAuth => '令牌认证';
+
+  @override
+  String openclawQueuedRequestCount(Object count) {
+    return '$count 个待处理';
+  }
+
+  @override
+  String get openclawQuickConnect => '快速接入';
+
+  @override
+  String get openclawCustomConfig => '自定义配置';
+
+  @override
+  String get openclawImportFromClipboard => '从剪贴板导入';
+
+  @override
+  String get openclawPastePairingString => '粘贴配对串';
+
+  @override
+  String get openclawScanToPair => '扫码配对';
+
+  @override
+  String get openclawTailscaleRemoteNode => 'Tailscale 远程节点';
+
+  @override
+  String get openclawTailscaleIpOrDomain => 'Tailscale IP 或域名';
+
+  @override
+  String get openclawTailscaleHint => '例如 100.88.1.24 或 devbox.tail123.ts.net';
+
+  @override
+  String get openclawTailscaleHelperText =>
+      '如果你的 OpenClaw 暴露在 Tailscale 上，这里只需要填节点 IP 或 MagicDNS 域名，Sparkle 会自动补上标准端口与 WebSocket 连接方式。';
+
+  @override
+  String get openclawTailscaleLabel => 'Tailscale';
+
+  @override
+  String get openclawCloudflareTunnel => 'Cloudflare Tunnel';
+
+  @override
+  String get openclawTunnelDomain => 'Tunnel 域名';
+
+  @override
+  String get openclawCloudflareHint => '例如 openclaw.example.com';
+
+  @override
+  String get openclawCloudflareHelperText =>
+      '如果你通过 Cloudflare Tunnel 暴露 OpenClaw，这里填入域名即可。Sparkle 会按 HTTPS/WSS 方式生成连接配置。';
+
+  @override
+  String get openclawCloudflareLabel => 'Cloudflare';
+
+  @override
+  String openclawPresetSelected(Object label) {
+    return '已选中\"$label\"。连接细节会自动填入；如果随后提示缺执行权限，优先更换具备 `operator.write` scope 的令牌，或改用设备配对。';
+  }
+
+  @override
+  String get openclawGatewayAddress => '网关地址';
+
+  @override
+  String get openclawGatewayHint => '例如 http://localhost:8080';
+
+  @override
+  String get openclawAuthMode => '认证方式';
+
+  @override
+  String get openclawAuthToken => '认证令牌';
+
+  @override
+  String get openclawAuthTokenHint => '粘贴 OpenClaw 网关令牌';
+
+  @override
+  String get openclawDeviceToken => '设备令牌';
+
+  @override
+  String get openclawDeviceTokenHint => '配对完成后粘贴设备令牌';
+
+  @override
+  String get openclawPairingCode => '配对码';
+
+  @override
+  String get openclawPairingCodeInstructions =>
+      '请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。';
+
+  @override
+  String get openclawGeneratePairingCode => '生成配对码';
+
+  @override
+  String get openclawCompletePairing => '完成配对';
+
+  @override
+  String get openclawCancelPairing => '取消配对';
+
+  @override
+  String get openclawTransportProtocol => '传输协议';
+
+  @override
+  String get openclawDeviceAuthDesc => '适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。';
+
+  @override
+  String get openclawTokenAuthDesc => '适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。';
+
+  @override
+  String get openclawWebSocketTransportDesc =>
+      'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。';
+
+  @override
+  String get openclawHttpTransportDesc => 'HTTP 更适合手动验证和快速测试连接。';
+
+  @override
+  String get openclawDefaultConnectionReady => '已为你准备好默认连接细节';
+
+  @override
+  String get openclawTestConnection => '测试连接';
+
+  @override
+  String get openclawSaveConfig => '保存配置';
+
+  @override
+  String get openclawRetryQueue => '重试队列';
+
+  @override
+  String get accountabilityPartnerDefault => '责任伙伴';
+
+  @override
+  String get accountabilityEndPartnership => '结束伙伴关系';
+
+  @override
+  String get accountabilityDashboardLoadFailed => '伙伴工作台加载失败';
+
+  @override
+  String get accountabilityNudgeSentDefault => '已通过站内提醒发送，对方在线时会实时看到';
+
+  @override
+  String get accountabilityNudgeCooldown =>
+      '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。';
+
+  @override
+  String get accountabilityNudgeFailed => '提醒发送失败，请稍后再试';
+
+  @override
+  String get accountabilityEndPartnershipConfirm => '确定要结束这段责任伙伴关系吗？';
+
+  @override
+  String get accountabilityPartnershipEnded => '伙伴关系已结束';
+
+  @override
+  String get accountabilityMyGoal => '我的目标';
+
+  @override
+  String get accountabilityGoalNotSet => '还没有填写目标';
+
+  @override
+  String get accountabilityGrowingTogether => '伙伴共成长';
+
+  @override
+  String get accountabilityRecentShares => '最近分享';
+
+  @override
+  String get accountabilitySharedItem => '已分享内容';
+
+  @override
+  String get accountabilityMonthlyHeatmap => '月度打卡热力图';
+
+  @override
+  String get accountabilityPartnerAchievements => '伙伴成就';
+
+  @override
+  String get accountabilityPartnerNoAchievements => '伙伴还没有解锁专属成就，先互相打卡一轮试试看。';
+
+  @override
+  String get accountabilityRecentCheckins => '最近打卡';
+
+  @override
+  String get accountabilityNoCheckinRecords => '还没有打卡记录';
+
+  @override
+  String get accountabilityNoCheckinHint => '今天先发一条简短进展，伙伴关系就会开始有温度。';
+
+  @override
+  String get accountabilityCheckedInToday => '今天已打卡';
+
+  @override
+  String get accountabilityCheckInToday => '今日打卡';
+
+  @override
+  String get accountabilityTotalCheckins => '总打卡';
+
+  @override
+  String get accountabilityCheckedIn => '已打卡';
+
+  @override
+  String get accountabilityCheckin => '打卡';
+
+  @override
+  String get accountabilityNudge => '提醒';
+
+  @override
+  String get accountabilityShare => '分享';
+
+  @override
+  String get accountabilityChat => '聊天';
+
+  @override
+  String get accountabilityInviteSentWait => '邀请已发出，等待对方确认后才能进入伙伴工作台。';
+
+  @override
+  String get accountabilityInvitePendingConfirm => '这条伙伴邀请还待你确认，先去邀请页处理后再回来。';
+
+  @override
+  String get accountabilityDashboardNotAvailable => '当前伙伴关系暂时不可进入完整工作台。';
+
+  @override
+  String get accountabilityInvitePending => '伙伴邀请待处理';
+
+  @override
+  String get accountabilityDashboardUnavailable => '伙伴工作台暂不可用';
+
+  @override
+  String get accountabilityViewStatus => '查看状态';
+
+  @override
+  String get accountabilityHandleInvite => '去处理邀请';
+
+  @override
+  String get accountabilityContinueChat => '继续聊天';
+
+  @override
+  String get accountabilityNoPendingPolicies => '当前没有待执行的问责策略。';
+
+  @override
+  String get accountabilityPendingPolicies => '待执行策略';
+
+  @override
+  String get accountabilityNoRecentReflections => '最近还没有新的跨事件反思。';
+
+  @override
+  String get accountabilityRecentReflections => '近期反思';
+
+  @override
+  String get accountabilityForesightHint => '前瞻提示';
+
+  @override
+  String get accountabilityNoForesightHint => '暂无前瞻提示。';
+
+  @override
+  String get accountabilityInterventionIneffective => '干预未奏效';
+
+  @override
+  String get accountabilityPlanStall => '计划停滞';
+
+  @override
+  String get accountabilityOverload => '负荷过载';
+
+  @override
+  String get accountabilityTooDifficult => '任务过难';
+
+  @override
+  String get accountabilityUnclear => '任务不清晰';
+
+  @override
+  String get accountabilityAbandoned => '中途放下';
+
+  @override
+  String get accountabilityReflectionSummary => '反思摘要';
+
+  @override
+  String get accountabilityDimPace => '节奏';
+
+  @override
+  String get accountabilityDimCompletionRate => '完成率';
+
+  @override
+  String get accountabilityDimEngagement => '投入度';
+
+  @override
+  String get accountabilityDimMood => '情绪';
+
+  @override
+  String get accountabilityDimPlanAdherence => '计划跟随';
+
+  @override
+  String get accountabilityMoodLow => '低落';
+
+  @override
+  String get accountabilityMoodOkay => '一般';
+
+  @override
+  String get accountabilityMoodSteady => '平稳';
+
+  @override
+  String get accountabilityMoodGood => '不错';
+
+  @override
+  String get accountabilityMoodGreat => '很棒';
+
+  @override
+  String get accountabilityPartner => '伙伴';
+
+  @override
+  String get accountabilityLike => '点赞';
+
+  @override
+  String get accountabilityEncourage => '鼓励';
+
+  @override
+  String get accountabilityEncourageSent => '已为伙伴点亮鼓励';
+
+  @override
+  String get accountabilitySendEncourage => '发送鼓励';
+
+  @override
+  String get accountabilityEncourageHint => '写一句你想对伙伴说的话';
+
+  @override
+  String get accountabilitySend => '发送';
+
+  @override
+  String get accountabilityEncourageDelivered => '鼓励已送达';
+
+  @override
+  String get accountabilityTodayProgressHint => '今日进展...';
+
+  @override
+  String get accountabilityTodayMood => '今日心情:';
+
+  @override
+  String get accountabilityPublishCheckin => '发布打卡';
+
+  @override
+  String get accountabilityProgressRequired => '请写一句今天的进展';
+
+  @override
+  String get accountabilityCheckinSuccess => '打卡成功，伙伴已经能看到了';
+
+  @override
+  String get openclawImportedPairing => '已导入 OpenClaw 配对配置';
+
+  @override
+  String accountabilityPartnerGoal(Object partnerName) {
+    return '$partnerName 的目标';
+  }
+
+  @override
+  String get accountabilityPartnerGoalNotSet => '对方还没填写目标';
+
+  @override
+  String get accountabilityMe => '我';
+
+  @override
+  String get accountabilityThem => 'TA';
+
+  @override
+  String accountabilityStreakDays(Object days) {
+    return '$days 天';
+  }
+
+  @override
+  String accountabilityCheckinMinutes(Object minutes) {
+    return '$minutes分钟';
+  }
+
+  @override
+  String accountabilityDaysTogether(Object days) {
+    return '一起坚持了 $days 天';
+  }
+
+  @override
+  String accountabilityMyStreakDays(Object days) {
+    return '我 $days 天';
+  }
+
+  @override
+  String accountabilityPartnerStreakDays(Object days) {
+    return 'TA $days 天';
+  }
+
+  @override
+  String accountabilityMyAchievementsUnlocked(Object count) {
+    return '我解锁 $count 个成就';
+  }
+
+  @override
+  String accountabilityPartnerAchievementsUnlocked(Object count) {
+    return 'TA 解锁 $count 个成就';
+  }
+
+  @override
+  String accountabilityStreakRank(Object myRank, Object partnerRank) {
+    return '连续打卡榜：你第 $myRank，伙伴第 $partnerRank';
+  }
+
+  @override
+  String accountabilityDeviationsDetected(Object count) {
+    return '检测到 $count 个偏离';
+  }
+
+  @override
+  String accountabilityUpdatedAt(Object time) {
+    return '更新时间 $time';
+  }
+
+  @override
+  String get accountabilityZeroItems => '0 条';
+
+  @override
+  String accountabilityItemCount(Object count) {
+    return '$count 条';
+  }
+
+  @override
+  String accountabilityPoliciesReady(Object count) {
+    return '已有 $count 条策略就绪，等待事件触发。';
+  }
+
+  @override
+  String accountabilityReflectionsGenerated(Object count) {
+    return '最近已生成 $count 条反思摘要。';
+  }
+
+  @override
+  String accountabilityPoliciesPending(Object count, Object time) {
+    return '已有 $count 条策略待执行，下一次触发在 $time。';
+  }
+
+  @override
+  String accountabilityReflectionsLatest(Object category, Object time) {
+    return '最近一次聚焦 $category，更新时间 $time。';
+  }
+
+  @override
+  String accountabilityInvestedTime(Object minutes) {
+    return '投入时长: $minutes 分钟';
+  }
+
+  @override
+  String accountabilityMinutes(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get accountabilityEnd => '结束';
+
+  @override
+  String get accountabilityOperationFailed => '操作失败';
+
+  @override
+  String get accountabilityLikeFailed => '点赞失败';
+
+  @override
+  String get accountabilitySendFailed => '发送失败';
+
+  @override
+  String get accountabilityCheckinFailed => '打卡失败';
 }

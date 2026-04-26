@@ -39,7 +39,7 @@ class _SeedLibraryDetailScreenState
   String _friendlyActionError(Object error) {
     final raw = error.toString().replaceFirst('Exception: ', '').trim();
     if (raw.isEmpty || raw.toLowerCase() == 'null') {
-      return '系统暂时没能完成这次应用，请稍后再试';
+      return context.l10n.seedLibraryDetailFriendlyError;
     }
     return raw;
   }
@@ -271,7 +271,7 @@ class _SeedLibraryDetailScreenState
                               context,
                               Icons.reviews_outlined,
                               '${library.userRatingCount}',
-                              '用户评分',
+                              context.l10n.seedLibraryDetailUserRatings,
                             ),
                         ],
                       ),
@@ -286,12 +286,12 @@ class _SeedLibraryDetailScreenState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '质量评分拆解',
+                                context.l10n.seedLibraryDetailQualityBreakdown,
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: DS.spacing8),
                               Text(
-                                '列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。',
+                                context.l10n.seedLibraryDetailQualityBreakdownDesc,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -308,21 +308,21 @@ class _SeedLibraryDetailScreenState
                                   if (library.qualityScore != null)
                                     _buildQualityBadge(
                                       context,
-                                      label: '综合',
+                                      label: context.l10n.seedLibraryDetailQualityComprehensive,
                                       value: library.qualityScore!,
                                       icon: Icons.auto_awesome_outlined,
                                     ),
                                   if (library.systemQualityScore != null)
                                     _buildQualityBadge(
                                       context,
-                                      label: '系统',
+                                      label: context.l10n.seedLibraryDetailQualitySystem,
                                       value: library.systemQualityScore!,
                                       icon: Icons.settings_suggest_outlined,
                                     ),
                                   if (library.userRatingAvg != null)
                                     _buildQualityBadge(
                                       context,
-                                      label: '用户',
+                                      label: context.l10n.seedLibraryDetailQualityUser,
                                       value: library.userRatingAvg!,
                                       icon: Icons.people_outline,
                                     ),
@@ -341,7 +341,7 @@ class _SeedLibraryDetailScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '应用到系统',
+                              context.l10n.seedLibraryDetailApplyToSystem,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: DS.spacing8),
@@ -381,23 +381,23 @@ class _SeedLibraryDetailScreenState
                                       AppFeedback.success(
                                         context,
                                         isNowEnabled && !wasEnabled
-                                            ? '已应用到系统'
+                                            ? context.l10n.seedLibraryDetailAppliedSuccess
                                             : !isNowEnabled && wasEnabled
-                                                ? '已暂停使用该种子库'
-                                                : '种子库状态已更新',
+                                                ? context.l10n.seedLibraryDetailPausedSuccess
+                                                : context.l10n.seedLibraryDetailStatusUpdated,
                                       );
                                     } catch (e) {
                                       if (!context.mounted) return;
                                       AppFeedback.error(
                                         context,
-                                        '应用失败：${_friendlyActionError(e)}',
+                                        context.l10n.seedLibraryDetailApplyFailed(_friendlyActionError(e)),
                                       );
                                     }
                                   },
                                   label:
-                                      (state.subscription?.isEnabled ?? false)
-                                          ? '暂停使用'
-                                          : '应用种子库',
+                                  (state.subscription?.isEnabled ?? false)
+                                      ? context.l10n.seedLibraryDetailPauseUse
+                                      : context.l10n.seedLibraryDetailApplyLibrary,
                                   icon: Icon(
                                     (state.subscription?.isEnabled ?? false)
                                         ? Icons.pause_circle_outline
@@ -413,13 +413,13 @@ class _SeedLibraryDetailScreenState
                                               .notifier)
                                           .setAsPrimaryLibrary();
                                       if (!context.mounted) return;
-                                      AppFeedback.success(context, '已设为优先使用');
+                                      AppFeedback.success(context, context.l10n.seedLibraryDetailSetPrimarySuccess);
                                     } catch (e) {
                                       if (!context.mounted) return;
-                                      AppFeedback.error(context, '设置失败：$e');
+                                      AppFeedback.error(context, context.l10n.seedLibraryDetailSetPrimaryFailed(e.toString()));
                                     }
                                   },
-                                  label: '设为主用',
+                                  label: context.l10n.seedLibraryDetailSetPrimary,
                                   icon: const Icon(Icons.vertical_align_top),
                                 ),
                                 SparkleButton.ghost(
@@ -433,25 +433,25 @@ class _SeedLibraryDetailScreenState
                                       if (!context.mounted) return;
                                       AppFeedback.success(
                                         context,
-                                        '已记录“此种子不适合我”',
+                                        context.l10n.seedLibraryDetailMarkedNotSuitableSuccess,
                                       );
                                     } catch (e) {
                                       if (!context.mounted) return;
                                       AppFeedback.error(
                                         context,
-                                        '记录失败：${_friendlyActionError(e)}',
+                                        context.l10n.seedLibraryDetailMarkNotSuitableFailed(_friendlyActionError(e)),
                                       );
                                     }
                                   },
-                                  label: '此种子不适合我',
+                                  label: context.l10n.seedLibraryDetailMarkNotSuitable,
                                   icon: const Icon(Icons.thumb_down_alt_outlined),
                                 ),
                                 SparkleButton.ghost(
                                   onPressed: () =>
                                       _showRatingSheet(context, state),
                                   label: library.currentUserRating != null
-                                      ? '修改评分'
-                                      : '给个评分',
+                                      ? context.l10n.seedLibraryDetailEditRating
+                                      : context.l10n.seedLibraryDetailGiveRating,
                                   icon: const Icon(Icons.star_outline),
                                 ),
                               ],
@@ -459,7 +459,12 @@ class _SeedLibraryDetailScreenState
                             if (state.subscription != null) ...[
                               const SizedBox(height: DS.spacing10),
                               Text(
-                                '当前状态：${state.subscription!.isEnabled ? '已启用' : '已订阅未启用'} · 优先级 ${state.subscription!.priority}',
+                                context.l10n.seedLibraryDetailCurrentStatus(
+                                    state.subscription!.isEnabled
+                                        ? context.l10n.seedLibraryDetailSubscriptionStatusEnabled
+                                        : context.l10n.seedLibraryDetailSubscriptionStatusDisabled,
+                                    state.subscription!.priority,
+                                  ),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -481,12 +486,12 @@ class _SeedLibraryDetailScreenState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '协同中的种子库',
+                                context.l10n.seedLibraryDetailActiveSubscriptions,
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: DS.spacing8),
                               Text(
-                                '你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。',
+                                context.l10n.seedLibraryDetailActiveSubscriptionsDesc,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -505,7 +510,7 @@ class _SeedLibraryDetailScreenState
                                       sub.libraryId == widget.libraryId;
                                   return Chip(
                                     label: Text(
-                                      '${sub.library?.name ?? '种子库'} · P${sub.priority}',
+                                      '${sub.library?.name ?? context.l10n.seedLibraryDetailFallbackName} · P${sub.priority}',
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     avatar: Icon(
@@ -604,7 +609,7 @@ class _SeedLibraryDetailScreenState
                           Text(
                             state.items.isEmpty
                                 ? context.l10n.seedLibraryNoContent
-                                : '当前筛选条件下没有内容',
+                                : context.l10n.seedLibraryDetailNoResultsUnderFilter,
                             style:
                                 Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: DS.textSecondary,
@@ -732,18 +737,18 @@ class _SeedLibraryDetailScreenState
     SeedLibraryDetailState state,
   ) {
     final categoryHint = switch (library.category) {
-      LibraryCategory.fewShot => '用于增强 AI 在相似任务中的回答风格和示例质量',
-      LibraryCategory.teachingContent => '用于给学习计划、任务说明和知识讲解提供高质量教学内容',
-      LibraryCategory.replyTemplate => '用于改善系统回复模板和表达稳定性',
-      LibraryCategory.custom => '用于你自己的内容偏好和专属示例沉淀',
+      LibraryCategory.fewShot => context.l10n.seedLibraryDetailUsageFewShot,
+      LibraryCategory.teachingContent => context.l10n.seedLibraryDetailUsageTeachingContent,
+      LibraryCategory.replyTemplate => context.l10n.seedLibraryDetailUsageReplyTemplate,
+      LibraryCategory.custom => context.l10n.seedLibraryDetailUsageCustom,
     };
     if (state.subscription?.isEnabled ?? false) {
-      return '当前已生效。$categoryHint；系统会按优先级把它与其他启用中的种子库一起使用。';
+      return context.l10n.seedLibraryDetailUsageAppliedEnabled(categoryHint);
     }
     if (state.isSubscribed) {
-      return '当前已订阅但未启用。启用后，$categoryHint。';
+      return context.l10n.seedLibraryDetailUsageSubscribedNotEnabled(categoryHint);
     }
-    return '当前尚未应用。应用后，$categoryHint。';
+    return context.l10n.seedLibraryDetailUsageNotApplied(categoryHint);
   }
 
   Future<void> _showItemFilterSheet(BuildContext context) async {
@@ -757,25 +762,25 @@ class _SeedLibraryDetailScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '筛选内容',
+                context.l10n.seedLibraryDetailFilterTitle,
                 style: Theme.of(sheetContext).textTheme.titleLarge,
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                '按内容类型、难度和启用状态筛选当前种子库里的条目。',
+                context.l10n.seedLibraryDetailFilterDesc,
                 style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                     ),
               ),
               const SizedBox(height: DS.spacing16),
-              Text('内容类型', style: Theme.of(sheetContext).textTheme.titleSmall),
+              Text(context.l10n.seedLibraryDetailFilterContentType, style: Theme.of(sheetContext).textTheme.titleSmall),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
                   FilterChip(
-                    label: const Text('全部'),
+                    label: Text(context.l10n.seedLibraryDetailFilterAll),
                     selected: _selectedItemType == null,
                     onSelected: (_) {
                       setSheetState(() {
@@ -798,14 +803,14 @@ class _SeedLibraryDetailScreenState
                 ],
               ),
               const SizedBox(height: DS.spacing16),
-              Text('难度', style: Theme.of(sheetContext).textTheme.titleSmall),
+              Text(context.l10n.seedLibraryDetailFilterDifficulty, style: Theme.of(sheetContext).textTheme.titleSmall),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
                   FilterChip(
-                    label: const Text('全部'),
+                    label: Text(context.l10n.seedLibraryDetailFilterAll),
                     selected: _selectedDifficulty == null,
                     onSelected: (_) {
                       setSheetState(() {
@@ -833,8 +838,8 @@ class _SeedLibraryDetailScreenState
               SwitchListTile.adaptive(
                 value: _showInactiveItems,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('显示已停用内容'),
-                subtitle: const Text('关闭时仅展示当前仍在使用的条目'),
+                title: Text(context.l10n.seedLibraryDetailFilterShowInactive),
+                subtitle: Text(context.l10n.seedLibraryDetailFilterShowInactiveDesc),
                 onChanged: (value) {
                   setSheetState(() {
                     _showInactiveItems = value;
@@ -854,7 +859,7 @@ class _SeedLibraryDetailScreenState
                         });
                         Navigator.of(sheetContext).pop();
                       },
-                      label: '重置',
+                      label: context.l10n.seedLibraryDetailFilterReset,
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
@@ -864,7 +869,7 @@ class _SeedLibraryDetailScreenState
                         setState(() {});
                         Navigator.of(sheetContext).pop();
                       },
-                      label: '完成',
+                      label: context.l10n.seedLibraryDetailFilterDone,
                     ),
                   ),
                 ],
@@ -898,7 +903,7 @@ class _SeedLibraryDetailScreenState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('给这个种子库评分', style: Theme.of(context).textTheme.titleLarge),
+              Text(context.l10n.seedLibraryDetailRatingTitle, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: DS.spacing8),
               Text(
                 '你的评分会影响这个种子库的展示质量分。',

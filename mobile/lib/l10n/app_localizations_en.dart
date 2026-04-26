@@ -13595,4 +13595,892 @@ class AppLocalizationsEn extends AppLocalizations {
   String simulationImmersiveTopicAndFocus(String topic, String speaker) {
     return 'Topic: $topic · Speaking: $speaker';
   }
+
+  @override
+  String get simulationWaitingInput => 'Awaiting Input';
+
+  @override
+  String get simulationScenarioDescStudyGroup =>
+      'Multi-role collaborative learning around a topic, ideal for explaining concepts, examples, and misconceptions together.';
+
+  @override
+  String get simulationScenarioDescKnowledgeDebate =>
+      'Let opposing viewpoints clash directly, ideal for verifying opinions, evidence, and boundary conditions.';
+
+  @override
+  String get simulationScenarioDescHistoricalRoleplay =>
+      'Bring in characters and era constraints, advancing the discussion like a real historical scene.';
+
+  @override
+  String get simulationScenarioDescSocraticDialogue =>
+      'Deconstruct premises through persistent questioning, ideal for clarifying vague concepts and reasoning gaps.';
+
+  @override
+  String get simulationScenarioDescCaseAnalysis =>
+      'Deconstruct, diagnose, and decide around specific cases, ideal for practical topics.';
+
+  @override
+  String get simulationScenarioDescWhatIfPath =>
+      'Compare different learning or action routes, ideal for planning, trade-offs, and resource allocation.';
+
+  @override
+  String get simulationScenarioDescConceptMapBuild =>
+      'Weave knowledge points into a structural diagram, ideal for establishing the global framework and connections.';
+
+  @override
+  String get simulationScenarioDescErrorDiagnosis =>
+      'Focus on identifying error causes, correction paths, and verification methods, ideal for filling gaps.';
+
+  @override
+  String get simulationFacilitationDescBalanced =>
+      'Fits most topics, emphasizing balanced multi-role progression without any party dominating the field.';
+
+  @override
+  String get simulationFacilitationDescDebate =>
+      'Actively amplifies controversy and evidence conflicts, better for topics that need viewpoint collision.';
+
+  @override
+  String get simulationFacilitationDescGuided =>
+      'More like a mentor-led discussion, emphasizing clarification of premises, step-by-step deconstruction, and keeping the user on track.';
+
+  @override
+  String get simulationFacilitationDescPractical =>
+      'Prioritizes action, verification, and real-world constraints, ideal for skill and solution planning.';
+
+  @override
+  String get simulationRoleHonorsStudent => 'Honors Student';
+
+  @override
+  String get simulationRoleMidStudent => 'Mid-level Student';
+
+  @override
+  String get simulationRoleQuestioner => 'Questioner';
+
+  @override
+  String get simulationRoleSummarizer => 'Summarizer';
+
+  @override
+  String get simulationRolePracticeCoach => 'Practice Coach';
+
+  @override
+  String get simulationRoleProExpert => 'Pro Expert';
+
+  @override
+  String get simulationRoleConExpert => 'Con Expert';
+
+  @override
+  String get simulationRoleModerator => 'Moderator';
+
+  @override
+  String get simulationRoleEvidenceReviewer => 'Evidence Reviewer';
+
+  @override
+  String get simulationRolePursuer => 'Pursuer';
+
+  @override
+  String get simulationRoleHistoryMentor => 'History Mentor';
+
+  @override
+  String get simulationRoleKeyFigure => 'Key Figure';
+
+  @override
+  String get simulationRoleEraObserver => 'Era Observer';
+
+  @override
+  String get simulationRoleStrategyAdvisor => 'Strategy Advisor';
+
+  @override
+  String get simulationRoleRecorder => 'Recorder';
+
+  @override
+  String get simulationRoleSocrates => 'Socrates';
+
+  @override
+  String get simulationRoleSkeptic => 'Skeptic';
+
+  @override
+  String get simulationRoleDeconstructor => 'Deconstructor';
+
+  @override
+  String get simulationRoleApplier => 'Applier';
+
+  @override
+  String get simulationRoleCaseMentor => 'Case Mentor';
+
+  @override
+  String get simulationRoleDiagnostician => 'Diagnostician';
+
+  @override
+  String get simulationRolePractitioner => 'Practitioner';
+
+  @override
+  String get simulationRoleCounterExample => 'Counter-Example Provider';
+
+  @override
+  String get simulationRoleDecisionRecorder => 'Decision Recorder';
+
+  @override
+  String get simulationRoleCurrentRoute => 'Current Route';
+
+  @override
+  String get simulationRoleRadicalRoute => 'Radical Route';
+
+  @override
+  String get simulationRoleRiskObserver => 'Risk Observer';
+
+  @override
+  String get simulationRoleResourceScheduler => 'Resource Scheduler';
+
+  @override
+  String get simulationRoleVerifier => 'Verifier';
+
+  @override
+  String get simulationRoleStructurer => 'Structurer';
+
+  @override
+  String get simulationRoleConnector => 'Connector';
+
+  @override
+  String get simulationRoleCounterExampleChecker => 'Counter-Example Checker';
+
+  @override
+  String get simulationRoleBridgeBuilder => 'Bridge Builder';
+
+  @override
+  String get simulationRoleErrorAnalyst => 'Error Analyst';
+
+  @override
+  String get simulationRoleCorrectionCoach => 'Correction Coach';
+
+  @override
+  String get simulationRoleQuestionDeconstructor => 'Question Deconstructor';
+
+  @override
+  String get simulationRoleMigrationCoach => 'Migration Coach';
+
+  @override
+  String get simulationRoleStudyBuddy => 'Study Buddy';
+
+  @override
+  String get simulationRoleCurrentDiscussionTitle => 'Current Discussion';
+
+  @override
+  String simulationBulletOpeningFormat(String message) {
+    return 'Opening focus: $message';
+  }
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault0 => 'Study Buddy';
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault1 => 'Questioner';
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault2 => 'Summarizer';
+
+  @override
+  String get simulationScenarioLabelStudyGroup => 'Study Group';
+
+  @override
+  String get simulationScenarioLabelKnowledgeDebate => 'Knowledge Debate';
+
+  @override
+  String get simulationScenarioLabelHistoricalRoleplay => 'Historical Roleplay';
+
+  @override
+  String get simulationScenarioLabelSocraticDialogue => 'Socratic Dialogue';
+
+  @override
+  String get simulationScenarioLabelCaseAnalysis => 'Case Analysis';
+
+  @override
+  String get simulationScenarioLabelWhatIfPath => 'What-If Path';
+
+  @override
+  String get simulationScenarioLabelConceptMapBuild => 'Concept Map Building';
+
+  @override
+  String get simulationScenarioLabelErrorDiagnosis => 'Error Diagnosis';
+
+  @override
+  String get openclawPairImportedSaved =>
+      'OpenClaw pairing config imported and saved';
+
+  @override
+  String get openclawPairImportedVerifyFailed =>
+      'Pairing config imported, but connection verification failed';
+
+  @override
+  String get openclawClipboardNoPairingPayload =>
+      'No OpenClaw pairing string or QR JSON found in clipboard';
+
+  @override
+  String get openclawImportedFromClipboard =>
+      'Imported OpenClaw pairing config from clipboard';
+
+  @override
+  String openclawConnectedToDevice(Object deviceName) {
+    return 'Connected to $deviceName';
+  }
+
+  @override
+  String openclawImportedDevicePairing(Object deviceName) {
+    return 'Imported pairing config for $deviceName';
+  }
+
+  @override
+  String get openclawScannedPairingImported =>
+      'Scanned and imported OpenClaw pairing config';
+
+  @override
+  String openclawScannedConnectedToDevice(Object deviceName) {
+    return 'Scanned and connected to $deviceName';
+  }
+
+  @override
+  String get openclawUnrecognizedContent =>
+      'Cannot recognize this content. Check for gateway_url and token';
+
+  @override
+  String get openclawCameraPermissionNeeded =>
+      'Camera permission needed for QR pairing. You can also use \"Import from clipboard\" or \"Paste pairing string\".';
+
+  @override
+  String get openclawQrNotPairingContent =>
+      'The scanned QR code is not a recognizable OpenClaw pairing payload';
+
+  @override
+  String get openclawRemoteTemplateFilled =>
+      'Remote connection template filled. Add an auth token or import a pairing string next.';
+
+  @override
+  String get openclawPairingCodeExpired => 'Pairing code expired';
+
+  @override
+  String openclawPairingExpiresSeconds(Object seconds) {
+    return 'Complete pairing within $seconds seconds';
+  }
+
+  @override
+  String openclawPairingExpiresMinutes(Object minutes, Object seconds) {
+    return 'Complete pairing within ${minutes}m ${seconds}s';
+  }
+
+  @override
+  String get openclawInvalidUrlFormat =>
+      'Please enter an address starting with http://, https://, ws://, or wss://';
+
+  @override
+  String get openclawValidAddressRequired =>
+      'Please enter a valid OpenClaw address';
+
+  @override
+  String get openclawDisconnected => 'OpenClaw connection disconnected';
+
+  @override
+  String openclawPairingCodeGenerated(Object code) {
+    return 'Pairing code $code generated';
+  }
+
+  @override
+  String get openclawDeviceTokenRequired =>
+      'Please enter the device token before completing pairing';
+
+  @override
+  String get openclawDevicePairingComplete => 'Device pairing completed';
+
+  @override
+  String get openclawNoExecutionPermission =>
+      'Gateway is accessible but lacks execution permission. Cannot retry queue.';
+
+  @override
+  String get openclawExecutionEndpointUnavailable =>
+      'Gateway is accessible but the execution endpoint is unavailable. Cannot retry queue.';
+
+  @override
+  String get openclawExecutionEngineNotConnected =>
+      'Execution engine is not connected. Cannot retry queue.';
+
+  @override
+  String openclawQueuedTasksResubmitted(Object count) {
+    return '$count queued task(s) resubmitted';
+  }
+
+  @override
+  String get openclawNoRetryableTasks => 'No queued tasks available to retry';
+
+  @override
+  String get openclawPairingCodeCopied => 'Pairing code copied';
+
+  @override
+  String get openclawImportPairingString => 'Import Pairing String';
+
+  @override
+  String get openclawPairingOrQrLabel => 'Pairing string or QR content';
+
+  @override
+  String get openclawPairingPasteHint =>
+      'Paste the JSON shared from OpenClaw desktop, openclaw://pair?... link, or text containing gateway_url / pair_token';
+
+  @override
+  String get openclawImportAndSave => 'Import & Save';
+
+  @override
+  String get openclawApplyWizard => 'Apply Wizard';
+
+  @override
+  String get openclawDisconnect => 'Disconnect';
+
+  @override
+  String get openclawDisconnectConfirmBody =>
+      'This will clear the locally saved OpenClaw connection config.';
+
+  @override
+  String get openclawDisconnectAction => 'Disconnect';
+
+  @override
+  String get openclawGatewayOnlineNoExecPermission =>
+      'Gateway online, but current token lacks execution permission';
+
+  @override
+  String get openclawGatewayOnlineExecNotReady =>
+      'Gateway online, but execution endpoint is not ready';
+
+  @override
+  String get openclawNeedExecutionChainCheck =>
+      'An additional execution chain check is needed';
+
+  @override
+  String get openclawTroubleshootNoPermissionBody =>
+      'Health check passes but execution requests are rejected. Replace the token with one that has the `operator.write` scope, or switch to device pairing + WebSocket.';
+
+  @override
+  String get openclawTroubleshootMissingEndpointBody =>
+      'Address is reachable but `/v1/responses` execution endpoint is missing. Verify OpenClaw gateway version, proxy forwarding, and transport selection are consistent.';
+
+  @override
+  String get openclawTroubleshootGenericBody =>
+      'Re-test the connection, then verify the gateway address, auth method, and transport match the current OpenClaw instance.';
+
+  @override
+  String get openclawStatusReadyForTasks => 'Ready to take on tasks';
+
+  @override
+  String get openclawStatusConfirmingConnection =>
+      'Confirming connection status';
+
+  @override
+  String get openclawStatusOnlineNoPermission =>
+      'Gateway online, but no execution permission';
+
+  @override
+  String get openclawStatusNotConnected => 'Not connected yet';
+
+  @override
+  String get openclawStatusNotConfigured => 'OpenClaw not configured yet';
+
+  @override
+  String get openclawStatusConnectedSubtitle =>
+      'Connection is stable. You can delegate work to OpenClaw from the task page or chat page.';
+
+  @override
+  String get openclawStatusConnectingSubtitle =>
+      'Confirming engine status. Saved results will show here.';
+
+  @override
+  String get openclawStatusNoPermissionSubtitle =>
+      'Token can access the gateway, but execution will be rejected. This requires permission handling, not just re-entering the address.';
+
+  @override
+  String get openclawStatusErrorSubtitleFallback =>
+      'Check the address, auth method, and transport protocol, then re-test the connection.';
+
+  @override
+  String get openclawStatusDisconnectedSubtitle =>
+      'After the first connection, delegation, queuing, and recent activity will auto-link across all entry points.';
+
+  @override
+  String get openclawUnsavedChanges => 'Unsaved changes';
+
+  @override
+  String get openclawDevicePairing => 'Device pair';
+
+  @override
+  String get openclawTokenAuth => 'Token auth';
+
+  @override
+  String openclawQueuedRequestCount(Object count) {
+    return '$count pending';
+  }
+
+  @override
+  String get openclawQuickConnect => 'Quick Connect';
+
+  @override
+  String get openclawCustomConfig => 'Custom Config';
+
+  @override
+  String get openclawImportFromClipboard => 'Import from Clipboard';
+
+  @override
+  String get openclawPastePairingString => 'Paste Pairing String';
+
+  @override
+  String get openclawScanToPair => 'Scan to Pair';
+
+  @override
+  String get openclawTailscaleRemoteNode => 'Tailscale Remote Node';
+
+  @override
+  String get openclawTailscaleIpOrDomain => 'Tailscale IP or domain name';
+
+  @override
+  String get openclawTailscaleHint =>
+      'e.g. 100.88.1.24 or devbox.tail123.ts.net';
+
+  @override
+  String get openclawTailscaleHelperText =>
+      'If your OpenClaw is exposed via Tailscale, just enter the node IP or MagicDNS domain. Sparkle will auto-fill the standard port and WebSocket connection.';
+
+  @override
+  String get openclawTailscaleLabel => 'Tailscale';
+
+  @override
+  String get openclawCloudflareTunnel => 'Cloudflare Tunnel';
+
+  @override
+  String get openclawTunnelDomain => 'Tunnel domain';
+
+  @override
+  String get openclawCloudflareHint => 'e.g. openclaw.example.com';
+
+  @override
+  String get openclawCloudflareHelperText =>
+      'If your OpenClaw is exposed via Cloudflare Tunnel, just enter the domain. Sparkle will generate the connection config using HTTPS/WSS.';
+
+  @override
+  String get openclawCloudflareLabel => 'Cloudflare';
+
+  @override
+  String openclawPresetSelected(Object label) {
+    return '\"$label\" selected. Connection details will be auto-filled. If you later see a missing execution permission error, replace the token with one that has `operator.write` scope, or switch to device pairing.';
+  }
+
+  @override
+  String get openclawGatewayAddress => 'Gateway address';
+
+  @override
+  String get openclawGatewayHint => 'e.g. http://localhost:8080';
+
+  @override
+  String get openclawAuthMode => 'Auth mode';
+
+  @override
+  String get openclawAuthToken => 'Auth token';
+
+  @override
+  String get openclawAuthTokenHint => 'Paste OpenClaw gateway token';
+
+  @override
+  String get openclawDeviceToken => 'Device token';
+
+  @override
+  String get openclawDeviceTokenHint => 'Paste device token after pairing';
+
+  @override
+  String get openclawPairingCode => 'Pairing code';
+
+  @override
+  String get openclawPairingCodeInstructions =>
+      'Enter this 6-digit pairing code on OpenClaw desktop, then paste the returned device token above.';
+
+  @override
+  String get openclawGeneratePairingCode => 'Generate pairing code';
+
+  @override
+  String get openclawCompletePairing => 'Complete pairing';
+
+  @override
+  String get openclawCancelPairing => 'Cancel pairing';
+
+  @override
+  String get openclawTransportProtocol => 'Transport protocol';
+
+  @override
+  String get openclawDeviceAuthDesc =>
+      'Best for pairing with a local OpenClaw instance. Once complete, subsequent connections are smoother.';
+
+  @override
+  String get openclawTokenAuthDesc =>
+      'Use when you already have a gateway token and need to quickly verify or switch environments.';
+
+  @override
+  String get openclawWebSocketTransportDesc =>
+      'WebSocket is better for persistent connections, frequent delegation, and state push-back.';
+
+  @override
+  String get openclawHttpTransportDesc =>
+      'HTTP is better for manual verification and quick connection testing.';
+
+  @override
+  String get openclawDefaultConnectionReady =>
+      'Default connection details ready';
+
+  @override
+  String get openclawTestConnection => 'Test connection';
+
+  @override
+  String get openclawSaveConfig => 'Save config';
+
+  @override
+  String get openclawRetryQueue => 'Retry queue';
+
+  @override
+  String get accountabilityPartnerDefault => 'Accountability Partner';
+
+  @override
+  String get accountabilityEndPartnership => 'End partnership';
+
+  @override
+  String get accountabilityDashboardLoadFailed =>
+      'Partner dashboard failed to load';
+
+  @override
+  String get accountabilityNudgeSentDefault =>
+      'Sent as an in-app reminder. They will see it in real time when online.';
+
+  @override
+  String get accountabilityNudgeCooldown =>
+      'Already nudged recently. The reminder was delivered as an in-app notification. They will see it in real time when online.';
+
+  @override
+  String get accountabilityNudgeFailed =>
+      'Failed to send nudge. Please try again later.';
+
+  @override
+  String get accountabilityEndPartnershipConfirm =>
+      'Are you sure you want to end this accountability partnership?';
+
+  @override
+  String get accountabilityPartnershipEnded => 'Partnership ended';
+
+  @override
+  String get accountabilityMyGoal => 'My goal';
+
+  @override
+  String get accountabilityGoalNotSet => 'No goal set yet';
+
+  @override
+  String get accountabilityGrowingTogether => 'Growing together';
+
+  @override
+  String get accountabilityRecentShares => 'Recent shares';
+
+  @override
+  String get accountabilitySharedItem => 'Shared item';
+
+  @override
+  String get accountabilityMonthlyHeatmap => 'Monthly check-in heatmap';
+
+  @override
+  String get accountabilityPartnerAchievements => 'Partner achievements';
+
+  @override
+  String get accountabilityPartnerNoAchievements =>
+      'Your partner hasn\'t unlocked exclusive achievements yet. Try a round of mutual check-ins first.';
+
+  @override
+  String get accountabilityRecentCheckins => 'Recent check-ins';
+
+  @override
+  String get accountabilityNoCheckinRecords => 'No check-in records yet';
+
+  @override
+  String get accountabilityNoCheckinHint =>
+      'Share a quick update today and your partnership will start to feel alive.';
+
+  @override
+  String get accountabilityCheckedInToday => 'Checked in today';
+
+  @override
+  String get accountabilityCheckInToday => 'Check in today';
+
+  @override
+  String get accountabilityTotalCheckins => 'Total check-ins';
+
+  @override
+  String get accountabilityCheckedIn => 'Checked in';
+
+  @override
+  String get accountabilityCheckin => 'Check in';
+
+  @override
+  String get accountabilityNudge => 'Nudge';
+
+  @override
+  String get accountabilityShare => 'Share';
+
+  @override
+  String get accountabilityChat => 'Chat';
+
+  @override
+  String get accountabilityInviteSentWait =>
+      'Invitation sent. Partner dashboard will be available after they confirm.';
+
+  @override
+  String get accountabilityInvitePendingConfirm =>
+      'This partnership invite is waiting for your confirmation. Process it on the invitations page first.';
+
+  @override
+  String get accountabilityDashboardNotAvailable =>
+      'The full partner dashboard is not available right now.';
+
+  @override
+  String get accountabilityInvitePending => 'Partnership invite pending';
+
+  @override
+  String get accountabilityDashboardUnavailable =>
+      'Partner dashboard unavailable';
+
+  @override
+  String get accountabilityViewStatus => 'View status';
+
+  @override
+  String get accountabilityHandleInvite => 'Handle invitation';
+
+  @override
+  String get accountabilityContinueChat => 'Continue chat';
+
+  @override
+  String get accountabilityNoPendingPolicies =>
+      'No pending accountability policies.';
+
+  @override
+  String get accountabilityPendingPolicies => 'Pending policies';
+
+  @override
+  String get accountabilityNoRecentReflections =>
+      'No recent cross-event reflections.';
+
+  @override
+  String get accountabilityRecentReflections => 'Recent reflections';
+
+  @override
+  String get accountabilityForesightHint => 'Foresight hint';
+
+  @override
+  String get accountabilityNoForesightHint => 'No foresight hints yet.';
+
+  @override
+  String get accountabilityInterventionIneffective =>
+      'Intervention ineffective';
+
+  @override
+  String get accountabilityPlanStall => 'Plan stall';
+
+  @override
+  String get accountabilityOverload => 'Overload';
+
+  @override
+  String get accountabilityTooDifficult => 'Too difficult';
+
+  @override
+  String get accountabilityUnclear => 'Unclear';
+
+  @override
+  String get accountabilityAbandoned => 'Dropped midway';
+
+  @override
+  String get accountabilityReflectionSummary => 'Reflection summary';
+
+  @override
+  String get accountabilityDimPace => 'Pace';
+
+  @override
+  String get accountabilityDimCompletionRate => 'Completion rate';
+
+  @override
+  String get accountabilityDimEngagement => 'Engagement';
+
+  @override
+  String get accountabilityDimMood => 'Mood';
+
+  @override
+  String get accountabilityDimPlanAdherence => 'Plan adherence';
+
+  @override
+  String get accountabilityMoodLow => 'Low';
+
+  @override
+  String get accountabilityMoodOkay => 'Okay';
+
+  @override
+  String get accountabilityMoodSteady => 'Steady';
+
+  @override
+  String get accountabilityMoodGood => 'Good';
+
+  @override
+  String get accountabilityMoodGreat => 'Great';
+
+  @override
+  String get accountabilityPartner => 'Partner';
+
+  @override
+  String get accountabilityLike => 'Like';
+
+  @override
+  String get accountabilityEncourage => 'Encourage';
+
+  @override
+  String get accountabilityEncourageSent => 'Encouragement sent to partner';
+
+  @override
+  String get accountabilitySendEncourage => 'Send encouragement';
+
+  @override
+  String get accountabilityEncourageHint => 'Write a message to your partner';
+
+  @override
+  String get accountabilitySend => 'Send';
+
+  @override
+  String get accountabilityEncourageDelivered => 'Encouragement delivered';
+
+  @override
+  String get accountabilityTodayProgressHint => 'Today\'s progress...';
+
+  @override
+  String get accountabilityTodayMood => 'Today\'s mood:';
+
+  @override
+  String get accountabilityPublishCheckin => 'Publish check-in';
+
+  @override
+  String get accountabilityProgressRequired =>
+      'Please write about today\'s progress';
+
+  @override
+  String get accountabilityCheckinSuccess =>
+      'Check-in successful. Your partner can see it now.';
+
+  @override
+  String get openclawImportedPairing => 'Imported OpenClaw pairing config';
+
+  @override
+  String accountabilityPartnerGoal(Object partnerName) {
+    return '$partnerName\'s goal';
+  }
+
+  @override
+  String get accountabilityPartnerGoalNotSet => 'They haven\'t set a goal yet';
+
+  @override
+  String get accountabilityMe => 'Me';
+
+  @override
+  String get accountabilityThem => 'Them';
+
+  @override
+  String accountabilityStreakDays(Object days) {
+    return '$days days';
+  }
+
+  @override
+  String accountabilityCheckinMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String accountabilityDaysTogether(Object days) {
+    return 'Stayed together for $days days';
+  }
+
+  @override
+  String accountabilityMyStreakDays(Object days) {
+    return 'Me $days days';
+  }
+
+  @override
+  String accountabilityPartnerStreakDays(Object days) {
+    return 'Them $days days';
+  }
+
+  @override
+  String accountabilityMyAchievementsUnlocked(Object count) {
+    return 'I unlocked $count achievements';
+  }
+
+  @override
+  String accountabilityPartnerAchievementsUnlocked(Object count) {
+    return 'They unlocked $count achievements';
+  }
+
+  @override
+  String accountabilityStreakRank(Object myRank, Object partnerRank) {
+    return 'Streak ranking: you $myRank, partner $partnerRank';
+  }
+
+  @override
+  String accountabilityDeviationsDetected(Object count) {
+    return '$count deviation(s) detected';
+  }
+
+  @override
+  String accountabilityUpdatedAt(Object time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String get accountabilityZeroItems => '0 items';
+
+  @override
+  String accountabilityItemCount(Object count) {
+    return '$count items';
+  }
+
+  @override
+  String accountabilityPoliciesReady(Object count) {
+    return '$count policy/policies ready, waiting for event trigger.';
+  }
+
+  @override
+  String accountabilityReflectionsGenerated(Object count) {
+    return '$count reflection summary/recently generated.';
+  }
+
+  @override
+  String accountabilityPoliciesPending(Object count, Object time) {
+    return '$count pending policy/policies, next trigger at $time.';
+  }
+
+  @override
+  String accountabilityReflectionsLatest(Object category, Object time) {
+    return 'Last focused on $category, updated $time.';
+  }
+
+  @override
+  String accountabilityInvestedTime(Object minutes) {
+    return 'Time invested: $minutes min';
+  }
+
+  @override
+  String accountabilityMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get accountabilityEnd => 'End';
+
+  @override
+  String get accountabilityOperationFailed => 'Operation failed';
+
+  @override
+  String get accountabilityLikeFailed => 'Like failed';
+
+  @override
+  String get accountabilitySendFailed => 'Send failed';
+
+  @override
+  String get accountabilityCheckinFailed => 'Check-in failed';
 }

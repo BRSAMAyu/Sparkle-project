@@ -555,7 +555,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 simulationSessionId: session?.id,
               ),
             ),
-            child: const Text('回到剧场'),
+            child: Text(context.l10n.simulationBackToTheater),
           ),
         ],
       ),
@@ -597,7 +597,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   sourceChatSessionId:
                       widget.initialSourceChatSessionId!.trim(),
                   kind: ChatContinuityKind.journey,
-                  subtitle: '这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。',
+                  subtitle: context.l10n.simulationContinuitySubtitle,
                 ),
                 const SizedBox(height: 14),
               ],
@@ -776,7 +776,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     required _SimulationViewMode viewMode,
   }) {
     final topic = _topicController.text.trim().isEmpty
-        ? session?.topic ?? '当前模拟'
+        ? session?.topic ?? context.l10n.simulationCurrentSimulation
         : _topicController.text.trim();
     final scenarioLabel =
         _scenarioLabels[session?.scenarioKey ?? _selectedScenarioKey] ??
@@ -856,7 +856,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                       participantCount: participants.length,
                       facilitationLabel:
                           _facilitationLabels[runtimeFacilitationStyle] ??
-                              '平衡推进',
+                              context.l10n.simulationBalancedPush,
                       isPaused: _isPlaybackPaused,
                       isReview: viewMode == _SimulationViewMode.review,
                       hasInsight: hasInsight,
@@ -1197,7 +1197,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       );
       final data = response.data;
       if (data is! Map<String, dynamic>) {
-        throw Exception('学习报告返回格式异常');
+        throw Exception(context.l10n.simulationReportReturnException);
       }
       final report = LearningReport.fromJson(data);
       if (!mounted) {
@@ -1215,7 +1215,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.error('生成学习报告失败：$e'),
+        SparkleSnackBar.error(context.l10n.simulationReportGenerationFailed(e.toString())),
       );
     } finally {
       if (mounted) {
@@ -1241,8 +1241,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       triggerSummary: report.triggerSummary ??
           const LearningReportTriggerSummary(
             mode: 'simulation_bridge',
-            title: '这份报告已接收本次模拟中暴露的问题',
-            summary: '你在模拟里暴露出的分歧和知识盲区，已经被带入这份正式报告。',
+            title: context.l10n.simulationReportTitle,
+            summary: context.l10n.simulationReportSummary,
           ),
       dataStatus: report.dataStatus,
     );
@@ -1291,7 +1291,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     await share_plus.SharePlus.instance.share(
       share_plus.ShareParams(
         text:
-            '学习场景模拟\n主题：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey)}\n洞察：${localizeSimulationText(session.insightSummary)}',
+            context.l10n.simulationShareRawText(session.topic, _scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey), localizeSimulationText(session.insightSummary)),
       ),
     );
   }
@@ -1302,7 +1302,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       payload: UniversalSharePayload(
         contentType: ShareableContentType.learningReport,
         resourceId: 'simulation-${session.id}',
-        title: '学习场景模拟 · ${session.topic}',
+        title: context.l10n.simulationShareTitle(session.topic),
         subtitle: _scenarioLabels[session.scenarioKey] ??
             localizeSimulationScenario(session.scenarioKey),
         description: localizeSimulationText(session.insightSummary),
@@ -1313,7 +1313,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               session.participants.map((item) => item.name).take(3).join('、'),
         },
         shareMessage:
-            '我刚在 Sparkle 跑了一场学习仿真：${session.topic}\n场景：${_scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey)}\n洞察：${localizeSimulationText(session.insightSummary)}',
+            context.l10n.simulationShareCreated(session.topic, _scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey), localizeSimulationText(session.insightSummary)),
       ),
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
@@ -1351,12 +1351,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         session?.interactionPrompt ??
         state.liveInteractionPrompt;
     final prompt = [
-      if (topic.isNotEmpty) '继续刚才的学习模拟。',
-      if (topic.isNotEmpty) '主题：$topic',
-      if (scenarioLabel.trim().isNotEmpty) '场景：$scenarioLabel',
+      if (topic.isNotEmpty) context.l10n.simulationContinueInChatContext,
+      if (topic.isNotEmpty) context.l10n.simulationContinueTopicLabel(topic),
+      if (scenarioLabel.trim().isNotEmpty) context.l10n.simulationContinueScenarioLabel(scenarioLabel),
       if ((currentPrompt ?? '').trim().isNotEmpty)
-        '当前问题：${localizeSimulationText(currentPrompt!)}',
-      '我的回应：$normalizedReply',
+        context.l10n.simulationContinueCurrentQuestion(localizeSimulationText(currentPrompt!)),
+      context.l10n.simulationContinueMyResponse(normalizedReply),
     ].join('\n');
     final query = <String, String>{
       'prompt': prompt.isEmpty ? normalizedReply : prompt,
@@ -1404,32 +1404,32 @@ class _SimulationComposer extends StatelessWidget {
         localizeSimulationScenario(selectedScenarioKey);
     return MirofishStageHeader(
       icon: Icons.groups_rounded,
-      eyebrow: '学习场景模拟',
-      title: '开始这场学习模拟',
-      subtitle: '先选讨论场景，再输入一个你想推开的主题。开始后会自动收束成沉浸式讨论界面。',
+      eyebrow: context.l10n.simulationScenarioEyebrow,
+      title: context.l10n.simulationScenarioTitle,
+      subtitle: context.l10n.simulationScenarioSubtitle,
       metrics: <MirofishStageMetric>[
         MirofishStageMetric(
-          label: '当前场景',
+          label: context.l10n.simulationCurrentScene,
           value: activeLabel,
           accent: DS.info,
           icon: Icons.theater_comedy_rounded,
         ),
         MirofishStageMetric(
-          label: '当前目标',
+          label: context.l10n.simulationCurrentGoal,
           value: topicController.text.trim().isEmpty
-              ? '等待输入'
+              ? context.l10n.simulationWaitingInput
               : topicController.text.trim(),
           accent: DS.warning,
           icon: Icons.flag_rounded,
         ),
         MirofishStageMetric(
-          label: '互动方式',
-          value: '角色讨论 + 你来接话',
+          label: context.l10n.simulationInteractionStyle,
+          value: context.l10n.simulationRoleDiscussionValue,
           accent: DS.success,
           icon: Icons.touch_app_rounded,
         ),
       ],
-      primaryLabel: state.isLoading ? '模拟进行中...' : '开始这场模拟',
+      primaryLabel: state.isLoading ? context.l10n.simulationRunning : context.l10n.simulationStartSimulation,
       onPrimaryTap: state.isLoading ? null : onRun,
       accent: DS.info,
       footer: Column(
@@ -1443,10 +1443,10 @@ class _SimulationComposer extends StatelessWidget {
                 onRun();
               }
             },
-            decoration: const InputDecoration(
-              labelText: '输入一个知识点或主题',
-              hintText: '例如：特征值与特征向量',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.simulationTopicHint,
+              hintText: context.l10n.simulationTopicHintExample,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -1478,14 +1478,14 @@ class _SimulationComposer extends StatelessWidget {
                 onPressed: state.isLoading ? null : onRun,
                 icon: const Icon(Icons.play_circle_outline_rounded),
                 label: Text(
-                  state.isLoading ? '模拟进行中...' : '开始这场模拟',
+                  state.isLoading ? context.l10n.simulationRunning : context.l10n.simulationStartSimulation,
                 ),
               ),
               if (topicController.text.trim().isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: topicController.clear,
                   icon: const Icon(Icons.close_rounded),
-                  label: const Text('清空主题'),
+                  label: Text(context.l10n.simulationClearTopic),
                 ),
             ],
           ),
@@ -1563,10 +1563,10 @@ class _RecommendedSeedStrip extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 requiresUserInput
-                    ? '现在先从你最想讨论的具体问题开始。等积累更多真实学习记录后，系统会再给出基于数据的推荐主题。'
+                    ? context.l10n.simulationRecommendedUserInputHint
                     : seeds.isEmpty
-                        ? '还没有推荐种子，你可以先手动输入主题开始。'
-                        : '先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。',
+                        ? context.l10n.simulationRecommendedEmptyHint
+                        : context.l10n.simulationRecommendedPickHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -1577,8 +1577,8 @@ class _RecommendedSeedStrip extends StatelessWidget {
                 TextField(
                   controller: topicController,
                   decoration: InputDecoration(
-                    hintText: '输入你想要讨论的学习主题或问题',
-                    helperText: '完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题',
+                    hintText: context.l10n.simulationUserInputTopicHint,
+                    helperText: context.l10n.simulationUserInputTopicHelper,
                     prefixIcon: const Icon(Icons.edit_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
@@ -1595,7 +1595,7 @@ class _RecommendedSeedStrip extends StatelessWidget {
                   child: FilledButton.tonalIcon(
                     onPressed: onSubmitManualTopic,
                     icon: const Icon(Icons.play_circle_outline_rounded),
-                    label: const Text('开始围绕这个问题模拟'),
+                    label: Text(context.l10n.simulationStartSimulationTopicAction),
                   ),
                 ),
               ] else if (seeds.isNotEmpty) ...[
@@ -1704,11 +1704,11 @@ class _RecommendedSeedCard extends StatelessWidget {
               children: [
                 FilledButton.tonal(
                   onPressed: onStart,
-                  child: const Text('开始模拟'),
+                  child: Text(context.l10n.simulationStartSimButton),
                 ),
                 OutlinedButton(
                   onPressed: onOpenTheater,
-                  child: const Text('去推演'),
+                  child: Text(context.l10n.simulationGoToTheater),
                 ),
               ],
             ),
@@ -1769,7 +1769,7 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
           children: [
             if (!isReview)
               IconButton.filledTonal(
-                tooltip: isPaused ? '继续模拟' : '暂停模拟',
+                tooltip: isPaused ? context.l10n.simulationContinueSim : context.l10n.simulationPauseSim,
                 onPressed: onTogglePause,
                 icon: Icon(
                   isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
@@ -1785,14 +1785,14 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
                           ? Icons.insights_rounded
                           : Icons.lightbulb_circle_rounded),
                 ),
-                label: Text(insightOpen ? '收起洞察' : '查看洞察'),
+                label: Text(insightOpen ? context.l10n.simulationCollapseInsight : context.l10n.simulationViewInsight),
               ),
             FilledButton.tonalIcon(
               onPressed: onToggleSettings,
               icon: Icon(
                 settingsOpen ? Icons.expand_less_rounded : Icons.tune_rounded,
               ),
-              label: Text(settingsOpen ? '收起设置' : '模拟设置'),
+              label: Text(settingsOpen ? context.l10n.simulationCollapseSettings : context.l10n.simulationSimSettings),
             ),
           ],
         );
@@ -1817,11 +1817,11 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
                 _StatusBadge(
                   icon: Icons.forum_rounded,
                   label:
-                      '${math.max(1, roundCount)}/${math.max(expectedRounds, roundCount)} 轮',
+                      context.l10n.simulationRoundFormatShort(math.max(1, roundCount), math.max(expectedRounds, roundCount)),
                 ),
                 _StatusBadge(
                   icon: Icons.groups_rounded,
-                  label: '$participantCount 角色',
+                  label: context.l10n.simulationRoleCountFormat(participantCount),
                 ),
                 _StatusBadge(
                   icon: Icons.tune_rounded,
@@ -1895,7 +1895,7 @@ class _SimulationInlineInteractionSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '轮到你回应',
+                      context.l10n.simulationYourTurnTitle,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -2266,10 +2266,17 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '调整这场模拟',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+                  Text(
+                      context.l10n.simulationRecommendedScenarios,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: onRefresh,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(seeds.isEmpty ? context.l10n.simulationGenerate : context.l10n.simulationRefresh),
                   ),
             ),
             const SizedBox(height: 4),

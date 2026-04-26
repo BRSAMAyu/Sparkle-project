@@ -23843,6 +23843,1536 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'主题：{topic} · 当前发言 {speaker}'**
   String simulationImmersiveTopicAndFocus(String topic, String speaker);
+
+  /// No description provided for @simulationWaitingInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待输入'**
+  String get simulationWaitingInput;
+
+  /// No description provided for @simulationScenarioDescStudyGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。'**
+  String get simulationScenarioDescStudyGroup;
+
+  /// No description provided for @simulationScenarioDescKnowledgeDebate.
+  ///
+  /// In zh, this message translates to:
+  /// **'让不同立场直接碰撞，适合验证观点、证据和边界条件。'**
+  String get simulationScenarioDescKnowledgeDebate;
+
+  /// No description provided for @simulationScenarioDescHistoricalRoleplay.
+  ///
+  /// In zh, this message translates to:
+  /// **'带入人物与时代约束，让讨论像真实历史现场一样推进。'**
+  String get simulationScenarioDescHistoricalRoleplay;
+
+  /// No description provided for @simulationScenarioDescSocraticDialogue.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。'**
+  String get simulationScenarioDescSocraticDialogue;
+
+  /// No description provided for @simulationScenarioDescCaseAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'围绕具体案例做拆解、诊断和决策，适合实务型主题。'**
+  String get simulationScenarioDescCaseAnalysis;
+
+  /// No description provided for @simulationScenarioDescWhatIfPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'比较不同学习或行动路线，适合规划、取舍与资源分配。'**
+  String get simulationScenarioDescWhatIfPath;
+
+  /// No description provided for @simulationScenarioDescConceptMapBuild.
+  ///
+  /// In zh, this message translates to:
+  /// **'把知识点织成结构图，适合建立全局框架与连接关系。'**
+  String get simulationScenarioDescConceptMapBuild;
+
+  /// No description provided for @simulationScenarioDescErrorDiagnosis.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注识别错因、纠偏路径与验证方式，适合查漏补缺。'**
+  String get simulationScenarioDescErrorDiagnosis;
+
+  /// No description provided for @simulationFacilitationDescBalanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。'**
+  String get simulationFacilitationDescBalanced;
+
+  /// No description provided for @simulationFacilitationDescDebate.
+  ///
+  /// In zh, this message translates to:
+  /// **'主动放大争议和证据冲突，更适合需要碰撞观点的主题。'**
+  String get simulationFacilitationDescDebate;
+
+  /// No description provided for @simulationFacilitationDescGuided.
+  ///
+  /// In zh, this message translates to:
+  /// **'更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。'**
+  String get simulationFacilitationDescGuided;
+
+  /// No description provided for @simulationFacilitationDescPractical.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先讨论行动、验证和现实约束，适合技能与方案推演。'**
+  String get simulationFacilitationDescPractical;
+
+  /// No description provided for @simulationRoleHonorsStudent.
+  ///
+  /// In zh, this message translates to:
+  /// **'优等生'**
+  String get simulationRoleHonorsStudent;
+
+  /// No description provided for @simulationRoleMidStudent.
+  ///
+  /// In zh, this message translates to:
+  /// **'中等生'**
+  String get simulationRoleMidStudent;
+
+  /// No description provided for @simulationRoleQuestioner.
+  ///
+  /// In zh, this message translates to:
+  /// **'提问者'**
+  String get simulationRoleQuestioner;
+
+  /// No description provided for @simulationRoleSummarizer.
+  ///
+  /// In zh, this message translates to:
+  /// **'总结者'**
+  String get simulationRoleSummarizer;
+
+  /// No description provided for @simulationRolePracticeCoach.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习教练'**
+  String get simulationRolePracticeCoach;
+
+  /// No description provided for @simulationRoleProExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'正方专家'**
+  String get simulationRoleProExpert;
+
+  /// No description provided for @simulationRoleConExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'反方专家'**
+  String get simulationRoleConExpert;
+
+  /// No description provided for @simulationRoleModerator.
+  ///
+  /// In zh, this message translates to:
+  /// **'主持人'**
+  String get simulationRoleModerator;
+
+  /// No description provided for @simulationRoleEvidenceReviewer.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据审查员'**
+  String get simulationRoleEvidenceReviewer;
+
+  /// No description provided for @simulationRolePursuer.
+  ///
+  /// In zh, this message translates to:
+  /// **'追问者'**
+  String get simulationRolePursuer;
+
+  /// No description provided for @simulationRoleHistoryMentor.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史导师'**
+  String get simulationRoleHistoryMentor;
+
+  /// No description provided for @simulationRoleKeyFigure.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键人物'**
+  String get simulationRoleKeyFigure;
+
+  /// No description provided for @simulationRoleEraObserver.
+  ///
+  /// In zh, this message translates to:
+  /// **'时代观察者'**
+  String get simulationRoleEraObserver;
+
+  /// No description provided for @simulationRoleStrategyAdvisor.
+  ///
+  /// In zh, this message translates to:
+  /// **'策略顾问'**
+  String get simulationRoleStrategyAdvisor;
+
+  /// No description provided for @simulationRoleRecorder.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录官'**
+  String get simulationRoleRecorder;
+
+  /// No description provided for @simulationRoleSocrates.
+  ///
+  /// In zh, this message translates to:
+  /// **'苏格拉底'**
+  String get simulationRoleSocrates;
+
+  /// No description provided for @simulationRoleSkeptic.
+  ///
+  /// In zh, this message translates to:
+  /// **'怀疑者'**
+  String get simulationRoleSkeptic;
+
+  /// No description provided for @simulationRoleDeconstructor.
+  ///
+  /// In zh, this message translates to:
+  /// **'拆解者'**
+  String get simulationRoleDeconstructor;
+
+  /// No description provided for @simulationRoleApplier.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用者'**
+  String get simulationRoleApplier;
+
+  /// No description provided for @simulationRoleCaseMentor.
+  ///
+  /// In zh, this message translates to:
+  /// **'案例导师'**
+  String get simulationRoleCaseMentor;
+
+  /// No description provided for @simulationRoleDiagnostician.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断官'**
+  String get simulationRoleDiagnostician;
+
+  /// No description provided for @simulationRolePractitioner.
+  ///
+  /// In zh, this message translates to:
+  /// **'实践派'**
+  String get simulationRolePractitioner;
+
+  /// No description provided for @simulationRoleCounterExample.
+  ///
+  /// In zh, this message translates to:
+  /// **'反例提出者'**
+  String get simulationRoleCounterExample;
+
+  /// No description provided for @simulationRoleDecisionRecorder.
+  ///
+  /// In zh, this message translates to:
+  /// **'决策记录官'**
+  String get simulationRoleDecisionRecorder;
+
+  /// No description provided for @simulationRoleCurrentRoute.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前路线'**
+  String get simulationRoleCurrentRoute;
+
+  /// No description provided for @simulationRoleRadicalRoute.
+  ///
+  /// In zh, this message translates to:
+  /// **'激进路线'**
+  String get simulationRoleRadicalRoute;
+
+  /// No description provided for @simulationRoleRiskObserver.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险观察者'**
+  String get simulationRoleRiskObserver;
+
+  /// No description provided for @simulationRoleResourceScheduler.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源调度者'**
+  String get simulationRoleResourceScheduler;
+
+  /// No description provided for @simulationRoleVerifier.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证者'**
+  String get simulationRoleVerifier;
+
+  /// No description provided for @simulationRoleStructurer.
+  ///
+  /// In zh, this message translates to:
+  /// **'结构师'**
+  String get simulationRoleStructurer;
+
+  /// No description provided for @simulationRoleConnector.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接者'**
+  String get simulationRoleConnector;
+
+  /// No description provided for @simulationRoleCounterExampleChecker.
+  ///
+  /// In zh, this message translates to:
+  /// **'反例检查员'**
+  String get simulationRoleCounterExampleChecker;
+
+  /// No description provided for @simulationRoleBridgeBuilder.
+  ///
+  /// In zh, this message translates to:
+  /// **'桥梁构建者'**
+  String get simulationRoleBridgeBuilder;
+
+  /// No description provided for @simulationRoleErrorAnalyst.
+  ///
+  /// In zh, this message translates to:
+  /// **'错因分析师'**
+  String get simulationRoleErrorAnalyst;
+
+  /// No description provided for @simulationRoleCorrectionCoach.
+  ///
+  /// In zh, this message translates to:
+  /// **'纠偏教练'**
+  String get simulationRoleCorrectionCoach;
+
+  /// No description provided for @simulationRoleQuestionDeconstructor.
+  ///
+  /// In zh, this message translates to:
+  /// **'题面解构者'**
+  String get simulationRoleQuestionDeconstructor;
+
+  /// No description provided for @simulationRoleMigrationCoach.
+  ///
+  /// In zh, this message translates to:
+  /// **'迁移教练'**
+  String get simulationRoleMigrationCoach;
+
+  /// No description provided for @simulationRoleStudyBuddy.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习伙伴'**
+  String get simulationRoleStudyBuddy;
+
+  /// No description provided for @simulationRoleCurrentDiscussionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前讨论流'**
+  String get simulationRoleCurrentDiscussionTitle;
+
+  /// No description provided for @simulationBulletOpeningFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'开场重点：{message}'**
+  String simulationBulletOpeningFormat(String message);
+
+  /// No description provided for @simulationScenarioParticipantOptionsDefault0.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习伙伴'**
+  String get simulationScenarioParticipantOptionsDefault0;
+
+  /// No description provided for @simulationScenarioParticipantOptionsDefault1.
+  ///
+  /// In zh, this message translates to:
+  /// **'提问者'**
+  String get simulationScenarioParticipantOptionsDefault1;
+
+  /// No description provided for @simulationScenarioParticipantOptionsDefault2.
+  ///
+  /// In zh, this message translates to:
+  /// **'总结者'**
+  String get simulationScenarioParticipantOptionsDefault2;
+
+  /// No description provided for @simulationScenarioLabelStudyGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习小组'**
+  String get simulationScenarioLabelStudyGroup;
+
+  /// No description provided for @simulationScenarioLabelKnowledgeDebate.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识辩论'**
+  String get simulationScenarioLabelKnowledgeDebate;
+
+  /// No description provided for @simulationScenarioLabelHistoricalRoleplay.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史角色扮演'**
+  String get simulationScenarioLabelHistoricalRoleplay;
+
+  /// No description provided for @simulationScenarioLabelSocraticDialogue.
+  ///
+  /// In zh, this message translates to:
+  /// **'苏格拉底对话'**
+  String get simulationScenarioLabelSocraticDialogue;
+
+  /// No description provided for @simulationScenarioLabelCaseAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'案例分析'**
+  String get simulationScenarioLabelCaseAnalysis;
+
+  /// No description provided for @simulationScenarioLabelWhatIfPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'如果路径'**
+  String get simulationScenarioLabelWhatIfPath;
+
+  /// No description provided for @simulationScenarioLabelConceptMapBuild.
+  ///
+  /// In zh, this message translates to:
+  /// **'概念图构建'**
+  String get simulationScenarioLabelConceptMapBuild;
+
+  /// No description provided for @simulationScenarioLabelErrorDiagnosis.
+  ///
+  /// In zh, this message translates to:
+  /// **'错误诊断'**
+  String get simulationScenarioLabelErrorDiagnosis;
+
+  /// No description provided for @openclawPairImportedSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入并保存 OpenClaw 配对配置'**
+  String get openclawPairImportedSaved;
+
+  /// No description provided for @openclawPairImportedVerifyFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对配置已导入，但当前连接验证失败'**
+  String get openclawPairImportedVerifyFailed;
+
+  /// No description provided for @openclawClipboardNoPairingPayload.
+  ///
+  /// In zh, this message translates to:
+  /// **'剪贴板里没有识别到 OpenClaw 配对串或二维码 JSON'**
+  String get openclawClipboardNoPairingPayload;
+
+  /// No description provided for @openclawImportedFromClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'已从剪贴板导入 OpenClaw 配对配置'**
+  String get openclawImportedFromClipboard;
+
+  /// No description provided for @openclawConnectedToDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连接到 {deviceName}'**
+  String openclawConnectedToDevice(Object deviceName);
+
+  /// No description provided for @openclawImportedDevicePairing.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 {deviceName} 的配对配置'**
+  String openclawImportedDevicePairing(Object deviceName);
+
+  /// No description provided for @openclawScannedPairingImported.
+  ///
+  /// In zh, this message translates to:
+  /// **'已扫码导入 OpenClaw 配对配置'**
+  String get openclawScannedPairingImported;
+
+  /// No description provided for @openclawScannedConnectedToDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'已扫码连接到 {deviceName}'**
+  String openclawScannedConnectedToDevice(Object deviceName);
+
+  /// No description provided for @openclawUnrecognizedContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法识别这段内容，请检查是否包含 gateway_url 与 token'**
+  String get openclawUnrecognizedContent;
+
+  /// No description provided for @openclawCameraPermissionNeeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要相机权限才能扫码配对。你也可以改用\"从剪贴板导入\"或\"粘贴配对串\"。'**
+  String get openclawCameraPermissionNeeded;
+
+  /// No description provided for @openclawQrNotPairingContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫到的二维码不是可识别的 OpenClaw 配对内容'**
+  String get openclawQrNotPairingContent;
+
+  /// No description provided for @openclawRemoteTemplateFilled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已填入远程连接模板，接下来补入授权令牌或导入配对串即可'**
+  String get openclawRemoteTemplateFilled;
+
+  /// No description provided for @openclawPairingCodeExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对码已过期'**
+  String get openclawPairingCodeExpired;
+
+  /// No description provided for @openclawPairingExpiresSeconds.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在 {seconds} 秒内完成配对'**
+  String openclawPairingExpiresSeconds(Object seconds);
+
+  /// No description provided for @openclawPairingExpiresMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在 {minutes} 分 {seconds} 秒内完成配对'**
+  String openclawPairingExpiresMinutes(Object minutes, Object seconds);
+
+  /// No description provided for @openclawInvalidUrlFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入以 http://、https://、ws:// 或 wss:// 开头的地址'**
+  String get openclawInvalidUrlFormat;
+
+  /// No description provided for @openclawValidAddressRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的 OpenClaw 地址'**
+  String get openclawValidAddressRequired;
+
+  /// No description provided for @openclawDisconnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已断开 OpenClaw 连接'**
+  String get openclawDisconnected;
+
+  /// No description provided for @openclawPairingCodeGenerated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已生成配对码 {code}'**
+  String openclawPairingCodeGenerated(Object code);
+
+  /// No description provided for @openclawDeviceTokenRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入设备令牌后再完成配对'**
+  String get openclawDeviceTokenRequired;
+
+  /// No description provided for @openclawDevicePairingComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备配对已完成'**
+  String get openclawDevicePairingComplete;
+
+  /// No description provided for @openclawNoExecutionPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前网关可访问，但没有执行权限，暂时无法重试队列'**
+  String get openclawNoExecutionPermission;
+
+  /// No description provided for @openclawExecutionEndpointUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前网关可访问，但执行入口不可用，暂时无法重试队列'**
+  String get openclawExecutionEndpointUnavailable;
+
+  /// No description provided for @openclawExecutionEngineNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行引擎尚未连接，暂时无法重试队列'**
+  String get openclawExecutionEngineNotConnected;
+
+  /// No description provided for @openclawQueuedTasksResubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已重新提交 {count} 个排队任务'**
+  String openclawQueuedTasksResubmitted(Object count);
+
+  /// No description provided for @openclawNoRetryableTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有可重试的排队任务'**
+  String get openclawNoRetryableTasks;
+
+  /// No description provided for @openclawPairingCodeCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对码已复制'**
+  String get openclawPairingCodeCopied;
+
+  /// No description provided for @openclawImportPairingString.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入配对串'**
+  String get openclawImportPairingString;
+
+  /// No description provided for @openclawPairingOrQrLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对串或二维码内容'**
+  String get openclawPairingOrQrLabel;
+
+  /// No description provided for @openclawPairingPasteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴 OpenClaw 桌面端分享的 JSON、openclaw://pair?... 链接，或包含 gateway_url / pair_token 的文本'**
+  String get openclawPairingPasteHint;
+
+  /// No description provided for @openclawImportAndSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入并保存'**
+  String get openclawImportAndSave;
+
+  /// No description provided for @openclawApplyWizard.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用向导'**
+  String get openclawApplyWizard;
+
+  /// No description provided for @openclawDisconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'断开连接'**
+  String get openclawDisconnect;
+
+  /// No description provided for @openclawDisconnectConfirmBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'这会清除本地保存的 OpenClaw 连接配置。'**
+  String get openclawDisconnectConfirmBody;
+
+  /// No description provided for @openclawDisconnectAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'断开'**
+  String get openclawDisconnectAction;
+
+  /// No description provided for @openclawGatewayOnlineNoExecPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关在线，但当前令牌没有执行权限'**
+  String get openclawGatewayOnlineNoExecPermission;
+
+  /// No description provided for @openclawGatewayOnlineExecNotReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关在线，但执行接口没有准备好'**
+  String get openclawGatewayOnlineExecNotReady;
+
+  /// No description provided for @openclawNeedExecutionChainCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要补一层执行链路排查'**
+  String get openclawNeedExecutionChainCheck;
+
+  /// No description provided for @openclawTroubleshootNoPermissionBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前状态说明健康检查能通过，但真正发起执行会被拒绝。优先更换具备 `operator.write` scope 的令牌，或改用设备配对 + WebSocket。'**
+  String get openclawTroubleshootNoPermissionBody;
+
+  /// No description provided for @openclawTroubleshootMissingEndpointBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前地址可访问，但缺少 `/v1/responses` 执行入口。请确认 OpenClaw 网关版本、代理转发和 transport 选择是否一致。'**
+  String get openclawTroubleshootMissingEndpointBody;
+
+  /// No description provided for @openclawTroubleshootGenericBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议先重新测试连接，再检查网关地址、认证方式和 transport 是否与 OpenClaw 当前实例一致。'**
+  String get openclawTroubleshootGenericBody;
+
+  /// No description provided for @openclawStatusReadyForTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'已准备好接手任务'**
+  String get openclawStatusReadyForTasks;
+
+  /// No description provided for @openclawStatusConfirmingConnection.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在确认连接状态'**
+  String get openclawStatusConfirmingConnection;
+
+  /// No description provided for @openclawStatusOnlineNoPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关在线，但没有执行权限'**
+  String get openclawStatusOnlineNoPermission;
+
+  /// No description provided for @openclawStatusNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时还没连上'**
+  String get openclawStatusNotConnected;
+
+  /// No description provided for @openclawStatusNotConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有接入 OpenClaw'**
+  String get openclawStatusNotConfigured;
+
+  /// No description provided for @openclawStatusConnectedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接保持正常，你可以直接从任务页或聊天页把工作交给 OpenClaw。'**
+  String get openclawStatusConnectedSubtitle;
+
+  /// No description provided for @openclawStatusConnectingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我们正在确认引擎状态，保存后的结果会同步显示在这里。'**
+  String get openclawStatusConnectingSubtitle;
+
+  /// No description provided for @openclawStatusNoPermissionSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前令牌能访问网关，但真正执行会被拒绝。这里需要处理权限，而不是单纯重填地址。'**
+  String get openclawStatusNoPermissionSubtitle;
+
+  /// No description provided for @openclawStatusErrorSubtitleFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'先检查地址、认证方式和传输协议，再重新测试连接。'**
+  String get openclawStatusErrorSubtitleFallback;
+
+  /// No description provided for @openclawStatusDisconnectedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成一次连接后，之后的委派、排队和最近活动都会在各入口自动联动。'**
+  String get openclawStatusDisconnectedSubtitle;
+
+  /// No description provided for @openclawUnsavedChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'未保存更改'**
+  String get openclawUnsavedChanges;
+
+  /// No description provided for @openclawDevicePairing.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备配对'**
+  String get openclawDevicePairing;
+
+  /// No description provided for @openclawTokenAuth.
+  ///
+  /// In zh, this message translates to:
+  /// **'令牌认证'**
+  String get openclawTokenAuth;
+
+  /// No description provided for @openclawQueuedRequestCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个待处理'**
+  String openclawQueuedRequestCount(Object count);
+
+  /// No description provided for @openclawQuickConnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速接入'**
+  String get openclawQuickConnect;
+
+  /// No description provided for @openclawCustomConfig.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义配置'**
+  String get openclawCustomConfig;
+
+  /// No description provided for @openclawImportFromClipboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'从剪贴板导入'**
+  String get openclawImportFromClipboard;
+
+  /// No description provided for @openclawPastePairingString.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴配对串'**
+  String get openclawPastePairingString;
+
+  /// No description provided for @openclawScanToPair.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫码配对'**
+  String get openclawScanToPair;
+
+  /// No description provided for @openclawTailscaleRemoteNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'Tailscale 远程节点'**
+  String get openclawTailscaleRemoteNode;
+
+  /// No description provided for @openclawTailscaleIpOrDomain.
+  ///
+  /// In zh, this message translates to:
+  /// **'Tailscale IP 或域名'**
+  String get openclawTailscaleIpOrDomain;
+
+  /// No description provided for @openclawTailscaleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如 100.88.1.24 或 devbox.tail123.ts.net'**
+  String get openclawTailscaleHint;
+
+  /// No description provided for @openclawTailscaleHelperText.
+  ///
+  /// In zh, this message translates to:
+  /// **'如果你的 OpenClaw 暴露在 Tailscale 上，这里只需要填节点 IP 或 MagicDNS 域名，Sparkle 会自动补上标准端口与 WebSocket 连接方式。'**
+  String get openclawTailscaleHelperText;
+
+  /// No description provided for @openclawTailscaleLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Tailscale'**
+  String get openclawTailscaleLabel;
+
+  /// No description provided for @openclawCloudflareTunnel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Cloudflare Tunnel'**
+  String get openclawCloudflareTunnel;
+
+  /// No description provided for @openclawTunnelDomain.
+  ///
+  /// In zh, this message translates to:
+  /// **'Tunnel 域名'**
+  String get openclawTunnelDomain;
+
+  /// No description provided for @openclawCloudflareHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如 openclaw.example.com'**
+  String get openclawCloudflareHint;
+
+  /// No description provided for @openclawCloudflareHelperText.
+  ///
+  /// In zh, this message translates to:
+  /// **'如果你通过 Cloudflare Tunnel 暴露 OpenClaw，这里填入域名即可。Sparkle 会按 HTTPS/WSS 方式生成连接配置。'**
+  String get openclawCloudflareHelperText;
+
+  /// No description provided for @openclawCloudflareLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Cloudflare'**
+  String get openclawCloudflareLabel;
+
+  /// No description provided for @openclawPresetSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选中\"{label}\"。连接细节会自动填入；如果随后提示缺执行权限，优先更换具备 `operator.write` scope 的令牌，或改用设备配对。'**
+  String openclawPresetSelected(Object label);
+
+  /// No description provided for @openclawGatewayAddress.
+  ///
+  /// In zh, this message translates to:
+  /// **'网关地址'**
+  String get openclawGatewayAddress;
+
+  /// No description provided for @openclawGatewayHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如 http://localhost:8080'**
+  String get openclawGatewayHint;
+
+  /// No description provided for @openclawAuthMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'认证方式'**
+  String get openclawAuthMode;
+
+  /// No description provided for @openclawAuthToken.
+  ///
+  /// In zh, this message translates to:
+  /// **'认证令牌'**
+  String get openclawAuthToken;
+
+  /// No description provided for @openclawAuthTokenHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴 OpenClaw 网关令牌'**
+  String get openclawAuthTokenHint;
+
+  /// No description provided for @openclawDeviceToken.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备令牌'**
+  String get openclawDeviceToken;
+
+  /// No description provided for @openclawDeviceTokenHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对完成后粘贴设备令牌'**
+  String get openclawDeviceTokenHint;
+
+  /// No description provided for @openclawPairingCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对码'**
+  String get openclawPairingCode;
+
+  /// No description provided for @openclawPairingCodeInstructions.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。'**
+  String get openclawPairingCodeInstructions;
+
+  /// No description provided for @openclawGeneratePairingCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成配对码'**
+  String get openclawGeneratePairingCode;
+
+  /// No description provided for @openclawCompletePairing.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成配对'**
+  String get openclawCompletePairing;
+
+  /// No description provided for @openclawCancelPairing.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消配对'**
+  String get openclawCancelPairing;
+
+  /// No description provided for @openclawTransportProtocol.
+  ///
+  /// In zh, this message translates to:
+  /// **'传输协议'**
+  String get openclawTransportProtocol;
+
+  /// No description provided for @openclawDeviceAuthDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。'**
+  String get openclawDeviceAuthDesc;
+
+  /// No description provided for @openclawTokenAuthDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。'**
+  String get openclawTokenAuthDesc;
+
+  /// No description provided for @openclawWebSocketTransportDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。'**
+  String get openclawWebSocketTransportDesc;
+
+  /// No description provided for @openclawHttpTransportDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'HTTP 更适合手动验证和快速测试连接。'**
+  String get openclawHttpTransportDesc;
+
+  /// No description provided for @openclawDefaultConnectionReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'已为你准备好默认连接细节'**
+  String get openclawDefaultConnectionReady;
+
+  /// No description provided for @openclawTestConnection.
+  ///
+  /// In zh, this message translates to:
+  /// **'测试连接'**
+  String get openclawTestConnection;
+
+  /// No description provided for @openclawSaveConfig.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存配置'**
+  String get openclawSaveConfig;
+
+  /// No description provided for @openclawRetryQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试队列'**
+  String get openclawRetryQueue;
+
+  /// No description provided for @accountabilityPartnerDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'责任伙伴'**
+  String get accountabilityPartnerDefault;
+
+  /// No description provided for @accountabilityEndPartnership.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束伙伴关系'**
+  String get accountabilityEndPartnership;
+
+  /// No description provided for @accountabilityDashboardLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴工作台加载失败'**
+  String get accountabilityDashboardLoadFailed;
+
+  /// No description provided for @accountabilityNudgeSentDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'已通过站内提醒发送，对方在线时会实时看到'**
+  String get accountabilityNudgeSentDefault;
+
+  /// No description provided for @accountabilityNudgeCooldown.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。'**
+  String get accountabilityNudgeCooldown;
+
+  /// No description provided for @accountabilityNudgeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提醒发送失败，请稍后再试'**
+  String get accountabilityNudgeFailed;
+
+  /// No description provided for @accountabilityEndPartnershipConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要结束这段责任伙伴关系吗？'**
+  String get accountabilityEndPartnershipConfirm;
+
+  /// No description provided for @accountabilityPartnershipEnded.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴关系已结束'**
+  String get accountabilityPartnershipEnded;
+
+  /// No description provided for @accountabilityMyGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的目标'**
+  String get accountabilityMyGoal;
+
+  /// No description provided for @accountabilityGoalNotSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有填写目标'**
+  String get accountabilityGoalNotSet;
+
+  /// No description provided for @accountabilityGrowingTogether.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴共成长'**
+  String get accountabilityGrowingTogether;
+
+  /// No description provided for @accountabilityRecentShares.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近分享'**
+  String get accountabilityRecentShares;
+
+  /// No description provided for @accountabilitySharedItem.
+  ///
+  /// In zh, this message translates to:
+  /// **'已分享内容'**
+  String get accountabilitySharedItem;
+
+  /// No description provided for @accountabilityMonthlyHeatmap.
+  ///
+  /// In zh, this message translates to:
+  /// **'月度打卡热力图'**
+  String get accountabilityMonthlyHeatmap;
+
+  /// No description provided for @accountabilityPartnerAchievements.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴成就'**
+  String get accountabilityPartnerAchievements;
+
+  /// No description provided for @accountabilityPartnerNoAchievements.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴还没有解锁专属成就，先互相打卡一轮试试看。'**
+  String get accountabilityPartnerNoAchievements;
+
+  /// No description provided for @accountabilityRecentCheckins.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近打卡'**
+  String get accountabilityRecentCheckins;
+
+  /// No description provided for @accountabilityNoCheckinRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有打卡记录'**
+  String get accountabilityNoCheckinRecords;
+
+  /// No description provided for @accountabilityNoCheckinHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天先发一条简短进展，伙伴关系就会开始有温度。'**
+  String get accountabilityNoCheckinHint;
+
+  /// No description provided for @accountabilityCheckedInToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天已打卡'**
+  String get accountabilityCheckedInToday;
+
+  /// No description provided for @accountabilityCheckInToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日打卡'**
+  String get accountabilityCheckInToday;
+
+  /// No description provided for @accountabilityTotalCheckins.
+  ///
+  /// In zh, this message translates to:
+  /// **'总打卡'**
+  String get accountabilityTotalCheckins;
+
+  /// No description provided for @accountabilityCheckedIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已打卡'**
+  String get accountabilityCheckedIn;
+
+  /// No description provided for @accountabilityCheckin.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡'**
+  String get accountabilityCheckin;
+
+  /// No description provided for @accountabilityNudge.
+  ///
+  /// In zh, this message translates to:
+  /// **'提醒'**
+  String get accountabilityNudge;
+
+  /// No description provided for @accountabilityShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get accountabilityShare;
+
+  /// No description provided for @accountabilityChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天'**
+  String get accountabilityChat;
+
+  /// No description provided for @accountabilityInviteSentWait.
+  ///
+  /// In zh, this message translates to:
+  /// **'邀请已发出，等待对方确认后才能进入伙伴工作台。'**
+  String get accountabilityInviteSentWait;
+
+  /// No description provided for @accountabilityInvitePendingConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条伙伴邀请还待你确认，先去邀请页处理后再回来。'**
+  String get accountabilityInvitePendingConfirm;
+
+  /// No description provided for @accountabilityDashboardNotAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前伙伴关系暂时不可进入完整工作台。'**
+  String get accountabilityDashboardNotAvailable;
+
+  /// No description provided for @accountabilityInvitePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴邀请待处理'**
+  String get accountabilityInvitePending;
+
+  /// No description provided for @accountabilityDashboardUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴工作台暂不可用'**
+  String get accountabilityDashboardUnavailable;
+
+  /// No description provided for @accountabilityViewStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看状态'**
+  String get accountabilityViewStatus;
+
+  /// No description provided for @accountabilityHandleInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'去处理邀请'**
+  String get accountabilityHandleInvite;
+
+  /// No description provided for @accountabilityContinueChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续聊天'**
+  String get accountabilityContinueChat;
+
+  /// No description provided for @accountabilityNoPendingPolicies.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有待执行的问责策略。'**
+  String get accountabilityNoPendingPolicies;
+
+  /// No description provided for @accountabilityPendingPolicies.
+  ///
+  /// In zh, this message translates to:
+  /// **'待执行策略'**
+  String get accountabilityPendingPolicies;
+
+  /// No description provided for @accountabilityNoRecentReflections.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近还没有新的跨事件反思。'**
+  String get accountabilityNoRecentReflections;
+
+  /// No description provided for @accountabilityRecentReflections.
+  ///
+  /// In zh, this message translates to:
+  /// **'近期反思'**
+  String get accountabilityRecentReflections;
+
+  /// No description provided for @accountabilityForesightHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'前瞻提示'**
+  String get accountabilityForesightHint;
+
+  /// No description provided for @accountabilityNoForesightHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无前瞻提示。'**
+  String get accountabilityNoForesightHint;
+
+  /// No description provided for @accountabilityInterventionIneffective.
+  ///
+  /// In zh, this message translates to:
+  /// **'干预未奏效'**
+  String get accountabilityInterventionIneffective;
+
+  /// No description provided for @accountabilityPlanStall.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划停滞'**
+  String get accountabilityPlanStall;
+
+  /// No description provided for @accountabilityOverload.
+  ///
+  /// In zh, this message translates to:
+  /// **'负荷过载'**
+  String get accountabilityOverload;
+
+  /// No description provided for @accountabilityTooDifficult.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务过难'**
+  String get accountabilityTooDifficult;
+
+  /// No description provided for @accountabilityUnclear.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务不清晰'**
+  String get accountabilityUnclear;
+
+  /// No description provided for @accountabilityAbandoned.
+  ///
+  /// In zh, this message translates to:
+  /// **'中途放下'**
+  String get accountabilityAbandoned;
+
+  /// No description provided for @accountabilityReflectionSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'反思摘要'**
+  String get accountabilityReflectionSummary;
+
+  /// No description provided for @accountabilityDimPace.
+  ///
+  /// In zh, this message translates to:
+  /// **'节奏'**
+  String get accountabilityDimPace;
+
+  /// No description provided for @accountabilityDimCompletionRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成率'**
+  String get accountabilityDimCompletionRate;
+
+  /// No description provided for @accountabilityDimEngagement.
+  ///
+  /// In zh, this message translates to:
+  /// **'投入度'**
+  String get accountabilityDimEngagement;
+
+  /// No description provided for @accountabilityDimMood.
+  ///
+  /// In zh, this message translates to:
+  /// **'情绪'**
+  String get accountabilityDimMood;
+
+  /// No description provided for @accountabilityDimPlanAdherence.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划跟随'**
+  String get accountabilityDimPlanAdherence;
+
+  /// No description provided for @accountabilityMoodLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低落'**
+  String get accountabilityMoodLow;
+
+  /// No description provided for @accountabilityMoodOkay.
+  ///
+  /// In zh, this message translates to:
+  /// **'一般'**
+  String get accountabilityMoodOkay;
+
+  /// No description provided for @accountabilityMoodSteady.
+  ///
+  /// In zh, this message translates to:
+  /// **'平稳'**
+  String get accountabilityMoodSteady;
+
+  /// No description provided for @accountabilityMoodGood.
+  ///
+  /// In zh, this message translates to:
+  /// **'不错'**
+  String get accountabilityMoodGood;
+
+  /// No description provided for @accountabilityMoodGreat.
+  ///
+  /// In zh, this message translates to:
+  /// **'很棒'**
+  String get accountabilityMoodGreat;
+
+  /// No description provided for @accountabilityPartner.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴'**
+  String get accountabilityPartner;
+
+  /// No description provided for @accountabilityLike.
+  ///
+  /// In zh, this message translates to:
+  /// **'点赞'**
+  String get accountabilityLike;
+
+  /// No description provided for @accountabilityEncourage.
+  ///
+  /// In zh, this message translates to:
+  /// **'鼓励'**
+  String get accountabilityEncourage;
+
+  /// No description provided for @accountabilityEncourageSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'已为伙伴点亮鼓励'**
+  String get accountabilityEncourageSent;
+
+  /// No description provided for @accountabilitySendEncourage.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送鼓励'**
+  String get accountabilitySendEncourage;
+
+  /// No description provided for @accountabilityEncourageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'写一句你想对伙伴说的话'**
+  String get accountabilityEncourageHint;
+
+  /// No description provided for @accountabilitySend.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送'**
+  String get accountabilitySend;
+
+  /// No description provided for @accountabilityEncourageDelivered.
+  ///
+  /// In zh, this message translates to:
+  /// **'鼓励已送达'**
+  String get accountabilityEncourageDelivered;
+
+  /// No description provided for @accountabilityTodayProgressHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日进展...'**
+  String get accountabilityTodayProgressHint;
+
+  /// No description provided for @accountabilityTodayMood.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日心情:'**
+  String get accountabilityTodayMood;
+
+  /// No description provided for @accountabilityPublishCheckin.
+  ///
+  /// In zh, this message translates to:
+  /// **'发布打卡'**
+  String get accountabilityPublishCheckin;
+
+  /// No description provided for @accountabilityProgressRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请写一句今天的进展'**
+  String get accountabilityProgressRequired;
+
+  /// No description provided for @accountabilityCheckinSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡成功，伙伴已经能看到了'**
+  String get accountabilityCheckinSuccess;
+
+  /// No description provided for @openclawImportedPairing.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 OpenClaw 配对配置'**
+  String get openclawImportedPairing;
+
+  /// No description provided for @accountabilityPartnerGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'{partnerName} 的目标'**
+  String accountabilityPartnerGoal(Object partnerName);
+
+  /// No description provided for @accountabilityPartnerGoalNotSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'对方还没填写目标'**
+  String get accountabilityPartnerGoalNotSet;
+
+  /// No description provided for @accountabilityMe.
+  ///
+  /// In zh, this message translates to:
+  /// **'我'**
+  String get accountabilityMe;
+
+  /// No description provided for @accountabilityThem.
+  ///
+  /// In zh, this message translates to:
+  /// **'TA'**
+  String get accountabilityThem;
+
+  /// No description provided for @accountabilityStreakDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days} 天'**
+  String accountabilityStreakDays(Object days);
+
+  /// No description provided for @accountabilityCheckinMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes}分钟'**
+  String accountabilityCheckinMinutes(Object minutes);
+
+  /// No description provided for @accountabilityDaysTogether.
+  ///
+  /// In zh, this message translates to:
+  /// **'一起坚持了 {days} 天'**
+  String accountabilityDaysTogether(Object days);
+
+  /// No description provided for @accountabilityMyStreakDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'我 {days} 天'**
+  String accountabilityMyStreakDays(Object days);
+
+  /// No description provided for @accountabilityPartnerStreakDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'TA {days} 天'**
+  String accountabilityPartnerStreakDays(Object days);
+
+  /// No description provided for @accountabilityMyAchievementsUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'我解锁 {count} 个成就'**
+  String accountabilityMyAchievementsUnlocked(Object count);
+
+  /// No description provided for @accountabilityPartnerAchievementsUnlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'TA 解锁 {count} 个成就'**
+  String accountabilityPartnerAchievementsUnlocked(Object count);
+
+  /// No description provided for @accountabilityStreakRank.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续打卡榜：你第 {myRank}，伙伴第 {partnerRank}'**
+  String accountabilityStreakRank(Object myRank, Object partnerRank);
+
+  /// No description provided for @accountabilityDeviationsDetected.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测到 {count} 个偏离'**
+  String accountabilityDeviationsDetected(Object count);
+
+  /// No description provided for @accountabilityUpdatedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新时间 {time}'**
+  String accountabilityUpdatedAt(Object time);
+
+  /// No description provided for @accountabilityZeroItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'0 条'**
+  String get accountabilityZeroItems;
+
+  /// No description provided for @accountabilityItemCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条'**
+  String accountabilityItemCount(Object count);
+
+  /// No description provided for @accountabilityPoliciesReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有 {count} 条策略就绪，等待事件触发。'**
+  String accountabilityPoliciesReady(Object count);
+
+  /// No description provided for @accountabilityReflectionsGenerated.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近已生成 {count} 条反思摘要。'**
+  String accountabilityReflectionsGenerated(Object count);
+
+  /// No description provided for @accountabilityPoliciesPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有 {count} 条策略待执行，下一次触发在 {time}。'**
+  String accountabilityPoliciesPending(Object count, Object time);
+
+  /// No description provided for @accountabilityReflectionsLatest.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近一次聚焦 {category}，更新时间 {time}。'**
+  String accountabilityReflectionsLatest(Object category, Object time);
+
+  /// No description provided for @accountabilityInvestedTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'投入时长: {minutes} 分钟'**
+  String accountabilityInvestedTime(Object minutes);
+
+  /// No description provided for @accountabilityMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String accountabilityMinutes(Object minutes);
+
+  /// No description provided for @accountabilityEnd.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束'**
+  String get accountabilityEnd;
+
+  /// No description provided for @accountabilityOperationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作失败'**
+  String get accountabilityOperationFailed;
+
+  /// No description provided for @accountabilityLikeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'点赞失败'**
+  String get accountabilityLikeFailed;
+
+  /// No description provided for @accountabilitySendFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败'**
+  String get accountabilitySendFailed;
+
+  /// No description provided for @accountabilityCheckinFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡失败'**
+  String get accountabilityCheckinFailed;
 }
 
 class _AppLocalizationsDelegate

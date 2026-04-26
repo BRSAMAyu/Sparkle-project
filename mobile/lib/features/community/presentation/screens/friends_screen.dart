@@ -19,6 +19,7 @@ import 'package:sparkle/features/community/presentation/providers/community_prov
 import 'package:sparkle/features/community/presentation/utils/accountability_invite_flow.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
 import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class FriendsScreen extends StatelessWidget {
@@ -40,8 +41,8 @@ class FriendsScreen extends StatelessWidget {
           title: Text(l10n.community),
           bottom: TabBar(
             tabs: [
-              Tab(text: l10n.languageChinese == '简体中文' ? '我的好友' : 'My Friends'),
-              Tab(text: l10n.languageChinese == '简体中文' ? '好友请求' : 'Requests'),
+              Tab(text: context.l10n.friendsMyFriends),
+              Tab(text: context.l10n.friendsFriendRequests),
             ],
           ),
         ),
@@ -74,7 +75,7 @@ class FriendRequestsScreen extends StatelessWidget {
               ? context.pop()
               : context.go(CommunityRoutes.home),
         ),
-        title: Text(l10n.languageChinese == '简体中文' ? '好友请求' : 'Requests'),
+        title: Text(context.l10n.friendsFriendRequests),
       ),
       child: const ContentConstraint(
         child: SparkleStaggerItem(index: 0, child: _PendingRequestsTab()),
@@ -99,9 +100,7 @@ class FriendsDiscoverScreen extends StatelessWidget {
               ? context.pop()
               : context.go(CommunityRoutes.home),
         ),
-        title: Text(
-          l10n.languageChinese == '简体中文' ? '发现好友' : 'Discover Friends',
-        ),
+        title: Text(context.l10n.friendsDiscoverFriends),
       ),
       child: const ContentConstraint(
         child: SparkleStaggerItem(index: 0, child: _RecommendationsTab()),
@@ -176,7 +175,7 @@ class _MyFriendsTab extends ConsumerWidget {
                 // Delete friend option
                 ListTile(
                   leading: Icon(Icons.person_remove, color: DS.neutral600),
-                  title: const Text('删除好友'),
+                  title: Text(context.l10n.friendsDeleteFriend),
                   onTap: () {
                     Navigator.pop(ctx);
                     _handleDeleteFriend(context, ref, friendInfo);
@@ -185,7 +184,7 @@ class _MyFriendsTab extends ConsumerWidget {
                 // Block user option
                 ListTile(
                   leading: Icon(Icons.block, color: DS.error),
-                  title: Text('拉黑用户', style: TextStyle(color: DS.error)),
+                  title: Text(context.l10n.friendsBlockUser, style: TextStyle(color: DS.error)),
                   onTap: () {
                     Navigator.pop(ctx);
                     _handleBlockUser(context, ref, friendInfo);
@@ -194,7 +193,7 @@ class _MyFriendsTab extends ConsumerWidget {
                 // Blocked users management
                 ListTile(
                   leading: Icon(Icons.block_outlined, color: DS.neutral600),
-                  title: const Text('黑名单管理'),
+                  title: Text(context.l10n.friendsBlockedUsersManagement),
                   onTap: () {
                     Navigator.pop(ctx);
                     context.push(CommunityRoutes.blockedUsers);
@@ -217,17 +216,17 @@ class _MyFriendsTab extends ConsumerWidget {
     final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除好友'),
-        content: Text('确定要删除好友 ${friendInfo.friend.displayName} 吗？'),
+        title: Text(context.l10n.friendsDeleteFriend),
+        content: Text(context.l10n.friendsConfirmDeleteFriend(friendInfo.friend.displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(context.l10n.friendsCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: DS.error),
-            child: const Text('删除'),
+            child: Text(context.l10n.friendsDelete),
           ),
         ],
       ),
@@ -238,13 +237,13 @@ class _MyFriendsTab extends ConsumerWidget {
         await ref.read(friendsProvider.notifier).deleteFriend(friendInfo.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.success('已删除 ${friendInfo.friend.displayName}'),
+            SparkleSnackBar.success(context.l10n.friendsFriendDeleted(friendInfo.friend.displayName)),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.error('删除失败: $e'),
+            SparkleSnackBar.error(context.l10n.friendsDeleteFailed(e.toString())),
           );
         }
       }
@@ -259,12 +258,12 @@ class _MyFriendsTab extends ConsumerWidget {
     final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('拉黑用户'),
+        title: Text(context.l10n.friendsBlockUser),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('拉黑 ${friendInfo.friend.displayName} 后:'),
+            Text(context.l10n.friendsAfterBlockingHint(friendInfo.friend.displayName)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -277,7 +276,7 @@ class _MyFriendsTab extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const Expanded(child: Text('从好友列表移除')),
+                Expanded(child: Text(context.l10n.friendsRemoveFromFriendList)),
               ],
             ),
             const SizedBox(height: 4),
@@ -292,7 +291,7 @@ class _MyFriendsTab extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const Expanded(child: Text('无法发送消息给你')),
+                Expanded(child: Text(context.l10n.friendsCannotMessageYou)),
               ],
             ),
             const SizedBox(height: 4),
@@ -307,7 +306,7 @@ class _MyFriendsTab extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const Expanded(child: Text('无法发送好友请求')),
+                Expanded(child: Text(context.l10n.friendsCannotSendRequest)),
               ],
             ),
           ],
@@ -315,12 +314,12 @@ class _MyFriendsTab extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(context.l10n.friendsCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: DS.error),
-            child: const Text('拉黑'),
+            child: Text(context.l10n.friendsBlock),
           ),
         ],
       ),
@@ -333,13 +332,13 @@ class _MyFriendsTab extends ConsumerWidget {
             .blockUser(friendInfo.friend.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.success('已拉黑 ${friendInfo.friend.displayName}'),
+            SparkleSnackBar.success(context.l10n.friendsBlockedSuccess(friendInfo.friend.displayName)),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.error('拉黑失败: $e'),
+            SparkleSnackBar.error(context.l10n.friendsBlockFailed(e.toString())),
           );
         }
       }
@@ -361,7 +360,7 @@ class _PendingRequestsTab extends ConsumerWidget {
             overviewAsync.valueOrNull?.pendingPartnerships ??
                 const <AccountabilityPartnershipInfo>[];
         if (requests.isEmpty && pendingPartnerships.isEmpty) {
-          return const Center(child: Text('当前没有待处理的好友请求或伙伴邀请'));
+          return Center(child: Text(context.l10n.friendsNoPendingRequests));
         }
         return RefreshIndicator(
           onRefresh: () async {
@@ -377,7 +376,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: DS.md),
                   child: Text(
-                    '好友请求',
+                    context.l10n.friendsFriendRequests,
                     style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
                   ),
                 );
@@ -396,7 +395,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                           : null,
                     ),
                     title: Text(user.displayName),
-                    subtitle: const Text('希望先和你建立好友关系'),
+                    subtitle: Text(context.l10n.friendsWantsToBeYourFriend),
                     onTap: () => context.push(
                       '/community/users/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
                     ),

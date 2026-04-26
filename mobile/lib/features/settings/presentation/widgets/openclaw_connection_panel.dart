@@ -206,8 +206,8 @@ class _OpenClawConnectionPanelState
     );
     _showSnackBar(
       ok
-          ? (successLabel ?? '已导入并保存 OpenClaw 配对配置')
-          : (service.info.errorMessage ?? '配对配置已导入，但当前连接验证失败'),
+          ? (successLabel ?? context.l10n.openclawPairImportedSaved)
+          : (service.info.errorMessage ?? context.l10n.openclawPairImportedVerifyFailed),
       isError: !ok,
     );
   }
@@ -220,7 +220,7 @@ class _OpenClawConnectionPanelState
     final payload = OpenClawConnectionService.parsePairingPayload(raw);
     if (payload == null) {
       _showSnackBar(
-        '剪贴板里没有识别到 OpenClaw 配对串或二维码 JSON',
+        context.l10n.openclawClipboardNoPairingPayload,
         isError: true,
       );
       return;
@@ -232,8 +232,8 @@ class _OpenClawConnectionPanelState
       service,
       config,
       successLabel: payload.deviceName == null
-          ? '已从剪贴板导入 OpenClaw 配对配置'
-          : '已连接到 ${payload.deviceName}',
+          ? context.l10n.openclawImportedFromClipboard
+          : context.l10n.openclawConnectedToDevice(payload.deviceName!),
     );
   }
 
@@ -244,7 +244,7 @@ class _OpenClawConnectionPanelState
     final raw = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('导入配对串'),
+        title: const Text(context.l10n.openclawImportPairingString),
         content: SizedBox(
           width: 520,
           child: TextField(
@@ -252,20 +252,20 @@ class _OpenClawConnectionPanelState
             maxLines: 8,
             autofocus: true,
             decoration: const InputDecoration(
-              labelText: '配对串或二维码内容',
+              labelText: context.l10n.openclawPairingOrQrLabel,
               hintText:
-                  '粘贴 OpenClaw 桌面端分享的 JSON、openclaw://pair?... 链接，或包含 gateway_url / pair_token 的文本',
+                  context.l10n.openclawPairingPasteHint,
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('导入并保存'),
+            child: const Text(context.l10n.openclawImportAndSave),
           ),
         ],
       ),
@@ -275,7 +275,7 @@ class _OpenClawConnectionPanelState
 
     final payload = OpenClawConnectionService.parsePairingPayload(raw);
     if (payload == null) {
-      _showSnackBar('无法识别这段内容，请检查是否包含 gateway_url 与 token', isError: true);
+      _showSnackBar(context.l10n.openclawUnrecognizedContent, isError: true);
       return;
     }
 
@@ -285,8 +285,8 @@ class _OpenClawConnectionPanelState
       service,
       config,
       successLabel: payload.deviceName == null
-          ? '已导入 OpenClaw 配对配置'
-          : '已导入 ${payload.deviceName} 的配对配置',
+          ? context.l10n.openclawImportedPairing
+          : context.l10n.openclawImportedDevicePairing(payload.deviceName!),
     );
   }
 
@@ -297,7 +297,7 @@ class _OpenClawConnectionPanelState
     if (!mounted) return;
     if (!status.isGranted) {
       _showSnackBar(
-        '需要相机权限才能扫码配对。你也可以改用“从剪贴板导入”或“粘贴配对串”。',
+        context.l10n.openclawCameraPermissionNeeded,
         isError: true,
       );
       return;
@@ -313,7 +313,7 @@ class _OpenClawConnectionPanelState
 
     final payload = OpenClawConnectionService.parsePairingPayload(raw);
     if (payload == null) {
-      _showSnackBar('扫到的二维码不是可识别的 OpenClaw 配对内容', isError: true);
+      _showSnackBar(context.l10n.openclawQrNotPairingContent, isError: true);
       return;
     }
 
@@ -323,8 +323,8 @@ class _OpenClawConnectionPanelState
       service,
       config,
       successLabel: payload.deviceName == null
-          ? '已扫码导入 OpenClaw 配对配置'
-          : '已扫码连接到 ${payload.deviceName}',
+          ? context.l10n.openclawScannedPairingImported
+          : context.l10n.openclawScannedConnectedToDevice(payload.deviceName!),
     );
   }
 
@@ -369,11 +369,11 @@ class _OpenClawConnectionPanelState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('应用向导'),
+            child: const Text(context.l10n.openclawApplyWizard),
           ),
         ],
       ),
@@ -388,7 +388,7 @@ class _OpenClawConnectionPanelState
         transport: transport,
       ),
     );
-    _showSnackBar('已填入远程连接模板，接下来补入授权令牌或导入配对串即可');
+    _showSnackBar(context.l10n.openclawRemoteTemplateFilled);
   }
 
   void _flashSavedState() {
@@ -421,13 +421,13 @@ class _OpenClawConnectionPanelState
   String _pairingCountdownLabel(OpenClawPairingSession? session) {
     if (session == null) return '';
     final remaining = session.expiresAt.difference(DateTime.now());
-    if (remaining.isNegative) return '配对码已过期';
+    if (remaining.isNegative) return context.l10n.openclawPairingCodeExpired;
     final minutes = remaining.inMinutes;
     final seconds = remaining.inSeconds % 60;
     if (minutes <= 0) {
-      return '请在 $seconds 秒内完成配对';
+      return context.l10n.openclawPairingExpiresSeconds(seconds);
     }
-    return '请在 $minutes 分 ${seconds.toString().padLeft(2, '0')} 秒内完成配对';
+    return context.l10n.openclawPairingExpiresMinutes(minutes, seconds.toString().padLeft(2, '0'));
   }
 
   OpenClawConnectionConfig? _buildConfig() {
@@ -459,7 +459,7 @@ class _OpenClawConnectionPanelState
     final config = _buildConfig();
     if (config == null) {
       _showSnackBar(
-        '请输入以 http://、https://、ws:// 或 wss:// 开头的地址',
+        context.l10n.openclawInvalidUrlFormat,
         isError: true,
       );
       return;
@@ -486,7 +486,7 @@ class _OpenClawConnectionPanelState
     final copy = ExecutionCopy.of(context);
     final config = _buildConfig();
     if (config == null) {
-      _showSnackBar('请输入有效的 OpenClaw 地址', isError: true);
+      _showSnackBar(context.l10n.openclawValidAddressRequired, isError: true);
       return;
     }
 
@@ -518,16 +518,16 @@ class _OpenClawConnectionPanelState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('断开连接'),
-        content: const Text('这会清除本地保存的 OpenClaw 连接配置。'),
+        title: const Text(context.l10n.openclawDisconnect),
+        content: const Text(context.l10n.openclawDisconnectConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('断开'),
+            child: const Text(context.l10n.openclawDisconnectAction),
           ),
         ],
       ),
@@ -547,7 +547,7 @@ class _OpenClawConnectionPanelState
       _transport = 'responses_http';
     });
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-    _showSnackBar('已断开 OpenClaw 连接');
+    _showSnackBar(context.l10n.openclawDisconnected);
   }
 
   Future<void> _startPairing(OpenClawConnectionService service) async {
@@ -555,13 +555,13 @@ class _OpenClawConnectionPanelState
     if (!mounted) return;
     _markDirty();
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-    _showSnackBar('已生成配对码 ${session.code}');
+    _showSnackBar(context.l10n.openclawPairingCodeGenerated(session.code));
   }
 
   Future<void> _completePairing(OpenClawConnectionService service) async {
     final token = _deviceTokenController.text.trim();
     if (token.isEmpty) {
-      _showSnackBar('请输入设备令牌后再完成配对', isError: true);
+      _showSnackBar(context.l10n.openclawDeviceTokenRequired, isError: true);
       return;
     }
 
@@ -571,17 +571,17 @@ class _OpenClawConnectionPanelState
       _authMode = 'device';
       _syncSavedConfig(service);
     });
-    _showSnackBar('设备配对已完成');
+    _showSnackBar(context.l10n.openclawDevicePairingComplete);
   }
 
   Future<void> _retryQueuedRequests(OpenClawConnectionService service) async {
     if (!service.isConnected) {
       _showSnackBar(
         service.hasExecutionPermissionIssue
-            ? '当前网关可访问，但没有执行权限，暂时无法重试队列'
+            ? context.l10n.openclawNoExecutionPermission
             : service.hasExecutionEndpointIssue
-                ? '当前网关可访问，但执行入口不可用，暂时无法重试队列'
-                : '执行引擎尚未连接，暂时无法重试队列',
+                ? context.l10n.openclawExecutionEndpointUnavailable
+                : context.l10n.openclawExecutionEngineNotConnected,
         isError: true,
       );
       return;
@@ -593,10 +593,10 @@ class _OpenClawConnectionPanelState
     if (!mounted) return;
     setState(() => _retryingQueue = false);
     if (dispatched > 0) {
-      _showSnackBar('已重新提交 $dispatched 个排队任务');
+      _showSnackBar(context.l10n.openclawQueuedTasksResubmitted(dispatched));
       return;
     }
-    _showSnackBar('当前没有可重试的排队任务');
+    _showSnackBar(context.l10n.openclawNoRetryableTasks);
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -621,15 +621,15 @@ class _OpenClawConnectionPanelState
     final permissionIssue = _hasExecutionPermissionIssue(message);
     final endpointIssue = _hasExecutionEndpointIssue(message);
     final title = permissionIssue
-        ? '网关在线，但当前令牌没有执行权限'
+        ? context.l10n.openclawGatewayOnlineNoExecPermission
         : endpointIssue
-            ? '网关在线，但执行接口没有准备好'
-            : '需要补一层执行链路排查';
+            ? context.l10n.openclawGatewayOnlineExecNotReady
+            : context.l10n.openclawNeedExecutionChainCheck;
     final body = permissionIssue
-        ? '当前状态说明健康检查能通过，但真正发起执行会被拒绝。优先更换具备 `operator.write` scope 的令牌，或改用设备配对 + WebSocket。'
+        ? context.l10n.openclawTroubleshootNoPermissionBody
         : endpointIssue
-            ? '当前地址可访问，但缺少 `/v1/responses` 执行入口。请确认 OpenClaw 网关版本、代理转发和 transport 选择是否一致。'
-            : '建议先重新测试连接，再检查网关地址、认证方式和 transport 是否与 OpenClaw 当前实例一致。';
+            ? context.l10n.openclawTroubleshootMissingEndpointBody
+            : context.l10n.openclawTroubleshootGenericBody;
 
     return Container(
       width: double.infinity,
@@ -690,22 +690,22 @@ class _OpenClawConnectionPanelState
       OpenClawConnectionStatus.disconnected => OpenClawVisualTone.offline,
     };
     final statusTitle = switch (service.info.status) {
-      OpenClawConnectionStatus.connected => '已准备好接手任务',
-      OpenClawConnectionStatus.connecting => '正在确认连接状态',
-      OpenClawConnectionStatus.error when hasPermissionIssue => '网关在线，但没有执行权限',
-      OpenClawConnectionStatus.error => '暂时还没连上',
-      OpenClawConnectionStatus.disconnected => '还没有接入 OpenClaw',
+      OpenClawConnectionStatus.connected => context.l10n.openclawStatusReadyForTasks,
+      OpenClawConnectionStatus.connecting => context.l10n.openclawStatusConfirmingConnection,
+      OpenClawConnectionStatus.error when hasPermissionIssue => context.l10n.openclawStatusOnlineNoPermission,
+      OpenClawConnectionStatus.error => context.l10n.openclawStatusNotConnected,
+      OpenClawConnectionStatus.disconnected => context.l10n.openclawStatusNotConfigured,
     };
     final statusSubtitle = switch (service.info.status) {
       OpenClawConnectionStatus.connected =>
-        '连接保持正常，你可以直接从任务页或聊天页把工作交给 OpenClaw。',
-      OpenClawConnectionStatus.connecting => '我们正在确认引擎状态，保存后的结果会同步显示在这里。',
+        context.l10n.openclawStatusConnectedSubtitle,
+      OpenClawConnectionStatus.connecting => context.l10n.openclawStatusConnectingSubtitle,
       OpenClawConnectionStatus.error when hasPermissionIssue =>
-        '当前令牌能访问网关，但真正执行会被拒绝。这里需要处理权限，而不是单纯重填地址。',
+        context.l10n.openclawStatusNoPermissionSubtitle,
       OpenClawConnectionStatus.error =>
-        service.info.errorMessage ?? '先检查地址、认证方式和传输协议，再重新测试连接。',
+        service.info.errorMessage ?? context.l10n.openclawStatusErrorSubtitleFallback,
       OpenClawConnectionStatus.disconnected =>
-        '完成一次连接后，之后的委派、排队和最近活动都会在各入口自动联动。',
+        context.l10n.openclawStatusDisconnectedSubtitle,
     };
 
     return SingleChildScrollView(
@@ -724,7 +724,7 @@ class _OpenClawConnectionPanelState
               if (_formDirty)
                 const OpenClawMetricPill(
                   icon: Icons.edit_rounded,
-                  label: '未保存更改',
+                  label: context.l10n.openclawUnsavedChanges,
                   tone: OpenClawVisualTone.attention,
                   emphasized: true,
                 ),
@@ -736,7 +736,7 @@ class _OpenClawConnectionPanelState
                 icon: _authMode == 'device'
                     ? Icons.devices_rounded
                     : Icons.key_rounded,
-                label: _authMode == 'device' ? '设备配对' : '令牌认证',
+                label: _authMode == 'device' ? context.l10n.openclawDevicePairing : context.l10n.openclawTokenAuth,
                 tone: _authMode == 'device'
                     ? OpenClawVisualTone.attention
                     : OpenClawVisualTone.active,
@@ -750,7 +750,7 @@ class _OpenClawConnectionPanelState
               if (service.queuedRequests.isNotEmpty)
                 OpenClawMetricPill(
                   icon: Icons.schedule_rounded,
-                  label: '${service.queuedRequestCount} 个待处理',
+                  label: context.l10n.openclawQueuedRequestCount(service.queuedRequestCount),
                   tone: OpenClawVisualTone.offline,
                   emphasized: true,
                 ),
@@ -761,7 +761,7 @@ class _OpenClawConnectionPanelState
             _buildTroubleshootingCard(service.info.errorMessage!),
           SizedBox(height: spacing),
           Text(
-            '快速接入',
+            context.l10n.openclawQuickConnect,
             style: DS.labelSmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
@@ -770,7 +770,7 @@ class _OpenClawConnectionPanelState
             runSpacing: DS.spacing8,
             children: [
               ChoiceChip(
-                label: const Text('自定义配置'),
+                label: const Text(context.l10n.openclawCustomConfig),
                 selected: _selectedPresetId == 'custom',
                 onSelected: (_) {
                   setState(() {
@@ -806,26 +806,26 @@ class _OpenClawConnectionPanelState
                 onPressed: () =>
                     unawaited(_importPairingPayloadFromClipboard(service)),
                 icon: const Icon(Icons.content_paste_go_rounded),
-                label: const Text('从剪贴板导入'),
+                label: const Text(context.l10n.openclawImportFromClipboard),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(_showPairingImportDialog(service)),
                 icon: const Icon(Icons.qr_code_2_rounded),
-                label: const Text('粘贴配对串'),
+                label: const Text(context.l10n.openclawPastePairingString),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(_scanPairingPayload(service)),
                 icon: const Icon(Icons.qr_code_scanner_rounded),
-                label: const Text('扫码配对'),
+                label: const Text(context.l10n.openclawScanToPair),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(
                   _showRemotePresetDialog(
-                    title: 'Tailscale 远程节点',
-                    labelText: 'Tailscale IP 或域名',
-                    hintText: '例如 100.88.1.24 或 devbox.tail123.ts.net',
+                    title: context.l10n.openclawTailscaleRemoteNode,
+                    labelText: context.l10n.openclawTailscaleIpOrDomain,
+                    hintText: context.l10n.openclawTailscaleHint,
                     helperText:
-                        '如果你的 OpenClaw 暴露在 Tailscale 上，这里只需要填节点 IP 或 MagicDNS 域名，Sparkle 会自动补上标准端口与 WebSocket 连接方式。',
+                        context.l10n.openclawTailscaleHelperText,
                     buildUrl: (raw) {
                       if (raw.startsWith('http://') ||
                           raw.startsWith('https://') ||
@@ -838,16 +838,16 @@ class _OpenClawConnectionPanelState
                   ),
                 ),
                 icon: const Icon(Icons.hub_rounded),
-                label: const Text('Tailscale'),
+                label: const Text(context.l10n.openclawTailscaleLabel),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(
                   _showRemotePresetDialog(
-                    title: 'Cloudflare Tunnel',
-                    labelText: 'Tunnel 域名',
-                    hintText: '例如 openclaw.example.com',
+                    title: context.l10n.openclawCloudflareTunnel,
+                    labelText: context.l10n.openclawTunnelDomain,
+                    hintText: context.l10n.openclawCloudflareHint,
                     helperText:
-                        '如果你通过 Cloudflare Tunnel 暴露 OpenClaw，这里填入域名即可。Sparkle 会按 HTTPS/WSS 方式生成连接配置。',
+                        context.l10n.openclawCloudflareHelperText,
                     buildUrl: (raw) {
                       if (raw.startsWith('http://') ||
                           raw.startsWith('https://')) {
@@ -858,7 +858,7 @@ class _OpenClawConnectionPanelState
                   ),
                 ),
                 icon: const Icon(Icons.cloud_rounded),
-                label: const Text('Cloudflare'),
+                label: const Text(context.l10n.openclawCloudflareLabel),
               ),
             ],
           ),
@@ -900,13 +900,13 @@ class _OpenClawConnectionPanelState
               controller: _gatewayController,
               onChanged: (_) => _markDirty(),
               decoration: const InputDecoration(
-                labelText: '网关地址',
-                hintText: '例如 http://localhost:8080',
+                labelText: context.l10n.openclawGatewayAddress,
+                hintText: context.l10n.openclawGatewayHint,
               ),
             ),
             SizedBox(height: spacing),
             Text(
-              '认证方式',
+              context.l10n.openclawAuthMode,
               style: DS.labelSmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing8),
@@ -914,11 +914,11 @@ class _OpenClawConnectionPanelState
               segments: const [
                 ButtonSegment<String>(
                   value: 'token',
-                  label: Text('令牌认证'),
+                  label: Text(context.l10n.openclawTokenAuth),
                 ),
                 ButtonSegment<String>(
                   value: 'device',
-                  label: Text('设备配对'),
+                  label: Text(context.l10n.openclawDevicePairing),
                 ),
               ],
               selected: {_authMode},
@@ -932,8 +932,8 @@ class _OpenClawConnectionPanelState
             const SizedBox(height: DS.spacing8),
             Text(
               _authMode == 'device'
-                  ? '适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。'
-                  : '适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。',
+                  ? context.l10n.openclawDeviceAuthDesc
+                  : context.l10n.openclawTokenAuthDesc,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.45,
@@ -946,8 +946,8 @@ class _OpenClawConnectionPanelState
                 onChanged: (_) => _markDirty(),
                 obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: '认证令牌',
-                  hintText: '粘贴 OpenClaw 网关令牌',
+                  labelText: context.l10n.openclawAuthToken,
+                  hintText: context.l10n.openclawAuthTokenHint,
                 ),
               )
             else ...[
@@ -955,8 +955,8 @@ class _OpenClawConnectionPanelState
                 controller: _deviceTokenController,
                 onChanged: (_) => _markDirty(),
                 decoration: const InputDecoration(
-                  labelText: '设备令牌',
-                  hintText: '配对完成后粘贴设备令牌',
+                  labelText: context.l10n.openclawDeviceToken,
+                  hintText: context.l10n.openclawDeviceTokenHint,
                 ),
               ),
               if (pairingSession != null) ...[
@@ -975,7 +975,7 @@ class _OpenClawConnectionPanelState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '配对码',
+                        context.l10n.openclawPairingCode,
                         style: DS.bodySmall.copyWith(
                           fontWeight: DS.fontWeightBold,
                           color: DS.info,
@@ -1002,7 +1002,7 @@ class _OpenClawConnectionPanelState
                                 ClipboardData(text: pairingSession.code),
                               );
                               if (!mounted) return;
-                              _showSnackBar('配对码已复制');
+                              _showSnackBar(context.l10n.openclawPairingCodeCopied);
                             },
                             icon: const Icon(Icons.copy_rounded),
                           ),
@@ -1017,7 +1017,7 @@ class _OpenClawConnectionPanelState
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        '请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。',
+                        context.l10n.openclawPairingCodeInstructions,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
@@ -1034,23 +1034,23 @@ class _OpenClawConnectionPanelState
                 children: [
                   TextButton(
                     onPressed: () => unawaited(_startPairing(service)),
-                    child: const Text('生成配对码'),
+                    child: const Text(context.l10n.openclawGeneratePairingCode),
                   ),
                   TextButton(
                     onPressed: () => unawaited(_completePairing(service)),
-                    child: const Text('完成配对'),
+                    child: const Text(context.l10n.openclawCompletePairing),
                   ),
                   if (pairingSession != null)
                     TextButton(
                       onPressed: () => unawaited(service.cancelPairing()),
-                      child: const Text('取消配对'),
+                      child: const Text(context.l10n.openclawCancelPairing),
                     ),
                 ],
               ),
             ],
             SizedBox(height: spacing),
             Text(
-              '传输协议',
+              context.l10n.openclawTransportProtocol,
               style: DS.labelSmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing8),
@@ -1076,8 +1076,8 @@ class _OpenClawConnectionPanelState
             const SizedBox(height: DS.spacing8),
             Text(
               _transport == 'gateway_ws'
-                  ? 'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。'
-                  : 'HTTP 更适合手动验证和快速测试连接。',
+                  ? context.l10n.openclawWebSocketTransportDesc
+                  : context.l10n.openclawHttpTransportDesc,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.45,
@@ -1087,7 +1087,7 @@ class _OpenClawConnectionPanelState
           ] else ...[
             const OpenClawMetricPill(
               icon: Icons.login_rounded,
-              label: '已为你准备好默认连接细节',
+              label: context.l10n.openclawDefaultConnectionReady,
               tone: OpenClawVisualTone.connected,
               emphasized: true,
             ),
@@ -1106,7 +1106,7 @@ class _OpenClawConnectionPanelState
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('测试连接'),
+                      : const Text(context.l10n.openclawTestConnection),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -1126,7 +1126,7 @@ class _OpenClawConnectionPanelState
                             ),
                           ),
                         )
-                      : const Text('保存配置'),
+                      : const Text(context.l10n.openclawSaveConfig),
                 ),
               ),
             ],
@@ -1158,7 +1158,7 @@ class _OpenClawConnectionPanelState
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('重试队列'),
+                        : const Text(context.l10n.openclawRetryQueue),
                   ),
                 ),
               if (service.queuedRequests.isNotEmpty &&
@@ -1170,7 +1170,7 @@ class _OpenClawConnectionPanelState
                   child: TextButton(
                     onPressed: () => unawaited(_disconnect(service)),
                     child: Text(
-                      '断开连接',
+                      context.l10n.openclawDisconnect,
                       style: DS.bodyMedium.copyWith(color: DS.semanticError),
                     ),
                   ),
