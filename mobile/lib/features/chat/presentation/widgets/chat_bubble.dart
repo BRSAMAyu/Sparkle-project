@@ -25,6 +25,7 @@ import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.
 import 'package:sparkle/features/chat/presentation/widgets/assistant_citation_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
 import 'package:sparkle/features/chat/presentation/widgets/capability_ceiling_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/context_receipt_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/collapsible_widget_wrapper.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
@@ -1117,6 +1118,19 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                           citation,
                                           helpful,
                                         ),
+                              ),
+                            if (showAiSystemAccessories &&
+                                !_isUser &&
+                                widget.message is ChatMessageModel)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0,
+                                ),
+                                child: ContextReceiptBar(
+                                  rawMetadata:
+                                      (widget.message as ChatMessageModel)
+                                          .rawMetadata,
+                                ),
                               ),
                             if (showAiSystemAccessories &&
                                 (_metadataWidgets.isNotEmpty ||

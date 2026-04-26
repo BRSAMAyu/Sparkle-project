@@ -1999,6 +1999,29 @@ class ChatOrchestrator(
             )
             filtered_rag = filter_graph_rag_result(rag_result)
             document_context = format_graph_rag_document_context(rag_result, filtered_rag.chunks)
+            used_chunks = [
+                {
+                    "chunk_id": c.chunk_id,
+                    "source_file_id": c.source_file_id,
+                    "filename": c.filename,
+                    "page_number": c.page_number,
+                    "relevance_score": round(c.relevance_score, 3),
+                    "evidence_strength": c.evidence_strength,
+                }
+                for c in filtered_rag.chunks
+                if c.relevance_score >= 0.3
+            ]
+            excluded_count = filtered_rag.total_retrieved - len(used_chunks)
+            context_receipt = {
+                "used": used_chunks,
+                "used_count": len(used_chunks),
+                "excluded_count": excluded_count,
+                "total_retrieved": filtered_rag.total_retrieved,
+                "mode": mode,
+                "decision_reason": state.context_data.get(
+                    "retrieval_decision", {}
+                ).get("reason_for_user", ""),
+            }
             metadata = {
                 "source": "graphrag",
                 "mode": mode,
@@ -2007,6 +2030,7 @@ class ChatOrchestrator(
                 "fallback_triggered": filtered_rag.fallback_triggered,
                 "entities": list(rag_result.entities or []),
                 "injection_mode": injection_mode,
+                "context_receipt": context_receipt,
             }
         except Exception as exc:
             logger.warning(f"GraphRAG document context hydration failed: {exc}")
