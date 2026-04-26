@@ -366,3 +366,50 @@ async def record_chip_selected(
     return {"recorded": True, "semantic_value": payload.semantic_value}
 
 
+# ── Signal-to-Action Spine: Receipt endpoints ──────────────────────────────────
+
+
+class SpineReceiptActionRequest(BaseModel):
+    receipt_id: str
+    action: Literal["confirm", "correct", "dismiss"]
+
+
+@router.get("/spine/receipt")
+async def get_spine_receipt(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any] | None:
+    """Get the latest UserVisibleReceipt for the current user."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"active": False}
+    spine = SpineOrchestrator(redis)
+    receipt = await spine.get_latest_receipt(str(current_user.id))
+    if receipt is None:
+        return {"active": False}
+    result = receipt.to_dict()
+    result["active"] = True
+    return result
+
+
+@router.post("/spine/receipt/action")
+async def submit_spine_receipt_action(
+    payload: SpineReceiptActionRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Submit user action on a Receipt (confirm / correct / dismiss)."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"processed": False}
+    spine = SpineOrchestrator(redis)
+    await spine.handle_user_receipt_action(
+        user_id=str(current_user.id),
+        receipt_id=payload.receipt_id,
+        action=payload.action,
+    )
+    return {"processed": True, "action": payload.action}
+
+

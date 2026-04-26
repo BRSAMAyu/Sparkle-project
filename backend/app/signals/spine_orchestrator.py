@@ -1,0 +1,236 @@
+"""
+Core: execution
+Phase: sense→clarify→plan→execute→reflect
+Stage: Signal-to-Action Spine M1 — 全链路编排
+
+Spine Orchestrator — 编排完整的 Signal→State→Decision→Directive→Audit→Receipt→Trace 链路。
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from loguru import logger
+
+from app.signals.causal_trace_store import CausalTraceStore
+from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
+from app.signals.policy_engine import PolicyEngine
+from app.signals.task_timeout_detector import TaskTimeoutDetector
+from app.signals.types import (
+    ActionableSignal,
+    CausalTrace,
+    DirectiveApplicationAudit,
+    ExecutionDirective,
+    PolicyDecision,
+    UserVisibleReceipt,
+    _uid,
+)
+
+
+class SpineOrchestrator:
+    """
+    Signal-to-Action Spine 主编排器。
+
+    职责：
+    1. 消费 task.completed 事件
+    2. 运行固定规则检测 → ActionableSignal
+    3. 运行 PolicyEngine → PolicyDecision + ExecutionDirective
+    4. 存储 directive 供 planning_workflow 消费
+    5. 生成 UserVisibleReceipt
+    6. 记录完整 CausalTrace
+    """
+
+    def __init__(self, redis_client: Any):
+        self.redis = redis_client
+        self.trace_store = CausalTraceStore(redis_client)
+        self.timeout_detector = TaskTimeoutDetector(redis_client)
+        self.policy_engine = PolicyEngine()
+
+    async def on_task_completed(
+        self,
+        *,
+        user_id: str,
+        task_id: str,
+        estimated_minutes: int,
+        actual_minutes: int,
+        plan_id: str | None = None,
+    ) -> CausalTrace | None:
+        """
+        完整链路：task.completed → (可能) signal → policy → directive → trace。
+
+        Returns:
+            CausalTrace if signal was generated and policy applied, None otherwise.
+        """
+        # Step 1: 创建 trace 骨架
+        trace = await self.trace_store.create_trace()
+        trace.raw_event_ids.append(task_id)
+        await self.trace_store.link_to_user(user_id, trace.trace_id)
+        await self.trace_store._save_trace(trace)
+
+        # Step 2: 固定规则检测
+        signal = await self.timeout_detector.on_task_completed(
+            user_id=user_id,
+            task_id=task_id,
+            estimated_minutes=estimated_minutes,
+            actual_minutes=actual_minutes,
+            plan_id=plan_id,
+        )
+
+        if signal is None:
+            # 无信号 — trace 记录了事件但无后续动作
+            trace.outcome_to_measure = ["task_completed_normally"]
+            await self.trace_store._save_trace(trace)
+            return trace
+
+        # Step 2b: 存储 signal 并链接到 trace
+        await self.trace_store.store_signal(signal)
+        await self.trace_store.append_signal(trace.trace_id, signal)
+
+        # Step 3: PolicyEngine
+        consecutive = await self.timeout_detector._get_consecutive_timeouts(user_id)
+        result = await self.policy_engine.evaluate(signal, context={"consecutive": consecutive})
+
+        if result is None:
+            trace.outcome_to_measure = ["signal_no_rule_match"]
+            await self.trace_store._save_trace(trace)
+            return trace
+
+        decision, directive = result
+
+        # Step 3b: 链接到 trace
+        await self.trace_store.append_policy(trace.trace_id, decision)
+        await self.trace_store.append_directive(trace.trace_id, directive)
+
+        # Step 4: 存储 active directive 供 task_generator 消费
+        await self.trace_store.set_active_directive(user_id, directive)
+
+        # Step 5: 生成 Receipt（如果 visibility = "receipt"）
+        if decision.visibility == "receipt":
+            receipt = UserVisibleReceipt(
+                receipt_id=_uid("rcpt"),
+                receipt_type="strategy_adjustment",
+                message=directive.user_visible_reason,
+                actions=["confirm", "correct", "dismiss"],
+                related_state_keys=[signal.state_key],
+            )
+            await self.trace_store.append_receipt(trace.trace_id, receipt)
+            trace = await self.trace_store.get_trace(trace.trace_id) or trace
+            # 将 receipt 挂到用户维度，方便前端拉取
+            import json
+            receipt_key = f"spine:receipt:{user_id}:latest"
+            await self.redis.set(
+                receipt_key,
+                json.dumps(receipt.to_dict()),
+                ex=72 * 3600,
+            )
+
+        # Step 6: 设置 outcome_to_measure
+        trace.outcome_to_measure = [
+            "task_started",
+            "task_completed",
+            "actual_duration_min",
+            "mini_quiz_accuracy",
+            "user_feedback",
+        ]
+        await self.trace_store._save_trace(trace)
+
+        logger.info(
+            "Spine complete: trace={} signal={} policy={} directive={}",
+            trace.trace_id, signal.signal_id,
+            decision.policy_decision_id, directive.directive_id,
+        )
+
+        return trace
+
+    async def get_active_directive(self, user_id: str) -> ExecutionDirective | None:
+        """供 planning_workflow 调用——获取当前用户的活跃 directive。"""
+        return await self.trace_store.get_active_directive(user_id)
+
+    async def apply_directive_to_task_spec(
+        self,
+        user_id: str,
+        task_spec: dict[str, Any],
+    ) -> tuple[dict[str, Any], DirectiveApplicationAudit | None]:
+        """
+        供 planning_workflow 调用——将 directive 约束应用到任务 spec，并审计。
+        """
+        directive = await self.get_active_directive(user_id)
+        if not directive:
+            return task_spec, None
+
+        modified_spec = DirectiveApplier.apply_to_task_spec(
+            directive=directive,
+            task_spec=task_spec,
+        )
+        audit = DirectiveAuditor.audit(
+            directive=directive,
+            generated_task=modified_spec,
+        )
+
+        # 链接 audit 到最近的 trace
+        traces = await self.trace_store.get_user_traces(user_id, limit=1)
+        if traces:
+            await self.trace_store.append_audit(traces[0].trace_id, audit)
+
+        # 如果 directive 已消费（scope=today），清除
+        if directive.scope == "today":
+            await self.trace_store.clear_active_directive(user_id)
+            logger.info("Directive {} consumed and cleared for user {}", directive.directive_id, user_id)
+
+        return modified_spec, audit
+
+    async def get_latest_receipt(self, user_id: str) -> UserVisibleReceipt | None:
+        """供前端调用——获取最新的 Receipt。"""
+        import json
+        raw = await self.redis.get(f"spine:receipt:{user_id}:latest")
+        if not raw:
+            return None
+        d = json.loads(raw)
+        return UserVisibleReceipt(
+            receipt_id=d["receipt_id"],
+            receipt_type=d["receipt_type"],
+            message=d["message"],
+            actions=d["actions"],
+            related_state_keys=d["related_state_keys"],
+            created_at=d.get("created_at", ""),
+        )
+
+    async def handle_user_receipt_action(
+        self,
+        user_id: str,
+        receipt_id: str,
+        action: str,
+    ) -> None:
+        """
+        用户对 Receipt 的反馈。
+        - confirm: 确认接受策略调整
+        - correct: 用户纠正（收回判断）
+        - dismiss: 忽略
+        """
+        import json
+        if action == "correct":
+            # 用户纠正 → 清除 directive，记录到 self_model
+            await self.trace_store.clear_active_directive(user_id)
+            logger.info("User corrected receipt {} — directive cleared", receipt_id)
+
+            # 记录纠正到 self_model
+            try:
+                from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+                from app.core.cache import cache_service
+                await SparkleSelfModelService(cache_service.redis).record_user_correction(
+                    user_id=user_id,
+                    signal_id=f"receipt_correct:{receipt_id}",
+                    reason="user_corrected_strategy_adjustment",
+                    source="spine_receipt",
+                )
+            except Exception as exc:
+                logger.warning("Failed to record user correction to self_model: {}", exc)
+
+        # 清除 receipt
+        await self.redis.delete(f"spine:receipt:{user_id}:latest")
+        # 记录用户动作
+        await self.redis.set(
+            f"spine:receipt_action:{receipt_id}",
+            json.dumps({"action": action, "user_id": user_id}),
+            ex=72 * 3600,
+        )

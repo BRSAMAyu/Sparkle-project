@@ -976,6 +976,19 @@ class PlanningWorkflowManager:
         created_tasks: list[Task] = []
         galaxy_weak_nodes = list(session.collected.get("galaxy_weak_nodes") or [])
         phases = list(strategy.get("phases") or [])
+
+        # Signal-to-Action Spine: fetch active directive for this user
+        spine = None
+        spine_directive = None
+        try:
+            from app.signals.spine_orchestrator import SpineOrchestrator
+            spine = SpineOrchestrator(cache_service.redis)
+            spine_directive = await spine.get_active_directive(str(user_id))
+            if spine_directive:
+                logger.info("Spine directive active for user {}: {}", user_id, list(spine_directive.hard_constraints.keys()))
+        except Exception as _spine_exc:
+            logger.debug("Spine directive fetch skipped: {}", _spine_exc)
+
         for index, phase in enumerate(phases, start=1):
             for day_spec in self._daily_task_specs(
                 phase,
@@ -984,6 +997,18 @@ class PlanningWorkflowManager:
                 error_clusters=last_24h_error_clusters,
                 galaxy_weak_nodes=galaxy_weak_nodes or None,
             ):
+                # Signal-to-Action Spine: apply directive constraints + audit
+                if spine is not None:
+                    try:
+                        day_spec, _spine_audit = await spine.apply_directive_to_task_spec(
+                            str(user_id), day_spec,
+                        )
+                        if _spine_audit and not _spine_audit.applied:
+                            logger.warning("Spine audit violation: {}", _spine_audit.violations)
+                        spine = None  # directive consumed once
+                    except Exception as _spine_exc:
+                        logger.debug("Spine apply_directive skipped: {}", _spine_exc)
+
                 guide_json = self._build_task_guide_json(
                     session=session,
                     phase=phase,
@@ -4625,6 +4650,7 @@ class PlanningWorkflowManager:
         task_kind: str,
         sprint_mode: str,
         base_minutes: int,
+        max_duration_min: int | None = None,
     ) -> int:
         caps = {
             "diagnostic_triage": 55,
@@ -4645,7 +4671,10 @@ class PlanningWorkflowManager:
         }
         floor = floors.get(sprint_mode, 30)
         cap = caps.get(task_kind, base_minutes)
-        return max(floor, min(base_minutes, cap))
+        result = max(floor, min(base_minutes, cap))
+        if max_duration_min is not None:
+            result = min(result, max_duration_min)
+        return result
 
     def _progress_data(self, state: str) -> dict[str, Any]:
         current = {
