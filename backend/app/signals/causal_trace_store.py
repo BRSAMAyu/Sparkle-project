@@ -69,6 +69,9 @@ class CausalTraceStore:
         from datetime import UTC, datetime
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
+        # Store policy object for timeline retrieval
+        key = f"spine:policy:{decision.policy_decision_id}"
+        await self.redis.set(key, json.dumps(decision.to_dict()), ex=_TRACE_TTL)
 
     async def append_directive(self, trace_id: str, directive: ExecutionDirective) -> None:
         trace = await self.get_trace(trace_id)
@@ -78,6 +81,14 @@ class CausalTraceStore:
         from datetime import UTC, datetime
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
+        # Store directive object for timeline retrieval
+        key = f"spine:directive_by_id:{directive.directive_id}"
+        await self.redis.set(key, json.dumps(directive.to_dict()), ex=_TRACE_TTL)
+
+    async def store_directive_by_id(self, directive_id: str, data: dict) -> None:
+        """Store any directive type by ID for timeline retrieval."""
+        key = f"spine:directive_by_id:{directive_id}"
+        await self.redis.set(key, json.dumps(data), ex=_TRACE_TTL)
 
     async def append_audit(self, trace_id: str, audit: DirectiveApplicationAudit) -> None:
         trace = await self.get_trace(trace_id)

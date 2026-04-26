@@ -439,8 +439,11 @@ async def get_causal_timeline(
     current_user: User = Depends(get_current_user),
 ) -> CausalTimelineResponse:
     """Get the Causal Audit Timeline for the current user (Spec Section 19)."""
+    import json
+
     from app.signals.causal_trace_store import CausalTraceStore
     from app.signals.outcome_recorder import OutcomeRecorder
+    from app.signals.types import ActionableSignal, PolicyDecision, UserVisibleReceipt
 
     redis = cache_service.redis
     if redis is None:
@@ -456,47 +459,31 @@ async def get_causal_timeline(
         if trace.signal_ids:
             raw = await redis.get(f"spine:signal:{trace.signal_ids[0]}")
             if raw:
-                from app.signals.types import ActionableSignal
-                signal_data = ActionableSignal.from_dict(
-                    __import__("json").loads(raw)
-                ).to_dict()
+                signal_data = ActionableSignal.from_dict(json.loads(raw)).to_dict()
 
         # Build policy summary
         policy_data = None
-        if trace.policy_ids:
-            raw = await redis.get(f"spine:policy:{trace.policy_ids[0]}")
+        if trace.policy_decision_id:
+            raw = await redis.get(f"spine:policy:{trace.policy_decision_id}")
             if raw:
-                from app.signals.types import PolicyDecision
-                policy_data = PolicyDecision.from_dict(
-                    __import__("json").loads(raw)
-                ).to_dict()
+                policy_data = PolicyDecision.from_dict(json.loads(raw)).to_dict()
 
-        # Build directive summaries
+        # Build directive summaries — fetch each by individual key
         directives = []
         for did in trace.directive_ids:
-            # Try execution directive
-            raw = await redis.get(f"spine:directive_raw:{did}")
+            raw = await redis.get(f"spine:directive_by_id:{did}")
             if raw:
-                directives.append(__import__("json").loads(raw))
-                continue
-            # Try other directive types
-            for prefix in ("response", "notification", "plan", "model_write", "ux", "retrieval"):
-                raw = await redis.get(f"spine:{prefix}_directive:{str(current_user.id)}:latest")
-                if raw:
-                    d = __import__("json").loads(raw)
-                    if d.get("directive_id") == did:
-                        directives.append(d)
-                        break
+                directives.append(json.loads(raw))
 
         # Build receipt summary
         receipt_data = None
         if trace.receipt_ids:
-            raw = await redis.get(f"spine:receipt:{str(current_user.id)}:latest")
+            raw = await redis.get(f"spine:receipt_by_id:{trace.receipt_ids[0]}")
+            if not raw:
+                # Fallback to user's latest receipt
+                raw = await redis.get(f"spine:receipt:{str(current_user.id)}:latest")
             if raw:
-                from app.signals.types import UserVisibleReceipt
-                receipt_data = UserVisibleReceipt.from_dict(
-                    __import__("json").loads(raw)
-                ).to_dict()
+                receipt_data = UserVisibleReceipt.from_dict(json.loads(raw)).to_dict()
 
         # Build outcome summary
         outcome_data = None
@@ -513,7 +500,7 @@ async def get_causal_timeline(
         if signal_data:
             event_parts.append(f"信号: {signal_data.get('claim', '?')}")
         if policy_data:
-            event_parts.append(f"策略: {policy_data.get('action', '?')}")
+            event_parts.append(f"策略: {policy_data.get('primary_strategy', '?')}")
         event_summary = " → ".join(event_parts) if event_parts else "系统事件"
 
         entries.append(CausalTimelineEntry(

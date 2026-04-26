@@ -3901,6 +3901,12 @@ async def test_causal_timeline_api_format():
     sig_data = json.loads(raw_signal)
     assert sig_data["claim"] == "recent_task_too_large"
 
+    # Verify policy data is stored by ID for timeline retrieval
+    raw_policy = await redis.get(f"spine:policy:{policy.policy_decision_id}")
+    assert raw_policy is not None
+    pol_data = json.loads(raw_policy)
+    assert pol_data["primary_strategy"] == "recover_execution_rhythm"
+
 
 @pytest.mark.asyncio
 async def test_state_endpoint_returns_packet():
@@ -3953,3 +3959,30 @@ async def test_metrics_endpoint_returns_snapshot():
     assert len(snap) == 10
     assert snap["signal_to_state_rate"]["value"] == pytest.approx(0.8, abs=0.01)
     assert snap["orphan_signal_count"]["value"] == 0
+
+
+@pytest.mark.asyncio
+async def test_directive_stored_by_id():
+    """All directive types stored via spine are retrievable by directive_id."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    signal = ActionableSignal(
+        signal_id="sig_byid", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.85, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    spine = SpineOrchestrator(redis_client=redis)
+    trace = await spine._run_signal_pipeline(user_id="u_byid", signal=signal)
+
+    # The trace should have directive_ids
+    assert len(trace.directive_ids) > 0
+
+    # Each directive should be retrievable by ID
+    for did in trace.directive_ids:
+        raw = await redis.get(f"spine:directive_by_id:{did}")
+        assert raw is not None, f"directive {did} not stored by ID"
+        d = json.loads(raw)
+        assert "directive_id" in d
+        assert d["directive_id"] == did

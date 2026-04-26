@@ -192,9 +192,12 @@ class SpineOrchestrator:
             # 将 receipt 挂到用户维度，方便前端拉取
             import json
             receipt_key = f"spine:receipt:{user_id}:latest"
+            receipt_data = json.dumps(receipt.to_dict())
+            await self.redis.set(receipt_key, receipt_data, ex=72 * 3600)
+            # Store by receipt ID for timeline retrieval
             await self.redis.set(
-                receipt_key,
-                json.dumps(receipt.to_dict()),
+                f"spine:receipt_by_id:{receipt.receipt_id}",
+                receipt_data,
                 ex=72 * 3600,
             )
 
@@ -700,6 +703,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:response_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
 
     async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
         """获取用户当前 ResponseDirective。"""
@@ -714,6 +718,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:notification_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(nd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
 
     async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
         """获取用户当前 NotificationDirective。"""
@@ -727,6 +732,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:retrieval_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
 
     async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
         import json
@@ -741,6 +747,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:plan_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(pd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
 
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
         import json
@@ -755,6 +762,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:model_write_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(mwd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(mwd.directive_id, mwd.to_dict())
 
     async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
         import json
@@ -797,6 +805,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:ux_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(uxd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
 
     async def get_ux_directive(self, user_id: str) -> UXDirective | None:
         import json
