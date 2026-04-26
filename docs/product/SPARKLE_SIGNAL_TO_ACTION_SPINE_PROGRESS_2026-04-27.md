@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-152/152 tests passing:
+157/157 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -182,8 +182,8 @@
 - PolicyEngine rules: 6 tests
 - P2 Spine integration: 17 tests
 - P3 Production wiring: 5 tests
-- Layer 3 SignalRanker: 11 tests
-- Layer 4 StateRegister: 16 tests
+- Layer 3 SignalRanker: 11 tests (9 standalone + 2 integration)
+- Layer 4 StateRegister: 21 tests (16 standalone + 5 integration/edge)
 
 ---
 
@@ -275,12 +275,17 @@
 ### 验收标准
 
 - [x] Signal → StateEntry 持久化
-- [x] 高置信度信号覆盖低置信度状态
+- [x] 高置信度信号覆盖低置信度状态（低置信度不覆盖 value）
 - [x] TTL 过期自动清理
-- [x] counter_evidence 可追加
+- [x] counter_evidence 可追加（上限 20 条）
 - [x] scope 批量清除（turn/session/sprint）
+- [x] Iron Rule 7: scope TTL clamp（turn ≤1h, sprint ≤168h, goal ≤720h）
+- [x] 证据列表上限 20 条
+- [x] StateEntry 完整字段（11 个字段匹配 Final Spec Section 4.1）
+- [x] 21 个 state_key 的 can_affect 映射
 - [x] SpineOrchestrator.on_task_completed 和 _run_signal_pipeline 自动持久化
 - [x] 反序列化正确
+- [x] Opus review: C-1/C-3/C-4 已修复
 
 ---
 

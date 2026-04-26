@@ -2269,10 +2269,11 @@ async def test_state_register_upsert_merge_higher(state_register):
 
 @pytest.mark.asyncio
 async def test_state_register_upsert_keep_lower(state_register):
-    """同 state_key 更低 confidence → 保留旧的 confidence。"""
-    await state_register.upsert_from_signal("u1", _sig(confidence=0.9))
-    entry = await state_register.upsert_from_signal("u1", _sig(confidence=0.5))
+    """同 state_key 更低 confidence → 保留旧的 confidence 和 value。"""
+    await state_register.upsert_from_signal("u1", _sig(confidence=0.9, claim="original_claim"))
+    entry = await state_register.upsert_from_signal("u1", _sig(confidence=0.5, claim="new_claim"))
     assert entry.confidence == 0.9
+    assert entry.value == "original_claim"  # value NOT overwritten
 
 
 @pytest.mark.asyncio
@@ -2393,4 +2394,56 @@ async def test_spine_pipeline_updates_state_register(spine):
     entry = await spine.state_register.get_state("u_reg", "task_granularity_fit")
     assert entry is not None
     assert entry.value == "too_large"
+
+
+@pytest.mark.asyncio
+async def test_state_register_scope_ttl_clamp(state_register):
+    """scope=turn ttl=999 → 被 clamp 到 1h。"""
+    signal = _sig(scope="turn", ttl=999)
+    entry = await state_register.upsert_from_signal("u1", signal)
+    assert entry.ttl_hours == 1  # turn max is 1h
+
+
+@pytest.mark.asyncio
+async def test_state_register_scope_ttl_no_clamp(state_register):
+    """scope=sprint ttl=72 → 不被 clamp。"""
+    signal = _sig(scope="current_sprint", ttl=72)
+    entry = await state_register.upsert_from_signal("u1", signal)
+    assert entry.ttl_hours == 72
+
+
+@pytest.mark.asyncio
+async def test_state_register_evidence_cap(state_register):
+    """证据列表不超过上限。"""
+    for i in range(25):
+        await state_register.upsert_from_signal("u1", _sig(
+            confidence=0.5, evidence=f"evidence_{i}",
+        ))
+    entry = await state_register.get_state("u1", "task_granularity_fit")
+    assert len(entry.supporting_evidence) <= 20
+
+
+@pytest.mark.asyncio
+async def test_state_register_expire_stale(state_register, monkeypatch):
+    """expire_stale 移除过期状态。"""
+    from app.signals.state_register import _parse_iso
+    from datetime import timedelta
+
+    await state_register.upsert_from_signal("u1", _sig(ttl=1))
+
+    # Patch _is_expired to always return True
+    monkeypatch.setattr(state_register, "_is_expired", lambda entry: True)
+    count = await state_register.expire_stale("u1")
+    assert count == 1
+    states = await state_register.get_active_states("u1")
+    assert len(states) == 0
+
+
+@pytest.mark.asyncio
+async def test_state_register_clear_scope_empty(state_register):
+    """clear_scope 无匹配 → 0。"""
+    await state_register.upsert_from_signal("u1", _sig(scope="sprint"))
+    count = await state_register.clear_scope("u1", "turn")
+    assert count == 0
+
 
