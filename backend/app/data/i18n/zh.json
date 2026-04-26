@@ -1,0 +1,35 @@
+{
+  "common": {
+    "unknown": "未知",
+    "success": "成功",
+    "error": "错误"
+  },
+  "planner": {
+    "constraints_header": "规划约束（必须尽量满足）：",
+    "ai_study_plan": "AI 学习计划",
+    "start_task_with": "在开始目标任务前，先安排一个针对「{topic}」"
+  },
+  "workflow": {
+    "analyzing": "正在分析并规划任务...",
+    "fallback_notice": "本轮未生成可执行工具计划，已回退为模式化回答。",
+    "executing": "正在执行 {count} 个任务...",
+    "synthesizing": "正在合成最终结果...",
+    "fallback_summary": "已完成多Agent执行，以下是结构化摘要：\n{summary}\n\n如需我继续输出完整报告，请告诉我你关注的重点。",
+    "validation_status": "验证结果: status={status}, score={score}, aborted={aborted}",
+    "main_issues": "主要问题: {issues}"
+  },
+  "synthesis": {
+    "deep_analysis": "你是深度分析综合器。请输出：关键结论、证据链、反方与边界、应用建议。",
+    "study_plan": "你是学习计划综合器。请输出：目标、里程碑、每周计划、每日执行模板、复盘机制。",
+    "error_diagnosis": "你是错题诊断综合器。请输出：错误类型、根因分析、正确路径、针对性练习、复发预防。",
+    "default": "你是任务结果综合器。请基于执行结果输出清晰结论。",
+    "multi_agent_constraints": "## 多Agent综合约束",
+    "refer_to_points": "请同时参考以下要点：",
+    "fact_based": "1. 最终回答必须以已执行完成的工具结果为事实基础。",
+    "consistency": "2. 保留用户画像、历史上下文、当前计划上下文的一致性。",
+    "deviation": "3. 如果执行结果与用户期待有偏差，要明确指出边界与下一步。",
+    "expert_contribution": "4. 最终综合时优先吸收以下专家视角并明确其贡献：{experts}",
+    "executed_results": "## 已验证的执行结果摘要",
+    "execution_quality": "## 执行质量验证"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "common": {
+    "unknown": "Unknown",
+    "success": "Success",
+    "error": "Error"
+  },
+  "planner": {
+    "constraints_header": "Planning Constraints (must be met if possible):",
+    "ai_study_plan": "AI Study Plan",
+    "start_task_with": "Before starting the target task, arrange a 「{topic}」"
+  },
+  "workflow": {
+    "analyzing": "Analyzing and planning tasks...",
+    "fallback_notice": "No executable tool plan generated this round. Fallback to model-based response.",
+    "executing": "Executing {count} tasks...",
+    "synthesizing": "Synthesizing final result...",
+    "fallback_summary": "Multi-agent execution completed. Here is the structured summary:\n{summary}\n\nIf you need me to output a full report, please tell me your focus.",
+    "validation_status": "Validation results: status={status}, score={score}, aborted={aborted}",
+    "main_issues": "Main issues: {issues}"
+  },
+  "synthesis": {
+    "deep_analysis": "You are a Deep Analysis Synthesizer. Please output: Key Conclusions, Evidence Chain, Counter-arguments & Boundaries, Application Suggestions.",
+    "study_plan": "You are a Study Plan Synthesizer. Please output: Goals, Milestones, Weekly Plan, Daily Execution Template, Review Mechanism.",
+    "error_diagnosis": "You are an Error Diagnosis Synthesizer. Please output: Error Type, Root Cause Analysis, Correct Path, Targeted Practice, Recurrence Prevention.",
+    "default": "You are a Task Result Synthesizer. Please output clear conclusions based on execution results.",
+    "multi_agent_constraints": "## Multi-Agent Synthesis Constraints",
+    "refer_to_points": "Please also refer to the following points:",
+    "fact_based": "1. The final answer must be based on facts from the executed tool results.",
+    "consistency": "2. Maintain consistency with user persona, historical context, and current plan context.",
+    "deviation": "3. If the execution result deviates from user expectations, clearly point out boundaries and next steps.",
+    "expert_contribution": "4. In the final synthesis, prioritize absorbing the following expert perspectives and clearly state their contributions: {experts}",
+    "executed_results": "## Summarized Verified Execution Results",
+    "execution_quality": "## Execution Quality Verification"
+  }
+}
