@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-97/97 tests passing:
+109/109 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -179,6 +179,8 @@
 - P1-4 RecallOpportunity: 10 tests
 - P1-5 SparkleSelfModel: 9 tests
 - P1-6 CommunitySignal: 9 tests
+- PolicyEngine rules: 6 tests
+- P2 Spine integration: 6 tests
 
 ---
 
