@@ -50,9 +50,7 @@ async def _create_user_turn(db_session, user_id, session_id, content: str) -> Ch
 @pytest.mark.asyncio
 async def test_memory_inferred_extractor_precision_fixture(db_session):
     service = MemoryInferredWriteLaneService(db_session)
-    fixture_path = (
-        Path(__file__).resolve().parents[1] / "fixtures" / "memory_inferred_cold_dataset.json"
-    )
+    fixture_path = Path(__file__).resolve().parents[1] / "fixtures" / "memory_inferred_cold_dataset.json"
     cases = json.loads(fixture_path.read_text(encoding="utf-8"))
 
     predicted_positive = 0
@@ -110,6 +108,114 @@ async def test_memory_inferred_write_lane_respects_feature_flag(db_session, monk
 
 
 @pytest.mark.asyncio
+async def test_memory_inferred_write_lane_default_writes_user_signal(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
+    from unittest.mock import AsyncMock
+
+    from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+
+    monkeypatch.setattr(AuroraStage19KillSwitchService, "is_enabled", AsyncMock(return_value=False))
+
+    user = await _create_user(db_session)
+    session_id = uuid4()
+    text = "我下周要考高数，TCP 这块也一直觉得很难。"
+    user_turn = await _create_user_turn(db_session, user.id, session_id, text)
+
+    service = MemoryInferredWriteLaneService(db_session)
+    candidate = await service.process_chat_turn(
+        user_id=user.id,
+        session_id=session_id,
+        user_message=text,
+        assistant_message="收到，我会把高数考试和 TCP 难点都记进后续安排里。",
+        user_message_id=str(user_turn.id),
+        assistant_message_id=str(uuid4()),
+    )
+
+    assert candidate is not None
+    result = await db_session.execute(
+        select(EpisodicMemory).where(
+            EpisodicMemory.user_id == user.id,
+            EpisodicMemory.source_lane == "inferred_extraction",
+        )
+    )
+    record = result.scalar_one_or_none()
+    assert record is not None
+    assert "高数" in record.summary or "TCP" in record.summary
+
+
+@pytest.mark.asyncio
+async def test_memory_inferred_extractor_captures_learning_fragments(db_session):
+    service = MemoryInferredWriteLaneService(db_session)
+    user_id = uuid4()
+
+    exam_candidate = service.extract_candidate(
+        user_id=user_id,
+        user_message="明天考高数",
+        assistant_message="我会帮你安排复习。",
+        evidence_token=str(uuid4()),
+    )
+    difficulty_candidate = service.extract_candidate(
+        user_id=user_id,
+        user_message="TCP 流量控制有点难",
+        assistant_message="我们可以拆开讲。",
+        evidence_token=str(uuid4()),
+    )
+
+    assert exam_candidate is not None
+    assert "明天考高数" in exam_candidate.candidate_text
+    assert difficulty_candidate is not None
+    assert "TCP 流量控制有点难" in difficulty_candidate.candidate_text
+
+
+@pytest.mark.asyncio
+async def test_two_consecutive_sessions_prompt_includes_inferred_memory(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
+    from unittest.mock import AsyncMock
+
+    from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+
+    monkeypatch.setattr(AuroraStage19KillSwitchService, "is_enabled", AsyncMock(return_value=False))
+
+    user = await _create_user(db_session)
+    first_session_id = uuid4()
+    second_session_id = uuid4()
+    first_turn = await _create_user_turn(
+        db_session,
+        user.id,
+        first_session_id,
+        "TCP 流量控制有点难，明天还要考高数。",
+    )
+
+    service = MemoryInferredWriteLaneService(db_session)
+    candidate = await service.process_chat_turn(
+        user_id=user.id,
+        session_id=first_session_id,
+        user_message=first_turn.content,
+        assistant_message="收到，我会记住 TCP 流量控制和高数考试这两个点。",
+        user_message_id=str(first_turn.id),
+        assistant_message_id=str(uuid4()),
+    )
+    assert candidate is not None
+
+    await _create_user_turn(db_session, user.id, second_session_id, "早上好，今天从哪里开始？")
+    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 200, "goals": 200, "episodic": 200}})
+    pack = await ContextPackBuilder(db_session, scheduler=scheduler).build(
+        user.id,
+        intent="chat",
+        query_text="早上好，今天从哪里开始？",
+    )
+    prompt = build_system_prompt(pack.to_prompt_context(), {"messages": []})
+
+    assert prompt.startswith("## 跨会话记忆 [L2 引导]\n")
+    assert "请自然衔接上次内容" in prompt
+    assert "TCP 流量控制有点难" in prompt
+    assert "明天还要考高数" in prompt
+    assert "inferred_extraction" in prompt or "chat" in prompt
+
+
+@pytest.mark.asyncio
 async def test_memory_inferred_revoke_hides_from_prompt_read_path(db_session, monkeypatch):
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
@@ -137,9 +243,7 @@ async def test_memory_inferred_revoke_hides_from_prompt_read_path(db_session, mo
     )
     assert candidate is not None
 
-    scheduler = ContextBudgetScheduler(
-        budgets={"chat": {"preferences": 200, "goals": 200, "episodic": 200}}
-    )
+    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 200, "goals": 200, "episodic": 200}})
     builder = ContextPackBuilder(db_session, scheduler=scheduler)
     pack_before = await builder.build(user.id, intent="chat", query_text="继续帮我安排今晚进度")
     prompt_before = build_system_prompt(pack_before.to_prompt_context(), "History")

@@ -571,6 +571,75 @@ async def test_process_stream_fast_tracks_exam_sprint_before_sufficiency(orchest
 
 
 @pytest.mark.asyncio
+async def test_process_stream_modeling_complete_fast_track_returns_launch_route(orchestrator_factory):
+    orchestrator, _, state_updates = orchestrator_factory()
+    request = _make_request(message="开始规划")
+    request.extra_context.CopyFrom(
+        _make_struct(
+            {
+                "from_modeling_complete": True,
+                "modeling_output": {
+                    "cold_start_context": {
+                        "goal_raw": "7天后考计算机网络",
+                        "subject": "计算机网络",
+                        "exam_scope": "计算机网络期末：传输层、网络层、应用层",
+                        "knowledge_baseline": "完全没学过",
+                        "time_available": "每天约 2 小时",
+                        "daily_available_hours": 2,
+                        "time_constraint_days": 7,
+                        "motivation_context": "想先保住及格线",
+                    },
+                },
+            }
+        )
+    )
+    plan_id = "11111111-1111-1111-1111-111111111111"
+    task_id = "22222222-2222-2222-2222-222222222222"
+    orchestrator.planning_workflow_manager.process_planning_turn = AsyncMock(
+        return_value={
+            "message": "方案已经确认，我先把今天聚焦成第一天任务。",
+            "widgets": [
+                {
+                    "type": "plan_card",
+                    "data": {"id": plan_id, "plan_id": plan_id, "name": "7天计算机网络冲刺"},
+                },
+                {
+                    "type": "task_list",
+                    "data": {
+                        "tasks": [
+                            {
+                                "id": task_id,
+                                "plan_id": plan_id,
+                                "title": "Day 1 · 诊断",
+                            }
+                        ]
+                    },
+                },
+            ],
+            "metadata": {},
+        }
+    )
+
+    responses = await _collect(orchestrator, request)
+    final_response = responses[-1]
+    planning_context = orchestrator.planning_workflow_manager.process_planning_turn.await_args.kwargs["context"]
+    fast_track_context = planning_context["exam_sprint_fast_track"]
+    fast_track_collected = fast_track_context["collected"]
+
+    assert final_response.finish_reason == agent_service_pb2.STOP
+    assert final_response.metadata["plan_id"] == plan_id
+    assert final_response.metadata["plan_route"] == f"/plans/{plan_id}"
+    assert final_response.metadata["recommended_task_id"] == task_id
+    assert final_response.metadata["recommended_task_route"] == f"/tasks/{task_id}"
+    assert final_response.metadata["planning_fast_track"] == "exam_sprint"
+    assert fast_track_collected["from_modeling_complete"] is True
+    assert fast_track_collected["fast_track_exam_sprint"] is True
+    assert fast_track_collected["exam_scope"] == "计算机网络期末：传输层、网络层、应用层"
+    assert orchestrator._check_sufficiency.await_count == 0
+    assert state_updates[-1][0] == STATE_DONE
+
+
+@pytest.mark.asyncio
 async def test_process_stream_planning_bypass_injects_aurora_sidecar_prompt(orchestrator_factory):
     orchestrator, _, _state_updates = orchestrator_factory()
     user_id = str(uuid.uuid4())

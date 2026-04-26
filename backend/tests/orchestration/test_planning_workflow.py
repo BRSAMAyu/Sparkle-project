@@ -115,6 +115,46 @@ def test_daily_task_specs_expands_each_phase_to_one_task_per_day() -> None:
     assert all("核心攻克" in spec["focus"] for spec in specs)
 
 
+def test_daily_task_specs_reference_calendar_time_blocks() -> None:
+    manager = PlanningWorkflowManager(redis_client=FakeRedis())
+    today = datetime.utcnow().date().isoformat()
+    session = PlanningSession(
+        planning_session_id=str(uuid4()),
+        chat_session_id="chat-session-calendar",
+        user_id=str(uuid4()),
+        state="CLARIFYING",
+        goal_raw="3天后考试",
+        collected={
+            "time_constraint_days": 3,
+            "daily_available_hours": 2,
+            "subject": "英语",
+            "calendar_context": {
+                "today": today,
+                "time_blocks_by_date": {today: [{"start": "19:00", "end": "21:00"}]},
+                "busy_events_by_date": {
+                    today: [{"title": "下午上课", "kind": "class", "start_time": "14:00", "end_time": "16:00"}]
+                },
+            },
+        },
+    )
+
+    specs = manager._daily_task_specs(
+        {
+            "start_day": 1,
+            "end_day": 1,
+            "label": "核心复习",
+            "focus": "闭卷复述重点",
+        },
+        phase_index=1,
+        session=session,
+    )
+
+    assert specs[0]["target_date"] == today
+    assert specs[0]["scheduled_start_time"] == "19:00"
+    assert specs[0]["scheduled_end_time"] == "20:00"
+    assert specs[0]["calendar_avoidance"]["applied"] is True
+
+
 def test_daily_task_specs_use_sprint_pack_for_computer_networks() -> None:
     manager = PlanningWorkflowManager(redis_client=FakeRedis())
     session = PlanningSession(
@@ -172,6 +212,30 @@ def test_daily_task_specs_use_sprint_pack_for_computer_networks() -> None:
     assert "权重" in day_one_guide["why_now"]
     assert day_one_guide["related_archetypes"]
     assert day_one_guide["common_mistakes_to_watch"]
+
+
+@pytest.mark.asyncio
+async def test_prefill_carries_seed_library_nodes_from_context() -> None:
+    manager = PlanningWorkflowManager(redis_client=FakeRedis())
+
+    prefill = await manager._prefill_from_profile_context(
+        {
+            "seed_library": {
+                "has_seed_library": True,
+                "seed_library_nodes": ["cn.tcp_congestion_control", "cn.subnetting"],
+            },
+            "profile_context": {
+                "preferences": {
+                    "cold_start_context": {
+                        "subject": "计算机网络",
+                        "exam_scope": "计算机网络期末",
+                    }
+                }
+            },
+        }
+    )
+
+    assert prefill["seed_library_nodes"] == ["cn.tcp_congestion_control", "cn.subnetting"]
 
 
 @pytest.mark.asyncio
@@ -870,3 +934,59 @@ async def test_exam_sprint_fast_track_single_message_enters_planning_with_pack_p
     )[0]
     assert day_one_spec["day"] == 1
     assert day_one_spec["task_kind"] == "diagnostic_triage"
+
+
+@pytest.mark.asyncio
+async def test_modeling_complete_bridge_generates_plan_on_first_turn(db_session, test_user, monkeypatch) -> None:
+    from app.orchestration import bottleneck_analyzer as bottleneck_module
+
+    monkeypatch.setattr(
+        bottleneck_module.bottleneck_analyzer,
+        "analyze",
+        AsyncMock(side_effect=RuntimeError("force deterministic fallback")),
+    )
+    monkeypatch.setattr("app.services.task_service._sync_task_card_projection", AsyncMock(return_value=None))
+    monkeypatch.setattr("app.services.plan_service._sync_plan_card_projection", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        "app.services.plan_quota_service.PlanQuotaService.check_and_raise", AsyncMock(return_value=None)
+    )
+
+    redis = FakeRedis()
+    manager = PlanningWorkflowManager(redis_client=redis)
+    conversation_id = "chat-session-modeling-bridge"
+    user_id = test_user.id
+    modeling_output = {
+        "activity_profile": {"conversation_style": "structured"},
+        "cold_start_context": {
+            "goal_raw": "7天后考计算机网络",
+            "subject": "计算机网络",
+            "exam_scope": "计算机网络期末：传输层、网络层、应用层",
+            "knowledge_baseline": "完全没学过",
+            "time_available": "每天约 2 小时",
+            "daily_available_hours": 2,
+            "time_constraint_days": 7,
+            "motivation_context": "想先保住及格线",
+        },
+    }
+
+    result = await manager.process_planning_turn(
+        db=db_session,
+        user_id=user_id,
+        chat_session_id=conversation_id,
+        message="开始规划",
+        context={"from_modeling_complete": True, "modeling_output": modeling_output},
+    )
+
+    plan = (
+        (await db_session.execute(select(Plan).where(Plan.user_id == user_id).order_by(Plan.created_at.desc())))
+        .scalars()
+        .first()
+    )
+    assert plan is not None
+    tasks = list((await db_session.execute(select(Task).where(Task.plan_id == plan.id))).scalars())
+
+    assert result is not None
+    assert plan.subject == "计算机网络"
+    assert tasks
+    assert any(widget["type"] == "plan_card" for widget in result["widgets"])
+    assert await manager.get_active_session(conversation_id) is None

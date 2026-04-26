@@ -6,12 +6,14 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement
+from app.config import settings
+from app.core.cache import cache_service
+from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement, UserStreakStats
 from app.models.calendar_event import CalendarEvent
-from app.models.achievement import UserStreakStats
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.memory import EpisodicMemory
 from app.services.social_signal_types import SocialSignalsV1
+from app.state_aggregator.schema import RecentPersonMentionsValue, StateFieldEnvelope
 from app.state_aggregator.service import StateAggregatorService
 
 
@@ -49,6 +51,68 @@ async def test_state_aggregator_returns_only_requested_fields(db_session, monkey
     assert state.recent_person_mentions is None
     assert state.engagement_state is None
     assert state.learning_state is None
+
+
+@pytest.mark.asyncio
+async def test_state_aggregator_shadow_computes_without_returning_live_fields(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "shadow", raising=False)
+    user_id = uuid4()
+    service = StateAggregatorService(db_session)
+    build_commitment = AsyncMock(return_value=None)
+    monkeypatch.setattr(service, "_build_commitment_summary", build_commitment)
+
+    state = await service.get_user_state(
+        user_id,
+        required_fields=("commitment_summary",),
+    )
+
+    assert state.commitment_summary is None
+    build_commitment.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_state_aggregator_social_shadow_computes_without_returning_live_fields(
+    db_session,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "live", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE33_MODE", "shadow", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE33_SOCIAL_MODE", "shadow", raising=False)
+    user_id = uuid4()
+    now = datetime.utcnow()
+    service = StateAggregatorService(db_session)
+    build_mentions = AsyncMock(
+        return_value=StateFieldEnvelope(
+            value=RecentPersonMentionsValue(mentions=(), relationship_count=1),
+            computed_at=now,
+            source_snapshot_ids=("social:test",),
+            freshness_seconds=0,
+        )
+    )
+    monkeypatch.setattr(service, "_build_recent_person_mentions", build_mentions)
+
+    state = await service.get_user_state(user_id, required_fields=("recent_person_mentions",), now=now)
+
+    assert state.recent_person_mentions is None
+    build_mentions.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_state_aggregator_social_off_skips_compute(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "live", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE33_MODE", "shadow", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE33_SOCIAL_MODE", "off", raising=False)
+    service = StateAggregatorService(db_session)
+    build_mentions = AsyncMock()
+    monkeypatch.setattr(service, "_build_recent_person_mentions", build_mentions)
+
+    state = await service.get_user_state(uuid4(), required_fields=("recent_person_mentions",))
+
+    assert state.recent_person_mentions is None
+    build_mentions.assert_not_awaited()
 
 
 @pytest.mark.asyncio

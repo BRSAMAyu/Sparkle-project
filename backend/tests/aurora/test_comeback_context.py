@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
 
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+from app.models.chat import ChatMessage, MessageRole
+from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.plan import Plan, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
@@ -17,19 +19,20 @@ async def _seed_comeback_fixture(
     inactive_days: int,
     days_remaining: int,
 ) -> tuple[User, Plan]:
+    now = datetime.now(UTC).replace(tzinfo=None)
     user = User(
         id=uuid4(),
         username=f"comeback_{uuid4().hex[:8]}",
         email=f"comeback_{uuid4().hex[:8]}@example.com",
         hashed_password="hashed",
-        last_login_at=datetime.now(UTC) - timedelta(days=inactive_days),
+        last_login_at=now - timedelta(days=inactive_days),
     )
     plan = Plan(
         name="7天计算机网络冲刺",
         user_id=user.id,
         type=PlanType.SPRINT,
         subject="计算机网络",
-        target_date=date.today() + timedelta(days=days_remaining),
+        target_date=datetime.now(UTC).date() + timedelta(days=days_remaining),
         plan_stage=PlanStage.SPRINT,
         is_active=True,
         is_primary=True,
@@ -66,6 +69,7 @@ async def _seed_comeback_fixture(
             difficulty=1,
             energy_cost=1,
             status=TaskStatus.COMPLETED,
+            completed_at=now - timedelta(days=inactive_days),
             order_index=2,
         )
     )
@@ -113,3 +117,158 @@ async def test_get_comeback_context_returns_none_when_user_was_active_two_days_a
     )
 
     assert payload is None
+
+
+@pytest.mark.asyncio
+async def test_get_comeback_context_triggers_at_three_day_threshold(db_session):
+    user, plan = await _seed_comeback_fixture(
+        db_session,
+        inactive_days=3,
+        days_remaining=3,
+    )
+    service = AuroraRuntimeV1Service()
+
+    payload = await service.get_comeback_context(
+        active_db=db_session,
+        user_id=user.id,
+    )
+
+    assert payload is not None
+    assert payload["plan_id"] == str(plan.id)
+    assert payload["days_away"] == 3
+
+
+@pytest.mark.asyncio
+async def test_get_comeback_context_uses_recent_task_completion_over_login(db_session):
+    user, plan = await _seed_comeback_fixture(
+        db_session,
+        inactive_days=8,
+        days_remaining=3,
+    )
+    now = datetime.now(UTC).replace(tzinfo=None)
+    for offset in range(1, 6):
+        db_session.add(
+            Task(
+                user_id=user.id,
+                plan_id=plan.id,
+                title=f"连续学习任务 {offset}",
+                type=TaskType.LEARNING,
+                tags=["规划生成", "active"],
+                estimated_minutes=20,
+                difficulty=1,
+                energy_cost=1,
+                status=TaskStatus.COMPLETED,
+                completed_at=now - timedelta(days=offset),
+                order_index=10 + offset,
+            )
+        )
+    await db_session.commit()
+    service = AuroraRuntimeV1Service()
+
+    payload = await service.get_comeback_context(
+        active_db=db_session,
+        user_id=user.id,
+    )
+
+    assert payload is None
+
+
+@pytest.mark.asyncio
+async def test_get_comeback_context_does_not_trigger_when_login_two_days_and_task_yesterday(db_session):
+    user, plan = await _seed_comeback_fixture(
+        db_session,
+        inactive_days=4,
+        days_remaining=3,
+    )
+    now = datetime.now(UTC).replace(tzinfo=None)
+    user.last_login_at = now - timedelta(days=2)
+    db_session.add(
+        Task(
+            user_id=user.id,
+            plan_id=plan.id,
+            title="昨天完成的真实任务",
+            type=TaskType.LEARNING,
+            tags=["active"],
+            estimated_minutes=20,
+            difficulty=1,
+            energy_cost=1,
+            status=TaskStatus.COMPLETED,
+            completed_at=now - timedelta(days=1),
+            order_index=20,
+        )
+    )
+    await db_session.commit()
+    service = AuroraRuntimeV1Service()
+
+    payload = await service.get_comeback_context(
+        active_db=db_session,
+        user_id=user.id,
+    )
+
+    assert payload is None
+
+
+@pytest.mark.asyncio
+async def test_get_comeback_context_uses_recent_user_message_over_login(db_session):
+    user, _plan = await _seed_comeback_fixture(
+        db_session,
+        inactive_days=8,
+        days_remaining=3,
+    )
+    db_session.add(
+        ChatMessage(
+            user_id=user.id,
+            role=MessageRole.USER,
+            content="我今天已经回来复习了",
+            created_at=datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1),
+        )
+    )
+    await db_session.commit()
+    service = AuroraRuntimeV1Service()
+
+    payload = await service.get_comeback_context(
+        active_db=db_session,
+        user_id=user.id,
+    )
+
+    assert payload is None
+
+
+@pytest.mark.asyncio
+async def test_get_comeback_context_triggers_when_all_real_activity_is_four_days_old(db_session):
+    user, plan = await _seed_comeback_fixture(
+        db_session,
+        inactive_days=4,
+        days_remaining=3,
+    )
+    now = datetime.now(UTC).replace(tzinfo=None)
+    user.last_login_at = now - timedelta(days=2)
+    db_session.add(
+        ChatMessage(
+            user_id=user.id,
+            role=MessageRole.USER,
+            content="四天前还在问计划",
+            created_at=now - timedelta(days=4, hours=2),
+        )
+    )
+    db_session.add(
+        FocusSession(
+            user_id=user.id,
+            start_time=now - timedelta(days=4, hours=1, minutes=30),
+            end_time=now - timedelta(days=4, hours=1),
+            duration_minutes=30,
+            focus_type=FocusType.POMODORO,
+            status=FocusStatus.COMPLETED,
+        )
+    )
+    await db_session.commit()
+    service = AuroraRuntimeV1Service()
+
+    payload = await service.get_comeback_context(
+        active_db=db_session,
+        user_id=user.id,
+    )
+
+    assert payload is not None
+    assert payload["plan_id"] == str(plan.id)
+    assert payload["days_away"] >= 4

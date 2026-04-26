@@ -12,12 +12,14 @@ from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.notification import Notification
 from app.models.plan import Plan, PlanStage, PlanType
+from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.schemas.exam_sprint import HelpfulFeature, PostExamReviewRequest, ReviewPlanSelection, ReviewTopicSelection
 from app.services.exam_sprint_review_service import ExamSprintReviewService
 from app.services.galaxy_service import GalaxyService
+from app.services.task_service import TaskService
 
 
 def _utcnow() -> datetime:
@@ -132,7 +134,10 @@ async def test_submit_post_exam_review_archives_plan_and_writes_growth_profile(d
                         "mastery": 42.0,
                     },
                 ],
-            }
+            },
+            "exam_sprint_growth_archive": {
+                "entries": [{"review_id": f"old-review-{index}", "plan_id": str(uuid4())} for index in range(10)]
+            },
         },
     )
     status_rows = [
@@ -214,6 +219,8 @@ async def test_submit_post_exam_review_archives_plan_and_writes_growth_profile(d
     assert response.summary.error_recovery.repair_rate == 0.5
     assert response.summary.invitation_status.completed_at is not None
     assert stored_prefs.explicit["exam_sprint_last_review"]["headline"] == response.summary.headline
+    assert len(stored_prefs.explicit["exam_sprint_growth_archive"]["entries"]) == 11
+    assert stored_prefs.explicit["exam_sprint_growth_archive"]["entries"][0]["review_id"] == "old-review-0"
     assert stored_prefs.explicit["exam_sprint_growth_archive"]["entries"][-1]["review_id"] == response.review_id
     assert len(unlocked) == 1
     assert unlocked[0].achievement_id == "sprint_first"
@@ -251,7 +258,11 @@ async def test_get_portfolio_merges_archived_active_and_planned_sprints(db_sessi
                             "score_stats": {"current_score": 82.0},
                             "top_improvement": {"node_name": "TCP 拥塞控制"},
                             "mastery_changes": [{"node_name": "TCP 拥塞控制"}],
-                            "high_frequency_coverage": {"covered_topics_after": 32},
+                            "high_frequency_coverage": {
+                                "current_rate": 0.8,
+                                "total_topics": 40,
+                                "covered_topics_after": 32,
+                            },
                             "task_stats": {"completion_rate": 1.0},
                         },
                     }
@@ -304,7 +315,7 @@ async def test_get_portfolio_merges_archived_active_and_planned_sprints(db_sessi
     service = ExamSprintReviewService(db_session)
     response = await service.get_portfolio(user_id=user_id)
 
-    assert response.total_mastered_nodes == 50
+    assert response.total_mastered_nodes == 98
     assert response.active_count == 1
     assert response.completed_count == 1
     assert response.planned_count == 1
@@ -313,7 +324,7 @@ async def test_get_portfolio_merges_archived_active_and_planned_sprints(db_sessi
 
     completed = entries_by_subject["计算机网络"]
     assert completed.status == "completed"
-    assert completed.mastered_nodes_count == 32
+    assert completed.mastered_nodes_count == 80
     assert completed.proud_nodes == ["TCP 拥塞控制"]
     assert completed.weakest_points == ["子网划分"]
     assert completed.current_score == 82.0
@@ -329,6 +340,83 @@ async def test_get_portfolio_merges_archived_active_and_planned_sprints(db_sessi
     assert planned.sprint_mode == "standard_exam_sprint"
     assert planned.mastered_nodes_count == 0
     assert planned.weakest_points == ["积分中值定理"]
+
+
+@pytest.mark.asyncio
+async def test_completed_sprint_auto_archives_without_post_exam_review(db_session, test_user):
+    user_id = test_user.id
+    started_at = datetime.combine(date.today() - timedelta(days=2), time(hour=9))
+    target_date = started_at.date() + timedelta(days=2)
+    plan = Plan(
+        user_id=user_id,
+        name="3天计网冲刺",
+        type=PlanType.SPRINT,
+        plan_stage=PlanStage.SPRINT,
+        subject="计算机网络",
+        target_date=target_date,
+        progress=0.5,
+        mastery_level=0.42,
+        is_active=True,
+        is_primary=True,
+        source_metadata={
+            "exam_sprint_intake": {
+                "sprint_mode": "seven_day_survival",
+                "weak_chapters": ["TCP 拥塞控制"],
+            }
+        },
+        created_at=started_at,
+        updated_at=started_at,
+    )
+    completed_task = Task(
+        user_id=user_id,
+        plan=plan,
+        title="Day 1 · 高频保底",
+        type=TaskType.LEARNING,
+        tags=["day:1"],
+        estimated_minutes=30,
+        actual_minutes=28,
+        difficulty=2,
+        energy_cost=2,
+        status=TaskStatus.COMPLETED,
+        completed_at=started_at + timedelta(days=1),
+    )
+    final_task = Task(
+        user_id=user_id,
+        plan=plan,
+        title="Day 2 · 闭卷输出",
+        type=TaskType.TRAINING,
+        tags=["day:2"],
+        estimated_minutes=35,
+        difficulty=3,
+        energy_cost=3,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add_all([plan, completed_task, final_task])
+    await db_session.commit()
+
+    await TaskService.complete(db=db_session, db_obj=final_task, actual_minutes=36)
+
+    await db_session.refresh(plan)
+    state = (
+        await db_session.execute(
+            select(PlanState).where(PlanState.user_id == user_id, PlanState.plan_id == plan.id)
+        )
+    ).scalar_one()
+    portfolio = await ExamSprintReviewService(db_session).get_portfolio(user_id=user_id)
+    entry = next(item for item in portfolio.entries if item.plan_id == plan.id)
+
+    assert plan.is_active is False
+    assert plan.is_primary is False
+    assert plan.progress == 1.0
+    assert plan.source_metadata["exam_sprint_completion"]["trigger"] == "all_tasks_completed"
+    assert plan.source_metadata["exam_sprint_completion"]["completed_at"] is not None
+    assert state.status == PlanStateStatus.ARCHIVED.value
+    assert state.archived_at is not None
+    assert portfolio.active_count == 0
+    assert portfolio.completed_count == 1
+    assert entry.status == "completed"
+    assert entry.completed_at == plan.source_metadata["exam_sprint_completion"]["completed_at"]
+    assert entry.self_rating is None
 
 
 @pytest.mark.asyncio

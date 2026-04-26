@@ -7,6 +7,7 @@ import pytest
 from app.aurora.runtime_v1.control_surface import ControlSurfaceService, HarnessUpdateRejectedError
 from app.aurora.runtime_v1.persistence import AuroraPersistenceStore
 from app.aurora.runtime_v1.planning import AuroraRuntimePlanningAdapter, get_tension_prompt
+from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.aurora.runtime_v1.state import (
     ActivityProfile,
@@ -56,6 +57,44 @@ class _FakeRedis:
     async def zrem(self, key: str, member: str) -> None:
         bucket = self.sorted_sets.setdefault(key, {})
         bucket.pop(member, None)
+
+
+class _RecordingDecisionLoop:
+    def __init__(self) -> None:
+        self.readouts = []
+
+    async def decide(self, readout):
+        from app.aurora.runtime_v1.decision_loop import AuroraDecision
+
+        self.readouts.append(readout)
+        if len(self.readouts) == 1:
+            return AuroraDecision(
+                action="emit_message",
+                state_updates={
+                    "informational_tensions": [
+                        {
+                            "domain": "传输层",
+                            "description": "传输层 checkpoint 还没补齐",
+                            "priority": 0.8,
+                            "status": "open",
+                        }
+                    ],
+                    "latent_threads": [
+                        {
+                            "context_snapshot": "下个 checkpoint 要追回传输层",
+                            "salience": 0.75,
+                        }
+                    ],
+                },
+                harness_updates={"agenda_priority": "传输层"},
+                chat_directive={"intent": "checkpoint_repair", "target_domain": "传输层"},
+            )
+        return AuroraDecision(action="emit_message", chat_directive={"intent": "checkpoint_repair"})
+
+
+class _StaticChatAdapter:
+    async def render(self, decision, readout):
+        return ["checkpoint runtime message"]
 
 
 def _make_state(*, user_id, surface: str, conversation_id: str, session_suffix: str) -> AuroraState:
@@ -142,6 +181,46 @@ async def test_runtime_state_isolated_by_surface_and_conversation_id(test_user) 
     assert loaded_c is not None and loaded_c.runtime_session_id == "runtime-c"
     assert loaded_a.conversation_id != loaded_b.conversation_id
     assert loaded_a.surface != loaded_c.surface
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_surface_loads_prior_runtime_threads_across_conversations() -> None:
+    redis = _FakeRedis()
+    decision_loop = _RecordingDecisionLoop()
+    service = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=decision_loop,
+        chat_adapter=_StaticChatAdapter(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id="user-checkpoint",
+        surface="aurora_checkpoint",
+        conversation_id="cp:plan:2",
+        request_id="req-1",
+        user_message="第 2 天 checkpoint，传输层落后",
+        request_extra_context={"checkpoint_state": {"checkpoint_day": 2}},
+        conversation_context={"messages": []},
+        user_context_payload={},
+    )
+    await service.plan_turn(
+        active_db=None,
+        user_id="user-checkpoint",
+        surface="aurora_checkpoint",
+        conversation_id="cp:plan:4",
+        request_id="req-2",
+        user_message="第 4 天 checkpoint",
+        request_extra_context={"checkpoint_state": {"checkpoint_day": 4}},
+        conversation_context={"messages": []},
+        user_context_payload={},
+    )
+
+    second_readout = decision_loop.readouts[1]
+    assert second_readout.informational_tensions
+    assert second_readout.informational_tensions[0]["domain"] == "传输层"
+    assert second_readout.latent_threads
+    assert "传输层" in second_readout.latent_threads[0]["context_snapshot"]
 
 
 @pytest.mark.asyncio

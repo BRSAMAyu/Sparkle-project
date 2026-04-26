@@ -16,6 +16,17 @@ class _RowsResult:
         return self._rows
 
 
+class _ScalarRowsResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def scalars(self):
+        return self
+
+    def first(self):
+        return self._rows[0] if self._rows else None
+
+
 @pytest.mark.asyncio
 async def test_behavior_signal_collector_creates_fragment_for_too_difficult_streak():
     user_id = uuid4()
@@ -136,6 +147,125 @@ async def test_behavior_signal_collector_schedules_push_for_push_channel_record(
     assert len(scheduled_calls) == 1
     assert scheduled_calls[0]["user_id"] == str(user_id)
     assert scheduled_calls[0]["payload"]["pattern_name"] == "Planning Optimism"
+
+
+@pytest.mark.asyncio
+async def test_behavior_signal_collector_creates_fragment_for_capsule_favorite_event():
+    user_id = uuid4()
+    capsule_id = uuid4()
+    capsule = SimpleNamespace(
+        id=capsule_id,
+        user_id=user_id,
+        title="TCP 拥塞控制",
+        content="用动画解释 TCP 拥塞窗口变化。",
+        depth_level=SimpleNamespace(value="deep"),
+        related_subject="computer_networks",
+        related_task_id=None,
+    )
+    db = SimpleNamespace(get=AsyncMock(return_value=capsule))
+    collector = BehaviorSignalCollector(db, redis=None)
+    fragment = SimpleNamespace(id=uuid4())
+    collector.cognitive_service.create_fragment = AsyncMock(return_value=fragment)
+    collector.cognitive_service.analyze_behavior = AsyncMock()
+    collector._mark_signal_emitted = AsyncMock()
+
+    await collector.handle_capsule_favorite_event(
+        {
+            "user_id": str(user_id),
+            "capsule_id": str(capsule_id),
+            "action": "favorited",
+        }
+    )
+
+    collector.cognitive_service.create_fragment.assert_awaited_once()
+    payload = collector.cognitive_service.create_fragment.await_args.kwargs
+    assert payload["source_type"] == "capsule_favorite"
+    assert "TCP 拥塞控制" in payload["content"]
+    assert payload["context_tags"]["depth_level"] == "deep"
+    assert payload["context_tags"]["related_subject"] == "computer_networks"
+    collector.cognitive_service.analyze_behavior.assert_awaited_once_with(user_id, fragment.id)
+    collector._mark_signal_emitted.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_behavior_signal_collector_creates_fragment_for_breathing_tool_history():
+    user_id = uuid4()
+    record = SimpleNamespace(
+        id=42,
+        tool_name="breathing",
+        success=True,
+        context_snapshot={
+            "duration_minutes": 3,
+            "pattern": "方块呼吸",
+            "rounds_completed": 12,
+            "used_at": "2026-04-26T08:00:00",
+        },
+    )
+    db = SimpleNamespace(execute=AsyncMock(return_value=_ScalarRowsResult([record])))
+    collector = BehaviorSignalCollector(db, redis=None)
+    fragment = SimpleNamespace(id=uuid4())
+    collector.cognitive_service.create_fragment = AsyncMock(return_value=fragment)
+    collector.cognitive_service.analyze_behavior = AsyncMock()
+    collector._mark_signal_emitted = AsyncMock()
+
+    await collector.handle_tool_history_event(
+        {
+            "user_id": str(user_id),
+            "tool_name": "breathing",
+            "success": True,
+            "tool_category": "wellbeing",
+        }
+    )
+
+    collector.cognitive_service.create_fragment.assert_awaited_once()
+    payload = collector.cognitive_service.create_fragment.await_args.kwargs
+    assert payload["source_type"] == "tool_history"
+    assert "主动压力调节" in payload["content"]
+    assert payload["context_tags"]["tool_history_id"] == 42
+    assert "wellbeing.stress_regulation" in payload["error_tags"]
+    collector.cognitive_service.analyze_behavior.assert_awaited_once_with(user_id, fragment.id)
+    collector._mark_signal_emitted.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_behavior_signal_collector_does_not_store_calculator_expression_content():
+    user_id = uuid4()
+    record = SimpleNamespace(
+        id=43,
+        tool_name="calculator",
+        success=True,
+        context_snapshot={
+            "complexity": "complex",
+            "used_at": "2026-04-26T08:00:00",
+        },
+    )
+    db = SimpleNamespace(execute=AsyncMock(return_value=_ScalarRowsResult([record])))
+    collector = BehaviorSignalCollector(db, redis=None)
+    fragment = SimpleNamespace(id=uuid4())
+    collector.cognitive_service.create_fragment = AsyncMock(return_value=fragment)
+    collector.cognitive_service.analyze_behavior = AsyncMock()
+    collector._mark_signal_emitted = AsyncMock()
+
+    await collector.handle_tool_history_event(
+        {
+            "user_id": str(user_id),
+            "tool_name": "calculator",
+            "success": True,
+            "tool_category": "calculation",
+        }
+    )
+
+    collector.cognitive_service.create_fragment.assert_awaited_once()
+    payload = collector.cognitive_service.create_fragment.await_args.kwargs
+    assert payload["context_tags"] == {
+        "signal_key": "tool_calculator_complex",
+        "tool_name": "calculator",
+        "tool_history_id": 43,
+        "complexity": "complex",
+        "used_at": "2026-04-26T08:00:00",
+    }
+    assert "表达式内容未被保存" in payload["content"]
+    assert "workflow.calculation_load" in payload["error_tags"]
 
 
 @pytest.mark.asyncio

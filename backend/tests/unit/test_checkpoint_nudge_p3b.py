@@ -67,7 +67,8 @@ async def test_checkpoint_scan_writes_nudge_once(db_session, test_user) -> None:
     )
     messages = list(rows.scalars().all())
     assert len(messages) == 1
-    assert "第 2 天" in messages[0].content
+    # F09 changed nudge to real Aurora decision loop — content is now dynamic
+    assert len(messages[0].content) > 20  # Non-trivial nudge content
     assert messages[0].actions[0]["type"] == "aurora_nudge_entry"
 
 

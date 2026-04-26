@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
@@ -8,10 +9,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user, get_db
+from app.api.v1.chat import router as chat_router
 from app.api.v1.tasks import router as tasks_router
 from app.core.cache import cache_service
 from app.models.task import SubTask, SubTaskStatus, Task, TaskStatus, TaskType
 from app.models.user import User
+from app.services.llm_service import LLMResponse
 from app.services.task_service import TaskService
 
 
@@ -19,6 +22,30 @@ from app.services.task_service import TaskService
 def tasks_client(db_session):
     app = FastAPI()
     app.include_router(tasks_router, prefix="/tasks")
+
+    state = {"current_user": None}
+
+    async def _override_get_db():
+        yield db_session
+
+    def _override_get_current_user():
+        return state["current_user"]
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+
+    cache_service._local_cache.clear()
+
+    with TestClient(app) as client:
+        yield client, state
+
+    cache_service._local_cache.clear()
+
+
+@pytest.fixture
+def task_chat_client(db_session):
+    app = FastAPI()
+    app.include_router(chat_router, prefix="/chat")
 
     state = {"current_user": None}
 
@@ -100,9 +127,7 @@ async def test_snooze_task_moves_due_date_without_replanning(tasks_client, db_se
     payload = response.json()
     assert payload["action"] == "snooze"
     assert "写错题总结" in payload["message"]
-    assert payload["data"]["task"]["due_date"] == (
-        date.today() + timedelta(days=1)
-    ).isoformat()
+    assert payload["data"]["task"]["due_date"] == (date.today() + timedelta(days=1)).isoformat()
 
     await db_session.refresh(primary_task)
     assert primary_task.due_date == date.today() + timedelta(days=1)
@@ -210,3 +235,156 @@ async def test_skip_task_marks_task_abandoned(tasks_client, db_session, monkeypa
     await db_session.refresh(task)
     assert task.status == TaskStatus.ABANDONED
     assert task.user_note == "Skipped from quick action"
+
+
+@pytest.mark.asyncio
+async def test_stuck_task_returns_live_aurora_diagnosis(tasks_client, db_session, monkeypatch):
+    client, state = tasks_client
+    user = await _create_user(db_session)
+    task = await _create_task(
+        db_session,
+        user_id=user.id,
+        title="拆 TCP 状态机",
+        due_date=date.today(),
+    )
+    state["current_user"] = user
+
+    async def _fake_diagnosis(*args, **kwargs):
+        return {
+            "mistake_diagnosis": "你卡在 TCP 状态机的状态转换断点。",
+            "one_targeted_fix": "先只画 SYN 到 SYN-RECEIVED 这一条边。",
+            "diagnosis_question": "你卡在状态转换还是触发条件？",
+            "diagnosis_options": ["状态转换", "触发条件"],
+            "targeted_fix": "先只画 SYN 到 SYN-RECEIVED 这一条边。",
+            "check_question": "LISTEN 收到 SYN 后是什么状态？",
+            "source": "test",
+            "task_state": {"stage": "stuck", "stuck_topic": "TCP 状态机"},
+        }
+
+    mock_publish = AsyncMock()
+    monkeypatch.setattr(TaskService, "_build_stuck_diagnosis", _fake_diagnosis)
+    monkeypatch.setattr("app.services.task_service.event_bus_reliable.publish", mock_publish)
+    monkeypatch.setattr("app.services.task_service.publish_srl_event", AsyncMock())
+
+    response = client.post(
+        f"/tasks/{task.id}/stuck",
+        json={
+            "stuck_point": "TCP 状态机",
+            "recent_steps": ["画了 CLOSED", "卡在 LISTEN"],
+            "elapsed_seconds": 420,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["action"] == "stuck"
+    assert payload["data"]["task"]["status"] == "STUCK"
+    assert payload["data"]["diagnosis"]["mistake_diagnosis"] == "你卡在 TCP 状态机的状态转换断点。"
+    assert payload["data"]["diagnosis"]["one_targeted_fix"] == "先只画 SYN 到 SYN-RECEIVED 这一条边。"
+    assert payload["data"]["diagnosis"]["targeted_fix"] == "先只画 SYN 到 SYN-RECEIVED 这一条边。"
+
+    await db_session.refresh(task)
+    assert task.status == TaskStatus.STUCK
+    assert task.guide_json["stuck_help"]["source"] == "test"
+    mock_publish.assert_awaited_once()
+    assert mock_publish.await_args.args[0] == "task.stuck"
+    assert mock_publish.await_args.args[1]["stuck_point"] == "TCP 状态机"
+
+
+@pytest.mark.asyncio
+async def test_stuck_task_sends_stage_context_to_aurora(tasks_client, db_session, monkeypatch):
+    client, state = tasks_client
+    user = await _create_user(db_session)
+    task = await _create_task(
+        db_session,
+        user_id=user.id,
+        title="拆 TCP 状态机",
+        due_date=date.today(),
+    )
+    state["current_user"] = user
+    captured: dict[str, object] = {}
+
+    class _FakePlan:
+        messages = ["mistake_diagnosis: 卡在状态转换。\none_targeted_fix: 只画 SYN 这一条边。"]
+
+    class _FakeRuntime:
+        async def plan_turn(self, **kwargs):
+            captured.update(kwargs)
+            return _FakePlan()
+
+    monkeypatch.setattr("app.aurora.runtime_v1.service.AuroraRuntimeV1Service", lambda: _FakeRuntime())
+    monkeypatch.setattr("app.services.task_service.event_bus_reliable.publish", AsyncMock())
+    monkeypatch.setattr("app.services.task_service.publish_srl_event", AsyncMock())
+
+    response = client.post(
+        f"/tasks/{task.id}/stuck",
+        json={
+            "stuck_point": "TCP 状态机",
+            "recent_steps": ["画了 CLOSED", "卡在 LISTEN"],
+            "elapsed_seconds": 420,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["task"]["status"] == "STUCK"
+    assert "mistake_diagnosis" in payload["data"]["diagnosis"]
+    assert "one_targeted_fix" in payload["data"]["diagnosis"]
+    extra_context = captured["request_extra_context"]
+    assert extra_context["task_state"]["stage"] == "stuck"
+    assert extra_context["task_state"]["stuck_topic"] == "TCP 状态机"
+    assert extra_context["task_stage"] == "stuck"
+
+    await db_session.refresh(task)
+    assert task.status == TaskStatus.STUCK
+
+
+@pytest.mark.asyncio
+async def test_next_task_chat_message_inherits_stuck_context(task_chat_client, db_session, monkeypatch):
+    client, state = task_chat_client
+    user = await _create_user(db_session)
+    task = await _create_task(
+        db_session,
+        user_id=user.id,
+        title="拆 TCP 状态机",
+        due_date=date.today(),
+    )
+    task.status = TaskStatus.STUCK
+    task.guide_json = {
+        "stuck_runtime": {
+            "stage": "stuck",
+            "stuck_point": "TCP 状态机",
+            "recent_steps": ["画了 CLOSED", "卡在 LISTEN"],
+            "elapsed_seconds": 420,
+        }
+    }
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+    state["current_user"] = user
+    captured: dict[str, object] = {}
+
+    async def _fake_chat_with_tools(**kwargs):
+        captured.update(kwargs)
+        return LLMResponse(
+            content="mistake_diagnosis: 卡在 LISTEN 收到 SYN 后的状态转换。\none_targeted_fix: 只画 SYN 到 SYN-RECEIVED 这一条边。",
+            tool_calls=None,
+        )
+
+    monkeypatch.setattr("app.api.v1.chat.llm_service.chat_with_tools", _fake_chat_with_tools)
+
+    response = client.post(
+        f"/chat/task/{task.id}",
+        json={"message": "我还是不知道下一步怎么画"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "mistake_diagnosis" in payload["message"]
+    assert "one_targeted_fix" in payload["message"]
+    assert captured["user_message"] == "我还是不知道下一步怎么画"
+    assert "STUCK TASK DIAGNOSTIC MODE" in captured["system_prompt"]
+    assert '"stage": "stuck"' in captured["system_prompt"]
+
+    await db_session.refresh(task)
+    assert task.status == TaskStatus.STUCK

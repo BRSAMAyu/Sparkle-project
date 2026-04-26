@@ -16,6 +16,17 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+class _MemoryCache:
+    def __init__(self):
+        self.values = {}
+
+    async def get(self, key):
+        return self.values.get(key)
+
+    async def set(self, key, value, ttl=None):
+        self.values[key] = value
+
+
 @pytest.mark.asyncio
 async def test_progress_snapshot_includes_task_and_streak_highlights(db_session):
     user_id = uuid4()
@@ -203,6 +214,75 @@ async def test_weekly_growth_narrative_uses_tasks_errors_reflections_and_mastery
     assert "热力学" in narrative.body
     assert narrative.data_points["error_causes"] == ["概念混淆"]
     assert "掌握度从 40% 提升到了 58%" in narrative.body
+
+
+@pytest.mark.asyncio
+async def test_weekly_growth_narrative_varies_against_recent_cached_weeks(db_session):
+    user_id = uuid4()
+    base = datetime(2026, 4, 6, 10, 0, tzinfo=UTC).replace(tzinfo=None)
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    node = KnowledgeNode(
+        id=uuid4(),
+        name="网络层路由",
+        importance_level=3,
+    )
+    db_session.add_all([user, node])
+    for week_offset in (0, 7):
+        completed_at = base + timedelta(days=week_offset + 1)
+        task = Task(
+            id=uuid4(),
+            user_id=user_id,
+            title="网络层错题复盘",
+            type=TaskType.LEARNING,
+            status=TaskStatus.COMPLETED,
+            estimated_minutes=30,
+            actual_minutes=30,
+            difficulty=3,
+            energy_cost=2,
+            tags=["网络层"],
+            completed_at=completed_at,
+            created_at=completed_at,
+        )
+        study = StudyRecord(
+            id=uuid4(),
+            user_id=user_id,
+            node_id=node.id,
+            task_id=task.id,
+            study_minutes=30,
+            mastery_delta=10.0,
+            initial_mastery=40,
+            record_type="task_complete",
+            created_at=completed_at,
+        )
+        db_session.add_all([task, study])
+    await db_session.commit()
+
+    cache = _MemoryCache()
+    service = ProgressNarrativeService(db_session, redis=None, cache=cache)
+    first = await service.get_weekly_narrative(
+        user_id,
+        base,
+        base + timedelta(days=7),
+        force=True,
+        now=base + timedelta(days=5),
+    )
+    second = await service.get_weekly_narrative(
+        user_id,
+        base + timedelta(days=7),
+        base + timedelta(days=14),
+        force=True,
+        now=base + timedelta(days=12),
+    )
+
+    assert second.data_points["recent_narrative_count"] == 1
+    assert second.data_points["style_variant"] != first.data_points["style_variant"]
+    assert second.sentences[0] != first.sentences[0]
+    assert not set(first.sentences).intersection(second.sentences)
 
 
 @pytest.mark.asyncio

@@ -4,12 +4,21 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from sqlalchemy import select
 
-from app.models.achievement import UserStreakStats
+from app.models.achievement import (
+    Achievement,
+    AchievementRarity,
+    AchievementType,
+    ContractStatus,
+    SparkContract,
+    UserAchievement,
+    UserStreakStats,
+)
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.notification import Notification
 from app.models.plan import Plan, PlanType
 from app.models.subject import Subject
+from app.services.achievement_engine import ContractService
 from app.services.achievement_event_consumer import AchievementEventConsumer
 
 
@@ -122,3 +131,80 @@ async def test_milestone_notification_skips_duplicates_within_24h(db_session, te
     )
 
     assert notification is None
+
+
+@pytest.mark.asyncio
+async def test_achievement_progress_event_creates_persistent_notification(db_session, test_user):
+    consumer = AchievementEventConsumer(event_bus=AsyncMock())
+
+    with patch(
+        "app.services.notification_service.NotificationService._push_notification_via_websocket",
+        new=AsyncMock(),
+    ), patch(
+        "app.services.notification_service.NotificationService._should_push_notification",
+        new=AsyncMock(return_value=(True, None)),
+    ):
+        notification = await consumer._create_achievement_progress_notification(
+            db=db_session,
+            user_id=test_user.id,
+            achievement_id="streak_7",
+            achievement_name="连续学习 7 天",
+            progress_percent=50,
+        )
+
+    assert notification is not None
+    assert notification.type == "achievement_progress"
+    assert notification.data["achievement_id"] == "streak_7"
+    assert notification.data["progress_percent"] == 50
+
+    stored = await db_session.execute(select(Notification).where(Notification.id == notification.id))
+    assert stored.scalar_one().title == "连续学习 7 天 进度达到 50%"
+
+
+@pytest.mark.asyncio
+async def test_contract_completion_triggers_achievement_unlock(db_session, test_user):
+    db_session.add(
+        Achievement(
+            id="contract_finish_first",
+            name="契约兑现者",
+            description="完成一次星火契约",
+            type=AchievementType.CONTRACT,
+            rarity=AchievementRarity.COMMON,
+            trigger_code="CONTRACT_COMPLETED",
+            trigger_config={"count": 1},
+            category="contract",
+        )
+    )
+    db_session.add(
+        SparkContract(
+            user_id=test_user.id,
+            target_study_minutes=20,
+            target_days=1,
+            photon_stake=10,
+            start_date=datetime.utcnow() - timedelta(days=2),
+            end_date=datetime.utcnow() - timedelta(days=1),
+            status=ContractStatus.ACTIVE,
+            current_days=1,
+            current_minutes=0,
+        )
+    )
+    await db_session.commit()
+
+    service = ContractService(db_session)
+    with patch.object(service, "_grant_rewards", new=AsyncMock()), patch(
+        "app.services.achievement_engine.AchievementEngine._notify_unlocks",
+        new=AsyncMock(),
+    ):
+        result = await service.check_contract_status(str(test_user.id))
+
+    assert result == {"status": "completed", "reward": 20.0}
+
+    user_achievement_result = await db_session.execute(
+        select(UserAchievement).where(
+            UserAchievement.user_id == test_user.id,
+            UserAchievement.achievement_id == "contract_finish_first",
+        )
+    )
+    user_achievement = user_achievement_result.scalar_one_or_none()
+    assert user_achievement is not None
+    assert user_achievement.unlocked_at is not None

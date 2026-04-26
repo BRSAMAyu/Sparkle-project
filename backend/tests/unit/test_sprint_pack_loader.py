@@ -175,6 +175,15 @@ class TestJsonDataQuality:
         assert len(quicksort_mistakes) >= 2
         assert "ds.quicksort" in ds_pack["paths"]["minimum_pass"]["ordered_nodes"]
 
+    def test_data_structures_algorithms_templates_and_checkpoints_are_complete(self, ds_pack):
+        assert ds_pack["checkpoint_rules"]["pass_threshold"] == 60
+        assert ds_pack["checkpoint_rules"]["checkpoint_intervals"]["7d"] == [3, 5, 7]
+        for template in ds_pack["task_card_templates"]:
+            assert template["description"]
+            assert template["steps"]
+            assert template["done_criteria"]
+            assert template["duration_minutes"] > 0
+
 
 # ---------------------------------------------------------------------------
 # query_nodes_by_priority — sorting logic

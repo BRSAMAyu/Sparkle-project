@@ -188,6 +188,66 @@ async def test_analyze_and_link_publishes_event_without_links():
 
 
 @pytest.mark.asyncio
+async def test_analyze_and_link_runs_ocr_for_image_even_with_existing_text():
+    db_mock = MagicMock(spec=AsyncSession)
+    db_mock.execute = AsyncMock()
+    db_mock.commit = AsyncMock()
+    db_mock.rollback = AsyncMock()
+    db_mock.begin_nested = MagicMock(return_value=_AsyncNullContext())
+
+    service = ErrorBookService(db_mock)
+    user_id = uuid4()
+    error_id = uuid4()
+
+    error = MagicMock(spec=ErrorRecord)
+    error.id = error_id
+    error.user_id = user_id
+    error.question_text = "十二字符描述文本"
+    error.question_image_url = "https://example.com/error.png"
+    error.user_answer = "go"
+    error.correct_answer = "went"
+    error.subject_code = "english"
+    error.latest_analysis = None
+    error.linked_knowledge_node_ids = []
+
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = error
+    db_mock.execute.return_value = mock_result
+
+    with patch.object(service, "_run_ocr", AsyncMock(return_value="He went to school yesterday.")) as mock_ocr, \
+         patch.object(service, "_search_knowledge_nodes", AsyncMock(return_value=[])), \
+         patch.object(
+             service,
+             "_run_llm_analysis",
+             AsyncMock(
+                 return_value={
+                     "error_type": "concept_confusion",
+                     "error_type_label": "语法规则混淆",
+                     "root_cause": "时态判断错误",
+                     "correct_approach": "根据 yesterday 选择过去式",
+                     "similar_traps": [],
+                     "recommended_knowledge": [],
+                     "study_suggestion": "复习一般过去时",
+                 }
+             ),
+         ) as mock_analysis, \
+         patch("app.services.error_book_service.event_bus.publish", new=AsyncMock()), \
+         patch("app.services.error_book_service.SemanticMemoryService") as mock_semantic, \
+         patch("app.services.error_book_signal_processor.ErrorBookSignalProcessor") as mock_processor, \
+         patch("app.services.error_book_mastery_sync_service.ErrorBookMasterySyncService") as mock_mastery:
+        mock_semantic.return_value.upsert_strategy_from_error = AsyncMock()
+        mock_processor.return_value.process_error_created = AsyncMock()
+        mock_mastery.return_value.apply_error_diagnosis = AsyncMock(return_value=[])
+        await service.analyze_and_link(error_id, user_id)
+
+    mock_ocr.assert_awaited_once_with("https://example.com/error.png")
+    analyzed_question = mock_analysis.await_args.kwargs["question"]
+    assert "十二字符描述文本" in analyzed_question
+    assert "[OCR]: He went to school yesterday." in analyzed_question
+    assert error.question_text == "十二字符描述文本"
+
+
+@pytest.mark.asyncio
 async def test_analyze_and_link_flushes_node_mastery_events_after_commit():
     db_mock = MagicMock(spec=AsyncSession)
     db_mock.execute = AsyncMock()
@@ -303,3 +363,18 @@ def test_review_scheduler_caps_easiness_factor_growth():
     )
 
     assert new_ef == 2.5
+
+
+def test_fallback_analysis_classifies_english_grammar_without_knowledge_gap():
+    service = ErrorBookService(MagicMock(spec=AsyncSession))
+
+    result = service._build_fallback_analysis(
+        subject="english",
+        question="Choose the correct tense: He ___ to school yesterday.",
+        user_ans="go",
+        correct_ans="went",
+        linked_nodes=[],
+    )
+
+    assert result["error_type"] == "concept_confusion"
+    assert result["error_type"] != "knowledge_gap"

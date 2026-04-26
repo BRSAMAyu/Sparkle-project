@@ -195,11 +195,11 @@ async def _seed_replan_context(
 
 
 @pytest.mark.asyncio
-async def test_repeated_error_mastery_drop_triggers_replan(db_session):
+async def test_replan_bridge_uses_existing_mastery_without_second_deduction(db_session):
     user, plan, node, errors = await _seed_replan_context(
         db_session,
         username="repeated_mastery_user",
-        mastery_score=52,
+        mastery_score=37,
         analyses=[
             {"error_type": "baseline_gap"},
             {"error_type": "knowledge_transfer_fail"},
@@ -228,8 +228,7 @@ async def test_repeated_error_mastery_drop_triggers_replan(db_session):
 
     assert result["triggered"] is True
     assert result["recent_error_count"] == 3
-    assert result["mastery_update"]["old_mastery"] == 52.0
-    assert result["mastery_update"]["new_mastery"] == 37.0
+    assert result["mastery_update"] is None
     mock_eval.assert_awaited_once_with(
         user_id=user.id,
         plan_id=plan.id,
@@ -319,5 +318,12 @@ async def test_careless_error_updates_mastery_but_does_not_replan(db_session):
 
     assert result["triggered"] is False
     assert result["reason"] == "careless_error_no_replan"
-    assert result["mastery_update"]["new_mastery"] == 22.0
+    assert result["mastery_update"] is None
     mock_eval.assert_not_awaited()
+
+    status = (
+        await db_session.execute(
+            select(UserNodeStatus).where(UserNodeStatus.user_id == user.id, UserNodeStatus.node_id == node.id)
+        )
+    ).scalar_one()
+    assert status.mastery_score == 25.0

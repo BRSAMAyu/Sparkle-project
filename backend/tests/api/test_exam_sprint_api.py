@@ -367,7 +367,7 @@ async def test_learning_portfolio_endpoint_supports_current_user_query_param(exa
                 "subject": "计算机网络",
                 "sprint_mode": "seven_day_survival",
                 "status": "completed",
-                "mastered_nodes_count": 32,
+                "mastered_nodes_count": 80,
                 "started_at": "2026-04-04T09:00:00",
                 "completed_at": "2026-04-10T20:00:00",
                 "target_date": "2026-04-10",
@@ -383,7 +383,7 @@ async def test_learning_portfolio_endpoint_supports_current_user_query_param(exa
                 "proud_nodes": ["TCP 拥塞控制"],
             }
         ],
-        "total_mastered_nodes": 32,
+        "total_mastered_nodes": 80,
         "active_count": 0,
         "completed_count": 1,
         "planned_count": 0,

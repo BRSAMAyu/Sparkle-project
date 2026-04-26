@@ -230,5 +230,5 @@ async def test_h6_scenario4_cross_session_memory_reaches_prompt_in_practice(db_s
     )
 
     assert context.past_session_memory[0]["summary"].startswith("你之前提过 TCP 状态转换最容易断链")
-    assert "你之前了解的关于用户的信息" in prompt
+    assert "跨会话记忆" in prompt
     assert "TCP 状态转换最容易断链" in prompt

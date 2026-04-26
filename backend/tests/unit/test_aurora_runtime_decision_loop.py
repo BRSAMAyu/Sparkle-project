@@ -1978,6 +1978,46 @@ def test_last_24h_mode_exposed_in_planning_surface_llm_payload() -> None:
     assert payload["last_24h_mode"] is True
 
 
+def test_dashboard_builder_injects_sanitized_social_signals_with_rule_z_boundary() -> None:
+    builder = DashboardReadoutBuilder(redis_client=None)
+    readout = builder.build(
+        surface="aurora_modeling",
+        user_id="user-social",
+        conversation_id="conv-social",
+        request_id="req-social",
+        user_message="今天有点卡住",
+        request_extra_context={},
+        conversation_context={"messages": []},
+        user_context_payload={
+            "social_signals_summary": {
+                "value": {
+                    "mention_count": 2,
+                    "relationship_count": 1,
+                    "pending_commitments_count": 1,
+                    "summary_text": "最近 7 天提到过 2 位学习相关人物。",
+                    "recent_person_mentions": ["Alice"],
+                }
+            }
+        },
+        control_surface_reading=ControlSurfaceReading(
+            runtime_enabled=True,
+            hard_bounds=AuroraHardBounds(),
+            adjustable=ActivityProfile(),
+        ),
+        activity_profile={"conversation_style": "warm"},
+        candidate_affordances=[],
+    )
+
+    payload = readout.to_llm_payload(action="emit_message")
+    assert payload["social_signals"]["mention_count"] == 2
+    assert "Rule Z" in payload["social_signals"]["rule_z_boundary"]
+    assert "recent_person_mentions" not in payload["social_signals"]
+
+    prompt_payload = json.loads(AuroraDecisionLoop().build_prompt(readout)[1]["content"])
+    assert "social_signals" in prompt_payload["dashboard_readout"]
+    assert any("Rule Z social boundary" in rule for rule in prompt_payload["rules"])
+
+
 # ---------------------------------------------------------------------------
 # F18: Sprint Pack auto-detection + injection tests
 # ---------------------------------------------------------------------------

@@ -5,8 +5,10 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select
 
-from app.models.focus import FocusStatus
+from app.api.v1.plans import get_plan_progress
+from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
@@ -79,7 +81,7 @@ async def test_focus_session_boosts_linked_node_mastery(db_session, monkeypatch)
         title="复习极限定义",
         type=TaskType.LEARNING,
         tags=[],
-        estimated_minutes=30,
+        estimated_minutes=90,
         difficulty=2,
         energy_cost=2,
         status=TaskStatus.PENDING,
@@ -220,3 +222,146 @@ async def test_focus_session_without_linked_node_has_no_mastery_update(db_sessio
 
     assert result["mastery_updates"] == []
     update_node_mastery.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_focus_session_updates_task_progress_and_publishes_task_id(db_session, monkeypatch):
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    plan = Plan(
+        user_id=user_id,
+        name="高数冲刺",
+        type=PlanType.SPRINT,
+        progress=0.0,
+        mastery_level=0.0,
+        daily_available_minutes=60,
+    )
+    task = Task(
+        user_id=user_id,
+        plan=plan,
+        title="完成极限专题",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=50,
+        difficulty=2,
+        energy_cost=2,
+        status=TaskStatus.PENDING,
+        priority=1,
+    )
+    db_session.add_all([user, plan, task])
+    await db_session.commit()
+
+    publish = AsyncMock()
+    monkeypatch.setattr("app.services.focus_service.event_bus.publish", publish)
+    monkeypatch.setattr("app.services.task_service.event_bus_reliable.publish", AsyncMock())
+    monkeypatch.setattr("app.services.task_service.publish_srl_event", AsyncMock())
+    monkeypatch.setattr("app.services.task_service._sync_task_card_projection", AsyncMock())
+    monkeypatch.setattr("app.services.plan_service._sync_plan_card_projection", AsyncMock())
+    monkeypatch.setattr(
+        "app.services.focus_service.AutoFragmentCollector.collect_from_focus_session",
+        AsyncMock(),
+    )
+    monkeypatch.setattr(
+        "app.services.focus_service.MemoryService.create_episodic_memory",
+        AsyncMock(),
+    )
+
+    end_time = _utcnow()
+    await FocusService.log_session(
+        db=db_session,
+        user_id=user_id,
+        task_id=task.id,
+        start_time=end_time - timedelta(minutes=25),
+        end_time=end_time,
+        duration_minutes=25,
+    )
+    await db_session.refresh(task)
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.actual_minutes == 25
+
+    end_time = _utcnow()
+    await FocusService.log_session(
+        db=db_session,
+        user_id=user_id,
+        task_id=task.id,
+        start_time=end_time - timedelta(minutes=25),
+        end_time=end_time,
+        duration_minutes=25,
+    )
+    await db_session.refresh(task)
+    assert task.status == TaskStatus.COMPLETED
+    assert task.actual_minutes == 50
+    assert task.completed_at is not None
+
+    focus_events = [
+        call.args[1] for call in publish.await_args_list if call.args and call.args[0] == "focus.session.completed"
+    ]
+    assert focus_events[-1]["task_id"] == str(task.id)
+    assert focus_events[-1]["plan_id"] == str(plan.id)
+
+
+@pytest.mark.asyncio
+async def test_plan_progress_reports_completed_focus_minutes(db_session):
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    plan = Plan(
+        user_id=user_id,
+        name="英语计划",
+        type=PlanType.GROWTH,
+        progress=0.0,
+        mastery_level=0.0,
+        daily_available_minutes=60,
+    )
+    task = Task(
+        user_id=user_id,
+        plan=plan,
+        title="阅读训练",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=30,
+        difficulty=2,
+        energy_cost=2,
+        status=TaskStatus.IN_PROGRESS,
+        priority=1,
+    )
+    db_session.add_all([user, plan, task])
+    await db_session.flush()
+
+    end_time = _utcnow()
+    db_session.add_all(
+        [
+            FocusSession(
+                user_id=user_id,
+                task_id=task.id,
+                start_time=end_time - timedelta(minutes=25),
+                end_time=end_time,
+                duration_minutes=25,
+                focus_type=FocusType.POMODORO,
+                status=FocusStatus.COMPLETED,
+            ),
+            FocusSession(
+                user_id=user_id,
+                task_id=task.id,
+                start_time=end_time - timedelta(minutes=5),
+                end_time=end_time,
+                duration_minutes=5,
+                focus_type=FocusType.POMODORO,
+                status=FocusStatus.INTERRUPTED,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    progress = await get_plan_progress(plan_id=plan.id, current_user=user, db=db_session)
+
+    assert progress["total_minutes_spent"] == 25

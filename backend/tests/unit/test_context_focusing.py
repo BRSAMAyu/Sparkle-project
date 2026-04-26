@@ -1,4 +1,4 @@
-from datetime import timezone, datetime
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -147,19 +147,59 @@ def test_build_system_prompt_unchanged_when_past_session_memory_empty() -> None:
 
 
 def test_build_system_prompt_prefixes_past_session_memory() -> None:
+    occurred_at = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
     prompt = build_system_prompt(
         user_context={
             "preferences": {"depth_preference": 0.5},
             "past_session_memory": [
-                {"summary": "上次你备考计算机网络，传输层学得不错但子网划分比较薄弱。"},
-                {"summary": "最近更适合用短冲刺和错题复盘推进。"},
+                {
+                    "summary": "上次你备考计算机网络，传输层学得不错但子网划分比较薄弱。",
+                    "subject_type": "computer_networks",
+                    "source_type": "chat_turn",
+                    "occurred_at": occurred_at,
+                    "tags": ["TCP"],
+                },
+                {"summary": "最近更适合用短冲刺和错题复盘推进。", "occurred_at": occurred_at},
             ],
         },
         conversation_history={"messages": []},
     )
 
-    assert prompt.startswith("你之前了解的关于用户的信息：\n- 上次你备考计算机网络")
+    assert prompt.startswith("## 跨会话记忆 [L2 引导]\n")
+    assert "当用户问候、含糊开场、请求继续学习" in prompt
+    assert "[上周 / computer_networks / chat_turn] 上次你备考计算机网络" in prompt
+    assert "tags=TCP" in prompt
     assert "子网划分比较薄弱" in prompt
+
+
+def test_build_system_prompt_includes_capsule_preferences() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5},
+            "capsule_preferences": {
+                "favorite_count": 3,
+                "content_depth_preference": "deep",
+                "subject_affinity": ["computer_networks", "os"],
+                "recent_notes": ["喜欢反例和推理过程"],
+                "method_preferences": [{"key": "pomodoro", "label": "番茄钟方法", "count": 1}],
+                "method_preference_summary": ["用户偏好番茄钟方法"],
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 胶囊内容偏好 [L2 引导]" in prompt
+    assert "内容深度偏好: deep" in prompt
+    assert "主题亲和: computer_networks, os" in prompt
+    assert "用户偏好番茄钟方法" in prompt
+    assert "完整推理链" in prompt
+
+    def fake_llm_reply(system_prompt: str) -> str:
+        if "内容深度偏好: deep" in system_prompt:
+            return "我会先给完整推理链，再补一个反例。"
+        return "我会给一个很短的提示。"
+
+    assert "完整推理链" in fake_llm_reply(prompt)
 
 
 def test_build_system_prompt_includes_understanding_depth_hint() -> None:

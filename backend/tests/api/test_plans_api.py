@@ -134,6 +134,16 @@ async def test_plan_list_and_detail_include_mobile_required_fields(db_session, p
             priority=2,
         )
     )
+    db_session.add(
+        PlanState(
+            user_id=user.id,
+            plan_id=plan.id,
+            status=PlanStateStatus.ACTIVE.value,
+            version=1,
+            task_index={"completed": 1, "total": 4, "avg_completion_rate": 0.25},
+            task_summaries=[],
+        )
+    )
     await db_session.commit()
     state["current_user"] = user
 
@@ -147,12 +157,17 @@ async def test_plan_list_and_detail_include_mobile_required_fields(db_session, p
         "plan_stage",
         "source",
         "source_metadata",
+        "health_score",
+        "health_status",
     ):
         assert required_key in item
+    assert item["health_score"] is not None
 
     detail_response = client.get(f"/plans/{plan.id}")
     assert detail_response.status_code == 200
     detail = detail_response.json()
+    assert detail["health_score"] is not None
+    assert detail["health_status"] in {"healthy", "warning", "critical"}
     assert detail["tasks"] is not None
     assert len(detail["tasks"]) == 1
     assert detail["tasks"][0]["plan_id"] == str(plan.id)

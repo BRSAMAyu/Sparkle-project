@@ -184,6 +184,7 @@ def _build_modeling_output(intake: ExamSprintIntakeRequest) -> dict[str, object]
         "subject": intake.subject,
         "exam_scope": intake.scope_context.text,
         "knowledge_baseline": "完全没学过",
+        "time_available": "每天约 2 小时",
         "daily_available_hours": intake.daily_study_minutes // 60,
         "time_constraint_days": 7,
         "motivation": "7 天后通过考试",
@@ -221,30 +222,27 @@ async def _create_bridged_plan(
     )
     monkeypatch.setattr("app.services.task_service._sync_task_card_projection", AsyncMock(return_value=None))
     monkeypatch.setattr("app.services.plan_service._sync_plan_card_projection", AsyncMock(return_value=None))
-    monkeypatch.setattr("app.services.plan_quota_service.PlanQuotaService.check_and_raise", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        "app.services.plan_quota_service.PlanQuotaService.check_and_raise", AsyncMock(return_value=None)
+    )
 
     manager = PlanningWorkflowManager(redis_client=redis_client)
     modeling_output = _build_modeling_output(intake)
-    bridge_context = manager.build_plan_from_modeling_output(modeling_output)
 
     first = await manager.process_planning_turn(
         db=db_session,
         user_id=user_id,
         chat_session_id=conversation_id,
         message=f"7天后考{intake.subject}，从没学过，每天2小时，直接开始规划。",
-        context=bridge_context,
+        context={"from_modeling_complete": True, "modeling_output": modeling_output},
     )
-    confirm = await manager.process_planning_turn(
-        db=db_session,
-        user_id=user_id,
-        chat_session_id=conversation_id,
-        message="按这个来",
-        context={},
-    )
+    confirm = first
 
     plan = (
-        await db_session.execute(select(Plan).where(Plan.user_id == user_id).order_by(Plan.created_at.desc()))
-    ).scalars().first()
+        (await db_session.execute(select(Plan).where(Plan.user_id == user_id).order_by(Plan.created_at.desc())))
+        .scalars()
+        .first()
+    )
     tasks = list(
         (
             await db_session.execute(
@@ -349,7 +347,7 @@ class TestNorthStarJourney:
             conversation_id="north-star-bridge",
         )
 
-        assert any(widget["type"] == "planning_strategy_card" for widget in first["widgets"])
+        assert any(widget["type"] == "plan_card" for widget in first["widgets"])
         assert confirm["message"].startswith("方案已经确认")
         assert plan.subject == "计算机网络"
         assert plan.type == PlanType.SPRINT

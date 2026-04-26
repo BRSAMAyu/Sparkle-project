@@ -14,13 +14,13 @@ def test_promoted_settings_defaults() -> None:
     assert defaults["AURORA_STAGE39_COGLOAD_ROUTE_MODE"].default == "live"
     assert defaults["AURORA_STAGE39_GALAXY_INJECT_MODE"].default == "live"
     assert defaults["AURORA_BAYESIAN_MODE"].default == "shadow"
-    assert defaults["SPARKLE_MEMORY_INFERRED_WRITE_ENABLED"].default is False
+    assert defaults["SPARKLE_MEMORY_INFERRED_WRITE_ENABLED"].default is True
 
 
 @pytest.mark.asyncio
-async def test_readiness_report_blocks_memory_inferred_write_promotion() -> None:
+async def test_readiness_report_tracks_memory_inferred_write_live_default() -> None:
     settings = SimpleNamespace(
-        SPARKLE_MEMORY_INFERRED_WRITE_ENABLED=False,
+        SPARKLE_MEMORY_INFERRED_WRITE_ENABLED=True,
         AURORA_BAYESIAN_MODE="shadow",
     )
 
@@ -28,10 +28,10 @@ async def test_readiness_report_blocks_memory_inferred_write_promotion() -> None
 
     memory_write = report["memory_inferred_write"]
     assert isinstance(memory_write, FeatureReadiness)
-    assert memory_write.current_mode == "off"
+    assert memory_write.current_mode == "live"
     assert memory_write.target_mode == "live"
-    assert memory_write.ready_for_promotion is False
-    assert memory_write.blocking_reasons
+    assert memory_write.ready_for_promotion is True
+    assert memory_write.blocking_reasons == []
     assert memory_write.promotion_criteria
 
 

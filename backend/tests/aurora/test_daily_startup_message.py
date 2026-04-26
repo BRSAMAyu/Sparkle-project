@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from uuid import uuid4
 
 import pytest
 
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+from app.models.calendar_event import CalendarEvent
 from app.models.plan import Plan, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
@@ -150,3 +151,30 @@ async def test_daily_startup_mentions_previous_exam_weak_priority_boost(db_sessi
     assert "根据你上次的考后复盘" in payload["message"]
     assert "TCP" in payload["message"]
     assert "优先级提高" in payload["message"]
+
+
+@pytest.mark.asyncio
+async def test_daily_startup_mentions_calendar_conflict_with_specific_time(db_session):
+    user, plan, session_day = await _create_sprint_plan(db_session, completion_rate=0.9)
+    db_session.add(
+        CalendarEvent(
+            user_id=user.id,
+            title="高数考试",
+            start_time=datetime.combine(session_day, datetime.min.time()).replace(hour=14),
+            end_time=datetime.combine(session_day, datetime.min.time()).replace(hour=15, minute=30),
+        )
+    )
+    await db_session.commit()
+
+    service = AuroraRuntimeV1Service(wake_policy_service=_WakePolicyStub())
+    payload = await service.get_daily_startup_message(
+        active_db=db_session,
+        user_id=user.id,
+        plan_id=plan.id,
+        session_date=session_day,
+    )
+
+    assert "14:00-15:30" in payload["message"]
+    assert "高数考试" in payload["message"]
+    assert "09:00-10:00" in payload["message"]
+    assert payload["calendar_note"]

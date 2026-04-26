@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -6,6 +7,25 @@ import pytest
 
 from app.core.context_manager import CognitiveContext, ContextOrchestrator
 from app.core.profile_context import CognitiveSummary, KnowledgeSummary, ProfileContext
+
+
+def test_calendar_context_serializes_exam_and_class_events() -> None:
+    event = SimpleNamespace(
+        title="高数考试",
+        start_time=datetime(2026, 4, 26, 14, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 26, 15, 30, tzinfo=UTC),
+        is_all_day=False,
+        source="manual",
+        task_id=None,
+        plan_id=None,
+        source_metadata={},
+    )
+
+    serialized = ContextOrchestrator._serialize_busy_calendar_events([event])
+
+    assert serialized[0]["kind"] == "exam"
+    assert serialized[0]["start"] == "14:00"
+    assert serialized[0]["end"] == "15:30"
 
 
 @pytest.mark.asyncio
@@ -83,6 +103,18 @@ async def test_context_orchestrator_aggregation(db_session):
             ),
         )
         m.setattr(
+            orchestrator,
+            "_get_capsule_preferences",
+            AsyncMock(
+                return_value={
+                    "favorite_count": 3,
+                    "content_depth_preference": "deep",
+                    "subject_affinity": ["computer_networks"],
+                    "recent_notes": ["keep the rigorous examples"],
+                }
+            ),
+        )
+        m.setattr(
             "app.core.context_manager.MemoryService.get_recent_episodic",
             AsyncMock(
                 return_value=[
@@ -116,6 +148,8 @@ async def test_context_orchestrator_aggregation(db_session):
     assert context.social_context_v1["mention_count"] == 1
     assert context.achievement_summary["recent_unlocks"][0]["name"] == "七日连胜"
     assert context.calendar_context["workload_density"] == "medium"
+    assert context.capsule_preferences["content_depth_preference"] == "deep"
+    assert context.capsule_preferences["subject_affinity"] == ["computer_networks"]
     assert context.past_session_memory[0]["summary"].startswith("上次你备考计算机网络")
     assert redis_client.setex.called
 
@@ -127,7 +161,7 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
     redis_client.get.return_value = None
     orchestrator = ContextOrchestrator(shared_db, redis_client)
 
-    created_sessions = [object(), object(), object(), object(), object(), object(), object(), object()]
+    created_sessions = [object(), object(), object(), object(), object(), object(), object(), object(), object()]
     issued_sessions: list[object] = []
     service_dbs: dict[str, list[object]] = {"profile": [], "error": [], "user": []}
 

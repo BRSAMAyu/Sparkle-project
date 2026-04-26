@@ -1,10 +1,15 @@
 from datetime import datetime
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 
+from app.config import settings
+from app.core.cache import cache_service
 from app.models.memory import EpisodicMemory
 from app.services.memory_service import MemoryService
+from app.services.social_signal_bridge import SocialSignalBridge
 
 
 @pytest.mark.asyncio
@@ -45,3 +50,30 @@ async def test_social_kill_switch_can_target_subject_type_only(db_session):
     assert revoked == 1
     assert person_record.revoked_at is not None
     assert commitment_record.revoked_at is None
+
+
+@pytest.mark.asyncio
+async def test_social_signal_bridge_shadow_computes_without_exposing_live_signals(
+    db_session,
+    monkeypatch,
+):
+    monkeypatch.setattr(cache_service, "redis", None)
+    monkeypatch.setattr(settings, "AURORA_STAGE33_MODE", "shadow", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE33_SOCIAL_MODE", "shadow", raising=False)
+    service = SocialSignalBridge(db_session)
+    fetch = AsyncMock(
+        return_value={
+            "snapshot": SimpleNamespace(
+                recent_person_mentions=[object(), object()],
+                relationship_count=1,
+                pending_commitments_count=1,
+            ),
+            "inferred": {"community_engagement_level": "medium"},
+        }
+    )
+    monkeypatch.setattr(service, "_fetch_for_user", fetch)
+
+    signals = await service.build_social_signals_v1(uuid4())
+
+    assert signals is None
+    fetch.assert_awaited_once()

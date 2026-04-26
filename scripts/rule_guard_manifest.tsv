@@ -58,3 +58,4 @@ BB	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bb_financial_atomicit
 BC	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bc_idempotency_key.py"
 AV	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_av_kill_switch_mode_enum.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_core_phase_header.py"
 BD	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_sgw_readiness.py"
+BE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_be_shadow_semantics.py"
