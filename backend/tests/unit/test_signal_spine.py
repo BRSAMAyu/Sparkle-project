@@ -31,6 +31,7 @@ from app.signals.task_timeout_detector import TaskTimeoutDetector
 from app.signals.policy_engine import PolicyEngine
 from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
 from app.signals.outcome_recorder import OutcomeRecorder
+from app.signals.spine_metrics import SpineMetricsCollector, METRIC_DEFINITIONS
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────
