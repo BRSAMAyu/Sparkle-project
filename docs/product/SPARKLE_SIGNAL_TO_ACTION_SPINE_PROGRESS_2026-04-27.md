@@ -151,17 +151,88 @@
 
 ---
 
+## P1 总览
+
+| P1 Item | 状态 | 完成度 | 最后更新 |
+|---------|------|--------|---------|
+| P1-1 AchievementReinforcementConsumer | ✅ 完成 | 6 tests | 2026-04-27 |
+| P1-2 AuroraWakeEligibility | ✅ 完成 (aurora module) | existing | 2026-04-27 |
+| P1-3 PredictedReplyOption Engine | ✅ 完成 | 5 steps / 8 tests | 2026-04-27 |
+| P1-4 RecallOpportunity | ✅ 完成 | 10 tests | 2026-04-27 |
+| P1-5 SparkleSelfModel | ✅ 完成 | 6 steps / 9 tests | 2026-04-27 |
+| P1-6 CommunitySignal v1 | ⚠️ Partial | bridge exists, not spine-connected | — |
+
+---
+
 ## 当前测试覆盖
 
-65/65 tests passing:
+81/81 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
 - P0-1 FirstMinuteSnapshot: 14 tests
 - P0-2 StaleStateGuard: 6 tests
 - P0-3 ActionableStatePacket: 7 tests
+- P1-1 AchievementReinforcement: 6 tests
 - P1-3 PredictedReplyOption: 8 tests
+- P1-4 RecallOpportunity: 10 tests
 - P1-5 SparkleSelfModel: 9 tests
+
+---
+
+## P1-1: AchievementReinforcementConsumer
+
+**目标**: 成就回流 — achievement → growth momentum → tone/nudge/challenge 调整
+
+### Steps
+
+| Step | 描述 | 状态 |
+|------|------|------|
+| 1 | AchievementMomentum 数据模型 | ✅ DONE |
+| 2 | compute_momentum 动量计算（unlock+streak+progress 三因子） | ✅ DONE |
+| 3 | momentum >= 0.7 → momentum_high signal（priority=low） | ✅ DONE |
+| 4 | momentum <= 0.3 + in_progress → momentum_stalled signal（priority=medium） | ✅ DONE |
+| 5 | 中间动量不生成信号（无行动意义） | ✅ DONE |
+| 6 | 禁止写长期人格，scope=current_sprint | ✅ DONE |
+
+### 验收标准
+
+- [x] 成就解锁 → compute_momentum → ActionableSignal(growth_momentum)
+- [x] 高动量 signal priority=low（不压过错误/超时信号）
+- [x] 停滞 signal priority=medium（值得注意但不紧急）
+- [x] 中等动量 → 不生成 signal
+- [x] scope=current_sprint，不写长期人格
+- [x] momentum_score 序列化正确
+
+---
+
+## P1-4: RecallOpportunity
+
+**目标**: 主动召回 — 4 种触发条件下的目标导向召回
+
+### Steps
+
+| Step | 描述 | 状态 |
+|------|------|------|
+| 1 | RecallTrigger 数据模型 | ✅ DONE |
+| 2 | undigested_material 检测（上传未诊断） | ✅ DONE |
+| 3 | task_not_started 检测（1h 未启动） | ✅ DONE |
+| 4 | task_missed 检测（错过 deadline） | ✅ DONE |
+| 5 | pre_exam_silence 检测（考前 48h 沉默） | ✅ DONE |
+| 6 | RecallTrigger → ActionableSignal 转换 | ✅ DONE |
+| 7 | 冷却期机制 | ✅ DONE |
+
+### 验收标准
+
+- [x] 上传资料未诊断 → trigger(undigested_material)
+- [x] 所有资料已诊断 → 不 trigger
+- [x] 任务超 1h 未启动 → trigger(task_not_started)
+- [x] 任务已启动 → 不 trigger
+- [x] 任务错过 deadline → trigger(task_missed, urgency=high)
+- [x] 考前 48h + 沉默 5h → trigger(pre_exam_silence)
+- [x] 考前但活跃 → 不 trigger
+- [x] to_actionable_signal 转换正确
+- [x] 冷却期按 trigger_type 区分
 
 ---
 
@@ -228,26 +299,30 @@
 | Orchestrator | `backend/app/orchestration/orchestrator.py` | FSM 主控 |
 | GalaxyService | `backend/app/services/galaxy_service.py` | 知识星图 |
 
-### 缺失的核心对象
+### 已完成的 P0/P1 核心对象
 
-| 对象 | 需要新建 | 依赖 |
-|------|---------|------|
-| ActionableSignal | ✅ 新模块 | EventBus |
-| ActionableStatePacket | ✅ 新模块 | ActionableSignal |
-| PolicyDecision | ✅ 新模块 | ActionableStatePacket |
-| ExecutionDirective | ✅ 新模块 | PolicyDecision |
-| DirectiveApplicationAudit | ✅ 新模块 | ExecutionDirective |
-| UserVisibleReceipt | ✅ 新模块 | PolicyDecision |
-| CausalTrace | ✅ 新模块 | 全部上述 |
+| 对象 | 状态 | 关键文件 |
+|------|------|---------|
+| ActionableSignal | ✅ 完成 | `signals/types.py` |
+| ActionableStatePacket | ✅ 完成 | `signals/types.py`, `signals/state_packet_builder.py` |
+| PolicyDecision | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
+| ExecutionDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
+| DirectiveApplicationAudit | ✅ 完成 | `signals/directive_applier.py` |
+| UserVisibleReceipt | ✅ 完成 | `signals/spine_orchestrator.py` |
+| CausalTrace | ✅ 完成 | `signals/types.py`, `signals/causal_trace_store.py` |
+| PredictedReplyOption | ✅ 完成 | `signals/predicted_reply_options.py` |
+| SparkleSelfModel | ✅ 完成 | `signals/self_model.py` |
+| AchievementMomentum | ✅ 完成 | `signals/achievement_reinforcement.py` |
+| RecallTrigger | ✅ 完成 | `signals/recall_opportunity.py` |
 
 ### 架构原则检查清单
 
-- [ ] 每个 Signal 都绑定一个用户可见变化
-- [ ] Directive 是结构化参数，不是 prompt 片段
-- [ ] Audit 验证输出是否满足约束
-- [ ] Receipt 短、具体、可纠正
-- [ ] 社群信号不直接写个人状态
-- [ ] 成就是不直接改长期人格
+- [x] 每个 Signal 都绑定一个用户可见变化
+- [x] Directive 是结构化参数，不是 prompt 片段
+- [x] Audit 验证输出是否满足约束
+- [x] Receipt 短、具体、可纠正
+- [x] 社群信号不直接写个人状态
+- [x] 成就是不直接改长期人格
 
 ---
 
