@@ -1174,6 +1174,10 @@ class _DocumentCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (document.qualityScore != null) ...[
+                  const SizedBox(height: DS.spacing12),
+                  _QualityIndicator(score: document.qualityScore!),
+                ],
                 const SizedBox(height: DS.spacing16),
                 Wrap(
                   spacing: DS.spacing10,
@@ -1874,6 +1878,46 @@ class _OrbitTile extends StatelessWidget {
         ],
       ),
       child: Icon(icon, color: color),
+    );
+  }
+}
+
+class _QualityIndicator extends StatelessWidget {
+  const _QualityIndicator({required this.score});
+
+  final double score;
+
+  @override
+  Widget build(BuildContext context) {
+    final clamped = score.clamp(-1.0, 1.0);
+    final color = clamped >= 0.3
+        ? DS.success
+        : clamped >= 0.0
+            ? DS.warning
+            : DS.error;
+    final label = clamped >= 0.3
+        ? 'High quality'
+        : clamped >= 0.0
+            ? 'Mixed feedback'
+            : 'Low quality';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing10, vertical: DS.spacing6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.signal_cellular_alt_rounded, size: 14, color: color),
+          const SizedBox(width: DS.spacing6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }

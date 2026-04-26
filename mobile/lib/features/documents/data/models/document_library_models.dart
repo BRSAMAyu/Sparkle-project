@@ -171,6 +171,7 @@ class DocumentLibraryItem {
     this.processingStatus,
     this.attachedNodes = const <DocumentGalaxyNode>[],
     this.citationInsight = const DocumentCitationInsight(),
+    this.qualityScore,
     this.subjectArea,
     this.errorMessage,
   });
@@ -191,6 +192,7 @@ class DocumentLibraryItem {
       visibility: json['visibility']?.toString() ?? 'private',
       fileSizeBytes: (json['file_size'] as num?)?.toInt(),
       errorMessage: json['error_message']?.toString(),
+      qualityScore: (json['document_quality_score'] as num?)?.toDouble(),
     );
   }
 
@@ -205,6 +207,7 @@ class DocumentLibraryItem {
   final List<DocumentGalaxyNode> attachedNodes;
   final DocumentCitationInsight citationInsight;
   final String? subjectArea;
+  final double? qualityScore;
   final String? errorMessage;
 
   DocumentLibraryItem copyWith({
@@ -219,6 +222,7 @@ class DocumentLibraryItem {
     List<DocumentGalaxyNode>? attachedNodes,
     DocumentCitationInsight? citationInsight,
     String? subjectArea,
+    double? qualityScore,
     String? errorMessage,
   }) {
     return DocumentLibraryItem(
@@ -233,6 +237,7 @@ class DocumentLibraryItem {
       attachedNodes: attachedNodes ?? this.attachedNodes,
       citationInsight: citationInsight ?? this.citationInsight,
       subjectArea: subjectArea ?? this.subjectArea,
+      qualityScore: qualityScore ?? this.qualityScore,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
