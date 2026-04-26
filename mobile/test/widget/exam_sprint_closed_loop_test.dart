@@ -216,7 +216,7 @@ void main() {
         expect(find.byType(LearningPortfolioScreen), findsOneWidget);
         expect(find.text('已完成'), findsWidgets);
         expect(find.text('7天冲刺（已完成，2026-05-01）'), findsOneWidget);
-        expect(find.text('掌握 9 节点'), findsOneWidget);
+        expect(find.text('掌握度 9%'), findsOneWidget);
       },
     );
   });

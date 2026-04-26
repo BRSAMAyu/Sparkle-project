@@ -27,8 +27,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('我的学习档案'), findsOneWidget);
-    expect(find.text('所有科目累计掌握节点'), findsOneWidget);
-    expect(find.text('50'), findsOneWidget);
+    expect(find.text('所有科目掌握度合计'), findsOneWidget);
+    expect(find.text('98'), findsOneWidget);
     expect(find.text('进行中'), findsOneWidget);
     expect(find.text('已完成'), findsOneWidget);
     expect(find.text('计划中'), findsOneWidget);
@@ -106,8 +106,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repositoryCalls, equals(2));
-    expect(find.text('所有科目累计掌握节点'), findsOneWidget);
+    expect(find.text('所有科目掌握度合计'), findsOneWidget);
     expect(find.text('操作系统'), findsOneWidget);
+  });
+
+  testWidgets('pull-to-refresh refreshes portfolio data',
+      (WidgetTester tester) async {
+    await _useTallSurface(tester);
+    var fetchCalls = 0;
+    final repository = _FakeExamSprintRepository(
+      handler: () async {
+        fetchCalls += 1;
+        return _mockPortfolio();
+      },
+    );
+
+    await tester.pumpWidget(_buildApp(repository: repository));
+    await tester.pump();
+    await tester.pump();
+
+    expect(fetchCalls, equals(1));
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+
+    await tester.fling(
+      find.byType(ListView).first,
+      const Offset(0, 500),
+      1000,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+
+    expect(fetchCalls, greaterThanOrEqualTo(2));
   });
 
   testWidgets('back falls back to profile when opened directly',
@@ -161,21 +191,31 @@ Future<void> _useTallSurface(WidgetTester tester) async {
 Widget _buildApp({
   required _FakeExamSprintRepository repository,
 }) {
+  final router = GoRouter(
+    initialLocation: '/exam-sprint/portfolio',
+    routes: [
+      GoRoute(
+        path: '/exam-sprint/portfolio',
+        builder: (context, state) => const LearningPortfolioScreen(),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
   return ProviderScope(
     overrides: [
       examSprintRepositoryProvider.overrideWithValue(repository),
       currentUserProvider.overrideWithValue(_mockUser()),
     ],
-    child: MaterialApp(
+    child: MaterialApp.router(
       theme: AppThemes.lightTheme,
-      home: const LearningPortfolioScreen(),
+      routerConfig: router,
     ),
   );
 }
 
 LearningPortfolioResult _mockPortfolio() {
   return LearningPortfolioResult(
-    totalMasteredNodes: 50,
+    totalMasteredNodes: 98,
     activeCount: 1,
     completedCount: 1,
     plannedCount: 1,
@@ -200,7 +240,7 @@ LearningPortfolioResult _mockPortfolio() {
         subject: '计算机网络',
         sprintMode: 'seven_day_survival',
         status: 'completed',
-        masteredNodesCount: 32,
+        masteredNodesCount: 80,
         startedAt: DateTime(2026, 4, 4, 9),
         completedAt: DateTime(2026, 4, 10, 20),
         targetDate: DateTime(2026, 4, 10),

@@ -103,4 +103,86 @@ void main() {
 
     expect(find.textContaining('这是你的第一周，先开始吧'), findsOneWidget);
   });
+
+  testWidgets('weekly growth narrative card honors initial expanded state',
+      (tester) async {
+    const narrative = WeeklyGrowthNarrative(
+      period: '本周成长故事',
+      weekStart: '2026-04-20',
+      weekEnd: '2026-04-26',
+      body: '这周你学习了 5 天。',
+      sentences: <String>['这周你学习了 5 天。'],
+      highlights: <String>['高数错题复盘更稳定了。'],
+      biggestImprovement: <String, dynamic>{},
+      nextWeekSuggestion: '',
+      dataPoints: <String, dynamic>{'study_days': 5},
+      sourceCounts: <String, int>{'study_days': 5},
+      isPlaceholder: false,
+      generatedAt: '2026-04-25T10:00:00',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          weeklyGrowthNarrativeProvider.overrideWith(
+            (ref) async => narrative,
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: WeeklyGrowthNarrativeCard(initialExpanded: true),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('收起'), findsOneWidget);
+    expect(find.text('5 天学习'), findsOneWidget);
+    expect(find.text('高数错题复盘更稳定了。'), findsOneWidget);
+  });
+
+  testWidgets('weekly growth narrative card expands when route state updates',
+      (tester) async {
+    const narrative = WeeklyGrowthNarrative(
+      period: '本周成长故事',
+      weekStart: '2026-04-20',
+      weekEnd: '2026-04-26',
+      body: '这周你学习了 5 天。',
+      sentences: <String>['这周你学习了 5 天。'],
+      highlights: <String>['高数错题复盘更稳定了。'],
+      biggestImprovement: <String, dynamic>{},
+      nextWeekSuggestion: '',
+      dataPoints: <String, dynamic>{'study_days': 5},
+      sourceCounts: <String, int>{'study_days': 5},
+      isPlaceholder: false,
+      generatedAt: '2026-04-25T10:00:00',
+    );
+
+    Widget buildCard({required bool initialExpanded}) {
+      return ProviderScope(
+        overrides: <Override>[
+          weeklyGrowthNarrativeProvider.overrideWith(
+            (ref) async => narrative,
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: WeeklyGrowthNarrativeCard(
+              initialExpanded: initialExpanded,
+            ),
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(buildCard(initialExpanded: false));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('展开'), findsOneWidget);
+
+    await tester.pumpWidget(buildCard(initialExpanded: true));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('收起'), findsOneWidget);
+    expect(find.text('高数错题复盘更稳定了。'), findsOneWidget);
+  });
 }

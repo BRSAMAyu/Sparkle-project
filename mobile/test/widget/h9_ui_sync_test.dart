@@ -67,6 +67,9 @@ void main() {
         ),
       ),
     );
+    final portfolioRepository =
+        _MutableExamSprintRepository(_portfolio(status: 'active'));
+    final achievementRepository = _MutableAchievementRepository();
     final taskRepository = _FakeTaskRepository(
       initialTask: _task('task-1'),
       onComplete: () {
@@ -77,6 +80,8 @@ void main() {
             userFlameIntensity: 0.7,
           ),
         );
+        portfolioRepository.portfolio = _portfolio(status: 'completed');
+        achievementRepository.unlock();
       },
     );
 
@@ -84,6 +89,10 @@ void main() {
       _buildApp(
         overrides: <Override>[
           enhancedGalaxyRepositoryProvider.overrideWithValue(galaxyRepository),
+          examSprintRepositoryProvider.overrideWithValue(portfolioRepository),
+          achievementRepositoryProvider
+              .overrideWithValue(achievementRepository),
+          currentUserProvider.overrideWithValue(_user()),
           taskRepositoryProvider.overrideWithValue(taskRepository),
           taskNotificationSchedulerProvider
               .overrideWithValue(_NoopTaskNotificationScheduler()),
@@ -100,12 +109,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('mastery:20'), findsOneWidget);
+    expect(find.text('portfolio:1/0'), findsOneWidget);
+    expect(find.text('achievement:locked'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('complete-task')));
     await tester.pump();
     await tester.pumpAndSettle();
 
     expect(find.text('mastery:80'), findsOneWidget);
+    expect(find.text('portfolio:0/1'), findsOneWidget);
+    expect(find.text('achievement:unlocked'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -140,6 +153,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('tasks:2'), findsOneWidget);
+  });
+
+  testWidgets('B2. error review bumps galaxy refresh trigger', (tester) async {
+    final errorRepository = _FakeErrorBookRepository(onSubmitReview: () {});
+
+    await tester.pumpWidget(
+      _buildApp(
+        overrides: <Override>[
+          errorBookRepositoryProvider.overrideWithValue(errorRepository),
+        ],
+        child: const _ErrorReviewGalaxyHarness(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('galaxy-trigger:0'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('submit-review-galaxy')));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('galaxy-trigger:1'), findsOneWidget);
   });
 
   testWidgets('C. sprint completion pop refreshes learning portfolio',
@@ -274,12 +309,24 @@ class _TaskGalaxyHarnessState extends ConsumerState<_TaskGalaxyHarness> {
   @override
   Widget build(BuildContext context) {
     final galaxy = ref.watch(galaxyProvider);
+    final portfolio = ref.watch(learningPortfolioProvider);
+    final achievement = ref.watch(achievementProvider);
     final mastery =
         galaxy.nodes.isEmpty ? 'loading' : '${galaxy.nodes.first.masteryScore}';
+    final portfolioLabel = portfolio.maybeWhen(
+      data: (data) => '${data.activeCount}/${data.completedCount}',
+      orElse: () => 'loading',
+    );
+    final achievementLabel = achievement.achievements.isNotEmpty &&
+            achievement.achievements.first.isUnlocked
+        ? 'unlocked'
+        : 'locked';
     return Scaffold(
       body: Column(
         children: <Widget>[
           Text('mastery:$mastery'),
+          Text('portfolio:$portfolioLabel'),
+          Text('achievement:$achievementLabel'),
           ElevatedButton(
             key: const ValueKey('complete-task'),
             onPressed: () {
@@ -319,6 +366,34 @@ class _PlanRepairHarness extends ConsumerWidget {
               unawaited(
                 ref.read(errorOperationsProvider.notifier).submitReview(
                       errorId: 'error-1',
+                      performance: 'remembered',
+                    ),
+              );
+            },
+            child: const Text('submit'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorReviewGalaxyHarness extends ConsumerWidget {
+  const _ErrorReviewGalaxyHarness();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trigger = ref.watch(galaxyRefreshTriggerProvider);
+    return Scaffold(
+      body: Column(
+        children: <Widget>[
+          Text('galaxy-trigger:$trigger'),
+          ElevatedButton(
+            key: const ValueKey('submit-review-galaxy'),
+            onPressed: () {
+              unawaited(
+                ref.read(errorOperationsProvider.notifier).submitReview(
+                      errorId: 'error-galaxy',
                       performance: 'remembered',
                     ),
               );

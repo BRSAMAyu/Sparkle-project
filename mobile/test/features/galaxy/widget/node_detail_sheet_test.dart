@@ -53,6 +53,18 @@ void main() {
     expect(reviewContext, {
       'review_node': 'cn.tcp_flow',
       'node_label': 'TCP流量控制',
+      'mastery': 0.65,
+      'study_count': 3,
+      'related_error_count': 1,
+      'related_errors': [
+        {
+          'id': 'error-1',
+          'question_text': 'rwnd 和 cwnd 的区别是什么？',
+          'analysis_summary': '窗口变量混淆',
+          'mastery_level': 0.0,
+          'review_count': 0,
+        },
+      ],
     });
   });
 
@@ -82,6 +94,8 @@ void main() {
 
     expect(find.text('尚未学习'), findsWidgets);
     expect(find.text('0%'), findsNothing);
+    expect(find.text('开始学习'), findsOneWidget);
+    expect(find.text('开始复习'), findsNothing);
   });
 
   testWidgets('start review can return to Galaxy after entering chat', (

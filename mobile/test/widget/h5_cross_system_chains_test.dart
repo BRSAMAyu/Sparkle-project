@@ -88,6 +88,10 @@ void main() {
     expect(chatExtra?['initial_context'], <String, dynamic>{
       'review_node': 'cn.tcp_flow',
       'node_label': 'TCP 流量控制',
+      'mastery': 0.65,
+      'study_count': 3,
+      'related_error_count': 0,
+      'related_errors': <Map<String, dynamic>>[],
     });
   });
 

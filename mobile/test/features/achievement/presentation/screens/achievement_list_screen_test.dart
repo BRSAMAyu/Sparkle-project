@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
@@ -9,6 +10,20 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/achievement/presentation/screens/achievement_list_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+
+GoRouter _buildRouter() {
+  final router = GoRouter(
+    initialLocation: '/achievements',
+    routes: [
+      GoRoute(
+        path: '/achievements',
+        builder: (context, state) => const AchievementListScreen(),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  return router;
+}
 
 void main() {
   testWidgets('achievement list shows onboarding empty state', (
@@ -21,12 +36,12 @@ void main() {
             _FakeAchievementRepository(),
           ),
         ],
-        child: MaterialApp(
+        child: MaterialApp.router(
           theme: AppThemes.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
-          home: const AchievementListScreen(),
+          routerConfig: _buildRouter(),
         ),
       ),
     );
@@ -43,6 +58,32 @@ void main() {
     expect(find.text('还没有解锁任何成就'), findsOneWidget);
     expect(find.text('去创建今日任务'), findsOneWidget);
     expect(find.text('尚未开始'), findsWidgets);
+  });
+
+  testWidgets('achievement list has RefreshIndicator', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          achievementRepositoryProvider.overrideWithValue(
+            _FakeAchievementRepository(),
+          ),
+        ],
+        child: MaterialApp.router(
+          theme: AppThemes.lightTheme,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          routerConfig: _buildRouter(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    expect(find.byType(RefreshIndicator), findsOneWidget);
   });
 }
 

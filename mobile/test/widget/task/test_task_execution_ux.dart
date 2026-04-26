@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mockito/mockito.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -261,7 +262,7 @@ void main() {
       (tester) async {
     final task = _task();
 
-    await tester.pumpWidget(_executionHost(task));
+    await tester.pumpWidget(_executionRouterHost(task));
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('stuck-help-fab')));
@@ -269,6 +270,36 @@ void main() {
 
     expect(find.text('别担心，我们来看看卡在哪里'), findsOneWidget);
     expect(find.text('把卡住的具体位置写下来'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('stuck chat opens above task execution instead of replacing it',
+      (tester) async {
+    final task = _task(
+      guideJson: const <String, dynamic>{
+        'stuck_help': {
+          'diagnosis_question': '你卡在状态转换还是触发条件？',
+          'targeted_fix': '先只画 SYN 到 SYN-RECEIVED 这一条边。',
+          'check_question': 'LISTEN 收到 SYN 后是什么状态？',
+        },
+      },
+    );
+
+    await tester.pumpWidget(_executionRouterHost(task));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('stuck-help-fab')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('和Sparkle聊聊这个问题'));
+    await tester.tap(find.text('和Sparkle聊聊这个问题'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('chat-opened'), findsOneWidget);
+    expect(
+      find.byType(TaskExecutionScreen, skipOffstage: false),
+      findsOneWidget,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -322,6 +353,35 @@ Widget _executionHost(TaskModel task) => ProviderScope(
         home: const TaskExecutionScreen(),
       ),
     );
+
+Widget _executionRouterHost(TaskModel task) {
+  final router = GoRouter(
+    initialLocation: '/task',
+    routes: [
+      GoRoute(
+        path: '/task',
+        builder: (context, state) => const TaskExecutionScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        builder: (context, state) => const Scaffold(body: Text('chat-opened')),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [
+      activeTaskProvider.overrideWith((ref) => task),
+    ],
+    child: MaterialApp.router(
+      theme: AppThemes.lightTheme,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('zh'),
+      routerConfig: router,
+    ),
+  );
+}
 
 TaskModel _task({
   Map<String, dynamic>? guideJson = const <String, dynamic>{},

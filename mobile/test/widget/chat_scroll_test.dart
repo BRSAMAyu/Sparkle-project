@@ -16,6 +16,7 @@ class MockChatNotifier extends ChatNotifier {
     String content, {
     String? taskId,
     Map<String, dynamic>? extraContextOverrides,
+    bool reuseLastUserMessage = false,
   }) async {
     // Mock sending
     state = state.copyWith(

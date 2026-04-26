@@ -254,6 +254,11 @@ class _FakeUserRepository implements UserRepository {
       Map<String, dynamic> scheduleData) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<List<int>> exportUserData() {
+    throw UnimplementedError();
+  }
 }
 
 Widget _buildTestApp(_FakeUserRepository repository) => ProviderScope(

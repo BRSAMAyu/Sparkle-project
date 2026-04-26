@@ -40,6 +40,52 @@ void main() {
     expect(find.text('学习洞察还没有可读数据'), findsOneWidget);
     expect(find.text('去创建学习任务'), findsOneWidget);
   });
+
+  testWidgets('weekly narrative panel opens expanded from deep link',
+      (WidgetTester tester) async {
+    const narrative = WeeklyGrowthNarrative(
+      period: '本周成长故事',
+      weekStart: '2026-04-20',
+      weekEnd: '2026-04-26',
+      body: '这周你学习了 5 天。',
+      sentences: <String>['这周你学习了 5 天。'],
+      highlights: <String>['错题复盘更稳定了。'],
+      biggestImprovement: <String, dynamic>{},
+      nextWeekSuggestion: '',
+      dataPoints: <String, dynamic>{'study_days': 5},
+      sourceCounts: <String, int>{'study_days': 5},
+      isPlaceholder: false,
+      generatedAt: '2026-04-25T10:00:00',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          simulationProvider.overrideWith(
+            (ref) => _StaticSimulationNotifier(const SimulationState()),
+          ),
+          systemUpdatesProvider.overrideWith(
+            (ref) async => const <Map<String, dynamic>>[],
+          ),
+          weeklyGrowthNarrativeProvider.overrideWith(
+            (ref) async => narrative,
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppThemes.lightTheme,
+          home: const LearningInsightsOverviewScreen(
+            initialPanel: LearningInsightsOverviewScreen.panelWeeklyNarrative,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byTooltip('收起'), findsOneWidget);
+    expect(find.text('错题复盘更稳定了。'), findsOneWidget);
+  });
 }
 
 class _FakeSimulationRepository implements SimulationRepository {

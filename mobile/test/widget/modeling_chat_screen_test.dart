@@ -20,11 +20,20 @@ class _QueuedChatRepository extends ChatRepository {
   _QueuedChatRepository() : super(Dio(), container: ProviderContainer());
 
   final List<_SentChatRequest> sentRequests = <_SentChatRequest>[];
-  final List<StreamController<ChatStreamEvent>> _controllers =
-      <StreamController<ChatStreamEvent>>[];
+  final List<Stream<ChatStreamEvent>> _streams = <Stream<ChatStreamEvent>>[];
 
   void enqueueController(StreamController<ChatStreamEvent> controller) {
-    _controllers.add(controller);
+    _streams.add(controller.stream);
+  }
+
+  void enqueueEvents(List<ChatStreamEvent> events) {
+    _streams.add(_eventStream(events));
+  }
+
+  Stream<ChatStreamEvent> _eventStream(List<ChatStreamEvent> events) async* {
+    for (final event in events) {
+      yield event;
+    }
   }
 
   @override
@@ -40,7 +49,7 @@ class _QueuedChatRepository extends ChatRepository {
     bool includeReferences = false,
     String? chatMode,
   }) {
-    if (_controllers.isEmpty) {
+    if (_streams.isEmpty) {
       fail('No queued stream controller for message: $message');
     }
 
@@ -53,7 +62,7 @@ class _QueuedChatRepository extends ChatRepository {
       ),
     );
 
-    return _controllers.removeAt(0).stream;
+    return _streams.removeAt(0);
   }
 
   @override
@@ -142,16 +151,48 @@ class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
   }
 }
 
-Future<void> _pumpModelingScreen(
+Future<GoRouter> _pumpModelingScreen(
   WidgetTester tester, {
   required _QueuedChatRepository repository,
   String initialLocation = '/',
+  bool useShellPlanRoute = false,
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
 
   final router = GoRouter(
     initialLocation: initialLocation,
     routes: [
+      if (useShellPlanRoute)
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) => Scaffold(
+            body: Column(
+              children: [
+                Expanded(child: navigationShell),
+                const Text('BOTTOM_TAB_SENTINEL'),
+              ],
+            ),
+          ),
+          branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/home',
+                  pageBuilder: (context, state) => const NoTransitionPage<void>(
+                    child: Center(child: Text('HOME')),
+                  ),
+                ),
+                GoRoute(
+                  path: '/plans/:id',
+                  pageBuilder: (context, state) => NoTransitionPage<void>(
+                    child: Center(
+                      child: Text('PLAN ${state.pathParameters['id']}'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       GoRoute(
         path: '/',
         builder: (context, state) => const ModelingChatScreen(),
@@ -172,6 +213,13 @@ Future<void> _pumpModelingScreen(
           body: Center(child: Text('HOME')),
         ),
       ),
+      if (!useShellPlanRoute)
+        GoRoute(
+          path: '/plans/:id',
+          builder: (context, state) => Scaffold(
+            body: Center(child: Text('PLAN ${state.pathParameters['id']}')),
+          ),
+        ),
       GoRoute(
         path: '/chat',
         builder: (context, state) => const Scaffold(
@@ -197,6 +245,7 @@ Future<void> _pumpModelingScreen(
     ),
   );
   await tester.pump();
+  return router;
 }
 
 void main() {
@@ -220,13 +269,24 @@ void main() {
     testWidgets('modeling_complete metadata replaces old turn-count heuristic',
         (tester) async {
       final onboardingController = StreamController<ChatStreamEvent>();
-      final planningController = StreamController<ChatStreamEvent>();
-      controllers.addAll([onboardingController, planningController]);
+      controllers.add(onboardingController);
       repository
         ..enqueueController(onboardingController)
-        ..enqueueController(planningController);
+        ..enqueueEvents([
+          const MetaEvent(
+            meta: {
+              'plan_id': 'plan-1',
+              'plan_route': '/plans/plan-1',
+            },
+          ),
+          DoneEvent(finishReason: 'STOP'),
+        ]);
 
-      await _pumpModelingScreen(tester, repository: repository);
+      final router = await _pumpModelingScreen(
+        tester,
+        repository: repository,
+        useShellPlanRoute: true,
+      );
 
       expect(repository.sentRequests.single.message, '_onboarding_start_');
       expect(
@@ -246,23 +306,32 @@ void main() {
               'aurora_surface': 'aurora_modeling',
               'aurora_runtime_enabled': true,
               'modeling_complete': true,
+              'modeling_output_json':
+                  '{"cold_start_context":{"subject":"计算机网络","exam_scope":"传输层","knowledge_baseline":"完全没学过","time_available":"每天约 2 小时"}}',
             },
           ),
         )
-        ..add(DoneEvent(finishReason: 'STOP'));
+        ..add(
+          DoneEvent(finishReason: 'STOP'),
+        );
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('正在生成你的第一份冲刺计划'), findsOneWidget);
-      expect(find.text('我们先定个调。'), findsOneWidget);
       expect(repository.sentRequests.last.message, '开始规划');
 
-      planningController
-        ..add(DoneEvent(finishReason: 'STOP'))
-        ..close();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+
+      expect(
+        repository.sentRequests.last.extraContext?['modeling_output'],
+        isA<Map<String, dynamic>>(),
+      );
+      expect(router.routeInformationProvider.value.uri.path, '/plans/plan-1');
+      expect(find.text('PLAN plan-1'), findsOneWidget);
+      expect(find.text('BOTTOM_TAB_SENTINEL'), findsOneWidget);
+      expect(find.textContaining('计划生成遇到问题'), findsNothing);
     });
 
     testWidgets('ignores modeling_complete metadata from non-modeling surfaces',

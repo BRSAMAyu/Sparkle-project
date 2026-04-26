@@ -66,6 +66,25 @@ void main() {
       expect(find.text('错题补强'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('renders specialized repair task with orange card treatment',
+        (tester) async {
+      final plan = _planWithTargetedRepairTask(
+        repairTag: 'specialized_repair',
+        repairTaskKind: 'specialized_repair',
+      );
+
+      await _pumpPlanDetail(tester, plan);
+
+      final repairCard = tester.widget<GraphiteCardSurface>(
+        find.byKey(const ValueKey('plan-task-card-task-repair')),
+      );
+
+      expect(repairCard.backgroundColor, DS.warning.withValues(alpha: 0.08));
+      expect(find.text('⚠️'), findsOneWidget);
+      expect(find.text('错题补强'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('PlanDetailScreen error recovery', () {
@@ -196,7 +215,10 @@ PlanModel _planWithMistakes(List<dynamic> commonMistakesToWatch) {
   );
 }
 
-PlanModel _planWithTargetedRepairTask() {
+PlanModel _planWithTargetedRepairTask({
+  String repairTag = 'targeted_repair',
+  String repairTaskKind = 'targeted_repair',
+}) {
   final now = DateTime.utc(2026, 4, 25);
   final normalTask = TaskModel(
     id: 'task-normal',
@@ -208,7 +230,7 @@ PlanModel _planWithTargetedRepairTask() {
     estimatedMinutes: 30,
     difficulty: 2,
     energyCost: 1,
-    guideJson: const {
+    guideJson: {
       'why_now': '现在先处理它，是为了把今天的学习推进变成一个看得见的输出。',
       'task_kind': 'retrieval_drill',
     },
@@ -224,17 +246,14 @@ PlanModel _planWithTargetedRepairTask() {
     planId: 'plan-1',
     title: '修复昨日错题：TCP 滑动窗口机制',
     type: TaskType.errorFix,
-    tags: const ['day:1', 'targeted_repair'],
+    tags: ['day:1', repairTag],
     estimatedMinutes: 15,
     difficulty: 2,
     energyCost: 1,
-    guideJson: const {
+    guideJson: {
       'why_now': '昨天暴露的漏洞现在最适合短补强。',
-      'task_kind': 'targeted_repair',
-      'daily_spec': {
-        'task_kind': 'targeted_repair',
-        'estimated_minutes': 15,
-      },
+      'task_kind': repairTaskKind,
+      'daily_spec': {'task_kind': repairTaskKind, 'estimated_minutes': 15},
     },
     status: TaskStatus.pending,
     priority: 100,
