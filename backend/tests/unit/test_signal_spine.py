@@ -9,6 +9,7 @@ Stage: Signal-to-Action Spine M1 验收测试
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -2437,6 +2438,128 @@ async def test_state_register_expire_stale(state_register, monkeypatch):
     assert count == 1
     states = await state_register.get_active_states("u1")
     assert len(states) == 0
+
+
+# ── Layer 6: ResponseDirective ──────────────────────────────────────────
+
+from app.signals.types import ResponseDirective
+
+
+def test_response_directive_creation():
+    """ResponseDirective 基本创建和序列化。"""
+    rd = ResponseDirective(
+        directive_id="rdsp_001",
+        policy_decision_id="pd_001",
+        tone="calm_direct",
+        length="medium",
+        must_acknowledge=["recent_overrun"],
+        avoid=["generic_encouragement"],
+        include_user_options=True,
+    )
+    d = rd.to_dict()
+    assert d["tone"] == "calm_direct"
+    assert d["must_acknowledge"] == ["recent_overrun"]
+    assert d["avoid"] == ["generic_encouragement"]
+
+    restored = ResponseDirective.from_dict(d)
+    assert restored.tone == "calm_direct"
+    assert restored.directive_id == "rdsp_001"
+
+
+@pytest.mark.asyncio
+async def test_response_directive_from_policy_task_timeout():
+    """task_granularity_fit → PolicyEngine → ResponseDirective with calm_direct tone。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="2 tasks overran", possible_effects=[],
+        priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+
+    rd = engine.build_response_directive(decision, signal)
+    assert rd is not None
+    assert rd.tone == "direct_but_reassuring"
+    assert "recent_overrun" in rd.must_acknowledge
+
+
+@pytest.mark.asyncio
+async def test_response_directive_from_policy_exam_rescue():
+    """goal_mode/exam_rescue → ResponseDirective with calm_urgent tone。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="goal_mode", claim="exam_rescue_detected",
+        confidence=0.9, scope="current_sprint", ttl_hours=72,
+        evidence_summary="exam detected", possible_effects=[],
+        priority="high",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    rd = engine.build_response_directive(decision, signal)
+    assert rd is not None
+    assert rd.tone == "calm_urgent"
+    assert "exam_situation" in rd.must_acknowledge
+
+
+@pytest.mark.asyncio
+async def test_response_directive_no_status_band():
+    """visibility=status_band → no ResponseDirective。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="growth_momentum", claim="momentum_high",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="streak", possible_effects=[], priority="low",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    rd = engine.build_response_directive(decision, signal)
+    assert rd is None
+
+
+@pytest.mark.asyncio
+async def test_response_directive_avoid_pressure():
+    """encouraging_diagnostic tone → avoid pressure_language。"""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="knowledge_transfer", claim="transfer_failure",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="3 errors same topic", possible_effects=[], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    decision, _ = result
+    rd = engine.build_response_directive(decision, signal)
+    assert rd is not None
+    assert "generic_encouragement" in rd.avoid
+    assert "pressure_language" in rd.avoid
+
+
+@pytest.mark.asyncio
+async def test_spine_get_response_directive(spine):
+    """SpineOrchestrator.get_response_directive 返回 None 或 ResponseDirective。"""
+    result = await spine.get_response_directive("u_test")
+    assert result is None or isinstance(result, ResponseDirective)
+
+
+@pytest.mark.asyncio
+async def test_spine_pipeline_stores_response_directive(spine):
+    """Spine pipeline 处理 task_granularity_fit 后存储 ResponseDirective。"""
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    await spine._run_signal_pipeline(user_id="u_rdsp", signal=signal)
+    rd = await spine.get_response_directive("u_rdsp")
+    assert rd is not None
+    assert rd.tone == "direct_but_reassuring"
 
 
 @pytest.mark.asyncio

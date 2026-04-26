@@ -33,6 +33,7 @@ from app.signals.types import (
     DirectiveApplicationAudit,
     ExecutionDirective,
     PolicyDecision,
+    ResponseDirective,
     UserVisibleReceipt,
     _uid,
 )
@@ -128,6 +129,11 @@ class SpineOrchestrator:
 
         # Step 4: 存储 active directive 供 task_generator 消费
         await self.trace_store.set_active_directive(user_id, directive)
+
+        # Step 4b: Build and store ResponseDirective
+        response_dir = self.policy_engine.build_response_directive(decision, signal)
+        if response_dir:
+            await self._store_response_directive(user_id, response_dir)
 
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":
@@ -360,6 +366,11 @@ class SpineOrchestrator:
         decision, directive = result
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
+
+        # Build and store ResponseDirective
+        response_dir = self.policy_engine.build_response_directive(decision, signal)
+        if response_dir:
+            await self._store_response_directive(user_id, response_dir)
 
         if decision.visibility == "receipt":
             receipt = UserVisibleReceipt(
@@ -595,3 +606,19 @@ class SpineOrchestrator:
     async def remove_state(self, user_id: str, state_key: str) -> None:
         """移除某状态。"""
         await self.state_register.remove_state(user_id, state_key)
+
+    # ── Layer 6: ResponseDirective ─────────────────────────────────────
+
+    async def _store_response_directive(self, user_id: str, rd: ResponseDirective) -> None:
+        """存储 ResponseDirective 供 response layer 消费。"""
+        import json
+        key = f"spine:response_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
+
+    async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
+        """获取用户当前 ResponseDirective。"""
+        import json
+        raw = await self.redis.get(f"spine:response_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return ResponseDirective.from_dict(json.loads(raw))

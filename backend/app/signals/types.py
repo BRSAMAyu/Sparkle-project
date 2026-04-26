@@ -178,6 +178,42 @@ class ExecutionDirective:
         }
 
 
+# ── 4b. ResponseDirective ────────────────────────────────────────────────
+# 控制回复层的语气、长度、确认、避免项。
+# 用户可见变化：回复语气和内容风格变了。
+
+@dataclass
+class ResponseDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "response_layer"
+    tone: str = "calm_direct"                 # calm_direct / calm_urgent / encouraging_diagnostic / recognition_not_praise / encouraging_low_pressure
+    length: str = "medium"                    # short / medium / long
+    must_acknowledge: list[str] = field(default_factory=list)
+    avoid: list[str] = field(default_factory=list)
+    include_user_options: bool = True
+    scope: str = "turn"
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "tone": self.tone,
+            "length": self.length,
+            "must_acknowledge": self.must_acknowledge,
+            "avoid": self.avoid,
+            "include_user_options": self.include_user_options,
+            "scope": self.scope,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> ResponseDirective:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
 # ── 5. DirectiveApplicationAudit ───────────────────────────────────────
 # 不是日志装饰。验证输出是否满足 directive。
 # 用户可见变化：团队/开发者能审计为什么变了。

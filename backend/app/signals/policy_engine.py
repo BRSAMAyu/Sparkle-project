@@ -20,6 +20,7 @@ from app.signals.types import (
     ActionableSignal,
     ExecutionDirective,
     PolicyDecision,
+    ResponseDirective,
     _uid,
 )
 
@@ -269,3 +270,48 @@ class PolicyEngine:
         )
 
         return decision, directive
+
+    def build_response_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> ResponseDirective | None:
+        """
+        从 PolicyDecision 的 soft_biases 构建 ResponseDirective。
+        不是所有策略都需要 ResponseDirective（e.g. status_band 级别不需要）。
+        """
+        biases = decision.soft_biases
+        tone = biases.get("tone", "calm_direct")
+
+        # Derive must_acknowledge from signal context
+        must_acknowledge: list[str] = []
+        if signal.state_key == "task_granularity_fit":
+            must_acknowledge = ["recent_overrun"]
+        elif signal.state_key == "knowledge_transfer":
+            must_acknowledge = ["repeated_errors"]
+        elif signal.state_key == "goal_mode":
+            must_acknowledge = ["exam_situation"]
+
+        # Derive avoid list from tone
+        avoid: list[str] = []
+        if tone in ("encouraging_diagnostic", "encouraging_low_pressure"):
+            avoid = ["generic_encouragement", "pressure_language"]
+        elif tone in ("calm_urgent", "calm_direct"):
+            avoid = ["generic_encouragement"]
+        if tone == "recognition_not_praise":
+            avoid = ["empty_praise", "generic_encouragement"]
+
+        # Only produce ResponseDirective for receipt/inline visibility
+        if decision.visibility == "status_band":
+            return None
+
+        return ResponseDirective(
+            directive_id=_uid("rdsp"),
+            policy_decision_id=decision.policy_decision_id,
+            tone=tone,
+            length="short" if decision.visibility == "inline_hint" else "medium",
+            must_acknowledge=must_acknowledge,
+            avoid=avoid,
+            include_user_options=decision.requires_user_confirmation,
+            scope="turn",
+        )

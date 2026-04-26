@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-157/157 tests passing:
+164/164 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -184,6 +184,7 @@
 - P3 Production wiring: 5 tests
 - Layer 3 SignalRanker: 11 tests (9 standalone + 2 integration)
 - Layer 4 StateRegister: 21 tests (16 standalone + 5 integration/edge)
+- Layer 6 ResponseDirective: 7 tests (5 standalone + 2 integration)
 
 ---
 
@@ -286,6 +287,39 @@
 - [x] SpineOrchestrator.on_task_completed 和 _run_signal_pipeline 自动持久化
 - [x] 反序列化正确
 - [x] Opus review: C-1/C-3/C-4 已修复
+
+---
+
+## Layer 6: ResponseDirective
+
+**目标**: 8 层架构第 6 层 — 控制回复层的语气、长度、确认、避免项
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `ResponseDirective` 数据结构 | tone / length / must_acknowledge / avoid / include_user_options |
+| `PolicyEngine.build_response_directive()` | 从 PolicyDecision.soft_biases 派生 ResponseDirective |
+| `SpineOrchestrator.get_response_directive()` | 供 response layer 消费 |
+
+### 语气映射
+
+| 信号 | tone | avoid |
+|------|------|-------|
+| task_granularity_fit | direct_but_reassuring | generic_encouragement |
+| knowledge_transfer | encouraging_diagnostic | generic_encouragement, pressure_language |
+| goal_mode/exam_rescue | calm_urgent | generic_encouragement |
+| growth_momentum (status_band) | — 不生成 — | — |
+
+### 验收标准
+
+- [x] ResponseDirective 包含 tone / length / must_acknowledge / avoid / include_user_options
+- [x] task_granularity_fit → tone=direct_but_reassuring, must_acknowledge=["recent_overrun"]
+- [x] exam_rescue → tone=calm_urgent, must_acknowledge=["exam_situation"]
+- [x] transfer_failure → tone=encouraging_diagnostic, avoid=["generic_encouragement", "pressure_language"]
+- [x] growth_momentum (status_band) → 不生成 ResponseDirective
+- [x] SpineOrchestrator pipeline 自动存储和读取
+- [x] 序列化/反序列化正确
 
 ---
 
