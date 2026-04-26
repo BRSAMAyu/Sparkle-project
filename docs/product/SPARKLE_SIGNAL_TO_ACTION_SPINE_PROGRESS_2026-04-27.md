@@ -84,6 +84,85 @@
 
 ---
 
+## P0-1: FirstMinuteSnapshot / ExamRescueDetector
+
+**目标**: 新用户 60 秒内感到被理解
+
+### Steps
+
+| Step | 描述 | 状态 |
+|------|------|------|
+| 1 | ExamRescueDetector 正则匹配（deadline + baseline + subject） | ✅ DONE — `signals/exam_rescue_detector.py` |
+| 2 | FirstMinuteSnapshot 数据结构 | ✅ DONE |
+| 3 | PolicyEngine exam_rescue 规则 | ✅ DONE — `goal_mode/exam_rescue_detected` |
+| 4 | 中文相对日期提取（明天/后天/下周） | ✅ DONE — Opus C1 修复 |
+| 5 | 考试意图门控（防止非考试用户误入） | ✅ DONE — Opus C2 修复 |
+| 6 | 英文学科名支持 | ✅ DONE — Opus C3 修复 |
+
+### 验收标准 (E4)
+
+- [x] "我 7 天后计网考试，零基础，想先别挂" → exam_rescue 判断
+- [x] 不要求先完成完整表单
+- [x] 给出低成本下一步（上传资料或诊断）
+- [x] 给出可纠正选项
+- [x] E2E pipeline: Detector → Signal → PolicyEngine → result
+
+---
+
+## P0-2: TimeContext + StaleStateGuard
+
+**目标**: 用户离开后回来，系统不能假装时间没过去
+
+### Steps
+
+| Step | 描述 | 状态 |
+|------|------|------|
+| 1 | TimeContext 数据结构 | ✅ DONE — `signals/stale_state_guard.py` |
+| 2 | StaleStateGuard 检测逻辑 | ✅ DONE — 60 分钟阈值 |
+| 3 | TimeDeltaPacket 恢复选项 | ✅ DONE — 4 个标准选项 |
+
+### 验收标准 (E5)
+
+- [x] 用户开始任务后离开 2 小时 → TimeDeltaPacket
+- [x] 系统询问任务状态
+- [x] 提供选项：做完了 / 做一半 / 没开始 / 换小任务
+
+---
+
+## P0-3: ActionableStatePacket v1
+
+**目标**: 下游模块消费结构化状态，不是自然语言 prompt
+
+### Steps
+
+| Step | 描述 | 状态 |
+|------|------|------|
+| 1 | ActionableStatePacketBuilder | ✅ DONE — `signals/state_packet_builder.py` |
+| 2 | 从信号构建 top_states | ✅ DONE |
+| 3 | 从 directive 构建 risk_flags | ✅ DONE |
+| 4 | 瓶颈检测 | ✅ DONE |
+| 5 | Goal frame 填充 | ✅ DONE |
+
+### 验收标准
+
+- [x] task_generator 和 response layer 消费结构化字段
+- [x] 状态包从活跃信号和 directive 构建
+- [x] 序列化/反序列化正确
+
+---
+
+## 当前测试覆盖
+
+48/48 tests passing:
+- M1 控制链路: 12 tests
+- M2 资料闭环: 5 tests
+- M3 错因驱动: 4 tests
+- P0-1 FirstMinuteSnapshot: 14 tests
+- P0-2 StaleStateGuard: 6 tests
+- P0-3 ActionableStatePacket: 7 tests
+
+---
+
 ## 差距分析：距离完全体愿景
 
 ### 已有的基础设施（可复用）
