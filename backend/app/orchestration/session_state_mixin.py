@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime
 from typing import Any
 
 from google.protobuf import struct_pb2
@@ -19,6 +20,7 @@ from app.core.metrics import (
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.context_focus import FocusedContextAssembler
 from app.orchestration.retrieval_intent import RetrievalIntentBudgets, build_retrieval_decision
+from app.orchestration.retrieval_intent import ContextPlan
 from app.orchestration.session_feedback import (
     SESSION_FEEDBACK_TTL_SECONDS,
     SessionAdaptationContext,
@@ -685,6 +687,11 @@ class SessionStateMixin:
             user_message=user_message,
             route_intent=route_intent,
         )
+        await self._persist_context_plan(
+            user_id=user_id,
+            state=state,
+            active_db=active_db,
+        )
         if not settings.ENABLE_CONTEXT_FOCUSING or not active_db or user_context_payload is None:
             return user_context_payload
 
@@ -770,6 +777,8 @@ class SessionStateMixin:
         if state is not None:
             state.context_data["retrieval_decision"] = decision_payload
             state.context_data["document_retrieval_decision"] = decision_payload
+            state.context_data["context_plan"] = decision_payload
+            state.context_data["context_plan_timestamp"] = datetime.utcnow().isoformat()
 
         logger.info(
             "Document retrieval decision: mode={} should_retrieve={} budget={} reason={}",
@@ -779,6 +788,37 @@ class SessionStateMixin:
             decision.reason,
         )
         return payload
+
+    async def _persist_context_plan(
+        self,
+        *,
+        user_id: str,
+        state: WorkflowState | None,
+        active_db: AsyncSession | None,
+    ) -> None:
+        if state is None or active_db is None:
+            return
+        context_plan = state.context_data.get("context_plan")
+        if not isinstance(context_plan, dict):
+            return
+        try:
+            from app.models.aurora_stage20 import RoutingDecisionLog
+
+            now = datetime.utcnow()
+            record = RoutingDecisionLog(
+                decision_id=uuid.uuid4(),
+                created_at=now,
+                updated_at=now,
+                user_id=uuid.UUID(str(user_id)),
+                decided_at=now,
+                input_aggregator_snapshot_id=f"context_plan:{user_id}:{now.isoformat(timespec='seconds')}",
+                decision_type="context_plan",
+                decision_payload=context_plan,
+            )
+            active_db.add(record)
+            await active_db.commit()
+        except Exception as exc:
+            logger.debug(f"Failed to persist context plan to routing_decision_log: {exc}")
 
     async def _update_state(self, session_id: str, state: str, details: str = ""):
         """Update FSM State in Redis with persistence"""
