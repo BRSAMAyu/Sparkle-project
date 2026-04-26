@@ -332,3 +332,102 @@ async def test_full_pipeline_e1_acceptance(fake_redis):
     # After consumption, directive should be cleared
     directive2 = await spine.get_active_directive("u1")
     assert directive2 is None
+
+
+# ── M2: Material Signal Tests ────────────────────────────────────────
+
+from app.signals.material_signal import MaterialSignalDetector
+
+
+class FakeRedisWithHset(FakeRedis):
+    """Extended fake Redis with hash operations for M2 tests."""
+
+    def __init__(self):
+        super().__init__()
+        self._hashes: dict[str, dict[str, str]] = {}
+
+    async def hset(self, key: str, field: str, value: str) -> None:
+        self._hashes.setdefault(key, {})[field] = value
+
+    async def hgetall(self, key: str) -> dict[str, str]:
+        return self._hashes.get(key, {})
+
+
+@pytest.mark.asyncio
+async def test_material_signal_no_files():
+    redis = FakeRedisWithHset()
+    detector = MaterialSignalDetector(redis)
+    signal = await detector.on_turn_completed(user_id="u1", context_receipt=None)
+    assert signal is None
+
+
+@pytest.mark.asyncio
+async def test_material_signal_underutilized_after_threshold():
+    redis = FakeRedisWithHset()
+    detector = MaterialSignalDetector(redis)
+
+    # Register uploaded file
+    await detector.register_uploaded_file(
+        user_id="u1", file_id="f1", filename="计网传输层.pdf", node_ids=["cn.tcp"]
+    )
+
+    # 3 turns with no usage
+    for _ in range(3):
+        signal = await detector.on_turn_completed(
+            user_id="u1", context_receipt={"used_count": 0, "decision_reason": "graph_only"}
+        )
+
+    # After 3 turns: signal should be generated
+    assert signal is not None
+    assert signal.state_key == "material_utilization"
+    assert signal.claim == "material_underutilized"
+    assert "计网传输层" in signal.evidence_summary
+
+
+@pytest.mark.asyncio
+async def test_material_signal_resets_when_used():
+    redis = FakeRedisWithHset()
+    detector = MaterialSignalDetector(redis)
+
+    await detector.register_uploaded_file(user_id="u1", file_id="f1", filename="test.pdf")
+
+    # 2 turns unused
+    for _ in range(2):
+        await detector.on_turn_completed(user_id="u1", context_receipt={"used_count": 0})
+
+    # 1 turn with usage → should NOT trigger
+    signal = await detector.on_turn_completed(
+        user_id="u1", context_receipt={"used_count": 3}
+    )
+    assert signal is None
+
+
+# ── M2: Retrieval Override Test ──────────────────────────────────────
+
+def test_retrieval_intent_respects_spine_override():
+    from app.orchestration.retrieval_intent import build_retrieval_decision
+
+    decision = build_retrieval_decision(
+        message="TCP 拥塞控制是什么？",
+        context={
+            "spine_retrieval_override": {
+                "retrieval_mode": "targeted_source_rag",
+                "source_scope": "user_selected",
+            }
+        },
+    )
+    assert decision.retrieval_mode == "targeted_source_rag"
+    assert decision.source_scope == "user_selected"
+    assert decision.should_retrieve is True
+    assert "课件" in decision.reason_for_user
+
+
+def test_retrieval_intent_normal_without_override():
+    from app.orchestration.retrieval_intent import build_retrieval_decision
+
+    decision = build_retrieval_decision(
+        message="TCP 拥塞控制是什么？",
+        context={},
+    )
+    # Should follow normal classification (not spine override)
+    assert decision.retrieval_mode != "no_retrieval" or decision.reason != "spine_material_directive"

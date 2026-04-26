@@ -681,6 +681,20 @@ class SessionStateMixin:
         session_feedback_signal: dict[str, Any] | None = None,
         force_focus_mode: str | None = None,
     ) -> dict[str, Any] | None:
+        # Signal-to-Action Spine: inject retrieval directive from Spine
+        if user_context_payload is not None and user_id:
+            try:
+                from app.signals.spine_orchestrator import SpineOrchestrator
+                from app.core.cache import cache_service
+                _spine = SpineOrchestrator(cache_service.redis)
+                _spine_directive = await _spine.get_active_directive(str(user_id))
+                if _spine_directive and _spine_directive.hard_constraints.get("retrieval_mode"):
+                    user_context_payload = dict(user_context_payload)
+                    user_context_payload["spine_retrieval_override"] = _spine_directive.hard_constraints
+                    logger.info("Spine retrieval override: {}", _spine_directive.hard_constraints.get("retrieval_mode"))
+            except Exception as _spine_exc:
+                logger.debug("Spine retrieval directive check skipped: {}", _spine_exc)
+
         user_context_payload = self._attach_retrieval_decision(
             user_context_payload=user_context_payload,
             state=state,

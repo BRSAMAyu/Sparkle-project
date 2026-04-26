@@ -11,7 +11,7 @@
 | Milestone | 状态 | 完成度 | 最后更新 |
 |-----------|------|--------|---------|
 | M1: 控制链路最小可运行 | ✅ 完成 | 5/5 steps | 2026-04-27 |
-| M2: 资料闭环最小可运行 | ⬜ 未开始 | 0/3 steps | - |
+| M2: 资料闭环最小可运行 | ✅ 完成 | 3/3 steps | 2026-04-27 |
 | M3: 错因驱动策略改变 | ⬜ 未开始 | 0/3 steps | - |
 
 ---
@@ -49,15 +49,17 @@
 
 | Step | 描述 | 状态 |
 |------|------|------|
-| 1 | SourceAsset + SourceSlice 模型 | ⬜ TODO |
-| 2 | RetrievalDirective + ContextPlan | ⬜ TODO |
-| 3 | ContextReceipt 前端展示 | ⬜ TODO |
+| 1 | SourceAsset + SourceSlice 模型 | ✅ 复用现有 DocumentChunk |
+| 2 | RetrievalDirective + ContextPlan | ✅ MaterialSignalDetector + PolicyEngine 扩展 |
+| 3 | ContextReceipt 前端展示 | ✅ 已有 ContextReceiptBar，spine override 注入 |
 
 ### 验收标准 (E3)
 
-- [ ] 上传课件 → 挂载到知识节点
-- [ ] 按需调用 → 不加载完整课件
-- [ ] ContextReceipt 显示用了什么/没用什么/为什么
+- [x] 上传课件 → 挂载到知识节点
+- [x] 按需调用 → 不加载完整课件
+- [x] ContextReceipt 显示用了什么/没用什么/为什么
+- [x] Spine material directive → retrieval_mode override
+- [x] PolicyEngine 扩展了 material_utilization 规则
 
 ---
 

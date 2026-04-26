@@ -45,6 +45,22 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "最近 {consecutive} 次任务超时，先恢复可完成节奏。",
         },
     },
+    "material_utilization": {
+        "material_underutilized": {
+            "primary_strategy": "activate_material_retrieval",
+            "secondary_strategy": None,
+            "hard_constraints": {
+                "retrieval_mode": "targeted_source_rag",
+                "source_scope": "user_selected",
+            },
+            "soft_biases": {
+                "tone": "helpful_suggestion",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": True,
+            "reasoning_template": "你上传的课件最近几轮没被用到，我来按课件内容回答。",
+        },
+    },
 }
 
 _DIRECTIVE_TARGET_MODULE = "task_generator"

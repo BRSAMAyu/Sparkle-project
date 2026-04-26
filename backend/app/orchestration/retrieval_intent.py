@@ -427,6 +427,25 @@ def build_retrieval_decision(
     document_context_scope: str = "auto",
     budgets: RetrievalIntentBudgets | None = None,
 ) -> RetrievalDecision:
+    # Signal-to-Action Spine: if Spine injected a retrieval override, respect it
+    if context and isinstance(context, dict):
+        spine_override = context.get("spine_retrieval_override")
+        if spine_override and isinstance(spine_override, dict):
+            override_mode = spine_override.get("retrieval_mode")
+            override_scope = spine_override.get("source_scope")
+            if override_mode:
+                return ContextPlan(
+                    retrieval_mode=override_mode,
+                    should_retrieve=True,
+                    budget_tokens=budgets.aggressive if budgets else 2200,
+                    reason="spine_material_directive",
+                    source_scope=override_scope or "user_selected",
+                    pollution_guard="moderate",
+                    citation_required=True,
+                    user_visible_receipt=True,
+                    reason_for_user="Aurora · 按你的课件回答",
+                )
+
     return default_retrieval_intent_classifier.classify(
         message,
         route_intent=route_intent,
