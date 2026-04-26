@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-136/136 tests passing:
+152/152 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -182,7 +182,8 @@
 - PolicyEngine rules: 6 tests
 - P2 Spine integration: 17 tests
 - P3 Production wiring: 5 tests
-- Layer 3 SignalRanker: 11 tests (9 standalone + 2 integration)
+- Layer 3 SignalRanker: 11 tests
+- Layer 4 StateRegister: 16 tests
 
 ---
 
@@ -248,6 +249,38 @@
 - [x] 冲突检测 + 抑制正确
 - [x] 综合评分排序正确
 - [x] SpineOrchestrator.rank_signals() 委托到 SignalRanker
+
+---
+
+## Layer 4: StateRegister
+
+**目标**: 8 层架构第 4 层 — 每用户持久化状态寄存器
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `upsert_from_signal()` | 从信号更新或插入状态（高置信度覆盖） |
+| `get_active_states()` | 获取所有非过期状态（按置信度排序） |
+| `add_counter_evidence()` | 为状态添加反证 |
+| `remove_state()` | 移除指定状态 |
+| `expire_stale()` | 清理所有过期状态 |
+| `clear_scope()` | 按作用域批量清除 |
+
+### 存储格式
+
+- `spine:state:{user_id}:{state_key}` → JSON StateEntry（TTL 自动过期）
+- `spine:state_index:{user_id}` → Redis Set（活跃 state_key 索引）
+
+### 验收标准
+
+- [x] Signal → StateEntry 持久化
+- [x] 高置信度信号覆盖低置信度状态
+- [x] TTL 过期自动清理
+- [x] counter_evidence 可追加
+- [x] scope 批量清除（turn/session/sprint）
+- [x] SpineOrchestrator.on_task_completed 和 _run_signal_pipeline 自动持久化
+- [x] 反序列化正确
 
 ---
 
@@ -407,6 +440,9 @@
 | SparkleSelfModel | ✅ 完成 | `signals/self_model.py` |
 | AchievementMomentum | ✅ 完成 | `signals/achievement_reinforcement.py` |
 | RecallTrigger | ✅ 完成 | `signals/recall_opportunity.py` |
+| SignalRanker + RankingResult | ✅ 完成 | `signals/signal_ranker.py` |
+| StateRegister | ✅ 完成 | `signals/state_register.py` |
+| StateEntry | ✅ 完成 | `signals/types.py` |
 
 ### 架构原则检查清单
 
