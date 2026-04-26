@@ -117,6 +117,7 @@ class SpineOrchestrator:
         # Step 2b: 存储 signal 并链接到 trace
         await self.trace_store.store_signal(signal)
         await self.trace_store.append_signal(trace.trace_id, signal)
+        trace.signal_ids.append(signal.signal_id)  # Keep local trace in sync
         await self.metrics.record_signal_generated()
 
         # Layer 4: Persist signal state to StateRegister
@@ -294,6 +295,7 @@ class SpineOrchestrator:
             await self.trace_store.clear_active_directive(user_id)
             logger.info("User corrected receipt {} — directive cleared", receipt_id)
             await self.metrics.record_retraction()
+            await self.metrics.record_outcome_recorded(effective=False)
 
             # 记录纠正到 self_model
             try:
@@ -408,6 +410,7 @@ class SpineOrchestrator:
 
         await self.trace_store.store_signal(signal)
         await self.trace_store.append_signal(trace.trace_id, signal)
+        trace.signal_ids.append(signal.signal_id)  # Keep local trace in sync
         await self.metrics.record_signal_generated()
 
         # Layer 4: Persist signal state to StateRegister
@@ -424,6 +427,9 @@ class SpineOrchestrator:
         decision, directive = result
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
+        await self.trace_store.set_active_directive(user_id, directive)
+        trace.policy_decision_id = decision.policy_decision_id  # Keep local in sync
+        trace.directive_ids.append(directive.directive_id)  # Keep local in sync
         await self.metrics.record_directive_generated()
 
         # Build and store ResponseDirective
@@ -470,8 +476,14 @@ class SpineOrchestrator:
             )
             await self.trace_store.append_receipt(trace.trace_id, receipt)
             await self.metrics.record_receipt_shown()
+            trace.receipt_ids.append(receipt.receipt_id)  # Keep local in sync
             await self.redis.set(
                 f"spine:receipt:{user_id}:latest",
+                json.dumps(receipt.to_dict()),
+                ex=72 * 3600,
+            )
+            await self.redis.set(
+                f"spine:receipt_by_id:{receipt.receipt_id}",
                 json.dumps(receipt.to_dict()),
                 ex=72 * 3600,
             )
