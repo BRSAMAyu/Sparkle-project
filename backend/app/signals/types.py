@@ -72,6 +72,32 @@ class StateEntry:
     value: str
     confidence: float
     scope: str
+    ttl_hours: int = 72
+    supporting_evidence: list[str] = field(default_factory=list)
+    counter_evidence: list[str] = field(default_factory=list)
+    last_updated_at: str = field(default_factory=_utcnow)
+    can_affect: list[str] = field(default_factory=list)
+    user_visible: bool = True
+    requires_confirmation_if_high_impact: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "state_key": self.state_key,
+            "value": self.value,
+            "confidence": self.confidence,
+            "scope": self.scope,
+            "ttl_hours": self.ttl_hours,
+            "supporting_evidence": self.supporting_evidence,
+            "counter_evidence": self.counter_evidence,
+            "last_updated_at": self.last_updated_at,
+            "can_affect": self.can_affect,
+            "user_visible": self.user_visible,
+            "requires_confirmation_if_high_impact": self.requires_confirmation_if_high_impact,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> StateEntry:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
 @dataclass
@@ -88,11 +114,7 @@ class ActionableStatePacket:
         return {
             "user_id": self.user_id,
             "goal_frame": self.goal_frame,
-            "top_states": [
-                {"state_key": s.state_key, "value": s.value,
-                 "confidence": s.confidence, "scope": s.scope}
-                for s in self.top_states
-            ],
+            "top_states": [s.to_dict() for s in self.top_states],
             "risk_flags": self.risk_flags,
             "current_bottleneck": self.current_bottleneck,
             "next_best_action": self.next_best_action,

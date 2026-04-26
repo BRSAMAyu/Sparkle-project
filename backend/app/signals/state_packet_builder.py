@@ -110,6 +110,9 @@ class ActionableStatePacketBuilder:
                 value=signal.claim,
                 confidence=signal.confidence,
                 scope=signal.scope,
+                ttl_hours=signal.ttl_hours,
+                supporting_evidence=[signal.evidence_summary] if signal.evidence_summary else [],
+                can_affect=self._get_can_affect(signal.state_key),
             ))
 
         return entries[:10]  # 最多 10 个状态
@@ -201,3 +204,8 @@ class ActionableStatePacketBuilder:
         if m:
             return m.group(1).strip("，。、")
         return "unknown"
+
+    def _get_can_affect(self, state_key: str) -> list[str]:
+        """Get which directive types a state_key can affect."""
+        from app.signals.state_register import _CAN_AFFECT_MAP
+        return _CAN_AFFECT_MAP.get(state_key, [])

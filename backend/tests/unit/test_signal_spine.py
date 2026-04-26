@@ -7,6 +7,8 @@ Stage: Signal-to-Action Spine M1 验收测试
         ExecutionDirective → 下一张任务卡 duration <= 25 → Audit applied=true → Receipt。
 """
 
+from __future__ import annotations
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -36,6 +38,7 @@ class FakeRedis:
     def __init__(self):
         self._store: dict[str, str] = {}
         self._lists: dict[str, list[str]] = {}
+        self._sets: dict[str, set[str]] = {}
 
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
@@ -68,6 +71,23 @@ class FakeRedis:
             data.remove(value)
         except ValueError:
             pass
+
+    async def smembers(self, key: str) -> set[str]:
+        return self._sets.get(key, set())
+
+    async def sadd(self, key: str, *members: str) -> int:
+        s = self._sets.setdefault(key, set())
+        before = len(s)
+        for m in members:
+            s.add(m)
+        return len(s) - before
+
+    async def srem(self, key: str, *members: str) -> int:
+        s = self._sets.get(key, set())
+        before = len(s)
+        for m in members:
+            s.discard(m)
+        return before - len(s)
 
 
 @pytest.fixture
@@ -1732,9 +1752,37 @@ from app.signals.spine_orchestrator import SpineOrchestrator
 
 def _make_redis_mock():
     redis = AsyncMock()
-    redis.set = AsyncMock()
-    redis.get = AsyncMock(return_value=None)
-    redis.delete = AsyncMock()
+    redis._store: dict[str, str] = {}
+    redis._sets: dict[str, set] = {}
+
+    async def _set(key, value, ex=None):
+        redis._store[key] = value
+
+    async def _get(key):
+        return redis._store.get(key)
+
+    async def _delete(key):
+        redis._store.pop(key, None)
+
+    async def _smembers(key):
+        return redis._sets.get(key, set())
+
+    async def _sadd(key, *members):
+        s = redis._sets.setdefault(key, set())
+        for m in members:
+            s.add(m)
+
+    async def _srem(key, *members):
+        s = redis._sets.get(key, set())
+        for m in members:
+            s.discard(m)
+
+    redis.set = _set
+    redis.get = _get
+    redis.delete = _delete
+    redis.smembers = _smembers
+    redis.sadd = _sadd
+    redis.srem = _srem
     redis.lpush = AsyncMock()
     redis.lrange = AsyncMock(return_value=[])
     redis.ltrim = AsyncMock()
@@ -2175,3 +2223,174 @@ def test_rank_conflict_rules_explicit(ranker):
     assert len(result.conflicts_resolved) == 1
     assert result.conflicts_resolved[0]["winner"] == "task_granularity_fit"
     assert result.conflicts_resolved[0]["loser"] == "growth_momentum"
+
+
+# ── Layer 4: StateRegister ─────────────────────────────────────────────
+
+from app.signals.state_register import StateRegister
+
+
+@pytest.fixture
+def state_register(fake_redis):
+    return StateRegister(fake_redis)
+
+
+def _sig(state_key: str = "task_granularity_fit", claim: str = "too_large",
+         confidence: float = 0.8, priority: str = "high", scope: str = "current_sprint",
+         ttl: int = 72, evidence: str = "test evidence") -> ActionableSignal:
+    return ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key=state_key, claim=claim, confidence=confidence,
+        scope=scope, ttl_hours=ttl, evidence_summary=evidence,
+        possible_effects=[], priority=priority,
+    )
+
+
+@pytest.mark.asyncio
+async def test_state_register_upsert_new(state_register):
+    """新信号 → 创建新状态。"""
+    signal = _sig(confidence=0.8)
+    entry = await state_register.upsert_from_signal("u1", signal)
+    assert entry.state_key == "task_granularity_fit"
+    assert entry.value == "too_large"
+    assert entry.confidence == 0.8
+    assert "test evidence" in entry.supporting_evidence
+
+
+@pytest.mark.asyncio
+async def test_state_register_upsert_merge_higher(state_register):
+    """同 state_key 更高 confidence → 更新。"""
+    await state_register.upsert_from_signal("u1", _sig(confidence=0.6, evidence="first evidence"))
+    entry = await state_register.upsert_from_signal("u1", _sig(confidence=0.9, evidence="second evidence"))
+    assert entry.confidence == 0.9
+    # Evidence merged
+    assert len(entry.supporting_evidence) == 2
+
+
+@pytest.mark.asyncio
+async def test_state_register_upsert_keep_lower(state_register):
+    """同 state_key 更低 confidence → 保留旧的 confidence。"""
+    await state_register.upsert_from_signal("u1", _sig(confidence=0.9))
+    entry = await state_register.upsert_from_signal("u1", _sig(confidence=0.5))
+    assert entry.confidence == 0.9
+
+
+@pytest.mark.asyncio
+async def test_state_register_get_active(state_register):
+    """获取所有活跃状态。"""
+    await state_register.upsert_from_signal("u1", _sig(state_key="task_granularity_fit"))
+    await state_register.upsert_from_signal("u1", _sig(state_key="knowledge_transfer", claim="transfer_failure"))
+    states = await state_register.get_active_states("u1")
+    assert len(states) == 2
+    keys = {s.state_key for s in states}
+    assert "task_granularity_fit" in keys
+    assert "knowledge_transfer" in keys
+
+
+@pytest.mark.asyncio
+async def test_state_register_get_single(state_register):
+    """获取单个状态。"""
+    await state_register.upsert_from_signal("u1", _sig())
+    entry = await state_register.get_state("u1", "task_granularity_fit")
+    assert entry is not None
+    assert entry.value == "too_large"
+
+
+@pytest.mark.asyncio
+async def test_state_register_get_missing(state_register):
+    """不存在的状态 → None。"""
+    entry = await state_register.get_state("u1", "nonexistent")
+    assert entry is None
+
+
+@pytest.mark.asyncio
+async def test_state_register_counter_evidence(state_register):
+    """添加反证。"""
+    await state_register.upsert_from_signal("u1", _sig())
+    ok = await state_register.add_counter_evidence("u1", "task_granularity_fit", "user completed 90min task")
+    assert ok is True
+    entry = await state_register.get_state("u1", "task_granularity_fit")
+    assert "user completed 90min task" in entry.counter_evidence
+
+
+@pytest.mark.asyncio
+async def test_state_register_counter_evidence_missing(state_register):
+    """为不存在的状态添加反证 → False。"""
+    ok = await state_register.add_counter_evidence("u1", "nonexistent", "evidence")
+    assert ok is False
+
+
+@pytest.mark.asyncio
+async def test_state_register_remove(state_register):
+    """移除状态。"""
+    await state_register.upsert_from_signal("u1", _sig())
+    await state_register.remove_state("u1", "task_granularity_fit")
+    entry = await state_register.get_state("u1", "task_granularity_fit")
+    assert entry is None
+
+
+@pytest.mark.asyncio
+async def test_state_register_clear_scope(state_register):
+    """清除特定 scope 的所有状态。"""
+    await state_register.upsert_from_signal("u1", _sig(state_key="a", scope="turn"))
+    await state_register.upsert_from_signal("u1", _sig(state_key="b", scope="sprint"))
+    count = await state_register.clear_scope("u1", "turn")
+    assert count == 1
+    states = await state_register.get_active_states("u1")
+    assert len(states) == 1
+    assert states[0].state_key == "b"
+
+
+@pytest.mark.asyncio
+async def test_state_register_can_affect(state_register):
+    """state_key 映射到正确的 can_affect。"""
+    await state_register.upsert_from_signal("u1", _sig(state_key="task_granularity_fit"))
+    entry = await state_register.get_state("u1", "task_granularity_fit")
+    assert "ExecutionDirective" in entry.can_affect
+
+
+@pytest.mark.asyncio
+async def test_state_register_high_impact_confirmation(state_register):
+    """低置信 + 高优先级 → requires_confirmation_if_high_impact。"""
+    signal = _sig(confidence=0.3, priority="high")
+    entry = await state_register.upsert_from_signal("u1", signal)
+    assert entry.requires_confirmation_if_high_impact is True
+
+
+@pytest.mark.asyncio
+async def test_state_register_serialization(state_register):
+    """StateEntry 序列化/反序列化正确。"""
+    await state_register.upsert_from_signal("u1", _sig())
+    entry = await state_register.get_state("u1", "task_granularity_fit")
+    d = entry.to_dict()
+    restored = StateEntry.from_dict(d)
+    assert restored.state_key == entry.state_key
+    assert restored.confidence == entry.confidence
+    assert restored.ttl_hours == entry.ttl_hours
+    assert restored.supporting_evidence == entry.supporting_evidence
+
+
+@pytest.mark.asyncio
+async def test_state_register_no_cross_user(state_register):
+    """不同用户的状态互不影响。"""
+    await state_register.upsert_from_signal("u1", _sig())
+    states = await state_register.get_active_states("u2")
+    assert len(states) == 0
+
+
+@pytest.mark.asyncio
+async def test_spine_get_active_states(spine):
+    """SpineOrchestrator.get_active_states 委托到 StateRegister。"""
+    states = await spine.get_active_states("u_test")
+    assert isinstance(states, list)
+
+
+@pytest.mark.asyncio
+async def test_spine_pipeline_updates_state_register(spine):
+    """Spine pipeline 处理信号后 StateRegister 有记录。"""
+    signal = _sig()
+    await spine._run_signal_pipeline(user_id="u_reg", signal=signal)
+    entry = await spine.state_register.get_state("u_reg", "task_granularity_fit")
+    assert entry is not None
+    assert entry.value == "too_large"
+

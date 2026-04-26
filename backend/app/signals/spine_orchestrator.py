@@ -19,6 +19,7 @@ from app.signals.task_timeout_detector import TaskTimeoutDetector
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.recall_opportunity import RecallOpportunityDetector
 from app.signals.signal_ranker import SignalRanker
+from app.signals.state_register import StateRegister
 from app.signals.exam_rescue_detector import ExamRescueDetector
 from app.signals.stale_state_guard import StaleStateGuard
 from app.signals.state_packet_builder import ActionableStatePacketBuilder
@@ -65,6 +66,7 @@ class SpineOrchestrator:
         self.reply_engine = SpineReplyOptionEngine()
         self.wake_judge = AuroraWakeJudge()
         self.signal_ranker = SignalRanker()
+        self.state_register = StateRegister(redis_client)
 
     async def on_task_completed(
         self,
@@ -105,6 +107,9 @@ class SpineOrchestrator:
         # Step 2b: 存储 signal 并链接到 trace
         await self.trace_store.store_signal(signal)
         await self.trace_store.append_signal(trace.trace_id, signal)
+
+        # Layer 4: Persist signal state to StateRegister
+        await self.state_register.upsert_from_signal(user_id, signal)
 
         # Step 3: PolicyEngine
         consecutive = await self.timeout_detector._get_consecutive_timeouts(user_id)
@@ -343,6 +348,9 @@ class SpineOrchestrator:
         await self.trace_store.store_signal(signal)
         await self.trace_store.append_signal(trace.trace_id, signal)
 
+        # Layer 4: Persist signal state to StateRegister
+        await self.state_register.upsert_from_signal(user_id, signal)
+
         result = await self.policy_engine.evaluate(signal)
         if result is None:
             trace.outcome_to_measure = ["signal_no_rule_match"]
@@ -573,3 +581,17 @@ class SpineOrchestrator:
     def rank_signals(self, signals: list[ActionableSignal], *, max_signals: int = 5):
         """排序信号并解决冲突。返回 RankingResult。"""
         return self.signal_ranker.rank(signals, max_signals=max_signals)
+
+    # ── Layer 4: State Register ────────────────────────────────────────
+
+    async def get_active_states(self, user_id: str) -> list:
+        """获取用户当前所有活跃状态。返回 list[StateEntry]。"""
+        return await self.state_register.get_active_states(user_id)
+
+    async def add_counter_evidence(self, user_id: str, state_key: str, evidence: str) -> bool:
+        """为某状态添加反证。"""
+        return await self.state_register.add_counter_evidence(user_id, state_key, evidence)
+
+    async def remove_state(self, user_id: str, state_key: str) -> None:
+        """移除某状态。"""
+        await self.state_register.remove_state(user_id, state_key)
