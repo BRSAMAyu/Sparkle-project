@@ -1,5 +1,4 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: require_trailing_commas
 
 part of 'knowledge_detail_model.dart';
 
@@ -73,6 +72,7 @@ KnowledgeNodeDetail _$KnowledgeNodeDetailFromJson(Map<String, dynamic> json) =>
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
+      communitySignal: json['community_signal'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$KnowledgeNodeDetailToJson(
@@ -91,6 +91,7 @@ Map<String, dynamic> _$KnowledgeNodeDetailToJson(
       'subject_id': instance.subjectId,
       'subject_name': instance.subjectName,
       'created_at': instance.createdAt?.toIso8601String(),
+      'community_signal': instance.communitySignal,
     };
 
 NodeRelation _$NodeRelationFromJson(Map<String, dynamic> json) => NodeRelation(

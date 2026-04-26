@@ -53,6 +53,7 @@ class KnowledgeNodeDetail {
     this.subjectId,
     this.subjectName,
     this.createdAt,
+    this.communitySignal,
   });
 
   factory KnowledgeNodeDetail.fromJson(Map<String, dynamic> json) =>
@@ -79,6 +80,8 @@ class KnowledgeNodeDetail {
   final String? subjectName;
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  @JsonKey(name: 'community_signal')
+  final Map<String, dynamic>? communitySignal;
 
   /// Convert sectorCode string to SectorEnum
   SectorEnum get sector {

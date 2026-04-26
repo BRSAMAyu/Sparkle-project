@@ -388,6 +388,8 @@ class _HistoryContent extends StatelessWidget {
           else
             ...relatedErrors.map(_ErrorPreview.new),
           const SizedBox(height: DS.spacing20),
+          _CommunityInsightSection(nodeId: nodeId),
+          const SizedBox(height: DS.spacing20),
           Row(
             children: [
               Expanded(
@@ -1540,4 +1542,95 @@ String _buildExcerptReferenceLabel(
     parts.add(copy.excerpt(excerpt.fallbackOrdinal));
   }
   return parts.join(' · ');
+}
+
+class _CommunityInsightSection extends ConsumerWidget {
+  const _CommunityInsightSection({required this.nodeId});
+
+  final String nodeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Community Insights',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: DS.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: DS.spacing10),
+        _CommunityInsightContent(nodeId: nodeId),
+      ],
+    );
+  }
+}
+
+class _CommunityInsightContent extends ConsumerStatefulWidget {
+  const _CommunityInsightContent({required this.nodeId});
+
+  final String nodeId;
+
+  @override
+  ConsumerState<_CommunityInsightContent> createState() => _CommunityInsightContentState();
+}
+
+class _CommunityInsightContentState extends ConsumerState<_CommunityInsightContent> {
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _fetchCommunitySignal(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data == null) {
+          return Text(
+            'No community data yet',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
+          );
+        }
+        final signal = snapshot.data!;
+        final patterns = signal['common_mistake_patterns'] as List? ?? [];
+        if (patterns.isEmpty) {
+          return Text(
+            'No community data yet',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: patterns.take(3).map((pattern) {
+            final p = pattern as Map<String, dynamic>;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Row(
+                children: [
+                  Icon(Icons.group_outlined, size: 14, color: DS.brandPrimary),
+                  const SizedBox(width: DS.spacing6),
+                  Expanded(
+                    child: Text(
+                      '${p['error_type'] ?? 'Unknown'}: ${p['user_count']} users',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: DS.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> _fetchCommunitySignal() async {
+    try {
+      final detailResult = await ref.read(enhancedGalaxyRepositoryProvider).getNodeDetail(widget.nodeId);
+      if (detailResult.isSuccess && detailResult.data != null) {
+        return detailResult.data!.node.communitySignal;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 }
