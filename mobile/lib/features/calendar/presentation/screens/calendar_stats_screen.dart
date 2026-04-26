@@ -784,7 +784,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                               event.title,
                               style: TextStyle(
                                 color: DS.textPrimary,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: DS.fontWeightSemibold,
                               ),
                             ),
                             subtitle: Text(
@@ -1019,7 +1019,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 label,
                 style: TextStyle(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
               const SizedBox(height: DS.spacing2),
@@ -1074,7 +1074,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               style: TextStyle(
                 color: intensity >= 3 ? DS.textOnPrimary : DS.textPrimary,
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
           ),
@@ -1122,7 +1122,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     value,
                     style: TextStyle(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ],
@@ -1150,6 +1150,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final statusColor = switch (task.status) {
       TaskStatus.completed => DS.success,
       TaskStatus.inProgress => DS.info,
+      TaskStatus.stuck => DS.warning,
       TaskStatus.pending => DS.warning,
       TaskStatus.abandoned => DS.textSecondary,
     };
@@ -1179,7 +1180,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           task.title,
           style: TextStyle(
             color: DS.textPrimary,
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
           ),
         ),
         subtitle: Text(
@@ -1378,7 +1379,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                       _saveError!,
                       style: TextStyle(
                         color: DS.error,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                     ),
                   ),

@@ -86,11 +86,13 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     });
 
     try {
-      final result = await ref.read(translationServiceProvider).translate(
+      final translationService = ref.read(translationServiceProvider);
+      final result = await translationService.translate(
         text: _inputController.text,
         sourceLang: _sourceLanguage.code,
         targetLang: _targetLanguage.code,
       );
+      if (!mounted) return;
       if (result.success) {
         final translatedText = result.translation;
         setState(() {
@@ -105,6 +107,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = '翻译出错: $e';
       });
@@ -137,26 +140,27 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
   Future<void> _saveTranslation(String translatedText) async {
     try {
+      if (!mounted) return;
+      final historyNotifier = ref.read(translationHistoryProvider.notifier);
       final similar =
-          await ref.read(translationHistoryProvider.notifier).findSimilar(
+          await historyNotifier.findSimilar(
                 originalText: _inputController.text,
                 sourceLanguage: _sourceLanguage.code,
                 targetLanguage: _targetLanguage.code,
               );
 
+      if (!mounted) return;
       if (similar != null) {
-        if (mounted) {
-          setState(() {
-            _currentTranslationId = similar.id;
-            _currentRating = similar.rating;
-            _isFavorited = similar.isFavorited;
-          });
-        }
+        setState(() {
+          _currentTranslationId = similar.id;
+          _currentRating = similar.rating;
+          _isFavorited = similar.isFavorited;
+        });
         return;
       }
 
       final id =
-          await ref.read(translationHistoryProvider.notifier).saveTranslation(
+          await historyNotifier.saveTranslation(
                 originalText: _inputController.text,
                 translatedText: translatedText,
                 sourceLanguage: _sourceLanguage.code,
@@ -164,11 +168,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 rating: _currentRating,
                 isFavorited: _isFavorited,
               );
-      if (mounted) {
-        setState(() {
-          _currentTranslationId = id;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _currentTranslationId = id;
+      });
     } catch (e) {
       debugPrint('Error auto-saving translation: $e');
     }
@@ -178,7 +181,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     setState(() {
       _currentRating = rating;
     });
-    if (_currentTranslationId != null) {
+    if (_currentTranslationId != null && mounted) {
       unawaited(
         ref
             .read(translationHistoryProvider.notifier)
@@ -192,7 +195,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     setState(() {
       _isFavorited = newValue;
     });
-    if (_currentTranslationId != null) {
+    if (_currentTranslationId != null && mounted) {
       await ref
           .read(translationHistoryProvider.notifier)
           .toggleFavorite(_currentTranslationId!);
@@ -219,6 +222,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       _isAddingToWordbook = true;
     });
     try {
+      if (!mounted) return;
       final repository = ref.read(vocabularyRepositoryProvider);
       final word = _inputController.text.trim().toLowerCase();
       var definition = _output.trim();
@@ -227,6 +231,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
       try {
         final lookup = await repository.lookup(word);
+        if (!mounted) return;
         final definitions = lookup['definitions'];
         if (definitions is List && definitions.isNotEmpty) {
           definition = definitions.join('; ');
@@ -272,7 +277,11 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       accentColor: accent,
       compactHeader: true,
       headerAction: SparkleIconButton(
-        onPressed: () => unawaited(context.push(TranslationRoutes.history)),
+        onPressed: () {
+          if (context.mounted) {
+            unawaited(context.push(TranslationRoutes.history));
+          }
+        },
         icon: const Icon(Icons.history_rounded),
         variant: ButtonVariant.ghost,
       ),

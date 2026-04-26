@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
@@ -26,7 +30,24 @@ class NotificationListScreen extends ConsumerWidget {
       child: notificationsAsync.when(
         data: (notifications) {
           if (notifications.isEmpty) {
-            return const Center(child: Text('No new notifications'));
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(DS.spacing24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.notifications_none_rounded, size: 48),
+                    SizedBox(height: DS.spacing12),
+                    Text('No new notifications'),
+                    SizedBox(height: DS.spacing6),
+                    Text(
+                      'Study reminders and weekly reports will appear here when they need your attention.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
           return ContentConstraint(
             child: ListView.builder(
@@ -44,7 +65,8 @@ class NotificationListScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.notifications_off_outlined, size: 48, color: DS.textSecondary),
+              Icon(Icons.notifications_off_outlined,
+                  size: 48, color: DS.textSecondary),
               const SizedBox(height: DS.spacing12),
               Text('加载通知失败，请稍后重试', style: TextStyle(color: DS.textSecondary)),
             ],
@@ -78,11 +100,36 @@ class NotificationItem extends ConsumerWidget {
               ref
                   .read(unreadNotificationsProvider.notifier)
                   .markAsRead(notification.id);
-              if (notification.type == 'fragmented_time' &&
-                  notification.data != null) {
-                final taskId = notification.data!['task_id'];
-                if (taskId != null) {
-                  context.push('/tasks/$taskId');
+              final data = notification.data;
+              if (data != null) {
+                final destinationRoute = data['destination_route']?.toString();
+                if (destinationRoute != null && destinationRoute.isNotEmpty) {
+                  unawaited(
+                    RouteResilience.openExternalRoute(
+                      context,
+                      destinationRoute,
+                    ),
+                  );
+                  return;
+                }
+
+                final deepLink = data['deep_link']?.toString();
+                if (deepLink != null &&
+                    deepLink.isNotEmpty &&
+                    DeepLinkService.handleExternalDeepLink(context, deepLink)) {
+                  return;
+                }
+
+                if (notification.type == 'fragmented_time') {
+                  final taskId = data['task_id'];
+                  if (taskId != null) {
+                    unawaited(
+                      RouteResilience.openExternalRoute(
+                        context,
+                        '/tasks/$taskId',
+                      ),
+                    );
+                  }
                 }
               }
             },

@@ -95,7 +95,7 @@ class _VisualElementCardState extends State<VisualElementCard>
     return SparkleTappable(
       onTap: widget.onTap,
       onLongPress: widget.onLongPress,
-      enableHaptic: widget.element.isUnlocked,
+      enableHaptic: true,
       borderRadius: borderRadius,
       child: RarityVisualWrapper(
         rarity: widget.element.rarity,
@@ -112,26 +112,33 @@ class _VisualElementCardState extends State<VisualElementCard>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    DS.surfaceSecondary,
-                    DS.surfaceTertiary.withValues(alpha: 0.5),
+                    _InkVisualPalette.moonless,
+                    _InkVisualPalette.surface,
+                    Color.lerp(_InkVisualPalette.panel, accent, 0.08) ??
+                        _InkVisualPalette.panel,
                   ],
                 ),
                 borderRadius: borderRadius,
                 border: Border.all(
                   color: widget.element.isEquipped
                       ? colors.border
-                      : DS.border.withValues(alpha: 0.5),
+                      : colors.border.withValues(alpha: 0.22),
                   width: widget.element.isEquipped ? 2 : 1,
                 ),
-                boxShadow: widget.element.isEquipped
-                    ? [
-                        BoxShadow(
-                          color: colors.border.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.32),
+                    blurRadius: 20,
+                    offset: const Offset(0, 12),
+                  ),
+                  if (widget.element.isEquipped ||
+                      widget.element.rarity == VisualElementRarity.legendary)
+                    BoxShadow(
+                      color: colors.border.withValues(alpha: 0.20),
+                      blurRadius: 28,
+                      spreadRadius: 1,
+                    ),
+                ],
               ),
               child: ClipRRect(
                 borderRadius: borderRadius,
@@ -148,7 +155,7 @@ class _VisualElementCardState extends State<VisualElementCard>
                               colors: [
                                 accent.withValues(alpha: 0.18),
                                 Colors.transparent,
-                                accent.withValues(alpha: 0.08),
+                                _InkVisualPalette.gold.withValues(alpha: 0.10),
                               ],
                               stops: const [0.0, 0.38, 1.0],
                             ),
@@ -167,7 +174,14 @@ class _VisualElementCardState extends State<VisualElementCard>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               _buildTypeIcon(),
-                              _buildRarityBadge(colors, l10n),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildPreviewHint(accent),
+                                  const SizedBox(width: DS.spacing6),
+                                  _buildRarityBadge(colors, l10n),
+                                ],
+                              ),
                             ],
                           ),
                           const SizedBox(height: DS.spacing8),
@@ -191,64 +205,12 @@ class _VisualElementCardState extends State<VisualElementCard>
                             const SizedBox(height: DS.spacing10)
                           else
                             const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.element.name,
-                                style: TextStyle(
-                                  fontSize: widget.isCompact
-                                      ? DS.fontSizeSm
-                                      : DS.fontSizeBase,
-                                  fontWeight: DS.fontWeightSemibold,
-                                  color: DS.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (widget.element.description != null &&
-                                  !widget.isCompact) ...[
-                                const SizedBox(height: DS.spacing4),
-                                Text(
-                                  widget.element.description!,
-                                  style: TextStyle(
-                                    fontSize: DS.fontSizeXs,
-                                    color: DS.textSecondary,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                              const SizedBox(height: DS.spacing6),
-                              Wrap(
-                                spacing: DS.spacing6,
-                                runSpacing: DS.spacing6,
-                                children: [
-                                  if (!widget.isCompact)
-                                    _buildMetaChip(
-                                      widget.element.unlockSourceLabel,
-                                      accent,
-                                    ),
-                                  if (widget.element.setId != null &&
-                                      !widget.isCompact)
-                                    _buildMetaChip(
-                                      widget.element.setId!,
-                                      colors.border,
-                                    ),
-                                ],
-                              ),
-                              if (widget.element.isBundle &&
-                                  widget.bundleTotalCount > 0 &&
-                                  !widget.isCompact) ...[
-                                const SizedBox(height: DS.spacing6),
-                                _buildBundleProgressChip(colors),
-                              ],
-                              if (widget.showStatus && !widget.isCompact) ...[
-                                const SizedBox(height: DS.spacing8),
-                                _buildStatusRow(l10n),
-                              ],
-                            ],
-                          ),
+                          if (widget.isCompact)
+                            _buildTextBlock(accent, colors, l10n)
+                          else
+                            Flexible(
+                              child: _buildTextBlock(accent, colors, l10n),
+                            ),
                         ],
                       ),
                     ),
@@ -260,13 +222,15 @@ class _VisualElementCardState extends State<VisualElementCard>
             ),
             if (widget.element.isEquipped)
               Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: _breathingAnimation,
-                  builder: (context, child) => CustomPaint(
-                    painter: _BreathingBorderPainter(
-                      animation: _breathingAnimation,
-                      color: colors.border,
-                      borderRadius: borderRadius,
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _breathingAnimation,
+                    builder: (context, child) => CustomPaint(
+                      painter: _BreathingBorderPainter(
+                        animation: _breathingAnimation,
+                        color: colors.border,
+                        borderRadius: borderRadius,
+                      ),
                     ),
                   ),
                 ),
@@ -276,6 +240,67 @@ class _VisualElementCardState extends State<VisualElementCard>
       ),
     );
   }
+
+  Widget _buildTextBlock(
+    Color accent,
+    _RarityColors colors,
+    AppLocalizations l10n,
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.element.name,
+            style: TextStyle(
+              fontSize: widget.isCompact ? DS.fontSizeSm : DS.fontSizeBase,
+              fontWeight: DS.fontWeightSemibold,
+              color: _InkVisualPalette.textPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (widget.element.description != null && !widget.isCompact) ...[
+            const SizedBox(height: DS.spacing4),
+            Text(
+              widget.element.description!,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: _InkVisualPalette.textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: DS.spacing6),
+          Wrap(
+            spacing: DS.spacing6,
+            runSpacing: DS.spacing6,
+            children: [
+              if (!widget.isCompact)
+                _buildMetaChip(
+                  widget.element.unlockSourceLabel,
+                  accent,
+                ),
+              if (widget.element.setId != null && !widget.isCompact)
+                _buildMetaChip(
+                  widget.element.setId!,
+                  colors.border,
+                ),
+            ],
+          ),
+          if (widget.element.isBundle &&
+              widget.bundleTotalCount > 0 &&
+              !widget.isCompact) ...[
+            const SizedBox(height: DS.spacing6),
+            _buildBundleProgressChip(colors),
+          ],
+          if (widget.showStatus && !widget.isCompact) ...[
+            const SizedBox(height: DS.spacing8),
+            _buildStatusRow(l10n),
+          ],
+        ],
+      );
 
   bool _shouldShimmerForRarity(VisualElementRarity rarity) =>
       rarity == VisualElementRarity.rare ||
@@ -383,8 +408,9 @@ class _VisualElementCardState extends State<VisualElementCard>
     }
     // 默认渐变
     return [
-      DS.surfaceSecondary.withValues(alpha: 0.8),
-      DS.surfaceTertiary.withValues(alpha: 0.6),
+      _InkVisualPalette.moonless,
+      _InkVisualPalette.surface,
+      _InkVisualPalette.blueWash,
     ];
   }
 
@@ -397,7 +423,7 @@ class _VisualElementCardState extends State<VisualElementCard>
         return Color(int.parse(hexColor, radix: 16));
       }
     } catch (_) {}
-    return DS.surfaceSecondary;
+    return _InkVisualPalette.surface;
   }
 
   Widget _buildTypeIcon() {
@@ -411,7 +437,8 @@ class _VisualElementCardState extends State<VisualElementCard>
           end: Alignment.bottomRight,
           colors: [
             DS.surfacePrimary.withValues(alpha: 0.94),
-            rarityColors.background.withValues(alpha: 0.72),
+            Color.lerp(_InkVisualPalette.panel, rarityColors.border, 0.18) ??
+                _InkVisualPalette.panel,
           ],
         ),
         borderRadius: DS.borderRadius8,
@@ -430,10 +457,45 @@ class _VisualElementCardState extends State<VisualElementCard>
       child: Icon(
         icon,
         size: widget.isCompact ? DS.iconSizeXs : DS.iconSizeSm,
-        color: Color.lerp(DS.textSecondary, rarityColors.text, 0.28),
+        color: Color.lerp(
+          _InkVisualPalette.textSecondary,
+          rarityColors.text,
+          0.52,
+        ),
       ),
     );
   }
+
+  Widget _buildPreviewHint(Color accent) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.13),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: accent.withValues(alpha: 0.24)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.visibility_outlined,
+              size: DS.iconSizeXs,
+              color: Color.lerp(accent, _InkVisualPalette.textPrimary, 0.18),
+            ),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              '预览',
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: Color.lerp(accent, _InkVisualPalette.textPrimary, 0.18),
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ],
+        ),
+      );
 
   IconData _getTypeIcon(VisualElementType type) {
     switch (type) {
@@ -455,9 +517,9 @@ class _VisualElementCardState extends State<VisualElementCard>
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: colors.background,
+          color: colors.background.withValues(alpha: 0.92),
           borderRadius: DS.borderRadius8,
-          border: Border.all(color: colors.border),
+          border: Border.all(color: colors.border.withValues(alpha: 0.55)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -523,7 +585,7 @@ class _VisualElementCardState extends State<VisualElementCard>
       statusIcon = Icons.lock_open;
     } else {
       statusText = _getUnlockSourceText(l10n);
-      statusColor = DS.textTertiary;
+      statusColor = _InkVisualPalette.textSecondary;
       statusIcon = Icons.lock;
     }
 
@@ -559,9 +621,9 @@ class _VisualElementCardState extends State<VisualElementCard>
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withValues(alpha: 0.13),
           borderRadius: DS.borderRadiusFull,
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.24)),
         ),
         child: Text(
           label,
@@ -569,7 +631,7 @@ class _VisualElementCardState extends State<VisualElementCard>
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: color,
+            color: Color.lerp(color, _InkVisualPalette.textPrimary, 0.14),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
@@ -581,7 +643,7 @@ class _VisualElementCardState extends State<VisualElementCard>
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: colors.border.withValues(alpha: 0.12),
+          color: colors.border.withValues(alpha: 0.13),
           borderRadius: DS.borderRadius8,
           border: Border.all(color: colors.border.withValues(alpha: 0.2)),
         ),
@@ -633,7 +695,7 @@ class _VisualElementCardState extends State<VisualElementCard>
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
                 child: Container(
-                  color: DS.surfacePrimary.withValues(alpha: 0.85),
+                  color: _InkVisualPalette.moonless.withValues(alpha: 0.78),
                 ),
               ),
               // 内容
@@ -697,30 +759,40 @@ class _VisualElementCardState extends State<VisualElementCard>
     switch (rarity) {
       case VisualElementRarity.common:
         return _RarityColors(
-          background: DS.rarityCommonBg,
-          border: DS.rarityCommon,
-          text: DS.rarityCommonText,
+          background: const Color(0xFF102436),
+          border: const Color(0xFF668696),
+          text: const Color(0xFFC6D6DB),
         );
       case VisualElementRarity.rare:
         return _RarityColors(
-          background: DS.rarityRareBg,
-          border: DS.rarityRare,
-          text: DS.rarityRareText,
+          background: const Color(0xFF0C2A37),
+          border: const Color(0xFF58C0D7),
+          text: const Color(0xFFC6F2F7),
         );
       case VisualElementRarity.epic:
         return _RarityColors(
-          background: DS.rarityEpicBg,
-          border: DS.rarityEpic,
-          text: DS.rarityEpicText,
+          background: const Color(0xFF17253A),
+          border: const Color(0xFF91A9FF),
+          text: const Color(0xFFDCE5FF),
         );
       case VisualElementRarity.legendary:
         return _RarityColors(
-          background: DS.rarityLegendaryBg,
-          border: DS.rarityLegendary,
-          text: DS.rarityLegendaryText,
+          background: const Color(0xFF312813),
+          border: const Color(0xFFD9B66F),
+          text: const Color(0xFFFFE7A8),
         );
     }
   }
+}
+
+class _InkVisualPalette {
+  static const Color moonless = Color(0xFF050A12);
+  static const Color surface = Color(0xFF0B1D2C);
+  static const Color panel = Color(0xFF10283A);
+  static const Color blueWash = Color(0xFF14384A);
+  static const Color gold = Color(0xFFD9B66F);
+  static const Color textPrimary = Color(0xFFEAF3F5);
+  static const Color textSecondary = Color(0xFF9CB4BD);
 }
 
 class _RarityColors {

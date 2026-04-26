@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
@@ -131,8 +132,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     );
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.communityCopiedToClipboard),
+                      SparkleSnackBar.info(
+                        l10n.communityCopiedToClipboard,
                         duration: const Duration(seconds: 1),
                       ),
                     );

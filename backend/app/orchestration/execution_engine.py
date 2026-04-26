@@ -2046,6 +2046,7 @@ class ExecutionEngineMixin:
                 )
             else:
                 try:
+                    locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
                     executable_plan = await asyncio.wait_for(
                         self.lang_graph_planner.plan(
                             message=user_message,
@@ -2061,6 +2062,7 @@ class ExecutionEngineMixin:
                             state_overrides=state_overrides or None,
                             planning_constraints=planning_constraints or None,
                             stream_callback=stream_callback,
+                            locale=locale,
                         ),
                         timeout=_LANGGRAPH_PLANNER_TIMEOUT_SECONDS,
                     )

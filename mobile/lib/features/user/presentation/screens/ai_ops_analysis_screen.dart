@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class AiOpsAnalysisScreen extends ConsumerStatefulWidget {
@@ -84,7 +85,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             Text(
               '分析窗口',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -133,7 +134,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               Text(
                 '开发运营视角',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: DS.spacing8),
@@ -209,7 +210,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                 Text(
                   '模式明细',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.spacing12),
@@ -245,7 +246,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
           Text(
             '预测转化闭环',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -273,7 +274,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             Text(
               '按入口看效果',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -294,7 +295,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             Text(
               '最值得优化的动作',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -324,7 +325,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -342,7 +343,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
     await Clipboard.setData(ClipboardData(text: pretty));
     if (!mounted) return;
     messenger.showSnackBar(
-      const SnackBar(content: Text('AI 运营导出已复制到剪贴板')),
+      SparkleSnackBar.success('AI 运营导出已复制到剪贴板'),
     );
   }
 
@@ -380,7 +381,7 @@ class _TrendSeriesCard extends StatelessWidget {
           Text(
             _chatModeLabel(chatMode),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -492,7 +493,7 @@ class _TrendBarRow extends StatelessWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ),
@@ -591,7 +592,7 @@ class _ModeBreakdownRow extends StatelessWidget {
           Text(
             _chatModeLabel(chatMode),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: 6),
@@ -670,7 +671,7 @@ class _MetricChip extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],

@@ -217,6 +217,24 @@ class NotificationCenter extends _$NotificationCenter {
     }
   }
 
+  Future<Map<String, dynamic>> sendAccountabilityEncouragement(
+    UnifiedNotification notification,
+  ) async {
+    if (!notification.canSendAccountabilityEncouragement) {
+      return const {'success': false};
+    }
+    try {
+      final result = await _repository.sendAccountabilityEncouragement(
+        notification.id,
+      );
+      _updateAccountabilityEncouragementLocalState(notification.id);
+      return result;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
   /// Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
@@ -381,6 +399,26 @@ class NotificationCenter extends _$NotificationCenter {
                   metadata: metadata,
                 );
               }).toList();
+
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
+
+  void _updateAccountabilityEncouragementLocalState(String notificationId) {
+    final updatedNotifications = state.notifications.map((n) {
+      if (n.id != notificationId) {
+        return n;
+      }
+      final metadata = Map<String, dynamic>.from(n.metadata)
+        ..['encouragement_status'] = 'sent';
+      return n.copyWith(
+        isRead: true,
+        metadata: metadata,
+      );
+    }).toList();
 
     final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
     state = state.copyWith(

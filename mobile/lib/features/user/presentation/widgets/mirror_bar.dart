@@ -16,7 +16,8 @@ class MirrorBar extends StatelessWidget {
       return _buildInertSurface(context);
     }
 
-    final presenceColor = _presenceColor(model.presenceValue);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final presenceColor = _presenceColor(model.presenceValue, isDark);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing16),
@@ -126,14 +127,14 @@ class MirrorBar extends StatelessWidget {
       ),
     );
 
-  Color _presenceColor(double value) {
+  Color _presenceColor(double value, bool isDark) {
     if (value >= 0.7) {
-      return const Color(0xFF73E0B9);
+      return isDark ? DS.success : const Color(0xFF73E0B9);
     }
     if (value >= 0.35) {
-      return const Color(0xFFF1C27A);
+      return isDark ? DS.warning : const Color(0xFFF1C27A);
     }
-    return const Color(0xFF8A8EA8);
+    return isDark ? DS.textSecondary : const Color(0xFF8A8EA8);
   }
 }
 

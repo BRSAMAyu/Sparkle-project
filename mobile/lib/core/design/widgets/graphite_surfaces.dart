@@ -136,6 +136,7 @@ class GraphiteCardSurface extends StatelessWidget {
     this.margin,
     this.onTap,
     this.borderColor,
+    this.backgroundColor,
     this.surfaceRole,
     this.motionToken = SparkleMotionToken.standard,
   });
@@ -145,6 +146,7 @@ class GraphiteCardSurface extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
   final Color? borderColor;
+  final Color? backgroundColor;
   final SparkleSurfaceRole? surfaceRole;
   final SparkleMotionToken motionToken;
 
@@ -160,9 +162,10 @@ class GraphiteCardSurface extends StatelessWidget {
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: surfaceRole != null
-            ? DS.surfaceRoleColor(surfaceRole!)
-            : DS.surfaceOverlay,
+        color: backgroundColor ??
+            (surfaceRole != null
+                ? DS.surfaceRoleColor(surfaceRole!)
+                : DS.surfaceOverlay),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: borderColor ?? DS.borderSubtle,
@@ -244,13 +247,14 @@ class GraphiteModalSurface extends StatelessWidget {
                       ),
                     ),
                   if (title != null) ...[
-                    const SizedBox(height: 16),
+                    if (showHandle) const SizedBox(height: 16),
                     Text(
                       title!,
                       style: DS.titleLarge.copyWith(color: DS.textPrimary),
                     ),
-                  ],
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                  ] else if (showHandle)
+                    const SizedBox(height: 16),
                   if (expandChild) Expanded(child: child) else child,
                 ],
               ),

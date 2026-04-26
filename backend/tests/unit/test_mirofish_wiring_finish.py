@@ -445,7 +445,7 @@ async def test_simulation_engine_builds_interaction_point():
 async def test_simulation_engine_persists_gap_events(monkeypatch):
     engine = SimulationEngine()
     publish = AsyncMock(return_value="evt-1")
-    monkeypatch.setattr(engine.event_bus, "publish", publish)
+    monkeypatch.setattr(engine.event_bus_reliable, "publish", publish)
 
     session = engine._session_from_payload(
         {

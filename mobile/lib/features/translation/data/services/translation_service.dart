@@ -143,15 +143,31 @@ class TranslationService {
       },
     );
 
-    return TranslationResult.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    if (data == null) {
+      return TranslationResult(
+        success: false,
+        translation: '',
+        segments: [],
+        meta: {'error': 'Empty response from translation service'},
+      );
+    }
+    return TranslationResult.fromJson(data);
   }
 
   /// Get available glossaries
   Future<List<Map<String, dynamic>>> getGlossaries() async {
     final response = await _apiClient.get<Map<String, dynamic>>('/translation/glossaries');
-    final data = response.data as Map<String, dynamic>;
-    return (data['glossaries'] as List<dynamic>)
-        .map((e) => e as Map<String, dynamic>)
+    final data = response.data;
+    if (data == null) {
+      return [];
+    }
+    final glossaries = data['glossaries'];
+    if (glossaries is! List<dynamic>) {
+      return [];
+    }
+    return glossaries
+        .whereType<Map<String, dynamic>>()
         .toList();
   }
 }

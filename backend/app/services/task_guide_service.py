@@ -11,6 +11,7 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.i18n import I18n
 from app.models.task import Task
 from app.models.user import User
 from app.task_guidance import (
@@ -190,22 +191,22 @@ class TaskGuideService:
         task_type_value = getattr(task.type, "value", task.type)
 
         task_type_map = {
-            "learning": "学习",
-            "training": "练习",
-            "error_fix": "错题订正",
-            "reflection": "反思总结",
-            "social": "协作",
-            "planning": "规划",
+            "learning": I18n.t("task_guide.learning", locale="zh"),
+            "training": I18n.t("task_guide.training", locale="zh"),
+            "error_fix": I18n.t("task_guide.error_fix", locale="zh"),
+            "reflection": I18n.t("task_guide.reflection", locale="zh"),
+            "social": I18n.t("task_guide.social", locale="zh"),
+            "planning": I18n.t("task_guide.planning", locale="zh"),
         }
         task_type_name = task_type_map.get(str(task_type_value).lower(), str(task_type_value))
 
         difficulty_desc = {
-            1: "非常简单，适合入门",
-            2: "较简单，可以轻松完成",
-            3: "中等，需要一定专注",
-            4: "较难，需要深入思考",
-            5: "困难，建议分步完成",
-        }.get(task.difficulty, "中等")
+            1: I18n.t("task_guide.difficulty_1", locale="zh"),
+            2: I18n.t("task_guide.difficulty_2", locale="zh"),
+            3: I18n.t("task_guide.difficulty_3", locale="zh"),
+            4: I18n.t("task_guide.difficulty_4", locale="zh"),
+            5: I18n.t("task_guide.difficulty_5", locale="zh"),
+        }.get(task.difficulty, I18n.t("task_guide.difficulty_3", locale="zh"))
 
         prompt = f"""请为以下学习任务生成一份执行指南：
 
@@ -272,7 +273,7 @@ class TaskGuideService:
             "messages": [
                 {
                     "role": "system",
-                    "content": "你是一个高效的学习任务助手，擅长输出简短、清晰、可执行的任务指南。你只能使用基础 Markdown 标题、数字列表和短横线列表，禁止 emoji、表格、引用、代码块和特殊符号。",
+                    "content": I18n.t("task_guide.system_prompt", locale="zh"),
                 },
                 {
                     "role": "user",
@@ -308,7 +309,7 @@ class TaskGuideService:
             "messages": [
                 {
                     "role": "system",
-                    "content": "你是一个高效的学习任务助手，擅长输出简短、清晰、可执行的任务指南。你只能使用基础 Markdown 标题、数字列表和短横线列表，禁止 emoji、表格、引用、代码块和特殊符号。",
+                    "content": I18n.t("task_guide.system_prompt", locale="zh"),
                 },
                 {
                     "role": "user",
@@ -388,38 +389,42 @@ class TaskGuideService:
         """降级方案：当 API 不可用时返回固定模板"""
         task_type_value = getattr(task.type, "value", task.type)
         task_type_map = {
-            "learning": "学习",
-            "training": "练习",
-            "error_fix": "错题订正",
-            "reflection": "反思总结",
-            "social": "协作",
-            "planning": "规划",
+            "learning": I18n.t("task_guide.learning", locale="zh"),
+            "training": I18n.t("task_guide.training", locale="zh"),
+            "error_fix": I18n.t("task_guide.error_fix", locale="zh"),
+            "reflection": I18n.t("task_guide.reflection", locale="zh"),
+            "social": I18n.t("task_guide.social", locale="zh"),
+            "planning": I18n.t("task_guide.planning", locale="zh"),
         }
         task_type_name = task_type_map.get(str(task_type_value).lower(), str(task_type_value))
+        prep_minutes = max(5, task.estimated_minutes // 10)
+        exec_minutes = task.estimated_minutes - 10
 
-        return f"""## 任务目标
-- 完成此{task_type_name}任务，预计耗时 {task.estimated_minutes} 分钟。
-
-## 准备清单
-- 确认有充足的时间（{task.estimated_minutes} 分钟）
-- 准备必要的学习材料
-- 找一个安静的学习环境
-
-## 执行步骤
-1. 准备阶段（约 {max(5, task.estimated_minutes // 10)} 分钟）：明确目标，准备材料，进入专注状态。
-2. 执行阶段（约 {task.estimated_minutes - 10} 分钟）：专注完成核心内容，及时记录关键点。
-3. 收尾阶段（约 5 分钟）：检查完成质量，总结改进点。
-
-## 时间分配
-- 准备：{max(5, task.estimated_minutes // 10)} 分钟
-- 执行：{task.estimated_minutes - 10} 分钟
-- 收尾：5 分钟
-
-## 完成标准
-- 按计划完成主要步骤
-- 达到预期学习效果
-- 记录关键笔记或总结
-"""
+        parts = [
+            f"## {I18n.t('task_guide.static_title', locale='zh')}",
+            f"- {I18n.t('task_guide.static_goal', locale='zh', task_type=task_type_name, minutes=task.estimated_minutes)}",
+            "",
+            f"## {I18n.t('task_guide.static_prep_header', locale='zh')}",
+            f"- {I18n.t('task_guide.static_prep_time', locale='zh', minutes=task.estimated_minutes)}",
+            f"- {I18n.t('task_guide.static_prep_material', locale='zh')}",
+            f"- {I18n.t('task_guide.static_prep_environment', locale='zh')}",
+            "",
+            f"## {I18n.t('task_guide.static_steps_header', locale='zh')}",
+            f"1. {I18n.t('task_guide.static_step_prepare', locale='zh', minutes=prep_minutes)}",
+            f"2. {I18n.t('task_guide.static_step_execute', locale='zh', minutes=exec_minutes)}",
+            f"3. {I18n.t('task_guide.static_step_finish', locale='zh')}",
+            "",
+            f"## {I18n.t('task_guide.static_time_header', locale='zh')}",
+            f"- {I18n.t('task_guide.static_prep_header', locale='zh')}：{prep_minutes} " + I18n.t("task_guide.static_prep_time", locale="zh", minutes=""),
+            f"- {I18n.t('task_guide.static_steps_header', locale='zh')}：{exec_minutes} " + I18n.t("task_guide.static_prep_time", locale="zh", minutes=""),
+            "- " + I18n.t("task_guide.static_step_finish", locale='zh'),
+            "",
+            f"## {I18n.t('task_guide.static_completion_header', locale='zh')}",
+            f"- {I18n.t('task_guide.static_completion_done', locale='zh')}",
+            f"- {I18n.t('task_guide.static_completion_effect', locale='zh')}",
+            f"- {I18n.t('task_guide.static_completion_notes', locale='zh')}",
+        ]
+        return "\n".join(parts) + "\n"
 
 
 task_guide_service = TaskGuideService()

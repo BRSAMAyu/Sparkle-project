@@ -194,7 +194,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                       ),
                       title: Text(
                         user.displayName,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontWeight: DS.fontWeightMedium),
                       ),
                       subtitle: Text('@${user.username}'),
                       trailing: Row(

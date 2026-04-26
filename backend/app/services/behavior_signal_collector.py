@@ -1,6 +1,7 @@
 """
 BehaviorSignalCollector - aggregate implicit behavior into cognitive fragments.
 """
+
 from __future__ import annotations
 
 import json
@@ -12,11 +13,14 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cognitive import CognitiveFragment
+from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+from app.models.tool_history import UserToolHistory
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.core.event_bus import EventBus
+from app.services.capsule_favorite_service import CapsuleFavoriteService
 from app.services.cognitive_service import CognitiveService
 from app.services.plan_state_service import PlanStateService
 from app.services.profile_write_service import ProfileWriteService
@@ -110,6 +114,23 @@ class BehaviorSignalCollector:
         await self._track_plan_modification(user_id, plan_id)
         await self._maybe_emit_inactivity_signal(user_id)
 
+    async def handle_tool_history_event(self, event: dict) -> None:
+        user_id_raw = event.get("user_id")
+        tool_name = str(event.get("tool_name") or "").strip()
+        if not user_id_raw or tool_name not in {"breathing", "calculator"}:
+            return
+
+        user_id = UUID(str(user_id_raw))
+        record = await self._latest_tool_history_record(user_id, tool_name)
+        if record is None or not record.success:
+            return
+
+        context = record.context_snapshot or {}
+        if tool_name == "breathing":
+            await self._maybe_emit_breathing_recovery_signal(user_id, record, context)
+        elif tool_name == "calculator":
+            await self._maybe_emit_calculator_load_signal(user_id, record, context)
+
     async def handle_behavior_pattern_event(self, event: dict) -> None:
         user_id = UUID(str(event["user_id"]))
         confidence = float(event.get("confidence_score") or 0.0)
@@ -134,6 +155,7 @@ class BehaviorSignalCollector:
             # --- Card protocol: behavior → intervention record (breakpoint 4 fix) ---
             try:
                 from app.services.card_protocol.behavior_intervention_bridge import BehaviorInterventionBridge
+
                 bridge = BehaviorInterventionBridge(self.db, self.event_bus)
                 record = None
                 if hasattr(self.db, "begin_nested"):
@@ -165,6 +187,7 @@ class BehaviorSignalCollector:
                     intervention_created = True
                     try:
                         from app.models.card_protocol import DeliveryChannel
+
                         if record.delivery_channel == DeliveryChannel.PUSH:
                             pending_push_deliveries.append(
                                 (
@@ -195,6 +218,67 @@ class BehaviorSignalCollector:
                         intervention_id,
                         delivery_exc,
                     )
+
+    async def handle_capsule_favorite_event(self, event: dict) -> None:
+        user_id_raw = event.get("user_id")
+        capsule_id_raw = event.get("capsule_id")
+        if not user_id_raw or not capsule_id_raw:
+            return
+
+        user_id = UUID(str(user_id_raw))
+        capsule_id = UUID(str(capsule_id_raw))
+        action = str(event.get("action") or "updated").strip().lower()
+        signal_key = f"capsule_favorite:{action}:{capsule_id}"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        capsule = await self.db.get(CuriosityCapsule, capsule_id)
+        if capsule is None or capsule.user_id != user_id:
+            return
+
+        verb = {
+            "favorited": "收藏了",
+            "updated": "更新了收藏备注",
+            "unfavorited": "取消收藏了",
+        }.get(action, "更新了")
+        title = str(capsule.title or "未命名胶囊").strip()
+        depth = str(getattr(capsule.depth_level, "value", capsule.depth_level) or "").strip()
+        subject = str(capsule.related_subject or "").strip()
+        content_parts = [f"用户{verb}认知胶囊《{title}》。"]
+        if depth:
+            content_parts.append(f"胶囊深度：{depth}。")
+        if subject:
+            content_parts.append(f"相关主题：{subject}。")
+        method_preferences = CapsuleFavoriteService._extract_method_preferences(
+            capsule,
+            note=str(event.get("note") or "").strip(),
+        )
+        method_summaries = [f"用户偏好{item['label']}" for item in method_preferences if item.get("label")]
+        if method_summaries:
+            content_parts.append(f"方法偏好信号：{'；'.join(method_summaries[:3])}。")
+
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=" ".join(content_parts),
+            source_type="capsule_favorite",
+            resource_type="curiosity_capsule",
+            context_tags={
+                "signal_key": signal_key,
+                "capsule_id": str(capsule_id),
+                "capsule_title": title,
+                "action": action,
+                "depth_level": depth,
+                "related_subject": subject,
+                "method_preferences": method_preferences,
+                "method_preference_summary": method_summaries,
+            },
+            error_tags=["content.preference_signal"],
+            severity=1,
+            task_id=capsule.related_task_id,
+            source_event_id=f"capsule_fav:{action[:8]}:{capsule_id}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
 
     async def _maybe_emit_too_difficult_streak(self, user_id: UUID) -> None:
         signal_key = "too_difficult_streak"
@@ -311,8 +395,7 @@ class BehaviorSignalCollector:
 
         cutoff = _utcnow() - timedelta(days=self.INACTIVITY_DAYS)
         result = await self.db.execute(
-            select(func.count(Task.id))
-            .where(
+            select(func.count(Task.id)).where(
                 Task.user_id == user_id,
                 Task.plan_id == states[0].plan_id,
                 Task.status == TaskStatus.COMPLETED,
@@ -353,6 +436,83 @@ class BehaviorSignalCollector:
             )
         if states:
             await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _latest_tool_history_record(self, user_id: UUID, tool_name: str) -> UserToolHistory | None:
+        result = await self.db.execute(
+            select(UserToolHistory)
+            .where(
+                UserToolHistory.user_id == user_id,
+                UserToolHistory.tool_name == tool_name,
+            )
+            .order_by(desc(UserToolHistory.created_at))
+            .limit(1)
+        )
+        return result.scalars().first()
+
+    async def _maybe_emit_breathing_recovery_signal(
+        self,
+        user_id: UUID,
+        record: UserToolHistory,
+        context: dict,
+    ) -> None:
+        signal_key = "tool_breathing_recovery"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        duration = context.get("duration_minutes") or 0
+        pattern = str(context.get("pattern") or "呼吸练习")
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=f"用户完成了一次 {duration} 分钟的{pattern}，这是主动压力调节和恢复信号。",
+            source_type="tool_history",
+            context_tags={
+                "signal_key": signal_key,
+                "tool_name": record.tool_name,
+                "tool_history_id": record.id,
+                "duration_minutes": duration,
+                "rounds_completed": context.get("rounds_completed"),
+                "pattern": pattern,
+                "used_at": context.get("used_at"),
+            },
+            error_tags=["wellbeing.stress_regulation", "wellbeing.recovery"],
+            severity=1,
+            source_event_id=f"tool_history:breathing:{record.id}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _maybe_emit_calculator_load_signal(
+        self,
+        user_id: UUID,
+        record: UserToolHistory,
+        context: dict,
+    ) -> None:
+        complexity = str(context.get("complexity") or "simple")
+        if complexity not in {"medium", "complex"}:
+            return
+
+        signal_key = f"tool_calculator_{complexity}"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        severity = 2 if complexity == "complex" else 1
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=f"用户完成了一次{complexity}复杂度的计算器演算，表达式内容未被保存。",
+            source_type="tool_history",
+            context_tags={
+                "signal_key": signal_key,
+                "tool_name": record.tool_name,
+                "tool_history_id": record.id,
+                "complexity": complexity,
+                "used_at": context.get("used_at"),
+            },
+            error_tags=["workflow.calculation_load"],
+            severity=severity,
+            source_event_id=f"tool_history:calculator:{record.id}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
 
     async def _signal_on_cooldown(self, user_id: UUID, signal_key: str) -> bool:
         key = self._cooldown_key(user_id, signal_key)
@@ -524,10 +684,7 @@ class BehaviorSignalCollector:
             elif category == TaskFeedbackCategory.JUST_RIGHT.value:
                 buckets["just_right"] += weight
 
-        return {
-            key: round(count / total, 3) if total else 0.0
-            for key, count in buckets.items()
-        }
+        return {key: round(count / total, 3) if total else 0.0 for key, count in buckets.items()}
 
     @staticmethod
     def _task_signal_counter_key(user_id: UUID) -> str:

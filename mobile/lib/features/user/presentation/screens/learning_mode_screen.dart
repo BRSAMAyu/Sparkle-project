@@ -89,7 +89,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
         ),
         child: ContentConstraint(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(DS.spacing16),
+            padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
             child: GraphiteCardSurface(
               surfaceRole: SparkleSurfaceRole.card,
               child: Column(

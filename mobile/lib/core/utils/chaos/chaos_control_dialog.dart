@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 
 class ChaosControlDialog extends StatefulWidget {
   const ChaosControlDialog({super.key});
@@ -65,14 +66,14 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         await _fetchStatus();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('模式已切换: $value')),
+            SparkleSnackBar.success('模式已切换: $value'),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('切换失败: $e')),
+          SparkleSnackBar.error('切换失败: $e'),
         );
       }
     } finally {

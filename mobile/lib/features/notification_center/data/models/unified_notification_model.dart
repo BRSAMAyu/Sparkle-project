@@ -167,6 +167,9 @@ class UnifiedNotification {
 
   bool get isIntervention => sourceType == 'intervention';
   bool get isPush => sourceType == 'push';
+  bool get isAccountabilityStruggleAlert =>
+      type == 'accountability_struggle_alert' ||
+      metadata['kind'] == 'accountability_struggle_alert';
 
   String? get intentType => metadata['intent_type'] as String?;
 
@@ -225,6 +228,23 @@ class UnifiedNotification {
       interactionState != 'dismissed';
 
   bool get canDisablePushCategory => isPush && pushCategory != null;
+
+  bool get canSendAccountabilityEncouragement =>
+      isAccountabilityStruggleAlert &&
+      metadata['encouragement_status'] != 'sent';
+
+  String? get accountabilityTargetName => metadata['target_name'] as String?;
+
+  String get accountabilityEncouragementLabel {
+    final action = metadata['primary_action'];
+    if (action is Map<String, dynamic>) {
+      final label = action['label'] as String?;
+      if (label != null && label.trim().isNotEmpty) {
+        return label.trim();
+      }
+    }
+    return '发个鼓励';
+  }
 
   String get previewText {
     final step = suggestedStep;

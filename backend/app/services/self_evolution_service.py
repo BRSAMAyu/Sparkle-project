@@ -21,6 +21,7 @@ from app.core.business_metrics import (
     PERCEPTIBLE_INSIGHT_SKIPPED_TOTAL,
     snapshot_metric,
 )
+from app.core.i18n import I18n
 from app.models.chat import ChatMessage, MessageRole
 from app.models.cognitive import BehaviorPattern
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
@@ -173,7 +174,7 @@ class StrategyCalibrationService:
             updated = dict(mapping)
             if rule_key in weak_rules:
                 updated["confidence_tier"] = "weak"
-                updated["calibration_note"] = "此建议近期命中率较低，仅供参考。"
+                updated["calibration_note"] = I18n.t("self_evolution.calibration_note_weak", locale="zh")
             adjusted.append(updated)
         return adjusted, calibration
 
@@ -250,11 +251,11 @@ class UnderstandingDepthService:
     @staticmethod
     def _natural_hint(level: str) -> str:
         hints = {
-            "L1": "如果自然，可以顺带一句提到：我已经开始稳定记住你的基础偏好了。",
-            "L2": "如果自然，可以顺带一句提到：我现在不只记住你的偏好，也开始识别你的行为模式了。",
-            "L3": "如果自然，可以顺带一句提到：我现在不只知道你的偏好，还能比较稳定地预判你的执行节奏。",
-            "L4": "如果自然，可以顺带一句提到：我开始能提出更容易被你真正采纳的建议了。",
-            "L5": "如果自然，可以顺带一句提到：我和你的节奏已经开始形成更稳定的共振。",
+            "L1": I18n.t("self_evolution.understanding_depth_l1_unnoticed_hint", locale="zh"),
+            "L2": I18n.t("self_evolution.understanding_depth_l2_unnoticed_hint", locale="zh"),
+            "L3": I18n.t("self_evolution.understanding_depth_l3_unnoticed_hint", locale="zh"),
+            "L4": I18n.t("self_evolution.understanding_depth_l4_unnoticed_hint", locale="zh"),
+            "L5": I18n.t("self_evolution.understanding_depth_l5_unnoticed_hint", locale="zh"),
         }
         return hints.get(level, "")
 
@@ -322,17 +323,17 @@ class UnderstandingDepthService:
             return None
 
         descriptions = {
-            "L1": "我已经开始稳定记住你的基础偏好了。",
-            "L2": "我已经不只知道你的偏好，也开始识别你的行为模式了。",
-            "L3": "我现在不只知道你的偏好，还能更稳定地预判你会怎么执行了。",
-            "L4": "我开始能提出更容易被你真正采纳的建议了。",
-            "L5": "我和你的节奏已经开始形成更稳定的共振。",
+            "L1": I18n.t("self_evolution.upgrade_desc_l1", locale="zh"),
+            "L2": I18n.t("self_evolution.upgrade_desc_l2", locale="zh"),
+            "L3": I18n.t("self_evolution.upgrade_desc_l3", locale="zh"),
+            "L4": I18n.t("self_evolution.upgrade_desc_l4", locale="zh"),
+            "L5": I18n.t("self_evolution.upgrade_desc_l5", locale="zh"),
         }
         payload = build_system_update(
             update_type="understanding_depth_upgraded",
             category="evolution",
-            title="我对你的理解又进了一层",
-            description=descriptions.get(snapshot.level, "我对你的理解又更稳定了一些。"),
+            title=I18n.t("self_evolution.upgrade_title", locale="zh"),
+            description=descriptions.get(snapshot.level, I18n.t("self_evolution.upgrade_desc_fallback", locale="zh")),
             priority="low",
             metadata={
                 "evolution_kind": "understanding_depth",

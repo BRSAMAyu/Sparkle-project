@@ -12,7 +12,7 @@ import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
-import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class PersonaOnboardingScreen extends ConsumerStatefulWidget {
@@ -61,45 +61,46 @@ class _PersonaOnboardingScreenState
         trackOverride: _personaTrack(),
       ),
       child: SparklePageScaffold(
-      role: SparklePageRole.settings,
-      appBar: AppBar(
-        title: Text(l10n.personaGuide),
-      ),
-      child: ContentConstraint(
-        child: GraphiteCardSurface(
-          surfaceRole: SparkleSurfaceRole.card,
-          margin: const EdgeInsets.all(DS.spacing16),
-          child: Stepper(
-            currentStep: _currentStep,
-            onStepContinue: _submitting
-                ? null
-                : () {
-                    unawaited(_handleContinue(steps.length));
-                  },
-            onStepCancel: _submitting ? null : _handleBack,
-            controlsBuilder: (context, details) {
-              final isLast = _currentStep == steps.length - 1;
-              return Row(
-                children: [
-                  SparkleButton(
-                    label: isLast ? l10n.personaComplete : l10n.personaNextStep,
-                    onPressed: details.onStepContinue,
-                    loading: _submitting,
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  if (_currentStep > 0)
+        role: SparklePageRole.settings,
+        appBar: AppBar(
+          title: Text(l10n.personaGuide),
+        ),
+        child: ContentConstraint(
+          child: GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            margin: const EdgeInsets.symmetric(vertical: DS.spacing16),
+            child: Stepper(
+              currentStep: _currentStep,
+              onStepContinue: _submitting
+                  ? null
+                  : () {
+                      unawaited(_handleContinue(steps.length));
+                    },
+              onStepCancel: _submitting ? null : _handleBack,
+              controlsBuilder: (context, details) {
+                final isLast = _currentStep == steps.length - 1;
+                return Row(
+                  children: [
                     SparkleButton(
-                      label: l10n.personaPreviousStep,
-                      variant: ButtonVariant.ghost,
-                      onPressed: details.onStepCancel,
+                      label:
+                          isLast ? l10n.personaComplete : l10n.personaNextStep,
+                      onPressed: details.onStepContinue,
+                      loading: _submitting,
                     ),
-                ],
-              );
-            },
-            steps: steps,
+                    const SizedBox(width: DS.spacing12),
+                    if (_currentStep > 0)
+                      SparkleButton(
+                        label: l10n.personaPreviousStep,
+                        variant: ButtonVariant.ghost,
+                        onPressed: details.onStepCancel,
+                      ),
+                  ],
+                );
+              },
+              steps: steps,
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -232,7 +233,8 @@ class _PersonaOnboardingScreenState
         label: Text(label),
         selected: _learningStyle == value,
         onSelected: (_) {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           setState(() => _learningStyle = value);
           _schedulePreview();
         },
@@ -242,7 +244,8 @@ class _PersonaOnboardingScreenState
         label: Text(label),
         selected: _goalType == value,
         onSelected: (_) {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           setState(() => _goalType = value);
           _schedulePreview();
         },
@@ -252,7 +255,8 @@ class _PersonaOnboardingScreenState
         label: Text(label),
         selected: _knowledgeLevel == value,
         onSelected: (_) {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
           setState(() => _knowledgeLevel = value);
           _schedulePreview();
         },
@@ -313,8 +317,7 @@ class _PersonaOnboardingScreenState
     } catch (_) {
       if (!mounted || requestId != _previewRequestId) return;
       setState(() {
-        _previewMessage =
-            '我已经理解你想先推进「$goal」，接下来会根据你的目标和时间给出第一版学习建议。';
+        _previewMessage = '我已经理解你想先推进「$goal」，接下来会根据你的目标和时间给出第一版学习建议。';
         _previewLoading = false;
       });
     }
@@ -358,7 +361,7 @@ class _PersonaOnboardingScreenState
                 Text(
                   'AI 已开始理解你的目标',
                   style: textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: DS.spacing4),
@@ -402,7 +405,6 @@ class _PersonaOnboardingScreenState
         'response_depth': _depthPreference,
         'curiosity_preference': _curiosityPreference,
       });
-      await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
       ref.invalidate(transparentProfileProvider);
       ref.invalidate(profileContextProvider);
       ref.invalidate(inferredPreferencesProvider);
@@ -411,11 +413,10 @@ class _PersonaOnboardingScreenState
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
         );
-        if (firstMessage != null && firstMessage.isNotEmpty) {
-          context.go('/chat', extra: {'initial_ai_message': firstMessage});
-        } else {
-          context.go('/home');
-        }
+        context.go(
+          UserRoutes.modelingChat,
+          extra: {'post_onboarding_message': firstMessage},
+        );
       }
     } finally {
       if (mounted) {

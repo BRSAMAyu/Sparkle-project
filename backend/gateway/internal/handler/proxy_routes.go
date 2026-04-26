@@ -98,6 +98,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/start", h.proxyWithHeaders)
 		tasks.POST("/:id/complete", h.proxyWithHeaders)
 		tasks.POST("/:id/abandon", h.proxyWithHeaders)
+		// route-tier: authed
+		tasks.POST("/:id/snooze", h.proxyWithHeaders)
+		// route-tier: authed
+		tasks.POST("/:id/too-hard", h.proxyWithHeaders)
+		// route-tier: authed
+		tasks.POST("/:id/too_hard", h.proxyWithHeaders)
+		// route-tier: authed
+		tasks.POST("/:id/skip", h.proxyWithHeaders)
 		tasks.POST("/:id/feedback", h.proxyWithHeaders)
 		// route-tier: authed
 		tasks.GET("/:id/feedback", h.proxyWithHeaders)
@@ -479,6 +487,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered growth proxy routes")
 
+	// ==================== Exam Sprint Routes ====================
+	// route-tier: authed
+	examSprint := api.Group("/exam-sprint")
+	examSprint.Use(authMiddleware)
+	{
+		// route-tier: authed
+		examSprint.POST("/intake", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered exam sprint proxy routes")
+
 	// ==================== Background Tasks Routes ====================
 	backgroundTasks := api.Group("/background-tasks")
 	backgroundTasks.Use(authMiddleware)
@@ -816,6 +834,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		inventory.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered inventory proxy routes")
+
+	// ==================== Aurora Routes ====================
+	aurora := api.Group("/aurora")
+	aurora.Use(authMiddleware)
+	{
+		aurora.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered aurora proxy routes (catch-all)")
+
+	// Health routes are handled locally by the gateway (setup.go) — do not proxy
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers

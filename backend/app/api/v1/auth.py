@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -66,6 +67,7 @@ LOGOUT_RATE_LIMIT = "500/15minutes" if settings.DEBUG else "30/15minutes"
 FORGOT_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "3/15minutes"
 VERIFY_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
 RESET_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
+GUEST_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "5/15minutes"
 
 PASSWORD_RESET_TTL_SECONDS = 15 * 60
 EMAIL_VERIFY_TTL_SECONDS = 24 * 60 * 60
@@ -796,7 +798,7 @@ async def verify_email(
 
 
 @router.post("/guest", response_model=Any)
-@limiter.limit("100/15minutes")
+@limiter.limit(GUEST_RATE_LIMIT)
 async def guest_login(
     request: Request,
     guest_id: str = None,
@@ -834,22 +836,40 @@ async def guest_login(
             is_active=True,
         )
         db.add(user)
-        await db.flush()  # 获取 user.id 但不 commit，保持事务
+        try:
+            await db.flush()  # 获取 user.id 但不 commit，保持事务
+        except IntegrityError:
+            # Concurrent INSERT with same guest_id — user already exists
+            await db.rollback()
+            result = await db.execute(select(User).where(User.username == guest_id))
+            user = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试")
+            is_new_guest = False
 
         # 为新游客播种演示数据，确保完整体验
-        # 整个 user 创建 + seed 在同一个事务中，失败全部回滚
+        # 先 commit 用户保证用户存在，再 seed 演示数据
         try:
             from app.services.guest_seed_service import seed_guest_user_data
             await seed_guest_user_data(db, user)
             await db.commit()
             await db.refresh(user)
         except Exception as e:
-            logger.error(f"Guest seed failed, rolling back: {e}")
+            logger.warning(f"Guest seed failed on first attempt, committing user and retrying: {e}")
+            # Rollback everything (including failed seed data), then save user alone
             await db.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail="访客账号初始化失败，请稍后重试",
-            )
+            # Re-merge user into clean session and commit just the user
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            # Retry seed in a fresh transaction
+            try:
+                await seed_guest_user_data(db, user)
+                await db.commit()
+                await db.refresh(user)
+            except Exception as retry_err:
+                logger.error(f"Guest seed retry also failed (non-fatal, user exists): {retry_err}")
+                # Don't raise — user can still use the app without demo data
     else:
         # 已有访客账户 — 检查数据是否完整（seed 可能之前失败过）
         from app.services.guest_seed_service import seed_guest_user_data
@@ -858,9 +878,12 @@ async def guest_login(
             await db.commit()
             await db.refresh(user)
         except Exception as e:
-            logger.warning(f"Guest re-seed failed (non-fatal): {e}")
-            await db.rollback()
-            # rollback 后需要重新加载 user 对象（session 状态已重置）
+            logger.warning(f"Guest re-seed failed (non-fatal, user can still proceed): {e}")
+            try:
+                await db.rollback()
+            except Exception:
+                pass
+            # Reload user after rollback
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:

@@ -8,8 +8,11 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCard extends ConsumerStatefulWidget {
@@ -103,19 +106,20 @@ class _TaskCardState extends ConsumerState<TaskCard> {
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.dragDrop),
         );
+        final l10n = context.l10n;
         return await showDialog<bool>(
               context: context,
               builder: (dialogContext) => AlertDialog(
-                title: const Text('确认完成任务？'),
-                content: Text('将“${widget.task.title}”标记为已完成。'),
+                title: Text(l10n.taskConfirmCompleteTitle),
+                content: Text(l10n.taskConfirmCompleteBody(widget.task.title)),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: const Text('取消'),
+                    child: Text(l10n.cancel),
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
-                    child: const Text('确认'),
+                    child: Text(l10n.confirm),
                   ),
                 ],
               ),
@@ -157,7 +161,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
               ),
               const SizedBox(width: DS.spacing6),
               Text(
-                '完成',
+                context.l10n.taskActionComplete,
                 style: TextStyle(
                   color: _success(context),
                   fontWeight: DS.fontWeightBold,
@@ -183,6 +187,11 @@ class _TaskCardState extends ConsumerState<TaskCard> {
             type: MaterialType.transparency,
             child: SparkleTappable(
               onTap: widget.onTap,
+              onLongPress: () => showTaskQuickActionMenu(
+                context: context,
+                ref: ref,
+                task: widget.task,
+              ),
               borderRadius: _radius(context),
               child: RepaintBoundary(
                 child: Container(
@@ -304,6 +313,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                       TaskPill(
                                                         type: widget.task.type,
                                                         label: _statusLabel(
+                                                          context.l10n,
                                                           widget.task.status,
                                                         ),
                                                         tone: _statusTone(
@@ -367,7 +377,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            '${widget.task.estimatedMinutes} 分钟',
+                                            context.l10n.taskEstimatedMinutesValue(widget.task.estimatedMinutes),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
@@ -433,6 +443,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                 height: 1.35,
                                               ),
                                         ),
+                                      ],
+                                      if (widget.task.knowledgeNodeId != null) ...[
+                                        const SizedBox(height: 8),
+                                        _SourceContextChip(task: widget.task),
                                       ],
                                     ],
                                   ),
@@ -556,6 +570,7 @@ TaskPillTone _statusTone(TaskStatus status) {
     case TaskStatus.pending:
       return TaskPillTone.brand;
     case TaskStatus.inProgress:
+    case TaskStatus.stuck:
       return TaskPillTone.brand;
     case TaskStatus.completed:
       return TaskPillTone.success;
@@ -583,15 +598,51 @@ String _typeLabel(TaskType type) {
   }
 }
 
-String _statusLabel(TaskStatus status) {
+String _statusLabel(AppLocalizations l10n, TaskStatus status) {
   switch (status) {
     case TaskStatus.pending:
-      return '待开始';
+      return l10n.taskStatusPending;
     case TaskStatus.inProgress:
-      return '进行中';
+      return l10n.taskStatusInProgress;
+    case TaskStatus.stuck:
+      return l10n.taskStatusStuck;
     case TaskStatus.completed:
-      return '已完成';
+      return l10n.taskStatusCompleted;
     case TaskStatus.abandoned:
-      return '已放弃';
+      return l10n.taskStatusAbandoned;
+  }
+}
+
+class _SourceContextChip extends StatelessWidget {
+  const _SourceContextChip({required this.task});
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasGuide = (task.guideContent ?? '').isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_stories, size: 14, color: DS.brandPrimary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              hasGuide ? 'Linked to knowledge source' : 'Knowledge-linked task',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DS.brandPrimary,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

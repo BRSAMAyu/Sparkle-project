@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import re
+from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 
+from app.core.i18n import I18n
 from app.core.metrics import (
     ERROR_REPLAN_BRIDGE_BLOCKED_BY_GATE_TOTAL,
     ERROR_REPLAN_BRIDGE_ERROR_TOTAL,
@@ -15,9 +19,9 @@ from app.core.metrics import (
 )
 from app.models.card_protocol import InterventionRecord
 from app.models.error_book import ErrorRecord
-from app.models.galaxy import UserNodeStatus
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan
-from app.models.task import Task, TaskStatus
+from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionTriggerType
@@ -25,7 +29,6 @@ from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.route_history_service import RouteHistoryService
-
 
 # Preserve the Stage 34 patch target while Stage 38 owns the live kill-switch path.
 AuroraStage34KillSwitchService = AuroraStage38KillSwitchService
@@ -50,21 +53,128 @@ class ErrorPressureDecision:
     recent_error_count: int
 
 
+@dataclass(frozen=True)
+class MistakeClusterMatch:
+    cluster_id: str
+    cluster_label: str
+    related_nodes: tuple[str, ...]
+    related_node_labels: tuple[str, ...]
+    source: str
+    repair_strategy: str
+    task_template_id: str
+    pack_id: str | None
+    streak_count: int
+    matched_keywords: tuple[str, ...]
+    matched_node_names: tuple[str, ...]
+    db_node_ids: tuple[str, ...]
+
+
 class ErrorReplanBridge:
     """Separates ErrorCreated -> immediate plan-health evaluation from mastery sync."""
 
     LOW_MASTERY_THRESHOLD = 50.0
+    REPLAN_MASTERY_THRESHOLD = 40.0
     ERROR_PRESSURE_LOOKBACK_DAYS = 7
     ERROR_PRESSURE_TRIGGER_COUNT = 3
+    RECURRING_ERROR_LOOKBACK_DAYS = 30
+    RECURRING_ERROR_TRIGGER_COUNT = 3
+    HIGH_SEVERITY_TRIGGER_COUNT = 2
     COOLDOWN_HOURS = 24
     TRIGGERING_ERROR_TYPES = {
         "concept_confusion",
-        "knowledge_gap",
-        "procedural_error",
-        "careless_mistake",
-        "time_management",
-        "strategy_mismatch",
+        "repeated_mistake",
+        "baseline_gap",
+        "comprehension_failure",
+        "time_pressure_miss",
+        "knowledge_transfer_fail",
+        "prerequisite_missing",
+        "careless_error",
     }
+    REPLAN_ELIGIBLE_ERROR_TYPES = TRIGGERING_ERROR_TYPES - {"careless_error"}
+    HIGH_SEVERITY_VALUES = {"high", "critical", "severe", "urgent", "error", "3", "4", "5"}
+    SPECIALIZED_REPAIR_DURATION_MINUTES = 30
+    SPECIALIZED_REPAIR_SCHEDULE_OPTIONS = ("today", "tomorrow")
+    RECURRING_CAUSE_INTERVENTIONS: dict[str, tuple[str, str]] = {
+        "trigger_condition_confusion": (
+            "error_bridge.recurring_cause_confusion_hypothesis",
+            "error_bridge.recurring_cause_confusion_intervention",
+        ),
+        "state_transition_confusion": (
+            "error_bridge.recurring_cause_transition_hypothesis",
+            "error_bridge.recurring_cause_transition_intervention",
+        ),
+        "concept_boundary_confusion": (
+            "error_bridge.recurring_cause_boundary_hypothesis",
+            "error_bridge.recurring_cause_boundary_intervention",
+        ),
+    }
+    NETWORK_PACK_SUBJECT = "计算机网络"
+    NETWORK_PACK_SIGNAL_TOKENS = (
+        "计算机网络",
+        "计网",
+        "network",
+        "tcp",
+        "udp",
+        "ip",
+        "三次握手",
+        "四次挥手",
+        "拥塞控制",
+        "滑动窗口",
+        "确认号",
+        "ack",
+        "syn",
+        "fin",
+    )
+    PACK_NODE_HINTS: dict[str, tuple[str, ...]] = {
+        "cn.tcp_basics": ("tcp基础", "tcp首部", "端口号", "tcp特点"),
+        "cn.tcp_three_way": ("三次握手", "syn", "synack", "建立连接"),
+        "cn.tcp_four_way": ("四次挥手", "fin", "timewait", "2msl", "关闭连接"),
+        "cn.tcp_reliable_transport": ("ack", "确认号", "累计确认", "序号", "seq", "重传"),
+        "cn.tcp_flow_control": ("滑动窗口", "流量控制", "rwnd", "窗口大小"),
+        "cn.tcp_congestion_control": (
+            "拥塞控制",
+            "慢启动",
+            "拥塞避免",
+            "快重传",
+            "快恢复",
+            "重复ack",
+            "3重复ack",
+            "cwnd",
+            "ssthresh",
+            "超时重传",
+        ),
+    }
+    GENERIC_MISTAKE_FALLBACKS: tuple[dict[str, Any], ...] = (
+        {
+            "cluster_id": "generic.state_transition",
+            "label": "error_bridge.generic_cluster_label_state_transition",
+            "keywords": (
+                "状态变化",
+                "状态转换",
+                "状态切换",
+                "流程变化",
+                "流程图",
+                "state transition",
+                "transition",
+            ),
+            "repair_strategy": "error_bridge.generic_repair_state_transition",
+            "task_template_id": "process_trace_card",
+        },
+        {
+            "cluster_id": "generic.unit_conversion",
+            "label": "error_bridge.generic_cluster_label_unit_conversion",
+            "keywords": ("单位换算", "bit", "byte", "kb", "mb", "gb", "ms", "秒", "字节", "比特"),
+            "repair_strategy": "error_bridge.generic_repair_unit_conversion",
+            "task_template_id": "calculation_drill_card",
+        },
+        {
+            "cluster_id": "generic.formula_application",
+            "label": "error_bridge.generic_cluster_label_formula_application",
+            "keywords": ("公式", "代入", "变形", "推导", "计算步骤"),
+            "repair_strategy": "error_bridge.generic_repair_formula_application",
+            "task_template_id": "calculation_drill_card",
+        },
+    )
 
     def __init__(self, db, redis=None) -> None:
         self.db = db
@@ -76,6 +186,7 @@ class ErrorReplanBridge:
         user_id: UUID,
         error_id: UUID,
         linked_node_ids: list[UUID],
+        locale: str = "zh",
     ) -> dict[str, object]:
         mode = "shadow"
         try:
@@ -97,9 +208,42 @@ class ErrorReplanBridge:
                     reason=f"unsupported_error_type:{self._extract_error_type(error)}",
                 )
 
+            try:
+                recent_error_count = await self._count_recent_triggering_errors(
+                    user_id=user_id,
+                    node_ids=normalized_node_ids,
+                    days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
+                )
+                mastery_update = None
+                await self._record_error_mastery_echo(
+                    error=error,
+                    mastery_update=mastery_update,
+                    fallback_node_id=normalized_node_ids[0],
+                )
+                node_mastery_scores = await self._get_node_mastery_scores(
+                    user_id=user_id,
+                    node_ids=normalized_node_ids,
+                )
+                is_new_user = await self._is_new_user(user_id)
+            except Exception as exc:
+                raise BridgeEvaluationError("stage34_bridge_evaluation_failed") from exc
+
+            if error_type == "careless_error":
+                return self._blocked(
+                    mode=mode,
+                    gate="careless_error_no_replan",
+                    mastery_update=mastery_update,
+                    recent_error_count=recent_error_count,
+                )
+
             plan_ids = await self._find_relevant_active_plan_ids(user_id=user_id, node_ids=normalized_node_ids)
             if not plan_ids:
-                return self._blocked(mode=mode, gate="no_relevant_active_plan")
+                return self._blocked(
+                    mode=mode,
+                    gate="no_relevant_active_plan",
+                    mastery_update=mastery_update,
+                    recent_error_count=recent_error_count,
+                )
 
             eligible_plan_ids = await self._filter_plan_ids_by_cooldown(
                 user_id=user_id,
@@ -107,30 +251,86 @@ class ErrorReplanBridge:
                 error_type=error_type,
             )
             if not eligible_plan_ids:
-                return self._blocked(mode=mode, gate="trigger_cooldown_active")
-
-            low_mastery_nodes = await self._find_low_mastery_nodes(user_id=user_id, node_ids=normalized_node_ids)
-            if not low_mastery_nodes:
-                return self._blocked(mode=mode, gate="mastery_not_low")
-
-            try:
-                is_new_user = await self._is_new_user(user_id)
-                recent_error_count = await self._count_recent_triggering_errors(
-                    user_id=user_id,
-                    node_ids=low_mastery_nodes,
-                    days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
+                return self._blocked(
+                    mode=mode,
+                    gate="trigger_cooldown_active",
+                    mastery_update=mastery_update,
+                    recent_error_count=recent_error_count,
                 )
-            except Exception as exc:
-                raise BridgeEvaluationError("stage34_bridge_evaluation_failed") from exc
 
+            specialized_match = await self._build_specialized_repair_match(
+                user_id=user_id,
+                error=error,
+                fallback_node_ids=normalized_node_ids,
+                locale=locale,
+            )
+            if specialized_match is not None and specialized_match.streak_count >= self.ERROR_PRESSURE_TRIGGER_COUNT:
+                primary_plan_id = await self._select_primary_plan_id(user_id=user_id, plan_ids=eligible_plan_ids)
+                repair_task_ids = await self._insert_next_day_repair_tasks(
+                    plan_ids={primary_plan_id} if primary_plan_id else set(),
+                    error=error,
+                    fallback_node_ids=normalized_node_ids,
+                    error_type=error_type,
+                )
+                intervention_id, notification_id = await self._create_specialized_repair_intervention(
+                    user_id=user_id,
+                    error_type=error_type,
+                    recent_error_count=recent_error_count,
+                    plan_id=primary_plan_id,
+                    match=specialized_match,
+                    cohort_profile=await self._get_cohort_profile(user_id),
+                    locale=locale,
+                )
+                logger.info(
+                    "ErrorReplanBridge: proposed specialized repair for user={} error={} cluster={} streak={} plan={}",
+                    user_id,
+                    error_id,
+                    specialized_match.cluster_id,
+                    specialized_match.streak_count,
+                    primary_plan_id,
+                )
+                ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL.labels(mode=mode).inc()
+                await self._submit_weak_node_claim(
+                    user_id=user_id,
+                    error_node_id=self._primary_error_node_id(error, normalized_node_ids),
+                    plan_id=primary_plan_id,
+                )
+                return {
+                    "triggered": True,
+                    "reason": "specialized_error_repair",
+                    "plan_ids": [str(primary_plan_id)] if primary_plan_id else [],
+                    "recent_error_count": recent_error_count,
+                    "same_cluster_streak": specialized_match.streak_count,
+                    "repair_cluster_id": specialized_match.cluster_id,
+                    "repair_cluster_label": specialized_match.cluster_label,
+                    "repair_cluster_source": specialized_match.source,
+                    "threshold_applied": self.ERROR_PRESSURE_TRIGGER_COUNT,
+                    "is_new_user": is_new_user,
+                    "mastery_update": mastery_update,
+                    "intervention_id": intervention_id,
+                    "notification_id": notification_id,
+                    "repair_task_ids": repair_task_ids,
+                    "mode": mode,
+                }
+
+            low_mastery_nodes = [
+                node_id
+                for node_id in normalized_node_ids
+                if node_mastery_scores.get(node_id, 100.0) < self.REPLAN_MASTERY_THRESHOLD
+            ]
+            high_severity_decision = ErrorPressureDecision(
+                triggered=self._is_high_severity(error) and recent_error_count >= self.HIGH_SEVERITY_TRIGGER_COUNT,
+                threshold=self.HIGH_SEVERITY_TRIGGER_COUNT,
+                recent_error_count=recent_error_count,
+            )
             legacy_decision = ErrorPressureDecision(
-                triggered=recent_error_count >= self.ERROR_PRESSURE_TRIGGER_COUNT,
+                triggered=bool(low_mastery_nodes) and recent_error_count >= self.ERROR_PRESSURE_TRIGGER_COUNT,
                 threshold=self.ERROR_PRESSURE_TRIGGER_COUNT,
                 recent_error_count=recent_error_count,
             )
             stage34_threshold = 1 if is_new_user else self.ERROR_PRESSURE_TRIGGER_COUNT
             stage34_decision = ErrorPressureDecision(
-                triggered=recent_error_count >= stage34_threshold,
+                triggered=bool(low_mastery_nodes) and recent_error_count >= stage34_threshold,
                 threshold=stage34_threshold,
                 recent_error_count=recent_error_count,
             )
@@ -151,14 +351,23 @@ class ErrorReplanBridge:
             else:
                 effective_decision = legacy_decision
 
+            if high_severity_decision.triggered:
+                effective_decision = high_severity_decision
+
             if not effective_decision.triggered:
+                gate = (
+                    "mastery_not_low"
+                    if not low_mastery_nodes and not high_severity_decision.triggered
+                    else "insufficient_error_pressure"
+                )
                 return self._blocked(
                     mode=mode,
-                    gate="insufficient_error_pressure",
+                    gate=gate,
                     plan_ids=[],
                     recent_error_count=recent_error_count,
                     threshold_applied=effective_decision.threshold,
                     is_new_user=is_new_user,
+                    mastery_update=mastery_update,
                 )
 
             replanner = AdaptiveReplanner(self.db, self.redis)
@@ -174,10 +383,16 @@ class ErrorReplanBridge:
                 except Exception as exc:
                     raise PlanHealthError(f"plan_health_eval_failed:{plan_id}") from exc
                 triggered_plan_ids.append(str(plan_id))
+            repair_task_ids = await self._insert_next_day_repair_tasks(
+                plan_ids=eligible_plan_ids,
+                error=error,
+                fallback_node_ids=normalized_node_ids,
+                error_type=error_type,
+            )
 
             intervention_id = await self._create_error_intervention_record(
                 user_id=user_id,
-                low_mastery_nodes=low_mastery_nodes,
+                low_mastery_nodes=low_mastery_nodes or normalized_node_ids,
                 recent_error_count=recent_error_count,
                 plan_ids=triggered_plan_ids,
                 error_type=error_type,
@@ -185,9 +400,10 @@ class ErrorReplanBridge:
 
             await self._notify_plan_adjusted(
                 user_id=user_id,
-                low_mastery_nodes=low_mastery_nodes,
+                low_mastery_nodes=low_mastery_nodes or normalized_node_ids,
                 recent_error_count=recent_error_count,
                 intervention_id=intervention_id,
+                locale=locale,
             )
 
             logger.info(
@@ -200,6 +416,11 @@ class ErrorReplanBridge:
                 effective_decision.threshold,
             )
             ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL.labels(mode=mode).inc()
+            await self._submit_weak_node_claim(
+                user_id=user_id,
+                error_node_id=self._primary_error_node_id(error, low_mastery_nodes or normalized_node_ids),
+                plan_id=triggered_plan_ids[0] if triggered_plan_ids else None,
+            )
             return {
                 "triggered": True,
                 "reason": "error_pressure_bridge",
@@ -207,23 +428,1009 @@ class ErrorReplanBridge:
                 "recent_error_count": recent_error_count,
                 "threshold_applied": effective_decision.threshold,
                 "is_new_user": is_new_user,
+                "mastery_update": mastery_update,
+                "repair_task_ids": repair_task_ids,
                 "mode": mode,
             }
         except BridgeEvaluationError as exc:
             ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="BridgeEvaluationError", mode=mode).inc()
             logger.warning("ErrorReplanBridge evaluation failed for user {}: {}", user_id, exc)
-            await self._notify_bridge_failure(user_id=user_id, category="BridgeEvaluationError", error=str(exc))
+            await self._notify_bridge_failure(user_id=user_id, category="BridgeEvaluationError", error=str(exc), locale=locale)
             return {"triggered": False, "reason": "bridge_evaluation_error", "plan_ids": []}
         except PlanHealthError as exc:
             ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="PlanHealthError", mode=mode).inc()
             logger.warning("ErrorReplanBridge plan-health evaluation failed for user {}: {}", user_id, exc)
-            await self._notify_bridge_failure(user_id=user_id, category="PlanHealthError", error=str(exc))
+            await self._notify_bridge_failure(user_id=user_id, category="PlanHealthError", error=str(exc), locale=locale)
             return {"triggered": False, "reason": "plan_health_error", "plan_ids": []}
         except Exception as exc:
             ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="UnknownError", mode=mode).inc()
             logger.exception("ErrorReplanBridge unknown failure for user {}", user_id)
-            await self._notify_bridge_failure(user_id=user_id, category="UnknownError", error=str(exc))
+            await self._notify_bridge_failure(user_id=user_id, category="UnknownError", error=str(exc), locale=locale)
             return {"triggered": False, "reason": "unknown_error", "plan_ids": []}
+
+    async def _build_specialized_repair_match(
+        self,
+        *,
+        user_id: UUID,
+        error: ErrorRecord,
+        fallback_node_ids: list[UUID],
+        locale: str = "zh",
+    ) -> MistakeClusterMatch | None:
+        recent_errors = await self._load_recent_user_errors(
+            user_id=user_id,
+            days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
+            limit=8,
+        )
+        if not recent_errors:
+            recent_errors = [error]
+
+        node_name_map = await self._load_node_name_map_for_errors(recent_errors)
+        latest_match = self._match_sprint_pack_cluster(error, node_name_map)
+        if latest_match is None:
+            latest_match = self._match_generic_cluster(error, node_name_map, fallback_node_ids=fallback_node_ids, locale=locale)
+        if latest_match is None:
+            return None
+
+        streak = 0
+        for recent_error in recent_errors:
+            analysis = recent_error.latest_analysis if isinstance(recent_error.latest_analysis, dict) else {}
+            if self._classify_trigger_type_from_analysis(analysis) not in self.REPLAN_ELIGIBLE_ERROR_TYPES:
+                break
+
+            candidate = self._match_sprint_pack_cluster(recent_error, node_name_map)
+            if candidate is None:
+                candidate = self._match_generic_cluster(
+                    recent_error,
+                    node_name_map,
+                    fallback_node_ids=[
+                        self._coerce_uuid(value)
+                        for value in (recent_error.linked_knowledge_node_ids or [])
+                        if self._coerce_uuid(value) is not None
+                    ],
+                    locale=locale,
+                )
+            if candidate is None or candidate.cluster_id != latest_match.cluster_id:
+                break
+            streak += 1
+
+        if streak < self.ERROR_PRESSURE_TRIGGER_COUNT:
+            return None
+
+        return MistakeClusterMatch(
+            cluster_id=latest_match.cluster_id,
+            cluster_label=latest_match.cluster_label,
+            related_nodes=latest_match.related_nodes,
+            related_node_labels=latest_match.related_node_labels,
+            source=latest_match.source,
+            repair_strategy=latest_match.repair_strategy,
+            task_template_id=latest_match.task_template_id,
+            pack_id=latest_match.pack_id,
+            streak_count=streak,
+            matched_keywords=latest_match.matched_keywords,
+            matched_node_names=latest_match.matched_node_names,
+            db_node_ids=latest_match.db_node_ids,
+        )
+
+    async def _load_recent_user_errors(
+        self,
+        *,
+        user_id: UUID,
+        days: int,
+        limit: int = 8,
+    ) -> list[ErrorRecord]:
+        cutoff = _utcnow() - timedelta(days=days)
+        result = await self.db.execute(
+            select(ErrorRecord)
+            .where(
+                ErrorRecord.user_id == user_id,
+                ErrorRecord.is_deleted.is_(False),
+                ErrorRecord.created_at >= cutoff,
+            )
+            .order_by(desc(ErrorRecord.created_at))
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def _analyze_recurring_errors(self, user_id: UUID | str, node_id: UUID | str) -> dict[str, Any]:
+        """Detect same-cause error recurrence for one knowledge node over the last 30 days."""
+        coerced_user_id = self._coerce_uuid(user_id)
+        node_key = self._normalize_node_key(node_id)
+        if coerced_user_id is None or not node_key:
+            return {
+                "recurring": False,
+                "node_id": str(node_id or "").strip(),
+                "lookback_days": self.RECURRING_ERROR_LOOKBACK_DAYS,
+                "reason": "invalid_user_or_node",
+            }
+
+        recent_errors = await self._load_recent_user_errors(
+            user_id=coerced_user_id,
+            days=self.RECURRING_ERROR_LOOKBACK_DAYS,
+            limit=200,
+        )
+        cause_counts: Counter[str] = Counter()
+        matched_errors_by_cause: dict[str, list[ErrorRecord]] = {}
+
+        for error in recent_errors:
+            if not self._error_matches_node_key(error, node_key):
+                continue
+            cause_category = self._extract_cause_category(error)
+            if not cause_category:
+                continue
+            cause_counts[cause_category] += 1
+            matched_errors_by_cause.setdefault(cause_category, []).append(error)
+
+        if not cause_counts:
+            return {
+                "recurring": False,
+                "node_id": str(node_id),
+                "lookback_days": self.RECURRING_ERROR_LOOKBACK_DAYS,
+                "matched_error_count": 0,
+            }
+
+        cause_category, occurrence_count = cause_counts.most_common(1)[0]
+        matched_errors = matched_errors_by_cause.get(cause_category, [])
+        payload: dict[str, Any] = {
+            "recurring": occurrence_count >= self.RECURRING_ERROR_TRIGGER_COUNT,
+            "node_id": str(node_id),
+            "cause_category": cause_category,
+            "occurrence_count": occurrence_count,
+            "threshold": self.RECURRING_ERROR_TRIGGER_COUNT,
+            "lookback_days": self.RECURRING_ERROR_LOOKBACK_DAYS,
+            "recent_error_ids": [str(error.id) for error in matched_errors[:5]],
+        }
+        latest_error = matched_errors[0] if matched_errors else None
+        if latest_error is not None and latest_error.created_at is not None:
+            payload["latest_error_at"] = latest_error.created_at.isoformat()
+
+        if payload["recurring"]:
+            hypothesis, intervention = self._recurring_cause_guidance(cause_category, node_id=str(node_id), locale="zh")
+            payload.update(
+                {
+                    "root_cause_hypothesis": hypothesis,
+                    "recommended_intervention": intervention,
+                }
+            )
+        return payload
+
+    def _error_matches_node_key(self, error: ErrorRecord, node_key: str) -> bool:
+        if not node_key:
+            return False
+
+        affected_node_id = self._normalize_node_key(getattr(error, "affected_node_id", None))
+        if affected_node_id and affected_node_id == node_key:
+            return True
+
+        linked_node_ids = {
+            self._normalize_node_key(value)
+            for value in (getattr(error, "linked_knowledge_node_ids", None) or [])
+            if value is not None
+        }
+        if node_key in linked_node_ids:
+            return True
+
+        suggested_concepts = {
+            self._normalize_node_key(value)
+            for value in (getattr(error, "suggested_concepts", None) or [])
+            if value is not None
+        }
+        if node_key in suggested_concepts:
+            return True
+
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        candidate_values: list[Any] = []
+        for key in (
+            "node_id",
+            "node_ids",
+            "knowledge_node_id",
+            "knowledge_node_ids",
+            "knowledge_node",
+            "knowledge_nodes",
+            "concept_id",
+            "concept_ids",
+            "concept",
+            "concepts",
+            "error_concept",
+            "weak_concept",
+            "pack_node_id",
+            "sprint_pack_node_id",
+            "related_node",
+            "related_nodes",
+            "related_node_ids",
+        ):
+            if key in analysis:
+                candidate_values.extend(self._flatten_node_candidates(analysis.get(key)))
+        return any(self._normalize_node_key(value) == node_key for value in candidate_values)
+
+    def _extract_cause_category(self, error: ErrorRecord) -> str | None:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        for key in (
+            "cause_category",
+            "mistake_cause_category",
+            "error_cause_category",
+            "root_cause_category",
+            "misconception_category",
+        ):
+            value = str(analysis.get(key) or "").strip().lower()
+            if value:
+                return re.sub(r"[^\w]+", "_", value).strip("_")
+        return None
+
+    def _recurring_cause_guidance(self, cause_category: str, *, node_id: str, locale: str = "zh") -> tuple[str, str]:
+        guidance_keys = self.RECURRING_CAUSE_INTERVENTIONS.get(cause_category)
+        if guidance_keys is not None:
+            hypothesis_key, intervention_key = guidance_keys
+            return I18n.t(hypothesis_key, locale=locale), I18n.t(intervention_key, locale=locale)
+        return (
+            I18n.t("error_bridge.recurring_cause_fallback_hypothesis", locale=locale, node_id=node_id, cause=cause_category),
+            I18n.t("error_bridge.recurring_cause_fallback_intervention", locale=locale),
+        )
+
+    @staticmethod
+    def _normalize_node_key(value: Any) -> str:
+        return str(value or "").strip().lower()
+
+    def _flatten_node_candidates(self, value: Any) -> list[Any]:
+        if value in (None, "", [], {}):
+            return []
+        if isinstance(value, dict):
+            direct = (
+                value.get("node_id")
+                or value.get("id")
+                or value.get("knowledge_node_id")
+                or value.get("concept_id")
+                or value.get("value")
+            )
+            values = [direct] if direct is not None else []
+            for nested in value.values():
+                if nested is direct:
+                    continue
+                values.extend(self._flatten_node_candidates(nested))
+            return values
+        if isinstance(value, (list, tuple, set)):
+            values: list[Any] = []
+            for item in value:
+                values.extend(self._flatten_node_candidates(item))
+            return values
+        return [value]
+
+    async def _load_node_name_map_for_errors(self, errors: list[ErrorRecord]) -> dict[str, str]:
+        node_ids: set[UUID] = set()
+        for error in errors:
+            for value in error.linked_knowledge_node_ids or []:
+                node_id = self._coerce_uuid(value)
+                if isinstance(node_id, UUID):
+                    node_ids.add(node_id)
+
+        if not node_ids:
+            return {}
+
+        result = await self.db.execute(
+            select(KnowledgeNode.id, KnowledgeNode.name).where(KnowledgeNode.id.in_(node_ids))
+        )
+        return {
+            str(node_id): str(node_name or "").strip()
+            for node_id, node_name in result.all()
+            if node_id is not None and str(node_name or "").strip()
+        }
+
+    def _match_sprint_pack_cluster(
+        self,
+        error: ErrorRecord,
+        node_name_map: dict[str, str],
+    ) -> MistakeClusterMatch | None:
+        feature_bundle = self._extract_error_feature_bundle(error, node_name_map)
+        feature_text = str(feature_bundle["raw_text"])
+        if not self._looks_like_network_pack_candidate(feature_text):
+            return None
+
+        try:
+            from app.sprint_packs.sprint_pack_loader import get_task_template, load_pack
+
+            pack = load_pack(self.NETWORK_PACK_SUBJECT)
+        except Exception:
+            pack = None
+            get_task_template = None  # type: ignore[assignment]
+
+        if not pack:
+            return None
+
+        matched_pack_nodes = self._match_pack_nodes(pack, feature_bundle)
+        if not matched_pack_nodes:
+            return None
+
+        pack_nodes_by_id = {
+            str(node.get("node_id") or ""): node
+            for node in pack.get("knowledge_nodes", [])
+            if str(node.get("node_id") or "").strip()
+        }
+        best_match: MistakeClusterMatch | None = None
+        best_score = 0
+
+        for cluster in list(pack.get("mistake_taxonomy") or pack.get("mistake_types") or []):
+            related_nodes = tuple(
+                str(node_id).strip() for node_id in (cluster.get("related_nodes") or []) if str(node_id).strip()
+            )
+            if not related_nodes:
+                continue
+
+            overlap = tuple(node_id for node_id in related_nodes if node_id in matched_pack_nodes)
+            if not overlap:
+                continue
+
+            keyword_hits = tuple(
+                self._keyword_hits(
+                    feature_text,
+                    cluster.get("keywords")
+                    or self._keywords_from_free_text(
+                        " ".join(
+                            filter(
+                                None,
+                                (
+                                    cluster.get("mistake_id"),
+                                    cluster.get("label"),
+                                    cluster.get("repair_strategy"),
+                                ),
+                            )
+                        )
+                    ),
+                )
+            )
+            score = len(overlap) * 10 + len(keyword_hits)
+            if score < best_score:
+                continue
+
+            template_id = self._template_id_for_cluster(
+                cluster_id=str(cluster.get("mistake_id") or cluster.get("id") or ""),
+                cluster_label=str(cluster.get("label") or "").strip(),
+                repair_strategy=str(cluster.get("repair_strategy") or "").strip(),
+                explicit_template_id=(
+                    str(cluster.get("repair_card_template_id") or "").strip()
+                    or str(cluster.get("template_id") or "").strip()
+                    or None
+                ),
+            )
+            related_labels = tuple(
+                str((pack_nodes_by_id.get(node_id) or {}).get("label") or node_id) for node_id in related_nodes
+            )
+            template = get_task_template(pack, template_id) if get_task_template else None
+            if template is not None:
+                template_id = str(template.get("template_id") or template_id)
+
+            best_score = score
+            best_match = MistakeClusterMatch(
+                cluster_id=str(cluster.get("mistake_id") or cluster.get("id") or "").strip(),
+                cluster_label=str(cluster.get("label") or I18n.t("error_bridge.fallback_cluster_label", locale="zh")).strip(),
+                related_nodes=related_nodes,
+                related_node_labels=related_labels,
+                source="sprint_pack",
+                repair_strategy=str(cluster.get("repair_strategy") or "").strip(),
+                task_template_id=template_id,
+                pack_id=str(pack.get("id") or "").strip() or None,
+                streak_count=0,
+                matched_keywords=keyword_hits,
+                matched_node_names=tuple(str(name) for name in feature_bundle["node_names"]),
+                db_node_ids=tuple(str(node_id) for node_id in feature_bundle["db_node_ids"]),
+            )
+
+        return best_match
+
+    def _match_generic_cluster(
+        self,
+        error: ErrorRecord,
+        node_name_map: dict[str, str],
+        *,
+        fallback_node_ids: list[UUID],
+        locale: str = "zh",
+    ) -> MistakeClusterMatch | None:
+        feature_bundle = self._extract_error_feature_bundle(error, node_name_map)
+        feature_text = str(feature_bundle["raw_text"])
+        normalized_text = str(feature_bundle["normalized_text"])
+        best_rule: dict[str, Any] | None = None
+        best_hits: tuple[str, ...] = ()
+
+        for rule in self.GENERIC_MISTAKE_FALLBACKS:
+            hits = tuple(
+                keyword
+                for keyword in rule.get("keywords", ())
+                if self._normalize_text(keyword) and self._normalize_text(keyword) in normalized_text
+            )
+            if len(hits) <= len(best_hits):
+                continue
+            best_rule = rule
+            best_hits = hits
+
+        if best_rule is None or not best_hits:
+            return None
+
+        related_node_labels = tuple(str(name) for name in feature_bundle["node_names"]) or tuple(
+            str(node_id) for node_id in fallback_node_ids
+        )
+        related_nodes = tuple(str(node_id) for node_id in fallback_node_ids) or related_node_labels
+        return MistakeClusterMatch(
+            cluster_id=str(best_rule["cluster_id"]),
+            cluster_label=I18n.t(str(best_rule["label"]), locale=locale),
+            related_nodes=related_nodes,
+            related_node_labels=related_node_labels,
+            source="generic_keyword",
+            repair_strategy=I18n.t(str(best_rule["repair_strategy"]), locale=locale),
+            task_template_id=str(best_rule["task_template_id"]),
+            pack_id=None,
+            streak_count=0,
+            matched_keywords=best_hits,
+            matched_node_names=tuple(str(name) for name in feature_bundle["node_names"]),
+            db_node_ids=tuple(str(node_id) for node_id in feature_bundle["db_node_ids"]),
+        )
+
+    def _extract_error_feature_bundle(
+        self,
+        error: ErrorRecord,
+        node_name_map: dict[str, str],
+    ) -> dict[str, object]:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        db_node_ids = tuple(
+            str(node_id)
+            for node_id in (self._coerce_uuid(value) for value in (error.linked_knowledge_node_ids or []))
+            if node_id is not None
+        )
+        node_names = tuple(
+            node_name_map.get(str(node_id), "") for node_id in db_node_ids if node_name_map.get(str(node_id), "")
+        )
+        raw_text = " ".join(
+            filter(
+                None,
+                (
+                    str(error.subject_code or "").strip(),
+                    str(error.chapter or "").strip(),
+                    str(error.question_text or "").strip(),
+                    str(error.user_answer or "").strip(),
+                    str(error.correct_answer or "").strip(),
+                    str(error.ai_analysis_summary or "").strip(),
+                    " ".join(node_names),
+                    " ".join(str(item or "").strip() for item in (error.suggested_concepts or [])),
+                    " ".join(
+                        str(analysis.get(key) or "").strip()
+                        for key in (
+                            "knowledge_node_name",
+                            "knowledge_node",
+                            "error_concept",
+                            "concept_name",
+                            "concept",
+                            "weak_concept",
+                            "root_cause",
+                            "study_suggestions",
+                            "ocr_text",
+                        )
+                    ),
+                ),
+            )
+        )
+        return {
+            "raw_text": raw_text,
+            "normalized_text": self._normalize_text(raw_text),
+            "node_names": node_names,
+            "db_node_ids": db_node_ids,
+        }
+
+    def _looks_like_network_pack_candidate(self, text: str) -> bool:
+        lowered = str(text or "").strip().lower()
+        return any(token in lowered for token in self.NETWORK_PACK_SIGNAL_TOKENS)
+
+    def _match_pack_nodes(self, pack: dict[str, Any], feature_bundle: dict[str, object]) -> set[str]:
+        matched: set[str] = set()
+        feature_text = str(feature_bundle["raw_text"])
+        normalized_text = str(feature_bundle["normalized_text"])
+
+        for node in pack.get("knowledge_nodes", []):
+            node_id = str(node.get("node_id") or "").strip()
+            if not node_id:
+                continue
+            label = str(node.get("label") or node.get("name") or "").strip()
+            normalized_label = self._normalize_text(label)
+            if normalized_label and normalized_label in normalized_text:
+                matched.add(node_id)
+                continue
+
+            hints = tuple(self.PACK_NODE_HINTS.get(node_id, ()))
+            if any(self._normalize_text(hint) in normalized_text for hint in hints if self._normalize_text(hint)):
+                matched.add(node_id)
+                continue
+
+            recommended_action = str(node.get("recommended_action") or "").strip()
+            if recommended_action and self._normalize_text(recommended_action) in normalized_text:
+                matched.add(node_id)
+
+        return matched
+
+    async def _select_primary_plan_id(self, *, user_id: UUID, plan_ids: set[UUID]) -> UUID | None:
+        if not plan_ids:
+            return None
+
+        result = await self.db.execute(
+            select(Plan.id)
+            .where(
+                Plan.user_id == user_id,
+                Plan.id.in_(plan_ids),
+            )
+            .order_by(
+                Plan.is_primary.desc(),
+                Plan.target_date.asc(),
+                Plan.created_at.desc(),
+            )
+        )
+        return result.scalars().first()
+
+    async def _insert_next_day_repair_tasks(
+        self,
+        *,
+        plan_ids: set[UUID],
+        error: ErrorRecord,
+        fallback_node_ids: list[UUID],
+        error_type: str,
+    ) -> list[str]:
+        error_node_id = self._primary_error_node_id(error, fallback_node_ids)
+        if error_node_id is None or not plan_ids:
+            return []
+
+        from app.orchestration.planning_workflow import PlanningWorkflowManager
+
+        manager = PlanningWorkflowManager(redis_client=self.redis)
+        repair_task_ids: list[str] = []
+        for plan_id in sorted(plan_ids, key=str):
+            task = await manager._insert_repair_task(
+                db=self.db,
+                plan_id=plan_id,
+                next_day=await self._next_repair_day_for_plan(plan_id),
+                error_node_id=error_node_id,
+                error_cause_category=error_type,
+            )
+            if task is not None:
+                repair_task_ids.append(str(task.id))
+        return repair_task_ids
+
+    async def _next_repair_day_for_plan(self, plan_id: UUID) -> int:
+        plan = await self.db.get(Plan, plan_id)
+        metadata = (
+            dict(plan.source_metadata or {}) if plan is not None and isinstance(plan.source_metadata, dict) else {}
+        )
+        highlights = metadata.get("day_highlights")
+        if isinstance(highlights, dict):
+            try:
+                highlighted_day = int(highlights.get("day") or 0)
+            except (TypeError, ValueError):
+                highlighted_day = 0
+            if highlighted_day > 0:
+                return highlighted_day + 1
+
+        task_rows = (
+            await self.db.execute(
+                select(Task.order_index, Task.tags)
+                .where(Task.plan_id == plan_id)
+                .where(Task.status.in_((TaskStatus.PENDING, TaskStatus.IN_PROGRESS)))
+                .order_by(Task.order_index.asc(), Task.created_at.asc())
+            )
+        ).all()
+        for order_index, tags in task_rows:
+            try:
+                order_value = int(order_index or 0)
+            except (TypeError, ValueError):
+                order_value = 0
+            if order_value >= 1000:
+                return max(1, order_value // 1000) + 1
+            for tag in list(tags or []):
+                text = str(tag or "").strip()
+                if not text.startswith("day:"):
+                    continue
+                try:
+                    return max(1, int(text.split(":", 1)[1])) + 1
+                except ValueError:
+                    continue
+        return 2
+
+    async def _create_specialized_repair_intervention(
+        self,
+        *,
+        user_id: UUID,
+        error_type: str,
+        recent_error_count: int,
+        plan_id: UUID | None,
+        match: MistakeClusterMatch,
+        cohort_profile: dict[str, str] | None,
+        locale: str = "zh",
+    ) -> tuple[str | None, str | None]:
+        from app.schemas.notification import NotificationCreate
+        from app.services.notification_service import NotificationService
+
+        task_payload = self._build_specialized_repair_task_payload(match, locale=locale)
+        diagnosis_payload = {
+            "node_ids": list(match.db_node_ids),
+            "node_name": match.cluster_label,
+            "recent_error_count": recent_error_count,
+            "same_cluster_streak": match.streak_count,
+            "plan_ids": [str(plan_id)] if plan_id else [],
+            "target_plan_id": str(plan_id) if plan_id else None,
+            "error_type": error_type,
+            "cohort_profile": cohort_profile or {},
+            "trigger": "error_replan_bridge",
+            "specialized_repair": True,
+            "cluster_id": match.cluster_id,
+            "cluster_label": match.cluster_label,
+            "cluster_source": match.source,
+            "pack_id": match.pack_id,
+            "related_nodes": list(match.related_nodes),
+            "related_node_labels": list(match.related_node_labels),
+            "matched_keywords": list(match.matched_keywords),
+            "matched_node_names": list(match.matched_node_names),
+            "weak_concept": match.cluster_label,
+            "solution_text": match.repair_strategy,
+            "estimated_minutes": task_payload["estimated_minutes"],
+            "repair_task": task_payload,
+            "suggested_schedule_options": list(self.SPECIALIZED_REPAIR_SCHEDULE_OPTIONS),
+        }
+        record = await InterventionRecordService(self.db).create_record(
+            user_id=user_id,
+            trigger_type=InterventionTriggerType.CONCEPT_GAP,
+            delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+            delivery_channel=DeliveryChannel.IN_APP,
+            trigger_source_ref="error_replan_bridge",
+            diagnosis_payload=diagnosis_payload,
+            outcome_window_days=14,
+        )
+
+        title = I18n.t("error_bridge.title_specialized_repair_ready", locale=locale)
+        description = I18n.t(
+            "error_bridge.desc_specialized_repair_ready",
+            locale=locale,
+            streak_count=match.streak_count,
+            cluster_label=match.cluster_label,
+            minutes=task_payload['estimated_minutes'],
+        )
+        notification = await NotificationService.create(
+            self.db,
+            user_id,
+            NotificationCreate(
+                title=title,
+                content=description,
+                type="intervention",
+                data={
+                    "record_id": str(record.id),
+                    "intervention_id": str(record.id),
+                    "trigger": "error_replan_bridge.specialized_repair",
+                    "plan_id": str(plan_id) if plan_id else None,
+                    "repair_cluster_id": match.cluster_id,
+                    "repair_cluster_label": match.cluster_label,
+                    "same_cluster_streak": match.streak_count,
+                    "schedule_options": [
+                        {"label": I18n.t("error_bridge.schedule_today", locale=locale), "action": "accepted", "action_payload": {"schedule": "today"}},
+                        {"label": I18n.t("error_bridge.schedule_tomorrow", locale=locale), "action": "accepted", "action_payload": {"schedule": "tomorrow"}},
+                        {"label": I18n.t("error_bridge.schedule_decline", locale=locale), "action": "dismissed", "action_payload": {"reason": "user_declined"}},
+                    ],
+                    "repair_task_preview": task_payload,
+                },
+            ),
+            push_via_websocket=True,
+        )
+        await InterventionRecordService(self.db).mark_delivered(record.id)
+        await self.db.commit()
+        return str(record.id), str(notification.id)
+
+    def _build_specialized_repair_task_payload(self, match: MistakeClusterMatch, locale: str = "zh") -> dict[str, Any]:
+        template = self._load_repair_template(match)
+        template_steps = [str(step).strip() for step in (template.get("steps") or []) if str(step).strip()]
+        step_instructions = [
+            I18n.t("error_bridge.repair_step_review", locale=locale, count=match.streak_count),
+            *template_steps[:3],
+            I18n.t("error_bridge.repair_step_final_check", locale=locale),
+        ]
+        deduped_steps: list[str] = []
+        for step in step_instructions:
+            if step and step not in deduped_steps:
+                deduped_steps.append(step)
+
+        structured_steps = [{"index": index, "instruction": step} for index, step in enumerate(deduped_steps, start=1)]
+        output_action = self._output_action_for_template(match.task_template_id, match.cluster_label, locale=locale)
+        success_criteria = str(template.get("done_criteria") or "").strip() or I18n.t(
+            "error_bridge.repair_success_criteria", locale=locale, cluster_label=match.cluster_label,
+        )
+        objective = I18n.t("error_bridge.repair_objective", locale=locale, cluster_label=match.cluster_label)
+
+        return {
+            "title": I18n.t("error_bridge.repair_task_title", locale=locale, cluster_label=match.cluster_label),
+            "objective": objective,
+            "steps": structured_steps,
+            "method_steps": deduped_steps,
+            "time_estimate_minutes": self.SPECIALIZED_REPAIR_DURATION_MINUTES,
+            "estimated_minutes": self.SPECIALIZED_REPAIR_DURATION_MINUTES,
+            "output_action": output_action,
+            "success_criteria": success_criteria,
+            "micro_contract": I18n.t("error_bridge.repair_micro_contract", locale=locale),
+            "fail_safe_rule": I18n.t("error_bridge.repair_fail_safe_rule", locale=locale),
+            "repair_strategy": match.repair_strategy,
+            "repair_cluster_id": match.cluster_id,
+            "repair_cluster_label": match.cluster_label,
+            "repair_cluster_source": match.source,
+            "pack_id": match.pack_id,
+            "related_nodes": list(match.related_nodes),
+            "related_node_labels": list(match.related_node_labels),
+            "matched_keywords": list(match.matched_keywords),
+            "matched_node_names": list(match.matched_node_names),
+            "sprint_fail_safe": True,
+            "specialized_repair": True,
+            "schedule_options": list(self.SPECIALIZED_REPAIR_SCHEDULE_OPTIONS),
+        }
+
+    def _load_repair_template(self, match: MistakeClusterMatch) -> dict[str, Any]:
+        if match.pack_id is None:
+            return {}
+
+        try:
+            from app.sprint_packs.sprint_pack_loader import get_task_template, load_pack
+
+            pack = load_pack(self.NETWORK_PACK_SUBJECT)
+            if not pack:
+                return {}
+            template = get_task_template(pack, match.task_template_id)
+            return dict(template or {})
+        except Exception:
+            return {}
+
+    def _template_id_for_cluster(
+        self,
+        *,
+        cluster_id: str,
+        cluster_label: str,
+        repair_strategy: str,
+        explicit_template_id: str | None = None,
+    ) -> str:
+        explicit = str(explicit_template_id or "").strip()
+        if explicit:
+            return explicit
+
+        haystack = f"{cluster_id} {cluster_label} {repair_strategy}".lower()
+        if any(token in haystack for token in ("状态", "握手", "挥手", "流程", "transition", "syn", "fin")):
+            return "process_trace_card"
+        if any(token in haystack for token in ("ack", "窗口", "window", "计算", "公式", "单位", "seq")):
+            return "calculation_drill_card"
+        if any(token in haystack for token in ("对比", "混淆", "mapping", "区别")):
+            return "comparison_table_card"
+        return "concept_recall_card"
+
+    def _output_action_for_template(self, template_id: str, cluster_label: str, locale: str = "zh") -> str:
+        normalized = str(template_id or "").strip().lower()
+        if normalized == "process_trace_card":
+            return I18n.t("error_bridge.repair_output_process_trace", locale=locale, cluster_label=cluster_label)
+        if normalized == "calculation_drill_card":
+            return I18n.t("error_bridge.repair_output_calculation_drill", locale=locale, cluster_label=cluster_label)
+        if normalized == "comparison_table_card":
+            return I18n.t("error_bridge.repair_output_comparison_table", locale=locale, cluster_label=cluster_label)
+        return I18n.t("error_bridge.repair_output_concept_recall", locale=locale, cluster_label=cluster_label)
+
+    async def materialize_specialized_repair_task_from_record(
+        self,
+        *,
+        user_id: UUID,
+        record: InterventionRecord,
+        action_payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        diagnosis = dict(record.diagnosis_payload or {})
+        if not diagnosis.get("specialized_repair"):
+            return {}
+
+        existing_payload = dict(record.action_payload or {})
+        if existing_payload.get("repair_task_id"):
+            return {
+                "repair_task_id": existing_payload.get("repair_task_id"),
+                "repair_task_created": False,
+                "repair_task_due_date": existing_payload.get("repair_task_due_date"),
+            }
+
+        task_payload = dict(diagnosis.get("repair_task") or {})
+        if not task_payload:
+            return {}
+
+        raw_plan_id = diagnosis.get("target_plan_id") or next(iter(diagnosis.get("plan_ids") or []), None)
+        plan_id = self._coerce_uuid(raw_plan_id)
+        if not isinstance(plan_id, UUID):
+            return {}
+
+        due_date = self._repair_due_date_from_action_payload(action_payload)
+        anchor_task = await self._find_anchor_task_for_plan(user_id=user_id, plan_id=plan_id)
+        cluster_label = str(
+            diagnosis.get("cluster_label") or task_payload.get("repair_cluster_label") or I18n.t("error_bridge.fallback_repair_title", locale="zh")
+        ).strip()
+        priority_boost = await self._next_repair_priority(user_id=user_id, plan_id=plan_id)
+
+        from app.schemas.task import TaskCreate
+        from app.services.task_service import TaskService
+
+        db_node_ids = [self._coerce_uuid(value) for value in (diagnosis.get("node_ids") or [])]
+        materialized = await TaskService.create(
+            self.db,
+            TaskCreate(
+                title=str(task_payload.get("title") or f"[专项修复] {cluster_label}"),
+                type=TaskType.ERROR_FIX,
+                plan_id=plan_id,
+                tags=[
+                    "specialized_repair",
+                    "mistake_cluster",
+                    f"cluster:{diagnosis.get('cluster_id')}",
+                    f"repair_source:{diagnosis.get('cluster_source')}",
+                ],
+                estimated_minutes=int(
+                    task_payload.get("estimated_minutes") or self.SPECIALIZED_REPAIR_DURATION_MINUTES
+                ),
+                difficulty=1,
+                energy_cost=1,
+                guide_content=str(task_payload.get("objective") or I18n.t("error_bridge.fallback_guide_content", locale="zh", cluster_label=cluster_label)),
+                priority=priority_boost,
+                due_date=due_date,
+                knowledge_node_id=next(
+                    (node_id for node_id in db_node_ids if isinstance(node_id, UUID)),
+                    getattr(anchor_task, "knowledge_node_id", None),
+                ),
+                guide_json=task_payload,
+                ai_prompt=self._build_specialized_repair_ai_prompt(
+                    cluster_label=cluster_label,
+                    task_payload=task_payload,
+                    locale="zh",
+                ),
+                source_planning_session_id=getattr(anchor_task, "source_planning_session_id", None),
+                phase_index=getattr(anchor_task, "phase_index", None),
+                success_criteria=str(task_payload.get("success_criteria") or "").strip() or None,
+            ),
+            user_id=user_id,
+        )
+        await self._attach_specialized_repair_links(
+            task=materialized,
+            db_node_ids=[node_id for node_id in db_node_ids if isinstance(node_id, UUID)],
+        )
+
+        record.action_payload = {
+            **existing_payload,
+            "repair_task_id": str(materialized.id),
+            "repair_task_due_date": due_date.isoformat(),
+            "repair_task_created_at": _utcnow().isoformat(),
+            "repair_schedule": self._repair_schedule_label(action_payload),
+        }
+        await self.db.flush()
+        return {
+            "repair_task_id": str(materialized.id),
+            "repair_task_created": True,
+            "repair_task_due_date": due_date.isoformat(),
+        }
+
+    async def _find_anchor_task_for_plan(self, *, user_id: UUID, plan_id: UUID) -> Task | None:
+        result = await self.db.execute(
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.plan_id == plan_id,
+            )
+            .order_by(
+                Task.due_date.asc(),
+                Task.order_index.asc(),
+                Task.created_at.asc(),
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def _attach_specialized_repair_links(self, *, task: Task, db_node_ids: list[UUID]) -> None:
+        if not db_node_ids:
+            return
+
+        existing_result = await self.db.execute(
+            select(TaskKnowledgeLink.knowledge_node_id).where(TaskKnowledgeLink.task_id == task.id)
+        )
+        existing = set(existing_result.scalars().all())
+        for index, node_id in enumerate(db_node_ids):
+            if node_id in existing:
+                continue
+            self.db.add(
+                TaskKnowledgeLink(
+                    task_id=task.id,
+                    knowledge_node_id=node_id,
+                    relation_type="repair_focus",
+                    is_primary=index == 0,
+                )
+            )
+        await self.db.flush()
+
+    async def _next_repair_priority(self, *, user_id: UUID, plan_id: UUID) -> int:
+        result = await self.db.execute(
+            select(func.max(Task.priority)).where(
+                Task.user_id == user_id,
+                Task.plan_id == plan_id,
+                Task.status.in_((TaskStatus.PENDING, TaskStatus.IN_PROGRESS)),
+            )
+        )
+        current_max = result.scalar_one_or_none()
+        return int(current_max or 0) + 1
+
+    def _repair_due_date_from_action_payload(self, action_payload: dict[str, Any] | None) -> date:
+        payload = dict(action_payload or {})
+        explicit_due_date = str(payload.get("due_date") or payload.get("target_date") or "").strip()
+        if explicit_due_date:
+            try:
+                return date.fromisoformat(explicit_due_date)
+            except ValueError:
+                pass
+
+        schedule = self._repair_schedule_label(payload)
+        base_date = _utcnow().date()
+        if schedule == "tomorrow":
+            return base_date + timedelta(days=1)
+        return base_date
+
+    def _repair_schedule_label(self, action_payload: dict[str, Any] | None) -> str:
+        payload = dict(action_payload or {})
+        for key in ("schedule", "schedule_slot", "target_day"):
+            value = str(payload.get(key) or "").strip().lower()
+            if value in self.SPECIALIZED_REPAIR_SCHEDULE_OPTIONS:
+                return value
+        return "today"
+
+    def _build_specialized_repair_ai_prompt(self, *, cluster_label: str, task_payload: dict[str, Any], locale: str = "zh") -> str:
+        step_lines = "\n".join(
+            f"{index}. {step}" for index, step in enumerate(task_payload.get("method_steps") or [], start=1)
+        )
+        return (
+            f"{I18n.t('error_bridge.repair_ai_prompt_header', locale=locale, cluster_label=cluster_label)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_objective', locale=locale, objective=task_payload.get('objective', ''))}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_output', locale=locale, output=task_payload.get('output_action', ''))}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_success', locale=locale, criteria=task_payload.get('success_criteria', ''))}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_steps', locale=locale)}\n{step_lines}\n\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help', locale=locale)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help_1', locale=locale)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help_2', locale=locale)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help_3', locale=locale)}"
+        )
+
+    @staticmethod
+    def _coerce_uuid(value: object) -> UUID | None:
+        if isinstance(value, UUID):
+            return value
+        if value is None:
+            return None
+        try:
+            return UUID(str(value))
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _normalize_text(value: object) -> str:
+        return re.sub(r"[\s_\-，。；：、,.!?:（）()/\\]+", "", str(value or "").strip().lower())
+
+    def _keywords_from_free_text(self, value: str) -> tuple[str, ...]:
+        candidates = (
+            "三次握手",
+            "四次挥手",
+            "状态",
+            "状态转换",
+            "拥塞控制",
+            "流量控制",
+            "确认号",
+            "ack",
+            "窗口",
+            "cwnd",
+            "rwnd",
+            "单位换算",
+            "公式",
+        )
+        normalized_text = self._normalize_text(value)
+        return tuple(keyword for keyword in candidates if self._normalize_text(keyword) in normalized_text)
+
+    def _keyword_hits(self, feature_text: str, keywords: Any) -> list[str]:
+        normalized_text = self._normalize_text(feature_text)
+        if isinstance(keywords, str):
+            keyword_pool = [item for item in re.split(r"[|,/，、\s]+", keywords) if item]
+        else:
+            keyword_pool = [str(item) for item in list(keywords or []) if str(item).strip()]
+        return [
+            keyword
+            for keyword in keyword_pool
+            if self._normalize_text(keyword) and self._normalize_text(keyword) in normalized_text
+        ]
 
     async def _create_error_intervention_record(
         self,
@@ -260,6 +1467,67 @@ class ErrorReplanBridge:
             logger.warning("ErrorReplanBridge: failed to create intervention record: {}", exc)
             return None
 
+    async def _record_error_mastery_echo(
+        self,
+        *,
+        error: ErrorRecord,
+        mastery_update: dict | None,
+        fallback_node_id: UUID,
+    ) -> None:
+        """Persist the user-facing link between an error and its primary galaxy node."""
+        node_id = fallback_node_id
+        if mastery_update and mastery_update.get("node_id"):
+            try:
+                node_id = UUID(str(mastery_update["node_id"]))
+            except (TypeError, ValueError):
+                node_id = fallback_node_id
+
+        error.affected_node_id = node_id
+        if mastery_update and mastery_update.get("delta") is not None:
+            error.mastery_delta = float(mastery_update["delta"])
+
+        await self.db.flush()
+
+    def _primary_error_node_id(self, error: ErrorRecord, fallback_node_ids: list[UUID]) -> UUID | None:
+        affected_node_id = self._coerce_uuid(getattr(error, "affected_node_id", None))
+        if affected_node_id is not None:
+            return affected_node_id
+        for value in getattr(error, "linked_knowledge_node_ids", None) or []:
+            node_id = self._coerce_uuid(value)
+            if node_id is not None:
+                return node_id
+        return fallback_node_ids[0] if fallback_node_ids else None
+
+    async def _submit_weak_node_claim(
+        self,
+        *,
+        user_id: UUID,
+        error_node_id: UUID | None,
+        plan_id: UUID | str | None,
+    ) -> None:
+        if self.redis is None or error_node_id is None:
+            return
+        try:
+            from app.aurora.runtime_v1.write_pipeline import AuroraWritePipeline, InferenceClaim
+
+            claim = InferenceClaim(
+                domain="weak_node",
+                value=str(error_node_id),
+                evidence_type="error_replan_signal",
+                confidence=0.75,
+                source="error_replan_bridge",
+                user_id=str(user_id),
+                planning_session_id=str(plan_id) if plan_id else None,
+            )
+            await AuroraWritePipeline(redis_client=self.redis).submit_claim(claim)
+        except Exception as exc:
+            logger.warning(
+                "ErrorReplanBridge: failed to submit weak-node claim for user={} node={}: {}",
+                user_id,
+                error_node_id,
+                exc,
+            )
+
     async def _notify_plan_adjusted(
         self,
         *,
@@ -267,6 +1535,7 @@ class ErrorReplanBridge:
         low_mastery_nodes: list[UUID],
         recent_error_count: int,
         intervention_id: str | None = None,
+        locale: str = "zh",
     ) -> None:
         """Emit a system update so the user sees the plan was adjusted due to errors."""
         try:
@@ -274,19 +1543,17 @@ class ErrorReplanBridge:
 
             node_name = await self._resolve_node_name(low_mastery_nodes)
 
-            description = (
-                f"我注意到你在「{node_name}」上遇到了{recent_error_count}次相似的问题，"
-                "已经调整了本周计划，把相关任务移到了更早的时间段。"
-                if node_name
-                else f"你最近在同一知识点上遇到了{recent_error_count}次问题，我已经微调了本周计划。"
-            )
+            if node_name:
+                description = I18n.t("error_bridge.plan_adjusted_desc_with_node", locale=locale, node_name=node_name, count=recent_error_count)
+            else:
+                description = I18n.t("error_bridge.plan_adjusted_desc_fallback", locale=locale, count=recent_error_count)
 
             await SystemUpdateService(self.redis).enqueue(
                 user_id,
                 build_system_update(
                     update_type="plan_adjusted_from_error",
                     category="evolution",
-                    title="计划已根据你的错题调整",
+                    title=I18n.t("error_bridge.plan_adjusted_title", locale=locale),
                     description=description,
                     priority="normal",
                     metadata={
@@ -307,6 +1574,7 @@ class ErrorReplanBridge:
         user_id: UUID,
         category: str,
         error: str,
+        locale: str = "zh",
     ) -> None:
         try:
             from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -316,8 +1584,8 @@ class ErrorReplanBridge:
                 build_system_update(
                     update_type="error_bridge_failure",
                     category="system",
-                    title="计划校准暂时未完成",
-                    description="系统识别到了新的错题压力信号，但这次自动校准没有完整执行，稍后会继续重试。",
+                    title=I18n.t("error_bridge.bridge_failure_title", locale=locale),
+                    description=I18n.t("error_bridge.bridge_failure_desc", locale=locale),
                     priority="medium",
                     metadata={
                         "trigger": "error_replan_bridge",
@@ -403,6 +1671,39 @@ class ErrorReplanBridge:
             return ""
         return str(node.name or "").strip()
 
+    async def _resolve_error_concept(self, error: ErrorRecord, node_ids: list[UUID]) -> str:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        for key in (
+            "knowledge_node_name",
+            "knowledge_node",
+            "error_concept",
+            "concept_name",
+            "concept",
+            "weak_concept",
+        ):
+            value = str(analysis.get(key) or "").strip()
+            if value:
+                return value
+
+        suggested_concepts = list(error.suggested_concepts or [])
+        for concept in suggested_concepts:
+            value = str(concept or "").strip()
+            if value:
+                return value
+
+        return await self._resolve_node_name(node_ids)
+
+    async def _get_node_mastery_scores(self, *, user_id: UUID, node_ids: list[UUID]) -> dict[UUID, float]:
+        if not node_ids:
+            return {}
+
+        result = await self.db.execute(
+            select(UserNodeStatus.node_id, UserNodeStatus.mastery_score)
+            .where(UserNodeStatus.user_id == user_id)
+            .where(UserNodeStatus.node_id.in_(node_ids))
+        )
+        return {node_id: float(mastery_score or 0.0) for node_id, mastery_score in result.all()}
+
     @staticmethod
     def _extract_error_type(error: ErrorRecord) -> str:
         analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
@@ -414,24 +1715,43 @@ class ErrorReplanBridge:
 
     def _classify_trigger_type_from_analysis(self, analysis: dict[str, object]) -> str | None:
         raw_error_type = str(analysis.get("error_type") or "other").strip().lower()
-        if raw_error_type in {"concept_confusion", "knowledge_gap"}:
+        if raw_error_type in self.TRIGGERING_ERROR_TYPES:
             return raw_error_type
-        if raw_error_type in {"procedural_error", "method_wrong"}:
-            return "procedural_error"
+        if raw_error_type in {"knowledge_gap", "foundation_gap", "basic_gap"}:
+            return "baseline_gap"
+        if raw_error_type in {"procedural_error", "method_wrong", "understanding_gap"}:
+            return "comprehension_failure"
         if raw_error_type in {"careless_mistake", "reading_careless", "calculation_error"}:
-            return "careless_mistake"
+            return "careless_error"
+        if raw_error_type in {"time_management", "time_pressure", "rushed_miss", "skipped_due_time"}:
+            return "time_pressure_miss"
+        if raw_error_type in {"strategy_mismatch", "logic_error", "transfer_error"}:
+            return "knowledge_transfer_fail"
+        if raw_error_type in {"missing_prerequisite", "prereq_missing"}:
+            return "prerequisite_missing"
 
         root_cause = str(analysis.get("root_cause") or "").strip().lower()
         study_suggestions = str(analysis.get("study_suggestions") or "").strip().lower()
-        if raw_error_type == "time_management" or any(
-            token in f"{root_cause} {study_suggestions}" for token in ("time", "rush", "pace", "deadline")
+        signal_text = f"{root_cause} {study_suggestions}"
+        if any(token in signal_text for token in ("time", "rush", "pace", "deadline")):
+            return "time_pressure_miss"
+        if any(
+            token in signal_text
+            for token in ("prerequisite", "prereq", "前置", "foundation", "basic knowledge", "基础")
         ):
-            return "time_management"
-        if raw_error_type in {"strategy_mismatch", "logic_error"} or any(
-            token in f"{root_cause} {study_suggestions}" for token in ("strategy", "approach", "method selection")
-        ):
-            return "strategy_mismatch"
+            return "prerequisite_missing"
+        if any(token in signal_text for token in ("strategy", "approach", "method selection", "transfer", "迁移")):
+            return "knowledge_transfer_fail"
         return None
+
+    def _is_high_severity(self, error: ErrorRecord) -> bool:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        raw_severity = analysis.get("severity")
+        if raw_severity is None:
+            raw_severity = analysis.get("severity_level")
+        if raw_severity is None:
+            raw_severity = analysis.get("risk_level")
+        return str(raw_severity or "").strip().lower() in self.HIGH_SEVERITY_VALUES
 
     async def _find_low_mastery_nodes(self, *, user_id: UUID, node_ids: list[UUID]) -> list[UUID]:
         result = await self.db.execute(
@@ -490,7 +1810,7 @@ class ErrorReplanBridge:
 
             analysis = latest_analysis if isinstance(latest_analysis, dict) else {}
             error_type = self._classify_trigger_type_from_analysis(analysis)
-            if error_type not in self.TRIGGERING_ERROR_TYPES:
+            if error_type not in self.REPLAN_ELIGIBLE_ERROR_TYPES:
                 continue
 
             linked = {str(value) for value in (linked_ids or []) if value is not None}

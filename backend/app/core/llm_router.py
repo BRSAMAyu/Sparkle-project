@@ -240,15 +240,27 @@ class LLMRouter:
                 avg_latency_ms=1500,
                 thinking_mode="enabled",
             ),
+            "deepseek_fast": ModelConfig(
+                provider=ModelProvider.DEEPSEEK,
+                model_name=settings.DEEPSEEK_CHAT_MODEL,
+                base_url=settings.DEEPSEEK_BASE_URL,
+                api_key=settings.DEEPSEEK_API_KEY,
+                temperature=0.7,
+                tier=ModelTier.FAST,
+                cost_per_1k_tokens=0.0002,
+                avg_latency_ms=200,
+                thinking_mode="disabled",
+            ),
             "deepseek_chat": ModelConfig(
                 provider=ModelProvider.DEEPSEEK,
                 model_name=settings.DEEPSEEK_CHAT_MODEL,
                 base_url=settings.DEEPSEEK_BASE_URL,
                 api_key=settings.DEEPSEEK_API_KEY,
                 temperature=0.7,
-                tier=ModelTier.PLUS,
-                cost_per_1k_tokens=0.0008,
-                avg_latency_ms=800,
+                tier=ModelTier.STANDARD,
+                cost_per_1k_tokens=0.0004,
+                avg_latency_ms=500,
+                thinking_mode="enabled",
             ),
             "deepseek_reason": ModelConfig(
                 provider=ModelProvider.DEEPSEEK,
@@ -256,9 +268,9 @@ class LLMRouter:
                 base_url=settings.DEEPSEEK_BASE_URL,
                 api_key=settings.DEEPSEEK_API_KEY,
                 temperature=0.2,
-                tier=ModelTier.PRO,
-                cost_per_1k_tokens=0.005,
-                avg_latency_ms=3000,
+                tier=ModelTier.MAX,
+                cost_per_1k_tokens=0.008,
+                avg_latency_ms=2500,
             ),
             "glm_4_7_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
@@ -485,11 +497,11 @@ class LLMRouter:
 
         self._available_models = configs
 
-        fast_models = ["xiaomi_chat", "dashscope_fast", "glm_4_7_flash_no_thinking"]
-        standard_models = ["xiaomi_standard_thinking", "dashscope_standard_thinking"]
-        plus_models = ["dashscope_chat", "deepseek_chat"]
-        pro_models = ["dashscope_reason", "deepseek_reason"]
-        max_models = ["glm_5_max"]
+        fast_models = ["deepseek_fast", "dashscope_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
+        standard_models = ["deepseek_chat", "dashscope_standard_thinking", "xiaomi_standard_thinking"]
+        plus_models = ["dashscope_chat"]
+        pro_models = ["dashscope_reason"]
+        max_models = ["deepseek_reason", "glm_5_max"]
 
         preferred_provider = (settings.LLM_PROVIDER or "").strip().lower()
         provider_standard_preference = {
@@ -502,15 +514,15 @@ class LLMRouter:
         provider_plus_preference = {
             "qwen": "dashscope_chat",
             "dashscope": "dashscope_chat",
-            "deepseek": "deepseek_chat",
+            "deepseek": "dashscope_chat",
             "zhipu": "dashscope_chat",
             "xiaomi": "dashscope_chat",
         }
         provider_pro_preference = {
             "qwen": "dashscope_reason",
             "dashscope": "dashscope_reason",
-            "deepseek": "deepseek_reason",
-            "zhipu": "deepseek_reason",
+            "deepseek": "dashscope_reason",
+            "zhipu": "dashscope_reason",
             "xiaomi": "dashscope_reason",
         }
 

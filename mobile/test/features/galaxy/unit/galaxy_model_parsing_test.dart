@@ -23,6 +23,12 @@ void main() {
             'is_unlocked': true,
             'mastery_score': 76,
             'study_count': 9,
+            'recent_error_count': 2,
+            'review_urgency_score': 0.81,
+            'is_review_recommended': true,
+            'review_urgency_reason': 'review_window',
+            'mastery_last_updated_at': '2026-04-18T09:30:00Z',
+            'days_since_mastery_update': 7.0,
             'first_unlock_at': '2026-03-20T09:30:00Z',
           },
         },
@@ -46,6 +52,16 @@ void main() {
     expect(node.isUnlocked, isTrue);
     expect(node.masteryScore, 76);
     expect(node.studyCount, 9);
+    expect(node.recentErrorCount, 2);
+    expect(node.reviewUrgencyScore, 0.81);
+    expect(node.isReviewRecommended, isTrue);
+    expect(node.reviewUrgencyReason, 'review_window');
+    expect(
+      node.masteryLastUpdatedAt,
+      DateTime.parse('2026-04-18T09:30:00Z'),
+    );
+    expect(node.daysSinceMasteryUpdate, 7.0);
+    expect(node.shouldPulseForReview, isTrue);
     expect(node.firstUnlockAt, DateTime.parse('2026-03-20T09:30:00Z'));
     expect(node.positionX, 128.5);
     expect(node.positionY, -64.25);

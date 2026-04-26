@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 必杀技 A: GraphRAG 检索可视化组件
@@ -172,7 +173,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
                         style: TextStyle(
                           color: DS.brandPrimary.withValues(alpha: 0.8),
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: DS.fontWeightMedium,
                         ),
                       ),
                     ),
@@ -345,6 +346,7 @@ class _NodeGraphPainter extends CustomPainter {
           style: TextStyle(
             color: DS.brandPrimary.withValues(alpha: 0.7),
             fontSize: 8,
+            fontFamilyFallback: sparkleFontFallback,
           ),
         ),
         textDirection: TextDirection.ltr,

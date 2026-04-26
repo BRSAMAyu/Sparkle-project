@@ -49,7 +49,7 @@ class SprintStatisticsCard extends ConsumerWidget {
               Text(
                 l10n.sprintStatsTitle,
                 style: context.sparkleTypography.labelLarge.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ],
@@ -273,7 +273,7 @@ class SprintStatisticsCard extends ConsumerWidget {
           l10n.sprintDailyCompletion,
           style: context.sparkleTypography.labelSmall.copyWith(
             color: DS.textSecondary,
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
           ),
         ),
         const SizedBox(height: DS.spacing8),
@@ -357,7 +357,7 @@ class SprintStatisticsCard extends ConsumerWidget {
             value,
             style: context.sparkleTypography.labelSmall.copyWith(
               color: color,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
         ],

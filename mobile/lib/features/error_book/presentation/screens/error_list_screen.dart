@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 /// 错题列表页面
@@ -19,8 +21,15 @@ import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 /// 2. 状态清晰：loading/empty/error 状态都有明确提示
 /// 3. 性能优化：分页加载、滑动删除
 class ErrorListScreen extends ConsumerStatefulWidget {
-  const ErrorListScreen({super.key, this.filterByDimension});
+  const ErrorListScreen({
+    super.key,
+    this.filterByDimension,
+    this.filterByNodeId,
+    this.filterByNodeLabel,
+  });
   final CognitiveDimension? filterByDimension;
+  final String? filterByNodeId;
+  final String? filterByNodeLabel;
 
   @override
   ConsumerState<ErrorListScreen> createState() => _ErrorListScreenState();
@@ -43,6 +52,12 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           .read(errorFilterProvider.notifier)
           .setCognitiveDimension(widget.filterByDimension);
     }
+    final nodeId = widget.filterByNodeId?.trim();
+    if (nodeId != null && nodeId.isNotEmpty) {
+      ref
+          .read(errorFilterProvider.notifier)
+          .setNodeFilter(nodeId, widget.filterByNodeLabel);
+    }
   }
 
   @override
@@ -58,6 +73,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     final filterState = ref.watch(errorFilterProvider);
     final hasAdvancedFilters =
         (filterState.chapterFilter?.trim().isNotEmpty ?? false) ||
+            (filterState.nodeId?.trim().isNotEmpty ?? false) ||
             filterState.showOnlyNeedReview ||
             filterState.cognitiveDimension != null;
 
@@ -191,6 +207,47 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 ),
               ),
 
+            if (filterState.nodeId != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing8,
+                ),
+                color:
+                    theme.colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.hub_rounded,
+                      size: 16,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        '知识点：${filterState.nodeLabel ?? filterState.nodeId}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.colorScheme.secondary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () =>
+                          ref.read(errorFilterProvider.notifier).reset(),
+                      borderRadius: DS.borderRadiusFull,
+                      child: const Padding(
+                        padding: EdgeInsets.all(DS.spacing4),
+                        child: Icon(Icons.close, size: DS.iconSizeXs),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // 科目筛选条
             ColoredBox(
               color: theme.colorScheme.surface,
@@ -314,10 +371,19 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               itemCount: response.items.length,
               itemBuilder: (context, index) {
                 final error = response.items[index];
-                return ErrorCard(
-                  error: error,
-                  onTap: () => _navigateToDetail(context, error.id),
-                  onDelete: () => _deleteError(error.id),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ErrorCard(
+                      error: error,
+                      onTap: () => _navigateToDetail(context, error.id),
+                      onKnowledgeNodeTap: (nodeId, masteryDelta) =>
+                          _navigateToGalaxyNode(context, nodeId, masteryDelta),
+                      onDelete: () => _deleteError(error.id),
+                    ),
+                    if (_shouldShowLinkingHint(error))
+                      _buildLinkingHintCard(error.latestAnalysis!.linkingHint!),
+                  ],
                 );
               },
             ),
@@ -327,47 +393,61 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         error: (error, stack) => _buildErrorState(error.toString(), query),
       );
 
+  bool _shouldShowLinkingHint(ErrorRecord error) {
+    final affectedNodeId = error.affectedNodeId?.trim();
+    return error.knowledgeLinks.isEmpty &&
+        (affectedNodeId == null || affectedNodeId.isEmpty) &&
+        error.latestAnalysis?.linkingHint != null;
+  }
+
+  Widget _buildLinkingHintCard(ErrorLinkingHint hint) => Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          return Card(
+            margin: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              0,
+              DS.spacing16,
+              DS.spacing8,
+            ),
+            color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.45),
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.account_tree_outlined,
+                    color: theme.colorScheme.onSecondaryContainer,
+                    size: 20,
+                  ),
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: Text(
+                      hint.message,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
   Widget _buildEmptyState(bool isReviewTab) => Builder(
-        builder: (context) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
-                size: 80,
-                color: DS.textTertiary,
-              ),
-              const SizedBox(height: DS.spacing16),
-              Text(
-                isReviewTab
-                    ? context.l10n.errorBookNoReview
-                    : context.l10n.errorBookNoErrors,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: DS.textSecondary,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Text(
-                isReviewTab
-                    ? context.l10n.errorBookNoReviewHint
-                    : context.l10n.errorBookNoErrorsHint,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: DS.textSecondary,
-                ),
-              ),
-              if (!isReviewTab) ...[
-                const SizedBox(height: DS.spacing24),
-                FilledButton.icon(
-                  onPressed: () => _navigateToAddError(context),
-                  icon: const Icon(Icons.add),
-                  label: Text(context.l10n.errorBookAddFirst),
-                ),
-              ],
-            ],
-          ),
+        builder: (context) => EmptyState(
+          icon: isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
+          title: isReviewTab
+              ? context.l10n.errorBookNoReview
+              : context.l10n.errorBookNoErrors,
+          description: isReviewTab
+              ? '${context.l10n.errorBookNoReviewHint} 先补记最近做错的一题，系统才会安排后续复习。'
+              : context.l10n.errorBookNoErrorsHint,
+          actionText: isReviewTab ? '去记录第一道错题' : context.l10n.errorBookAddFirst,
+          onAction: () => _navigateToAddError(context),
         ),
       );
 
@@ -383,10 +463,10 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                context.l10n.loadingFailed,
+                context.l10n.loadingFailed(error),
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
               const SizedBox(height: DS.spacing8),
@@ -431,6 +511,21 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         ..invalidate(errorListProvider)
         ..invalidate(errorStatsProvider);
     }
+  }
+
+  void _navigateToGalaxyNode(
+    BuildContext context,
+    String nodeId,
+    double? masteryDelta,
+  ) {
+    final uri = Uri(
+      path: GalaxyRoutes.home,
+      queryParameters: {
+        'focus_node_id': nodeId,
+        if (masteryDelta != null) 'mastery_delta': masteryDelta.toString(),
+      },
+    );
+    context.go(uri.toString());
   }
 
   Future<void> _deleteError(String errorId) async {
@@ -490,7 +585,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 Text(
                   '认知维度',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                 ),
                 const SizedBox(height: DS.spacing12),
@@ -571,6 +666,7 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
   ErrorListQuery copyWith({
     String? subject,
     String? chapter,
+    String? nodeId,
     bool? needReview,
     String? keyword,
     CognitiveDimension? cognitiveDimension,
@@ -580,6 +676,7 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
       ErrorListQuery(
         subject: subject ?? this.subject,
         chapter: chapter ?? this.chapter,
+        nodeId: nodeId ?? this.nodeId,
         needReview: needReview ?? this.needReview,
         keyword: keyword ?? this.keyword,
         cognitiveDimension: cognitiveDimension ?? this.cognitiveDimension,

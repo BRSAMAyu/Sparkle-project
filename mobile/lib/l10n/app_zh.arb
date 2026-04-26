@@ -179,7 +179,7 @@
   "featureInDevelopment": "功能开发中...",
   "sprintHistory": "冲刺历史",
   "noSprintHistory": "暂无冲刺历史",
-  "loadingFailed": "加载失败",
+  "loadingFailed": "加载失败: {error}",
   "completionProgress": "完成进度",
   "tasksCompleted": "{completed}/{total} 任务",
   "sprintCompleted": "✅ 冲刺已完成并归档",
@@ -415,7 +415,7 @@
   "@achievementEventStartsAt": {
     "placeholders": {
       "time": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -423,7 +423,7 @@
   "@achievementEventEndsAt": {
     "placeholders": {
       "time": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -431,7 +431,7 @@
   "@achievementEventEndsIn": {
     "placeholders": {
       "time": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -457,10 +457,10 @@
   "@contractProgressLabel": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "target": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -469,10 +469,10 @@
   "@contractMinutesTarget": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "target": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -488,7 +488,7 @@
   "@contractDaysRemaining": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -504,7 +504,7 @@
   "@streakCalendarRange": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -526,6 +526,7 @@
   "taskStatusCompleted": "已完成",
   "taskStatusAbandoned": "已放弃",
   "taskStatusPaused": "已暂停",
+  "taskStatusStuck": "卡住了",
   "taskActionStart": "开始",
   "taskActionPause": "暂停",
   "taskActionResume": "继续",
@@ -534,8 +535,17 @@
   "taskActionEdit": "编辑",
   "taskActionDelete": "删除",
   "taskPriorityHigh": "高优先级",
+  "taskPriorityHighShort": "高",
+  "taskPriorityMediumShort": "中",
+  "taskPriorityLowShort": "低",
   "taskPriorityMedium": "中优先级",
   "taskPriorityLow": "低优先级",
+  "taskListEmptyTitle": "今天还没有待办事项",
+  "taskListEmptyDescription": "先放进一件最想推进的小事，系统会帮你把今天逐步铺开。",
+  "taskListEmptyAction": "创建第一项任务",
+  "taskListReorderDisabledHint": "拖拽排序仅在「全部任务」列表中可用。",
+  "taskListPartialErrorHint": "部分数据刷新失败，当前先显示已加载的任务。",
+  "taskListFilterTooltip": "优先级筛选",
   "taskNoTasks": "暂无任务",
   "taskAddNew": "添加任务",
   "taskDueDate": "截止 {date}",
@@ -922,6 +932,11 @@
   "avatarPresetPet": "萌友",
   "statisticsWeeklyGrowthTrend": "本周成长趋势",
   "statisticsLearningIndex": "学习指数 {value}",
+  "statisticsAggregationNone": "原始数据",
+  "statisticsAggregationHourly": "按小时",
+  "statisticsAggregationDaily": "按天",
+  "statisticsAggregationWeekly": "按周",
+  "statisticsAggregationMonthly": "按月",
   "learningModeDepthHigh": "深度+",
   "learningModeDepthLow": "深度-",
   "learningModeCuriosityHigh": "好奇+",
@@ -1313,7 +1328,7 @@
   "@leaderboardMyRank": {
     "placeholders": {
       "rank": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1321,7 +1336,7 @@
   "@leaderboardPoints": {
     "placeholders": {
       "value": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1402,7 +1417,7 @@
   "@taskFeedbackStreakDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1440,7 +1455,7 @@
   "@communityReadByCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1461,7 +1476,7 @@
   "@shareResourceGroupMembers": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1510,7 +1525,7 @@
   "@calendarReminderMinutes": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1518,7 +1533,7 @@
   "@calendarReminderHours": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1526,7 +1541,7 @@
   "@calendarReminderDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1631,7 +1646,7 @@
   "@capsulePersonalizationBadge": {
     "placeholders": {
       "pattern": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1639,7 +1654,7 @@
   "@capsulePersonalizationExplanation": {
     "placeholders": {
       "patterns": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1652,7 +1667,7 @@
   "@cognitiveFutureDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1660,7 +1675,7 @@
   "@cognitiveDaysLater": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1669,7 +1684,7 @@
   "@cognitiveDayTick": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1681,7 +1696,7 @@
   "@cognitiveReviewNow": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1695,7 +1710,7 @@
   "@prismTotalPatterns": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1704,7 +1719,7 @@
   "@capsuleCurrentTab": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1712,7 +1727,7 @@
   "@capsuleArchiveTab": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1725,7 +1740,7 @@
   "@capsuleGenerationPreviewCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1736,7 +1751,7 @@
   "@patternCardCreatedAt": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1746,7 +1761,7 @@
   "@capsuleLoadFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1754,7 +1769,7 @@
   "@capsuleQualityLabel": {
     "placeholders": {
       "rating": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1762,7 +1777,7 @@
   "@capsuleFeedbackCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1770,7 +1785,7 @@
   "@capsuleShareCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1784,7 +1799,7 @@
   "@capsuleSubmitFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1798,7 +1813,7 @@
   "@capsuleGeneratingProgress": {
     "placeholders": {
       "progress": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1806,7 +1821,7 @@
   "@capsuleDepthPercent": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1814,7 +1829,7 @@
   "@capsuleCuriosityPercent": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1822,7 +1837,7 @@
   "@capsuleRequestedCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1830,7 +1845,7 @@
   "@capsuleActualCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1838,7 +1853,7 @@
   "@capsuleChipLabel": {
     "placeholders": {
       "id": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1858,7 +1873,7 @@
   "@patternDiscoveredOn": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1874,7 +1889,7 @@
   "@chatHistoryLoadFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1882,7 +1897,7 @@
   "@chatHistoryLoadMoreFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1916,6 +1931,9 @@
   "chatPromptDefault2": "先给我 3 步执行清单",
   "chatPromptDefault3": "结合我当前计划继续推进",
   "chatHelpful": "有帮助",
+  "chatCitationExcerptUnavailable": "这条引用暂时还没有可展示的原文摘录。",
+  "chatCitationHelpfulPrompt": "这条引用对你有帮助吗？",
+  "chatCitationOpenDocument": "前往文档",
   "chatNotHelpful": "没帮助",
   "chatQuote": "引用",
   "chatUndo": "撤销",
@@ -1948,7 +1966,7 @@
   "@chatTeamSheetSelectedExperts": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1972,7 +1990,7 @@
   "@chatActiveToolsCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1987,7 +2005,7 @@
   "@chatExecutionStepsCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1996,10 +2014,10 @@
   "@chatModeTeamSummary": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       },
       "mode": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2070,28 +2088,28 @@
   "@errorBookCreatedAt": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
   "@errorBookMasteryPercent": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@errorBookKnowledgeLinkSnack": {
     "placeholders": {
       "nodeName": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
   "@errorBookDeleteFailedMessage": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2099,7 +2117,7 @@
   "@errorBookCognitiveFilter": {
     "placeholders": {
       "dimension": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2107,7 +2125,7 @@
   "@errorBookReviewCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2116,7 +2134,7 @@
   "@errorBookTimeAgoMinutes": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2124,7 +2142,7 @@
   "@errorBookTimeAgoHours": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2132,7 +2150,7 @@
   "@errorBookTimeAgoDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2148,10 +2166,10 @@
   "@reviewProgress": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "total": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2167,7 +2185,7 @@
   "@reviewSubmitFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2178,7 +2196,7 @@
   "@reviewTotalReviewed": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2221,10 +2239,72 @@
   "@communityMembers": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
+  "friendsMyFriends": "我的好友",
+  "friendsFriendRequests": "好友请求",
+  "friendsDiscoverFriends": "发现好友",
+  "friendsDeleteFriend": "删除好友",
+  "friendsConfirmDeleteFriend": "确定要删除好友 {name} 吗？",
+  "@friendsConfirmDeleteFriend": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsCancel": "取消",
+  "friendsDelete": "删除",
+  "friendsFriendDeleted": "已将 {name} 从好友列表中移除",
+  "@friendsFriendDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsDeleteFailed": "删除好友失败：{error}",
+  "@friendsDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsBlockUser": "拉黑用户",
+  "friendsAfterBlockingHint": "拉黑 {name} 后：",
+  "@friendsAfterBlockingHint": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsRemoveFromFriendList": "将从你的好友列表中移除",
+  "friendsCannotMessageYou": "无法给你发送消息",
+  "friendsCannotSendRequest": "无法向你发送好友请求",
+  "friendsBlock": "拉黑",
+  "friendsBlockedSuccess": "已拉黑 {name}",
+  "@friendsBlockedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsBlockFailed": "拉黑用户失败：{error}",
+  "@friendsBlockFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "friendsBlockedUsersManagement": "管理黑名单",
+  "friendsNoPendingRequests": "暂无待处理请求",
+  "friendsWantsToBeYourFriend": "想成为你的好友",
   "taskMonitorTitle": "后台任务监控",
   "taskMonitorFilterAll": "全部",
   "taskMonitorFilterRunning": "运行中",
@@ -2244,7 +2324,7 @@
   "@planProgressPercent": {
     "placeholders": {
       "percent": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2286,6 +2366,71 @@
   "knowledgeDescription": "描述",
   "knowledgeNoDescription": "暂无描述",
   "knowledgeRelatedNodes": "相关节点",
+  "knowledgeSourceMaterialsTitle": "来源资料",
+  "knowledgeSourceMaterialsSummary": "{documents} 份文档 · {chunks} 个知识片段",
+  "@knowledgeSourceMaterialsSummary": {
+    "placeholders": {
+      "documents": {
+        "type": "Object"
+      },
+      "chunks": {
+        "type": "Object"
+      }
+    }
+  },
+  "knowledgeSourceMaterialsPersonalBadge": "我的上传",
+  "knowledgeSourceMaterialsSystemBadge": "暂未附带个人笔记",
+  "knowledgeSourceMaterialsUploadDate": "上传于 {date}",
+  "@knowledgeSourceMaterialsUploadDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "knowledgeSourceMaterialsChunkUnit": "片段",
+  "knowledgeSourceMaterialsEmptyTitle": "让这个节点回到你的真实资料里",
+  "knowledgeSourceMaterialsEmptyBody": "为「{topic}」补充自己的讲义或笔记，让这条知识真正可追溯。",
+  "@knowledgeSourceMaterialsEmptyBody": {
+    "placeholders": {
+      "topic": {}
+    }
+  },
+  "knowledgeSourceMaterialsAddNotes": "添加关于「{topic}」的笔记",
+  "@knowledgeSourceMaterialsAddNotes": {
+    "placeholders": {
+      "topic": {}
+    }
+  },
+  "knowledgeSourceMaterialsReadMore": "阅读更多",
+  "knowledgeSourceMaterialsNoPreview": "这份资料暂时还没有可展示的片段。",
+  "knowledgeSourceMaterialsOpenFailed": "暂时无法打开来源资料。",
+  "knowledgeSourceMaterialsUploadSaved": "{filename} 已上传，处理并挂接后会显示在这里。",
+  "@knowledgeSourceMaterialsUploadSaved": {
+    "placeholders": {
+      "filename": {}
+    }
+  },
+  "knowledgeSourceMaterialsPage": "第 {page} 页",
+  "@knowledgeSourceMaterialsPage": {
+    "placeholders": {
+      "page": {
+        "type": "Object"
+      }
+    }
+  },
+  "knowledgeSourceMaterialsPages": "第 {pages} 页",
+  "@knowledgeSourceMaterialsPages": {
+    "placeholders": {
+      "pages": {}
+    }
+  },
+  "knowledgeSourceMaterialsChunk": "片段 {index}",
+  "@knowledgeSourceMaterialsChunk": {
+    "placeholders": {
+      "index": {
+        "type": "Object"
+      }
+    }
+  },
   "knowledgePrerequisites": "前置知识",
   "knowledgeMasteryProgress": "掌握进度",
   "knowledgeKeywords": "关键词",
@@ -2305,14 +2450,14 @@
   "@knowledgeDaysLater": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@knowledgeWeeksLater": {
     "placeholders": {
       "weeks": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2327,7 +2472,7 @@
   "@seedLibraryItemCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2351,14 +2496,14 @@
   "@seedLibraryDeleteFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
   "@seedLibraryLastUpdated": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2401,21 +2546,21 @@
   "@translationMinutesAgo": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@translationHoursAgo": {
     "placeholders": {
       "hours": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@translationDaysAgo": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2519,8 +2664,8 @@
   "shareRegenerateCard": "重新生成",
   "notificationPermissionStatus": "通知权限状态",
   "notificationPermissionGranted": "已授权",
-  "notificationPermissionDenied": "未授权",
-  "notificationPermissionPartial": "部分授权",
+  "notificationPermissionDenied": "通知权限被拒绝，请在系统设置中开启",
+  "notificationPermissionPartial": "部分通知功能受限，建议开启完整权限",
   "notificationPermissionRequest": "请求权限",
   "notificationPermissionOpenSettings": "打开设置",
   "notificationPermissionDeniedHint": "通知权限被拒绝，请在系统设置中开启",
@@ -2715,6 +2860,7 @@
   "chatInputDocumentClean": "清理文档",
   "chatInterventionViewPlan": "查看计划",
   "chatInterventionViewSettings": "查看设置",
+  "chatOpenStudyMaterialsLibrary": "打开学习资料库",
   "chatKnowledgeCitationBody": "知识引用",
   "chatKnowledgeCitationTitle": "{arg0}",
   "chatModeCustomTeam": "自定义团队",
@@ -2784,6 +2930,27 @@
   "chatSourceUntitled": "无标题",
   "chatSourcesAvailable": "有可用来源",
   "chatSourcesUnavailable": "无可用来源",
+  "chatStudyMaterialsEmptySubtitle": "上传你的笔记、课件或 PDF 后，就能在聊天里作为学习资料使用。",
+  "chatStudyMaterialsAvailable": "{count} 份资料可用",
+  "@chatStudyMaterialsAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatStudyMaterialsKnowledgeNodes": "{count} 个知识节点",
+  "@chatStudyMaterialsKnowledgeNodes": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatStudyMaterialsLabel": "学习资料",
+  "chatStudyMaterialsPaused": "学习资料已暂停",
+  "chatStudyMaterialsPausedDescription": "下一轮对话将暂停文档检索。",
+  "chatStudyMaterialsReady": "已就绪",
   "chatStreakSummary": "{arg0} {arg1}",
   "chatSubmitFeedback": "提交反馈",
   "chatSynthesisSuggestions": "综合建议",
@@ -2843,6 +3010,194 @@
   "communityFileSharedSuccess": "文件分享成功",
   "communityGroupFiles": "群文件",
   "communityGroupMembersCount": "{arg0}",
+  "groupKnowledgeBase": "知识库",
+  "groupFiles": "学习资料",
+  "saveToMyLibrary": "保存到我的库",
+  "savedToLibrary": "已保存到你的库",
+  "markAsOfficial": "标记为官方",
+  "officialResource": "官方",
+  "noGroupFiles": "暂无学习资料",
+  "noGroupFilesSubtitle": "分享你的笔记，帮助群组成员！",
+  "shareFile": "分享文件",
+  "groupFilesCount": "{count} 个文件",
+  "@groupFilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsTitle": "学习资料库",
+  "studyMaterialsEntrySubtitle": "查看上传资料、处理进度，并管理知识来源",
+  "studyMaterialsHeroEyebrow": "个人知识资料馆",
+  "studyMaterialsHeroTitle": "把每一次上传都变成可调用的学习上下文",
+  "studyMaterialsHeroSubtitle": "统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。",
+  "studyMaterialsMetricDocs": "资料数",
+  "studyMaterialsMetricReady": "已就绪",
+  "studyMaterialsMetricInMotion": "处理中",
+  "studyMaterialsMetricWeeklyRefs": "周引用",
+  "studyMaterialsSearchHint": "搜索文件名、知识节点或引用片段",
+  "studyMaterialsFilterTitle": "筛选",
+  "studyMaterialsFilterAllStatus": "全部状态",
+  "studyMaterialsFilterHighlyCited": "高引用",
+  "studyMaterialsFilterAllSubjects": "全部学域",
+  "studyMaterialsFilterNode": "当前节点：{nodeName}",
+  "@studyMaterialsFilterNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsFilterClearNode": "清除节点筛选",
+  "studyMaterialsDate": "时间",
+  "studyMaterialsDateAll": "不限时间",
+  "studyMaterialsDate7d": "近 7 天",
+  "studyMaterialsDate30d": "近 30 天",
+  "studyMaterialsDate90d": "近 90 天",
+  "studyMaterialsLoadError": "暂时无法加载学习资料。",
+  "studyMaterialsRefreshCta": "重新加载",
+  "studyMaterialsUploadCta": "上传学习资料",
+  "studyMaterialsUploadCtaShort": "上传",
+  "studyMaterialsUploadSuccess": "上传已开始，我们会很快把它映射进你的知识星图。",
+  "studyMaterialsDeleteTitle": "删除这份学习资料？",
+  "studyMaterialsDeleteMessage": "要从资料库中删除 {filename} 吗？这会将它从你的个人资料中移除。",
+  "@studyMaterialsDeleteMessage": {
+    "placeholders": {
+      "filename": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsDeleteSuccess": "学习资料已删除",
+  "studyMaterialsDeleteFailure": "删除学习资料失败：{error}",
+  "@studyMaterialsDeleteFailure": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareSheetTitle": "分享到群组",
+  "studyMaterialsShareGroupSubtitle": "{count} 位成员",
+  "@studyMaterialsShareGroupSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareEmptyGroups": "请先加入或创建群组，再分享学习资料。",
+  "studyMaterialsShareLoadGroupsError": "暂时无法加载你的群组列表。",
+  "studyMaterialsShareSuccess": "已分享到 {groupName}",
+  "@studyMaterialsShareSuccess": {
+    "placeholders": {
+      "groupName": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareFailure": "分享学习资料失败：{error}",
+  "@studyMaterialsShareFailure": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsVisibilityGroup": "群组可见",
+  "studyMaterialsVisibilityPrivate": "仅自己可见",
+  "studyMaterialsAttachedNodesTitle": "挂载的知识星点",
+  "studyMaterialsNodesPending": "这份资料还在映射到你的知识星图节点中。",
+  "studyMaterialsNodesEmpty": "暂时还没有挂载到任何知识节点。",
+  "studyMaterialsTopChunksTitle": "高频引用片段",
+  "studyMaterialsTopChunksEmpty": "Aurora 还没有引用过这份资料。",
+  "studyMaterialsConversationCountLabel": "对话数",
+  "studyMaterialsReferenceCountLabel": "引用次数",
+  "studyMaterialsKnowledgeStarsLabel": "知识星点",
+  "studyMaterialsShareAction": "分享",
+  "studyMaterialsDeleteAction": "删除",
+  "studyMaterialsRefreshAction": "重新处理",
+  "studyMaterialsSubjectCosmos": "宇宙",
+  "studyMaterialsSubjectTech": "技术",
+  "studyMaterialsSubjectArt": "艺术",
+  "studyMaterialsSubjectCivilization": "文明",
+  "studyMaterialsSubjectLife": "生命",
+  "studyMaterialsSubjectWisdom": "智慧",
+  "studyMaterialsSubjectGeneral": "通用",
+  "studyMaterialsUsageWeekly": "本周已被引用 {count} 次",
+  "@studyMaterialsUsageWeekly": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUsageTotal": "累计已被引用 {count} 次",
+  "@studyMaterialsUsageTotal": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUsageEmpty": "暂未在对话中被引用",
+  "studyMaterialsUploadedDays": "{count} 天前",
+  "@studyMaterialsUploadedDays": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUploadedHours": "{count} 小时前",
+  "@studyMaterialsUploadedHours": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUploadedMinutes": "{count} 分钟前",
+  "@studyMaterialsUploadedMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusProcessingPercent": "处理中 {percent}%",
+  "@studyMaterialsStatusProcessingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusProcessing": "处理中",
+  "studyMaterialsStatusKnowledgeStars": "已映射 {count} 个星点",
+  "@studyMaterialsStatusKnowledgeStars": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusReady": "已就绪",
+  "studyMaterialsStatusFailed": "处理失败",
+  "studyMaterialsChunkHitCount": "命中 {count} 次",
+  "@studyMaterialsChunkHitCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsNoResultsTitle": "没有匹配的学习资料",
+  "studyMaterialsEmptyTitle": "你的学习宇宙正等待点亮",
+  "studyMaterialsNoResultsSubtitle": "换个搜索词，或清空筛选条件，看看更多资料。",
+  "studyMaterialsEmptySubtitle": "上传你的第一份笔记、课件或教材，Sparkle 会把它们转成可搜索的知识星图。",
+  "studyMaterialsResetFilters": "重置筛选",
   "communityMessageFallback": "消息加载中...",
   "communityMessageInputHint": "输入消息...",
   "communitySearchGroupMessages": "搜索群消息",
@@ -3006,6 +3361,166 @@
   "planContextTitle": "计划上下文",
   "planDaysRemaining": "{arg0}",
   "planDetailTitle": "计划详情",
+  "planDetailAddExistingTask": "添加已有",
+  "planDetailAddNewTask": "新增任务",
+  "planDetailAddPhase": "新增阶段",
+  "planDetailAiGuide": "AI执行指南",
+  "planDetailCompressionDesc": "今天只保留 {taskCount} 个任务 / {totalMinutes} 分钟，先把主线接回来。",
+  "@planDetailCompressionDesc": {
+    "placeholders": {
+      "taskCount": {
+        "type": "Object"
+      },
+      "totalMinutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailCompressionTitle": "已为你精简今日计划",
+  "planDetailCommonMistakes": "⚠️ 常见误区",
+  "planDetailDailyRhythm": "每日节奏",
+  "planDetailDayGroupSubtitle": "{count} 件 · {minutes} 分钟",
+  "@planDetailDayGroupSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailDefaultRecommendation": "今天不再学新内容，只做高频知识点速览、错题错因回看和 30 分钟短模拟。",
+  "planDetailEdit": "编辑计划",
+  "planDetailFullPlan": "完整计划",
+  "planDetailHealthNeedAttention": "需要关注",
+  "planDetailHealthNeedReplan": "需要重排",
+  "planDetailHealthReasonDefault": "暂无明确风险原因",
+  "planDetailHealthReasonProgressLag": "当前进度落后于时间线，建议优先处理高收益任务。",
+  "planDetailHealthReasonTimeOverrun": "最近任务用时偏长，可以考虑压缩下一步。",
+  "planDetailHealthReasonTooEasy": "最近反馈偏简单，可以适当提高挑战度。",
+  "planDetailHealthReasonTooHard": "最近反馈偏难，适合先拆小或补一个前置概念。",
+  "planDetailHealthScore": "计划健康度 {score}% · {label}",
+  "@planDetailHealthScore": {
+    "placeholders": {
+      "score": {
+        "type": "Object"
+      },
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailHealthStable": "稳定",
+  "planDetailLearningPathLoadError": "学习路径进度加载失败：{error}",
+  "@planDetailLearningPathLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailLoadError": "计划加载失败",
+  "planDetailLoadError404": "计划刚生成完成，详情可能还在同步。点\"重试\"继续加载就好。",
+  "planDetailLoadErrorEmpty": "计划详情暂时没加载出来，请重试一次。",
+  "planDetailLoadErrorGeneric": "计划详情暂时没加载出来：{error}",
+  "@planDetailLoadErrorGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailLoadErrorTimeout": "加载计划超时了，请检查网络后再试一次。",
+  "planDetailMinutes": "{minutes} 分钟",
+  "@planDetailMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailNoPhasesYet": "还没有真实阶段，先创建第一个 phase，把长期计划拆成可执行的小段。",
+  "planDetailPhasesLoadError": "阶段加载失败：{error}",
+  "@planDetailPhasesLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailPhasesTitle": "计划阶段",
+  "planDetailPlanScope": "计划边界",
+  "planDetailRecommendationDay1": "今天先做好{thingLabel}，你已经走在正确路上了。",
+  "@planDetailRecommendationDay1": {
+    "placeholders": {
+      "thingLabel": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailRecommendationDayN": "先看 Day {day} 的{thingLabel}，把节奏稳稳接上。",
+  "@planDetailRecommendationDayN": {
+    "placeholders": {
+      "day": {
+        "type": "Object"
+      },
+      "thingLabel": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailSprintMode7Day": "7 天冲刺模式",
+  "planDetailSprintModeExam": "考试冲刺模式",
+  "planDetailSprintModeLabel": "考前冲刺模式",
+  "planDetailSprintNodesLoading": "冲刺节点还在整理中。",
+  "planDetailSprintPackDesc": "今天先把这些高收益节点接稳，任务完成后对应圆点会点亮。",
+  "planDetailSprintPackNodes": "Sprint Pack 节点",
+  "planDetailStatusAbandoned": "已放弃",
+  "planDetailStatusCompleted": "已完成",
+  "planDetailStatusInProgress": "进行中",
+  "planDetailStatusPending": "待开始",
+  "planDetailStatusStuck": "卡住了",
+  "planDetailTaskBlueprint": "任务编排",
+  "planDetailTaskCount": "{completed}/{total} 任务",
+  "@planDetailTaskCount": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailTaskDifficulty": "难度 {difficulty}",
+  "@planDetailTaskDifficulty": {
+    "placeholders": {
+      "difficulty": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailTagErrorRepair": "错题补强",
+  "planDetailTagNoNewContent": "不学新内容",
+  "planDetailThingCount1": "这 1 件事",
+  "planDetailThingCountN": "这 {count} 件事",
+  "@planDetailThingCountN": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailTodayFocus": "今日聚焦",
+  "planDetailSprintFocus": "冲刺聚焦",
+  "planDetailWhyNowErrorFix": "现在修这个错因，能避免后面的任务被同一个漏洞反复拖住。",
+  "planDetailWhyNowLearning": "现在先处理它，是为了把今天的学习推进变成一个看得见的输出。",
+  "planDetailWhyNowOcr": "现在处理资料，能先把可用信息变成后续任务的入口。",
+  "planDetailWhyNowPlanning": "现在整理计划，能让下一步执行少一点犹豫。",
+  "planDetailWhyNowReflection": "现在复盘，能把今天的结果转成明天更轻的选择。",
+  "planDetailWhyNowSocial": "现在完成协作动作，能让外部反馈及时接进你的学习节奏。",
+  "planDetailWhyNowTraining": "现在做练习，能尽快确认刚学的内容是不是真的会用。",
   "planDueToday": "今日到期",
   "planFactsFeedbackSummary": "{arg0} {arg1}",
   "planKeyFacts": "关键事实",
@@ -3242,7 +3757,24 @@
   "taskExecutionAbandon": "放弃执行",
   "taskExecutionCompleteTitle": "完成任务",
   "taskExecutionCompletedTitle": "任务已完成",
+  "taskConfirmCompleteTitle": "确认完成任务？",
+  "taskConfirmCompleteBody": "将「{title}」标记为已完成。",
+  "taskEstimatedMinutesValue": "{minutes} 分钟",
   "taskExecutionConfirmComplete": "确认完成",
+  "@taskConfirmCompleteBody": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskEstimatedMinutesValue": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
   "taskExecutionElapsedMinutes": "{arg0}",
   "taskExecutionEnterFocus": "进入专注模式",
   "taskExecutionExpGained": "{arg0}",
@@ -3261,6 +3793,7 @@
   "taskExecutionStartFailed": "{arg0}",
   "taskExecutionStartNow": "立即开始",
   "taskExecutionSyncFailed": "同步失败",
+  "taskExecutionFreeFocusCompleted": "自由专注已完成",
   "taskExecutionTapToContinue": "点击继续",
   "taskExecutionTimerLabel": "计时器",
   "taskExitCancelStep1": "取消退出",
@@ -3277,6 +3810,40 @@
   "taskExitTitleStep3": "已放弃",
   "taskGenerateGuideSubtitle": "AI 正在生成执行指南...",
   "taskGenerateGuideTitle": "生成执行指南",
+  "taskDetailNoteSection": "任务说明",
+  "taskDetailSubtasks": "子任务 ({completed}/{total})",
+  "taskDetailSubtaskLoadFailed": "子任务加载失败：{error}",
+  "taskDetailAiExpansionTitle": "AI 拓展相关节点",
+  "taskDetailAiExpansionDescription": "基于当前节点生成 3 个候选相关节点。你可以不选，也可以任选 1 到 3 个真正写入知识星图。",
+  "taskDetailGenerateCandidates": "生成候选节点",
+  "taskDetailUnknownNode": "未知节点",
+  "taskDetailNodeCleanedUp": "这个节点已被清理，星图会在下次刷新后同步。",
+  "taskDetailRecentLearningPath": "最近生成的学习路径",
+  "taskDetailLightweightPath": "当前为轻量任务路径，不占用计划额度。",
+  "taskDetailFullPath": "当前为完整学习计划路径。",
+  "taskDetailGeneratedTasks": "已生成任务",
+  "taskDetailPlanContext": "所属计划",
+  "taskDetailPlanContextLoading": "正在加载所属计划...",
+  "taskDetailCopyAiPromptSuccess": "AI 提示词已复制",
+  "taskDetailGuideGenerated": "任务指南已生成",
+  "taskDetailGuideGenerateFailed": "生成失败: {error}",
+  "taskDetailRelationPrerequisite": "前置",
+  "taskDetailRelationApplication": "应用",
+  "taskDetailRelationEvolution": "进阶",
+  "taskDetailRelationRelated": "相关",
+  "taskDetailCandidatesProcessed": "候选节点已处理。",
+  "taskDetailCandidatesApplied": "已处理 {count} 个候选节点，新增 {created} 个，复用 {reused} 个已有节点。",
+  "taskDetailCandidatesReused": "已处理 {count} 个候选节点，复用 {reused} 个已有节点。",
+  "taskDetailCandidatesAccepted": "已将 {count} 个节点纳入星图。",
+  "taskDetailNodeExpansionDescription": "围绕「{name}」生成 3 个候选节点，再由你决定哪些真正写入知识星图。",
+  "taskDetailGenerateThreeCandidates": "生成 3 个候选节点",
+  "taskDetailSelectedCount": "已选 {selected} / {total} 个候选节点",
+  "taskDetailImportanceLevel": "重要度 {level}",
+  "taskDetailRegenerate": "重新生成",
+  "taskDetailSkipAll": "本次不纳入",
+  "taskDetailAcceptIntoGalaxy": "纳入星图（{count}）",
+  "taskDetailStepMinutesValue": "{minutes} 分钟",
+  "taskDetailStepMinutes": "{minutes}分钟",
   "taskGuideEmpty": "暂无指南",
   "taskGuideTitle": "任务指南",
   "taskListLoading": "加载任务列表...",
@@ -3317,5 +3884,4331 @@
   "sessionManagementCurrentHint": "这是您当前正在使用的设备",
   "personaAdjustInferredPreference": "调整推断偏好",
   "personaNewValue": "新值",
-  "personaAdjustInferredPreferenceTitle": "调整推断偏好"
+  "personaAdjustInferredPreferenceTitle": "调整推断偏好",
+  "languageDialogDescription": "选择你更习惯的阅读与交互语言，界面与系统文案会一起切换。",
+  "languageChineseDescription": "更适合中文阅读与本地化表达。",
+  "languageEnglishDescription": "适合英文界面与更国际化的内容环境。",
+  "learningModeSubtitle": "调整深度与好奇心偏好",
+  "learningPreferenceSaving": "保存中…",
+  "learningPreferenceSaved": "学习模式偏好已保存",
+  "learningPreferenceSaveFailed": "保存失败：{error}",
+  "@learningPreferenceSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "learningPreferenceAutoSaveHint": "拖动后会自动保存到后端",
+  "bgmVolume": "音乐音量",
+  "bgmScenePreference": "场景偏好",
+  "bgmPreviewTooltip": "试听 {palette}",
+  "@bgmPreviewTooltip": {
+    "placeholders": {
+      "palette": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmAdvancedControls": "高级控制",
+  "bgmAdvancedControlsSubtitle": "控制音乐浓度、轮换频率、阅读保护、专注优先与锁定当前风格",
+  "chatPureMode": "纯净模式",
+  "chatPureModeSubtitle": "聊天中只保留文字消息，隐藏附加信息卡片与消息下方组件。",
+  "motionIntensity": "动效强度",
+  "aiUsagePanelUnavailable": "额度面板暂时不可用，但档位切换仍可正常生效。",
+  "aiOpsPanelUnavailable": "运营面板暂时不可用，但 AI 档位和使用统计仍可继续使用。",
+  "notificationManageSubtitle": "统一管理系统通知、干预通知、免打扰时段与任务提醒。",
+  "notificationLoadingPrefs": "正在加载通知偏好...",
+  "notificationSystem": "系统通知",
+  "notificationSystemSubtitle": "控制任务提醒、成就、系统消息等站内通知",
+  "notificationInterventions": "干预通知",
+  "notificationInterventionsSubtitle": "控制教练/代理的干预和引导提醒",
+  "notificationReminders": "提醒",
+  "notificationRemindersSubtitle": "控制任务、计划进度和回归提醒",
+  "notificationSpacedRepetition": "复习",
+  "notificationSpacedRepetitionSubtitle": "控制 Galaxy 间隔复习节点提醒",
+  "notificationWeeklyReport": "周报",
+  "notificationWeeklyReportSubtitle": "控制每周成长报告和学习摘要通知",
+  "notificationMilestone": "里程碑",
+  "notificationMilestoneSubtitle": "控制成就、阶段达成和进度里程碑通知",
+  "notificationLevel": "通知级别",
+  "notificationLevelSwitched": "通知级别已切换为{level}",
+  "@notificationLevelSwitched": {
+    "placeholders": {
+      "level": {
+        "type": "Object"
+      }
+    }
+  },
+  "notificationLevelMinimal": "简洁",
+  "notificationLevelStandard": "标准",
+  "notificationLevelVerbose": "详细",
+  "notificationLevelMinimalDesc": "只保留最必要的提醒，减少打扰。",
+  "notificationLevelStandardDesc": "在信息量和打扰频率之间保持平衡。",
+  "notificationLevelVerboseDesc": "展示更完整的背景信息和提醒内容。",
+  "notificationLevelMinimalPreview": "只保留关键提醒，例如任务即将到期、需要立即处理的系统通知。",
+  "notificationLevelStandardPreview": "保留主要提醒，并在必要时补充简短背景说明，适合大多数场景。",
+  "notificationLevelVerbosePreview": "会附带更多上下文，例如为什么提醒你、下一步建议和补充说明。",
+  "notificationLevelPreviewTitle": "{level}通知",
+  "@notificationLevelPreviewTitle": {
+    "placeholders": {
+      "level": {
+        "type": "Object"
+      }
+    }
+  },
+  "notificationQuietHours": "免打扰时段",
+  "notificationQuietHoursSubtitle": "关闭后，系统会按正常节奏推送通知",
+  "notificationQuietHoursStart": "开始时间",
+  "notificationQuietHoursEnd": "结束时间",
+  "notificationQuietHoursHint": "支持跨午夜，例如 22:00 - 08:00；开始和结束时间不能相同。",
+  "notificationQuietHoursSameTimeError": "开始和结束时间不能相同",
+  "notificationQuietHoursStartUpdated": "免打扰开始时间已更新",
+  "notificationQuietHoursEndUpdated": "免打扰结束时间已更新",
+  "notificationUpdateFailed": "通知设置更新失败：{error}",
+  "@notificationUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "aiExecutionEngine": "AI执行引擎",
+  "aiExecutionEngineSubtitle": "连接你的 OpenClaw 实例并监控健康状态",
+  "capsuleGenerated": "新的好奇心胶囊已生成",
+  "capsuleGeneratedEmpty": "已生成新的胶囊，点击下方即可查看完整内容。",
+  "capsuleViewNew": "查看新胶囊",
+  "capsulePreviewFailed": "试听失败，请检查音频文件",
+  "capsuleScenePreviewFailed": "当前场景试听失败，请检查音频文件",
+  "aiReasoningModeSwitched": "AI 推理模式已切换为{mode}",
+  "@aiReasoningModeSwitched": {
+    "placeholders": {
+      "mode": {
+        "type": "Object"
+      }
+    }
+  },
+  "aiReasoningModeSwitchFailed": "AI 推理模式切换失败，请稍后重试",
+  "aiReasoningFastDesc": "优先更快给出结果，适合短问答、轻量查询和低延迟场景。",
+  "aiReasoningBalancedDesc": "在速度和推理深度之间保持平衡，适合大多数日常使用。",
+  "aiReasoningDeepDesc": "会投入更多推理预算，适合复杂问题、规划和高精度解释。",
+  "taskReminderDisabled": "已关闭",
+  "taskReminderEnabledNoTime": "已开启，但暂未选择提醒时间",
+  "taskReminderEnabledWithTimes": "已开启",
+  "taskReminderDaysAgo": "{days}天前",
+  "@taskReminderDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskReminderHoursAgo": "{hours}小时前",
+  "@taskReminderHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskReminderMinutesAgo": "{minutes}分钟前",
+  "@taskReminderMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "notificationPermissionDeniedTitle": "未授权: {error}",
+  "@notificationPermissionDeniedTitle": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "notificationRequestPermission": "请求权限",
+  "notificationOpenSettings": "打开设置",
+  "notificationPermissionDialogTitle": "通知权限状态",
+  "notificationPermissionDialogContent": "通知权限被拒绝，请在系统设置中开启",
+  "bgmPaletteAdaptive": "自适应",
+  "bgmPaletteClassical": "精选古典",
+  "bgmPalettePiano": "钢琴优先",
+  "bgmPaletteAiry": "空灵氛围",
+  "bgmPaletteWarm": "温暖轻快",
+  "bgmPaletteAdaptiveDesc": "系统会按页面功能自动挑选最合适的背景音乐。",
+  "bgmPaletteClassicalDesc": "精选古典钢琴与弦乐，会优先使用你本机准备的古典乐库做场景切换。",
+  "bgmPalettePianoDesc": "整体更偏轻钢琴与安静旋律，适合长时间陪伴。",
+  "bgmPaletteAiryDesc": "整体更偏空灵、梦幻和空间感更强的氛围。",
+  "bgmPaletteWarmDesc": "整体更偏温暖、柔和、有人味的轻快底色。",
+  "bgmIntensityGentle": "柔和",
+  "bgmIntensityBalanced": "平衡",
+  "bgmIntensityLush": "丰盈",
+  "bgmIntensityGentleDesc": "更适合长时间陪伴，优先轻密度、低干扰和慢切换。",
+  "bgmIntensityBalancedDesc": "保留舒适度的同时增加一点层次和存在感。",
+  "bgmIntensityLushDesc": "让同一场景更有氛围和包裹感，但仍避免明显突兀。",
+  "bgmVarietySteady": "稳定",
+  "bgmVarietyBalanced": "均衡",
+  "bgmVarietyDynamic": "灵动",
+  "bgmVarietySteadyDesc": "尽量减少跳曲和重复变化，让氛围更连贯。",
+  "bgmVarietyBalancedDesc": "在连贯和新鲜之间保持中间值。",
+  "bgmVarietyDynamicDesc": "降低重复率，让同类页面也能更常听到新变化。",
+  "bgmModeAdaptive": "跟随页面",
+  "bgmModeContinuous": "播放器模式",
+  "bgmModeFocusOnly": "仅专注开启",
+  "bgmModeSilent": "全局静音",
+  "bgmModeAdaptiveDesc": "首页、聊天、任务、成就等页面会自动切换到对应氛围音乐。",
+  "bgmModeContinuousDesc": "当前曲目会持续播放，不会因为你跳转到别的页面而被打断，适合把 App 当成舒缓音乐播放器。",
+  "bgmModeFocusOnlyDesc": "只有专注开始、沉浸和执行任务时才会播放背景音乐，日常页面保持安静。",
+  "bgmModeSilentDesc": "保留音效和触感反馈，但所有背景音乐都不会自动播放。",
+  "motionIntensityUltra": "超强",
+  "motionIntensityHigh": "高",
+  "motionIntensityMedium": "中",
+  "motionIntensityOff": "关闭",
+  "motionIntensityUltraDesc": "保留完整粒子、辉光与复杂动效，适合高性能设备。",
+  "motionIntensityHighDesc": "维持大部分视觉层，同时允许系统按帧率自动降级。",
+  "motionIntensityMediumDesc": "收敛粒子与辉光，优先稳定和省电，仍保留基础层次感。",
+  "motionIntensityOffDesc": "尽量关闭强动效与粒子层，适合偏静态、低刺激或低性能场景。",
+  "bgmSectionSubtitleDefault": "按页面与播放器模式管理背景音乐",
+  "bgmSectionSubtitleWithCount": "当前共 {count} 首，可在页面策略和播放器模式之间自由切换",
+  "@bgmSectionSubtitleWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryUpdated": "曲库已更新为 {count} 首",
+  "@bgmLibraryUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmOpenLibrary": "打开曲库",
+  "bgmCurated": "精选",
+  "bgmImported": "本地导入",
+  "bgmBundled": "系统兜底",
+  "bgmModeLabel": "模式",
+  "bgmPlayerMode": "播放器模式",
+  "bgmPageStrategyMode": "页面策略模式",
+  "bgmLibraryHint": "新页面里可以点播曲库、导入自己的音乐，并启用「播放器模式」让 BGM 跨页面持续不中断。",
+  "bgmNotPlaying": "当前未播放",
+  "bgmBundledTrack": "内置场景曲目",
+  "bgmWaitingPlayback": "等待播放信息",
+  "bgmDisabled": "背景音乐已关闭",
+  "bgmGlobalSilent": "当前处于全局静音",
+  "bgmContinuousPlaying": "播放器模式持续播放中",
+  "bgmNowPlaying": "当前播放",
+  "bgmPreviewCurrentScene": "试听当前场景",
+  "bgmTrackLabel": "曲目: {name}",
+  "@bgmTrackLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmSourceLabel": "来源: {label}",
+  "@bgmSourceLabel": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmIntensityLabel": "强度",
+  "bgmVarietyLabel": "轮换",
+  "bgmReadingProtection": "阅读保护",
+  "bgmFocusPriority": "专注优先",
+  "bgmStyleLocked": "锁定风格",
+  "bgmReadingProtectionTitle": "阅读保护",
+  "bgmReadingProtectionSubtitle": "聊天、洞察、个人页优先保留低刺激与轻混音",
+  "bgmFocusPriorityTitle": "专注优先",
+  "bgmFocusPrioritySubtitle": "专注与执行阶段优先选择更纯净、更稳定的曲目",
+  "bgmLockStyleTitle": "锁定当前风格",
+  "bgmLockStyleSubtitle": "跨普通页面时尽量延续当前气质，不覆盖专注和庆祝场景",
+  "bgmAtmosphereIntensity": "氛围强度",
+  "bgmVarietyFrequency": "曲目变化频率",
+  "aiUsageTodayPreparing": "今日额度统计准备中。",
+  "aiUsageTodayTitle": "今日 AI 额度与消耗",
+  "aiUsageRequests": "{used}/{limit} 次",
+  "@aiUsageRequests": {
+    "placeholders": {
+      "used": {
+        "type": "Object"
+      },
+      "limit": {
+        "type": "Object"
+      }
+    }
+  },
+  "aiUsageLatency": "平均首 token {firstToken}ms · 平均总耗时 {totalMs}ms",
+  "@aiUsageLatency": {
+    "placeholders": {
+      "firstToken": {
+        "type": "Object"
+      },
+      "totalMs": {
+        "type": "Object"
+      }
+    }
+  },
+  "aiOpsModesAccumulating": "模式级运营指标还在累积中。",
+  "aiOpsTopChatModeStandard": "标准对话",
+  "aiOpsTopChatModeStudyPlan": "学习规划",
+  "aiOpsTopChatModeDeepAnalysis": "深度分析",
+  "aiOpsTopChatModeErrorDiagnosis": "诊断纠错",
+  "aiOpsTopChatModeExpertAuto": "专家协作",
+  "aiOpsUserViewTitle": "用户视角",
+  "aiOpsUserViewDesc": "重点看 AI 是否回得快、够稳、能把建议真正推成执行，而不是只看模型层参数。",
+  "aiOpsSuccessRate": "成功率",
+  "aiOpsAvgFirstToken": "平均首包",
+  "aiOpsAvgTotalDuration": "平均总耗时",
+  "aiOpsExecutionConversion": "执行转化",
+  "aiOpsPredictedAcceptExec": "预测接受后执行",
+  "aiOpsTopModeSummary": "最近最常用的是「{topMode}」这条链，说明它已经是用户日常体验里的主力工作流。",
+  "@aiOpsTopModeSummary": {
+    "placeholders": {
+      "topMode": {
+        "type": "Object"
+      }
+    }
+  },
+  "aiOpsDevViewTitle": "开发运营视角",
+  "aiOpsDevViewDesc": "这里专门看速度、成本、fallback 和预测转化，用来决定下一轮要优化哪条模式链。",
+  "aiOpsMonitoringModes": "监控模式",
+  "aiOpsTotalRequests": "请求总量",
+  "aiOpsFallback": "fallback",
+  "aiOpsTotalCost": "总成本",
+  "aiOpsPromptHit": "prompt 命中",
+  "aiOpsInferenceHit": "推理命中",
+  "aiOpsPredictionSummary": "近 {days} 天里，当前最值得继续盯的预测动作是「{topAction}」；同时 prompt / inference 命中率分别是 {promptUtil}%/{inferenceUtil}%。",
+  "@aiOpsPredictionSummary": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      },
+      "topAction": {
+        "type": "Object"
+      },
+      "promptUtil": {
+        "type": "Object"
+      },
+      "inferenceUtil": {
+        "type": "Object"
+      }
+    }
+  },
+  "aiOpsOpenAnalysis": "打开 AI 运营分析页",
+  "aiOpsOpenAdminPanel": "打开管理员运营面板",
+  "memoryDeclaration": "声明",
+  "memoryEvidenceToken": "证据 Token",
+  "memoryDecayPolicy": "衰减策略",
+  "memoryUpdateValue": "更新: {date}",
+  "@memoryUpdateValue": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryConfidenceValue": "置信度: {value}",
+  "@memoryConfidenceValue": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryAllowedCaptureSummary": "已允许捕获：{types}\n捕获级别：{level}",
+  "@memoryAllowedCaptureSummary": {
+    "placeholders": {
+      "types": {
+        "type": "Object"
+      },
+      "level": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryAiInferredDisabledHint": "当前已关闭 AI 自动记忆，后续不会继续写入此类推断。",
+  "memoryExplanationInferredEpisodic": "这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。",
+  "memoryCorrectionSubmittedWithAction": "已提交纠错: {action}",
+  "@memoryCorrectionSubmittedWithAction": {
+    "placeholders": {
+      "action": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryCorrectionFailedWithDetail": "纠错失败: {error}",
+  "@memoryCorrectionFailedWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "tracksCount": "{count} 首",
+  "@tracksCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "profilePrestigeIdentity": "荣耀身份",
+  "profileNoTitleEquipped": "未装备称号",
+  "profileRecentHighlights": "近期高光成就",
+  "profileNoHighlightsHint": "继续完成学习与冲刺，你的荣耀陈列柜会在这里逐步点亮。",
+  "profileTraitQ1Title": "开始新目标时，你更像哪种方式？",
+  "profileTraitQ1Structured": "先搭结构再行动",
+  "profileTraitQ1Mixed": "先有框架，再边做边调",
+  "profileTraitQ1Explore": "先试试看，让方向自己浮现",
+  "profileTraitSkip": "跳过",
+  "profileTraitQ2Title": "遇到难题时，你更容易从哪里补能量？",
+  "profileTraitQ2Solo": "先自己想清楚",
+  "profileTraitQ2SmallGroup": "找一两个人讨论",
+  "profileTraitQ2Group": "边聊边想最有感觉",
+  "profileTraitQ3Title": "当计划被打乱时，你通常最先出现什么反应？",
+  "profileTraitQ3Replan": "马上重排，尽快回正",
+  "profileTraitQ3Pause": "会卡一下，但能慢慢拉回来",
+  "profileTraitQ3Swing": "情绪和节奏都会受影响",
+  "profileLearningPortfolio": "学习档案",
+  "profileLearningPortfolioSubtitle": "查看所有科目的冲刺历史、进行中与计划中记录",
+  "profilePosterStudio": "海报工坊",
+  "profilePosterStudioSubtitle": "把成长、计划与灵感做成高质感分享海报",
+  "profileMyWay": "我的方式",
+  "profileMetacognitionPanel": "自我认识面板",
+  "profileMetacognitionHidden": "已隐藏，后台仍会继续计算",
+  "profileMetacognitionVisible": "显示过去样本里的判断偏差摘要",
+  "profileExportData": "导出我的数据",
+  "profileExportPreparing": "正在准备数据，请稍候…",
+  "profileExportEmptyFile": "空文件",
+  "profileExportShareSubject": "Sparkle 数据导出",
+  "profileExportFailed": "导出失败：{error}",
+  "@profileExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "profileSubtitleAchievements": "查看已解锁的里程碑与荣誉进度",
+  "profileSubtitleVisualElements": "管理背景、粒子和视觉奖励",
+  "profileSubtitlePersona": "查看系统理解到的学习特征与偏好",
+  "profileSubtitlePersonalInfo": "编辑头像、昵称和基础资料",
+  "profileSubtitlePreferences": "管理感官反馈、学习模式与推送偏好",
+  "profileSubtitleMyWay": "管理私有 Skill、共享与匿名 fork",
+  "profileSubtitleSecurity": "查看安全信息、设备与隐私控制",
+  "profileSubtitleMemory": "调整长期记忆与上下文保留策略",
+  "profileSubtitleLogout": "安全退出当前账号",
+  "profileSubtitleDeleteAccount": "永久移除账号与相关数据",
+  "profileSubtitleDefault": "进入此页面继续调整详细设置",
+  "chatSelfVisibleOnly": "仅自己可见",
+  "chatSelfVisibleDraftDesc": "这条 AI 草稿只保存在你的当前私聊视图里。",
+  "chatPromoteToBothVisible": "改为双方都可见",
+  "chatPromoteToBothDesc": "把这条草稿放回输入框，由你确认后发送给对方。",
+  "chatViewAccessoryContent": "查看附加内容",
+  "chatViewAccessoryContentDesc": "在纯净模式下临时展开任务卡和快捷入口",
+  "chatActionSuggestion": "行动建议",
+  "chatActionSuggestionDesc": "继续完成这一步，或者先确认任务和计划。",
+  "chatTheaterTitle": "推演剧场",
+  "chatTheaterDesc": "现在最值得先看的是哪条路径，以及它为什么更适合你。",
+  "chatSimulationTitle": "学习仿真",
+  "chatSimulationDesc": "先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。",
+  "chatReportTitle": "学习报告",
+  "chatReportDesc": "先看最核心的诊断和下一步动作，再决定是否进入完整报告页。",
+  "chatAccessoryContent": "附加内容",
+  "chatContinueExploring": "继续探索",
+  "chatSwipeToSwitch": "左右滑动切换不同入口",
+  "chatViewTheaterDetails": "查看推演详情",
+  "chatCurrentLearningTopic": "当前学习主题",
+  "chatViewSimulationDetails": "查看模拟详情",
+  "chatCollaborationProcess": "协作过程",
+  "chatPlanContext": "计划上下文",
+  "chatPlanStatus": "计划状态",
+  "chatContinueFromConversation": "承接刚才的对话",
+  "chatReviewFirstThenExpand": "先看重点，再决定要不要展开完整体验",
+  "chatPathLabel": "路径",
+  "chatMasteryLabel": "掌握度",
+  "chatOpenFullExperience": "打开完整体验",
+  "chatContinueInChat": "继续在对话里",
+  "chatViewLatestReport": "查看最新学习报告",
+  "chatViewLearningReport": "查看学习报告",
+  "chatKeyFocusLabel": "重点关注",
+  "chatShareResourceInvalidId": "分享资源 ID 无效，无法采纳",
+  "chatShareResourceAdopted": "已采纳，跳转中...",
+  "chatShareResourceAdoptError": "采纳失败: {error}",
+  "chatTaskConfirmedMessage": "已确认 {count} 个任务，开始执行！",
+  "chatViewPlan": "查看计划",
+  "chatGoToTaskList": "去任务列表",
+  "chatConfirmFailed": "确认失败: {error}",
+  "chatTaskCompletedDoneMinutes": "已完成 · {minutes}分钟",
+  "chatTaskCompletedDone": "已完成",
+  "chatPlanProgressLabel": "进度: {percent}%",
+  "chatPromptPreviewCancel": "先不发",
+  "chatPromptPreviewSend": "直接发送",
+  "chatParticipantLabel": "参与者",
+  "chatPromptRefinePath": "继续细化这条路径",
+  "chatPromptRefinePathMessage": "继续围绕「{topic}」细化第一周最该先做的步骤。",
+  "chatPromptComparePaths": "比较两条路线",
+  "chatPromptComparePathsMessage": "比较一下「{pathA}」和「{pathB}」的取舍。",
+  "chatPromptDefaultPathA": "路线 A",
+  "chatPromptDefaultPathB": "路线 B",
+  "chatPromptPrerequisites": "先补什么前置",
+  "chatPromptPrerequisitesMessage": "如果我现在就开始学「{topic}」，最该先补的前置是什么？",
+  "chatPromptExamFocus": "考试重点是什么",
+  "chatPromptExamFocusMessage": "围绕「{topic}」，告诉我最容易成为考试重点的部分和原因。",
+  "chatPromptMakePlan": "给我排成计划",
+  "chatPromptMakePlanMessage": "把「{topic}」这条路径改写成 7 天可执行的小计划。",
+  "chatPromptSimulateRound": "继续模拟一轮",
+  "chatPromptSimulateRoundMessage": "继续围绕「{topic}」模拟一轮，我想继续跟进这个学习场景。",
+  "chatOneOfTheRoles": "其中一个角色",
+  "chatPromptLetMeAnswer": "让我来回答",
+  "chatPromptLetMeAnswerMessage": "让 {speaker} 围绕「{topic}」继续追问我一个关键问题，我来回答。",
+  "chatPromptPracticeExplain": "练习讲给别人听",
+  "chatPromptPracticeExplainMessage": "围绕「{topic}」安排一轮需要我讲给别人听的仿真。",
+  "chatPromptErrorDiagnosis": "换成错因诊断",
+  "chatPromptErrorDiagnosisMessage": "把「{topic}」切到错因诊断模式，帮我定位真正的卡点。",
+  "chatPromptOrderActions": "排今天行动顺序",
+  "chatPromptOrderActionsMessage": "根据这份学习报告，帮我排一个今天就能开始的行动顺序。",
+  "chatPromptExpandKeyIssue": "展开重点问题",
+  "chatPromptExpandKeyIssueMessage": "展开讲讲为什么「{highlight}」最值得先处理。",
+  "chatPromptPrioritizeArea": "先补哪一块",
+  "chatPromptPrioritizeAreaMessage": "根据这份报告，先帮我解释为什么「{area}」应该优先处理。",
+  "chatPromptConvertToPlan": "转成 7 天计划",
+  "chatPromptConvertToPlanMessage": "把这份学习报告改写成我接下来 7 天的执行顺序。",
+  "chatPromptReviewOutline": "帮我做复盘提纲",
+  "chatPromptReviewOutlineMessage": "根据这份学习报告，给我一份今晚就能用的复盘提纲。",
+  "dashboardBottleneckPrompt": "我想换个方式理解{topic}。请结合这个卡点，帮我调整接下来的学习路径。",
+  "@dashboardBottleneckPrompt": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardSetFirstGoal": "先定下你的第一个目标",
+  "dashboardSetFirstGoalSummary": "告诉我你最近最想推进的一件事，我会立刻帮你拆成可执行的计划。",
+  "dashboardStartWithAI": "和 AI 定目标",
+  "dashboardOpenTaskList": "查看任务列表",
+  "dashboardDueToday": "今天截止",
+  "dashboardOverdueDays": "已逾期 {days} 天",
+  "@dashboardOverdueDays": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardDaysLeft": "还有 {days} 天",
+  "@dashboardDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardMainMove": "1 个重点动作",
+  "dashboardMoreQueued": "另有 {count} 项待推进",
+  "@dashboardMoreQueued": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardProgress": "{percent}% 进度",
+  "@dashboardProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardTodayBriefing": "今日总览",
+  "dashboardBriefingSummary": "把最重要的事情压缩成一张卡",
+  "dashboardSparkleObservation": "Sparkle 的观察",
+  "dashboardStartWithThis": "今天先做这一步",
+  "dashboardGrowthSignal": "最近最明显的变化",
+  "dashboardMoreTasksQueued": "除了当前重点，还有 {count} 项任务在队列中。",
+  "@dashboardMoreTasksQueued": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardStartFocus": "开始专注",
+  "dashboardStartHere": "先做这个",
+  "dashboardOpenTasks": "查看任务",
+  "dashboardTaskList": "任务列表",
+  "dashboardActivePlan": "当前主计划",
+  "dashboardPhaseLabel": "阶段：{phase}",
+  "@dashboardPhaseLabel": {
+    "placeholders": {
+      "phase": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardPhaseInProgress": "进行中",
+  "dashboardDaysToDeadline": "距离截止还有 {days} 天",
+  "@dashboardDaysToDeadline": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardPrediction": "预测建议",
+  "dashboardMessagesCount": "{count} 条消息",
+  "@dashboardMessagesCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardAlertsCount": "{count} 条通知",
+  "@dashboardAlertsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardInsightsCount": "{count} 条洞察",
+  "@dashboardInsightsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardReviewPending": "夜间复盘待处理",
+  "dashboardUpdatesInsights": "更新与洞察",
+  "planEditTypeTitle": "编辑{type}",
+  "@planEditTypeTitle": {
+    "placeholders": {
+      "type": {
+        "type": "Object"
+      }
+    }
+  },
+  "planUpdated": "计划已更新",
+  "planGuideFillNameAndGoalFirst": "先填写计划名称和计划目标，再生成 AI 指南",
+  "planGuideGeneratedHuman": "已生成给用户看的执行指南",
+  "planGuideGeneratedAi": "已生成给 AI 使用的执行版本",
+  "planGuideGenerationFailed": "计划指南生成失败：{error}",
+  "@planGuideGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "planSuggestedGrowthTask1": "建立本周主线推进清单",
+  "planSuggestedGrowthTask2": "完成一次阶段复盘",
+  "planSuggestedSprintTask1": "确认冲刺目标与验收标准",
+  "planSuggestedSprintTask2": "完成冲刺关键里程碑",
+  "planSave": "保存计划",
+  "planStepBasics": "计划定位",
+  "planStepSchedule": "时间结构",
+  "planStepTasks": "任务编排",
+  "planStepGuide": "计划边界与指南",
+  "planStepReview": "确认预览",
+  "planAiVersionCopied": "AI 版本已复制",
+  "planBasicsDescription": "先定义这是一张真正的计划卡，而不是普通任务。",
+  "planBasicsNameHint": "例如：6 周英语口语提升 / 期中冲刺收束",
+  "planBasicsNameRequired": "请先填写计划名称",
+  "planBasicsSubjectLabel": "主题方向",
+  "planBasicsSubjectHint": "英语、Flutter、考研数学、论文阅读...",
+  "planBasicsGoalLabelGrowth": "长期目标",
+  "planBasicsGoalLabelSprint": "冲刺目标",
+  "planBasicsGoalHintGrowth": "写清楚这个成长计划最终想形成什么能力、习惯或成果。",
+  "planBasicsGoalHintSprint": "写清楚这次冲刺的结果、验收标准和不能偏离的主线。",
+  "planBasicsGoalRequired": "请写出这张计划卡的目标",
+  "planBasicsPriorityLabel": "计划优先级",
+  "planPriorityNormalValue": "正常",
+  "planPriorityCriticalValue": "关键",
+  "planScheduleDescription": "把持续时间、每日投入和提醒节奏一次性定清楚。",
+  "planScheduleDailyMinutesLabel": "每日可投入时长",
+  "planScheduleMinutesUnit": "{minutes} 分钟",
+  "@planScheduleMinutesUnit": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "planScheduleTotalHours": "总预估工时 {hours} 小时",
+  "@planScheduleTotalHours": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "planScheduleTargetDateUnset": "暂未设置",
+  "planScheduleReminderTime": "每日提醒时间",
+  "planScheduleStageLabel": "当前计划阶段",
+  "planScheduleStageSprint": "冲刺推进",
+  "planScheduleStageDaily": "日常执行",
+  "planScheduleStageReview": "复盘调优",
+  "planScheduleStagePaused": "暂时暂停",
+  "planScheduleChipWeekday": "工作日推进，周末复盘",
+  "planScheduleChipMorning": "早晨启动，晚上收束",
+  "planScheduleChipAfternoon": "午后主攻，夜间轻复盘",
+  "planScheduleRhythmLabel": "节奏说明",
+  "planScheduleRhythmHint": "例如：周一到周五推进，周六复盘，周日补缺",
+  "planTasksDescription": "这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。",
+  "planTasksBlueprintLabel": "任务编排说明",
+  "planTasksBlueprintHint": "例如：先搭框架，再每天推进主线，最后统一复盘补漏。",
+  "planTasksRefExisting": "参考已有任务",
+  "planTasksMinutesDifficulty": "{minutes} 分钟 · 难度 {difficulty}",
+  "@planTasksMinutesDifficulty": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      },
+      "difficulty": {
+        "type": "Object"
+      }
+    }
+  },
+  "planTasksCopyToPlan": "复制进计划",
+  "planTasksNewTaskLabel": "新增计划任务",
+  "planTasksNewTaskHint": "例如：完成一轮章节梳理",
+  "planTasksDurationLabel": "时长",
+  "planTasksAddToPlan": "加入计划任务",
+  "planTasksEmpty": "当前还没有计划任务",
+  "planGuideScopeLabel": "计划边界与注意事项",
+  "planGuideScopeHint": "例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。",
+  "planGuidePerspectiveLabel": "任务指南视角",
+  "planGuideForHuman": "给自己看",
+  "planGuideForAi": "给 AI 用",
+  "planGuideHumanInfo": "用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。",
+  "planGuideAiInfo": "AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。",
+  "planGuideHumanTitle": "用户版执行指南",
+  "planGuideAiTitle": "给 AI 的执行版本",
+  "planGuideGenerating": "生成中",
+  "planGuideGenerateHuman": "生成用户版",
+  "planGuideGenerateAi": "生成 AI 版",
+  "planGuideHumanHint": "生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。",
+  "planGuideAiEmpty": "还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。",
+  "planGuideCopyAi": "复制 AI 版",
+  "planReviewSummary": "{planType} · {minutes} 分钟/天 · {hours} 小时",
+  "@planReviewSummary": {
+    "placeholders": {
+      "planType": {
+        "type": "Object"
+      },
+      "minutes": {
+        "type": "Object"
+      },
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "planReviewEditInfo": "保存后会更新计划描述，并为新增草案创建新的计划任务。",
+  "planReviewCreateInfo": "创建后会生成一张更完整的计划卡，并同步创建计划任务。",
+  "planReviewFinalDescription": "最终写入的计划描述",
+  "taskExecutionChatAboutStuckPoint": "和 Sparkle 聊聊这个卡点",
+  "taskExecutionSentToAurora": "已发送给 Aurora",
+  "taskExecutionStuckPromptIntro": "我在做这个任务时卡住了，想和你一起拆一下具体卡点。",
+  "taskExecutionStuckTaskLabel": "任务：{title}",
+  "@taskExecutionStuckTaskLabel": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionStuckEstimatedTime": "预估时间：{minutes}分钟",
+  "@taskExecutionStuckEstimatedTime": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionStuckFocusCue": "今日焦点：{cue}",
+  "@taskExecutionStuckFocusCue": {
+    "placeholders": {
+      "cue": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionStuckSteps": "任务步骤：{steps}",
+  "@taskExecutionStuckSteps": {
+    "placeholders": {
+      "steps": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionStuckCriteria": "完成标准：{criteria}",
+  "@taskExecutionStuckCriteria": {
+    "placeholders": {
+      "criteria": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionStuckSuggestion": "卡住时建议：{suggestion}",
+  "@taskExecutionStuckSuggestion": {
+    "placeholders": {
+      "suggestion": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionStuckClarifyPrompt": "请先问我一个最关键的澄清问题，然后把下一步缩小到5分钟内能开始。",
+  "taskExecutionStuckTooltip": "卡住了？",
+  "taskExecutionStuckLabel": "卡住了?",
+  "taskExecutionAuroraDiagnosticUnavailable": "Aurora 诊断暂时不可用：{error}",
+  "@taskExecutionAuroraDiagnosticUnavailable": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionResetTimer": "重置",
+  "taskExecutionAiHandoffFailed": "AI 执行发起失败",
+  "taskExecutionAiCompleted": "AI 已完成本次执行",
+  "taskExecutionAiPartial": "AI 已完成部分内容，请继续查看",
+  "taskExecutionAiFailed": "AI 执行失败",
+  "taskExecutionAiWaitingApproval": "AI 正在等待你的确认",
+  "taskExecutionAiHandedOff": "任务已交给 AI，当前状态：{status}",
+  "@taskExecutionAiHandedOff": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionPermissionInsufficientQueued": "当前执行权限不足，任务已加入等待队列。补齐权限后可统一重试。",
+  "taskExecutionAiConfirmFailed": "AI 结果确认失败",
+  "taskExecutionAiResultConfirmed": "AI 结果已确认，任务状态已同步",
+  "taskExecutionRejectFailed": "取回任务失败",
+  "taskExecutionTaskReturned": "任务已交还给你继续处理",
+  "taskExecutionAiTakingOver": "AI 正在接管这个任务",
+  "taskExecutionAiNotStarted": "AI 执行尚未开始",
+  "taskExecutionAiStatusLabel": "AI 状态：{status}",
+  "@taskExecutionAiStatusLabel": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionSendingToOpenclaw": "Sparkle 正在把任务发送给 OpenClaw。",
+  "taskExecutionDigitalTaskHint": "适合数字执行的任务可以在这里一键转交。",
+  "taskExecutionValidationLabel": "校验 {passed}/{total}",
+  "@taskExecutionValidationLabel": {
+    "placeholders": {
+      "passed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionResultLabel": "结果：{text}",
+  "@taskExecutionResultLabel": {
+    "placeholders": {
+      "text": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionApprovalRequestLabel": " · 审批请求 {count}",
+  "@taskExecutionApprovalRequestLabel": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionGoalWithTrust": "目标：{goal} · {trust}",
+  "@taskExecutionGoalWithTrust": {
+    "placeholders": {
+      "goal": {
+        "type": "Object"
+      },
+      "trust": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionResultTrust": "结果信任：{trust}",
+  "@taskExecutionResultTrust": {
+    "placeholders": {
+      "trust": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionTemplateLabel": "模板 {name}",
+  "@taskExecutionTemplateLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionStrategyLabel": "策略 {variant}",
+  "@taskExecutionStrategyLabel": {
+    "placeholders": {
+      "variant": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionNodeLabel": "节点 {label}",
+  "@taskExecutionNodeLabel": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionAiTakingOverLoading": "AI 接管中...",
+  "taskExecutionRehandoffToAi": "重新交给 AI",
+  "taskExecutionHandoffToAiAgain": "再次交给 AI",
+  "taskExecutionWaitingConfirm": "等待确认",
+  "taskExecutionAiRunning": "AI 执行中",
+  "taskExecutionHandoffToAi": "交给 AI 执行",
+  "taskExecutionRecommendedTemplates": "推荐执行模板",
+  "taskExecutionOpenclawConnectedNoPermission": "OpenClaw 能连上，但当前没有执行权限",
+  "taskExecutionOpenclawOfflineQueued": "OpenClaw 当前离线，可先加入等待队列",
+  "taskExecutionOpenclawNotConnected": "OpenClaw 尚未连接",
+  "taskExecutionOpenclawPermissionHint": "当前令牌能访问网关，但执行会被权限拦住。你可以先把任务排队，等权限修好后统一重试。",
+  "taskExecutionOpenclawOfflineHint": "你可以先继续委派，等引擎恢复后再统一重试，不需要在这个任务页停住。",
+  "taskExecutionOpenclawNotConnectedHint": "先完成一次连接，之后任务页和聊天页都会把它当成同一个执行入口来使用。",
+  "taskExecutionViewAction": "查看",
+  "taskExecutionConnectAction": "连接",
+  "taskExecutionDismissHint": "关闭提示",
+  "taskExecutionMetricConnectedNoPermission": "已连到网关但无执行权限",
+  "taskExecutionMetricConfiguredOffline": "已配置但离线",
+  "taskExecutionMetricNotConfigured": "尚未配置",
+  "taskExecutionMetricQueuedTasks": "{count} 个任务已排队",
+  "@taskExecutionMetricQueuedTasks": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskExecutionSuggestionFixPermission": "建议先修权限再重试",
+  "taskExecutionSuggestionQueueFirst": "建议先排队再统一重试",
+  "taskExecutionSuggestionConnectFirst": "建议先连接再委派",
+  "taskExecutionNudgeCurrentStatus": "当前状态",
+  "taskExecutionNudgeStatusPermissionIssue": "这台设备已经能访问 OpenClaw 网关，但当前认证没有真正发起执行的权限。",
+  "taskExecutionNudgeStatusOffline": "连接信息还在，但引擎暂时不在线。",
+  "taskExecutionNudgeStatusNotConnected": "这台设备还没有接入 OpenClaw。",
+  "taskExecutionNudgeWhyThisPrompt": "为什么现在看到这个提示",
+  "taskExecutionNudgeWhyThisPromptValue": "你正在一个支持 AI 委派的任务里，而且当前执行入口还没有准备好。",
+  "taskExecutionNudgeNextAction": "下一步动作",
+  "taskExecutionNudgeNextActionPermissionIssue": "打开 OpenClaw Hub 更换具备执行权限的令牌，或切到已配对的 WebSocket 连接；修好后再统一重试队列。",
+  "taskExecutionNudgeNextActionOffline": "继续把任务加入等待队列，或去 OpenClaw Hub 恢复连接后统一重试。",
+  "taskExecutionNudgeNextActionNotConnected": "打开 OpenClaw Hub 完成连接，之后再回到这里发起委派。",
+  "taskExecutionCompletedToday": "今天完成了！",
+  "taskExecutionCompletionCheckHint": "先对照完成标准看一眼。符合了就收下这次完成；还差一点也没关系，继续拆小就好。",
+  "taskExecutionCompletionCriteria": "完成标准",
+  "taskExecutionNoCriteriaHint": "这张卡没有写明确完成标准，就按你今天最小可交付的一步来判断。",
+  "taskExecutionCriteriaMatchQuestion": "对照标准，是否符合？",
+  "taskExecutionCriteriaNotMet": "还不符合",
+  "taskExecutionContinueOrRetryTomorrow": "那就继续，或者标记明天重新做",
+  "taskExecutionCriteriaMetComplete": "符合，完成",
+  "taskExecutionRejectReasonInaccurate": "结果不准确",
+  "taskExecutionRejectReasonIncomplete": "结果不完整",
+  "taskExecutionRejectReasonSafety": "安全顾虑",
+  "taskExecutionRejectReasonSelfDo": "我想自己做",
+  "taskExecutionRejectReasonTitle": "退回原因",
+  "taskExecutionRejectDescription": "告诉 Sparkle 为什么这次结果不适合直接采纳，后续会据此调整执行方式。",
+  "taskExecutionRejectAdditionalNote": "补充说明",
+  "taskExecutionRejectNoteHint": "例如：缺少来源、结论太武断、我想保留自己的表达方式",
+  "taskExecutionRejectConfirm": "确认退回",
+  "taskExecutionUserRetrievedTask": "用户取回任务",
+  "planDetailTaskLoadFailed": "加载任务失败: {error}",
+  "@planDetailTaskLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailNoExternalTasks": "没有可添加的外部任务",
+  "planDetailAddExistingTaskTitle": "将已有任务添加到本计划",
+  "planDetailTaskUnassigned": "未分配",
+  "planDetailTaskInAnotherPlan": "当前在其他计划中",
+  "planDetailGroupUnassigned": "未分配的任务",
+  "planDetailGroupOtherPlans": "来自其他计划的任务",
+  "planDetailTaskAdded": "任务已添加到计划",
+  "planDetailAddTaskFailed": "添加任务失败: {error}",
+  "@planDetailAddTaskFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailDayLabel": "第 {day} 天",
+  "@planDetailDayLabel": {
+    "placeholders": {
+      "day": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailWeightedProgress": "加权进度 {percent}%",
+  "@planDetailWeightedProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "planDetailCreatePhaseTitle": "创建阶段",
+  "planDetailPhaseNameLabel": "阶段名称",
+  "planDetailPhaseNameHint": "基础 / 构建 / 复习",
+  "planDetailPhaseCreated": "阶段已创建",
+  "planDetailCreatePhaseFailed": "创建阶段失败: {error}",
+  "@planDetailCreatePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseActivated": "阶段已激活",
+  "planDetailActivatePhaseFailed": "激活失败: {error}",
+  "@planDetailActivatePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseNeedsFeedback": "此阶段需要反馈后才能推进",
+  "planDetailPhaseCompleted": "阶段已完成",
+  "planDetailCompletePhaseFailed": "完成阶段失败: {error}",
+  "@planDetailCompletePhaseFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseFeedbackTitle": "阶段反馈 · {title}",
+  "@planDetailPhaseFeedbackTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "planDetailPhaseAlignmentQuestion": "你觉得这个阶段的契合度如何？",
+  "planDetailPhaseReflectionLabel": "反思",
+  "planDetailPhaseReflectionHint": "哪些做得好，哪些失败了，发生了什么变化？",
+  "planDetailPhaseBlocked": "我在这个阶段遇到了阻碍",
+  "planDetailPhaseLifeChanged": "我的生活状况发生了变化",
+  "planDetailPhaseRequestReview": "请求 compass 审阅",
+  "planDetailPhaseActivate": "激活",
+  "planDetailPhaseComplete": "完成",
+  "planDetailPhaseFeedback": "反馈",
+  "planDetailFeedbackSavedWithReview": "反馈已保存，已建议 compass 审阅",
+  "planDetailFeedbackSaved": "反馈已保存",
+  "planDetailSubmitFeedbackFailed": "提交反馈失败: {error}",
+  "@planDetailSubmitFeedbackFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "planDetailPhaseStats": "{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务",
+  "@planDetailPhaseStats": {
+    "placeholders": {
+      "progress": {
+        "type": "Object"
+      },
+      "completed": {
+        "type": "Object"
+      },
+      "occurrences": {
+        "type": "Object"
+      },
+      "tasks": {
+        "type": "Object"
+      }
+    }
+  },
+  "theaterTitle": "知识推演剧场",
+  "theaterContinuityBanner": "这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。",
+  "theaterShareTopic": "推演主题：{topic}",
+  "theaterShareMessage": "我刚在 Sparkle 推演了一条学习路径：{topic}\n{route}\n{suggestion}",
+  "theaterShareSuggestion": "先把关键节点和风险看清楚，再决定怎么学。",
+  "theaterRecordActualTitle": "记录 7 天后的真实表现",
+  "theaterRecordActualDesc": "回填真实完成率和掌握度后，剧场会给你一份预测校准反馈。",
+  "theaterActualCompletionRate": "真实完成率",
+  "theaterActualMastery": "真实掌握度",
+  "theaterSubmitCalibration": "提交校准",
+  "theaterNodeDescriptionFallback": "这个节点是当前推演中的关键知识点。",
+  "theaterNodeCurrentMastery": "当前掌握度",
+  "theaterNodePredictedMastery": "预测掌握度",
+  "theaterNodeDelta": "变化",
+  "theaterNodeRisk": "风险",
+  "theaterNodeRoleInPath": "它在当前路径里的作用",
+  "theaterNodeStepLabel": "{dayLabel} · 第 {index} 步",
+  "theaterNodeNextAction": "下一步动作：先用约 {minutes} 分钟处理这个节点，再进入后续步骤。",
+  "theaterWhatIfStart": "开始假设推演",
+  "theaterViewGalaxyRef": "查看星图参考",
+  "theaterNodeNotInWhatIfPath": "这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。",
+  "theaterNodeNoGalaxyRef": "这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。",
+  "theaterPromoteNodeFailed": "加入知识星图失败，请稍后再试。",
+  "theaterPromoteNodeCreated": "已将「{nodeName}」加入知识星图，可以继续完善节点内容。",
+  "theaterPromoteNodeFound": "已定位到知识星图中的「{nodeName}」，你可以继续完善节点内容。",
+  "theaterGoImprove": "去完善",
+  "theaterEdgeStrength": "关系强度 {strength}%",
+  "theaterRiskHigh": "高风险",
+  "theaterRiskMedium": "中风险",
+  "theaterRiskLow": "低风险",
+  "theaterRelationPrerequisite": "前置依赖",
+  "theaterRelationExplains": "解释关系",
+  "theaterRelationSupports": "支持关系",
+  "theaterRelationContradicts": "矛盾关系",
+  "theaterSelectedNode": "已选节点 · {nodeName}",
+  "theaterNodeTapHint": "点击节点可查看详细推演说明。",
+  "theaterNodeStatCurrent": "当前",
+  "theaterNodeStatPredicted": "预测",
+  "theaterNodeStatLift": "提升",
+  "theaterNodeStatSource": "来源",
+  "theaterComposerEyebrow": "推演决策面板",
+  "theaterComposerTitle": "先定目标，再看清多条路径",
+  "theaterComposerSubtitle": "先确定想推进的目标，再比较切入方式、主要风险和每日投入，最后决定要不要采纳这条路径。",
+  "theaterComposerCurrentTarget": "当前目标",
+  "theaterComposerWaitingInput": "等待输入",
+  "theaterComposerRecommendedEntry": "推荐切入",
+  "theaterComposerInputPrompt": "输入后即可开始",
+  "theaterComposerOutput": "输出结果",
+  "theaterComposerOutputDesc": "路径 + 风险 + 检查点",
+  "theaterComposerLoading": "推演中...",
+  "theaterComposerStart": "开始推演",
+  "theaterComposerTrySuggestion": "试试 {topic}",
+  "theaterComposerHint": "例如：两周内掌握线性代数的特征值部分",
+  "theaterComposerGenerating": "生成",
+  "theaterTopBarAdjustTarget": "调整目标",
+  "theaterTopBarShare": "分享推演",
+  "theaterTopBarNoGalaxyRef": "当前没有可打开的知识星图参考节点",
+  "theaterTopBarViewGalaxy": "查看知识星图",
+  "theaterTopBarTarget": "目标 · {name}",
+  "theaterTopBarPath": "路径 · {title}",
+  "theaterTopBarMode": "模式 · {mode}",
+  "theaterTopBarRefMap": "参考映射 {count}",
+  "theaterTopBarFreeForm": "纯自由推演",
+  "theaterTopBarMastery": "掌握度 {value}%",
+  "theaterSettingsTitle": "调整推演目标",
+  "theaterSettingsSubtitle": "这里可以重新设定目标和建议起点，收起后会把舞台空间完整还给关系图谱与讨论流。",
+  "theaterSettingsContinuity": "这次推演仍然承接你刚才的对话上下文。",
+  "theaterSettingsCurrentTarget": "当前目标：{name}",
+  "theaterSettingsLabel": "重新设定推演目标",
+  "theaterSettingsHint": "例如：两周内掌握线性代数的特征值部分",
+  "theaterSettingsGenerate": "生成新推演",
+  "theaterSettingsSuggestions": "建议起点",
+  "theaterTabGraph": "图谱",
+  "theaterTabPaths": "路径",
+  "theaterTabDiscussion": "讨论",
+  "theaterTabCalibration": "校准",
+  "theaterIntroChangeTarget": "换个目标",
+  "theaterIntroTitle": "选一个目标，AI 帮你看清多条路径",
+  "theaterIntroSteps": "1. 选择一个目标\n2. AI 推演多条学习路径\n3. 采纳最适合你的方案并同步到 Sprint",
+  "theaterIntroStartFirst": "开始第一次推演",
+  "theaterIntroLastSnapshot": "最近一次推演",
+  "theaterIntroSuggestions": "从这些主题开始更顺手",
+  "theaterEmptyTitle": "这次还没生成可采纳路径",
+  "theaterEmptyMessage": "系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。",
+  "theaterGraphRecommended": "推荐路径 · {title}",
+  "theaterGraphEstimatedMastery": "预计掌握 {value}%",
+  "theaterGraphRisk": "风险 · {risk}",
+  "theaterGraphMode": "模式 · {mode}",
+  "theaterGraphRefCount": "映射参考 {count}",
+  "theaterGraphPendingEntry": "候选待入图",
+  "theaterGraphNodeCount": "{count} 个节点",
+  "theaterGraphMainStage": "关系图谱主舞台",
+  "theaterGraphWithGalaxy": "含星图参考",
+  "theaterGraphStandalone": "独立自由图谱",
+  "theaterGraphInstructions": "单指拖动画布，双指缩放，双击可回正，点按节点可查看详情并加入知识星图。",
+  "theaterCalibrationTitle": "校准与落地",
+  "theaterCalibrationSubtitle": "把推演变成计划、快照和真实反馈，形成闭环。",
+  "theaterRetry": "重试",
+  "theaterGotIt": "知道了",
+  "theaterSemanticMatchTitle": "自由节点与星图参考",
+  "theaterSemanticMatchItem": "{freeform} 对应参考 {galaxy}",
+  "theaterLoadingTitle": "AI 正在搭建这场推演...",
+  "theaterLoadingSubtitle": "图谱、路径和风险判断会按阶段依次完成，你可以先看它推进到哪一步了。",
+  "theaterStageBuildGraph": "构建知识图谱",
+  "theaterStageAnalyzePaths": "分析学习路径",
+  "theaterStageGenerateRisk": "生成风险预测",
+  "theaterStagePrepare": "准备推演完成",
+  "theaterTimelineTitle": "推演时间轴",
+  "theaterTimelineSubtitle": "现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。",
+  "theaterTimelinePause": "暂停播放",
+  "theaterTimelineAutoPlay": "自动播放",
+  "theaterTimelineReset": "回到起点",
+  "theaterTimelineCurrentPhase": "当前阶段",
+  "theaterTimelineWaitingPath": "等待路径生成",
+  "theaterTimelineBaseline": "基线预测",
+  "theaterTimelineDiscussionHere": "讲到这里",
+  "theaterTimelineMastery": "当前预测掌握度",
+  "theaterTimelineCompletion": "当前预测完成率",
+  "theaterTimelinePhaseWithSteps": "当前阶段：{label} · {step} · {compare}",
+  "theaterTimelineWaitingDeduction": "等待推演",
+  "theaterRouteList": "列表",
+  "theaterRouteCompare": "对比",
+  "theaterRouteComparisonTitle": "路径对比",
+  "theaterRouteAdoptedPlan": "已创建计划：{planName}",
+  "theaterRouteFirstWeekTasks": "首周任务：{tasks}",
+  "theaterRouteRiskControllable": "整体可控",
+  "theaterRouteRiskPacing": "需要留意节奏",
+  "theaterRouteEstimatedRange": "预估 {low}-{high}%",
+  "theaterRouteDataQualityLow": "参考估算",
+  "theaterRouteDataQualityMedium": "基于有限数据",
+  "theaterRouteDataQualityHigh": "数据充分度 {score}%",
+  "theaterRouteDataQualityFallback": "数据参考",
+  "theaterRouteDataNoteLow": "当前缺少该主题的真实学习记录，建议把区间估算当作参考，而不是精确预测。",
+  "theaterRouteDataNoteMedium": "当前只覆盖到部分图谱与校准数据，百分比判断仍需要继续观察。",
+  "theaterRouteModeAnchored": "图谱锚定",
+  "theaterRouteModeHybrid": "智能混合",
+  "theaterRouteModeFree": "自由推演",
+  "theaterRouteModeDeducing": "推演中",
+  "theaterNodeGalaxySyncing": "同步中...",
+  "theaterNodeOpenGalaxy": "打开知识星图",
+  "theaterNodeAddToGalaxy": "加入知识星图",
+  "theaterNodeSourceExplicit": "星图节点",
+  "theaterNodeSourceHybrid": "参考映射",
+  "theaterNodeSourcePending": "候选节点",
+  "theaterNodeSourceFree": "自由节点",
+  "theaterNodeBannerOpenGalaxy": "这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。",
+  "theaterNodeBannerHasMapping": "这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。",
+  "theaterNodeBannerFreeform": "这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。",
+  "theaterRouteRecommended": "推荐",
+  "theaterRouteAdopting": "采纳中",
+  "theaterRouteAdopt": "采纳此路径",
+  "theaterRouteSimulate": "带去模拟",
+  "theaterRouteCompletion": "完成率 {value}",
+  "theaterRouteMasteryLabel": "掌握度 {value}",
+  "theaterRouteDailyMinutes": "日均 {minutes} 分钟",
+  "theaterRouteRiskCount": "{count} 个风险点",
+  "theaterRouteScore": "综合 {score} 分",
+  "theaterRouteRangePrediction": "区间预测：完成率 {completionLow}%-{completionHigh}%， 掌握度 {masteryLow}%-{masteryHigh}%",
+  "theaterRouteRecommendedBaseline": "推荐基线",
+  "theaterRouteCompletionRate": "完成率",
+  "theaterRouteMasteryRate": "掌握度",
+  "theaterRouteDailyTime": "日均时间",
+  "theaterRouteRiskLevel": "风险数",
+  "theaterRouteOverallScore": "综合分",
+  "theaterRouteDataNote": "数据说明",
+  "theaterRouteCompletionRange": "完成率区间 {low}%-{high}%",
+  "theaterRouteMasteryRange": "掌握度区间 {low}%-{high}%",
+  "theaterRouteSimulateFromCurrent": "带去模拟",
+  "theaterRouteSimulateAfterSwitch": "切换后模拟",
+  "theaterRouteSwitchToThis": "切换到此路径",
+  "theaterRouteStepMinutes": "{dayLabel} · {minutes} 分钟",
+  "theaterDismissTooltip": "关闭提示",
+  "theaterCompactComparisonTitle": "路径对比",
+  "theaterCompactComparisonSummary": "对照路径：{summary}",
+  "theaterCompactComparisonCurrent": "当前 · {title}",
+  "theaterCompactComparisonMastery": "掌握 {value}%",
+  "theaterCompactComparisonTime": "时间 {minutes} 分/天",
+  "theaterCompactComparisonAlt": "对照 · {title}",
+  "theaterCompactOpenDetail": "进入路径页细比",
+  "theaterCompactFallbackSingle": "先聚焦 {name}。",
+  "theaterCompactFallbackMulti": "先补 {first}，再推进 {last}。",
+  "theaterComparisonTitle": "路径对比",
+  "theaterComparisonSubtitle": "把当前方案和另一条代表性路径放在一起比较，更容易判断该走稳一点还是快一点。",
+  "theaterComparisonMetric": "指标",
+  "theaterComparisonEstimatedMastery": "预计掌握度",
+  "theaterComparisonTimeInvestment": "时间投入",
+  "theaterComparisonRiskLevel": "风险等级",
+  "theaterComparisonRiskLow": "低",
+  "theaterComparisonRiskMediumHigh": "中高",
+  "theaterComparisonRiskMedium": "中",
+  "theaterBranchDeltaTitle": "假设分支对比",
+  "theaterBranchDeltaPath": "分支路径",
+  "theaterBranchDeltaWhatIf": "假设推演",
+  "theaterWhatIfTitle": "What-if 沙盘",
+  "theaterWhatIfSubtitle": "点选想跳过的节点，先看预计影响，再生成完整推演结果。",
+  "theaterWhatIfPreviewTitle": "预计影响预览",
+  "theaterWhatIfPreviewMastery": "掌握度",
+  "theaterWhatIfPreviewCompletion": "完成率",
+  "theaterWhatIfNoNodesSelected": "当前没有标记跳过节点，保持原始路径。",
+  "theaterWhatIfNodesSkipped": "你已标记跳过 {nodes}。",
+  "theaterWhatIfSelectFirst": "先选择一个节点",
+  "theaterWhatIfGenerateFull": "生成完整假设推演结果",
+  "theaterWhatIfOriginal": "原始 {original}",
+  "theaterWhatIfAdjusted": "调整后 {adjusted}",
+  "theaterWhatIfRemainingPath": "分支剩余路径：{path}",
+  "theaterDiscussionTitle": "专家圆桌",
+  "theaterSnapshotSaving": "保存中",
+  "theaterSnapshotSave": "保存当前快照",
+  "theaterSnapshotTitle": "保存当前快照",
+  "theaterSnapshotNoSnapshot": "把当前推演保存下来，稍后可以继续回看。",
+  "theaterSnapshotSaved": "已保存：{title}",
+  "theaterAccuracyTitle": "预测校准",
+  "theaterAccuracyWithinRange": "这次真实结果落在预测区间内，当前模型区间覆盖命中。",
+  "theaterAccuracyOutsideRange": "这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。",
+  "theaterAccuracyDueDate": "建议回填日期：{date}",
+  "theaterAccuracyRecordActual": "记录实际表现",
+  "theaterAccuracySampleCount": "样本 {count}",
+  "theaterAccuracyAvgScore": "平均准确度 {score}%",
+  "theaterAccuracyConfidenceScore": "数据充分度 {score}%",
+  "theaterAccuracyCoverageRate": "区间命中 {rate}%",
+  "theaterAccuracyScoreNote": "数据充分度反映当前预测所依据的数据量和校准次数，不是预测准确度。",
+  "theaterAccuracyNoSamples": "还没有历史回填样本，当前预测会优先展示区间而不是绝对值。",
+  "theaterAccuracyHistoryBias": "历史偏差：完成率 {completionBias}%， 掌握度 {masteryBias}%。",
+  "theaterAdoptionSynced": "已同步到你的 Sprint",
+  "theaterAdoptionFirstWeekTasks": "首周任务",
+  "theaterAdoptionCheckpoints": "检查点：{dates}",
+  "theaterAdoptionViewPlan": "查看计划",
+  "theaterAdoptionContinueExploring": "继续探索",
+  "planCreateEditingGrowth": "编辑成长计划",
+  "planCreateEditingSprint": "编辑冲刺计划",
+  "planCreateSavePlan": "保存计划",
+  "planCreateStepPositioning": "计划定位",
+  "planCreateStepTimeStructure": "时间结构",
+  "planCreateStepTaskBlueprint": "任务编排",
+  "planCreateStepBoundariesGuide": "计划边界与指南",
+  "planCreateStepReviewConfirm": "确认预览",
+  "planCreateBasicsSubtitle": "先定义这是一张真正的计划卡，而不是普通任务。",
+  "planCreateNameHint": "例如：6 周英语口语提升 / 期中冲刺收束",
+  "planCreateSubjectLabel": "主题方向",
+  "planCreateSubjectHint": "英语、Flutter、考研数学、论文阅读...",
+  "planCreateGrowthGoalLabel": "长期目标",
+  "planCreateSprintGoalLabel": "冲刺目标",
+  "planCreateGrowthGoalHint": "写清楚这个成长计划最终想形成什么能力、习惯或成果。",
+  "planCreateSprintGoalHint": "写清楚这次冲刺的结果、验收标准和不能偏离的主线。",
+  "planCreateGoalRequired": "请写出这张计划卡的目标",
+  "planCreateScheduleSubtitle": "把持续时间、每日投入和提醒节奏一次性定清楚。",
+  "planCreateDailyMinutesLabel": "每日可投入时长",
+  "planCreateTotalEstimatedHours": "总预估工时 {hours} 小时",
+  "planCreateDailyReminderTime": "每日提醒时间",
+  "planCreatePlanStageLabel": "当前计划阶段",
+  "planCreateStageSprint": "冲刺推进",
+  "planCreateStageDaily": "日常执行",
+  "planCreateStageReview": "复盘调优",
+  "planCreateStagePaused": "暂时暂停",
+  "planCreateScheduleChipWorkday": "工作日推进，周末复盘",
+  "planCreateScheduleChipMorning": "早晨启动，晚上收束",
+  "planCreateScheduleChipAfternoon": "午后主攻，夜间轻复盘",
+  "planCreateScheduleLabel": "节奏说明",
+  "planCreateScheduleHint": "例如：周一到周五推进，周六复盘，周日补缺",
+  "planCreateTasksSubtitle": "这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。",
+  "planCreateTaskBlueprintLabel": "任务编排说明",
+  "planCreateTaskBlueprintHint": "例如：先搭框架，再每天推进主线，最后统一复盘补漏。",
+  "planCreateReferenceExistingTasks": "参考已有任务",
+  "planCreateCopyToPlan": "复制进计划",
+  "planCreateNewTaskLabel": "新增计划任务",
+  "planCreateNewTaskHint": "例如：完成一轮章节梳理",
+  "planCreateDurationLabel": "时长",
+  "planCreateDifficultyLabel": "难度",
+  "planCreateAddTaskToPlan": "加入计划任务",
+  "planCreateNoTasks": "当前还没有计划任务",
+  "planCreateScopeLabel": "计划边界与注意事项",
+  "planCreateScopeHint": "例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。",
+  "planCreateGuidePerspective": "任务指南视角",
+  "planCreateGuideForSelf": "给自己看",
+  "planCreateGuideForAi": "给 AI 用",
+  "planCreateGuideHumanDescription": "用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。",
+  "planCreateGuideAiDescription": "AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。",
+  "planCreateGuideHumanTitle": "用户版执行指南",
+  "planCreateGuideAiTitle": "给 AI 的执行版本",
+  "planCreateGenerateHumanGuide": "生成用户版",
+  "planCreateGenerateAiGuide": "生成 AI 版",
+  "planCreateGuideHint": "生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。",
+  "planCreateAiGuideEmpty": "还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。",
+  "planCreateCopyAiGuide": "复制 AI 版",
+  "planCreateAiGuideCopied": "AI 版本已复制",
+  "planCreateReviewSummary": "{type} · {dailyMinutes} 分钟/天 · {hours} 小时",
+  "planCreateReviewEditDescription": "保存后会更新计划描述，并为新增草案创建新的计划任务。",
+  "planCreateReviewCreateDescription": "创建后会生成一张更完整的计划卡，并同步创建计划任务。",
+  "planCreateFinalDescription": "最终写入的计划描述",
+  "planCreateMinutes": "{value} 分钟",
+  "planCreateTaskSubtitle": "{minutes} 分钟 · 难度 {difficulty}",
+  "predictedIntentTitle": "系统预测",
+  "predictedIntentCollapsedTitle": "系统预测已收起",
+  "predictedIntentCollapsedExpand": "需要时再展开查看建议",
+  "predictedIntentCollapsedUpdated": "上次更新于",
+  "predictedIntentSummary": "基于画像、最近 24 小时行为与任务节奏",
+  "predictedIntentSuggestedCont": "建议接续",
+  "predictedIntentWaiting": "预测结果已生成，等待可继续指令",
+  "predictedIntentConfidence": "可信度 {percent}%",
+  "@predictedIntentConfidence": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "predictedIntentWhy": "为什么这样预测",
+  "predictedIntentContinuing": "正在衔接…",
+  "predictedIntentContinue": "按这个继续",
+  "predictedIntentError": "继续对话时出现问题，请稍后重试",
+  "predictedActionResumePriority": "继续重点任务",
+  "predictedActionStudyPlan": "生成学习计划",
+  "predictedActionDiagnose": "问题诊断",
+  "predictedActionCreateTask": "落成任务",
+  "predictedActionInstantResult": "即时结果",
+  "predictedActionReviewProgress": "复盘进展",
+  "predictedActionPlanNext": "规划下一步",
+  "predictedActionReflection": "快速反思",
+  "predictedActionDefault": "预测意图",
+  "predictedWindowNow": "就是现在",
+  "predictedWindow30m": "未来 30 分钟",
+  "predictedWindow1h": "未来 1 小时",
+  "predictedWindow2h": "未来 2 小时",
+  "predictedWindow6h": "未来 6 小时",
+  "predictedWindowToday": "今天内",
+  "predictedSourceLongRange": "长期预测",
+  "predictedSourceRules": "规则兜底",
+  "predictedFreshnessJustNow": "刚刚更新",
+  "predictedFreshnessMinutes": "{count} 分钟前",
+  "@predictedFreshnessMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "predictedFreshnessHours": "{count} 小时前",
+  "@predictedFreshnessHours": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "predictedFreshnessDays": "{count} 天前",
+  "@predictedFreshnessDays": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "predictedCategoryPrefTitle": "同类请求里的近期偏好",
+  "predictedCategoryPrefHint": "在{category}里，近期结果更常把「{tool}」推到前面。",
+  "@predictedCategoryPrefHint": {
+    "placeholders": {
+      "category": {
+        "type": "Object"
+      },
+      "tool": {
+        "type": "Object"
+      }
+    }
+  },
+  "predictedCategoryPrefCaveat": "仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。",
+  "predictedCategoryPlan": "规划类请求",
+  "predictedCategoryTask": "任务类请求",
+  "predictedCategoryFocus": "专注支持类请求",
+  "predictedCategoryGrowth": "成长推进类请求",
+  "predictedCategoryQuery": "查询类请求",
+  "predictedCategoryKnowledge": "知识类请求",
+  "predictedCategoryReview": "复盘类请求",
+  "predictedCategoryResearch": "研究类请求",
+  "predictedCategoryMemory": "记忆整理类请求",
+  "predictedCategoryCognitive": "认知整理类请求",
+  "predictedCategoryDefault": "同类请求",
+  "predictedToolCreatePlan": "生成计划",
+  "predictedToolGenerateTasks": "展开计划步骤",
+  "predictedToolCreateTask": "落成任务",
+  "predictedToolListTasks": "查看任务列表",
+  "predictedToolUpdateTask": "更新任务",
+  "predictedToolQueryKnowledge": "查询知识",
+  "predictedToolExplainConcept": "解释概念",
+  "predictedToolReviewProgress": "复盘进度",
+  "predictedToolGenerateSummary": "生成总结",
+  "predictedToolSuggestSchedule": "建议排期",
+  "examSprintHighFreqCoverage": "高频考点覆盖率",
+  "examSprintMistakeRepair": "错题修复率",
+  "examSprintStudyStreak": "连续学习天数",
+  "examSprintStreakDays": "{days} 天",
+  "@examSprintStreakDays": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintKeepRhythm": "保持节奏",
+  "examSprintHighYieldWeak": "高收益低掌握：{topics}",
+  "@examSprintHighYieldWeak": {
+    "placeholders": {
+      "topics": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintNoTasksToday": "今天还没有排入冲刺任务。",
+  "examSprintExamDayReady": "今天考试 · 你已经准备好了 🎓",
+  "examSprintExamTips": "考场建议",
+  "examSprintRecordResult": "记录考试结果",
+  "examSprintDashboardTitle": "考试冲刺仪表盘",
+  "examSprintModeHighScore": "冲高模式",
+  "examSprintModeHold": "稳分模式",
+  "examSprintModePass": "保过模式",
+  "examSprintModeDefault": "冲刺模式",
+  "examSprintExamDay": "今天考试",
+  "examSprintCountdown": "距考试还有 {days} 天",
+  "@examSprintCountdown": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintTodayTasks": "今天已完成 {completed}/{total} 项任务",
+  "@examSprintTodayTasks": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintDaysLeft": "离考试还有 {days}",
+  "@examSprintDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintTodayDone": "今日 {completed}/{total} 完成",
+  "@examSprintTodayDone": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintTodaySprintTasks": "今日冲刺任务",
+  "examSprintHideLater": "收起后续天",
+  "examSprintShowLater": "展开后续 {count} 天",
+  "@examSprintShowLater": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintDayIndex": "第 {index} 天",
+  "@examSprintDayIndex": {
+    "placeholders": {
+      "index": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintDateFormat": "{month}月{day}日",
+  "@examSprintDateFormat": {
+    "placeholders": {
+      "month": {
+        "type": "Object"
+      },
+      "day": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintNoSprintTasks": "今天还没有排入任务",
+  "examSprintMinLabel": "{minutes} 分钟 · {status}",
+  "@examSprintMinLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      },
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintStatusDone": "已完成",
+  "examSprintStatusInProgress": "进行中",
+  "examSprintStatusPending": "待开始",
+  "insightHubTitle": "学习洞察",
+  "insightHubRecommendedSeeds": "现在有 {count} 个推荐场景可以直接开始模拟。",
+  "@insightHubRecommendedSeeds": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "insightHubFallbackSummary": "把推演、仿真和报告收进一条更轻量的学习动线。",
+  "insightHubSimulation": "学习仿真",
+  "insightHubTheater": "推演剧场",
+  "insightHubReport": "学习报告",
+  "insightHubEnterOverview": "进入洞察总览",
+  "insightHubCompactSimulation": "仿真",
+  "insightHubCompactTheater": "推演",
+  "insightHubCompactReport": "报告",
+  "insightHubRefreshWarning": "部分洞察数据尚未刷新，点击后会继续显示已有内容。",
+  "insightHubSeedsToExplore": "{count} 个推荐场景待探索",
+  "@insightHubSeedsToExplore": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "insightHubCompactFallback": "仿真、推演和报告现在收在同一张卡里",
+  "insightHubNoRecentTheater": "最近暂无推演",
+  "insightHubContinueLastTheater": "继续上次推演",
+  "insightHubContinueTopic": "继续 {topic}",
+  "@insightHubContinueTopic": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      }
+    }
+  },
+  "insightHubContinueLastSimulation": "继续上次仿真",
+  "insightHubRecommendedSeedsCount": "{count} 个推荐场景",
+  "@insightHubRecommendedSeedsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "insightHubContinueSession": "继续 {topic}",
+  "@insightHubContinueSession": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      }
+    }
+  },
+  "insightHubStartSimulation": "开始一轮新模拟",
+  "insightHubNoRecentReport": "最近暂无报告",
+  "insightHubMasteryPercent": "掌握度 {percent}%",
+  "@insightHubMasteryPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "insightHubRefreshFailed": "洞察内容暂时没有刷新成功，当前先显示已有内容。",
+  "insightHubRetry": "重试",
+  "memoryPanel": "记忆面板",
+  "memoryPanelAdjust": "调整",
+  "memoryPanelAiAutoMemories": "AI 自动记忆",
+  "memoryPanelAiInferredDescription": "AI 推断自聊天，默认仅作记忆展示，不参与下游决策。",
+  "memoryPanelClearFilter": "清空筛选",
+  "memoryPanelCommitmentDismissed": "已忽略该承诺",
+  "memoryPanelConfidenceValue": "置信度 {value}",
+  "@memoryPanelConfidenceValue": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelConflictFailed": "处理冲突失败: {error}",
+  "@memoryPanelConflictFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelConflictResolvedA": "已按候选 A 处理",
+  "memoryPanelConflictResolvedB": "已按候选 B 处理",
+  "memoryPanelConflictResolvedNone": "已撤销这组冲突候选",
+  "memoryPanelCorrectionCount": "纠错 {count}",
+  "@memoryPanelCorrectionCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelDate": "日期",
+  "memoryPanelDeviationsDetected": "检测到 {count} 个偏离",
+  "@memoryPanelDeviationsDetected": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelDimCompletionRate": "完成率",
+  "memoryPanelDimEngagement": "投入度",
+  "memoryPanelDimMood": "情绪",
+  "memoryPanelDimPace": "节奏",
+  "memoryPanelDimPlanAdherence": "计划跟随",
+  "memoryPanelDismissFailed": "忽略失败: {error}",
+  "@memoryPanelDismissFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelEmptyDescription": "先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。",
+  "memoryPanelEmptyFilterDescription": "试试清空筛选条件，重新查看所有已整理的记忆。",
+  "memoryPanelEmptyFilterTitle": "暂无符合条件的记忆",
+  "memoryPanelEmptyTitle": "记忆面板还没有内容",
+  "memoryPanelEvidenceAll": "证据全部",
+  "memoryPanelEvidenceMissing": "缺失",
+  "memoryPanelEvidenceOk": "OK",
+  "memoryPanelEvidenceRedacted": "已隐藏",
+  "memoryPanelForesightHint": "前瞻提示",
+  "memoryPanelImportanceValue": "重要度 {value}",
+  "@memoryPanelImportanceValue": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelItemCount": "{count} 条",
+  "@memoryPanelItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelLoadFailed": "记忆面板加载失败: {error}",
+  "@memoryPanelLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelMarkFailed": "标记失败: {error}",
+  "@memoryPanelMarkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelMarkedComplete": "已标记为完成",
+  "memoryPanelMetricsNone": "指标: -",
+  "memoryPanelNotUpdated": "未更新",
+  "memoryPanelRecentScenes": "最近场景",
+  "memoryPanelRevoke": "撤销",
+  "memoryPanelRevokeFailed": "撤销失败: {error}",
+  "@memoryPanelRevokeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelRevokeThis": "撤销此条",
+  "memoryPanelRevokedAutoMemory": "已撤销 AI 自动记忆",
+  "memoryPanelRevoking": "撤销中",
+  "memoryPanelSceneMemories": "{time} · {count} 条记忆",
+  "@memoryPanelSceneMemories": {
+    "placeholders": {
+      "time": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "memoryPanelUnavailable": "记忆面板不可用",
+  "memoryPanelValidUntil": "有效期 {policy}",
+  "@memoryPanelValidUntil": {
+    "placeholders": {
+      "policy": {
+        "type": "Object"
+      }
+    }
+  },
+  "theaterComposerDeducing": "推演中",
+  "theaterWhatIfCombinedResult": "原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%",
+  "@theaterWhatIfCombinedResult": {
+    "placeholders": {
+      "originalMastery": {
+        "type": "Object"
+      },
+      "originalCompletion": {
+        "type": "Object"
+      },
+      "predictedMastery": {
+        "type": "Object"
+      },
+      "predictedCompletion": {
+        "type": "Object"
+      }
+    }
+  },
+  "theaterAccuracyPredictedActual": "预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%",
+  "@theaterAccuracyPredictedActual": {
+    "placeholders": {
+      "predictedCompletion": {
+        "type": "Object"
+      },
+      "predictedMastery": {
+        "type": "Object"
+      },
+      "actualCompletion": {
+        "type": "Object"
+      },
+      "actualMastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "theaterPerDayUnit": "{minutes} 分/天",
+  "@theaterPerDayUnit": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationTitle": "学习场景模拟",
+  "simulationCurrentSimulation": "当前模拟",
+  "simulationBackToTheater": "回到剧场",
+  "simulationRunning": "模拟进行中...",
+  "simulationStartSimulation": "开始这场模拟",
+  "simulationAwaitingInput": "等待输入",
+  "simulationClearTopic": "清空主题",
+  "simulationRecommendedScenarios": "推荐场景",
+  "simulationGenerate": "生成",
+  "simulationRefresh": "刷新",
+  "simulationStartSimButton": "开始模拟",
+  "simulationGoToTheater": "去推演",
+  "simulationContinueSim": "继续模拟",
+  "simulationPauseSim": "暂停模拟",
+  "simulationCollapseInsight": "收起洞察",
+  "simulationViewInsight": "查看洞察",
+  "simulationCollapseSettings": "收起设置",
+  "simulationSimSettings": "模拟设置",
+  "simulationYourTurnTitle": "轮到你回应",
+  "simulationYourResponseArea": "你的回应区",
+  "simulationCollapse": "收起",
+  "simulationJoinDiscussion": "轮到你加入这场讨论",
+  "simulationOrInputJudgment": "或者输入你的判断",
+  "simulationSubmitting": "提交中...",
+  "simulationSubmitJudgment": "提交我的判断",
+  "simulationContinueInChat": "带回聊天继续",
+  "simulationAdjustSimulation": "调整这场模拟",
+  "simulationDiscussionRounds": "讨论轮数",
+  "simulationFacilitationStyleTitle": "展开方式",
+  "simulationParticipantsTitle": "参与角色",
+  "simulationRestoreDefault": "恢复推荐",
+  "simulationCustomHistoricalRole": "自定义历史人物",
+  "simulationAdd": "添加",
+  "simulationRestartSim": "重新开始这场模拟",
+  "simulationContinue": "继续",
+  "simulationPause": "暂停",
+  "simulationAwaitingStart": "等待开始",
+  "simulationGatheringParticipants": "正在召集参与者",
+  "simulationWaitingFirstRound": "等待首轮",
+  "simulationRolesPending": "角色待加入",
+  "simulationGeneratingInBackground": "后台仍在继续生成",
+  "simulationPausedForeground": "前台已暂停播放",
+  "simulationImmersiveDiscussion": "沉浸讨论流",
+  "simulationCurrentDiscussion": "当前讨论流",
+  "simulationWillAppearLive": "开始后会实时出现每一轮讨论。",
+  "simulationNoInsightYet": "暂未生成洞察总结。",
+  "simulationInsightSummaryTitle": "洞察总结",
+  "simulationGeneratingReport": "生成中...",
+  "simulationGenerateLearningReport": "生成学习报告",
+  "simulationContinueToTheater": "以此推演",
+  "simulationShareInsight": "分享洞察",
+  "simulationCoreArguments": "核心论点",
+  "simulationUnresolvedDisagreements": "未解决的分歧",
+  "simulationYourContribution": "你的贡献",
+  "simulationExposedKnowledgeGaps": "暴露的知识盲区",
+  "simulationSuggestedNextSteps": "建议下一步",
+  "simulationStructuredInsightGenerated": "已生成结构化洞察总结。",
+  "simulationEmptyGenerating": "模拟正在生成中...",
+  "simulationEmptyStartPrompt": "开始一次学习场景模拟，让角色逐轮讨论这个主题。",
+  "simulationCurrentScene": "当前场景",
+  "simulationCurrentGoal": "当前目标",
+  "simulationInteractionStyle": "互动方式",
+  "simulationRoleDiscussionUserJoin": "角色讨论 + 你来接话",
+  "simulationTopicHint": "输入一个知识点或主题",
+  "simulationTopicHintExample": "例如：特征值与特征向量",
+  "simulationStartSimulationTopicAction": "开始围绕这个问题模拟",
+  "simulationUserInputTopicHint": "输入你想要讨论的学习主题或问题",
+  "simulationUserInputTopicHelper": "完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题",
+  "simulationRecommendedEmptyHint": "还没有推荐种子，你可以先手动输入主题开始。",
+  "simulationRecommendedUserInputHint": "现在先从你最想讨论的具体问题开始。等积累更多真实学习记录后，系统会再给出基于数据的推荐主题。",
+  "simulationRecommendedPickHint": "先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。",
+  "simulationScenarioAdjustHint": "调整场景后，讨论的角色关系与推进方式也会一起变化。",
+  "simulationFacilitationFitHint": "让讨论更贴合当前主题。",
+  "simulationDiscussionNote": "这里可以完整调整主题、场景、轮数、展开方式和参与角色，开始后讨论会按这套设置运行。",
+  "simulationParticipantHint": "你可以明确指定想邀请谁参与这场讨论。至少保留 1 位，最多 6 位角色。",
+  "simulationRunningStatusHint": "模拟进行中，新的轮次会实时出现在下方。",
+  "simulationScenarioEyebrow": "学习场景模拟",
+  "simulationScenarioTitle": "开始这场学习模拟",
+  "simulationScenarioSubtitle": "先选讨论场景，再输入一个你想推开的主题。开始后会自动收束成沉浸式讨论界面。",
+  "simulationRoleDiscussionValue": "角色讨论 + 你来接话",
+  "simulationJudgeExampleHint": "例如：我会先补几何直觉，再回来刷一道题验证",
+  "simulationInteractionExplain": "先给出你的判断，下一轮才会真正围绕你的想法继续展开。",
+  "simulationInteractionHint": "建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。",
+  "simulationContinuitySubtitle": "这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。",
+  "simulationBridgeCurrentlyVerifyingFormat": "正在验证路径「{routeTitle}」",
+  "@simulationBridgeCurrentlyVerifyingFormat": {
+    "placeholders": {
+      "routeTitle": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationBridgeVerifyingRoute": "正在验证一条推演路径",
+  "simulationBridgeVerificationDescWithTarget": "这轮模拟来自知识剧场，目标是 {targetName}。你可以随时带着当前进度回到剧场继续采纳或校准。",
+  "@simulationBridgeVerificationDescWithTarget": {
+    "placeholders": {
+      "targetName": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationBridgeVerificationContext": "这轮模拟来自知识剧场，当前上下文会和原推演保持关联。",
+  "simulationInteractionModeFormat": "互动模式：{mode}",
+  "@simulationInteractionModeFormat": {
+    "placeholders": {
+      "mode": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationInteractionOpenQuestion": "开放追问",
+  "simulationInteractionViewpointChallenge": "观点挑战",
+  "simulationInteractionBinaryChoice": "二选一判断",
+  "simulationInteractionChoice": "选择判断",
+  "simulationCurrentFocusFormat": "当前焦点：{speaker}",
+  "@simulationCurrentFocusFormat": {
+    "placeholders": {
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationTopicFormat": "主题：{topic}",
+  "@simulationTopicFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationTopicAndSpeakerFormat": "主题：{topic} · 当前发言 {speaker}",
+  "@simulationTopicAndSpeakerFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      },
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRoundN": "第 {round} 轮",
+  "@simulationRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRoleCountFormat": "{count} 角色",
+  "@simulationRoleCountFormat": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRunningRoundN": "正在第 {round}/{total} 轮",
+  "@simulationRunningRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRoundViewpoints": "{count} 轮观点",
+  "@simulationRoundViewpoints": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRoleCountLong": "{count} 位角色",
+  "@simulationRoleCountLong": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRoundFormatLabel": "{current} / {max} 轮",
+  "@simulationRoundFormatLabel": {
+    "placeholders": {
+      "current": {
+        "type": "Object"
+      },
+      "max": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRoundSliderLabel": "{count} 轮",
+  "@simulationRoundSliderLabel": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationParticipantDefaultStatus": "当前将按系统默认角色运行。",
+  "simulationParticipantCurrentStatus": "当前参与：{names}",
+  "@simulationParticipantCurrentStatus": {
+    "placeholders": {
+      "names": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationBulletParticipants": "参与者：{names}",
+  "@simulationBulletParticipants": {
+    "placeholders": {
+      "names": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationBulletRounds": "总轮次：{count} 轮，适合沉淀为下一步推演或复盘报告。",
+  "@simulationBulletRounds": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationBulletOpening": "开场重点：{message}",
+  "@simulationBulletOpening": {
+    "placeholders": {
+      "message": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationRoundFormatShort": "{current}/{total} 轮",
+  "@simulationRoundFormatShort": {
+    "placeholders": {
+      "current": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationContinueInChatContext": "继续刚才的学习模拟。",
+  "simulationContinueTopicLabel": "主题：{topic}",
+  "@simulationContinueTopicLabel": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationContinueScenarioLabel": "场景：{label}",
+  "@simulationContinueScenarioLabel": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationContinueCurrentQuestion": "当前问题：{question}",
+  "@simulationContinueCurrentQuestion": {
+    "placeholders": {
+      "question": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationContinueMyResponse": "我的回应：{reply}",
+  "@simulationContinueMyResponse": {
+    "placeholders": {
+      "reply": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationBalancedPush": "平衡推进",
+  "simulationDebateClash": "分歧碰撞",
+  "simulationGuidedBreakdown": "引导拆解",
+  "simulationPracticalApply": "应用落地",
+  "simulationReportReturnException": "学习报告返回格式异常",
+  "simulationReportGenerationFailed": "生成学习报告失败：{error}",
+  "@simulationReportGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationReportTitle": "这份报告已接收本次模拟中暴露的问题",
+  "simulationReportSummary": "你在模拟里暴露出的分歧和知识盲区，已经被带入这份正式报告。",
+  "simulationShareCreated": "我刚在 Sparkle 跑了一场学习仿真：{topic}\n场景：{scenario}\n洞察：{insight}",
+  "@simulationShareCreated": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      },
+      "scenario": {
+        "type": "Object"
+      },
+      "insight": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationShareTitle": "学习场景模拟 · {topic}",
+  "@simulationShareTitle": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationShareRawText": "学习场景模拟\n主题：{topic}\n场景：{scenario}\n洞察：{insight}",
+  "@simulationShareRawText": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      },
+      "scenario": {
+        "type": "Object"
+      },
+      "insight": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationCustomFigureHint": "例如：张居正 / 俾斯麦",
+  "simulationTopicCurrentFocusFormat": "主题：{topic} · 当前发言 {speaker}",
+  "@simulationTopicCurrentFocusFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      },
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationCurrentFocusLabel": "当前焦点：{speaker}",
+  "@simulationCurrentFocusLabel": {
+    "placeholders": {
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationImmersiveTopicAndFocus": "主题：{topic} · 当前发言 {speaker}",
+  "@simulationImmersiveTopicAndFocus": {
+    "placeholders": {
+      "topic": {
+        "type": "Object"
+      },
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationWaitingInput": "等待输入",
+  "simulationScenarioDescStudyGroup": "围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。",
+  "simulationScenarioDescKnowledgeDebate": "让不同立场直接碰撞，适合验证观点、证据和边界条件。",
+  "simulationScenarioDescHistoricalRoleplay": "带入人物与时代约束，让讨论像真实历史现场一样推进。",
+  "simulationScenarioDescSocraticDialogue": "通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。",
+  "simulationScenarioDescCaseAnalysis": "围绕具体案例做拆解、诊断和决策，适合实务型主题。",
+  "simulationScenarioDescWhatIfPath": "比较不同学习或行动路线，适合规划、取舍与资源分配。",
+  "simulationScenarioDescConceptMapBuild": "把知识点织成结构图，适合建立全局框架与连接关系。",
+  "simulationScenarioDescErrorDiagnosis": "专注识别错因、纠偏路径与验证方式，适合查漏补缺。",
+  "simulationFacilitationDescBalanced": "适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。",
+  "simulationFacilitationDescDebate": "主动放大争议和证据冲突，更适合需要碰撞观点的主题。",
+  "simulationFacilitationDescGuided": "更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。",
+  "simulationFacilitationDescPractical": "优先讨论行动、验证和现实约束，适合技能与方案推演。",
+  "simulationRoleHonorsStudent": "优等生",
+  "simulationRoleMidStudent": "中等生",
+  "simulationRoleQuestioner": "追问者",
+  "simulationRoleSummarizer": "总结者",
+  "simulationRolePracticeCoach": "练习教练",
+  "simulationRoleProExpert": "正方专家",
+  "simulationRoleConExpert": "反方专家",
+  "simulationRoleModerator": "主持协调",
+  "simulationRoleEvidenceReviewer": "证据审查员",
+  "simulationRolePursuer": "追问者",
+  "simulationRoleHistoryMentor": "历史导师",
+  "simulationRoleKeyFigure": "关键人物",
+  "simulationRoleEraObserver": "时代观察者",
+  "simulationRoleStrategyAdvisor": "策略顾问",
+  "simulationRoleRecorder": "记录官",
+  "simulationRoleSocrates": "苏格拉底",
+  "simulationRoleSkeptic": "怀疑者",
+  "simulationRoleDeconstructor": "拆解者",
+  "simulationRoleApplier": "应用者",
+  "simulationRoleCaseMentor": "案例导师",
+  "simulationRoleDiagnostician": "诊断官",
+  "simulationRolePractitioner": "实践派",
+  "simulationRoleCounterExample": "反例提出者",
+  "simulationRoleDecisionRecorder": "决策记录官",
+  "simulationRoleCurrentRoute": "当前路线",
+  "simulationRoleRadicalRoute": "激进路线",
+  "simulationRoleRiskObserver": "风险观察者",
+  "simulationRoleResourceScheduler": "资源调度者",
+  "simulationRoleVerifier": "验证者",
+  "simulationRoleStructurer": "结构师",
+  "simulationRoleConnector": "连接者",
+  "simulationRoleCounterExampleChecker": "反例检查员",
+  "simulationRoleBridgeBuilder": "桥梁构建者",
+  "simulationRoleErrorAnalyst": "错因分析师",
+  "simulationRoleCorrectionCoach": "纠偏教练",
+  "simulationRoleQuestionDeconstructor": "题面解构者",
+  "simulationRoleMigrationCoach": "迁移教练",
+  "simulationRoleStudyBuddy": "学习伙伴",
+  "simulationRoleCurrentDiscussionTitle": "当前讨论流",
+  "simulationBulletOpeningFormat": "开场重点：{message}",
+  "@simulationBulletOpeningFormat": {
+    "placeholders": {
+      "message": {
+        "type": "Object"
+      }
+    }
+  },
+  "simulationScenarioParticipantOptionsDefault0": "学习伙伴",
+  "simulationScenarioParticipantOptionsDefault1": "提问者",
+  "simulationScenarioParticipantOptionsDefault2": "总结者",
+  "simulationScenarioLabelStudyGroup": "学习小组",
+  "simulationScenarioLabelKnowledgeDebate": "知识辩论",
+  "simulationScenarioLabelHistoricalRoleplay": "历史角色扮演",
+  "simulationScenarioLabelSocraticDialogue": "苏格拉底对话",
+  "simulationScenarioLabelCaseAnalysis": "案例分析",
+  "simulationScenarioLabelWhatIfPath": "如果路径",
+  "simulationScenarioLabelConceptMapBuild": "概念图构建",
+  "simulationScenarioLabelErrorDiagnosis": "错误诊断",
+  "openclawPairImportedSaved": "已导入并保存 OpenClaw 配对配置",
+  "openclawPairImportedVerifyFailed": "配对配置已导入，但当前连接验证失败",
+  "openclawClipboardNoPairingPayload": "剪贴板里没有识别到 OpenClaw 配对串或二维码 JSON",
+  "openclawImportedFromClipboard": "已从剪贴板导入 OpenClaw 配对配置",
+  "openclawConnectedToDevice": "已连接到 {deviceName}",
+  "openclawImportedDevicePairing": "已导入 {deviceName} 的配对配置",
+  "openclawScannedPairingImported": "已扫码导入 OpenClaw 配对配置",
+  "openclawScannedConnectedToDevice": "已扫码连接到 {deviceName}",
+  "openclawUnrecognizedContent": "无法识别这段内容，请检查是否包含 gateway_url 与 token",
+  "openclawCameraPermissionNeeded": "需要相机权限才能扫码配对。你也可以改用\"从剪贴板导入\"或\"粘贴配对串\"。",
+  "openclawQrNotPairingContent": "扫到的二维码不是可识别的 OpenClaw 配对内容",
+  "openclawRemoteTemplateFilled": "已填入远程连接模板，接下来补入授权令牌或导入配对串即可",
+  "openclawPairingCodeExpired": "配对码已过期",
+  "openclawPairingExpiresSeconds": "请在 {seconds} 秒内完成配对",
+  "openclawPairingExpiresMinutes": "请在 {minutes} 分 {seconds} 秒内完成配对",
+  "openclawInvalidUrlFormat": "请输入以 http://、https://、ws:// 或 wss:// 开头的地址",
+  "openclawValidAddressRequired": "请输入有效的 OpenClaw 地址",
+  "openclawDisconnected": "已断开 OpenClaw 连接",
+  "openclawPairingCodeGenerated": "已生成配对码 {code}",
+  "openclawDeviceTokenRequired": "请输入设备令牌后再完成配对",
+  "openclawDevicePairingComplete": "设备配对已完成",
+  "openclawNoExecutionPermission": "当前网关可访问，但没有执行权限，暂时无法重试队列",
+  "openclawExecutionEndpointUnavailable": "当前网关可访问，但执行入口不可用，暂时无法重试队列",
+  "openclawExecutionEngineNotConnected": "执行引擎尚未连接，暂时无法重试队列",
+  "openclawQueuedTasksResubmitted": "已重新提交 {count} 个排队任务",
+  "openclawNoRetryableTasks": "当前没有可重试的排队任务",
+  "openclawPairingCodeCopied": "配对码已复制",
+  "openclawImportPairingString": "导入配对串",
+  "openclawPairingOrQrLabel": "配对串或二维码内容",
+  "openclawPairingPasteHint": "粘贴 OpenClaw 桌面端分享的 JSON、openclaw://pair?... 链接，或包含 gateway_url / pair_token 的文本",
+  "openclawImportAndSave": "导入并保存",
+  "openclawApplyWizard": "应用向导",
+  "openclawDisconnect": "断开连接",
+  "openclawDisconnectConfirmBody": "这会清除本地保存的 OpenClaw 连接配置。",
+  "openclawDisconnectAction": "断开",
+  "openclawGatewayOnlineNoExecPermission": "网关在线，但当前令牌没有执行权限",
+  "openclawGatewayOnlineExecNotReady": "网关在线，但执行接口没有准备好",
+  "openclawNeedExecutionChainCheck": "需要补一层执行链路排查",
+  "openclawTroubleshootNoPermissionBody": "当前状态说明健康检查能通过，但真正发起执行会被拒绝。优先更换具备 `operator.write` scope 的令牌，或改用设备配对 + WebSocket。",
+  "openclawTroubleshootMissingEndpointBody": "当前地址可访问，但缺少 `/v1/responses` 执行入口。请确认 OpenClaw 网关版本、代理转发和 transport 选择是否一致。",
+  "openclawTroubleshootGenericBody": "建议先重新测试连接，再检查网关地址、认证方式和 transport 是否与 OpenClaw 当前实例一致。",
+  "openclawStatusReadyForTasks": "已准备好接手任务",
+  "openclawStatusConfirmingConnection": "正在确认连接状态",
+  "openclawStatusOnlineNoPermission": "网关在线，但没有执行权限",
+  "openclawStatusNotConnected": "暂时还没连上",
+  "openclawStatusNotConfigured": "还没有接入 OpenClaw",
+  "openclawStatusConnectedSubtitle": "连接保持正常，你可以直接从任务页或聊天页把工作交给 OpenClaw。",
+  "openclawStatusConnectingSubtitle": "我们正在确认引擎状态，保存后的结果会同步显示在这里。",
+  "openclawStatusNoPermissionSubtitle": "当前令牌能访问网关，但真正执行会被拒绝。这里需要处理权限，而不是单纯重填地址。",
+  "openclawStatusErrorSubtitleFallback": "先检查地址、认证方式和传输协议，再重新测试连接。",
+  "openclawStatusDisconnectedSubtitle": "完成一次连接后，之后的委派、排队和最近活动都会在各入口自动联动。",
+  "openclawUnsavedChanges": "未保存更改",
+  "openclawDevicePairing": "设备配对",
+  "openclawTokenAuth": "令牌认证",
+  "openclawQueuedRequestCount": "{count} 个待处理",
+  "openclawQuickConnect": "快速接入",
+  "openclawCustomConfig": "自定义配置",
+  "openclawCustomConfigDesc": "使用自定义网关地址和令牌连接",
+  "openclawGuestMainDesc": "使用本地网关直连",
+  "openclawGuestMainLabel": "本地网关",
+  "openclawImportFromClipboard": "从剪贴板导入",
+  "openclawPastePairingString": "粘贴配对串",
+  "openclawScanToPair": "扫码配对",
+  "openclawTailscaleRemoteNode": "Tailscale 远程节点",
+  "openclawTailscaleIpOrDomain": "Tailscale IP 或域名",
+  "openclawTailscaleHint": "例如 100.88.1.24 或 devbox.tail123.ts.net",
+  "openclawTailscaleHelperText": "如果你的 OpenClaw 暴露在 Tailscale 上，这里只需要填节点 IP 或 MagicDNS 域名，Sparkle 会自动补上标准端口与 WebSocket 连接方式。",
+  "openclawTailscaleLabel": "Tailscale",
+  "openclawCloudflareTunnel": "Cloudflare Tunnel",
+  "openclawTunnelDomain": "Tunnel 域名",
+  "openclawCloudflareHint": "例如 openclaw.example.com",
+  "openclawCloudflareHelperText": "如果你通过 Cloudflare Tunnel 暴露 OpenClaw，这里填入域名即可。Sparkle 会按 HTTPS/WSS 方式生成连接配置。",
+  "openclawCloudflareLabel": "Cloudflare",
+  "openclawPresetSelected": "已选中\"{label}\"。连接细节会自动填入；如果随后提示缺执行权限，优先更换具备 `operator.write` scope 的令牌，或改用设备配对。",
+  "openclawGatewayAddress": "网关地址",
+  "openclawGatewayHint": "例如 http://localhost:8080",
+  "openclawAuthMode": "认证方式",
+  "openclawAuthToken": "认证令牌",
+  "openclawAuthTokenHint": "粘贴 OpenClaw 网关令牌",
+  "openclawDeviceToken": "设备令牌",
+  "openclawDeviceTokenHint": "配对完成后粘贴设备令牌",
+  "openclawPairingCode": "配对码",
+  "openclawPairingCodeInstructions": "请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。",
+  "openclawGeneratePairingCode": "生成配对码",
+  "openclawCompletePairing": "完成配对",
+  "openclawCancelPairing": "取消配对",
+  "openclawTransportProtocol": "传输协议",
+  "openclawDeviceAuthDesc": "适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。",
+  "openclawTokenAuthDesc": "适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。",
+  "openclawWebSocketTransportDesc": "WebSocket 更适合保持持续连接，适合频繁委派和状态回推。",
+  "openclawHttpTransportDesc": "HTTP 更适合手动验证和快速测试连接。",
+  "openclawDefaultConnectionReady": "已为你准备好默认连接细节",
+  "openclawTestConnection": "测试连接",
+  "openclawSaveConfig": "保存配置",
+  "openclawRetryQueue": "重试队列",
+  "accountabilityPartnerDefault": "责任伙伴",
+  "accountabilityEndPartnership": "结束伙伴关系",
+  "accountabilityDashboardLoadFailed": "伙伴工作台加载失败",
+  "accountabilityNudgeSentDefault": "已通过站内提醒发送，对方在线时会实时看到",
+  "accountabilityNudgeCooldown": "刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。",
+  "accountabilityNudgeFailed": "提醒发送失败，请稍后再试",
+  "accountabilityEndPartnershipConfirm": "确定要结束这段责任伙伴关系吗？",
+  "accountabilityPartnershipEnded": "伙伴关系已结束",
+  "accountabilityMyGoal": "我的目标",
+  "accountabilityGoalNotSet": "还没有填写目标",
+  "accountabilityGrowingTogether": "伙伴共成长",
+  "accountabilityRecentShares": "最近分享",
+  "accountabilitySharedItem": "已分享内容",
+  "accountabilityMonthlyHeatmap": "月度打卡热力图",
+  "accountabilityPartnerAchievements": "伙伴成就",
+  "accountabilityPartnerNoAchievements": "伙伴还没有解锁专属成就，先互相打卡一轮试试看。",
+  "accountabilityRecentCheckins": "最近打卡",
+  "accountabilityNoCheckinRecords": "还没有打卡记录",
+  "accountabilityNoCheckinHint": "今天先发一条简短进展，伙伴关系就会开始有温度。",
+  "accountabilityCheckedInToday": "今天已打卡",
+  "accountabilityCheckInToday": "今日打卡",
+  "accountabilityTotalCheckins": "总打卡",
+  "accountabilityCheckedIn": "已打卡",
+  "accountabilityCheckin": "打卡",
+  "accountabilityNudge": "提醒",
+  "accountabilityShare": "分享",
+  "accountabilityChat": "聊天",
+  "accountabilityInviteSentWait": "邀请已发出，等待对方确认后才能进入伙伴工作台。",
+  "accountabilityInvitePendingConfirm": "这条伙伴邀请还待你确认，先去邀请页处理后再回来。",
+  "accountabilityDashboardNotAvailable": "当前伙伴关系暂时不可进入完整工作台。",
+  "accountabilityInvitePending": "伙伴邀请待处理",
+  "accountabilityDashboardUnavailable": "伙伴工作台暂不可用",
+  "accountabilityViewStatus": "查看状态",
+  "accountabilityHandleInvite": "去处理邀请",
+  "accountabilityContinueChat": "继续聊天",
+  "accountabilityNoPendingPolicies": "当前没有待执行的问责策略。",
+  "accountabilityPendingPolicies": "待执行策略",
+  "accountabilityNoRecentReflections": "最近还没有新的跨事件反思。",
+  "accountabilityRecentReflections": "近期反思",
+  "accountabilityForesightHint": "前瞻提示",
+  "accountabilityNoForesightHint": "暂无前瞻提示。",
+  "accountabilityInterventionIneffective": "干预未奏效",
+  "accountabilityPlanStall": "计划停滞",
+  "accountabilityOverload": "负荷过载",
+  "accountabilityTooDifficult": "任务过难",
+  "accountabilityUnclear": "任务不清晰",
+  "accountabilityAbandoned": "中途放下",
+  "accountabilityReflectionSummary": "反思摘要",
+  "accountabilityDimPace": "节奏",
+  "accountabilityDimCompletionRate": "完成率",
+  "accountabilityDimEngagement": "投入度",
+  "accountabilityDimMood": "情绪",
+  "accountabilityDimPlanAdherence": "计划跟随",
+  "accountabilityMoodLow": "低落",
+  "accountabilityMoodOkay": "一般",
+  "accountabilityMoodSteady": "平稳",
+  "accountabilityMoodGood": "不错",
+  "accountabilityMoodGreat": "很棒",
+  "accountabilityPartner": "伙伴",
+  "accountabilityLike": "点赞",
+  "accountabilityEncourage": "鼓励",
+  "accountabilityEncourageSent": "已为伙伴点亮鼓励",
+  "accountabilitySendEncourage": "发送鼓励",
+  "accountabilityEncourageHint": "写一句你想对伙伴说的话",
+  "accountabilitySend": "发送",
+  "accountabilityEncourageDelivered": "鼓励已送达",
+  "accountabilityTodayProgressHint": "今日进展...",
+  "accountabilityTodayMood": "今日心情:",
+  "accountabilityPublishCheckin": "发布打卡",
+  "accountabilityProgressRequired": "请写一句今天的进展",
+  "accountabilityCheckinSuccess": "打卡成功，伙伴已经能看到了",
+  "openclawImportedPairing": "已导入 OpenClaw 配对配置",
+  "accountabilityPartnerGoal": "{partnerName} 的目标",
+  "accountabilityPartnerGoalNotSet": "对方还没填写目标",
+  "accountabilityMe": "我",
+  "accountabilityThem": "TA",
+  "accountabilityStreakDays": "{days} 天",
+  "accountabilityCheckinMinutes": "{minutes}分钟",
+  "accountabilityDaysTogether": "一起坚持了 {days} 天",
+  "accountabilityMyStreakDays": "我 {days} 天",
+  "accountabilityPartnerStreakDays": "TA {days} 天",
+  "accountabilityMyAchievementsUnlocked": "我解锁 {count} 个成就",
+  "accountabilityPartnerAchievementsUnlocked": "TA 解锁 {count} 个成就",
+  "accountabilityStreakRank": "连续打卡榜：你第 {myRank}，伙伴第 {partnerRank}",
+  "accountabilityDeviationsDetected": "检测到 {count} 个偏离",
+  "accountabilityUpdatedAt": "更新时间 {time}",
+  "accountabilityZeroItems": "0 条",
+  "accountabilityItemCount": "{count} 条",
+  "accountabilityPoliciesReady": "已有 {count} 条策略就绪，等待事件触发。",
+  "accountabilityReflectionsGenerated": "最近已生成 {count} 条反思摘要。",
+  "accountabilityPoliciesPending": "已有 {count} 条策略待执行，下一次触发在 {time}。",
+  "accountabilityReflectionsLatest": "最近一次聚焦 {category}，更新时间 {time}。",
+  "accountabilityInvestedTime": "投入时长: {minutes} 分钟",
+  "accountabilityMinutes": "{minutes} 分钟",
+  "accountabilityEnd": "结束",
+  "accountabilityOperationFailed": "操作失败",
+  "accountabilityLikeFailed": "点赞失败",
+  "accountabilitySendFailed": "发送失败",
+  "accountabilityCheckinFailed": "打卡失败",
+  "openclawHubGatewayNoPermission": "当前网关可访问，但没有执行权限，暂时无法重试队列",
+  "openclawHubEndpointUnavailable": "当前网关可访问，但执行入口不可用，暂时无法重试队列",
+  "openclawHubEngineNotConnected": "执行引擎尚未连接，暂时无法重试队列",
+  "openclawHubNoRetryQueuedItems": "当前没有可重试的排队任务",
+  "openclawHubQueueCleared": "等待队列已清空",
+  "openclawHubConnectedDiagnostics": "OpenClaw 已连接，点击查看诊断",
+  "openclawHubGatewayNoPermissionDiagnostics": "网关可达但缺少执行权限，点击查看诊断",
+  "openclawHubEndpointIssueDiagnostics": "网关可达但执行入口异常，点击查看诊断",
+  "openclawHubQueuedTasksDiagnostics": "当前有排队任务，点击查看诊断",
+  "openclawHubNotConnectedDiagnostics": "OpenClaw 连接未完成，点击查看诊断",
+  "openclawHubOverviewGatewayNoPermission": "网关在线，但没有执行权限",
+  "openclawHubOverviewEndpointIssue": "网关在线，但执行入口不可用",
+  "openclawHubOverviewReady": "OpenClaw 已准备好接手",
+  "openclawHubOverviewTasksWaiting": "已有任务在等它恢复",
+  "openclawHubOverviewConfigSaved": "连接信息已保存，当前还没连上",
+  "openclawHubOverviewConnectFirst": "先接入 OpenClaw，再开始稳定委派",
+  "openclawHubOverviewGatewayNoPermissionDesc": "当前这台网关可以访问，但真正执行会被权限拦住。先补可写 scope，或改用设备配对 + WebSocket，才算闭环接通。",
+  "openclawHubOverviewEndpointIssueDesc": "当前地址本身可访问，但执行接口还没准备好。优先检查 `/v1/responses`、代理转发和 transport 选择是否一致。",
+  "openclawHubOverviewConnectedDesc": "连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。",
+  "openclawHubOverviewDefaultDesc": "连接完成后，首页、聊天和任务页会共享同一个执行中心，不再四处寻找入口。",
+  "openclawHubActionHintPermission": "现在最值得先做的是更换具备执行权限的令牌，或切到已配对的 WebSocket 连接。",
+  "openclawHubActionHintEndpoint": "现在最值得先做的是检查执行接口与 transport，让网关从“可达”变成“可执行”。",
+  "openclawHubActionHintRetryQueue": "现在最值得先做的是把等待队列重新提交。",
+  "openclawHubActionHintReconnect": "现在最值得先做的是恢复连接，让已排队的任务继续执行。",
+  "openclawHubActionHintNewDelegation": "现在最值得先做的是回到聊天或任务页发起新的委派。",
+  "openclawHubActionHintCompleteConnection": "现在最值得先做的是完成连接，让 OpenClaw 真正成为你的执行伴侣。",
+  "openclawHubAppBarTitle": "OpenClaw 执行中心",
+  "openclawHubMetricConnectedNoPermission": "已连接但无执行权限",
+  "openclawHubMetricConnectedEndpointIssue": "已连接但执行入口异常",
+  "openclawHubMetricConnected": "已连接",
+  "openclawHubMetricNotConnected": "未连接",
+  "openclawHubMetricPairedDevice": "已配对设备",
+  "openclawHubMetricTokenAuth": "令牌认证",
+  "openclawHubButtonContinueSetup": "继续设置",
+  "openclawHubButtonViewQueue": "查看队列",
+  "openclawHubButtonAutomation": "自动化",
+  "openclawHubButtonEnterChat": "进入聊天",
+  "openclawHubButtonViewTasks": "查看任务",
+  "openclawHubSectionConnectionTitle": "连接与控制",
+  "openclawHubSectionConnectionSubtitle": "先用摘要看清当前连接，再决定是否展开编辑，避免一进来就被整张表单打断。",
+  "openclawHubCollapseConnectionEdit": "收起连接编辑",
+  "openclawHubExpandConnectionEdit": "编辑连接方式",
+  "openclawHubGatewayUrlEmpty": "尚未填写网关地址",
+  "openclawHubConnectionSummaryPermission": "这台网关已经能访问，但当前认证没有真正发起执行的权限；更适合先修权限，再统一重试队列。",
+  "openclawHubConnectionSummaryEndpoint": "网关本身可达，但执行接口还没准备好；先检查 transport 和 `/v1/responses` 会更有效。",
+  "openclawHubConnectionSummaryConnected": "当前连接保持稳定，适合继续使用现有方式直接委派。",
+  "openclawHubConnectionSummaryConfigured": "配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。",
+  "openclawHubConnectionSummaryFirstTime": "第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。",
+  "openclawHubSectionDevicesTitle": "设备与亲和性",
+  "openclawHubSectionDevicesSubtitle": "把“哪类任务优先发到哪台设备”显式配置出来，避免每次都让系统猜你的偏好。",
+  "openclawHubCollapseDeviceDetails": "收起设备详情",
+  "openclawHubExpandDeviceDetails": "查看设备与偏好",
+  "openclawHubDevicesSummaryEmpty": "节点列表会在成功接入 OpenClaw 后自动出现。设备越清晰，后面的多节点调度和降级体验就越稳定。",
+  "openclawHubSectionQueueTitle": "队列与委派",
+  "openclawHubSectionQueueSubtitle": "让你先知道现在最该做什么，再决定是否展开看完整队列和模板能力。",
+  "openclawHubCollapseQueueDetails": "收起队列详情",
+  "openclawHubExpandQueueDetails": "查看全部队列",
+  "openclawHubQueueSummaryConnected": "你现在最适合先把排队任务重新提交，等引擎把积压处理完再发起新的委派。",
+  "openclawHubQueueSummaryNotConnected": "你已经把任务排好了，下一步先恢复连接，之后就能一口气继续执行。",
+  "openclawHubQueueSummaryConnectedEmpty": "当前没有等待中的任务，最适合回到聊天或任务页发起新的委派。",
+  "openclawHubQueueSummaryNotConnectedEmpty": "当前也没有排队任务，可以先完成连接，再决定要不要开始第一笔委派。",
+  "openclawHubQueueEmptyLabel": "等待队列当前为空",
+  "openclawHubButtonRetryQueue": "重试队列",
+  "openclawHubButtonClearQueue": "清空队列",
+  "openclawHubAvailableTemplates": "可用模板 / 能力说明",
+  "openclawHubTemplatesEmptyHint": "模板会在你打开具体任务后按需加载；现在可以先把连接、队列和最近活动整理顺，再回到具体任务开始委派。",
+  "openclawHubSectionAutomationTitle": "自动化与批量",
+  "openclawHubSectionAutomationSubtitle": "把一次性的批量执行和长期的定时/条件执行放进同一个操作台，避免执行能力只停留在单次点击。",
+  "openclawHubCollapseAutomationDetails": "收起自动化详情",
+  "openclawHubExpandAutomationDetails": "查看自动化能力",
+  "openclawHubAutomationSummaryEmpty": "你还没有任何自动化。展开后可以创建每天定时执行、事件触发或条件轮询，并直接从这里发起批量委派。",
+  "openclawHubSectionActivityTitle": "最近活动",
+  "openclawHubSectionActivitySubtitle": "用高密度时间线看最近的委派，不需要再在不同任务页之间来回翻找。",
+  "openclawHubCollapseActivityDetails": "收起活动详情",
+  "openclawHubExpandActivityDetails": "查看全部活动",
+  "openclawHubActivityEmptyHint": "暂时还没有最近执行。你可以从首页卡牌、任务执行页或聊天入口发起第一笔委派。",
+  "openclawHubActivityHint": "可继续查看该任务的执行详情。",
+  "openclawHubActivityOpenTask": "打开任务执行",
+  "openclawHubStatusRecorded": "已记录",
+  "openclawHubRetryQueuedSuccess": "已重新提交 {count} 个排队任务",
+  "@openclawHubRetryQueuedSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubLastExecutionStatus": "最近一次执行状态是“{status}”，你可以从这里继续查看连接、队列和活动。",
+  "@openclawHubLastExecutionStatus": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubPendingDelegationsDesc": "你已经有 {count} 个委派在等待恢复连接，先把引擎重新连上会最有效。",
+  "@openclawHubPendingDelegationsDesc": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubQueuedTasksCount": "{count} 个排队任务",
+  "@openclawHubQueuedTasksCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubNodeCount": "{count} 个节点",
+  "@openclawHubNodeCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubAutomationCount": "{count} 条自动化",
+  "@openclawHubAutomationCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubLatestBatch": "最近批量 {completed}/{total}",
+  "@openclawHubLatestBatch": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubLastTrustLabel": "最近一次信任判断：{label}",
+  "@openclawHubLastTrustLabel": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubDevicesSummaryActiveWithCount": "当前已发现 {count} 台节点。你可以在这里为浏览器、终端、文档和接口任务指定偏好设备，离线时 Sparkle 会自动找备用节点。",
+  "@openclawHubDevicesSummaryActiveWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubAutomationSummaryActiveWithCount": "当前已有 {count} 条自动化在运行。批量委派摘要和定时任务状态也会持续在这里汇总。",
+  "@openclawHubAutomationSummaryActiveWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubTaskLabel": "任务 {taskId}",
+  "@openclawHubTaskLabel": {
+    "placeholders": {
+      "taskId": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubTaskLabelTemplate": "模板 {templateId}",
+  "@openclawHubTaskLabelTemplate": {
+    "placeholders": {
+      "templateId": {
+        "type": "Object"
+      }
+    }
+  },
+  "openclawHubTaskLabelSource": "来源 {source}",
+  "@openclawHubTaskLabelSource": {
+    "placeholders": {
+      "source": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailFriendlyError": "系统暂时没能完成这次应用，请稍后再试",
+  "seedLibraryDetailUserRatings": "用户评分",
+  "seedLibraryDetailQualityBreakdown": "质量评分拆解",
+  "seedLibraryDetailQualityBreakdownDesc": "列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。",
+  "seedLibraryDetailQualityComprehensive": "综合",
+  "seedLibraryDetailQualitySystem": "系统",
+  "seedLibraryDetailQualityUser": "用户",
+  "seedLibraryDetailApplyToSystem": "应用到系统",
+  "seedLibraryDetailAppliedSuccess": "已应用到系统",
+  "seedLibraryDetailPausedSuccess": "已暂停使用该种子库",
+  "seedLibraryDetailStatusUpdated": "种子库状态已更新",
+  "seedLibraryDetailPauseUse": "暂停使用",
+  "seedLibraryDetailApplyLibrary": "应用种子库",
+  "seedLibraryDetailSetPrimarySuccess": "已设为优先使用",
+  "seedLibraryDetailSetPrimary": "设为主用",
+  "seedLibraryDetailMarkedNotSuitableSuccess": "已记录“此种子不适合我”",
+  "seedLibraryDetailMarkNotSuitable": "此种子不适合我",
+  "seedLibraryDetailEditRating": "修改评分",
+  "seedLibraryDetailGiveRating": "给个评分",
+  "seedLibraryDetailSubscriptionStatusEnabled": "已启用",
+  "seedLibraryDetailSubscriptionStatusDisabled": "已订阅未启用",
+  "seedLibraryDetailActiveSubscriptions": "协同中的种子库",
+  "seedLibraryDetailActiveSubscriptionsDesc": "你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。",
+  "seedLibraryDetailFallbackName": "种子库",
+  "seedLibraryDetailNoResultsUnderFilter": "当前筛选条件下没有内容",
+  "seedLibraryDetailUsageFewShot": "用于增强 AI 在相似任务中的回答风格和示例质量",
+  "seedLibraryDetailUsageTeachingContent": "用于给学习计划、任务说明和知识讲解提供高质量教学内容",
+  "seedLibraryDetailUsageReplyTemplate": "用于改善系统回复模板和表达稳定性",
+  "seedLibraryDetailUsageCustom": "用于你自己的内容偏好和专属示例沉淀",
+  "seedLibraryDetailFilterTitle": "筛选内容",
+  "seedLibraryDetailFilterDesc": "按内容类型、难度和启用状态筛选当前种子库里的条目。",
+  "seedLibraryDetailFilterContentType": "内容类型",
+  "seedLibraryDetailFilterAll": "全部",
+  "seedLibraryDetailFilterDifficulty": "难度",
+  "seedLibraryDetailFilterShowInactive": "显示已停用内容",
+  "seedLibraryDetailFilterShowInactiveDesc": "关闭时仅展示当前仍在使用的条目",
+  "seedLibraryDetailFilterReset": "重置",
+  "seedLibraryDetailFilterDone": "完成",
+  "seedLibraryDetailRatingTitle": "给这个种子库评分",
+  "seedLibraryDetailRatingDescription": "你的评分会影响这个种子库的展示质量分。",
+  "seedLibraryDetailRatingCommentLabel": "评价说明（可选）",
+  "seedLibraryDetailRatingSubmitted": "评分已提交",
+  "seedLibraryDetailSubmitRating": "提交评分",
+  "seedLibraryDetailContentBody": "正文",
+  "seedLibraryDetailStructuredContent": "结构化内容",
+  "seedLibraryDetailEditLibrary": "编辑种子库",
+  "seedLibraryDetailEditName": "名称",
+  "seedLibraryDetailEditNameEmpty": "名称不能为空",
+  "seedLibraryDetailEditDescriptionOptional": "描述（可选）",
+  "seedLibraryDetailEditCancel": "取消",
+  "seedLibraryDetailEditSave": "保存",
+  "seedLibraryDetailLibraryUpdated": "种子库已更新",
+  "seedLibraryDetailAddItem": "添加种子内容",
+  "seedLibraryDetailAddItemType": "内容类型",
+  "seedLibraryDetailAddItemTitle": "标题",
+  "seedLibraryDetailAddItemContent": "内容",
+  "seedLibraryDetailAddItemSubject": "主题/学科",
+  "seedLibraryDetailAddItemDifficulty": "难度",
+  "seedLibraryDetailAddItemUnset": "未设置",
+  "seedLibraryDetailAddItemTags": "标签（逗号分隔）",
+  "seedLibraryDetailAddItemSave": "保存内容",
+  "seedLibraryDetailAddItemSuccess": "种子内容已添加",
+  "seedLibraryDetailImportCannotRead": "无法读取文件内容",
+  "seedLibraryDetailImportInvalidJson": "JSON 格式无效，需为数组或 [items:[...]]",
+  "seedLibraryDetailImportNoItems": "文件中没有可导入的内容项",
+  "seedLibraryDetailApplyFailed": "应用失败：{error}",
+  "@seedLibraryDetailApplyFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailSetPrimaryFailed": "设置失败：{error}",
+  "@seedLibraryDetailSetPrimaryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailMarkNotSuitableFailed": "记录失败：{error}",
+  "@seedLibraryDetailMarkNotSuitableFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailCurrentStatus": "当前状态：{status} · 优先级 {priority}",
+  "@seedLibraryDetailCurrentStatus": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      },
+      "priority": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailUsageAppliedEnabled": "当前已生效。{hint}；系统会按优先级把它与其他启用中的种子库一起使用。",
+  "@seedLibraryDetailUsageAppliedEnabled": {
+    "placeholders": {
+      "hint": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailUsageSubscribedNotEnabled": "当前已订阅但未启用。启用后，{hint}。",
+  "@seedLibraryDetailUsageSubscribedNotEnabled": {
+    "placeholders": {
+      "hint": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailUsageNotApplied": "当前尚未应用。应用后，{hint}。",
+  "@seedLibraryDetailUsageNotApplied": {
+    "placeholders": {
+      "hint": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailCurrentRating": "当前评分：{score} / 10",
+  "@seedLibraryDetailCurrentRating": {
+    "placeholders": {
+      "score": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailRatingFailed": "评分失败：{error}",
+  "@seedLibraryDetailRatingFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailAddItemFailed": "添加失败：{error}",
+  "@seedLibraryDetailAddItemFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailImportResult": "导入完成：成功 {imported} 条，失败 {failed} 条",
+  "@seedLibraryDetailImportResult": {
+    "placeholders": {
+      "imported": {
+        "type": "Object"
+      },
+      "failed": {
+        "type": "Object"
+      }
+    }
+  },
+  "seedLibraryDetailImportFailed": "导入失败：{error}",
+  "@seedLibraryDetailImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationTargetFallback": "推荐对象",
+  "recommendationThisItem": "这条推荐",
+  "recommendationFeedbackAbout": "关于 {target} 的{stage}反馈",
+  "@recommendationFeedbackAbout": {
+    "placeholders": {
+      "target": {
+        "type": "Object"
+      },
+      "stage": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationFeedbackHint": "你的反馈会直接更新下一轮推荐权重",
+  "recommendationStartCalibration": "开始校准",
+  "recommendationFriendPreferenceTitle": "你的伙伴匹配偏好",
+  "recommendationGroupPreferenceTitle": "你的社群推荐偏好",
+  "recommendationRecentCount": "近 {count} 次",
+  "@recommendationRecentCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationFriendLearningHint": "系统正在学习你更看重相似度、互补性还是合作舒适度。",
+  "recommendationGroupLearningHint": "系统正在学习你更偏好兴趣对口、活跃氛围还是新鲜发现。",
+  "recommendationSystemAvoiding": "系统在回避：{signals}",
+  "@recommendationSystemAvoiding": {
+    "placeholders": {
+      "signals": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationCurrentlyBiasing": "当前更偏向：{metrics}",
+  "@recommendationCurrentlyBiasing": {
+    "placeholders": {
+      "metrics": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationListSeparator": "、",
+  "recommendationCalibrateTitle": "帮我们校准推荐",
+  "recommendationFeedbackSubtitle": "你对 {subject} 的评价会直接作用到接下来的推荐算法。",
+  "@recommendationFeedbackSubtitle": {
+    "placeholders": {
+      "subject": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationScoreOverall": "整体感受",
+  "recommendationScoreExplanationClarity": "推荐理由清晰度",
+  "recommendationScoreActionability": "采取行动的意愿",
+  "recommendationScoreRelevance": "契合度",
+  "recommendationScoreSimilarity": "相似度是否到位",
+  "recommendationScoreComplementary": "互补性是否成立",
+  "recommendationScoreComfort": "合作舒适度",
+  "recommendationScoreInterestMatch": "兴趣匹配度",
+  "recommendationScoreActivity": "活跃度是否合适",
+  "recommendationScoreAtmosphere": "社群氛围",
+  "recommendationIssuesTitle": "哪里不够对味",
+  "recommendationStrengthsTitle": "哪些地方做得好",
+  "recommendationFreeTextLabel": "自然语言补充",
+  "recommendationFriendHint": "例如：我更希望责任伙伴跟我节奏接近，但也能在拖延时推我一把。",
+  "recommendationGroupHint": "例如：我想找更对口的小组，最好活跃但不要太嘈杂。",
+  "recommendationPrivacyNotice": "我们只使用你填写的分数和总结来优化推荐，不会把私密原始数据直接暴露给其他用户。",
+  "recommendationLater": "稍后再说",
+  "recommendationSubmitFeedback": "提交反馈",
+  "recommendationMatchingStrategy": "匹配策略：{name}",
+  "@recommendationMatchingStrategy": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationGroupSubtitle": "{count} 人 · {tags}",
+  "@recommendationGroupSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "tags": {
+        "type": "Object"
+      }
+    }
+  },
+  "recommendationPublicGroup": "公开社群",
+  "recommendationStageImmediate": "即时",
+  "recommendationStageFollowUp": "跟进",
+  "recommendationStageOutcome": "结果",
+  "recommendationReasonSubjectOverlap": "主题重合",
+  "recommendationReasonPreferenceAlignment": "学习节奏接近",
+  "recommendationReasonTagOverlap": "兴趣命中",
+  "recommendationReasonTrending": "近期活跃",
+  "recommendationMetricOverall": "整体",
+  "recommendationMetricSimilarity": "相似度",
+  "recommendationMetricComfort": "舒适度",
+  "recommendationMetricInterestMatch": "兴趣匹配",
+  "recommendationMetricActivity": "活跃度",
+  "recommendationMetricSubjectSimilarity": "主题相似",
+  "recommendationMetricRelationshipReadiness": "关系熟悉度",
+  "recommendationMetricTagMatch": "标签匹配",
+  "recommendationMetricQuality": "质量",
+  "recommendationSignalTooDissimilar": "不够相似",
+  "recommendationSignalWantMoreTagMatch": "兴趣不够对口",
+  "recommendationSignalTrustworthy": "合作感靠谱",
+  "recommendationSignalGoodInterestMatch": "兴趣对口",
+  "recommendationIssueNotSimilar": "不够相似",
+  "recommendationIssueNotComplementary": "缺少互补",
+  "recommendationIssueNotProactive": "不够主动",
+  "recommendationIssueTooMuchPressure": "压力太大",
+  "recommendationIssueNotFamiliar": "不够熟悉",
+  "recommendationIssueInaccurateTags": "标签不准",
+  "recommendationIssueTooQuiet": "太冷清",
+  "recommendationIssueTooCrowded": "太拥挤",
+  "recommendationIssueMediocreVibe": "氛围一般",
+  "recommendationIssueUnsuitableThreshold": "门槛不合适",
+  "recommendationStrengthGreatFit": "很契合",
+  "recommendationStrengthComplementary": "很互补",
+  "recommendationStrengthReliable": "很靠谱",
+  "recommendationStrengthClearReason": "理由清楚",
+  "recommendationStrengthInterestMatch": "兴趣对口",
+  "recommendationStrengthGreatVibe": "氛围很好",
+  "recommendationStrengthActiveFit": "活跃合适",
+  "personaRefreshPersona": "刷新画像",
+  "personaProfileInterpretation": "画像解读",
+  "personaProfileInterpretationSubtitle": "先看自然语言总结，再决定要不要展开底层结构",
+  "personaL3Subtitle": "优先展示系统已经总结出的可感知结论",
+  "personaL1Subtitle": "你明确告诉系统的目标和偏好",
+  "personaL2Subtitle": "系统与你协作校准后的标签与能力判断",
+  "personaInferenceTitle": "系统推断与策略",
+  "personaInferenceSubtitle": "更技术性的推断偏好与当前策略，默认收起",
+  "personaQuickAccessSystemUpdates": "系统更新",
+  "personaQuickAccessMemorySettings": "记忆设置",
+  "personaCoreProfileUnavailable": "核心画像暂时不可用",
+  "personaDegradedMode": "已切换为降级展示，你仍然可以查看和刷新其它分区。\n{message}",
+  "@personaDegradedMode": {
+    "placeholders": {
+      "message": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaRetryFullProfile": "重试完整画像",
+  "personaActiveGoal": "你当前最明确的目标是：{goalTitle}。",
+  "@personaActiveGoal": {
+    "placeholders": {
+      "goalTitle": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaLearningPreference": "你的学习偏好更接近{learningStyle}，系统回答深度倾向{responseDepth}。",
+  "@personaLearningPreference": {
+    "placeholders": {
+      "learningStyle": {
+        "type": "Object"
+      },
+      "responseDepth": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaObservedPattern": "系统最近观察到的主要模式是：{pattern}。",
+  "@personaObservedPattern": {
+    "placeholders": {
+      "pattern": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaCognitiveClueCount": "画像里已积累 {count} 条可用于个性化推荐的认知线索。",
+  "@personaCognitiveClueCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaProfileSparse": "当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。",
+  "personaSimplifiedUnderstanding": "这是系统目前对你的简化理解：",
+  "personaSectionRefresh": "刷新",
+  "personaSectionLoading": "加载中…",
+  "personaLoadFailedError": "加载失败：{error}",
+  "@personaLoadFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaPreferenceVersionReason": "当前显式偏好与画像上下文版本。",
+  "personaActivePreferencesReason": "当前用于 AI 与系统联动的显式偏好。",
+  "personaKnowledgeSummaryReason": "知识掌握度与当前活跃学习主题摘要。",
+  "personaCognitiveSummaryReason": "当前认知模式与风险信号摘要。",
+  "personaInferredDefaultReason": "系统会根据最近行为持续更新这项推断。",
+  "personaViewRecord": "查看记录",
+  "personaUpdate": "更新",
+  "personaAdjust": "调整",
+  "personaManualOverride": "手动覆盖",
+  "personaPolicy": "策略",
+  "personaSourcePattern": "来源模式：{pattern}",
+  "@personaSourcePattern": {
+    "placeholders": {
+      "pattern": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaActivePolicyReason": "当前已生效的系统策略。",
+  "personaCorrectionSubmitFailed": "提交修正失败：{error}",
+  "@personaCorrectionSubmitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaPreferenceUpdated": "偏好已更新",
+  "personaPreferenceUpdateFailed": "偏好更新失败：{error}",
+  "@personaPreferenceUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaRolledBack": "已回滚到上一版本",
+  "personaRollbackFailed": "回滚失败：{error}",
+  "@personaRollbackFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaGoalUpdated": "目标已更新",
+  "personaGoalUpdateFailed": "目标更新失败：{error}",
+  "@personaGoalUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaInferredAdjusted": "推断偏好已调整",
+  "personaAdjustFailed": "调整失败：{error}",
+  "@personaAdjustFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaInferredReset": "已恢复系统推断值",
+  "personaRestoreFailed": "恢复失败：{error}",
+  "@personaRestoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "personaUnknownError": "未知错误",
+  "personaHintDecimalRange": "请输入 0.0 到 1.0 之间的数字",
+  "personaHintStudyMinutes": "请输入学习时长（分钟）",
+  "personaHintPositiveMinutes": "请输入大于 0 的分钟数",
+  "personaHintValidPreference": "请输入有效的偏好值",
+  "examSprintTitle": "考试冲刺设置",
+  "examSprintMinutesPerDay": "{minutes} 分钟/天",
+  "@examSprintMinutesPerDay": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintStep1Subject": "1. 哪门课？",
+  "examSprintSubjectHint": "例如：计算机网络 / 高数 / 英语四级",
+  "examSprintSubjectRequired": "先告诉我你要冲刺哪门课",
+  "examSprintStep2Date": "2. 考试哪天？",
+  "examSprintSelectDate": "选择考试日期",
+  "examSprintDateHint": "日期会决定冲刺天数和节奏",
+  "examSprintStep3Target": "3. 目标是通过、保分还是冲高分？",
+  "examSprintStep4Scope": "4. 考试范围 / 老师重点有吗？",
+  "examSprintStep4Subtitle": "可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。",
+  "examSprintScopeHint": "例如：重点看传输层、网络层；老师说会考简答和计算题。",
+  "examSprintUpload": "上传资料",
+  "examSprintNoUpload": "还没上传资料",
+  "examSprintUploadedCount": "已上传 {count} 份资料",
+  "@examSprintUploadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintStep5Baseline": "5. 你现在大概会多少？最怕哪几章？",
+  "examSprintWeakChapters": "最怕哪几章？",
+  "examSprintStep6Daily": "6. 每天真实能学多久？",
+  "examSprintMinutesPerDayLabel": "{minutes} 分钟 / 天",
+  "@examSprintMinutesPerDayLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintMinutesLabel": "{minutes} 分钟",
+  "@examSprintMinutesLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintDailyHint": "用「你大概率能坚持」的时间，不用理想状态。",
+  "examSprintGenerate": "生成我的第一天任务",
+  "examSprintSubmitHint": "提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。",
+  "examSprintHeroTitle": "不是填问卷，是一起确定起点",
+  "examSprintHeroSubtitle": "填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。",
+  "examSprintUploadSuccess": "资料已上传",
+  "examSprintSelectDateFirst": "先选择考试日期",
+  "examSprintAssessmentComplete": "初步评估已完成",
+  "examSprintPassProbability": "通过概率 {percent}%",
+  "@examSprintPassProbability": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintRecommendedMode": "建议模式 {mode}",
+  "@examSprintRecommendedMode": {
+    "placeholders": {
+      "mode": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintFirstDayFocus": "第一天先做什么",
+  "examSprintStartFirstDay": "开始第一天任务",
+  "examSprintViewPlan": "查看计划",
+  "examSprintViewFullPlan": "查看整个计划",
+  "examSprintBaselineAlmostZero": "几乎要从零开始",
+  "examSprintBaselineUnstable": "上过课，但基础还不稳",
+  "examSprintBaselinePartial": "有一部分基础，可以边补边冲",
+  "examSprintBaselineSolid": "基础不错，重点是提分校准",
+  "examSprintDayCount": "{count} 天",
+  "@examSprintDayCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "examSprintTargetPass": "通过",
+  "examSprintTargetHold": "保分",
+  "examSprintTargetHighScore": "冲高分",
+  "memorySettingsTitle": "记忆控制",
+  "memorySettingsBack": "返回",
+  "memorySettingsDisabled": "记忆控制未启用",
+  "memorySettingsLoadError": "加载记忆设置失败: {error}",
+  "@memorySettingsLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "memorySettingsSaveError": "保存失败: {error}",
+  "@memorySettingsSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "memorySettingsSaveSuccess": "记忆设置已更新",
+  "memorySettingsUnavailable": "记忆控制不可用",
+  "memorySettingsEnabledChip": "记忆已启用",
+  "memorySettingsDisabledChip": "记忆已暂停",
+  "memorySettingsControllableChip": "偏好可控",
+  "memorySettingsDescription": "控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。",
+  "memorySettingsEnableTitle": "启用长期记忆",
+  "memorySettingsEnableDesc": "关闭后会暂停新的记忆写入，但不会删除历史记录。",
+  "memorySettingsSocialTitle": "社交语义子开关",
+  "memorySettingsSocialDesc": "Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。",
+  "memorySettingsSocialSelf": "自我记忆",
+  "memorySettingsSocialPersonMention": "人物提及",
+  "memorySettingsSocialRelationship": "关系动态",
+  "memorySettingsSocialCommitment": "承诺事项",
+  "memorySettingsPushTitle": "主动提醒",
+  "memorySettingsPushDesc": "Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。",
+  "memorySettingsPushEnableTitle": "启用主动提醒",
+  "memorySettingsPushEnableDesc": "总开关。关闭后 Stage 18 主动提醒会全部停用。",
+  "memorySettingsPushFollowUpTitle": "承诺跟进",
+  "memorySettingsPushFollowUpDesc": "只针对你明确表达过、且已经逾期的承诺事项。",
+  "memorySettingsPushRecoveryTitle": "活跃恢复",
+  "memorySettingsPushRecoveryDesc": "只针对曾经连续活跃、且 72 小时未活跃的情况。",
+  "memorySettingsQuietHoursTitle": "静默时段",
+  "memorySettingsQuietHoursDesc": "你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。",
+  "memorySettingsStartTime": "开始时间",
+  "memorySettingsEndTime": "结束时间",
+  "memorySettingsCurrentTimezone": "当前时区：{timezone}",
+  "@memorySettingsCurrentTimezone": {
+    "placeholders": {
+      "timezone": {
+        "type": "Object"
+      }
+    }
+  },
+  "memorySettingsViewInbox": "查看提醒收件箱",
+  "memorySettingsTypeTitle": "记忆类型",
+  "memorySettingsTypeDesc": "决定哪些内容会被长期记住。",
+  "memorySettingsPreferenceTitle": "偏好",
+  "memorySettingsPreferenceDesc": "记录回答风格、学习节奏和常见偏好。",
+  "memorySettingsGoalTitle": "目标",
+  "memorySettingsGoalDesc": "记录已确认的长期目标和阶段意图。",
+  "memorySettingsEpisodicTitle": "经历",
+  "memorySettingsEpisodicDesc": "记录对后续决策有帮助的关键事件与反馈。",
+  "memorySettingsInferredTitle": "AI 自动记忆",
+  "memorySettingsInferredDesc": "允许系统从聊天中推断短期经历；每条都必须可见、可撤销。",
+  "memorySettingsCaptureTitle": "捕获强度",
+  "memorySettingsCaptureDesc": "越高越积极，但也会记录更多上下文。",
+  "memorySettingsCaptureLow": "低",
+  "memorySettingsCaptureMedium": "中",
+  "memorySettingsCaptureHigh": "高",
+  "memorySettingsBlockPrefTitle": "屏蔽偏好",
+  "memorySettingsBlockPrefDesc": "不希望长期存储的偏好项可以在这里关闭。",
+  "memorySettingsBlockSourceTitle": "屏蔽来源",
+  "memorySettingsBlockSourceDesc": "限制哪些入口不会写入长期记忆。",
+  "memorySettingsSaveButton": "保存设置",
+  "memorySettingsSaving": "保存中...",
+  "reportLearningAnalysisReport": "学习分析报告",
+  "reportContinuationSubtitle": "继续查看本次学习旅程的分析报告",
+  "reportPartialDataDisclaimer": "部分数据，仅供参考",
+  "reportPartialDataMessage": "当前基于部分学习记录生成，结果可能不够全面。",
+  "reportDiagnosisPanelEyebrow": "学习诊断面板",
+  "reportOpenGalaxy": "打开知识星图",
+  "reportPrioritizeNode": "优先处理 {nodeName}",
+  "@reportPrioritizeNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportRangeWeek": "本周",
+  "reportRangeMonth": "本月",
+  "reportRangeAll": "全部",
+  "reportCurrentLearningTopic": "当前学习主题",
+  "reportMasteryTrendTitle": "掌握度趋势",
+  "reportPartialDataPill": "部分数据，仅供参考",
+  "reportTrendEmptyTitle": "完成更多学习后将在此展示趋势分析",
+  "reportTrendEmptyMessage": "当前还没有足够的真实学习记录来生成趋势，请先完成学习任务、练习或复盘。",
+  "reportTrendChartHint": "拖动或点按时间点，就能把这条线和当时的学习投入一起看清楚。",
+  "reportRadarChartTitle": "掌握度雷达图",
+  "reportRadarSubtitleInsufficient": "完成更多学习后将在此展示掌握度分析",
+  "reportRadarSubtitleNoComparison": "点击任一维度查看更细的掌握情况",
+  "reportRadarSubtitleWithComparison": "当前报告已叠加上次轮廓，可点击维度查看详情",
+  "reportRadarEmptyMessage": "掌握度雷达图需要真实学习记录支撑，先开始一次学习并留下结果。",
+  "reportKeyMetricsTitle": "关键指标",
+  "reportMetricTotalMastery": "总掌握度",
+  "reportMetricKnowledgeCount": "知识点数",
+  "reportMetricStrengths": "强项",
+  "reportMetricWeaknesses": "薄弱点",
+  "reportExecutionProfileLoadFailed": "执行画像暂时没有加载出来，不影响你先阅读本次学习报告。",
+  "reportKeyDimensionsTitle": "重点知识维度",
+  "reportAiAnalysisTitle": "AI 分析报告",
+  "reportBackToGalaxy": "回到 Galaxy",
+  "reportViewSprintHistory": "查看 Sprint 历史",
+  "reportShareTitle": "学习报告 · 平均掌握度 {mastery}%",
+  "@reportShareTitle": {
+    "placeholders": {
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareSubtitleSummary": "本轮学习分析摘要",
+  "reportShareSubtitlePriority": "优先补强 {nodeName}",
+  "@reportShareSubtitlePriority": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareMetadataDimensions": "{count} 个维度",
+  "@reportShareMetadataDimensions": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareMessageWithMastery": "我刚在 Sparkle 生成了一份学习分析报告，平均掌握度 {mastery}%。",
+  "@reportShareMessageWithMastery": {
+    "placeholders": {
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareMessageWithNode": "我刚在 Sparkle 生成了一份学习分析报告，当前优先补强的是 {nodeName}。",
+  "@reportShareMessageWithNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroTitlePriority": "当前最该先收口的是 {nodeName}",
+  "@reportHeroTitlePriority": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroTitleStable": "你的稳定区已经开始成形",
+  "reportHeroTitleBuild": "先用真实学习记录建立分析基础",
+  "reportHeroSubtitleDeltaUp": "整体掌握度还在抬升，但 {nodeName} 依然是最容易拖慢进度的环节，优先补它最划算。",
+  "@reportHeroSubtitleDeltaUp": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroSubtitleDeltaDown": "最近节奏有一点回落，先别继续铺开范围，优先把 {nodeName} 重新拉稳。",
+  "@reportHeroSubtitleDeltaDown": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroSubtitleStrong": "这份报告已经把当前强项、薄弱点和趋势放到同一个面板里，先看重点，再决定下一步。",
+  "reportHeroSubtitleDefault": "先用这份报告确认方向，后续随着更多记录补齐，趋势会越来越清楚。",
+  "reportMetricAvgMastery": "平均掌握度",
+  "reportMetricPriority": "优先补强",
+  "reportMetricCurrentStrength": "当前强项",
+  "reportMetricTrendChange": "变化趋势",
+  "reportPlaceholderEmpty": "暂无学习报告数据。",
+  "reportContinueReading": "继续阅读报告",
+  "reportEvidenceAndAdvice": "证据与建议",
+  "reportGotIt": "知道了",
+  "reportMasteryStable": "掌握稳定",
+  "reportMasteryConsolidate": "仍可巩固",
+  "reportMasteryNeedFocus": "需要重点补强",
+  "reportGuidanceStable": "这个知识点已经比较稳，可以更多地通过应用题和迁移练习来保持熟练度。",
+  "reportGuidanceConsolidate": "这个知识点理解基本建立，但在连续推理或综合题里可能还会波动，适合再补一轮刻意练习。",
+  "reportGuidanceNeedFocus": "这个知识点当前是明显薄弱环节，建议先回到定义、例题和前置概念，再重新做相关练习。",
+  "reportChartFirstReport": "第一份报告已经准备好了。下次再来看，这里就会出现你的趋势变化线。",
+  "reportChartMasteryLabel": "掌握度 {mastery}%",
+  "@reportChartMasteryLabel": {
+    "placeholders": {
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportChartStudyMinutes": "学习时长 {minutes} 分钟",
+  "@reportChartStudyMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportChartMinutesShort": "{count}分",
+  "@reportChartMinutesShort": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportChartZeroMinutes": "0分",
+  "reportLegendMastery": "掌握度",
+  "reportLegendStudyDuration": "学习时长",
+  "reportDiagnosisSummaryTitle": "诊断摘要",
+  "reportDiagnosisSummaryDesc": "先回答三个最关键的问题：你现在最稳的地方在哪里、最该补的地方在哪里、整体是在上升还是停滞。",
+  "reportDiagnosisTitleStrength": "当前强项",
+  "reportDiagnosisTitleWeakness": "主要短板",
+  "reportDiagnosisTitleTrend": "整体趋势",
+  "reportDiagnosisHeadlinePending": "待生成",
+  "reportDiagnosisStrengthBodyPending": "生成更多学习记录后，这里会出现最稳的知识点。",
+  "reportDiagnosisStrengthBodyData": "建议把它作为迁移练习的发力点，带动相关知识点一起稳住。",
+  "reportDiagnosisWeaknessBodyPending": "当前还没有足够数据定位短板。",
+  "reportDiagnosisWeaknessBodyData": "这是最值得先补的切入口，优先回到定义、例题和前置关系。",
+  "reportDiagnosisWeaknessFallback": "薄弱项",
+  "reportDiagnosisTrendWaitingComparison": "等待历史对比",
+  "reportDiagnosisTrendBodyPending": "再积累一到两份报告后，这里会显示你的连续变化趋势。",
+  "reportDiagnosisTrendBodyUp": "掌握度在继续抬升，接下来更适合做巩固和迁移。",
+  "reportDiagnosisTrendBodyDown": "最近有回落迹象，建议减少铺开面，先收口当前薄弱点。",
+  "reportTagConsolidate": "可继续巩固",
+  "reportTagProcessFirst": "建议先处理",
+  "reportTagProcessSoon": "建议尽快处理",
+  "reportTagKeepRhythm": "保持当前节奏",
+  "reportTagCloseGap": "建议尽快收口",
+  "reportTagAwaitMore": "等待更多记录",
+  "reportTagObserve": "建议继续观察",
+  "reportActionTitle": "下一步行动",
+  "reportActionDescNoWeakness": "先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。",
+  "reportActionDescWithWeakness": "优先围绕 {weakNode} 收口，再用 {strongNode} 做迁移练习，能更快把整体掌握度拉起来。",
+  "@reportActionDescWithWeakness": {
+    "placeholders": {
+      "weakNode": {
+        "type": "Object"
+      },
+      "strongNode": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportActionExploreNode": "推演 {nodeName}",
+  "@reportActionExploreNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportActionWeaknessFallback": "薄弱项",
+  "reportActionStrengthFallback": "当前强项",
+  "reportActionEnterSimulation": "进入学习仿真",
+  "reportTrendAutoFillTitle": "趋势会随着更多报告自动补全",
+  "reportTrendFirstReportMessage": "第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。",
+  "reportTrendLoadingHistory": "正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。",
+  "reportAiExecutionAssistant": "AI执行助手",
+  "reportAiExecutionDesc": "Sparkle 会记住哪些任务更适合交给 AI，以及这些委派实际帮你节省了多少时间。",
+  "reportStatTotalExecutions": "总执行",
+  "reportStatUnitTimes": "次",
+  "reportStatSuccessRate": "成功率",
+  "reportStatTimeSaved": "节省时间",
+  "reportStatUnitHours": "小时",
+  "reportStatUnitMinutes": "分钟",
+  "reportStatByTypeFormat": "{key}: {count}次 · {rate}%",
+  "@reportStatByTypeFormat": {
+    "placeholders": {
+      "key": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      },
+      "rate": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryTitle": "BGM 曲库与播放器",
+  "bgmLibraryRefresh": "刷新",
+  "bgmLibraryNoImport": "没有导入新曲目",
+  "bgmLibraryImportedCount": "已导入 {count} 首本地音乐",
+  "@bgmLibraryImportedCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryPlayingSwitched": "正在播放 {title}，已切换到播放器模式",
+  "@bgmLibraryPlayingSwitched": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryRemoved": "已移除 {title}",
+  "@bgmLibraryRemoved": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryEmptyFilter": "当前筛选下没有曲目，可以尝试切换筛选或导入本地音乐。",
+  "bgmLibraryNotPlaying": "当前未播放",
+  "bgmLibraryWaitingPlay": "等待播放中",
+  "bgmLibraryBrowseHint": "你可以在这里直接点播曲库里的任意曲目",
+  "bgmLibraryNowPlaying": "当前播放",
+  "bgmLibraryPlayerMode": "播放器模式",
+  "bgmLibraryPlayerModeDesc": "播放器模式下音乐不会因页面跳转而被打断，适合把 Sparkle 当成舒缓音乐播放器来用。",
+  "bgmLibraryEnableBgm": "启用背景音乐",
+  "bgmLibraryDisableHint": "关闭后播放器页也不会继续播放背景音乐",
+  "bgmLibraryQuickStrategy": "快速策略调节",
+  "bgmLibraryQuickStrategyDesc": "这里保留最常用的调节项，完整细项仍然可以在设置页里继续调整。",
+  "bgmLibraryStyleOrientation": "风格取向",
+  "bgmLibraryIntensityLabel": "氛围强度",
+  "bgmLibraryVarietyLabel": "轮换节奏",
+  "bgmLibraryStats": "曲库状态",
+  "bgmLibraryTotalTracks": "总曲目",
+  "bgmLibraryCurated": "精选曲库",
+  "bgmLibraryImportedLabel": "本地导入",
+  "bgmLibraryBundled": "系统兜底",
+  "bgmLibraryImportDir": "本地导入目录：{path}",
+  "@bgmLibraryImportDir": {
+    "placeholders": {
+      "path": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryCacheDir": "下载缓存目录：{path}",
+  "@bgmLibraryCacheDir": {
+    "placeholders": {
+      "path": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryDirReadyNote": "这两个目录已经准备好，后续可以直接接“默认只打包少量曲目，其余从服务器下载到本地”的轻量化方案。",
+  "bgmLibraryImportManage": "导入与管理",
+  "bgmLibraryImportManageDesc": "你可以把自己的舒缓音乐直接导入进来。点播任意曲目时，系统会自动切换到播放器模式，后续跳页也不会中断。",
+  "bgmLibraryImportLocal": "导入本地歌曲",
+  "bgmLibrarySearchHint": "搜索曲目、专辑或场景标签",
+  "bgmLibraryFilterAll": "全部",
+  "bgmLibraryPlaying": "播放中",
+  "bgmLibraryPlay": "播放",
+  "bgmLibraryRemove": "移除",
+  "bgmLibraryTags": "标签",
+  "bgmLibraryStyle": "风格",
+  "bgmLibraryEnergy": "能量",
+  "bgmLibraryDensity": "密度",
+  "bgmLibraryModeAdaptive": "跟随页面",
+  "bgmLibraryModeContinuous": "播放器模式",
+  "bgmLibraryModeFocusOnly": "仅专注",
+  "bgmLibraryModeSilent": "静音",
+  "bgmLibraryPaletteAdaptive": "自适应",
+  "bgmLibraryPaletteClassical": "精选古典",
+  "bgmLibraryPalettePiano": "钢琴优先",
+  "bgmLibraryPaletteAiry": "空灵氛围",
+  "bgmLibraryPaletteWarm": "温暖轻快",
+  "bgmLibraryIntensityGentle": "柔和",
+  "bgmLibraryIntensityBalanced": "平衡",
+  "bgmLibraryIntensityLush": "丰盈",
+  "bgmLibraryVarietySteady": "稳定",
+  "bgmLibraryVarietyBalanced": "均衡",
+  "bgmLibraryVarietyDynamic": "灵动",
+  "bgmLibrarySourceCurated": "精选曲库",
+  "bgmLibrarySourceImported": "本地导入",
+  "bgmLibrarySourceBundled": "系统兜底",
+  "galaxyDraftReviewScreenTitle": "审核知识星",
+  "galaxyDraftReviewPromptTitle": "我们从 {documentName} 里找到了 {count} 颗知识星，要现在看看吗？",
+  "@galaxyDraftReviewPromptTitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "documentName": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftReviewPromptBody": "你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。",
+  "galaxyDraftReviewNow": "现在审核",
+  "galaxyDraftReviewLater": "稍后再看",
+  "galaxyDraftPendingIndicator": "{batchCount} 份待审核 · {draftCount} 颗星",
+  "@galaxyDraftPendingIndicator": {
+    "placeholders": {
+      "batchCount": {
+        "type": "Object"
+      },
+      "draftCount": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftReviewProgress": "第 {current} / {total} 颗",
+  "@galaxyDraftReviewProgress": {
+    "placeholders": {
+      "current": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftCompletionReady": "准备把它们送进你的星图",
+  "galaxyDraftLongPressHint": "右滑通过，左滑跳过，长按还能先改一下名字或描述。",
+  "galaxyDraftLongPressShort": "长按可编辑",
+  "galaxyDraftApprove": "通过",
+  "galaxyDraftSkip": "跳过",
+  "galaxyDraftMerge": "合并",
+  "galaxyDraftExcerpts": "这颗星里装着什么",
+  "galaxyDraftSimilarityLabel": "与已有节点相似：{nodeName}（{percent}%）",
+  "@galaxyDraftSimilarityLabel": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      },
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftEditTitle": "调整这颗知识星",
+  "galaxyDraftNameLabel": "节点名称",
+  "galaxyDraftDescriptionLabel": "节点描述",
+  "galaxyDraftEditSave": "保存修改",
+  "galaxyDraftReviewEmptyTitle": "现在没有待确认的知识星",
+  "galaxyDraftReviewEmptyBody": "等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。",
+  "galaxyDraftBackToGalaxy": "回到星图",
+  "galaxyDraftCompletionTitle": "已确认 {accepted} / {total} 颗知识星",
+  "@galaxyDraftCompletionTitle": {
+    "placeholders": {
+      "accepted": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftCompletionBody": "{documentName} 里的这些知识星，已经准备好飞进你的星图。",
+  "@galaxyDraftCompletionBody": {
+    "placeholders": {
+      "documentName": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftCompletionNothingAdded": "这批草稿先放一放也没关系，之后随时还能回来继续看。",
+  "galaxyDraftCompletionSummary": "{accepted} / {total} 颗知识星已加入你的星图！",
+  "@galaxyDraftCompletionSummary": {
+    "placeholders": {
+      "accepted": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadFabLabel": "添加学习资料",
+  "galaxyUploadDocumentHere": "在这里上传文档",
+  "galaxyNodeAddMaterial": "将资料添加到这个节点",
+  "galaxyUploadTargetGalaxyCore": "银河核心",
+  "galaxyUploadTargetSelectedConstellation": "这片星域",
+  "galaxyUploadAlreadyInProgress": "已经有一份学习资料正在飞向你的星图。",
+  "galaxyUploadStatusUploading": "上传中...",
+  "galaxyUploadStatusQueued": "上传完成，正在进入轨道...",
+  "galaxyUploadStatusExtracting": "提取内容中...",
+  "galaxyUploadStatusFindingKnowledge": "寻找知识中...",
+  "galaxyUploadStatusBuildingNodes": "编织新星中...",
+  "galaxyUploadSuccessTitle": "处理完成！",
+  "galaxyUploadSuccessBody": "处理完成！共发现 {count} 个知识概念。",
+  "@galaxyUploadSuccessBody": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadSuccessChip": "发现了 {count} 个概念",
+  "@galaxyUploadSuccessChip": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadFailedTitle": "这颗星还没落稳",
+  "galaxyUploadFailedBody": "文档在落入星图前滑了出去，准备好时再试一次就好。",
+  "galaxyUploadRetry": "重新上传",
+  "galaxyUploadHeadingTo": "正飞向 {target}",
+  "@galaxyUploadHeadingTo": {
+    "placeholders": {
+      "target": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadStepUpload": "上传",
+  "galaxyUploadStepExtract": "提取",
+  "galaxyUploadStepFind": "寻知",
+  "galaxyUploadStepComplete": "完成",
+  "executionEngineTitle": "AI执行引擎",
+  "executionConnectionSuccess": "连接成功",
+  "executionConnectionFailure": "连接失败",
+  "executionConfigSavedConnected": "配置已保存并连接成功",
+  "executionConfigSavedUnavailable": "配置已保存，但当前引擎不可达",
+  "executionResultPreview": "结果预览",
+  "executionReplay": "执行回放",
+  "executionSelfVerification": "自验证",
+  "executionSelfVerificationHint": "自验证提示",
+  "executionResultComparison": "结果对比",
+  "executionAdoptResult": "采纳结果",
+  "executionRejectResult": "退回修改",
+  "executionViewDetails": "查看详情",
+  "executionCollapseDetails": "收起详情",
+  "executionQueueAction": "加入等待队列",
+  "executionConnectEngine": "先连接 AI执行引擎",
+  "executionEngineOffline": "AI执行引擎当前离线",
+  "executionEngineNotConnected": "AI执行引擎尚未连接",
+  "executionOfflineQueueTitle": "离线等待队列",
+  "executionAboutEngineTitle": "什么是AI执行引擎？",
+  "executionAboutEngineBody": "AI执行引擎（OpenClaw）可以自动完成网页调研、文档整理等任务。你可以在自己的电脑上运行 OpenClaw，然后在这里连接它。",
+  "taskCopyAiPrompt": "复制AI提示词",
+  "taskObjective": "目标",
+  "taskEstimatedTime": "预计时间",
+  "taskCompletionCriteria": "完成标准",
+  "taskSteps": "步骤",
+  "taskKeyPoints": "关键点",
+  "taskStartFocus": "开始专注",
+  "taskOpenAiAssistant": "打开AI助手",
+  "taskAiGenerate": "AI 生成",
+  "knowledgeMasteryLevelMastered": "已掌握",
+  "knowledgeMasteryLevelPracticing": "熟练中",
+  "knowledgeMasteryLevelBeginner": "初涉",
+  "knowledgeMasteryLevelUntouched": "未学习",
+  "executionStatusDraft": "待准备",
+  "executionStatusReady": "准备完成",
+  "executionStatusQueued": "排队中",
+  "executionStatusDispatched": "已发送",
+  "executionStatusRunning": "执行中",
+  "executionStatusWaitingApproval": "等待确认",
+  "executionStatusSucceeded": "执行成功",
+  "executionStatusPartial": "部分完成",
+  "executionStatusFailed": "执行失败",
+  "executionStatusCanceled": "已取消",
+  "executionStatusTimedOut": "执行超时",
+  "executionStatusHandedBack": "已交还",
+  "executionStatusUnknown": "状态未知",
+  "executionTrustRaw": "原始结果",
+  "executionTrustValidated": "已校验",
+  "executionTrustTrusted": "可信结果",
+  "executionTrustUnknown": "待评估",
+  "nextActionQuickReviewTitle": "快速回顾",
+  "nextActionQuickReviewDescription": "回顾刚才的核心要点",
+  "nextActionLightExpandTitle": "拓展学习",
+  "nextActionLightExpandDescription": "了解相关知识点",
+  "nextActionPracticeApplyTitle": "实践应用",
+  "nextActionPracticeApplyDescription": "应用所学知识",
+  "nextActionRestBreakTitle": "休息一下",
+  "nextActionRestBreakDescription": "适当休息，保持状态",
+  "nextActionContinuePlanTitle": "继续计划",
+  "nextActionContinuePlanDescription": "继续按计划学习",
+  "knowledgeRelationPrerequisite": "前置知识",
+  "knowledgeRelationRelated": "相关知识",
+  "knowledgeRelationApplication": "应用",
+  "knowledgeRelationComposition": "组成部分",
+  "knowledgeRelationEvolution": "演进",
+  "knowledgeRelationDefault": "关联",
+  "knowledgeMasteryLevelLocked": "未解锁",
+  "knowledgeMasteryLevelBrilliant": "璀璨",
+  "knowledgeMasteryLevelShining": "闪耀",
+  "knowledgeMasteryLevelGlimmer": "微光",
+  "knowledgeMasteryLevelUnlit": "未点亮",
+  "interventionPhaseForethought": "规划中",
+  "interventionPhasePerformance": "执行中",
+  "interventionPhaseSelfReflection": "复盘中",
+  "stuckHelpTitle": "别担心，我们来看看卡在哪里",
+  "stuckHelpAskAi": "要不要让AI来看看？",
+  "stuckHelpChatWithSparkle": "和Sparkle聊聊这个问题",
+  "stuckHelpContinue": "好了，继续",
+  "stuckHelpSuggestion1": "把卡住的具体位置写下来",
+  "stuckHelpSuggestion2": "换一个更小的子问题",
+  "stuckHelpSuggestion3": "先完成你确实会的部分",
+  "stuckHelpSuggestion4": "给自己限时5分钟",
+  "stuckHelpSuggestion5": "标记这个点，继续其他部分",
+  "stuckHelpAuroraSteps": "Aurora 两步帮扶",
+  "stuckHelpFallbackOrder": "卡住时按这个顺序救火",
+  "stuckHelpWhatToDo": "具体该怎么做",
+  "stuckHelpDiagnose": "诊断问题",
+  "stuckHelpFix": "精准修复",
+  "taskQuickActionSnoozed": "已推迟到明天，今天轻一点。",
+  "taskQuickActionTooHard": "拆好了，先做第一小步。",
+  "taskQuickActionSkipped": "已跳过，这张卡先不打扰你。",
+  "taskQuickActionAdjusted": "已经帮你调整好了。",
+  "taskQuickActionSnoozing": "好，我先把它挪到明天。",
+  "taskQuickActionSimplifying": "我来把这张卡拆小一点。",
+  "taskQuickActionSkipping": "收到，我先把它从今天拿开。",
+  "executionResultNoText": "暂无文本结果。",
+  "executionResultNoStructured": "暂无结构化结果字段。",
+  "executionResultNoCode": "暂无代码结果。",
+  "executionResultNoLinks": "暂无链接结果。",
+  "executionResultArtifacts": "附件产物",
+  "executionResultMoreFields": "还有 {count} 个字段",
+  "executionResultNoPreview": "当前附件类型为 {type}，还没有更详细的预览内容。",
+  "executionResultLinkCopied": "链接已复制",
+  "executionResultCopyLink": "复制链接",
+  "executionResultArtifactType": "类型：{type}",
+  "executionResultArtifactFallback": "附件",
+  "onboardingVoiceInput": "语音输入",
+  "onboardingVoiceInputEn": "英语语音输入",
+  "onboardingVoiceInputDesc": "开启麦克风权限，支持语音指令与听写输入",
+  "onboardingVoiceInputDescEn": "开启英语语音输入，支持语音指令与听写",
+  "onboardingPermissionEnable": "启用",
+  "onboardingPermissionEnabled": "已启用",
+  "onboardingPermissionReady": "就绪 — 已全部设置好",
+  "onboardingPermissionPending": "尚未启用，启用后可使用语音功能。",
+  "onboardingPermissionWorking": "请求中...",
+  "homeNotificationUnreadMessages": "{count} 条未读消息",
+  "homeNotificationUnreadNotifications": "{count} 条未读通知",
+  "splashSubtitle": "从第一秒开始，进入更聪明也更有温度的学习旅程。",
+  "@homeNotificationUnreadMessages": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@homeNotificationUnreadNotifications": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskGuidePanelCollapse": "收起指南",
+  "taskGuidePanelExpand": "展开指南",
+  "taskGuidePanelEstimatedTimeCustom": "预估时间：按自己的节奏",
+  "taskGuidePanelEstimatedTimeMinutes": "预估时间：{minutes} 分钟",
+  "taskGuidePanelTodayFocus": "今日焦点",
+  "taskGuidePanelSteps": "步骤",
+  "taskGuidePanelKeyHints": "关键提示",
+  "taskGuidePanelCompletionCriteria": "完成标准",
+  "taskGuidePanelTapToMark": "点一下就能标记你已经完成的标准。",
+  "taskGuidePanelCommonMistakes": "常见陷阱",
+  "taskGuidePanelNoDetailedGuide": "这张卡还没有更细的指南，先从你能确定的一小步开始。",
+  "taskGuidePanelFailSafeRule": "失手时降压规则",
+  "taskGuidePanelFailSafeRuleContent": "失手规则：{rule}",
+  "taskGuidePanelAskAiTriggers": "遇到这些情况时问 AI",
+  "taskGuidePanelStepInProgress": "当前进行中",
+  "taskGuidePanelCompletedSteps": "已完成 {completed}/{total}",
+  "taskGuidePanelCompletedCriteria": "{completed}/{total}",
+  "taskGuidePanelExpectedOutput": "期望产出：{output}",
+  "taskGuidePanelFallbackLastStep": "最后用 {output} 做一个最小检查。",
+  "taskGuidePanelFallbackLastStepDefault": "最后做一个最小检查，确认今天真的会了。",
+  "taskGuidePanelFallbackSplitStep": "把这一小步拆成你现在能立刻开始的版本。",
+  "taskGuidePanelFallbackOutput1": "留下这一步的起手框架或关键词。",
+  "taskGuidePanelFallbackOutput2": "完成一次不看答案的独立输出。",
+  "taskGuidePanelFallbackOutput3": "标出关键缺口，并补一句提醒。",
+  "taskGuidePanelFallbackOutputCheck": "完成最小检查：{check}。",
+  "taskGuidePanelFallbackOutputCheckDefault": "完成最小检查，确认不是只看懂。",
+  "reviewPlanHubTitle": "复习计划中心",
+  "reviewPlanHubTodayList": "今日复习清单",
+  "reviewPlanHubNightlyReview": "夜间回顾",
+  "reviewPlanHubNoActivePlan": "还没有活跃计划",
+  "reviewPlanHubStartToday": "开始今日复习",
+  "reviewPlanHubOpenReview": "打开复习页",
+  "reviewPlanHubViewReview": "查看复习页",
+  "reviewPlanHubViewTonight": "查看今晚回顾",
+  "reviewPlanHubCreatePlan": "去创建计划",
+  "reviewPlanHubStartTodayReview": "开始今天的复习",
+  "reviewPlanHubHeroDescription": "把错题复习、夜间回顾和计划任务放在同一个入口里管理。",
+  "reviewPlanHubHeroSubtitle": "这里不会替代原有复习页，而是把今天值得回看的东西先排好，再带你进入具体执行。",
+  "reviewPlanHubPlanIntegration": "和长期/冲刺计划联动",
+  "reviewPlanHubTodayPlanTasks": "今天建议优先回看的计划任务",
+  "reviewPlanHubNoDueErrors": "今天没有到期错题，但仍然可以检查计划任务与夜间复盘。",
+  "reviewPlanHubHasErrors": "今天有 {count} 条待复习错题，适合先完成高优先级回看。",
+  "reviewPlanHubNoNightlyReview": "今晚还没有生成夜间回顾，先完成主线复习也可以。",
+  "reviewPlanHubHasNightlyReview": "系统已经生成夜间回顾，适合在收尾时统一查看。",
+  "reviewPlanHubNightlyUnavailable": "夜间回顾暂不可用，先按计划推进今日复习。",
+  "@taskGuidePanelEstimatedTimeMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelFailSafeRuleContent": {
+    "placeholders": {
+      "rule": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelCompletedSteps": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelCompletedCriteria": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelExpectedOutput": {
+    "placeholders": {
+      "output": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelFallbackLastStep": {
+    "placeholders": {
+      "output": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelFallbackOutputCheck": {
+    "placeholders": {
+      "check": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubHasErrors": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reviewPlanHubLoadFailed": "复习列表暂时加载失败：{error}",
+  "reviewPlanHubCreatePlanFirst": "先创建成长计划或冲刺计划，复习计划中心才会把计划任务和复习节奏串起来。",
+  "reviewPlanHubNoPlanTasks": "今天没有关联到计划的待推进任务，可以先做错题复习或回到计划里补任务。",
+  "reviewPlanHubSprintProgress": "冲刺进度 {percent}% · 剩余 {days} 天",
+  "reviewPlanHubGrowthProgress": "成长进度 {percent}% · 掌握 {mastery}%",
+  "reviewPlanHubPlanTask": "计划任务",
+  "reviewPlanHubTaskSubtitle": "{plan} · {minutes} 分钟",
+  "taskQuickActionSnooze": "推迟到明天",
+  "taskQuickActionTooHardLabel": "标记为太难",
+  "taskQuickActionSkip": "跳过",
+  "taskQuickActionHelp": "寻求帮助",
+  "@reviewPlanHubLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubSprintProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      },
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubGrowthProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      },
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubTaskSubtitle": {
+    "placeholders": {
+      "plan": {
+        "type": "Object"
+      },
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "statisticsExportTitle": "导出统计数据",
+  "statisticsExportFormat": "选择导出格式",
+  "statisticsExportIncludeCharts": "包含图表数据",
+  "statisticsExportAs": "导出为",
+  "statisticsExportStructured": "结构化数据",
+  "statisticsExportSpreadsheet": "电子表格",
+  "statisticsExportHDImage": "高清图片",
+  "statisticsExportPDF": "PDF文档",
+  "statisticsExportFailed": "导出失败: {error}",
+  "statisticsShareTitle": "分享统计数据",
+  "statisticsShareWechat": "微信",
+  "statisticsShareMoments": "朋友圈",
+  "statisticsShareSaveImage": "保存图片",
+  "statisticsShareCopyLink": "复制链接",
+  "statisticsShareMore": "更多",
+  "statisticsWatermark": "星火AI学习助手",
+  "statisticsDateFormat": "{year}年{month}月{day}日",
+  "statisticsTypeFocus": "专注",
+  "statisticsTypeAgent": "智能体",
+  "statisticsTypeCapsule": "胶囊",
+  "statisticsTypeLearning": "学习",
+  "statisticsPeriodToday": "今日",
+  "statisticsPeriodWeek": "本周",
+  "statisticsPeriodMonth": "本月",
+  "statisticsPeriodYear": "今年",
+  "statisticsPeriodCustom": "自定义",
+  "statisticsNoData": "暂无数据",
+  "statisticsLegendLow": "低",
+  "statisticsLegendMedium": "中",
+  "statisticsLegendHigh": "高",
+  "statisticsChartMon": "一",
+  "statisticsChartWed": "三",
+  "statisticsChartFri": "五",
+  "statisticsChartMonth1": "一月",
+  "statisticsChartMonth2": "二月",
+  "statisticsChartMonth3": "三月",
+  "statisticsChartMonth4": "四月",
+  "statisticsChartMonth5": "五月",
+  "statisticsChartMonth6": "六月",
+  "statisticsChartMonth7": "七月",
+  "statisticsChartMonth8": "八月",
+  "statisticsChartMonth9": "九月",
+  "statisticsChartMonth10": "十月",
+  "statisticsChartMonth11": "十一月",
+  "statisticsChartMonth12": "十二月",
+  "statisticsExportImageReport": "图片报告",
+  "statisticsExportPDFReport": "PDF报告",
+  "interventionStartNow": "开始",
+  "interventionLater": "稍后",
+  "fileUploadTitle": "上传文件",
+  "fileUploadDesc": "支持文档与图片，上传到对话后可继续分享或引用。",
+  "fileUploadType": "文件",
+  "fileUploadSize": "大小",
+  "fileUploadClickToSelect": "点击选择文件",
+  "fileUploadSupportedFormats": "PDF、DOCX、PPTX、TXT 和常见图片都支持",
+  "fileUploadSelected": "已选择文件",
+  "fileUploadFormat": "{type} · {size}",
+  "fileUploadProgress": "上传中 {percent}%",
+  "fileUploadSelect": "选择文件",
+  "fileUploadReselect": "重新选择",
+  "fileUploadStart": "开始上传",
+  "fileUploadResume": "继续上传",
+  "fileUploadNetworkError": "网络中断，可点击继续上传",
+  "fileUploadFailed": "上传失败: {error}",
+  "errorBookCorrectApproach": "正确思路",
+  "errorBookSimilarTraps": "类似易错点",
+  "errorBookStudySuggestion": "学习建议",
+  "errorBookKnowledgeRelated": "关联知识点",
+  "errorBookAnalyzing": "AI 正在分析中...",
+  "errorBookAnalyzingDesc": "正在分析错题原因、生成学习建议并关联知识点，预计需要 3-5 秒",
+  "simulationSceneStudyGroup": "虚拟学习小组",
+  "simulationSceneKnowledgeDebate": "知识辩论",
+  "simulationSceneHistoricalRoleplay": "历史角色扮演",
+  "simulationSceneSocraticDialogue": "苏格拉底式对话",
+  "simulationSceneCaseAnalysis": "案例拆解",
+  "simulationSceneWhatIfPath": "假设分支推演",
+  "simulationSceneConceptMapBuild": "概念图共建",
+  "simulationSceneErrorDiagnosis": "错因诊断",
+  "simulationStateWaiting": "等待你的判断",
+  "simulationStateCompleted": "讨论已收束",
+  "simulationStateRunning": "正在推进讨论",
+  "simulationStatePending": "正在准备",
+  "simulationStateReady": "准备中",
+  "simulationStanceSupporting": "支持派",
+  "simulationStanceSupportive": "补充支持",
+  "simulationStanceOpposing": "反方质疑",
+  "simulationStanceModerating": "居中协调",
+  "simulationStanceProbing": "追问推进",
+  "simulationStanceChallenging": "提出质疑",
+  "simulationStanceImmersive": "沉浸代入",
+  "simulationStanceContextual": "补充背景",
+  "simulationStanceReflective": "回看反思",
+  "simulationActionChallenge": "提出质疑",
+  "simulationActionSynthesize": "整合观点",
+  "simulationActionOpen": "打开话题",
+  "simulationActionGuideUser": "邀请你作答",
+  "simulationActionProbe": "继续追问",
+  "simulationActionExtend": "展开补充",
+  "simulationActionUserResponse": "你的回应",
+  "simulationSourceGalaxy": "知识星图",
+  "simulationSourceTasks": "任务记录",
+  "simulationSourcePlan": "学习计划",
+  "simulationSourceStarterGraph": "起步图谱",
+  "simulationSourceKnowledgeGraph": "知识图谱",
+  "simulationSourceTemplate": "默认角色模板",
+  "simulationSourceErrorBook": "错题记录",
+  "simulationSourceOnboardingProfile": "学习画像",
+  "simulationRoleAnalyst": "分析者",
+  "simulationRoleExpert": "专家",
+  "simulationRoleCoach": "教练",
+  "simulationRoleNavigator": "导航者",
+  "simulationRoleChallenger": "质疑者",
+  "simulationRoleSupporter": "支持者",
+  "simulationRoleObserver": "观察者",
+  "simulationRoleMentor": "导师",
+  "simulationRoleBuilder": "搭建者",
+  "simulationBubbleSpotlight": "当前焦点发言",
+  "simulationBubbleReplyTo": "承接 {speaker} 的观点",
+  "simulationBubbleStance": "立场 {stance}",
+  "simulationBubbleReply": "回应 {speaker}",
+  "simulationBubbleRound": "第 {round} 轮",
+  "achievementPrestigeLane": "声望进阶线",
+  "weatherTitleSunny": "晴空万里",
+  "weatherTitleCloudy": "薄雾弥漫",
+  "weatherTitleRainy": "风雨欲来",
+  "weatherTitleMeteor": "繁星入梦",
+  "weatherSubtitleSunny": "光感轻轻上扬，今天适合稳定推进。",
+  "weatherSubtitleCloudy": "边界柔和，适合整理思路与留白。",
+  "weatherSubtitleRainy": "环境收拢，适合沉浸、专注与减少噪声。",
+  "weatherSubtitleMeteor": "灵感高亮，适合冲刺、突破与留下痕迹。",
+  "weatherCompactSunny": "明亮推进",
+  "weatherCompactCloudy": "轻缓整理",
+  "weatherCompactRainy": "深潜聚焦",
+  "weatherCompactMeteor": "高光冲刺",
+  "weatherAmbientSunny": "空气更通透了，节奏也更容易启动。",
+  "weatherAmbientCloudy": "雾层抹平了边界，画面更安静。",
+  "weatherAmbientRainy": "雨幕把外界压低了，注意力更容易收束。",
+  "weatherAmbientMeteor": "星迹开始拉长，灵感窗口正在打开。",
+  "weatherGuideTitle": "天气图鉴",
+  "weatherGuidePreview": "天气预览",
+  "weatherGuidePreviewSubtitle": "这里可以预览系统里的全部天气表现。预览不会改动真实天气，只用于帮助你理解视觉效果与设定。",
+  "weatherGuideCriteria": "判定标准",
+  "weatherGuideCriteriaSubtitle": "真实天气依然由你的近期数据决定，下面是当前系统的主要参考规则。",
+  "weatherGuideRule1Title": "晴空是默认状态",
+  "weatherGuideRule1Body": "当系统没有检测到明显的高压、拖延或强势冲刺信号时，会保持晴空。",
+  "weatherGuideRule2Title": "薄雾代表节奏变慢",
+  "weatherGuideRule2Body": "冲刺剩余 7 天内且进度低于 20%，或连续 2 天没有完成任务时，天气更容易转为薄雾。",
+  "weatherGuideRule3Title": "风雨代表压力偏高",
+  "weatherGuideRule3Body": "冲刺剩余少于 3 天且进度低于 50% 时，系统会倾向给出风雨状态，提醒你尽快收束焦点。",
+  "weatherGuideRule4Title": "焦虑会覆盖基础判断",
+  "weatherGuideRule4Body": "如果近期焦虑指标高于 50%，系统会优先给出风雨天气，用来提示当前负荷偏高。",
+  "weatherGuideRule5Title": "流星代表高势能",
+  "weatherGuideRule5Body": "当当前冲刺进度高于 80% 时，系统更容易进入流星天气，强调你的推进势头。",
+  "weatherGuideCurrent": "当前",
+  "weatherGuideCurrentWeather": "当前天气",
+  "weatherGuideConditionFallback": "当前天气会根据你的真实数据自动更新。",
+  "weatherGuideConditionPrefix": "当前判定：{condition}",
+  "weatherGuideDisclaimer": "这个页面用于理解天气系统的视觉效果与判定逻辑。真正显示给你的天气，仍然会跟随你的真实任务、冲刺和状态数据动态更新。",
+  "weatherGuideTriggerPrefix": "真实触发参考：{trigger}",
+  "intentPredictionSprintSprint": "冲刺冲刺",
+  "intentPredictionContinue": "继续\"{title}\"",
+  "intentPredictionCreateTask": "创建任务",
+  "intentPredictionStartFocus": "开始专注",
+  "intentPredictionViewCalendar": "查看日历",
+  "intentPredictionCuriosityCapsule": "好奇心胶囊",
+  "intentPredictionSendToAI": "发送给AI",
+  "intentPredictionNoteIdea": "记录想法",
+  "intentPredictionSetReminder": "设置提醒",
+  "intentPredictionCognitivePrism": "认知棱镜",
+  "intentPredictionTranslate": "翻译文本",
+  "intentPredictionLearnLanguage": "学习语言",
+  "intentPredictionViewPrism": "查看认知棱镜",
+  "intentPredictionBehaviorAnalysis": "行为分析",
+  "intentPredictionStartSprint": "开始冲刺",
+  "intentPredictionFocusMode": "专注模式",
+  "intentPredictionStartLearning": "开始学习",
+  "intentPredictionCreateStudyPlan": "创建学习计划",
+  "intentPredictionStartReview": "开始复习",
+  "intentPredictionViewErrorBook": "查看错题本",
+  "intentPredictionContinuePriority": "继续重点任务",
+  "intentPrediction25Min": "先做 25 分钟",
+  "flashCapsuleTitle": "闪念胶囊",
+  "flashCapsuleSubtitle": "把一闪而过的疑点及时落地成错题线索，减少【知道有问题但没记住】的损耗。",
+  "flashCapsuleHistory": "历史胶囊",
+  "flashCapsuleHistoryEmpty": "还没有保存过闪念胶囊。",
+  "flashCapsuleHistoryDesc": "这里会显示你之前保存过的闪念与思考胶囊。",
+  "flashCapsuleNoHistory": "暂无历史胶囊",
+  "flashCapsuleNoHistoryDesc": "保存一次闪念胶囊后，就能在这里继续回看。",
+  "flashCapsuleUnnamed": "未命名胶囊",
+  "flashCapsuleNoDesc": "暂无补充描述",
+  "flashCapsuleSyncPending": "待同步",
+  "flashCapsuleContent": "记录内容",
+  "flashCapsuleContentSubtitle": "选择科目、错误类型，再补充知识点和描述。",
+  "flashCapsuleSubject": "科目",
+  "flashCapsuleSelectSubject": "选择科目",
+  "flashCapsuleKnowledgePoint": "知识点",
+  "flashCapsuleKnowledgeHint": "例如：三角函数求导、牛顿第二定律...",
+  "flashCapsuleErrorDesc": "错误描述",
+  "flashCapsuleErrorHint": "记录你是怎么错的、卡在什么地方、下次要如何避免。",
+  "flashCapsuleKpLength": "知识点长度",
+  "flashCapsuleDescLength": "描述长度",
+  "flashCapsuleCognitiveDim": "认知维度",
+  "flashCapsuleHistoryView": "查看历史",
+  "flashCapsuleSaving": "记录中...",
+  "flashCapsuleSave": "保存胶囊",
+  "flashCapsuleSubjectCount": "{count} 个科目",
+  "flashCapsuleHistoryCount": "{count} 条历史胶囊",
+  "flashCapsuleSaved": "已保存胶囊，并同步到错题本",
+  "flashCapsuleSavedNoSync": "胶囊已保存，错题本同步稍后重试",
+  "flashCapsuleSaveFailed": "记录失败: {error}",
+  "flashCapsuleSyncFailed": "请补全知识点和错误描述",
+  "flashCapsuleSaveError": "胶囊保存失败，请稍后重试",
+  "flashCapsuleLoadError": "加载历史胶囊失败: {error}",
+  "flashCapsuleErrorConcept": "概念混淆",
+  "flashCapsuleErrorCalc": "计算错误",
+  "flashCapsuleErrorReading": "审题不清",
+  "flashCapsuleErrorMemory": "知识遗忘",
+  "flashCapsuleErrorMethod": "方法不当",
+  "flashCapsuleErrorOther": "其他",
+  "flashCapsuleSubjectMath": "数学",
+  "flashCapsuleSubjectPhysics": "物理",
+  "flashCapsuleSubjectChemistry": "化学",
+  "flashCapsuleSubjectBiology": "生物",
+  "flashCapsuleSubjectEnglish": "英语",
+  "flashCapsuleSubjectChinese": "语文",
+  "flashCapsuleSubjectComputer": "计算机",
+  "flashCapsuleSubjectOther": "其他",
+  "flashCapsuleTagFlash": "闪念",
+  "flashCapsuleTagThink": "思考",
+  "vocabularyLookupTitle": "查词",
+  "vocabularyLookupSubtitle": "用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。",
+  "vocabularyLookupInput": "查询输入",
+  "vocabularyLookupInputSubtitle": "输入英文单词后回车或点击查询。Oxford 词典优先，本地离线包会先于网络命中。",
+  "vocabularyLookupSearch": "查询",
+  "vocabularyLookupInputHint": "输入英文单词...",
+  "vocabularyLookupResults": "查询结果",
+  "vocabularyLookupResultsSubtitle": "词义、例句、关联词和模型生成句都在这里。",
+  "vocabularyLookupStartTyping": "输入单词开始查询",
+  "vocabularyLookupTemporarilyFailed": "查询暂时失败",
+  "vocabularyLookupErrorDesc": "查询完成后可以直接收藏到生词本，并继续生成例句。",
+  "vocabularyLookupDefinitions": "释义",
+  "vocabularyLookupDictExamples": "词典例句",
+  "vocabularyLookupGeneratedExample": "模型生成例句",
+  "vocabularyLookupRelatedWords": "关联词汇",
+  "vocabularyLookupInWordbook": "已在生词本中",
+  "vocabularyLookupCanAdd": "可加入生词本",
+  "vocabularyLookupWaitingAssoc": "等待关联词",
+  "vocabularyLookupAssocCount": "{count} 个关联词",
+  "vocabularyLookupOfflineCount": "{count} 个离线词典包",
+  "vocabularyLookupNoOffline": "未下载离线词典",
+  "vocabularyLookupManageOffline": "管理离线词典",
+  "vocabularyLookupDownloadOffline": "下载离线词典",
+  "vocabularyLookupOfflinePackages": "离线词典包",
+  "vocabularyLookupOfflineDesc": "优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。",
+  "vocabularyLookupInstalled": "已安装",
+  "vocabularyLookupPackageDesc": "Oxford 优先离线词典包",
+  "vocabularyLookupEntryCount": "{count} 词条",
+  "vocabularyLookupSizeBytes": "{size}",
+  "vocabularyLookupInstalledAt": "安装于 {date}",
+  "vocabularyLookupReDownload": "重新下载",
+  "vocabularyLookupDownloadLocal": "下载到本地",
+  "vocabularyLookupRemove": "移除",
+  "vocabularyLookupGenerateSentence": "生成例句",
+  "vocabularyLookupRemoveFromWordbook": "移出生词本",
+  "vocabularyLookupAddToWordbook": "加入生词本",
+  "vocabularyLookupPos": "词性 · {pos}",
+  "vocabularyLookupAddedToWordbook": "已添加「{word}」到生词本",
+  "vocabularyLookupRemovedFromWordbook": "已从生词本移除「{word}」",
+  "vocabularyLookupEnterWord": "请输入要查询的单词",
+  "vocabularyLookupOfflineDownloaded": "离线词典已下载，可优先本地查词",
+  "vocabularyLookupOfflineDownloadFailed": "离线词典下载失败: {error}",
+  "vocabularyLookupOfflineRemoved": "已移除离线词典包",
+  "vocabularyLookupOfflineRemoveFailed": "移除离线词典包失败: {error}",
+  "vocabularyLookupNoPackage": "暂无可下载的离线词典包",
+  "vocabularyLookupDownloading": "下载中...",
+  "vocabularyLookupPackageScope": "{scope}",
+  "vocabularyLookupPackageInstallDate": "安装于 {date}",
+  "entityCardActionLabel": "执行",
+  "entityCardTitleFallback": "未命名卡片",
+  "entityCardEntityFallback": "未命名实体",
+  "entityCardTaskFallback": "未命名任务",
+  "entityCardPlanFallback": "学习计划",
+  "entityCardKnowledgeFallback": "知识节点",
+  "entityCardTaskListFallback": "{count} 个可执行任务",
+  "entityCardTaskListSummary": "AI 已整理任务列表",
+  "visualSlotAvatarBorder": "头像边框",
+  "visualSlotTitleBar": "称号条",
+  "visualSlotProfileBanner": "主页横幅",
+  "visualSlotAchievementFrame": "成就主题框",
+  "visualSlotHomeAmbience": "首页氛围",
+  "visualSlotStarMapEffect": "星图征服特效",
+  "visualSlotStreakFlame": "连胜火焰",
+  "visualSlotDisplayPedestal": "陈列台座",
+  "visualSlotBackground": "背景",
+  "visualSlotParticle": "粒子",
+  "visualSlotEffect": "特效",
+  "visualSlotBundle": "套装",
+  "visualSlotHomeAtmo": "首页氛围",
+  "visualSlotParticleTrail": "粒子轨迹",
+  "visualSlotGloryEffect": "荣耀特效",
+  "visualSlotProfile": "个人主页",
+  "visualSlotAchievementHeader": "成就页头图",
+  "visualSlotAchievementPage": "成就页",
+  "visualSlotDetailModal": "详情弹窗",
+  "visualSlotAvatarArea": "头像身份区",
+  "visualSlotNicknameBar": "昵称称号条",
+  "visualSlotDisplayArea": "陈列区",
+  "visualSlotGloryShowcase": "荣耀柜台",
+  "visualSlotStarMapPage": "星图页",
+  "visualSlotStreakDisplay": "连胜展示",
+  "visualSlotConquestTrail": "征服轨迹",
+  "visualSlotHomePage": "首页氛围",
+  "visualSlotHomeParticle": "首页粒子",
+  "visualUnlockSystem": "系统提供",
+  "visualUnlockAchievement": "成就解锁",
+  "visualUnlockShop": "商店获取",
+  "visualUnlockEvent": "活动限定",
+  "visualUnlockSeason": "赛季奖励",
+  "errorDefaultTitle": "哎呀，出错了",
+  "warningDefaultTitle": "温馨提示",
+  "infoDefaultTitle": "小提示",
+  "retryLabel": "重试",
+  "emptyStateTitle": "暂无数据",
+  "emptyStateTitleNone": "数据为空",
+  "auroraStatusReady": "Aurora 已校准",
+  "auroraStatusRecalibrating": "Aurora 正在校准",
+  "auroraStatusPartial": "Aurora 正在理解",
+  "auroraStatusMissing": "Aurora 初始化中",
+  "auroraStatusInactive": "Aurora 待激活",
+  "auroraFacetAboutYou": "关于你",
+  "auroraFacetAboutGoal": "关于目标",
+  "auroraFacetAboutNow": "关于现在",
+  "auroraFacetAboutJudgment": "关于我的判断",
+  "auroraFacetReady": "已连通",
+  "auroraFacetRecalibrating": "重校准中",
+  "auroraFacetPartial": "补全中",
+  "auroraFacetMissing": "未形成",
+  "auroraConfidenceLabel": "把握 {percent}%",
+  "auroraFreshnessLabel": "{age}前更新",
+  "auroraActionConfirm": "看起来对",
+  "auroraActionDisagree": "不太对",
+  "auroraActionRecalibrate": "重新校准",
+  "auroraActionViewDetails": "查看 Aurora 详情",
+  "auroraActionCloseDetails": "关闭",
+  "auroraLoading": "Aurora 加载中",
+  "auroraEvidence": "基于",
+  "auroraNeedsConfirm": "Aurora 需要确认",
+  "auroraStrategyRisk": "Aurora 策略风险升高",
+  "auroraBackground": "Aurora 已退回后台",
+  "auroraCalibrationTitle": "Aurora 正在校准",
+  "auroraCalibrationObserved": "我观察到",
+  "auroraCalibrationJudgment": "我的判断",
+  "auroraCalibrationUncertainty": "我可能判断错的地方",
+  "auroraCalibrationSuggestion": "我的建议",
+  "auroraCalibrationConfirm": "需要你确认",
+  "auroraCalibrationComplete": "校准完成，回到标准层。",
+  "auroraCalibrationExit": "Aurora 已退回后台",
+  "auroraCorrectNotRight": "不是这个方向",
+  "auroraCorrectShorter": "更短一点",
+  "auroraCorrectDirect": "直接出题",
+  "auroraCorrectRecalibrate": "重新校准",
+  "auroraSourceBadge": "基于：{source}",
+  "auroraJudgmentTag": "Aurora 判断",
+  "auroraPhaseDiagnosis": "诊断",
+  "auroraPhaseStrategy": "策略",
+  "auroraPhaseExecution": "执行",
+  "auroraPhaseCheckpoint": "检查点",
+  "auroraInputHint": "告诉 Sparkle 任何想法...",
+  "auroraBandSensing": "Aurora 轻量感知中",
+  "auroraBandCalibrated": "Aurora 已校准",
+  "auroraBandRiskFound": "Aurora 发现策略风险",
+  "auroraBandNeedsConfirm": "Aurora 需要确认一个判断",
+  "auroraBandCalibrationAvailable": "深度校准可用",
+  "auroraBandCoolingDown": "Aurora 校准冷却中",
+  "auroraWakeAvailable": "深度校准可用（今日还剩 {count} 次）",
+  "auroraWakeCooling": "校准冷却中 · 还需 {minutes} 分钟",
+  "auroraWakeQuickFallback": "快速校准",
+  "auroraWakeViewUpdates": "查看刚才更新了什么"
 }

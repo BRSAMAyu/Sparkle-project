@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Stage 38 failure no longer reproduces with current shop flow - reran and retained assertions.
 """
 Shop System End-to-End Integration Tests
 

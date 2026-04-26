@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -33,21 +34,15 @@ class UserRepository {
   }
 
   /// 更新推送偏好
-  Future<UserModel> updatePushPreferences(PushPreferences prefs) async {
+  Future<void> updatePushPreferences(PushPreferences prefs) async {
     if (DemoDataService.isDemoMode) {
-      return DemoDataService().demoUser; // Mock update
+      return;
     }
     try {
-      // Assuming a dedicated endpoint or patching the user profile
-      final response = await _apiClient.put<Map<String, dynamic>>(
+      await _apiClient.put<Map<String, dynamic>>(
         '/users/me/push-preference',
         data: prefs.toJson(),
       );
-      final payload = ApiResponseParser.unwrapMap(
-        response.data,
-        action: 'updatePushPreferences',
-      );
-      return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
     }
@@ -1020,6 +1015,19 @@ class UserRepository {
         action: 'updateSchedulePreferences',
       );
       return UserModel.fromJson(payload);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Download all user data as a ZIP archive.
+  Future<List<int>> exportUserData() async {
+    try {
+      final response = await _apiClient.dio.get<List<int>>(
+        ApiEndpoints.meExport,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? const [];
     } catch (e) {
       rethrow;
     }

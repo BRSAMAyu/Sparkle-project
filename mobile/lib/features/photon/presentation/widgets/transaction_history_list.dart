@@ -159,7 +159,7 @@ class _TransactionHistoryListState
                     _formatDateHeader(transaction.createdAt),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: DS.textSecondary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                         ),
                   ),
                 ),
@@ -245,7 +245,7 @@ class _TransactionItem extends StatelessWidget {
                   Text(
                     transaction.transactionTypeName,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                         ),
                   ),
                   const SizedBox(height: 4),

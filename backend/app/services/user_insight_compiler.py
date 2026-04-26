@@ -758,6 +758,11 @@ class UserInsightCompiler:
             for subject in list(capsule_preferences.get("subject_affinity") or [])
             if str(subject).strip()
         ]
+        method_preferences = [
+            method
+            for method in list(capsule_preferences.get("method_preferences") or [])
+            if isinstance(method, dict) and str(method.get("label") or "").strip()
+        ][:5]
 
         if top_depth and top_depth != "unknown":
             state.stable_preferences["content_depth_preference"] = top_depth
@@ -789,6 +794,12 @@ class UserInsightCompiler:
                     str(note).strip()
                     for note in list(capsule_preferences.get("recent_notes") or [])[:3]
                     if str(note).strip()
+                ],
+                "method_preferences": method_preferences,
+                "method_preference_summary": [
+                    str(item).strip()
+                    for item in list(capsule_preferences.get("method_preference_summary") or [])[:3]
+                    if str(item).strip()
                 ],
                 "mode": capsule_mode,
             }

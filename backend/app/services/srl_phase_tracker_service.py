@@ -114,11 +114,11 @@ class SRLPhaseTrackerService:
     async def handle_transition_event(
         self, event: dict[str, Any]
     ) -> SRLPhaseState | None:
-        if (
-            await self.kill_switch.get_mode() == "off"
-            or await self.kill_switch.get_tracker_mode() == "off"
-        ):
+        mode = await self.kill_switch.get_mode()
+        tracker_mode = await self.kill_switch.get_tracker_mode()
+        if mode == "off" or tracker_mode == "off":
             return None
+        live_write = mode == "live" and tracker_mode == "live"
 
         event_type = str(event.get("event_type") or "").strip()
         if event_type.startswith("srl.") and event_type != "srl.phase.transition":
@@ -140,7 +140,11 @@ class SRLPhaseTrackerService:
         async with self._user_lock(str(user_id)):
             async with self._distributed_lock(str(user_id)):
                 async with self._session_scope() as (db, owns_session):
-                    current_state = await self._get_current_phase_internal(db, user_id)
+                    current_state = await self._get_current_phase_for_transition(
+                        db,
+                        user_id,
+                        persist_missing=live_write,
+                    )
                     current_state = self._apply_inactivity_if_needed(current_state)
 
                     rule = get_transition_rule(
@@ -166,27 +170,36 @@ class SRLPhaseTrackerService:
                         evidence_id=evidence_id,
                         metadata=metadata,
                     )
-                    await self._persist_state(db, next_state)
-                    if owns_session:
-                        await db.commit()
+                    if live_write:
+                        await self._persist_state(db, next_state)
+                        if owns_session:
+                            await db.commit()
 
                     self._record_transition_metrics(current_state, next_state)
                     self._record_lag_metrics(published_at)
                     SRL_EVENT_CONSUMED_TOTAL.labels(
                         trigger_event_type=trigger_event_type,
-                        status="applied",
+                        status="applied" if live_write else "shadow",
                     ).inc()
                     return next_state
 
     async def get_current_phase(self, user_id: UUID | str) -> SRLPhaseState:
         normalized_user_id = self._normalize_user_id(user_id)
+        write_mode = await self._tracker_write_mode()
+        if write_mode == "off":
+            return self._default_state(normalized_user_id)
         async with self._session_scope() as (db, owns_session):
-            state = await self._get_current_phase_internal(db, normalized_user_id)
+            state = await self._get_current_phase_for_transition(
+                db,
+                normalized_user_id,
+                persist_missing=write_mode == "live",
+            )
             state = self._apply_inactivity_if_needed(state)
-            await self._persist_state(db, state)
-            if owns_session:
-                await db.commit()
-            await self._persist_cache(state)
+            if write_mode == "live":
+                await self._persist_state(db, state)
+                if owns_session:
+                    await db.commit()
+                await self._persist_cache(state)
             return state
 
     async def force_reset(
@@ -204,12 +217,17 @@ class SRLPhaseTrackerService:
         cleaned_justification = str(justification or "").strip()
         if not cleaned_justification:
             raise ValueError("justification is required")
+        write_mode = await self._tracker_write_mode()
+        if write_mode == "off":
+            return self._default_state(normalized_user_id)
         evidence_id = self._force_reset_evidence_id(cleaned_justification)
         async with self._user_lock(str(normalized_user_id)):
             async with self._distributed_lock(str(normalized_user_id)):
                 async with self._session_scope() as (db, owns_session):
-                    current_state = await self._get_current_phase_internal(
-                        db, normalized_user_id
+                    current_state = await self._get_current_phase_for_transition(
+                        db,
+                        normalized_user_id,
+                        persist_missing=write_mode == "live",
                     )
                     decided_at = self.now_factory()
                     forced_state = SRLPhaseState(
@@ -225,18 +243,19 @@ class SRLPhaseTrackerService:
                         source="default",
                         updated_at=decided_at,
                     )
-                    await self._persist_state(db, forced_state)
-                    await self._write_force_reset_audit(
-                        db,
-                        user_id=normalized_user_id,
-                        previous_phase=current_state.current_phase,
-                        next_phase=next_phase,
-                        justification=cleaned_justification,
-                        confidence=forced_state.confidence,
-                        decided_at=decided_at,
-                    )
-                    if owns_session:
-                        await db.commit()
+                    if write_mode == "live":
+                        await self._persist_state(db, forced_state)
+                        await self._write_force_reset_audit(
+                            db,
+                            user_id=normalized_user_id,
+                            previous_phase=current_state.current_phase,
+                            next_phase=next_phase,
+                            justification=cleaned_justification,
+                            confidence=forced_state.confidence,
+                            decided_at=decided_at,
+                        )
+                        if owns_session:
+                            await db.commit()
                     self._record_transition_metrics(current_state, forced_state)
                     return forced_state
 
@@ -296,6 +315,26 @@ class SRLPhaseTrackerService:
     async def _get_current_phase_internal(
         self, db: AsyncSession, user_id: UUID
     ) -> SRLPhaseState:
+        return await self._get_current_phase_for_transition(
+            db,
+            user_id,
+            persist_missing=True,
+        )
+
+    async def _tracker_write_mode(self) -> str:
+        mode = await self.kill_switch.get_mode()
+        tracker_mode = await self.kill_switch.get_tracker_mode()
+        if mode == "off" or tracker_mode == "off":
+            return "off"
+        return "live" if mode == "live" and tracker_mode == "live" else "shadow"
+
+    async def _get_current_phase_for_transition(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        *,
+        persist_missing: bool,
+    ) -> SRLPhaseState:
         cached = await self._load_cached_state(user_id)
         if cached is not None:
             return cached
@@ -303,15 +342,17 @@ class SRLPhaseTrackerService:
         record = await self._get_state_record(db, user_id)
         if record is not None:
             state = self._state_from_record(record)
-            await self._persist_cache(state)
+            if persist_missing:
+                await self._persist_cache(state)
             return state
 
         traits_prior = await self._load_traits_prior(db, user_id)
         coldstart_state = derive_coldstart_phase_from_traits(
             user_id=user_id, traits_prior=traits_prior
         )
-        await self._persist_state(db, coldstart_state)
-        await self._persist_cache(coldstart_state)
+        if persist_missing:
+            await self._persist_state(db, coldstart_state)
+            await self._persist_cache(coldstart_state)
         return coldstart_state
 
     async def _get_state_record(
@@ -332,6 +373,19 @@ class SRLPhaseTrackerService:
         )
         traits_prior = result.scalar_one_or_none()
         return dict(traits_prior or {})
+
+    def _default_state(self, user_id: UUID) -> SRLPhaseState:
+        now = self.now_factory()
+        return SRLPhaseState(
+            user_id=user_id,
+            current_phase=SRLPhase.UNKNOWN,
+            previous_phase=None,
+            phase_started_at=now,
+            transition_evidence_ids=(),
+            confidence=0.0,
+            source="default",
+            updated_at=now,
+        )
 
     async def _load_cached_state(self, user_id: UUID) -> SRLPhaseState | None:
         payload = await cache_service.get(self._cache_key(user_id))

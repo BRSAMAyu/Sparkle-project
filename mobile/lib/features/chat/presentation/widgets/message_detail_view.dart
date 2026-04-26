@@ -140,7 +140,7 @@ class MessageDetailView extends StatelessWidget {
                   style: TextStyle(
                     color: roleTextColor,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
               ],

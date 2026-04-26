@@ -1915,4 +1915,11 @@ class MockCommunityRepository implements CommunityRepository {
       reviewedAt: DateTime.now(),
       actionTaken: review.actionTaken,
     );
+
+  // ── Group File Library Copy ────────────────────────────────────────────────
+
+  @override
+  Future<void> copyFileToMyLibrary(String groupId, String fileId) async {
+    // Mock implementation - no-op
+  }
 }

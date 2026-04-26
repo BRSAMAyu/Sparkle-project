@@ -1,23 +1,24 @@
-class InterventionAction {
+import 'package:sparkle/core/services/i18n_service.dart';
 
+class InterventionAction {
   const InterventionAction({
     required this.id,
     required this.label,
     required this.type,
   });
 
-  factory InterventionAction.fromJson(Map<String, dynamic> json) => InterventionAction(
-      id: json['id'] as String? ?? '',
-      label: json['label'] as String? ?? '',
-      type: json['type'] as String? ?? 'primary',
-    );
+  factory InterventionAction.fromJson(Map<String, dynamic> json) =>
+      InterventionAction(
+        id: json['id'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        type: json['type'] as String? ?? 'primary',
+      );
   final String id;
   final String label;
   final String type;
 }
 
 class InterventionContent {
-
   const InterventionContent({
     required this.renderedMessage,
     required this.intentType,
@@ -63,13 +64,14 @@ class InterventionContent {
       srlPhaseHint.isNotEmpty && srlPhaseHint.toUpperCase() != 'UNKNOWN';
 
   String get srlPhaseLabel {
+    final l10n = I18nService.instance.l10n;
     switch (srlPhaseHint.toUpperCase()) {
       case 'FORETHOUGHT':
-        return '规划中';
+        return l10n.interventionPhaseForethought;
       case 'PERFORMANCE':
-        return '执行中';
+        return l10n.interventionPhasePerformance;
       case 'SELF_REFLECTION':
-        return '复盘中';
+        return l10n.interventionPhaseSelfReflection;
       default:
         return srlPhaseHint;
     }
@@ -98,7 +100,6 @@ InterventionLevel parseInterventionLevel(String? raw) {
 }
 
 class InterventionPushMessage {
-
   const InterventionPushMessage({
     required this.interventionId,
     required this.level,
@@ -145,22 +146,31 @@ class InterventionPushMessage {
 InterventionPushMessage buildLocalFallback({
   required String title,
   required String body,
-}) => InterventionPushMessage(
-    interventionId: 'local-${DateTime.now().millisecondsSinceEpoch}',
-    level: InterventionLevel.toast,
-    content: InterventionContent(
-      renderedMessage: '$title\n$body',
-      intentType: 'local',
-      templateId: 'local',
-      scaffoldingLevel: 0,
-      srlPhaseHint: '',
-      srlPhaseMessage: '',
-      reflectionPromptStyle: '',
-      contextVariables: const {},
-    ),
-    actions: const [
-      InterventionAction(id: 'start_now', label: '开始', type: 'primary'),
-      InterventionAction(id: 'dismiss', label: '稍后', type: 'secondary'),
-    ],
-    expiresAt: DateTime.now().add(const Duration(minutes: 10)),
-  );
+}) =>
+    InterventionPushMessage(
+      interventionId: 'local-${DateTime.now().millisecondsSinceEpoch}',
+      level: InterventionLevel.toast,
+      content: InterventionContent(
+        renderedMessage: '$title\n$body',
+        intentType: 'local',
+        templateId: 'local',
+        scaffoldingLevel: 0,
+        srlPhaseHint: '',
+        srlPhaseMessage: '',
+        reflectionPromptStyle: '',
+        contextVariables: const {},
+      ),
+      actions: [
+        InterventionAction(
+          id: 'start_now',
+          label: I18nService.instance.l10n.startTask,
+          type: 'primary',
+        ),
+        InterventionAction(
+          id: 'dismiss',
+          label: I18nService.instance.l10n.interventionLater,
+          type: 'secondary',
+        ),
+      ],
+      expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+    );

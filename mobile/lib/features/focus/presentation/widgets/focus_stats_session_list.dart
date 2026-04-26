@@ -94,7 +94,7 @@ class _SessionItem extends StatelessWidget {
                   session.taskTitle ?? l10n.focusFreeFocus,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                 ),
                 const SizedBox(height: DS.xs),
@@ -170,7 +170,7 @@ class _SessionItem extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           color: isPomodoro ? DS.prismPurple : DS.neutral600,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
         ),
       ),
     );

@@ -22,13 +22,13 @@ class JPushMessage {
   });
 
   factory JPushMessage.fromMap(Map<dynamic, dynamic> map) => JPushMessage(
-      title: map['title']?.toString(),
-      body: map['body']?.toString() ?? map['alert']?.toString(),
-      extras: map['extras'] != null
-          ? Map<String, dynamic>.from(map['extras'] as Map)
-          : null,
-      messageId: map['msgId']?.toString(),
-    );
+        title: map['title']?.toString(),
+        body: map['body']?.toString() ?? map['alert']?.toString(),
+        extras: map['extras'] != null
+            ? Map<String, dynamic>.from(map['extras'] as Map)
+            : null,
+        messageId: map['msgId']?.toString(),
+      );
 }
 
 /// JPush service for handling push notifications via JPush SDK.
@@ -56,7 +56,13 @@ class JPushService extends AsyncNotifier<void> {
 
   @override
   Future<void> build() async {
-    // Service is built on demand
+    try {
+      // Service is built on demand.
+      return;
+    } catch (error, stackTrace) {
+      _logger.e('Failed to build JPush service', error: error);
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   /// Initialize JPush SDK
@@ -126,9 +132,7 @@ class JPushService extends AsyncNotifier<void> {
 
       // Apply for notification permission (iOS)
       if (Platform.isIOS) {
-        _jpush.applyPushAuthority(
-          
-        );
+        _jpush.applyPushAuthority();
       }
 
       _isInitialized = true;

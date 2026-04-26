@@ -7,6 +7,8 @@ class TaskFeedbackResponse {
     required this.success,
     this.message,
     this.preferenceUpdates,
+    this.reflectionPayload,
+    this.aiResponse,
   });
 
   factory TaskFeedbackResponse.fromJson(Map<String, dynamic> json) =>
@@ -18,27 +20,42 @@ class TaskFeedbackResponse {
                 json['preference_updates'] as Map<String, dynamic>,
               )
             : null,
+        reflectionPayload: json['reflection_payload'] is Map
+            ? Map<String, dynamic>.from(
+                json['reflection_payload'] as Map<dynamic, dynamic>,
+              )
+            : null,
+        aiResponse: json['ai_response'] as String?,
       );
 
   final bool success;
   final String? message;
   final PreferenceUpdates? preferenceUpdates;
+  final Map<String, dynamic>? reflectionPayload;
+  final String? aiResponse;
 
   Map<String, dynamic> toJson() => {
         'success': success,
         if (message != null) 'message': message,
-        if (preferenceUpdates != null) 'preference_updates': preferenceUpdates?.toJson(),
+        if (preferenceUpdates != null)
+          'preference_updates': preferenceUpdates?.toJson(),
+        if (reflectionPayload != null) 'reflection_payload': reflectionPayload,
+        if (aiResponse != null) 'ai_response': aiResponse,
       };
 
   TaskFeedbackResponse copyWith({
     bool? success,
     String? message,
     PreferenceUpdates? preferenceUpdates,
+    Map<String, dynamic>? reflectionPayload,
+    String? aiResponse,
   }) =>
       TaskFeedbackResponse(
         success: success ?? this.success,
         message: message ?? this.message,
         preferenceUpdates: preferenceUpdates ?? this.preferenceUpdates,
+        reflectionPayload: reflectionPayload ?? this.reflectionPayload,
+        aiResponse: aiResponse ?? this.aiResponse,
       );
 }
 
@@ -52,7 +69,8 @@ class PreferenceUpdates {
   factory PreferenceUpdates.fromJson(Map<String, dynamic> json) =>
       PreferenceUpdates(
         depthPreference: (json['depth_preference'] as num?)?.toDouble(),
-        difficultyPreference: (json['difficulty_preference'] as num?)?.toDouble(),
+        difficultyPreference:
+            (json['difficulty_preference'] as num?)?.toDouble(),
       );
 
   final double? depthPreference;

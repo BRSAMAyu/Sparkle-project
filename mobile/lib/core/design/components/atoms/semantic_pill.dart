@@ -93,14 +93,22 @@ class SemanticPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon,
-                size: dense ? 14 : 16, color: _getIconColor(tone, context),),
+            Icon(
+              icon,
+              size: dense ? 14 : 16,
+              color: _getIconColor(tone, context),
+            ),
             SizedBox(width: context.space.xs),
           ],
-          Text(
-            label,
-            style: context.typo.labelSmall
-                .copyWith(color: _getTextColor(tone, context)),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: context.typo.labelSmall
+                  .copyWith(color: _getTextColor(tone, context)),
+            ),
           ),
         ],
       ),

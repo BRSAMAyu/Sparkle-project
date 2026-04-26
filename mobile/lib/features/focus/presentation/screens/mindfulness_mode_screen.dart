@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
+import 'package:sparkle/features/focus/presentation/widgets/focus_session_summary_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/star_background.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -166,24 +168,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     final state = ref.read(mindfulnessProvider);
     if (!state.isActive) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: DS.brandPrimary),
-            const SizedBox(width: DS.md),
-            Expanded(
-              child: Text(
-                context.l10n.focusInterruptionDetected(state.interruptionCount),
-                style: TextStyle(color: DS.brandPrimary),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: DS.warning,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
+    AppFeedback.warning(
+      context,
+      context.l10n.focusInterruptionDetected(state.interruptionCount),
     );
   }
 
@@ -220,7 +207,15 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             ),
           );
         }
-        if (result.message != null) {
+        if (result.masteryUpdates.isNotEmpty) {
+          await showFocusSessionSummaryDialog(
+            context,
+            durationMinutes: elapsedMinutes,
+            flameEarned: result.flameEarned,
+            masteryUpdates: result.masteryUpdates,
+          );
+          if (!mounted) return;
+        } else if (result.message != null) {
           AppFeedback.info(context, result.message!);
         }
         context.pop();
@@ -496,7 +491,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),

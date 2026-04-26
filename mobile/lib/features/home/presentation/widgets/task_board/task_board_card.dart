@@ -203,7 +203,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               _panelTitle(mode, isChinese: isChinese),
               style: context.sparkleTypography.labelLarge.copyWith(
                 color: DS.textSecondary,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: DS.spacing12),
@@ -482,7 +482,7 @@ class _PanelItem extends StatelessWidget {
                 title,
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
               const SizedBox(height: DS.spacing4),

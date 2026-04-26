@@ -2,6 +2,7 @@ export 'package:sparkle/shared/entities/galaxy_model.dart';
 
 export 'data/models/galaxy_build_playback_plan.dart';
 export 'data/models/node_expansion_models.dart';
+export 'data/models/node_history_model.dart';
 export 'data/repositories/enhanced_galaxy_repository.dart';
 export 'data/repositories/galaxy_repository.dart';
 export 'data/services/galaxy_accessibility_service.dart';
@@ -18,6 +19,7 @@ export 'domain/entities/galaxy_llm_protocol.dart';
 export 'galaxy_routes.dart';
 export 'presentation/providers/galaxy_display_settings_provider.dart';
 export 'presentation/providers/galaxy_provider.dart';
+export 'presentation/providers/node_source_materials_provider.dart';
 export 'presentation/screens/galaxy_screen.dart';
 export 'presentation/widgets/galaxy/galaxy_controls.dart';
 export 'presentation/widgets/galaxy/graphrag_visualizer.dart';

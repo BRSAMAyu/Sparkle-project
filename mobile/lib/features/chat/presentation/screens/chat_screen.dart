@@ -6,26 +6,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
+import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_calibration_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
+import 'package:sparkle/features/chat/presentation/widgets/contextual_correction_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_transition_banner.dart';
@@ -34,12 +42,17 @@ import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_wid
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
+import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
+import 'package:sparkle/features/documents/data/models/document_library_models.dart';
+import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -68,6 +81,10 @@ class ChatScreen extends ConsumerStatefulWidget {
     this.initialChatMode,
     this.initialConversationId,
     this.initialAiMessage,
+    this.initialUserMessage,
+    this.fromModelingComplete = false,
+    this.modelingOutput,
+    this.initialExtraContext,
   });
 
   final String? initialPrompt;
@@ -77,6 +94,14 @@ class ChatScreen extends ConsumerStatefulWidget {
   /// Pre-generated AI opening message shown immediately on first open (no backend call).
   /// Used after onboarding to make the AI feel present from the very first moment.
   final String? initialAiMessage;
+
+  /// User message to dispatch automatically after modeling is complete.
+  /// Sent with modeling context overrides so the planning workflow receives
+  /// the full Aurora modeling output.
+  final String? initialUserMessage;
+  final bool fromModelingComplete;
+  final Map<String, dynamic>? modelingOutput;
+  final Map<String, dynamic>? initialExtraContext;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -95,13 +120,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showContextControls = false;
   String? _dispatchedInitialPrompt;
+  String? _dispatchedInitialUserMessage;
   String? _hydratedConversationId;
   String? _hydratedChatOpeningConversationId;
+  String? _hydratedComebackSignature;
+  String? _hydratedDailyStartupKey;
+  bool _dailyStartupRetryBannerVisible = false;
+  bool _dailyStartupRetryInFlight = false;
+  String? _reviewNodeLabel;
+  double? _reviewNodeMastery;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    _extractReviewNodeContext();
     ref
       ..listenManual(
         chatProvider.select((state) => state.messages),
@@ -226,12 +259,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  void _extractReviewNodeContext() {
+    final ctx = widget.initialExtraContext;
+    _reviewNodeLabel = null;
+    _reviewNodeMastery = null;
+    if (ctx == null) return;
+    final nodeLabel = ctx['node_label'] as String?;
+    if (nodeLabel == null || nodeLabel.isEmpty) return;
+    _reviewNodeLabel = nodeLabel;
+    final mastery = ctx['mastery'];
+    if (mastery is num) {
+      _reviewNodeMastery = _normalizeReviewNodeMastery(mastery);
+    }
+  }
+
+  double _normalizeReviewNodeMastery(num mastery) {
+    final value = mastery.toDouble();
+    final normalized = value > 1 ? value / 100 : value;
+    return normalized.clamp(0.0, 1.0);
+  }
+
   @override
   void didUpdateWidget(covariant ChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialPrompt != widget.initialPrompt ||
         oldWidget.initialChatMode != widget.initialChatMode ||
-        oldWidget.initialConversationId != widget.initialConversationId) {
+        oldWidget.initialConversationId != widget.initialConversationId ||
+        oldWidget.initialExtraContext != widget.initialExtraContext) {
+      _extractReviewNodeContext();
       unawaited(_hydrateInitialConversationAndPrompt());
     }
   }
@@ -249,8 +304,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
     }
     _queueInitialPromptDispatch();
+    _queueInitialUserMessageDispatch();
     _injectWelcomeMessageIfNeeded();
-    await _hydrateChatOpeningIfNeeded();
+    final hydratedComeback = await _hydrateComebackContextIfNeeded();
+    if (hydratedComeback) {
+      return;
+    }
+    final hydratedDailyStartup = await _hydrateDailyStartupIfNeeded(
+      showFailure: true,
+    );
+    if (!hydratedDailyStartup) {
+      await _hydrateChatOpeningIfNeeded();
+    }
+  }
+
+  void _queueInitialUserMessageDispatch() {
+    if (!widget.fromModelingComplete) return;
+    final msg = widget.initialUserMessage?.trim();
+    if (msg == null || msg.isEmpty || msg == _dispatchedInitialUserMessage) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final nextMsg = widget.initialUserMessage?.trim();
+      if (nextMsg == null ||
+          nextMsg.isEmpty ||
+          nextMsg == _dispatchedInitialUserMessage) {
+        return;
+      }
+      _dispatchedInitialUserMessage = nextMsg;
+      final overrides = <String, dynamic>{'from_modeling_complete': true};
+      if (widget.modelingOutput != null) {
+        overrides['modeling_output'] = widget.modelingOutput;
+      }
+      await ref.read(chatProvider.notifier).sendMessage(
+            nextMsg,
+            extraContextOverrides: overrides,
+          );
+    });
   }
 
   void _injectWelcomeMessageIfNeeded() {
@@ -293,6 +384,265 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Future<bool> _hydrateDailyStartupIfNeeded({bool showFailure = false}) async {
+    if (!mounted) {
+      return false;
+    }
+    if (widget.initialAiMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialPrompt?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialUserMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+      return false;
+    }
+
+    final startupRepository = ref.read(auroraDailyStartupRepositoryProvider);
+    final resolution = await _resolveDailyStartupPlan(
+      startupRepository: startupRepository,
+      showFailure: showFailure,
+    );
+    if (!mounted || resolution == null || resolution.planId.trim().isEmpty) {
+      return false;
+    }
+
+    final sprintPlanId = resolution.planId.trim();
+    if (resolution.shouldSelectPlan) {
+      await ref.read(chatProvider.notifier).switchPlanSession(sprintPlanId);
+      if (!mounted ||
+          !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+        return false;
+      }
+      ref.read(activePlanProvider.notifier).selectPlan(sprintPlanId);
+    }
+
+    final todayKey = _dateKey(DateTime.now());
+    final storageKey = 'aurora_daily_startup:$sprintPlanId:$todayKey';
+    if (_hydratedDailyStartupKey == storageKey) {
+      return true;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(storageKey) ?? false) {
+      return false;
+    }
+
+    final cachedStartup = resolution.cachedStartup;
+    if (cachedStartup != null) {
+      ref.read(chatProvider.notifier).showDailyStartupMessage(
+            cachedStartup,
+            planId: sprintPlanId,
+            dateKey: todayKey,
+          );
+      _hydratedDailyStartupKey = storageKey;
+      return true;
+    }
+
+    try {
+      final startup =
+          await startupRepository.getDailyStartup(planId: sprintPlanId);
+      if (!mounted ||
+          startup.message.trim().isEmpty ||
+          !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+        return false;
+      }
+      ref.read(chatProvider.notifier).showDailyStartupMessage(
+            startup.message,
+            planId: sprintPlanId,
+            dateKey: todayKey,
+          );
+      await prefs.setBool(storageKey, true);
+      _hydratedDailyStartupKey = storageKey;
+      _hideDailyStartupRetryBanner();
+      return true;
+    } catch (_) {
+      if (showFailure) {
+        _showDailyStartupRetryBanner();
+      }
+      return false;
+    }
+  }
+
+  Future<_DailyStartupPlanResolution?> _resolveDailyStartupPlan({
+    required AuroraDailyStartupRepository startupRepository,
+    required bool showFailure,
+  }) async {
+    final selectedPlanId = ref.read(activePlanProvider)?.trim();
+    final dashboard = ref.read(examSprintDashboardProvider).valueOrNull;
+    final dashboardPlanId = dashboard?.planId.trim();
+    if (dashboardPlanId != null && dashboardPlanId.isNotEmpty) {
+      if (selectedPlanId != null &&
+          selectedPlanId.isNotEmpty &&
+          selectedPlanId != dashboardPlanId) {
+        return null;
+      }
+      return _DailyStartupPlanResolution(
+        planId: dashboardPlanId,
+        shouldSelectPlan: selectedPlanId == null || selectedPlanId.isEmpty,
+      );
+    }
+
+    if (selectedPlanId != null && selectedPlanId.isNotEmpty) {
+      return _DailyStartupPlanResolution(planId: selectedPlanId);
+    }
+
+    final cachedStartup = await startupRepository.getCachedDailyStartup();
+    if (cachedStartup != null) {
+      return _DailyStartupPlanResolution(
+        planId: cachedStartup.planId,
+        cachedStartup: cachedStartup.message.message,
+        shouldSelectPlan: true,
+      );
+    }
+
+    try {
+      final loadedDashboard =
+          await ref.read(examSprintDashboardProvider.future);
+      if (!mounted ||
+          loadedDashboard == null ||
+          loadedDashboard.planId.trim().isEmpty) {
+        return null;
+      }
+      return _DailyStartupPlanResolution(
+        planId: loadedDashboard.planId.trim(),
+        shouldSelectPlan: true,
+      );
+    } catch (_) {
+      if (showFailure) {
+        _showDailyStartupRetryBanner();
+      }
+      final fallbackStartup = await startupRepository.getCachedDailyStartup();
+      if (fallbackStartup == null) {
+        return null;
+      }
+      return _DailyStartupPlanResolution(
+        planId: fallbackStartup.planId,
+        cachedStartup: fallbackStartup.message.message,
+        shouldSelectPlan: true,
+      );
+    }
+  }
+
+  void _showDailyStartupRetryBanner() {
+    if (!mounted || _dailyStartupRetryBannerVisible) {
+      return;
+    }
+    setState(() {
+      _dailyStartupRetryBannerVisible = true;
+    });
+  }
+
+  void _hideDailyStartupRetryBanner() {
+    if (!mounted ||
+        (!_dailyStartupRetryBannerVisible && !_dailyStartupRetryInFlight)) {
+      return;
+    }
+    setState(() {
+      _dailyStartupRetryBannerVisible = false;
+      _dailyStartupRetryInFlight = false;
+    });
+  }
+
+  Future<void> _retryDailyStartupHydration() async {
+    if (_dailyStartupRetryInFlight) {
+      return;
+    }
+    setState(() {
+      _dailyStartupRetryInFlight = true;
+    });
+    final hydrated = await _hydrateDailyStartupIfNeeded(showFailure: true);
+    if (mounted && !hydrated) {
+      setState(() {
+        _dailyStartupRetryInFlight = false;
+        _dailyStartupRetryBannerVisible = true;
+      });
+    }
+    if (!hydrated && mounted) {
+      await _hydrateChatOpeningIfNeeded();
+    }
+  }
+
+  Future<bool> _hydrateComebackContextIfNeeded() async {
+    if (!mounted) {
+      return false;
+    }
+    if (widget.initialAiMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialPrompt?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialUserMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+      return false;
+    }
+
+    AuroraComebackContext comeback;
+    try {
+      comeback = await ref
+          .read(auroraDailyStartupRepositoryProvider)
+          .getComebackContext()
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      return false;
+    }
+    if (!mounted || !comeback.hasContent) {
+      return false;
+    }
+
+    final signature =
+        '${comeback.planId}:${comeback.daysAway}:${comeback.daysRemaining}';
+    if (_hydratedComebackSignature == signature) {
+      return true;
+    }
+
+    final selectedPlanId = ref.read(activePlanProvider)?.trim();
+    final comebackPlanId = comeback.planId.trim();
+    if ((selectedPlanId == null || selectedPlanId.isEmpty) &&
+        comebackPlanId.isNotEmpty) {
+      await ref.read(chatProvider.notifier).switchPlanSession(comebackPlanId);
+      if (!mounted ||
+          !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+        return false;
+      }
+      ref.read(activePlanProvider.notifier).selectPlan(comebackPlanId);
+    }
+
+    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+      return false;
+    }
+
+    ref.read(chatProvider.notifier).showComebackMessage(
+          comeback.message,
+          planId: comebackPlanId,
+          daysAway: comeback.daysAway,
+        );
+    _hydratedComebackSignature = signature;
+    return true;
+  }
+
+  bool _canShowAuroraOpenerOver(List<ChatMessageModel> messages) {
+    if (messages.any((message) => message.role == MessageRole.user)) {
+      return false;
+    }
+    return messages.every(
+      (message) =>
+          message.id.startsWith('comeback_') ||
+          message.id.startsWith('daily_startup_') ||
+          message.id.startsWith('welcome_'),
+    );
+  }
+
+  String _dateKey(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
   void _queueInitialPromptDispatch() {
     final prompt = widget.initialPrompt?.trim();
     if (prompt == null ||
@@ -313,7 +663,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (initialMode != null && initialMode.isNotEmpty) {
         ref.read(chatModeProvider.notifier).setFromApiValue(initialMode);
       }
-      await ref.read(chatProvider.notifier).sendMessage(nextPrompt);
+      await ref.read(chatProvider.notifier).sendMessage(
+            nextPrompt,
+            extraContextOverrides: widget.initialExtraContext,
+          );
     });
   }
 
@@ -554,6 +907,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       sessionId: chatState.conversationId,
                       onViewSource: _showWorkingMemorySource,
                     ),
+                    StatusAwarenessBar(
+                      conversationId: chatState.conversationId,
+                      hasActiveRun: chatState.hasActiveRun,
+                    ),
+                    if (_reviewNodeLabel != null)
+                      _ReviewNodeBanner(
+                        nodeLabel: _reviewNodeLabel!,
+                        mastery: _reviewNodeMastery,
+                      ),
+                    if (_dailyStartupRetryBannerVisible)
+                      _DailyStartupRetryBanner(
+                        isRetrying: _dailyStartupRetryInFlight,
+                        onRetry: _retryDailyStartupHydration,
+                      ),
                     Expanded(
                       child: messages.isEmpty &&
                               chatState.streamingContent.isEmpty &&
@@ -696,10 +1063,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 }
 
                                 final message = messages[adjustedIndex];
-                                return ChatBubble(
+                                final isLatestAssistant =
+                                    message.id == latestAssistantMessageId;
+                                final showCorrectionBar = isLatestAssistant &&
+                                    message.role == MessageRole.assistant &&
+                                    !chatState.hasActiveRun;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ChatBubble(
                                   message: message,
-                                  isLatestAssistantMessage:
-                                      message.id == latestAssistantMessageId,
+                                  isLatestAssistantMessage: isLatestAssistant,
                                   onActionConfirm: (action) {
                                     ref
                                         .read(chatProvider.notifier)
@@ -718,6 +1092,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           feedbackType,
                                         );
                                   },
+                                  onCitationFeedback:
+                                      (msg, citation, helpful) async {
+                                    ref
+                                        .read(chatProvider.notifier)
+                                        .sendCitationFeedback(
+                                          message: msg,
+                                          citation: citation,
+                                          helpful: helpful,
+                                        );
+                                  },
                                   onWidgetAction: (
                                     actionType,
                                     payload,
@@ -729,6 +1113,60 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           payload,
                                         );
                                   },
+                                ),
+                                    if (showCorrectionBar)
+                                      ContextualCorrectionBar(
+                                        predictedReplyGroups: ref
+                                            .watch(auroraStatusProvider)
+                                            ?.predictedReplyOptions,
+                                        onSendCorrection: (text) => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(text),
+                                        onNotRightDirection: () => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(
+                                              context.l10n.auroraCorrectNotRight,
+                                            ),
+                                        onMakeShorter: () => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(
+                                              context.l10n.auroraCorrectShorter,
+                                            ),
+                                        onGivePractice: () => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(
+                                              context.l10n.auroraCorrectDirect,
+                                            ),
+                                        onRecalibrate: () {
+                                          final snapshot = ref.read(
+                                            auroraStatusProvider,
+                                          );
+                                          showAuroraCalibration(
+                                            context: context,
+                                            observation: snapshot?.summary ??
+                                                context.l10n
+                                                    .auroraCalibrationObserved,
+                                            judgment: snapshot?.summary ??
+                                                context.l10n
+                                                    .auroraCalibrationJudgment,
+                                            confirmQuestion: context.l10n
+                                                .auroraCalibrationConfirm,
+                                            confirmOptions: const [
+                                              '30 分钟',
+                                              '45 分钟',
+                                              '60 分钟',
+                                            ],
+                                            onConfirm: (option) {
+                                              ref
+                                                  .read(chatProvider.notifier)
+                                                  .sendMessage(
+                                                    '${context.l10n.auroraCorrectRecalibrate}: $option',
+                                                  );
+                                            },
+                                          );
+                                        },
+                                      ),
+                                  ],
                                 );
                               },
                             ),
@@ -774,6 +1212,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  if (chatState.isErrorRetryable)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: DS.spacing8,
+                                      ),
+                                      child: SparkleButton(
+                                        label: context.l10n.retry,
+                                        icon: const Icon(Icons.refresh_rounded),
+                                        onPressed: () => unawaited(
+                                          ref
+                                              .read(chatProvider.notifier)
+                                              .retryLastMessage(),
+                                        ),
+                                        variant: ButtonVariant.secondary,
+                                      ),
+                                    ),
                                   Material(
                                     color:
                                         DS.surfacePrimary.withValues(alpha: 0),
@@ -992,7 +1446,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _showWorkingMemorySource(String evidenceToken) {
     final messages = ref.read(chatProvider).messages;
-    final matched = messages.where((message) => message.id == evidenceToken).toList();
+    final matched =
+        messages.where((message) => message.id == evidenceToken).toList();
     if (matched.isEmpty) {
       AppFeedback.info(context, '原始 turn 暂时不可见');
       return;
@@ -1251,6 +1706,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final showChatTransparencyCapsule =
         ref.watch(showChatTransparencyCapsuleProvider);
     final chatPureMode = ref.watch(chatPureModeProvider);
+    final documentLibraryState = ref.watch(documentLibraryProvider);
+    final readyStudyMaterialsCount =
+        (documentLibraryState.documents.valueOrNull ??
+                const <DocumentLibraryItem>[])
+            .where((doc) => doc.effectiveStatus == DocumentStatus.ready)
+            .length;
     final promptStarters = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
@@ -1384,8 +1845,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   )
                 : const SizedBox.shrink(),
           ),
+          Consumer(builder: (context, ref, _) {
+            final aurora = ref.watch(auroraStatusProvider);
+            if (aurora == null || !aurora.auroraActive) return const SizedBox.shrink();
+            return _AuroraQuickTrigger(
+              snapshot: aurora,
+              onTap: () {
+                final wake = aurora.wakeEligibility;
+                if (wake.canUserWake &&
+                    (aurora.overallStatus == 'risk_found' ||
+                        aurora.overallStatus == 'calibration_available' ||
+                        aurora.overallStatus == 'needs_confirm')) {
+                  unawaited(showAuroraCoreSession(
+                    context: context,
+                    bandStatus: aurora.overallStatus,
+                    wakeReasons: wake.wakeReasons,
+                    conversationId: chatState.conversationId,
+                  ));
+                } else {
+                  showAuroraCalibration(
+                    context: context,
+                    observation: aurora.summary,
+                    judgment: aurora.summary,
+                    confirmQuestion: context.l10n.auroraCalibrationConfirm,
+                    confirmOptions: const ['30 分钟', '45 分钟', '60 分钟'],
+                    onConfirm: (option) {
+                      ref.read(chatProvider.notifier).sendMessage(
+                            '${context.l10n.auroraCorrectRecalibrate}: $option',
+                          );
+                    },
+                  );
+                }
+              },
+            );
+          }),
           ChatInput(
             enabled: !chatState.hasActiveRun,
+            studyMaterialsEnabled: chatState.documentRetrievalEnabled,
+            documentContextMode: chatState.documentContextMode,
+            availableStudyMaterialsCount: readyStudyMaterialsCount,
+            onToggleStudyMaterials: () {
+              ref.read(chatProvider.notifier).setDocumentRetrievalEnabled(
+                    !chatState.documentRetrievalEnabled,
+                  );
+            },
+            onSetDocumentContextMode: (mode) {
+              ref.read(chatProvider.notifier).setDocumentContextMode(mode);
+            },
+            onOpenStudyMaterials: () => _showStudyMaterialsSheet(
+              chatState.documentRetrievalEnabled,
+            ),
             onTextChanged: (text) {
               if (mounted) {
                 ref
@@ -1449,6 +1958,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _shouldDuckForReasoning(state) &&
       state.runPhase.isActive &&
       state.streamingContent.isEmpty;
+
+  void _showStudyMaterialsSheet(bool retrievalEnabled) {
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => StudyMaterialsSheet(
+          retrievalEnabled: retrievalEnabled,
+        ),
+      ),
+    );
+  }
 
   String _attachmentChipLabel(StoredFile file) {
     final statusText = _attachmentStatusText(file.status);
@@ -1707,7 +2229,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                     l10n.chatHistoryTitle,
                     style: DS.titleLarge.copyWith(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -1800,8 +2322,8 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                               style: DS.bodyLarge.copyWith(
                                 color: DS.textPrimary,
                                 fontWeight: isCurrent
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
+                                    ? DS.fontWeightBold
+                                    : DS.fontWeightMedium,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1850,6 +2372,18 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
       ),
     );
   }
+}
+
+class _DailyStartupPlanResolution {
+  const _DailyStartupPlanResolution({
+    required this.planId,
+    this.cachedStartup,
+    this.shouldSelectPlan = false,
+  });
+
+  final String planId;
+  final String? cachedStartup;
+  final bool shouldSelectPlan;
 }
 
 class _InlineChatHistoryError extends StatelessWidget {
@@ -1973,7 +2507,7 @@ class _ChatContextToggle extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: DS.bodySmall.copyWith(
                       color: labelColor,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),
@@ -1992,6 +2526,78 @@ class _ChatContextToggle extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DailyStartupRetryBanner extends StatelessWidget {
+  const _DailyStartupRetryBanner({
+    required this.isRetrying,
+    required this.onRetry,
+  });
+
+  final bool isRetrying;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing4,
+          DS.spacing16,
+          DS.spacing8,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.08),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.warning.withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: DS.iconSizeSm,
+              child: isRetrying
+                  ? CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(DS.warning),
+                    )
+                  : Icon(
+                      Icons.hourglass_top_rounded,
+                      size: DS.iconSizeSm,
+                      color: DS.warning,
+                    ),
+            ),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                '加载今日概览中…',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: DS.warning,
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ),
+            const SizedBox(width: DS.spacing4),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: '重试今日概览',
+              onPressed: isRetrying ? null : onRetry,
+              icon: Icon(
+                Icons.refresh_rounded,
+                size: DS.iconSizeSm,
+                color: isRetrying
+                    ? DS.textSecondary.withValues(alpha: 0.45)
+                    : DS.warning,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _QuickActionChipState extends State<_QuickActionChip> {
@@ -2092,6 +2698,56 @@ class _TypingIndicator extends StatefulWidget {
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _ReviewNodeBanner extends StatelessWidget {
+  const _ReviewNodeBanner({
+    required this.nodeLabel,
+    this.mastery,
+  });
+
+  final String nodeLabel;
+  final double? mastery;
+
+  @override
+  Widget build(BuildContext context) {
+    final masteryText = mastery != null
+        ? ' · 当前掌握 ${(mastery! * 100).round().clamp(0, 100)}%'
+        : '';
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing4,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing12,
+        vertical: DS.spacing8,
+      ),
+      decoration: BoxDecoration(
+        color: DS.info.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.info.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.auto_stories_rounded, size: DS.iconSizeSm, color: DS.info),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Text(
+              '正在复习: $nodeLabel$masteryText',
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.info,
+                fontWeight: DS.fontWeightMedium,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// 流式输出气泡 - 显示正在流式输出的 AI 响应
@@ -2386,6 +3042,81 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
           ),
         );
       },
+    );
+  }
+}
+
+class _AuroraQuickTrigger extends StatelessWidget {
+  const _AuroraQuickTrigger({
+    required this.snapshot,
+    required this.onTap,
+  });
+
+  final AuroraControlSurfaceSnapshot snapshot;
+  final VoidCallback onTap;
+
+  Color _statusColor() {
+    return switch (snapshot.overallStatus) {
+      'calibrated' => DS.success,
+      'risk_found' => DS.warning,
+      'needs_confirm' => DS.info,
+      'calibration_available' => DS.brandPrimary,
+      'cooling_down' => DS.textSecondary,
+      _ => DS.textSecondary,
+    };
+  }
+
+  String _statusLabel(AppLocalizations l10n) {
+    return switch (snapshot.overallStatus) {
+      'calibrated' => l10n.auroraBandCalibrated,
+      'risk_found' => l10n.auroraBandRiskFound,
+      'needs_confirm' => l10n.auroraBandNeedsConfirm,
+      'calibration_available' => l10n.auroraBandCalibrationAvailable,
+      'cooling_down' => l10n.auroraBandCoolingDown,
+      _ => l10n.auroraBandSensing,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor();
+    final l10n = context.l10n;
+    final wake = snapshot.wakeEligibility;
+    final canWake = wake.canUserWake &&
+        (snapshot.overallStatus == 'risk_found' ||
+            snapshot.overallStatus == 'calibration_available' ||
+            snapshot.overallStatus == 'needs_confirm');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: DS.spacing10, vertical: DS.spacing6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 14, color: color),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                canWake
+                    ? '${_statusLabel(l10n)} · ${l10n.auroraWakeAvailable(wake.userQuotaRemaining)}'
+                    : _statusLabel(l10n),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

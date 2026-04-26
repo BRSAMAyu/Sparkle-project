@@ -158,7 +158,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                     'Flame Lv.${user.flameLevel}',
                     style: TextStyle(
                       color: DS.brandPrimaryConst,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       fontSize: 13,
                     ),
                   ),
@@ -409,7 +409,7 @@ class _RelationshipPanel extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 '伙伴共成长',
-                style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+                style: DS.labelLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: 6),
               Text(
@@ -421,7 +421,7 @@ class _RelationshipPanel extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 '激励摘要',
-                style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+                style: DS.labelLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: 6),
               Text(
@@ -433,7 +433,7 @@ class _RelationshipPanel extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 '最近共享',
-                style: DS.labelLarge.copyWith(fontWeight: FontWeight.w700),
+                style: DS.labelLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: 6),
               ...recentShares.take(2).map(
@@ -526,7 +526,7 @@ class _InfoChip extends StatelessWidget {
           label,
           style: DS.labelSmall.copyWith(
             color: DS.brandPrimary,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
       );

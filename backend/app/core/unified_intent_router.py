@@ -137,7 +137,10 @@ class UnifiedIntentRouter:
         UnifiedIntentType.SPRINT_PLAN: IntentPattern(
             keywords={
                 "冲刺", "sprint", "专注模式", "focus mode",
-                "突击", "cram", "考试冲刺", "进入冲刺"
+                "突击", "cram", "考试冲刺", "进入冲刺",
+                "备考", "exam prep", "押题", "刷题",
+                "考前突击", "最后冲刺", "倒计时",
+                "finals", "midterm", "期末", "期中",
             },
             weight=0.85
         ),
@@ -145,7 +148,13 @@ class UnifiedIntentRouter:
             keywords={
                 "学习计划", "study plan", "制定计划", "make a plan",
                 "复习计划", "review plan", "时间安排", "schedule",
-                "学习规划", "制定学习计划", "创建计划"
+                "学习规划", "制定学习计划", "创建计划",
+                "复习", "review", "帮我复习", "help me review",
+                "高数", "线性代数", "概率论", "英语", "物理",
+                "复习高数", "复习英语", "复习物理",
+                "prepare for exam", "study for", "get ready for",
+                "考试准备", "考试规划", "怎么复习", "how to study",
+                "几天后考试", "下周考试", "马上考试",
             },
             weight=0.75
         ),
@@ -176,7 +185,9 @@ class UnifiedIntentRouter:
     COMPLEX_INTENT_KEYWORDS = {
         "学习计划", "制定计划", "复习策略", "时间规划",
         "考试预测", "知识图谱", "知识关联", "多步骤",
-        "一系列", "然后", "接着", "之后", "首先"
+        "一系列", "然后", "接着", "之后", "首先",
+        "备考", "期末", "期中", "冲刺", "刷题", "押题",
+        "复习高数", "复习英语", "考试准备", "怎么复习",
     }
 
     def __init__(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -19,6 +20,7 @@ class UserSettingsResponse(BaseModel):
     ai_reasoning_mode: str
     task_reminders_enabled: bool
     task_reminder_times: list[int] | None = None
+    notification_preferences: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None
     updated_at: datetime | None
 

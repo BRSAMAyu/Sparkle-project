@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+import 'dart:ui' show Locale, PlatformDispatcher;
+
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/l10n/app_localizations_en.dart';
 import 'package:sparkle/l10n/app_localizations_zh.dart';
 
 /// Global i18n service for context-free localization access.
@@ -25,13 +27,34 @@ class I18nService {
   Locale? _currentLocale;
   AppLocalizations? _l10n;
 
+  static Locale resolveSupportedLocale([Locale? preferred]) {
+    final candidate = preferred ?? PlatformDispatcher.instance.locale;
+    for (final locale in AppLocalizations.supportedLocales) {
+      if (locale.languageCode == candidate.languageCode) {
+        return locale;
+      }
+    }
+    return const Locale('en');
+  }
+
+  static AppLocalizations _buildFallbackLocalizations(Locale locale) {
+    switch (locale.languageCode) {
+      case 'zh':
+        return AppLocalizationsZh();
+      case 'en':
+      default:
+        return AppLocalizationsEn();
+    }
+  }
+
   /// Get the current localizations instance.
-  /// Falls back to Chinese if not initialized.
-  AppLocalizations get l10n => _l10n ?? AppLocalizationsZh();
+  /// Falls back to the resolved app locale if not initialized.
+  AppLocalizations get l10n =>
+      _l10n ?? _buildFallbackLocalizations(currentLocale);
 
   /// Get the current locale.
-  /// Falls back to Chinese if not initialized.
-  Locale get currentLocale => _currentLocale ?? const Locale('zh');
+  /// Falls back to the resolved app locale if not initialized.
+  Locale get currentLocale => _currentLocale ?? resolveSupportedLocale();
 
   /// Check if current locale is Chinese.
   bool get isChinese => currentLocale.languageCode == 'zh';

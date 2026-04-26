@@ -7,12 +7,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
+import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/services/context_service.dart';
 import 'package:sparkle/features/focus/data/services/prediction_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -113,11 +118,15 @@ class MindfulnessStopResult {
   const MindfulnessStopResult({
     required this.savedLocally,
     required this.syncedRemotely,
+    this.flameEarned = 0,
+    this.masteryUpdates = const [],
     this.message,
   });
 
   final bool savedLocally;
   final bool syncedRemotely;
+  final int flameEarned;
+  final List<FocusMasteryUpdate> masteryUpdates;
   final String? message;
 }
 
@@ -279,6 +288,8 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
     final status = snapshot.interruptionCount > 3 ? 'interrupted' : 'completed';
     var savedLocally = false;
     var syncedRemotely = false;
+    var flameEarned = 0;
+    var masteryUpdates = const <FocusMasteryUpdate>[];
     String? resultMessage;
 
     state = snapshot.copyWith(isLoggingSession: true);
@@ -300,8 +311,24 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 
         savedLocally = true;
         syncedRemotely = response != null;
+        flameEarned = response?.response.rewards.flameEarned ?? 0;
+        masteryUpdates =
+            response?.masteryUpdates ?? const <FocusMasteryUpdate>[];
 
         if (response != null) {
+          final completedTask = snapshot.currentTask;
+          if (completedTask != null) {
+            _ref
+              ..invalidate(taskListProvider)
+              ..invalidate(taskDetailProvider(completedTask.id))
+              ..invalidate(learningPortfolioProvider)
+              ..invalidate(achievementProvider);
+            final planId = completedTask.planId;
+            if (planId != null && planId.isNotEmpty) {
+              _ref.invalidate(planDetailProvider(planId));
+            }
+          }
+
           final linkedPrediction =
               await _predictionAttribution.consumeForExecution(
             executionType: 'focus',
@@ -383,6 +410,8 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
     return MindfulnessStopResult(
       savedLocally: savedLocally,
       syncedRemotely: syncedRemotely,
+      flameEarned: flameEarned,
+      masteryUpdates: masteryUpdates,
       message: resultMessage,
     );
   }

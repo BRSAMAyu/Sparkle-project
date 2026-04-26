@@ -520,12 +520,14 @@ class AccountabilityAchievementService:
             partner_times = [t[0] for t in partner_checkins.all()]
 
             # 检查是否有在2小时内的打卡
+            found_mutual = False
             for user_time in user_times:
                 for partner_time in partner_times:
                     if abs((user_time - partner_time).total_seconds()) <= 7200:  # 2小时
                         mutual_days += 1
+                        found_mutual = True
                         break
-                if mutual_days > i:
+                if found_mutual:
                     break
 
         return mutual_days

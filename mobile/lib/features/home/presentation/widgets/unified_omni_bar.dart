@@ -726,7 +726,7 @@ class _IntentChip extends StatelessWidget {
                 prediction.label,
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: prediction.color ?? DS.brandPrimary,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
             ],

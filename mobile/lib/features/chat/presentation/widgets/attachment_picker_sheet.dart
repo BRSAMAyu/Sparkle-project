@@ -7,10 +7,16 @@ class AttachmentPickerSheet extends StatelessWidget {
     required this.onDirectUpload,
     required this.onDocumentClean,
     super.key,
+    this.title,
+    this.primaryTitle,
+    this.primarySubtitle,
   });
 
   final VoidCallback onDirectUpload;
   final VoidCallback onDocumentClean;
+  final String? title;
+  final String? primaryTitle;
+  final String? primarySubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +67,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '附件与文档',
+                  title ?? '附件与文档',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
@@ -73,8 +79,8 @@ class AttachmentPickerSheet extends StatelessWidget {
             _AttachmentOption(
               icon: Icons.upload_file_rounded,
               iconColor: DS.brandPrimary,
-              title: '直接上传文件',
-              subtitle: '上传文档或图片到对话中',
+              title: primaryTitle ?? '直接上传文件',
+              subtitle: primarySubtitle ?? '上传文档或图片到对话中',
               onTap: () {
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 Navigator.pop(context);

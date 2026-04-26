@@ -58,9 +58,14 @@ class AiStatusCapsule extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(fontSize: dense ? 12 : 14, color: baseColor),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: TextStyle(fontSize: dense ? 12 : 14, color: baseColor),
+            ),
           ),
         ],
       ),

@@ -6,10 +6,10 @@ Stage: <首次引入 Stage 号>
 Task Schemas - Task creation, update, query, etc.
 """
 
-
 from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
@@ -76,6 +76,11 @@ class TaskCreate(BaseModel):
     due_date: date | None = Field(default=None, description="Due date")
     knowledge_node_id: UUID | None = Field(default=None, description="Knowledge node ID")
     tool_result_id: str | None = Field(default=None, description="Tool result ID from AI generator")
+    guide_json: dict | None = Field(default=None, description="Structured user-facing task guide")
+    ai_prompt: str | None = Field(default=None, description="Copyable AI prompt scaffold")
+    source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+    phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
+    success_criteria: str | None = Field(default=None, description="Task success criteria")
 
     @field_validator("type", mode="before")
     @classmethod
@@ -121,6 +126,12 @@ class TaskUpdate(BaseModel):
     order_index: int | None = Field(default=None, description="Display order")
     due_date: date | None = Field(default=None, description="Due date")
     user_note: str | None = Field(default=None, description="User note")
+    knowledge_node_id: UUID | None = Field(default=None, description="Knowledge node ID")
+    guide_json: dict | None = Field(default=None, description="Structured user-facing task guide")
+    ai_prompt: str | None = Field(default=None, description="Copyable AI prompt scaffold")
+    source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+    phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
+    success_criteria: str | None = Field(default=None, description="Task success criteria")
 
 
 class TaskStart(BaseModel):
@@ -150,6 +161,29 @@ class TaskAbandon(BaseModel):
 
     task_id: UUID = Field(description="Task ID")
     reason: str | None = Field(default=None, description="Abandon reason")
+
+
+class TaskQuickActionRequest(BaseModel):
+    """Lightweight task-card action request."""
+
+    reason: str | None = Field(default=None, max_length=500, description="Optional user-facing reason")
+
+
+class TaskStuckRequest(BaseModel):
+    """Current task execution context when the user asks for stuck help."""
+
+    stuck_point: str | None = Field(default=None, max_length=500, description="Where the user feels blocked")
+    recent_steps: list[str] = Field(default_factory=list, max_length=10, description="Recent execution steps")
+    current_step_index: int | None = Field(default=None, ge=0, description="Current client-side step index")
+    elapsed_seconds: int | None = Field(default=None, ge=0, description="Elapsed timer seconds")
+    trigger: str | None = Field(default=None, max_length=100, description="Client trigger label")
+
+
+class TaskSnoozeRequest(TaskQuickActionRequest):
+    """Snooze a task without changing the plan structure."""
+
+    days: int = Field(default=1, ge=1, le=30, description="Days to move the task forward")
+    target_date: date | None = Field(default=None, description="Explicit target date")
 
 
 # ========== Response Schemas ==========
@@ -186,6 +220,11 @@ class TaskDetail(TaskBase):
     order_index: int = Field(default=0, description="Display order")
     subtasks_total: int = Field(default=0, description="Total subtasks")
     subtasks_completed: int = Field(default=0, description="Completed subtasks")
+    guide_json: dict | None = Field(default=None, description="Structured user-facing task guide")
+    ai_prompt: str | None = Field(default=None, description="Copyable AI prompt scaffold")
+    source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+    phase_index: int | None = Field(default=None, description="Phase index inside the planning strategy")
+    success_criteria: str | None = Field(default=None, description="Task success criteria")
 
 
 class TaskReorderRequest(BaseModel):
@@ -223,6 +262,45 @@ class TaskResourceLinkInfo(BaseSchema):
     resource_metadata: dict | None = Field(default=None, description="Extra metadata")
     order_index: int = Field(default=0, description="Display order")
     is_primary: bool = Field(default=False, description="Primary resource flag")
+
+
+class TaskDocumentLinkCreate(BaseModel):
+    """Attach a document to a task."""
+
+    file_id: UUID = Field(description="Stored file ID")
+    linked_by: Literal["user", "ai"] = Field(default="user", description="Who created the link")
+
+
+class TaskDocumentUnlinkRequest(BaseModel):
+    """Remove a linked document from a task."""
+
+    file_id: UUID = Field(description="Stored file ID")
+
+
+class TaskDocumentInfo(BaseSchema):
+    """Task-linked document."""
+
+    task_id: UUID = Field(description="Task ID")
+    file_id: UUID = Field(description="Stored file ID")
+    file_name: str = Field(description="Original file name")
+    mime_type: str = Field(description="Mime type")
+    file_size: int = Field(description="File size in bytes")
+    status: str = Field(description="Processing status")
+    linked_by: str = Field(description="Link origin")
+    document_quality_score: float = Field(description="Rolling document quality score")
+
+
+class TaskDocumentSuggestion(BaseModel):
+    """Suggested task-document link."""
+
+    file_id: UUID = Field(description="Stored file ID")
+    file_name: str = Field(description="Original file name")
+    reason: str = Field(description="Why this document is relevant")
+    source: str = Field(description="Suggestion source")
+    node_id: UUID | None = Field(default=None, description="Related knowledge node ID")
+    node_name: str | None = Field(default=None, description="Related knowledge node name")
+    linked_by: str = Field(default="ai", description="Suggested link origin")
+    status: str | None = Field(default=None, description="Current file processing status")
 
 
 class TaskSummary(BaseModel):

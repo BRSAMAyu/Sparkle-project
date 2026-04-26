@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_automation_panel.dart';
@@ -154,10 +156,10 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
     if (!service.isConnected) {
       _showSnackBar(
         service.hasExecutionPermissionIssue
-            ? '当前网关可访问，但没有执行权限，暂时无法重试队列'
+            ?             context.l10n.openclawHubGatewayNoPermission
             : service.hasExecutionEndpointIssue
-                ? '当前网关可访问，但执行入口不可用，暂时无法重试队列'
-                : '执行引擎尚未连接，暂时无法重试队列',
+                ? context.l10n.openclawHubEndpointUnavailable
+                : context.l10n.openclawHubEngineNotConnected,
         isError: true,
       );
       return;
@@ -166,22 +168,21 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
         await ref.read(taskListProvider.notifier).drainQueuedAiHandoffs();
     if (!mounted) return;
     _showSnackBar(
-      dispatched > 0 ? '已重新提交 $dispatched 个排队任务' : '当前没有可重试的排队任务',
+      dispatched > 0 ? context.l10n.openclawHubRetryQueuedSuccess(dispatched) : context.l10n.openclawHubNoRetryQueuedItems,
     );
   }
 
   Future<void> _clearQueuedRequests(OpenClawConnectionService service) async {
     await service.clearQueuedRequests();
     if (!mounted) return;
-    _showSnackBar('等待队列已清空');
+    _showSnackBar(context.l10n.openclawHubQueueCleared);
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? DS.semanticError : DS.semanticSuccess,
-      ),
+      isError
+          ? SparkleSnackBar.error(message)
+          : SparkleSnackBar.success(message),
     );
   }
 
@@ -224,18 +225,18 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
 
   String _statusIndicatorTooltip(OpenClawConnectionService connection) {
     if (connection.isConnected) {
-      return 'OpenClaw 已连接，点击查看诊断';
+      return context.l10n.openclawHubConnectedDiagnostics;
     }
     if (connection.hasExecutionPermissionIssue) {
-      return '网关可达但缺少执行权限，点击查看诊断';
+      return context.l10n.openclawHubGatewayNoPermissionDiagnostics;
     }
     if (connection.hasExecutionEndpointIssue) {
-      return '网关可达但执行入口异常，点击查看诊断';
+      return context.l10n.openclawHubEndpointIssueDiagnostics;
     }
     if (connection.queuedRequestCount > 0) {
-      return '当前有排队任务，点击查看诊断';
+      return context.l10n.openclawHubQueuedTasksDiagnostics;
     }
-    return 'OpenClaw 连接未完成，点击查看诊断';
+    return context.l10n.openclawHubNotConnectedDiagnostics;
   }
 
   @override
@@ -303,12 +304,12 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       connection.queuedRequestCount > 0,
       connection.config.isConfigured
     )) {
-      (true, _, _, _, _) => '网关在线，但没有执行权限',
-      (false, true, _, _, _) => '网关在线，但执行入口不可用',
-      (false, false, true, _, _) => 'OpenClaw 已准备好接手',
-      (false, false, false, true, _) => '已有任务在等它恢复',
-      (false, false, false, false, true) => '连接信息已保存，当前还没连上',
-      _ => '先接入 OpenClaw，再开始稳定委派',
+      (true, _, _, _, _) => context.l10n.openclawHubOverviewGatewayNoPermission,
+      (false, true, _, _, _) => context.l10n.openclawHubOverviewEndpointIssue,
+      (false, false, true, _, _) => context.l10n.openclawHubOverviewReady,
+      (false, false, false, true, _) => context.l10n.openclawHubOverviewTasksWaiting,
+      (false, false, false, false, true) => context.l10n.openclawHubOverviewConfigSaved,
+      _ => context.l10n.openclawHubOverviewConnectFirst,
     };
     final overviewSubtitle = switch ((
       hasExecutionPermissionIssue,
@@ -318,15 +319,15 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       connection.queuedRequestCount > 0
     )) {
       (true, _, _, _, _) =>
-        '当前这台网关可以访问，但真正执行会被权限拦住。先补可写 scope，或改用设备配对 + WebSocket，才算闭环接通。',
+        context.l10n.openclawHubOverviewGatewayNoPermissionDesc,
       (false, true, _, _, _) =>
-        '当前地址本身可访问，但执行接口还没准备好。优先检查 `/v1/responses`、代理转发和 transport 选择是否一致。',
+        context.l10n.openclawHubOverviewEndpointIssueDesc,
       (false, false, true, true, _) =>
-        '最近一次执行状态是“${latestIntent?.statusLabel ?? '已记录'}”，你可以从这里继续查看连接、队列和活动。',
-      (false, false, true, false, _) => '连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。',
+        context.l10n.openclawHubLastExecutionStatus(latestIntent?.statusLabel ?? context.l10n.openclawHubStatusRecorded),
+      (false, false, true, false, _) => context.l10n.openclawHubOverviewConnectedDesc,
       (false, false, false, _, true) =>
-        '你已经有 ${connection.queuedRequestCount} 个委派在等待恢复连接，先把引擎重新连上会最有效。',
-      _ => '连接完成后，首页、聊天和任务页会共享同一个执行中心，不再四处寻找入口。',
+        context.l10n.openclawHubPendingDelegationsDesc(connection.queuedRequestCount),
+      _ => context.l10n.openclawHubOverviewDefaultDesc,
     };
     final primaryActionHint = switch ((
       hasExecutionPermissionIssue,
@@ -334,18 +335,18 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       connection.isConnected,
       connection.queuedRequestCount > 0
     )) {
-      (true, _, _, _) => '现在最值得先做的是更换具备执行权限的令牌，或切到已配对的 WebSocket 连接。',
-      (false, true, _, _) => '现在最值得先做的是检查执行接口与 transport，让网关从“可达”变成“可执行”。',
-      (false, false, true, true) => '现在最值得先做的是把等待队列重新提交。',
-      (false, false, false, true) => '现在最值得先做的是恢复连接，让已排队的任务继续执行。',
-      (false, false, true, false) => '现在最值得先做的是回到聊天或任务页发起新的委派。',
-      _ => '现在最值得先做的是完成连接，让 OpenClaw 真正成为你的执行伴侣。',
+      (true, _, _, _) => context.l10n.openclawHubActionHintPermission,
+      (false, true, _, _) => context.l10n.openclawHubActionHintEndpoint,
+      (false, false, true, true) => context.l10n.openclawHubActionHintRetryQueue,
+      (false, false, false, true) => context.l10n.openclawHubActionHintReconnect,
+      (false, false, true, false) => context.l10n.openclawHubActionHintNewDelegation,
+      _ => context.l10n.openclawHubActionHintCompleteConnection,
     };
 
     return SparklePageScaffold(
       role: SparklePageRole.dashboard,
       appBar: AppBar(
-        title: const Text('OpenClaw 执行中心'),
+        title: Text(context.l10n.openclawHubAppBarTitle),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: DS.spacing12),
@@ -399,12 +400,12 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                   OpenClawMetricPill(
                     icon: Icons.sensors_rounded,
                     label: connection.hasExecutionPermissionIssue
-                        ? '已连接但无执行权限'
+                        ? context.l10n.openclawHubMetricConnectedNoPermission
                         : connection.hasExecutionEndpointIssue
-                            ? '已连接但执行入口异常'
+                            ? context.l10n.openclawHubMetricConnectedEndpointIssue
                             : isGatewayReachable
-                                ? '已连接'
-                                : '未连接',
+                                ? context.l10n.openclawHubMetricConnected
+                                : context.l10n.openclawHubMetricNotConnected,
                     tone:
                         hasExecutionPermissionIssue || hasExecutionEndpointIssue
                             ? OpenClawVisualTone.attention
@@ -415,7 +416,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                   ),
                   OpenClawMetricPill(
                     icon: Icons.schedule_rounded,
-                    label: '${connection.queuedRequestCount} 个排队任务',
+                    label: context.l10n.openclawHubQueuedTasksCount(connection.queuedRequestCount),
                     tone: connection.queuedRequestCount > 0
                         ? OpenClawVisualTone.offline
                         : OpenClawVisualTone.active,
@@ -424,7 +425,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                   if (info.nodeCount != null)
                     OpenClawMetricPill(
                       icon: Icons.hub_rounded,
-                      label: '${info.nodeCount} 个节点',
+                      label: context.l10n.openclawHubNodeCount(info.nodeCount!),
                     ),
                   OpenClawMetricPill(
                     icon: connection.config.transport == 'gateway_ws'
@@ -438,7 +439,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     icon: connection.config.isPaired
                         ? Icons.devices_rounded
                         : Icons.key_rounded,
-                    label: connection.config.isPaired ? '已配对设备' : '令牌认证',
+                    label: connection.config.isPaired ? context.l10n.openclawHubMetricPairedDevice : context.l10n.openclawHubMetricTokenAuth,
                     tone: connection.config.isPaired
                         ? OpenClawVisualTone.connected
                         : OpenClawVisualTone.attention,
@@ -460,7 +461,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                             () => setState(() => _connectionExpanded = true),
                           ),
                           icon: const Icon(Icons.settings_rounded),
-                          label: const Text('继续设置'),
+                          label: Text(context.l10n.openclawHubButtonContinueSetup),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => _focusSection(
@@ -468,7 +469,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                             () => setState(() => _delegateExpanded = true),
                           ),
                           icon: const Icon(Icons.schedule_send_rounded),
-                          label: const Text('查看队列'),
+                          label: Text(context.l10n.openclawHubButtonViewQueue),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => _focusSection(
@@ -476,17 +477,17 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                             () => setState(() => _automationExpanded = true),
                           ),
                           icon: const Icon(Icons.auto_awesome_motion_rounded),
-                          label: const Text('自动化'),
+                          label: Text(context.l10n.openclawHubButtonAutomation),
                         ),
                         TextButton.icon(
                           onPressed: () => context.push('/chat'),
                           icon: const Icon(Icons.chat_bubble_outline_rounded),
-                          label: const Text('进入聊天'),
+                          label: Text(context.l10n.openclawHubButtonEnterChat),
                         ),
                         TextButton.icon(
                           onPressed: () => context.push('/tasks'),
                           icon: const Icon(Icons.task_alt_rounded),
-                          label: const Text('查看任务'),
+                          label: Text(context.l10n.openclawHubButtonViewTasks),
                         ),
                       ],
                     ),
@@ -531,13 +532,13 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
               OpenClawSectionSurface(
                 key: _connectionKey,
                 icon: Icons.link_rounded,
-                title: '连接与控制',
-                subtitle: '先用摘要看清当前连接，再决定是否展开编辑，避免一进来就被整张表单打断。',
+                title: context.l10n.openclawHubSectionConnectionTitle,
+                subtitle: context.l10n.openclawHubSectionConnectionSubtitle,
                 tone: connection.isConnected
                     ? OpenClawVisualTone.connected
                     : OpenClawVisualTone.attention,
                 expanded: _connectionExpanded,
-                toggleLabel: _connectionExpanded ? '收起连接编辑' : '编辑连接方式',
+                toggleLabel: _connectionExpanded ? context.l10n.openclawHubCollapseConnectionEdit : context.l10n.openclawHubExpandConnectionEdit,
                 onToggle: () {
                   setState(() => _connectionExpanded = !_connectionExpanded);
                 },
@@ -551,8 +552,8 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                         OpenClawMetricPill(
                           icon: Icons.public_rounded,
                           label: connection.config.isConfigured
-                              ? connection.config.normalizedGatewayUrl
-                              : '尚未填写网关地址',
+                               ? connection.config.normalizedGatewayUrl
+                              : context.l10n.openclawHubGatewayUrlEmpty,
                           tone: connection.config.isConfigured
                               ? OpenClawVisualTone.active
                               : OpenClawVisualTone.offline,
@@ -576,14 +577,14 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     const SizedBox(height: DS.spacing10),
                     Text(
                       connection.hasExecutionPermissionIssue
-                          ? '这台网关已经能访问，但当前认证没有真正发起执行的权限；更适合先修权限，再统一重试队列。'
+                          ? context.l10n.openclawHubConnectionSummaryPermission
                           : connection.hasExecutionEndpointIssue
-                              ? '网关本身可达，但执行接口还没准备好；先检查 transport 和 `/v1/responses` 会更有效。'
+                              ? context.l10n.openclawHubConnectionSummaryEndpoint
                               : connection.isConnected
-                                  ? '当前连接保持稳定，适合继续使用现有方式直接委派。'
+                                  ? context.l10n.openclawHubConnectionSummaryConnected
                                   : connection.config.isConfigured
-                                      ? '配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。'
-                                      : '第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。',
+                                      ? context.l10n.openclawHubConnectionSummaryConfigured
+                                      : context.l10n.openclawHubConnectionSummaryFirstTime,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -597,20 +598,20 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
               OpenClawSectionSurface(
                 key: _devicesKey,
                 icon: Icons.hub_rounded,
-                title: '设备与亲和性',
-                subtitle: '把“哪类任务优先发到哪台设备”显式配置出来，避免每次都让系统猜你的偏好。',
+                title: context.l10n.openclawHubSectionDevicesTitle,
+                subtitle: context.l10n.openclawHubSectionDevicesSubtitle,
                 tone: (info.nodeCount ?? 0) > 0
                     ? OpenClawVisualTone.active
                     : OpenClawVisualTone.offline,
                 expanded: _devicesExpanded,
-                toggleLabel: _devicesExpanded ? '收起设备详情' : '查看设备与偏好',
+                toggleLabel: _devicesExpanded ? context.l10n.openclawHubCollapseDeviceDetails : context.l10n.openclawHubExpandDeviceDetails,
                 onToggle: () {
                   setState(() => _devicesExpanded = !_devicesExpanded);
                 },
                 summary: Text(
                   (info.nodeCount ?? 0) > 0
-                      ? '当前已发现 ${info.nodeCount} 台节点。你可以在这里为浏览器、终端、文档和接口任务指定偏好设备，离线时 Sparkle 会自动找备用节点。'
-                      : '节点列表会在成功接入 OpenClaw 后自动出现。设备越清晰，后面的多节点调度和降级体验就越稳定。',
+                      ? context.l10n.openclawHubDevicesSummaryActiveWithCount(info.nodeCount!)
+                      : context.l10n.openclawHubDevicesSummaryEmpty,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -622,13 +623,13 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
               OpenClawSectionSurface(
                 key: _delegateKey,
                 icon: Icons.playlist_add_check_circle_rounded,
-                title: '队列与委派',
-                subtitle: '让你先知道现在最该做什么，再决定是否展开看完整队列和模板能力。',
+                title: context.l10n.openclawHubSectionQueueTitle,
+                subtitle: context.l10n.openclawHubSectionQueueSubtitle,
                 tone: connection.queuedRequests.isNotEmpty
                     ? OpenClawVisualTone.offline
                     : OpenClawVisualTone.active,
                 expanded: _delegateExpanded,
-                toggleLabel: _delegateExpanded ? '收起队列详情' : '查看全部队列',
+                toggleLabel: _delegateExpanded ? context.l10n.openclawHubCollapseQueueDetails : context.l10n.openclawHubExpandQueueDetails,
                 onToggle: () {
                   setState(() => _delegateExpanded = !_delegateExpanded);
                 },
@@ -638,13 +639,13 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     Text(
                       connection.isConnected &&
                               connection.queuedRequests.isNotEmpty
-                          ? '你现在最适合先把排队任务重新提交，等引擎把积压处理完再发起新的委派。'
+                          ? context.l10n.openclawHubQueueSummaryConnected
                           : !connection.isConnected &&
                                   connection.queuedRequests.isNotEmpty
-                              ? '你已经把任务排好了，下一步先恢复连接，之后就能一口气继续执行。'
+                              ? context.l10n.openclawHubQueueSummaryNotConnected
                               : connection.isConnected
-                                  ? '当前没有等待中的任务，最适合回到聊天或任务页发起新的委派。'
-                                  : '当前也没有排队任务，可以先完成连接，再决定要不要开始第一笔委派。',
+                                  ? context.l10n.openclawHubQueueSummaryConnectedEmpty
+                                  : context.l10n.openclawHubQueueSummaryNotConnectedEmpty,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -652,9 +653,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     ),
                     const SizedBox(height: DS.spacing12),
                     if (connection.queuedRequests.isEmpty)
-                      const OpenClawMetricPill(
+                      OpenClawMetricPill(
                         icon: Icons.inbox_rounded,
-                        label: '等待队列当前为空',
+                        label: context.l10n.openclawHubQueueEmptyLabel,
                       )
                     else
                       ...connection.queuedRequests.take(3).map(
@@ -684,7 +685,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                             child: OutlinedButton(
                               onPressed: () =>
                                   unawaited(_retryQueuedRequests(connection)),
-                              child: const Text('重试队列'),
+                              child: Text(context.l10n.openclawHubButtonRetryQueue),
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),
@@ -693,7 +694,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                               onPressed: () =>
                                   unawaited(_clearQueuedRequests(connection)),
                               child: Text(
-                                '清空队列',
+                                context.l10n.openclawHubButtonClearQueue,
                                 style: DS.bodyMedium.copyWith(
                                   color: DS.semanticError,
                                 ),
@@ -705,7 +706,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       const SizedBox(height: DS.spacing16),
                     ],
                     Text(
-                      '可用模板 / 能力说明',
+                      context.l10n.openclawHubAvailableTemplates,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: DS.fontWeightBold,
                           ),
@@ -713,7 +714,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     const SizedBox(height: DS.spacing8),
                     if (templateNames.isEmpty)
                       Text(
-                        '模板会在你打开具体任务后按需加载；现在可以先把连接、队列和最近活动整理顺，再回到具体任务开始委派。',
+                        context.l10n.openclawHubTemplatesEmptyHint,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
@@ -739,13 +740,13 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
               OpenClawSectionSurface(
                 key: _automationKey,
                 icon: Icons.auto_awesome_motion_rounded,
-                title: '自动化与批量',
-                subtitle: '把一次性的批量执行和长期的定时/条件执行放进同一个操作台，避免执行能力只停留在单次点击。',
+                title: context.l10n.openclawHubSectionAutomationTitle,
+                subtitle: context.l10n.openclawHubSectionAutomationSubtitle,
                 tone: automation.schedules.isNotEmpty || automation.latestBatch != null
                     ? OpenClawVisualTone.connected
                     : OpenClawVisualTone.active,
                 expanded: _automationExpanded,
-                toggleLabel: _automationExpanded ? '收起自动化详情' : '查看自动化能力',
+                toggleLabel: _automationExpanded ? context.l10n.openclawHubCollapseAutomationDetails : context.l10n.openclawHubExpandAutomationDetails,
                 onToggle: () {
                   setState(() => _automationExpanded = !_automationExpanded);
                 },
@@ -754,8 +755,8 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                   children: [
                     Text(
                       automation.schedules.isEmpty
-                          ? '你还没有任何自动化。展开后可以创建每天定时执行、事件触发或条件轮询，并直接从这里发起批量委派。'
-                          : '当前已有 ${automation.schedules.length} 条自动化在运行。批量委派摘要和定时任务状态也会持续在这里汇总。',
+                          ? context.l10n.openclawHubAutomationSummaryEmpty
+                          : context.l10n.openclawHubAutomationSummaryActiveWithCount(automation.schedules.length),
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -768,7 +769,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       children: [
                         OpenClawMetricPill(
                           icon: Icons.schedule_rounded,
-                          label: '${automation.schedules.length} 条自动化',
+                          label: context.l10n.openclawHubAutomationCount(automation.schedules.length),
                           tone: automation.schedules.isNotEmpty
                               ? OpenClawVisualTone.connected
                               : OpenClawVisualTone.active,
@@ -777,7 +778,10 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                           OpenClawMetricPill(
                             icon: Icons.playlist_add_check_circle_rounded,
                             label:
-                                '最近批量 ${automation.latestBatch!.completedCount}/${automation.latestBatch!.taskIds.length}',
+                                context.l10n.openclawHubLatestBatch(
+                                    automation.latestBatch!.completedCount,
+                                    automation.latestBatch!.taskIds.length,
+                                  ),
                             tone: OpenClawVisualTone.attention,
                           ),
                       ],
@@ -790,19 +794,19 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
               OpenClawSectionSurface(
                 key: _activityKey,
                 icon: Icons.history_rounded,
-                title: '最近活动',
-                subtitle: '用高密度时间线看最近的委派，不需要再在不同任务页之间来回翻找。',
+                title: context.l10n.openclawHubSectionActivityTitle,
+                subtitle: context.l10n.openclawHubSectionActivitySubtitle,
                 tone: latestIntent?.isTerminal ?? false
                     ? OpenClawVisualTone.connected
                     : OpenClawVisualTone.active,
                 expanded: _activityExpanded,
-                toggleLabel: _activityExpanded ? '收起活动详情' : '查看全部活动',
+                toggleLabel: _activityExpanded ? context.l10n.openclawHubCollapseActivityDetails : context.l10n.openclawHubExpandActivityDetails,
                 onToggle: () {
                   setState(() => _activityExpanded = !_activityExpanded);
                 },
                 summary: recentTasks.isEmpty
                     ? Text(
-                        '暂时还没有最近执行。你可以从首页卡牌、任务执行页或聊天入口发起第一笔委派。',
+                        context.l10n.openclawHubActivityEmptyHint,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
@@ -850,7 +854,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                 Padding(
                   padding: const EdgeInsets.only(left: DS.spacing4),
                   child: Text(
-                    '最近一次信任判断：${latestRecord.trustLabel}',
+                    context.l10n.openclawHubLastTrustLabel(latestRecord.trustLabel),
                     style: DS.bodySmall.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -908,7 +912,7 @@ class _QueuePreviewCard extends StatelessWidget {
             Text(
               (request.goal?.trim().isNotEmpty ?? false)
                   ? request.goal!
-                  : '任务 ${request.taskId}',
+                  : context.l10n.openclawHubTaskLabel(request.taskId),
               style: DS.bodySmall.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
@@ -917,8 +921,8 @@ class _QueuePreviewCard extends StatelessWidget {
             Text(
               [
                 if ((request.templateId ?? '').isNotEmpty)
-                  '模板 ${request.templateId}',
-                '来源 ${request.source}',
+                  context.l10n.openclawHubTaskLabelTemplate(request.templateId!),
+                context.l10n.openclawHubTaskLabelSource(request.source),
               ].join(' · '),
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
@@ -982,7 +986,7 @@ class _ActivityTimelineCard extends StatelessWidget {
                     ),
                     const SizedBox(width: DS.spacing8),
                     OpenClawMetricPill(
-                      label: intent?.statusLabel ?? '已记录',
+                      label: intent?.statusLabel ?? context.l10n.openclawHubStatusRecorded,
                       tone: switch (intent?.status) {
                         ExecutionIntentStatus.succeeded =>
                           OpenClawVisualTone.connected,
@@ -1004,7 +1008,7 @@ class _ActivityTimelineCard extends StatelessWidget {
                       ? recordHint!
                       : (intent?.goal.trim().isNotEmpty ?? false)
                           ? intent!.goal
-                          : '可继续查看该任务的执行详情。',
+                          : context.l10n.openclawHubActivityHint,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -1021,7 +1025,7 @@ class _ActivityTimelineCard extends StatelessWidget {
                         '/tasks/${task.id}/execute?origin=${Uri.encodeComponent(_openClawHubOrigin)}',
                       ),
                       icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                      label: const Text('打开任务执行'),
+                      label: Text(context.l10n.openclawHubActivityOpenTask),
                     ),
                   ),
                 ],

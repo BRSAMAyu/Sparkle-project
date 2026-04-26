@@ -34,6 +34,8 @@ _$ErrorRecordImpl _$$ErrorRecordImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => KnowledgeLink.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      affectedNodeId: _nullableStringFromJson(json['affected_node_id']),
+      masteryDelta: _nullableDoubleFromJson(json['mastery_delta']),
       cognitiveTags: (json['cognitive_tags'] as List<dynamic>?)
               ?.map((e) => $enumDecode(_$CognitiveDimensionEnumMap, e))
               .toList() ??
@@ -59,6 +61,8 @@ Map<String, dynamic> _$$ErrorRecordImplToJson(_$ErrorRecordImpl instance) =>
       'last_reviewed_at': instance.lastReviewedAt?.toIso8601String(),
       'latest_analysis': instance.latestAnalysis,
       'knowledge_links': instance.knowledgeLinks,
+      'affected_node_id': instance.affectedNodeId,
+      'mastery_delta': instance.masteryDelta,
       'cognitive_tags': instance.cognitiveTags
           .map((e) => _$CognitiveDimensionEnumMap[e]!)
           .toList(),
@@ -92,6 +96,10 @@ _$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      linkingHint: json['linking_hint'] == null
+          ? null
+          : ErrorLinkingHint.fromJson(
+              json['linking_hint'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
@@ -104,6 +112,23 @@ Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
       'analyzed_at': instance.analyzedAt?.toIso8601String(),
       'similar_traps': instance.similarTraps,
       'recommended_knowledge': instance.recommendedKnowledge,
+      'linking_hint': instance.linkingHint,
+    };
+
+_$ErrorLinkingHintImpl _$$ErrorLinkingHintImplFromJson(
+        Map<String, dynamic> json) =>
+    _$ErrorLinkingHintImpl(
+      code: json['code'] as String,
+      message: json['message'] as String,
+      action: json['action'] as String?,
+    );
+
+Map<String, dynamic> _$$ErrorLinkingHintImplToJson(
+        _$ErrorLinkingHintImpl instance) =>
+    <String, dynamic>{
+      'code': instance.code,
+      'message': instance.message,
+      'action': instance.action,
     };
 
 _$KnowledgeLinkImpl _$$KnowledgeLinkImplFromJson(Map<String, dynamic> json) =>

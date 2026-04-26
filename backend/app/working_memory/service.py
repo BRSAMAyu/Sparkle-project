@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
+from app.core.i18n import I18n
 from app.working_memory.schema import WorkingMemoryEntry, WorkingMemorySnapshotItem
 
 
@@ -322,9 +323,9 @@ class WorkingMemoryService:
     @staticmethod
     def _snapshot_summary(entry: WorkingMemoryEntry) -> str:
         if entry.subject_type == "commitment":
-            return "当前会话里有一条待巩固承诺"
+            return I18n.t("working_memory.commitment_summary", locale="zh")
         if entry.subject_type in {"person_mention", "relationship"}:
-            return "当前会话里提到了一段人际语境"
+            return I18n.t("working_memory.relationship_summary", locale="zh")
         return entry.text[:48]
 
     @staticmethod

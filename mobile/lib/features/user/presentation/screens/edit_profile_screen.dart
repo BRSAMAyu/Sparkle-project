@@ -348,7 +348,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.spacing24),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
           child: GraphiteCardSurface(
             surfaceRole: SparkleSurfaceRole.card,
             child: Column(
@@ -528,7 +528,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               : l10n.editProfileResetPassword,
                           style: const TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: DS.fontWeightMedium,
                           ),
                         ),
                         subtitle: _isSocialAccount
@@ -556,7 +556,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               : l10n.editProfileEmailUnverified,
                           style: const TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: DS.fontWeightMedium,
                           ),
                         ),
                         subtitle: Text(
@@ -670,7 +670,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -683,7 +683,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           title,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),
@@ -708,7 +708,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           label,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),
@@ -774,7 +774,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           label,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),
@@ -843,7 +843,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               value,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
                 color: isDark ? DS.brandPrimary : DS.neutral900,
               ),
               textAlign: TextAlign.end,
@@ -899,7 +899,7 @@ class _AvatarSourceTile extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: DS.spacing4),

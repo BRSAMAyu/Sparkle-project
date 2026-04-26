@@ -11,6 +11,14 @@ String _stringFromJson(Object? value) {
   return value.toString();
 }
 
+String? _nullableStringFromJson(Object? value) {
+  final text = value?.toString();
+  if (text == null || text.isEmpty) {
+    return null;
+  }
+  return text;
+}
+
 int _intFromJson(Object? value) {
   if (value is int) {
     return value;
@@ -22,6 +30,16 @@ int _intFromJson(Object? value) {
     return int.tryParse(value) ?? 0;
   }
   return 0;
+}
+
+double? _nullableDoubleFromJson(Object? value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    return double.tryParse(value);
+  }
+  return null;
 }
 
 Map<String, int> _intMapFromJson(Object? value) {
@@ -59,6 +77,10 @@ class ErrorRecord with _$ErrorRecord {
     @JsonKey(name: 'knowledge_links')
     @Default([])
     List<KnowledgeLink> knowledgeLinks,
+    @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+    String? affectedNodeId,
+    @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+    double? masteryDelta,
     @JsonKey(name: 'cognitive_tags')
     @Default([])
     List<CognitiveDimension> cognitiveTags,
@@ -83,10 +105,24 @@ class ErrorAnalysis with _$ErrorAnalysis {
     @JsonKey(name: 'recommended_knowledge')
     @Default([])
     List<String> recommendedKnowledge,
+    @JsonKey(name: 'linking_hint') ErrorLinkingHint? linkingHint,
   }) = _ErrorAnalysis;
 
   factory ErrorAnalysis.fromJson(Map<String, dynamic> json) =>
       _$ErrorAnalysisFromJson(json);
+}
+
+/// 知识节点关联失败时的引导
+@freezed
+class ErrorLinkingHint with _$ErrorLinkingHint {
+  const factory ErrorLinkingHint({
+    required String code,
+    required String message,
+    String? action,
+  }) = _ErrorLinkingHint;
+
+  factory ErrorLinkingHint.fromJson(Map<String, dynamic> json) =>
+      _$ErrorLinkingHintFromJson(json);
 }
 
 /// 关联知识点

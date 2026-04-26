@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
@@ -100,7 +101,7 @@ class KnowledgeCard extends StatelessWidget {
                     context.go('/galaxy');
                   },
                   icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                  label: const Text('查看详情'),
+                  label: Text(context.l10n.viewDetails),
                 ),
               ),
             ],
@@ -116,16 +117,16 @@ class KnowledgeCard extends StatelessWidget {
 
     if (masteryLevel >= 80) {
       color = context.colors.semanticSuccess;
-      label = '已掌握';
+      label = context.l10n.knowledgeMasteryLevelMastered;
     } else if (masteryLevel >= 50) {
       color = context.colors.brandPrimary;
-      label = '熟练中';
+      label = context.l10n.knowledgeMasteryLevelPracticing;
     } else if (masteryLevel > 0) {
       color = context.colors.brandPrimary;
-      label = '初涉';
+      label = context.l10n.knowledgeMasteryLevelBeginner;
     } else {
       color = context.colors.brandPrimary;
-      label = '未学习';
+      label = context.l10n.knowledgeMasteryLevelUntouched;
     }
 
     return Container(

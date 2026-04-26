@@ -159,6 +159,11 @@ AccountabilityOverviewInfo _$AccountabilityOverviewInfoFromJson(
       relationshipSummary:
           json['relationship_summary'] as Map<String, dynamic>?,
       quickActions: json['quick_actions'] as Map<String, dynamic>? ?? const {},
+      inAppHints: (json['in_app_hints'] as List<dynamic>?)
+              ?.map((e) => AccountabilityInAppHintInfo.fromJson(
+                  e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$AccountabilityOverviewInfoToJson(
@@ -171,6 +176,35 @@ Map<String, dynamic> _$AccountabilityOverviewInfoToJson(
       'leaderboard_summary': instance.leaderboardSummary,
       'relationship_summary': instance.relationshipSummary,
       'quick_actions': instance.quickActions,
+      'in_app_hints': instance.inAppHints,
+    };
+
+AccountabilityInAppHintInfo _$AccountabilityInAppHintInfoFromJson(
+        Map<String, dynamic> json) =>
+    AccountabilityInAppHintInfo(
+      id: json['id'] as String,
+      message: json['message'] as String,
+      type: json['type'] as String?,
+      senderName: json['sender_name'] as String?,
+      senderId: json['sender_id'] as String?,
+      partnershipId: json['partnership_id'] as String?,
+      sourceNotificationId: json['source_notification_id'] as String?,
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
+    );
+
+Map<String, dynamic> _$AccountabilityInAppHintInfoToJson(
+        AccountabilityInAppHintInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'message': instance.message,
+      'sender_name': instance.senderName,
+      'sender_id': instance.senderId,
+      'partnership_id': instance.partnershipId,
+      'source_notification_id': instance.sourceNotificationId,
+      'created_at': instance.createdAt?.toIso8601String(),
     };
 
 PendingPoliciesSummaryInfo _$PendingPoliciesSummaryInfoFromJson(

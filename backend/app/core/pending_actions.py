@@ -90,6 +90,59 @@ class PendingActionsStore:
 
         return action_id
 
+    # Lua script for atomic get-and-delete in Redis
+    _CLAIM_LUA = """
+    local data = redis.call('GET', KEYS[1])
+    if not data then
+        return nil
+    end
+    local parsed = cjson.decode(data)
+    if parsed.user_id ~= ARGV[1] then
+        return nil
+    end
+    redis.call('DEL', KEYS[1])
+    redis.call('SREM', KEYS[2], ARGV[2])
+    return data
+    """
+
+    async def claim(self, action_id: str, user_id: str) -> dict[str, Any] | None:
+        """
+        Atomically get and delete a pending action.
+
+        Prevents concurrent claims of the same action (get-then-delete race).
+        Use this instead of separate get() + delete() when processing an action.
+
+        Args:
+            action_id: Action ID
+            user_id: User ID (ensures only the owner can claim)
+
+        Returns:
+            The action data if claimed, None if not found / already claimed / wrong user
+        """
+        if self.redis:
+            key = f"{self.ACTION_KEY_PREFIX}{action_id}"
+            user_index_key = f"{self.USER_INDEX_PREFIX}{user_id}"
+            raw = await self.redis.eval(
+                self._CLAIM_LUA, 2, key, user_index_key, user_id, action_id
+            )
+            if not raw:
+                return None
+            try:
+                return json.loads(raw) if isinstance(raw, str) else raw
+            except Exception:
+                return None
+        else:
+            action = self._store.pop(action_id, None)
+            if not action:
+                return None
+            if action["expires_at"] < _utcnow():
+                return None
+            if action.get("user_id") != user_id:
+                # Put it back if wrong user
+                self._store[action_id] = action
+                return None
+            return action
+
     async def get(self, action_id: str, user_id: str) -> dict[str, Any] | None:
         """
         获取待确认的操作

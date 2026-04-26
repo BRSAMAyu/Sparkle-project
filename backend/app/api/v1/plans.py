@@ -8,11 +8,12 @@ Plans API Endpoints - Full CRUD operations
 
 from __future__ import annotations
 
-from datetime import timezone, date, datetime
+import json
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Response, status
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, case, desc, func, select
@@ -24,10 +25,18 @@ from app.core.event_bus import event_bus
 from app.core.exceptions import QuotaExceededError
 from app.db.session import get_db
 from app.models.card_protocol import ArtifactType
+from app.models.focus import FocusSession, FocusStatus
 from app.models.plan import Plan, PlanType
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.orchestration.discovery_manager import (
+    PHASE_DESIGN_WORKFLOW_STATE,
+    PHASE_SKETCH_REVIEW_WORKFLOW_STATE,
+    DiscoveryManager,
+)
+from app.orchestration.phase_sketch_service import PhaseSketchService
+from app.orchestration.task_guide_enricher import TaskGuideEnricher
 from app.schemas.plan import (
     PlanCreate,
     PlanDetail,
@@ -38,26 +47,22 @@ from app.schemas.plan import (
     SetPrimaryPlanRequest,
 )
 from app.schemas.task import TaskDetail
+from app.services.card_protocol.feedback_gate_engine import FeedbackGateEngine
+from app.services.card_protocol.global_compass_manager import GlobalCompassManager
+from app.services.card_protocol.phase_design_service import PhaseDesignService
+from app.services.card_protocol.phase_service import PhaseService
+from app.services.card_protocol.planning_memory_service import PlanningMemoryService
+from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_quota_service import PlanQuotaService
 from app.services.plan_service import PlanService, _sync_plan_card_projection
 from app.services.plan_state_service import PlanStateService
-from app.services.card_protocol.phase_service import PhaseService
-from app.services.card_protocol.global_compass_manager import GlobalCompassManager
-from app.services.card_protocol.feedback_gate_engine import FeedbackGateEngine
-from app.services.card_protocol.phase_design_service import PhaseDesignService
-from app.services.card_protocol.planning_memory_service import PlanningMemoryService
 from app.services.planning_artifact_service import PlanningArtifactService
-from app.orchestration.discovery_manager import (
-    PHASE_DESIGN_WORKFLOW_STATE,
-    PHASE_SKETCH_REVIEW_WORKFLOW_STATE,
-    DiscoveryManager,
-)
-from app.orchestration.phase_sketch_service import PhaseSketchService
 from app.services.state_notification_service import state_notification_service
 from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
 
 router = APIRouter()
+_task_guide_enricher = TaskGuideEnricher()
 
 
 class GenerateTasksRequest(BaseModel):
@@ -125,7 +130,7 @@ class FeedbackGateAnswerRequest(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _serialize_plan(
@@ -134,6 +139,8 @@ def _serialize_plan(
     task_count: int,
     completed_task_count: int,
     tasks: list[Task] | None = None,
+    user_display_name: str | None = None,
+    health: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "id": plan.id,
@@ -143,6 +150,8 @@ def _serialize_plan(
         "subject": plan.subject,
         "target_date": plan.target_date,
         "progress": plan.progress,
+        "health_score": None,
+        "health_status": None,
         "mastery_level": plan.mastery_level,
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
@@ -158,9 +167,257 @@ def _serialize_plan(
         "source": plan.source,
         "source_metadata": plan.source_metadata,
     }
+    if health:
+        payload.update(health)
     if tasks is not None:
-        payload["tasks"] = [TaskDetail.model_validate(task).model_dump(mode="json") for task in tasks]
+        task_payloads = [_serialize_task_for_plan_detail(task, subject=plan.subject) for task in tasks]
+        payload["tasks"] = task_payloads
+        payload["day_highlights"] = _build_day_highlights(
+            plan=plan,
+            task_payloads=task_payloads,
+            user_display_name=user_display_name,
+        )
     return payload
+
+
+def _serialize_plan_health(report: PlanHealthReport | None) -> dict[str, Any]:
+    if report is None:
+        return {}
+    score = report.health_score
+    if score is None and isinstance(report.metrics, dict):
+        raw_score = report.metrics.get("health_score")
+        try:
+            score = float(raw_score) if raw_score is not None else None
+        except (TypeError, ValueError):
+            score = None
+    return {
+        "health_score": score,
+        "health_status": report.severity,
+        "health_reasons": list(report.reasons or []),
+        "health_metrics": dict(report.metrics or {}),
+        "requires_adjustment": bool(report.requires_adjustment),
+        "recommended_action": report.recommended_action,
+    }
+
+
+async def _evaluate_plan_health(
+    service: PlanProgressService,
+    *,
+    user_id: UUID,
+    plan_id: UUID,
+) -> dict[str, Any]:
+    try:
+        report = await service.evaluate_progress(user_id, plan_id)
+    except Exception as exc:
+        logger.warning("Failed to evaluate plan health for plan {}: {}", plan_id, exc)
+        return {}
+    return _serialize_plan_health(report)
+
+
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _serialize_task_for_plan_detail(task: Task, *, subject: str | None) -> dict[str, Any]:
+    payload = TaskDetail.model_validate(task).model_dump(mode="json")
+    guide_json = payload.get("guide_json")
+    guide = dict(guide_json) if isinstance(guide_json, dict) else {}
+    if not _strip(guide.get("why_now")):
+        task_kind = _strip(guide.get("task_kind")) or _task_kind_from_tags(payload.get("tags")) or "retrieval_drill"
+        focus = (
+            _strip(guide.get("focus_cue"))
+            or _strip(guide.get("objective"))
+            or _strip(payload.get("guide_content"))
+            or _strip(payload.get("title"))
+        )
+        guide["why_now"] = _task_guide_enricher.build_rule_based_why_now(
+            task_kind=task_kind,
+            subject=_strip(subject) or "当前科目",
+            focus=focus,
+            guide_json=guide,
+        )
+    payload["guide_json"] = guide
+    payload["compressed"] = bool(guide.get("compressed"))
+    payload["compression_reason"] = _strip(guide.get("compression_reason")) or None
+    return payload
+
+
+def _task_kind_from_tags(tags: Any) -> str:
+    if not isinstance(tags, list):
+        return ""
+    known_kinds = {
+        "diagnostic_triage",
+        "retrieval_triage",
+        "retrieval_drill",
+        "retrieval_repair",
+        "mock_review",
+        "diagnostic_map",
+        "closed_book_map",
+        "deep_learn_retrieval",
+        "spaced_retrieval",
+        "integration_retrieval",
+        "stage_mock",
+        "targeted_repair",
+    }
+    for tag in tags:
+        text = _strip(tag)
+        if text in known_kinds:
+            return text
+    return ""
+
+
+def _task_day_from_payload(task_payload: dict[str, Any]) -> int:
+    order_index = task_payload.get("order_index")
+    try:
+        order_value = int(order_index or 0)
+    except (TypeError, ValueError):
+        order_value = 0
+    if order_value >= 1000:
+        return max(1, order_value // 1000)
+    tags = task_payload.get("tags")
+    if isinstance(tags, list):
+        for tag in tags:
+            text = _strip(tag)
+            if text.startswith("day:"):
+                try:
+                    return max(1, int(text.split(":", 1)[1]))
+                except ValueError:
+                    continue
+    return 1
+
+
+def _stored_day_recommendation(plan: Plan, day: int) -> str:
+    metadata = plan.source_metadata if isinstance(plan.source_metadata, dict) else {}
+    highlights = metadata.get("day_highlights")
+    if not isinstance(highlights, dict):
+        return ""
+    try:
+        stored_day = int(highlights.get("day") or 0)
+    except (TypeError, ValueError):
+        stored_day = 0
+    if stored_day == day:
+        return _strip(highlights.get("recommendation") or highlights.get("ai_recommendation"))
+    keyed = highlights.get(str(day))
+    if isinstance(keyed, dict):
+        return _strip(keyed.get("recommendation") or keyed.get("ai_recommendation"))
+    return ""
+
+
+def _build_day_recommendation(
+    *,
+    plan: Plan,
+    day: int,
+    task_payloads: list[dict[str, Any]],
+    user_display_name: str | None,
+) -> str:
+    stored = _stored_day_recommendation(plan, day)
+    display_name = _strip(user_display_name)
+    if stored:
+        if display_name and len(display_name) <= 12 and not stored.startswith(f"{display_name}，"):
+            return f"{display_name}，{stored}"
+        return stored
+    name_prefix = f"{display_name}，" if display_name and len(display_name) <= 12 else ""
+    task_count = max(1, len(task_payloads))
+    thing_label = f"这 {task_count} 件事" if task_count > 1 else "这 1 件事"
+    subject_tail = f"{_strip(plan.subject)} 的第一步就稳下来了" if _strip(plan.subject) else "你已经走在正确路上了"
+    if day == 1:
+        return f"{name_prefix}今天先做好{thing_label}，{subject_tail}。"
+    return f"{name_prefix}先看 Day {day} 的{thing_label}，把节奏稳稳接上。"
+
+
+def _build_day_highlights(
+    *,
+    plan: Plan,
+    task_payloads: list[dict[str, Any]],
+    user_display_name: str | None,
+) -> dict[str, Any] | None:
+    if not task_payloads:
+        return None
+
+    day_groups: dict[int, list[dict[str, Any]]] = {}
+    for task_payload in task_payloads:
+        day = _task_day_from_payload(task_payload)
+        day_groups.setdefault(day, []).append(task_payload)
+
+    highlight_day = 1 if day_groups.get(1) else min(day_groups)
+    highlight_tasks = sorted(
+        day_groups[highlight_day],
+        key=lambda task: (int(task.get("order_index") or 0), _strip(task.get("created_at"))),
+    )
+    return {
+        "day": highlight_day,
+        "recommendation": _build_day_recommendation(
+            plan=plan,
+            day=highlight_day,
+            task_payloads=highlight_tasks,
+            user_display_name=user_display_name,
+        ),
+        "tasks": highlight_tasks,
+    }
+
+
+def _task_day_from_model(task: Task) -> int:
+    try:
+        order_value = int(task.order_index or 0)
+    except (TypeError, ValueError):
+        order_value = 0
+    if order_value >= 1000:
+        return max(1, order_value // 1000)
+    for tag in list(task.tags or []):
+        text = _strip(tag)
+        if text.startswith("day:"):
+            try:
+                return max(1, int(text.split(":", 1)[1]))
+            except ValueError:
+                continue
+    return 1
+
+
+def _strategy_from_plan(plan: Plan) -> dict[str, Any]:
+    description = _strip(plan.description)
+    if not description:
+        return {}
+    try:
+        payload = json.loads(description)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    strategy = payload.get("strategy")
+    return strategy if isinstance(strategy, dict) else {}
+
+
+def _initial_days_for_today(plan: Plan, tasks: list[Task]) -> int:
+    strategy = _strategy_from_plan(plan)
+    for candidate in (
+        strategy.get("actual_days_left"),
+        strategy.get("total_days"),
+        (plan.source_metadata or {}).get("initial_days_left") if isinstance(plan.source_metadata, dict) else None,
+    ):
+        try:
+            parsed = int(float(candidate))
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            return parsed
+    if plan.target_date and plan.created_at:
+        return max((plan.target_date - plan.created_at.date()).days, 1)
+    return max((_task_day_from_model(task) for task in tasks), default=1)
+
+
+def _today_day_index(plan: Plan, tasks: list[Task]) -> int:
+    initial_days = _initial_days_for_today(plan, tasks)
+    max_task_day = max((_task_day_from_model(task) for task in tasks), default=initial_days)
+    if plan.target_date is None:
+        pending_days = [
+            _task_day_from_model(task)
+            for task in tasks
+            if getattr(task.status, "value", task.status) != TaskStatus.COMPLETED.value
+        ]
+        return min(pending_days) if pending_days else max(1, max_task_day)
+    days_left = max((plan.target_date - date.today()).days, 0)
+    derived = max(initial_days - days_left + 1, 1)
+    return min(derived, max(max_task_day, 1))
 
 
 async def _get_plan_card_or_500(db: AsyncSession, plan: Plan, user_id: UUID):
@@ -239,12 +496,18 @@ async def list_plans(
 
     # Enrich with task counts
     plans_data = []
+    progress_service = PlanProgressService(db, cache_service.redis)
     for plan in plans:
         plans_data.append(
             _serialize_plan(
                 plan,
                 task_count=task_counts.get(plan.id, 0),
                 completed_task_count=completed_counts.get(plan.id, 0),
+                health=await _evaluate_plan_health(
+                    progress_service,
+                    user_id=current_user.id,
+                    plan_id=plan.id,
+                ),
             )
         )
 
@@ -337,10 +600,16 @@ async def create_plan(
     task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
     task_count = (await db.execute(task_query)).scalar() or 0
 
+    progress_service = PlanProgressService(db, cache_service.redis)
     return _serialize_plan(
         plan,
         task_count=task_count,
         completed_task_count=0,
+        health=await _evaluate_plan_health(
+            progress_service,
+            user_id=current_user.id,
+            plan_id=plan.id,
+        ),
     )
 
 
@@ -579,6 +848,100 @@ async def advance_plan_phase(
     return {"success": True, "data": payload}
 
 
+@router.get("/{plan_id:uuid}/today", response_model=dict[str, Any])
+async def get_plan_today(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+
+    tasks_result = await db.execute(
+        select(Task)
+        .where(
+            and_(
+                Task.plan_id == plan.id,
+                Task.user_id == current_user.id,
+                Task.not_deleted_filter(),
+            )
+        )
+        .order_by(Task.order_index.asc(), Task.created_at.asc())
+    )
+    tasks = list(tasks_result.scalars().all())
+    today_day = _today_day_index(plan, tasks)
+    today_tasks = [
+        task
+        for task in tasks
+        if _task_day_from_model(task) == today_day
+        and getattr(task.status, "value", task.status) != TaskStatus.ABANDONED.value
+    ]
+    if not today_tasks:
+        today_tasks = [
+            task
+            for task in tasks
+            if getattr(task.status, "value", task.status) != TaskStatus.COMPLETED.value
+            and getattr(task.status, "value", task.status) != TaskStatus.ABANDONED.value
+        ][:1]
+
+    task_payloads = [_serialize_task_for_plan_detail(task, subject=plan.subject) for task in today_tasks]
+    compression_reason = next(
+        (
+            _strip(task.get("compression_reason"))
+            for task in task_payloads
+            if task.get("compressed") and _strip(task.get("compression_reason"))
+        ),
+        None,
+    )
+    return {
+        "plan_id": str(plan.id),
+        "day": today_day,
+        "compressed": any(bool(task.get("compressed")) for task in task_payloads),
+        "compression_reason": compression_reason,
+        "tasks": task_payloads,
+    }
+
+
+@router.get("/active", response_model=PlanDetail | None)
+async def get_active_plan(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_primary(db, current_user.id)
+    if not plan:
+        result = await db.execute(
+            select(Plan)
+            .where(
+                Plan.user_id == current_user.id,
+                Plan.is_active.is_(True),
+            )
+            .order_by(desc(Plan.created_at))
+            .limit(1)
+        )
+        plan = result.scalar_one_or_none()
+    if not plan:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
+    task_count = (await db.execute(task_query)).scalar() or 0
+    completed_query = select(func.count(Task.id)).where(
+        and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
+    )
+    completed_count = (await db.execute(completed_query)).scalar() or 0
+    progress_service = PlanProgressService(db, cache_service.redis)
+    return _serialize_plan(
+        plan,
+        task_count=task_count,
+        completed_task_count=completed_count,
+        health=await _evaluate_plan_health(
+            progress_service,
+            user_id=current_user.id,
+            plan_id=plan.id,
+        ),
+    )
+
+
 @router.get("/{plan_id:uuid}", response_model=PlanDetail)
 async def get_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -601,14 +964,25 @@ async def get_plan(
         and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
     )
     completed_count = (await db.execute(completed_query)).scalar() or 0
-    tasks_result = await db.execute(select(Task).where(Task.plan_id == plan.id).order_by(desc(Task.created_at)))
+    tasks_result = await db.execute(
+        select(Task)
+        .where(and_(Task.plan_id == plan.id, Task.user_id == current_user.id))
+        .order_by(Task.order_index.asc(), Task.created_at.asc())
+    )
     tasks = tasks_result.scalars().all()
 
+    progress_service = PlanProgressService(db, cache_service.redis)
     return _serialize_plan(
         plan,
         task_count=task_count,
         completed_task_count=completed_count,
         tasks=list(tasks),
+        user_display_name=current_user.nickname or current_user.full_name or current_user.username,
+        health=await _evaluate_plan_health(
+            progress_service,
+            user_id=current_user.id,
+            plan_id=plan.id,
+        ),
     )
 
 
@@ -851,9 +1225,7 @@ async def generate_tasks_for_plan(
             task_ids.append(task["id"])
 
     created_tasks_result = await db.execute(
-        select(Task)
-        .where(Task.user_id == current_user.id, Task.id.in_(task_ids))
-        .order_by(desc(Task.created_at))
+        select(Task).where(Task.user_id == current_user.id, Task.id.in_(task_ids)).order_by(desc(Task.created_at))
     )
     created_tasks = created_tasks_result.scalars().all()
     return [TaskDetail.model_validate(task) for task in created_tasks]
@@ -876,6 +1248,20 @@ async def delete_plan(
     # Archive instead of hard delete
     plan.is_active = False
     db.add(plan)
+    if plan.type == PlanType.SPRINT and float(plan.progress or 0.0) < 0.8:
+        try:
+            from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+            await AchievementEngine(db).process_event(
+                str(current_user.id),
+                AchievementEvent.SPRINT_ABANDONED,
+                plan_id=str(plan.id),
+                completion_rate=float(plan.progress or 0.0),
+                abandoned_count=1,
+                source="plan_deleted",
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to publish sprint abandoned achievement for plan {plan.id}: {exc}")
     await db.commit()
 
     # Get task count for notification
@@ -972,6 +1358,15 @@ async def archive_plan_state(
             # SPRINT_STREAK: Always check streak for any completion >=80%
             await engine.process_event(
                 str(current_user.id), AchievementEvent.SPRINT_STREAK, completion_rate=completion_rate
+            )
+        else:
+            await engine.process_event(
+                str(current_user.id),
+                AchievementEvent.SPRINT_ABANDONED,
+                plan_id=str(plan.id),
+                completion_rate=completion_rate,
+                abandoned_count=1,
+                source="plan_archived",
             )
 
     # Get new primary plan info
@@ -1106,13 +1501,29 @@ async def get_plan_progress(
     )
     completed_tasks = (await db.execute(completed_query)).scalar() or 0
 
+    minutes_query = (
+        select(func.coalesce(func.sum(FocusSession.duration_minutes), 0))
+        .join(Task, FocusSession.task_id == Task.id)
+        .where(
+            Task.plan_id == plan.id,
+            FocusSession.user_id == current_user.id,
+            FocusSession.status == FocusStatus.COMPLETED,
+        )
+    )
+    total_minutes_spent = int((await db.execute(minutes_query)).scalar() or 0)
+    progress_service = PlanProgressService(db, cache_service.redis)
+    health = await _evaluate_plan_health(progress_service, user_id=current_user.id, plan_id=plan.id)
+
     return {
         "plan_id": plan.id,
         "progress": plan.progress,
         "mastery_level": plan.mastery_level,
+        "health_score": health.get("health_score"),
+        "health_status": health.get("health_status"),
+        "health_reasons": health.get("health_reasons", []),
         "total_tasks": total_tasks,
         "completed_tasks": completed_tasks,
-        "total_minutes_spent": 0,  # Would be calculated from focus sessions
+        "total_minutes_spent": total_minutes_spent,
         "estimated_remaining_hours": plan.total_estimated_hours or 0,
     }
 
@@ -1187,11 +1598,17 @@ async def get_primary_plan(current_user: User = Depends(get_current_user), db: A
     )
     completed_count = (await db.execute(completed_query)).scalar() or 0
 
+    progress_service = PlanProgressService(db, cache_service.redis)
     return {
         "plan": _serialize_plan(
             plan,
             task_count=task_count,
             completed_task_count=completed_count,
+            health=await _evaluate_plan_health(
+                progress_service,
+                user_id=current_user.id,
+                plan_id=plan.id,
+            ),
         )
     }
 
@@ -1314,8 +1731,9 @@ async def get_learning_path_progress(
             "overall_progress": 0.0,
         }
 
-    from app.models.galaxy import KnowledgeNode, UserNodeStatus
     from sqlalchemy import or_
+
+    from app.models.galaxy import KnowledgeNode, UserNodeStatus
 
     nodes_result = await db.execute(select(KnowledgeNode).where(KnowledgeNode.id.in_(path_node_ids)))
     nodes = {str(n.id): n for n in nodes_result.scalars().all()}

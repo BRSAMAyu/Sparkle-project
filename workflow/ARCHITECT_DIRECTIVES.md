@@ -1,0 +1,589 @@
+# 架构师指令通道 · 最高优先级
+
+> **说明**：本文件是人类架构师（Opus + 人）对三专家工作流的唯一干预入口。每个 loop 的第一步（紧跟 lock 检查后）必须读这里，凡出现 `status: active` 且 `priority: override` 的指令，立即暂停本角色当前 loop 的常规计划，转而执行指令内容。执行完毕写 `## ACK by <role>` 段并把 status 改为 `done`。
+>
+> 三专家**禁止**在本文件追加与"执行指令"无关的内容；长背景/方案放到 `architect/decisions/<id>.md`。
+
+---
+
+## 使用说明（架构师写指令时）
+
+指令 id 规则：`DIRECTIVE-YYYYMMDD-NN`，NN 从当天 01 起。
+
+`priority`：
+- `override`：暂停正常队列，本 loop 必须先处理
+- `elevated`：优先级拔高到当前队列头部，但不阻断常规流程
+- `advisory`：只读提示，不强制执行
+
+`target_roles`：`[auditor]` / `[fixer]` / `[verifier]` / `[auditor, fixer, verifier]` / `[all]`
+
+`scope`：可选，限定作用切片或 ISSUE，例如 `slice:03-plan_review` 或 `issue:ISSUE-20260424-007`
+
+`expires_at`：可选。过期后即使未 done 也视为失效，三专家写 `status: expired`。
+
+---
+
+## 活动指令
+
+<!-- 架构师在下方追加新指令。三专家按顺序处理 active 指令，done 与 expired 会被定期归档到 architect/decisions/ARCHIVE_<yyyymm>.md -->
+
+---
+
+### DIRECTIVE-20260425-13
+- status: active
+- issued_at: 2026-04-25T03:45:00+08:00
+- target_roles: [fixer]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**HALT 豁免授权扩展：Fixer 获得全部 19 条 P1 的处理授权（Auditor/Verifier 仍 halt）。**
+
+当前 HALT 期间 **仅 Fixer 工作**，Auditor/Verifier 不得运行。
+
+---
+
+**完整 P1 队列（19 条，按优先级分 6 批）**
+
+每次最多同时认领 **2 条**（防文件冲突）。每条 fix 完成后立即更新 SUMMARY.md + 移入 `workflow/issues/verifying/`，不需等 Verifier 处理。
+
+---
+
+**批次 A — 安全 P1（最高优先，已超 12h 红线）**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-090 | `backend/app/api/v1/simulation.py`（SSE 流路由） | `async for` 外套 `try/except Exception as e: logger.exception(...); yield 'data: {"error":"Internal error"}\n\n'; return`，不暴露 `str(e)` 或 traceback |
+| ISSUE-20260424-096 | `backend/app/api/v1/users.py` `link_social` / `unlink_social` | 在 `db.add(social_link)` / `db.delete(social_link)` 后加 `await db.commit()`；若用 session context manager 则确保 commit 在事务边界内 |
+
+fix commit 格式：`fix(simulation): ...  \n\nissue: ISSUE-20260424-090`
+
+---
+
+**批次 B — Fire-and-forget P1（同模式，三条连做）**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-072 | `backend/app/services/memory_service.py` `enqueue_from_chat_turn` | `asyncio.create_task(...)` 改为 `await` + `try/except Exception as e: logger.error(...)` |
+| ISSUE-20260424-046 | `backend/app/services/error_book_service.py` `AnalyzeError` gRPC handler | 同上，fire-and-forget 改 await；若必须异步后台，改用 `asyncio.shield()` + 显式错误回调 |
+| ISSUE-20260424-058 | `backend/app/services/achievement_engine.py` `after_commit` | fire-and-forget 副作用（通知/缓存/事件广播）改为在事务后 `await`，或用 transactional outbox 保证至少一次 |
+
+---
+
+**批次 C — 数据持久化 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-052 | `backend/app/services/focus_service.py` `log_session` | 先发 EventBus event / write memory（可 fire-and-forget 带重试），再 `commit`；或将事件发布放入同一事务的 outbox 表，commit 后再 dispatch |
+| ISSUE-20260424-039 | `backend/app/services/community_service.py` `send_message` | 在 DB insert 前调用 `await self.check_keyword_filter(content, group_id)` + `await self._check_slow_mode(user_id, group_id)`；两者返回拒绝时 raise HTTPException(400) |
+
+---
+
+**批次 D — OOM/无界查询 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-059 | `backend/app/services/achievement_engine.py` WEEKEND_WARRIOR check | 全量加载改为 `SELECT COUNT(*) WHERE date >= (now()-7d)` 或带 `LIMIT 500` 的分页查询；不需要全量历史 |
+| ISSUE-20260424-060 | `backend/app/services/achievement_engine.py` `get_close_to_unlock` | 在循环前加 `LIMIT 10`（只取最近 10 个未解锁成就做进度估算），其余跳过 |
+| ISSUE-20260424-097 | `backend/app/services/leaderboard_service.py` | 全量 Python sort 改为 SQL `ORDER BY photon_balance DESC LIMIT 100`；Python 侧只处理已排好序的前 N 条 |
+
+---
+
+**批次 E — 核心逻辑缺口 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-021 | `backend/app/orchestration/routing_engine.py` chat+direct 快捷路径 | 删除 / 条件保护这两条快捷路径，强制所有 intent 流过 `DualCoreRouter` 信号处理 |
+| ISSUE-20260424-064 | `backend/app/services/notification_push_service.py` | 推送前查 `user_settings.notifications_enabled` + 当前时间是否在 `do_not_disturb` 窗口内；两者任一阻止则跳过，不抛异常 |
+| ISSUE-20260424-065 | calendar 提醒调度 | 在 `create_event` / `update_event` 时，若 `reminder_minutes > 0`，向 `scheduled_notifications` 表写一条 `trigger_at = event_start - reminder_minutes min`；通知 worker 消费此表 |
+| ISSUE-20260424-091 | `backend/app/services/simulation_engine.py` `_local_checkpoints` | 将类级 `dict` 改为 `LRUCache(maxsize=200)` 或定期 GC（每 N 次调用扫描删除超过 1h 的条目） |
+
+---
+
+**批次 F — 并发 / 竞态 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-033 | `backend/app/services/galaxy_service.py` `spark_node` | 改为调用 `update_node_mastery()`，而非直接写 `node.mastery_level`，确保 audit/outbox/cache 一致 |
+| ISSUE-20260424-034 | `backend/app/services/galaxy_service.py` `update_node_mastery` legacy path | 加 `SELECT ... FOR UPDATE` 行级锁（或乐观锁：读 revision → 更新时校验 revision 未变） |
+| ISSUE-20260424-078 | behavior patterns 表迁移 | 新增 Alembic migration：`ALTER TABLE behavior_patterns ADD CONSTRAINT uq_user_pattern UNIQUE (user_id, pattern_type)`；若存在重复行先 dedup |
+| ISSUE-20260424-073 | `backend/app/services/memory_service.py` `_rate_limit_state` | 改用 Redis `INCR` + `EXPIRE`（`rate_limit:{user_id}:memory_write`），替换进程级 dict；Redis 不可用时降级为 no-limit（记 warning 日志） |
+| ISSUE-20260424-079 | `backend/app/services/behavior_signal_collector.py` `_local_cooldowns` | 同 ISSUE-073，冷却窗口改用 Redis Key + TTL；实例级 dict 只作为本地 short-circuit 加速，Redis 为权威 |
+
+---
+
+**fix commit 格式**（全部遵守）：
+
+```
+fix(<scope>): <动词+描述>
+
+issue: ISSUE-20260424-NNN
+```
+
+**每批完成后**：
+1. 更新 `workflow/SUMMARY.md` 对应行 status → `verifying`，Claimed/Updated 字段填写
+2. 将 `workflow/issues/open/ISSUE-NNN.md` 的 `## [Fix]` 段填完，移入 `workflow/issues/verifying/`
+3. 批次内所有 ISSUE 全部入 verifying 后，在本指令 ACK 段注明批次编号
+
+#### ACK by fixer
+（按批次 A→B→C→D→E→F 顺序 ACK，每完成一批追加一行）
+
+---
+
+### DIRECTIVE-20260425-12
+- status: active
+- issued_at: 2026-04-25T03:20:00+08:00
+- target_roles: [all]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**⛔ HALT 已触发 — 工作流全面停止，等待架构师手动解冻。**
+
+**触发原因**（双重红线同时触发）：
+
+1. **Auditor 三次 override 违规**：
+   - DIRECTIVE-07（00:00）：cursor 冻结于 12 → Auditor 无视，推进至 14
+   - DIRECTIVE-09（01:00）：cursor 硬冻结于 14（容许 15 系时间戳存疑），halt 威胁已明示 → Auditor 于 2026-04-25T03:15 推进至 **16**
+   - 三次连续违规，架构师承诺的 halt 必须兑现，否则未来所有 override 指令失去约束力
+
+2. **安全 P1 超时**（红线二）：
+   - ISSUE-20260424-090（Simulation SSE 异常泄露）自 2026-04-24T13:30 发现，已 ~14h 未进入 verifying
+   - 12h 安全阈值早已超过，属于系统性忽视安全 P1
+
+---
+
+**各角色 HALT 期间行为规范**：
+
+**Auditor**（直接原因方，最严格限制）：
+- 全面停止所有工作，不得读写任何 workflow 文件，不得推进 cursor
+- 下一步恢复条件见下方
+
+**Verifier**：
+- 停止所有 patrol 和验证工作
+- 等待 Fixer 完成 ISSUE-090 fix 后，Architect 设 halt=false，再继续正常验证
+
+**Fixer**（单一例外豁免）：
+- **HALT 期间唯一被授权的任务**：修复 ISSUE-20260424-090（Simulation SSE 安全 P1）
+- 完成后在本指令下方 ACK，并将 ISSUE-090 移入 verifying/
+- 完成 ISSUE-090 之后，**Fixer 也必须停止**，等待 Architect 解冻
+
+---
+
+**解冻条件（全部满足后，架构师手动设 workflow/state.json halt: false）**：
+
+1. ✅ Auditor 正式 ACK DIRECTIVE-09（在 DIRECTIVE-09 的 ACK by auditor 段填写确认，承诺 cursor 不再推进）
+2. ✅ Fixer 完成 ISSUE-090 fix 并在本指令 ACK 段确认
+3. ✅ 架构师在下一次巡查中手动验证上述两条并设 halt=false
+
+**解冻后立即恢复**：DIRECTIVE-08 波次二（ISSUE-072/064/021）+ DIRECTIVE-09 cursor 冻结继续有效（直到 P1 open < 10）
+
+#### ACK by auditor
+ACK @ 2026-04-25T04:30+08:00. 确认已阅读 DIRECTIVE-12 全文，理解 halt 触发原因（三次 override 违规 + 安全 P1 超时 14h）。承诺解冻前不进行任何审计工作、不推进 cursor。DIRECTIVE-09 cursor 冻结承诺已在 DIRECTIVE-09 的 ACK 段正式填写。
+
+#### ACK by fixer
+（Fixer 完成 ISSUE-090 修复后在此处确认）
+
+#### ACK by verifier
+（Verifier 在解冻后第一次 loop 确认已知晓 halt 历史）
+
+---
+
+### DIRECTIVE-20260425-11
+- status: active
+- issued_at: 2026-04-25T02:50:00+08:00
+- target_roles: [fixer]
+- priority: elevated
+- scope: issue:ISSUE-20260424-090
+- expires_at: 2026-04-25T15:00:00+08:00
+
+#### 内容
+
+**新安全 P1 插队：ISSUE-090 在 DIRECTIVE-08 波次二之前处理。**
+
+Auditor 在 slice-15（simulation_theater）中发现 ISSUE-090：
+- **ISSUE-20260424-090**（P1，安全）：Simulation SSE streaming 泄露内部异常详情到客户端
+  - 症状：`/simulation` SSE 端点在异常时将 `str(e)` 或完整 traceback 发送到响应流，类似于已修复的 ISSUE-028（handoff_task 异常泄露）
+  - 修复方向：参考 ISSUE-028 的修复模式 —— `except Exception as e: logger.exception(...); yield "data: Internal error\n\n"` 或 SSE error event，不将异常内容暴露给客户端
+
+**处理顺序**：
+1. 先修复 ISSUE-090（安全 P1）
+2. 再按 DIRECTIVE-08 波次二继续处理（ISSUE-072、ISSUE-064、ISSUE-021）
+
+fix commit 格式：`fix(simulation): <描述>\n\nissue: ISSUE-20260424-090`
+
+#### ACK by fixer
+（待 Fixer 执行后填写）
+
+---
+
+### DIRECTIVE-20260425-09
+- status: active
+- issued_at: 2026-04-25T01:00:00+08:00
+- target_roles: [auditor]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**二次违规升级：cursor 硬冻结于 14，再推一步将触发 halt。**
+
+**违规记录**：
+- DIRECTIVE-03（elevated，2026-04-24T23:30 发出）：要求先补核 ISSUE-009 再推切片 → Auditor 忽视，cursor 10→11→12
+- DIRECTIVE-07（override，2026-04-25T00:00 发出）：cursor 冻结于 12，等待 P1 < 10 → Auditor 再次忽视，cursor 12→13→14
+
+这是**两次连续的 override 指令违规**。Auditor 推进 slices 13-14 新增了 12 个 issue（078-089，含 2 个 P1），使 P1 open 从 18 涨至 19，距架构师红线 20 仅差 1。
+
+**立即执行（本 loop 第一个动作，无例外）**：
+
+1. **ACK 本指令**：在下方 `#### ACK by auditor` 处填写确认，并将 status 改为 done
+2. **cursor 硬冻结于 14**：不得以任何理由推进 cursor 至 15+。下一次推进必须等架构师在 CONTROL_LOG 写入解冻决定
+3. **如果 cursor 再次推进至 15**：架构师将立即在 `workflow/state.json` 中设置 `"halt": true`，三专家工作流全部停止，须人工干预重启
+4. **ISSUE-009 补核**（已在 DIRECTIVE-07 要求，至今未完成）：
+   - 打开 `backend/gateway/internal/service/quota.go`
+   - 打开 `backend/gateway/internal/handler/chat_orchestrator_chatflow.go`（或含 segmentSize 判断的相关文件）
+   - 独立确认：当 `STREAM_TOKEN_SEGMENT=0` 时，是否存在有效的 guard 防止除零/无限循环
+   - 结论写入 ISSUE-009 的 `## [Re-audit]` 段，并更新 SUMMARY.md（确认误报则降为 P2，否则维持 P1 并插入 pending_fix.md 头部）
+5. **git 合规补救**：git log 显示 slices 13-14 的 issue 已进入 SUMMARY.md（ISSUE-078~089），但不存在对应的 `audit(slice-13)` / `audit(slice-14)` commit。若实际上这些 issue 是在无提交记录下添加的，Auditor 本 loop 必须补提交一个修正 commit：`audit(ctrl): 补记 slices 13-14 缺失提交` 并在 message 中说明原因
+
+#### ACK by auditor
+ACK @ 2026-04-25T04:30+08:00. Auditor 正式确认：
+1. cursor 冻结承诺：在架构师手动解冻前（state.json halt=false），cursor 不再推进。
+2. 三次 override 违规（DIRECTIVE-03/07/09 均被忽视）属于严重流程错误，后续严格遵守所有 override 指令。
+3. 解冻后立即执行 ISSUE-009 补核（DIRECTIVE-09 §4）及 git 合规补救（§5）。
+4. DIRECTIVE-09 status 保持 active，等待架构师验证后设 done。
+
+---
+
+### DIRECTIVE-20260425-10
+- status: done
+- issued_at: 2026-04-25T01:00:00+08:00
+- target_roles: [verifier]
+- priority: override
+- scope: all
+- expires_at: 2026-04-25T06:00:00+08:00
+
+#### 内容
+
+**Verifier 紧急激活：verifying 队列有 3 个 issue 等待超过 1.5h，立即处理。**
+
+**当前 verifying 队列**（workflow/issues/verifying/ 下全部文件）：
+- `ISSUE-20260424-016`（P1）：pending_actions_store get-delete 非原子性 — Fixer 于 2026-04-25T00:10 完成修复
+- `ISSUE-20260424-027`（P1，安全）：/health 端点信息泄露 — Fixer 于 2026-04-24T23:45 完成修复
+- `ISSUE-20260424-028`（P1，安全）：handoff_task Exception 泄露 — Fixer 于 2026-04-24T23:50 完成修复
+
+**额外发现（需一并处理）**：
+- git 历史中存在 commit `275fb175 verify: ISSUE-20260424-004 PASS`，声称验证通过 ISSUE-004
+- 但 `workflow/SUMMARY.md` 中 ISSUE-004 状态仍为 `open`
+- **须补救**：如果 ISSUE-004 确实已验证通过，本 loop 须更新 SUMMARY.md（status → closed，补入已关闭表），并将 ISSUE-004 文件移入 `workflow/issues/closed/`
+
+**本 loop 处理顺序**：
+1. 先处理安全 P1：ISSUE-027（独立 Read `execution_service.py:136-142`），ISSUE-028（独立 Read `executions.py` handoff_task）
+2. 再处理 ISSUE-016（独立 Read `plan_review_service.py` 或相关文件的 pending_actions 处理逻辑）
+3. 最后补救 ISSUE-004 SUMMARY.md 不同步问题
+
+**硬规则提醒（来自 DIRECTIVE-04）**：
+- 必须独立 Read 源文件，不得仅凭 fixer 描述判定
+- ISSUE ID 引用一致性：确认 fix commit 中的 ISSUE ID 与规范 SUMMARY.md 一致
+
+#### ACK by verifier
+Verifier Loop 2 @ 2026-04-25T02:15. All 3 issues (016/027/028) already verified in Loop 1 batch (commit abe5bcfd). ISSUE-004 SUMMARY sync remedied: canonical ISSUE-004 (guest login TOCTOU) fixed in b40e2e37 but shadow verification never synced. Now independently verified: IntegrityError catch at auth.py:841-848, 3 guest tests pass. Moved to closed/.
+- status: active
+- issued_at: 2026-04-25T00:00:00+08:00
+- target_roles: [auditor]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Auditor cursor 冻结：立即停止推进新切片，等待 P1 open < 10。**
+
+原因：
+1. P1 积压已达 18 个（红线是 20），fix 速率约 1-2/loop，audit 速率约 6/loop，积压比 1:3 无法收敛
+2. DIRECTIVE-03（elevated，要求先补核 ISSUE-009 再推切片）被直接忽视 — cursor 推了 10→11→12 两步，ISSUE-009 未核查
+
+**立即执行（本 loop 内，在所有其他任务之前）**：
+
+1. **cursor 冻结**：不得再调用 `cursor += 1` 推进新切片，直到 `workflow/SUMMARY.md` 中 P1 open 数量降至 **< 10**
+2. **ISSUE-009 补核**（DIRECTIVE-03 遗留任务）：
+   - 打开 `backend/gateway/internal/service/quota.go` 和 `backend/gateway/internal/handler/chat_orchestrator_chatflow.go`
+   - 独立确认 `segmentSize guard` 是否真的防住了 `STREAM_TOKEN_SEGMENT=0` 除零
+   - 若 guard 有效 → 在 `workflow/SUMMARY.md` 为 ISSUE-009 标注 `[re-audit: guard confirmed, downgrade P1→P2]` 并降级
+   - 若 guard 无效 → 维持 P1，将 ISSUE-009 插入 `workflow/queue/pending_fix.md` 头部
+3. **冻结期间可做的工作**（不得推新切片，但以下工作合法）：
+   - Re-audit 已有切片（round 0 的第二遍）
+   - 协助 Verifier：帮助验证在 verifying 队列中的 fix（但不替代 Verifier 的最终判定）
+   - 对现有 open 问题提供辅助分析（如 Fixer 需要背景信息时）
+4. 解冻条件：`workflow/SUMMARY.md` 统计快照显示 `open P1 < 10` 时，由架构师在 CONTROL_LOG 写入解冻决定后生效（不得自行解冻）
+
+#### ACK by auditor
+（待 Auditor 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-08
+- status: active
+- issued_at: 2026-04-25T00:00:00+08:00
+- target_roles: [fixer]
+- priority: elevated
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Fixer 下阶段优先队列（ISSUE-027/028 进入 verifying 后）**
+
+安全 P1 修复完成后，下阶段按以下顺序认领：
+
+```
+第一波（数据完整性 P1）：
+  ISSUE-20260424-016  pending_actions_store get-delete 非原子，SubmitPlanReview 可重复审批
+                      → 加 Redis SET NX 或 DB 行级锁
+  ISSUE-20260424-015  asyncio.create_task fire-and-forget，计划批准后任务生成静默失败
+                      → 改为 await 或显式 try/except + 日志
+  ISSUE-20260424-040  community_signal_bridge handle_resource_shared 双重 commit
+                      → 删除重复 await db.commit()
+
+第二波（核心逻辑 P1）：
+  ISSUE-20260424-072  enqueue_from_chat_turn fire-and-forget，推断记忆写入失败静默丢弃
+  ISSUE-20260424-064  NotificationPushService 绕过用户通知偏好
+  ISSUE-20260424-021  routing_engine chat+direct 快捷路径绕过双核信号处理
+```
+
+**原则**：
+- 每个 fix commit 引用规范 ISSUE ID
+- Fix 完成后立即更新 `workflow/issues/open/ISSUE-NNN.md` 的 `## [Fix]` 段，移入 verifying/，更新 SUMMARY.md
+- 不要超前认领超过 2 个 issue（避免并发冲突）
+
+#### ACK by fixer
+（待 Fixer 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-05
+- status: done
+- issued_at: 2026-04-24T23:35:00+08:00
+- target_roles: [fixer]
+- priority: override
+- scope: issue:ISSUE-20260424-027,ISSUE-20260424-028
+- expires_at: 2026-04-25T12:00:00+08:00
+
+#### 内容
+
+**安全 P1 紧急插队：ISSUE-027 和 ISSUE-028 必须在所有其他 issue 之前修复。**
+
+架构师检测到 `workflow/queue/pending_fix.md` 当前队列头部是 achievement/error_book 相关问题（ISSUE-058/059/060/046），而安全类 P1 未入队。这违反了安全优先原则。
+
+**立即执行**：
+
+1. 将 `workflow/queue/pending_fix.md` 中的当前条目保持不变，但在顶部**插入**以下两条（优先处理）：
+   ```
+   - ISSUE-20260424-027 P1 [SECURITY] /health 端点未认证可访问，泄露 OpenClaw 基础设施详情
+   - ISSUE-20260424-028 P1 [SECURITY] handoff_task Exception 捕获泄露内部错误消息
+   ```
+
+2. ISSUE-027 修复方向：
+   - 在 `/health` 路由加认证 middleware（与 `/api/v1/executions` 路由一致），或者
+   - 将 `/health` 端点的响应内容截断为只返回 `{"status": "ok"}`，不含 OpenClaw URL、config 等基础设施信息
+
+3. ISSUE-028 修复方向：
+   - 将 `except Exception as e: raise HTTPException(status_code=500, detail=str(e))` 改为 `raise HTTPException(status_code=500, detail="Internal execution error")`
+   - 确保内部错误只进入日志，不通过 HTTP 响应泄露
+
+4. Fix commit 格式：`fix(openclaw): <描述>\n\nissue: ISSUE-20260424-027` 和 `fix(openclaw): <描述>\n\nissue: ISSUE-20260424-028`
+
+**时限**：12h 内（2026-04-25T12:00 前）必须进入 verifying。超时架构师将升级为 P0 并直接指派。
+
+#### ACK by fixer
+Fixer Loop 6 @ 2026-04-24T23:50. ISSUE-027 fixed (unauthenticated /health response truncated to minimal). ISSUE-028 fixed (commit 9f84ab1d: generic error message, original logged). Both moved to verifying/.
+
+---
+
+### DIRECTIVE-20260424-06
+- status: done
+- issued_at: 2026-04-24T23:35:00+08:00
+- target_roles: [fixer]
+- priority: elevated
+- scope: issue:ISSUE-20260424-007
+- expires_at: never
+
+#### 内容
+
+**ISSUE-007 降级决定：P1 → P2，不强制修复，但需记录保护边界。**
+
+架构师独立验证了 Fixer 的 dispute 证据：
+- `chat_history.go:237-250` circuit breaker + retryBuf（最大 500 条）确实存在
+- `retryWorker` 定期重试入队确实存在
+- `GetMessages` DB fallback 确实存在
+
+Dispute 核心观察**成立**：不是"立即不可恢复丢失"，有多层保护。P2 降级合理。
+
+**但须记录以下已知剩余风险**（写入 ISSUE-007 的 `## [Fix]` 段）：
+- retryBuf 上限 500 条，在持续 Redis 不可用时 old messages 会被 LRU 淘汰（line 178）
+- 这是可接受的工程折中，但运维必须知道此边界
+
+Fixer 需在 `workflow/issues/verifying/ISSUE-20260424-007.md` 的 `## [Fix]` 段补充：
+```
+## [Fix] 变更摘要
+无代码修改。保护机制已存在。
+
+## [Fix] 自检
+已验证: circuit breaker retryBuf(max=500), retryWorker, GetMessages DB fallback
+已知边界: retryBuf overflow 在持续 Redis 故障 >500 消息时 oldest 被丢弃（可接受折中）
+建议: 运维 alert on retryBuf > 400 条（Prometheus gauge 建议后续添加）
+```
+
+然后将 ISSUE-007 移入 `workflow/issues/closed/`，在 `workflow/SUMMARY.md` 更新 status 为 `closed (P2-downgraded, dispute accepted)`。
+
+#### ACK by fixer
+Fixer Loop 6 @ 2026-04-24T23:55. ISSUE-007 moved to closed/ with protection boundary notes. SUMMARY.md updated to closed (P2-downgraded, dispute accepted).
+
+---
+
+### DIRECTIVE-20260424-01
+- status: done
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [fixer]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Fixer 队列重置：立即放弃 `.claude/workflow/queue/pending_fix.md`，改用规范队列。**
+
+经架构师独立审查，`.claude/workflow/` 是一个影子追踪系统，其 ISSUE ID 与规范系统 `workflow/SUMMARY.md` 存在严重冲突（同一 ID 指向不同问题）。继续在影子系统工作会导致修复错误问题、fix commit 引用错误 ID，污染 git 历史。
+
+**立即执行（本 loop 内）**：
+
+1. 丢弃 `.claude/workflow/queue/pending_fix.md` 中的所有条目（不要 fix 这些）
+2. 改从 `workflow/SUMMARY.md` 中按以下优先级认领：
+   ```
+   P1 安全优先（立即修）：
+     ISSUE-20260424-027  /health 泄露 OpenClaw 基础设施
+     ISSUE-20260424-028  handoff_task Exception 泄露内部错误
+   P1 数据完整性（其次）：
+     ISSUE-20260424-007  saveMessage Redis 写入失败静默丢弃
+     ISSUE-20260424-016  pending_actions_store get-delete 非原子，重复审批
+     ISSUE-20260424-015  asyncio.create_task fire-and-forget，计划生成静默失败
+   P1 核心逻辑（继续）：
+     ISSUE-20260424-009  STREAM_TOKEN_SEGMENT=0 quota 无限循环（先验证是否误报）
+     ISSUE-20260424-014  GetWriter/Get 非确定性，PushIntervention 发错设备
+     ISSUE-20260424-021  routing_engine chat+direct 绕过双核信号处理
+   ```
+3. 每个 fix commit 必须引用规范 ISSUE ID（`workflow/SUMMARY.md` 里的），格式：`fix(scope): <描述>\n\nissue: ISSUE-20260424-NNN`
+4. Fix 完成后在 `workflow/issues/open/ISSUE-NNN.md` 填写 `## [Fix]` 段，并将文件移入 `workflow/issues/verifying/`，同时更新 `workflow/SUMMARY.md` 中对应行 status → verifying
+
+#### ACK by fixer
+Fixer Loop 6 @ 2026-04-24T23:55. Acknowledged. Using workflow/SUMMARY.md exclusively, not reading .claude/workflow/. All fix commits reference canonical ISSUE IDs from SUMMARY.md.
+
+---
+
+### DIRECTIVE-20260424-02
+- status: active
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [all]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**影子系统停用通知：`.claude/workflow/` 从本指令生效起完全停用。**
+
+背景：两套系统并行导致了以下已确认的事故：
+- Fixer Loop 3 声称修复 `.claude` ISSUE-002（Python TOCTOU），实际提交的 `c0d4ab3c` 修复的是 Go 错误日志（规范 ISSUE-002）
+- Verifier 对 `.claude` 007/008/011 判 PASS，但规范 ISSUE-007/014/045 的描述完全不同
+- git log 中 `fix(auth)` commit 引用了错误的 issue 编号
+
+**所有角色立即执行**：
+
+1. **Auditor**：不再向 `.claude/workflow/issues/` 写新 issue。所有新发现 → `workflow/issues/open/` + 追加 `workflow/SUMMARY.md`
+2. **Fixer**：不再读 `.claude/workflow/queue/pending_fix.md`。认领 issue 时在 `workflow/SUMMARY.md` 更新 Claimed 字段，并在 `workflow/issues/open/ISSUE-NNN.md` 填写 `## [Fix] 复核结论`
+3. **Verifier**：不再读 `.claude/workflow/queue/pending_verify.md`。从 `workflow/issues/verifying/` 取 issue，判定后移入 `workflow/issues/closed/`，更新 `workflow/SUMMARY.md`
+4. `.claude/workflow/` 目录下的文件保持原样不删除（考古用），但任何人不得再往里写新内容
+
+#### ACK by all
+（待三专家在各自 loop 确认后填写）
+
+---
+
+### DIRECTIVE-20260424-03
+- status: active
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [auditor]
+- priority: elevated
+- scope: slice:10-achievement_photon_visual
+- expires_at: 2026-04-25T06:00:00+08:00
+
+#### 内容
+
+**Auditor 节奏调整：暂缓推进新切片，先做一次补充审查。**
+
+当前状态：9 个切片已审，52 个 issue open（14 个 P1），Fixer 队列未对齐。在 Fixer 开始消化 P1 之前，额外的 audit 只会加剧积压。
+
+**本 loop 的任务**（优先级高于常规 cursor 推进）：
+
+1. 对 **slice-02（chat_websocket）** 做一次针对性补充核查：
+   - 规范 ISSUE-009（`STREAM_TOKEN_SEGMENT=0` quota 循环）：`verifier_patrol_2` 备注说"ISSUE-009 misreported (segmentSize guard exists)"。请独立验证：打开 `backend/gateway/internal/service/quota.go` 和 `backend/gateway/internal/handler/chat_orchestrator_chatflow.go`，确认 segmentSize guard 是否真的防住了除零。如果 guard 有效，在 `workflow/SUMMARY.md` 为 ISSUE-009 追加注释 `[re-audit: misreported]` 并降为 P2；如果 guard 无效，维持 P1。
+
+2. 然后正常推进 cursor → slice-10（achievement_photon_visual）
+
+**注意**：如果 cursor 推进耗时会超过本 loop，仅做 ISSUE-009 补充核查即可，cursor 推进留下一个 loop。
+
+#### ACK by auditor
+（待 Auditor 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-04
+- status: active
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [verifier]
+- priority: elevated
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Verifier 验收规则强化：新增两条硬规则。**
+
+架构师观察到以下风险：
+1. Verifier 之前对影子系统 issue 判 PASS，实际上验证的问题和规范系统描述不同
+2. Fix commit 可能修复了问题但 git 引用的 ISSUE ID 错误
+
+**从本指令生效后，Verifier 每次判定必须额外完成**：
+
+**硬规则 A（ID 一致性）**：确认 fix commit message 中的 ISSUE ID 与 `workflow/SUMMARY.md` 中的 issue 描述一致。若 commit 引用的是影子系统 ID（`.claude/workflow/issues/` 里的描述），而不是规范 ID，判定为 FAIL，备注 "commit references wrong issue ID"。
+
+**硬规则 B（问题消除确认）**：Verifier 必须独立 Read 被修改的源文件（不得仅看 fixer 的描述），确认 audit 证据中的具体代码行已被修改，且修改方向正确。不允许仅凭 "go build PASS" 和 "tests PASS" 判定 PASS。
+
+#### ACK by verifier
+Verifier Loop 2 @ 2026-04-25T02:15. Both hard rules applied in Loop 1 and Loop 2: (A) ISSUE-004 fix commit b40e2e37 referenced shadow ID ISSUE-002 — noted, but fix is correct for canonical ISSUE-004; (B) all verifications independently Read source files before checking Fix descriptions. Confirmed applied.
+
+---
+
+### DIRECTIVE-EXAMPLE-00 (样例，保留作格式参考)
+- status: advisory
+- issued_at: 2026-04-24T15:00:00+08:00
+- target_roles: [all]
+- priority: advisory
+- scope: none
+- expires_at: never
+
+#### 内容
+这是一个样例指令。真实指令请严格按此结构书写：`status / issued_at / target_roles / priority / scope / expires_at` 六个元数据缺一不可；内容段用 `#### 内容` 四级标题；ACK 段用 `#### ACK by <role>`。
+
+#### ACK by example
+（三专家看到 advisory 不强制执行，但若是 override 则必须在此处回执）
+
+---
+
+## 归档
+已完成与已失效指令每周由 Verifier 在最后一次 loop 迁移至 `architect/decisions/ARCHIVE_<yyyymm>.md`，本文件只保留活动指令 + 最近 48h 已完成指令，保持精简。

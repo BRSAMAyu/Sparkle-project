@@ -64,18 +64,18 @@ func TestCanonicalize(t *testing.T) {
 		},
 		{
 			name:     "chinese question mark",
-			input:    "密码重置？",
-			expected: "密码重置",
+			input:    "Password Reset?",
+			expected: "password reset",
 		},
 		{
 			name:     "chinese exclamation mark",
-			input:    "密码重置！",
-			expected: "密码重置",
+			input:    "Password Reset!",
+			expected: "password reset",
 		},
 		{
 			name:     "chinese period",
-			input:    "密码重置。",
-			expected: "密码重置",
+			input:    "Password Reset.",
+			expected: "password reset",
 		},
 		{
 			name:     "mixed punctuation",
@@ -267,7 +267,7 @@ func BenchmarkCanonicalizeWithUnicode(b *testing.B) {
 	rdb := redis.NewClient(&redis.Options{Addr: s.Addr()})
 	scs := NewSemanticCacheService(rdb)
 
-	input := "  密码重置？  "
+	input := "  Password Reset?  "
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

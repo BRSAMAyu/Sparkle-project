@@ -78,9 +78,12 @@ class GalaxyEventConsumer:
     async def _handle_error_created(self, event: dict):
         """处理错题创建事件 - 图演化和种子预热
 
-        Note: 节点掌握度更新已迁移到 ErrorBookMasterySyncService (断点2)，
-        该服务在 analyze_and_link() 完成后直接调用，使用基于 error_type 的
-        精确权重而非旧的粗糙 -10% 逻辑。
+        ⚠ MASTERY GUARD: 节点掌握度更新已迁移到 ErrorBookMasterySyncService (断点2)，
+        该服务在 error_book_service.py 的 analyze_and_link 回调中同步调用，
+        使用基于 error_type 的精确权重（如 knowledge_gap=-10）。
+        本异步处理器 **绝不** 修改 mastery_score。任何对
+        GalaxyService.handle_error_created() 或 GalaxyService.update_mastery_from_error()
+        的调用都会导致双重扣减。
         """
         user_id = event.get("user_id")
         linked_node_ids = event.get("linked_node_ids", [])
@@ -93,10 +96,14 @@ class GalaxyEventConsumer:
         linked_node_uuids = [UUID(str(node_id)) for node_id in linked_node_ids]
 
         async with AsyncSessionLocal() as db:
+            # Graph structure evolution (tags weak signals, adjusts relation strengths)
+            # Does NOT modify mastery_score.
             evolution = GraphEvolutionService(db)
             await evolution.handle_error_created(event)
             await SeedExtractor(db).prewarm_for_scenarios(user_uuid)
 
+            # Plan-health evaluation (read-only for mastery — only reads scores
+            # to decide whether replanning is needed). Does NOT modify mastery_score.
             from app.services.error_replan_bridge import ErrorReplanBridge
 
             error_replan_bridge = ErrorReplanBridge(db)
@@ -106,6 +113,8 @@ class GalaxyEventConsumer:
                 linked_node_ids=linked_node_uuids,
             )
 
+            # Card-protocol evidence layer (creates evidence edges and card metadata).
+            # Does NOT modify UserNodeStatus.mastery_score.
             from app.services.card_protocol.mastery_bridge import ErrorMasteryBridge
 
             bridge = ErrorMasteryBridge(db)

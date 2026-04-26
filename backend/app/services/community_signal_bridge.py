@@ -120,7 +120,6 @@ class CommunitySignalBridge:
             new_mastery=int(round(new_mastery)),
             reason="community_knowledge_share_bonus",
         )
-        await self.db.commit()
 
         await event_bus.publish(
             "galaxy.node.updated",

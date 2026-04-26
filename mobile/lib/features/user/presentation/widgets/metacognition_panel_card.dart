@@ -33,26 +33,32 @@ class MetacognitionPanelCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => GraphiteCardSurface(
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.spacing8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE8F1EA),
-                      borderRadius: DS.borderRadius12,
-                    ),
-                    child: const Icon(
-                      Icons.insights_rounded,
-                      color: Color(0xFF4A7A58),
-                      size: 18,
-                    ),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GraphiteCardSurface(
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing8),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? DS.success.withValues(alpha: 0.12)
+                        : const Color(0xFFE8F1EA),
+                    borderRadius: DS.borderRadius12,
                   ),
+                  child: Icon(
+                    Icons.insights_rounded,
+                    color: isDark
+                        ? DS.success
+                        : const Color(0xFF4A7A58),
+                    size: 18,
+                  ),
+                ),
                   const SizedBox(width: DS.spacing10),
                   Expanded(
                     child: Column(
@@ -75,7 +81,9 @@ class MetacognitionPanelCard extends StatelessWidget {
                           Text(
                             '已观察 ${profileDimensionCount!} 个元认知维度',
                             style: DS.labelSmall.copyWith(
-                              color: const Color(0xFF4A7A58),
+                              color: isDark
+                                  ? DS.success
+                                  : const Color(0xFF4A7A58),
                             ),
                           ),
                         ],
@@ -90,7 +98,7 @@ class MetacognitionPanelCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: DS.spacing12),
-              ...cards.map(_buildCard),
+              ...cards.map((c) => _buildCard(c, isDark)),
               if (generatedAt != null && generatedAt!.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing8),
                 Text(
@@ -102,15 +110,16 @@ class MetacognitionPanelCard extends StatelessWidget {
           ),
         ),
       );
+  }
 
-  Widget _buildCard(Map<String, dynamic> card) {
+  Widget _buildCard(Map<String, dynamic> card, bool isDark) {
     final status = card['status']?.toString() ?? 'ready';
     final title = card['title']?.toString() ?? '';
     final body = card['body']?.toString() ?? '';
     final trendText = card['trend_text']?.toString() ?? '';
     final toneColor = status == 'insufficient'
-        ? const Color(0xFF8A7C59)
-        : const Color(0xFF497179);
+        ? (isDark ? DS.warning : const Color(0xFF8A7C59))
+        : (isDark ? DS.info : const Color(0xFF497179));
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing10),

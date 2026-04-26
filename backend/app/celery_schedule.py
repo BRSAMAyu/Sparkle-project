@@ -1,9 +1,6 @@
 
 from app.workers.cleanup_worker import cleanup_galaxy_outbox, cleanup_outbox_events
 
-# Assuming 'app' is your main Celery application instance
-# In a real setup, you'd likely import 'app' from your main celery configuration file
-# e.g., from app.worker import celery_app
 
 def setup_periodic_tasks(sender, **kwargs):
     # Execute daily at midnight
@@ -17,4 +14,20 @@ def setup_periodic_tasks(sender, **kwargs):
         86400.0,
         cleanup_galaxy_outbox.s(),
         name='cleanup-galaxy-outbox-every-day'
+    )
+
+    # Aurora scheduled wake scanner — every 15 minutes
+    from app.core.celery_tasks import scan_aurora_scheduled_wakes
+    sender.add_periodic_task(
+        900.0,
+        scan_aurora_scheduled_wakes.s(),
+        name='scan-aurora-scheduled-wakes-every-15min'
+    )
+
+    # Community error pattern aggregation — every 6 hours
+    from app.core.celery_tasks import aggregate_community_error_patterns
+    sender.add_periodic_task(
+        21600.0,
+        aggregate_community_error_patterns.s(),
+        name='aggregate-community-errors-every-6h'
     )

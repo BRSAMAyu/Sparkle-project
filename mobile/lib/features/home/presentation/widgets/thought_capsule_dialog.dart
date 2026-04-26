@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -31,16 +32,13 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.thoughtCapsuleCaptured)),
+          SparkleSnackBar.success(context.l10n.thoughtCapsuleCaptured),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.thoughtCapsuleCaptureFailed(e)),
-            backgroundColor: DS.error,
-          ),
+          SparkleSnackBar.error(context.l10n.thoughtCapsuleCaptureFailed(e)),
         );
         setState(() => _isSubmitting = false);
       }

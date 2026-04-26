@@ -468,10 +468,8 @@ class _InteractiveOnboardingScreenState
             const SizedBox(height: DS.lg),
             _buildPermissionOption(
               icon: Icons.mic_none_rounded,
-              title: _isChinese ? '语音输入' : 'Voice Input',
-              description: _isChinese
-                  ? '启用麦克风后，你可以直接说出目标和问题。'
-                  : 'Enable the microphone so you can speak goals and questions naturally.',
+              title: context.l10n.onboardingVoiceInput,
+              description: context.l10n.onboardingVoiceInputDesc,
               enabled: _microphoneEnabled,
               isLoading: _requestingMicrophone,
               onTap: _microphoneEnabled ? null : _requestMicrophonePermission,
@@ -581,18 +579,13 @@ class _InteractiveOnboardingScreenState
         ),
       );
 
-  bool get _isChinese => Localizations.localeOf(context).languageCode == 'zh';
+  String get _permissionEnableLabel => context.l10n.onboardingPermissionEnable;
 
-  String get _permissionEnableLabel => _isChinese ? '开启' : 'Enable';
+  String get _permissionEnabledLabel => context.l10n.onboardingPermissionEnabled;
 
-  String get _permissionEnabledLabel => _isChinese ? '已开启' : 'Enabled';
+  String get _permissionReadyLabel => context.l10n.onboardingPermissionReady;
 
-  String get _permissionReadyLabel => _isChinese
-      ? '已准备好，之后也可以在设置里调整'
-      : 'Ready to go, and you can change this later in Settings';
-
-  String get _permissionPendingLabel =>
-      _isChinese ? '稍后也可以在设置里开启' : 'You can turn this on later in Settings';
+  String get _permissionPendingLabel => context.l10n.onboardingPermissionPending;
 
   Widget _buildPermissionOption({
     required IconData icon,
@@ -657,7 +650,7 @@ class _InteractiveOnboardingScreenState
                     style: TextStyle(
                       color: enabled ? DS.success : DS.brandPrimaryConst,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),
@@ -678,7 +671,7 @@ class _InteractiveOnboardingScreenState
                 if (onTap case final action?)
                   SparkleButton.ghost(
                     label: isLoading
-                        ? (_isChinese ? '处理中...' : 'Working...')
+                        ? context.l10n.onboardingPermissionWorking
                         : _permissionEnableLabel,
                     onPressed: isLoading
                         ? () {}

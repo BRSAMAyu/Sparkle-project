@@ -1,7 +1,7 @@
 # Sparkle x OpenClaw Integration — Implementation Specification v1.0
 
 > **Status**: Approved Architecture Spec
-> **Author**: Chief Architect (Claude Opus 4.6)
+> **Author**: Chief Architect (Claude Opus 4.7)
 > **Date**: 2026-03-27
 > **Scope**: Phase 0 (Protocol & Trust Foundation) + Phase 1 (PoC) + Phase 2-3 Interface Contracts
 > **Principle**: Zero-invasion to existing production chain

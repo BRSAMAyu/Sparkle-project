@@ -57,6 +57,7 @@ celery_app = Celery(
     include=[
         "app.core.celery_tasks",
         "app.tasks.accountability_tasks",
+        "app.tasks.checkpoint_nudge_task",
         "app.tasks.policy_tasks",
         "workers.signals_learning_worker",
     ],
@@ -131,10 +132,21 @@ celery_app.conf.update(
         "tasks.accountability.send_milestone_notification": {"queue": "default"},
         "tasks.accountability.notify_partner_checkin": {"queue": "default"},
         "tasks.policy.process_due_policies": {"queue": "default"},
+        "tasks.checkpoint_nudge.scan_daily_checkpoints": {"queue": "default"},
+        "tasks.checkpoint_nudge.run_due_checkpoint_wakes": {"queue": "default"},
         "verify_intervention_outcomes_engaged": {"queue": "low_priority"},
         "verify_intervention_outcomes_full": {"queue": "low_priority"},
         "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
         "app.core.celery_tasks.deliver_weekly_growth_digests": {"queue": "default"},
+        "app.core.celery_tasks.pack_quality_analysis_task": {"queue": "low_priority"},
+        "app.core.celery_tasks.spaced_repetition_reminder_task": {"queue": "default"},
+        "app.core.celery_tasks.scan_spaced_repetition_reminders": {"queue": "default"},
+        "app.core.celery_tasks.daily_sprint_reminder_task": {"queue": "default"},
+        "app.core.celery_tasks.scan_daily_sprint_reminders": {"queue": "default"},
+        "app.core.celery_tasks.comeback_nudge_task": {"queue": "default"},
+        "app.core.celery_tasks.scan_comeback_nudges": {"queue": "default"},
+        "app.core.celery_tasks.weekly_growth_narrative_task": {"queue": "default"},
+        "app.core.celery_tasks.scan_weekly_growth_narratives": {"queue": "default"},
     },
     # 监控
     worker_send_task_events=True,
@@ -956,6 +968,16 @@ celery_app.conf.beat_schedule = {
         "schedule": 30.0,
         "options": {"queue": "default"},
     },
+    "checkpoint-nudge-daily-8am": {
+        "task": "tasks.checkpoint_nudge.scan_daily_checkpoints",
+        "schedule": crontab(hour=8, minute=0),
+        "options": {"queue": "default"},
+    },
+    "checkpoint-due-wake-scan": {
+        "task": "tasks.checkpoint_nudge.run_due_checkpoint_wakes",
+        "schedule": 600.0,
+        "options": {"queue": "default"},
+    },
     "intervention-outcomes-engaged": {
         "task": "verify_intervention_outcomes_engaged",
         "schedule": crontab(minute=0, hour="*/4"),
@@ -1008,6 +1030,42 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(day_of_week="mon", hour=8, minute=0),
         "options": {"queue": "default"},
     },
+    "spaced-repetition-reminder-daily": {
+        "task": "app.core.celery_tasks.scan_spaced_repetition_reminders",
+        "schedule": crontab(hour=9, minute=30),
+        "args": (500,),
+        "options": {"queue": "default"},
+    },
+    "post-exam-review-invitation-scan": {
+        "task": "app.core.celery_tasks.scan_post_exam_review_invitations",
+        "schedule": crontab(minute=15, hour="*/1"),
+        "args": (200,),
+        "options": {"queue": "default"},
+    },
+    "pack-quality-analysis-computer-networks": {
+        "task": "app.core.celery_tasks.pack_quality_analysis_task",
+        "schedule": crontab(day_of_month=1, hour=2, minute=45),
+        "args": ("computer_networks@v1",),
+        "options": {"queue": "low_priority"},
+    },
+    "pack-quality-analysis-operating-systems": {
+        "task": "app.core.celery_tasks.pack_quality_analysis_task",
+        "schedule": crontab(day_of_month=1, hour=2, minute=50),
+        "args": ("operating_systems@v1",),
+        "options": {"queue": "low_priority"},
+    },
+    "pack-quality-analysis-mathematics": {
+        "task": "app.core.celery_tasks.pack_quality_analysis_task",
+        "schedule": crontab(day_of_month=1, hour=2, minute=55),
+        "args": ("mathematics@v1",),
+        "options": {"queue": "low_priority"},
+    },
+    "pack-quality-analysis-data-structures-algorithms": {
+        "task": "app.core.celery_tasks.pack_quality_analysis_task",
+        "schedule": crontab(day_of_month=1, hour=3, minute=0),
+        "args": ("data_structures_algorithms@v1",),
+        "options": {"queue": "low_priority"},
+    },
     "theater-prediction-accuracy-daily": {
         "task": "app.core.celery_tasks.check_prediction_accuracy",
         "schedule": crontab(hour=4, minute=10),
@@ -1034,6 +1092,20 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=4, minute=30),
         "args": (500,),
         "options": {"queue": "low_priority"},
+    },
+    "comeback-nudge-daily": {
+        "task": "app.core.celery_tasks.scan_comeback_nudges",
+        "schedule": crontab(hour=10, minute=0),
+        "args": (500,),
+        "options": {"queue": "default"},
+    },
+    "weekly-growth-narrative-scan": {
+        "task": "app.core.celery_tasks.scan_weekly_growth_narratives",
+        # Celery beat runs in Asia/Shanghai for this app, so 18:00 local
+        # is the runtime-equivalent of Sunday 10:00 UTC.
+        "schedule": crontab(day_of_week="sun", hour=18, minute=0),
+        "args": (500,),
+        "options": {"queue": "default"},
     },
     "idiographic-association-weekly-recompute": {
         "task": "app.core.celery_tasks.recompute_idiographic_associations",
@@ -1072,6 +1144,14 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.accountability.evaluate_achievements",
         "schedule": crontab(hour=23, minute=59),
         "options": {"queue": "low_priority"},
+    },
+    # ========== F17: 每日 Sprint 进度提醒 ==========
+    # UTC 12:00 = 北京时间 20:00
+    "daily-sprint-reminder-scan": {
+        "task": "app.core.celery_tasks.scan_daily_sprint_reminders",
+        "schedule": crontab(hour=12, minute=0),
+        "args": (500,),
+        "options": {"queue": "default"},
     },
 }
 

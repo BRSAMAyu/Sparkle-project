@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
@@ -39,6 +40,26 @@ double galaxyLodFade(double value, double start, double end) {
   return ((value - start) / (end - start)).clamp(0, 1);
 }
 
+double galaxyMasteryRatio(int masteryScore) =>
+    (masteryScore / 100).clamp(0.0, 1.0).toDouble();
+
+Color galaxyMasteryNodeColor({
+  required int masteryScore,
+  required bool isDarkMode,
+}) {
+  final mastery = galaxyMasteryRatio(masteryScore);
+  if (mastery < 0.25) {
+    return isDarkMode ? const Color(0xFF77808C) : const Color(0xFF9AA3AD);
+  }
+  if (mastery < 0.5) {
+    return isDarkMode ? const Color(0xFF73B7FF) : const Color(0xFF4F9FE8);
+  }
+  if (mastery < 0.75) {
+    return isDarkMode ? const Color(0xFF8FE6B0) : const Color(0xFF4BC77E);
+  }
+  return isDarkMode ? const Color(0xFF2EF28A) : const Color(0xFF16A85A);
+}
+
 class GalaxyLabelCache {
   GalaxyLabelCache({this.maxEntries = 600});
 
@@ -70,6 +91,7 @@ class GalaxyLabelCache {
           fontSize: fontSize,
           fontWeight: fontWeight,
           letterSpacing: 0.1,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       maxLines: 1,
@@ -254,6 +276,7 @@ class StarMapPainter extends CustomPainter {
     this.tapFeedbackPhase = 0,
     this.ambientPhase = 0,
     this.isBuildAnimating = false,
+    this.examSprintActive = false,
   });
 
   final GalaxyCamera camera;
@@ -290,6 +313,7 @@ class StarMapPainter extends CustomPainter {
   final double tapFeedbackPhase;
   final double ambientPhase;
   final bool isBuildAnimating;
+  final bool examSprintActive;
 
   static const int _nodeBudget = 500;
   static const int _edgeBudget = 800;
@@ -403,7 +427,8 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.performanceDegraded != performanceDegraded ||
       oldDelegate.predictionOverlay != predictionOverlay ||
       oldDelegate.ambientPhase != ambientPhase ||
-      oldDelegate.isBuildAnimating != isBuildAnimating;
+      oldDelegate.isBuildAnimating != isBuildAnimating ||
+      oldDelegate.examSprintActive != examSprintActive;
 
   void _drawPredictionOverlay(Canvas canvas) {
     final overlay = predictionOverlay;
@@ -470,7 +495,7 @@ class StarMapPainter extends CustomPainter {
           cacheKey: 'prediction:$nodeId:${predictedMastery.round()}',
           text: '${predictedMastery.round()}%',
           fontSize: 10,
-          fontWeight: FontWeight.w700,
+          fontWeight: DS.fontWeightBold,
           color: Colors.white,
           maxWidth: 44,
         );
@@ -725,8 +750,9 @@ class StarMapPainter extends CustomPainter {
           style: TextStyle(
             color: glow.withValues(alpha: labelAlpha * 0.8),
             fontSize: lod == GalaxyLod.l0 ? (isDarkMode ? 16 : 15) : 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
             letterSpacing: 1.2,
+            fontFamilyFallback: sparkleFontFallback,
             shadows: [
               Shadow(
                 color: glow.withValues(alpha: labelAlpha * 0.58),
@@ -920,8 +946,15 @@ class StarMapPainter extends CustomPainter {
     }
 
     nodes.sort(
-      (a, b) =>
-          a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter),
+      (a, b) {
+        final priorityCompare = _nodeSelectionPriority(b.node).compareTo(
+          _nodeSelectionPriority(a.node),
+        );
+        if (priorityCompare != 0) {
+          return priorityCompare;
+        }
+        return a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter);
+      },
     );
 
     final budget = _nodeBudgetFor(lod);
@@ -929,7 +962,38 @@ class StarMapPainter extends CustomPainter {
       nodes.removeRange(budget, nodes.length);
     }
 
+    nodes.sort(
+      (a, b) =>
+          a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter),
+    );
+
     return nodes;
+  }
+
+  int _nodeSelectionPriority(GalaxyNodeModel node) {
+    var priority = 0;
+    if (node.id == selectedNodeId) {
+      priority += 48;
+    }
+    if (node.id == previewNodeId) {
+      priority += 40;
+    }
+    if (node.id == draggingNodeId) {
+      priority += 36;
+    }
+    if (node.shouldPulseForReview) {
+      priority += 28;
+    }
+    if (spotlightNodeIds.contains(node.id)) {
+      priority += 20;
+    }
+    if (searchMatchedNodeIds.contains(node.id)) {
+      priority += 12;
+    }
+    if (node.recentErrorCount > 0) {
+      priority += 4;
+    }
+    return priority;
   }
 
   Offset? _renderWorldPosition(String nodeId) {
@@ -1310,31 +1374,32 @@ class StarMapPainter extends CustomPainter {
     }
 
     final tailPath = metric.extractPath(tailStart, headOffset);
-    canvas.drawPath(
-      tailPath,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = edge.strokeWidth + 0.8
-        ..strokeCap = StrokeCap.round
-        ..color = edge.color.withValues(
-          alpha: edge.color.a * (0.24 + trailStrength * 0.16),
-        )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
-    canvas.drawCircle(
-      tangent.position,
-      5.2,
-      Paint()
-        ..color = edge.color.withValues(
-          alpha: edge.color.a * (0.18 + trailStrength * 0.18),
-        )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-    );
-    canvas.drawCircle(
-      tangent.position,
-      2.2 + trailStrength * 1.6,
-      Paint()..color = Colors.white.withValues(alpha: 0.92),
-    );
+    canvas
+      ..drawPath(
+        tailPath,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = edge.strokeWidth + 0.8
+          ..strokeCap = StrokeCap.round
+          ..color = edge.color.withValues(
+            alpha: edge.color.a * (0.24 + trailStrength * 0.16),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      )
+      ..drawCircle(
+        tangent.position,
+        5.2,
+        Paint()
+          ..color = edge.color.withValues(
+            alpha: edge.color.a * (0.18 + trailStrength * 0.18),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      )
+      ..drawCircle(
+        tangent.position,
+        2.2 + trailStrength * 1.6,
+        Paint()..color = Colors.white.withValues(alpha: 0.92),
+      );
   }
 
   Path _extractPathReveal(Path path, double reveal) {
@@ -1442,6 +1507,22 @@ class StarMapPainter extends CustomPainter {
       }
 
       if (!performanceDegraded &&
+          node.shouldPulseForReview &&
+          node.isUnlocked &&
+          nodeAlpha > 0 &&
+          lod.index >= GalaxyLod.l2.index) {
+        _drawReviewPulse(
+          canvas: canvas,
+          center: nodeCenter,
+          radius: radius,
+          color: style.baseColor,
+          urgency: node.reviewUrgencyScore,
+          nodeAlpha: nodeAlpha,
+          seed: _nodeSeed(node.id),
+        );
+      }
+
+      if (!performanceDegraded &&
           style.glowAlpha > 0 &&
           nodeAlpha > 0 &&
           lod.index >= GalaxyLod.l2.index &&
@@ -1526,20 +1607,33 @@ class StarMapPainter extends CustomPainter {
         );
       }
 
+      if (examSprintActive &&
+          nodeAlpha > 0 &&
+          lod.index >= GalaxyLod.l1.index) {
+        _drawSprintMasteryDot(
+          canvas: canvas,
+          center: nodeCenter,
+          nodeRadius: radius,
+          masteryScore: node.masteryScore,
+          nodeAlpha: nodeAlpha,
+        );
+      }
+
       if (!node.isUnlocked) {
         _drawDashedCircle(
           canvas: canvas,
           center: nodeCenter,
           radius: radius + 1,
-          color: style.baseColor.withValues(alpha: 0.28 * nodeAlpha),
+          color: style.baseColor.withValues(alpha: 0.55 * nodeAlpha),
         );
         final questionPainter = TextPainter(
           text: TextSpan(
             text: '?',
             style: TextStyle(
-              color: style.baseColor.withValues(alpha: 0.42 * nodeAlpha),
+              color: style.baseColor.withValues(alpha: 0.68 * nodeAlpha),
               fontSize: math.max(10, radius * 1.05),
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
+              fontFamilyFallback: sparkleFontFallback,
             ),
           ),
           textDirection: TextDirection.ltr,
@@ -1571,12 +1665,14 @@ class StarMapPainter extends CustomPainter {
           node.isUnlocked &&
           lod.index >= GalaxyLod.l2.index) {
         final errorIntensity = (node.recentErrorCount / 5.0).clamp(0.15, 0.55);
-        final pulseFactor = 1.0 + 0.08 * math.sin(ambientPhase * 1.7 + _nodeSeed(node.id));
+        final pulseFactor =
+            1.0 + 0.08 * math.sin(ambientPhase * 1.7 + _nodeSeed(node.id));
         canvas.drawCircle(
           nodeCenter,
           radius * 1.55 * pulseFactor,
           Paint()
-            ..color = const Color(0xFFFF4444).withValues(alpha: errorIntensity * nodeAlpha)
+            ..color = const Color(0xFFFF4444)
+                .withValues(alpha: errorIntensity * nodeAlpha)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.2,
@@ -1676,6 +1772,50 @@ class StarMapPainter extends CustomPainter {
     }
   }
 
+  void _drawReviewPulse({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required Color color,
+    required double urgency,
+    required double nodeAlpha,
+    required double seed,
+  }) {
+    final clampedUrgency = urgency.clamp(0.0, 1.0);
+    final pulse = 0.5 + 0.5 * math.sin(ambientPhase * 2.4 + seed);
+    final accent = Color.lerp(color, const Color(0xFFFFD166), 0.28)!;
+    final outerRadius = radius * ui.lerpDouble(1.8, 2.65, pulse)!;
+    final innerRadius = radius * ui.lerpDouble(1.35, 1.9, pulse)!;
+    final haloAlpha = (0.08 + clampedUrgency * 0.12) * nodeAlpha;
+    final ringAlpha =
+        (0.12 + clampedUrgency * 0.18) * (1.0 - pulse * 0.24) * nodeAlpha;
+
+    canvas
+      ..drawCircle(
+        center,
+        outerRadius,
+        Paint()
+          ..color = accent.withValues(alpha: haloAlpha)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      )
+      ..drawCircle(
+        center,
+        innerRadius,
+        Paint()
+          ..color = accent.withValues(alpha: ringAlpha)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4,
+      )
+      ..drawCircle(
+        center,
+        outerRadius,
+        Paint()
+          ..color = accent.withValues(alpha: ringAlpha * 0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0,
+      );
+  }
+
   void _drawLabels(Canvas canvas, GalaxyLod lod, List<_PaintNode> nodes) {
     final allowPulse = lod.index >= GalaxyLod.l3.index &&
         nodes.length < 100 &&
@@ -1697,7 +1837,7 @@ class StarMapPainter extends CustomPainter {
           : camera.scale > 1.0
               ? 12.0
               : 10.0;
-      final fontWeight = isSelected ? FontWeight.w700 : FontWeight.w600;
+      final fontWeight = isSelected ? DS.fontWeightBold : DS.fontWeightSemibold;
       final labelColor = (isDarkMode ? Colors.white : Colors.black87)
           .withValues(alpha: labelAlpha);
       final cacheKey =
@@ -2044,10 +2184,10 @@ class StarMapPainter extends CustomPainter {
     if (!node.isUnlocked) {
       return _PaintNodeStyle(
         baseColor: baseColor,
-        fillAlpha: 0,
+        fillAlpha: 0.22,
         masteryRingAlpha: 0,
         glowAlpha: 0,
-        coreAlpha: 0,
+        coreAlpha: 0.12,
       );
     }
 
@@ -2355,13 +2495,51 @@ class StarMapPainter extends CustomPainter {
   }
 
   Color _nodeCanvasColor(GalaxyNodeModel node) {
-    final blended = blendedColors[node.id] ??
-        SectorConfig.resolveNodeBaseColor(node: node, isDarkMode: isDarkMode);
+    final blended = galaxyMasteryNodeColor(
+      masteryScore: node.masteryScore,
+      isDarkMode: isDarkMode,
+    );
     return SectorConfig.applyImportanceRamp(
       blended,
       importance: node.importance,
       isDarkMode: isDarkMode,
     );
+  }
+
+  void _drawSprintMasteryDot({
+    required Canvas canvas,
+    required Offset center,
+    required double nodeRadius,
+    required int masteryScore,
+    required double nodeAlpha,
+  }) {
+    final dotCenter = center.translate(nodeRadius * 0.72, -nodeRadius * 0.72);
+    final dotRadius = (nodeRadius * 0.25).clamp(2.4, 4.2);
+    canvas
+      ..drawCircle(
+        dotCenter,
+        dotRadius + 1.4,
+        Paint()
+          ..color = (isDarkMode ? const Color(0xFF060A12) : Colors.white)
+              .withValues(alpha: 0.92 * nodeAlpha),
+      )
+      ..drawCircle(
+        dotCenter,
+        dotRadius,
+        Paint()
+          ..color = galaxyMasteryNodeColor(
+            masteryScore: masteryScore,
+            isDarkMode: isDarkMode,
+          ).withValues(alpha: nodeAlpha),
+      )
+      ..drawCircle(
+        dotCenter,
+        dotRadius + 1.4,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.24 * nodeAlpha)
+          ..strokeWidth = 0.8
+          ..style = PaintingStyle.stroke,
+      );
   }
 
   double _buildRevealFor(String nodeId) {
@@ -2436,12 +2614,6 @@ class StarMapPainter extends CustomPainter {
   }
 
   Color _masteryTemperatureColor(Color color, {required int masteryScore}) {
-    if (masteryScore >= 85) {
-      return Color.lerp(color, const Color(0xFFFFD700), 0.05)!;
-    }
-    if (masteryScore < 30) {
-      return Color.lerp(color, const Color(0xFF88B4FF), 0.05)!;
-    }
     return color;
   }
 

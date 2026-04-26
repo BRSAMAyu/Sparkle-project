@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 
 const Map<String, String> _modeLabels = <String, String>{
@@ -363,7 +364,7 @@ class _OpenClawExecutionPreferencesCardState
                           _dirty = false;
                         });
                         messenger.showSnackBar(
-                          const SnackBar(content: Text('执行偏好已保存')),
+                          SparkleSnackBar.success('执行偏好已保存'),
                         );
                       }
                     },

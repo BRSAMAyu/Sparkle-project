@@ -8,6 +8,8 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
+typedef KnowledgeNodeTap = void Function(String nodeId, double? masteryDelta);
+
 /// 错题卡片组件
 ///
 /// 设计原则：
@@ -20,11 +22,13 @@ class ErrorCard extends StatelessWidget {
     super.key,
     this.onTap,
     this.onDelete,
+    this.onKnowledgeNodeTap,
     this.showReviewStatus = true,
   });
   final ErrorRecord error;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final KnowledgeNodeTap? onKnowledgeNodeTap;
   final bool showReviewStatus;
 
   @override
@@ -33,6 +37,7 @@ class ErrorCard extends StatelessWidget {
     final now = DateTime.now();
     final needReview =
         error.nextReviewAt != null && error.nextReviewAt!.isBefore(now);
+    final affectedNode = _affectedKnowledgeLink(error);
 
     return Dismissible(
       key: Key(error.id),
@@ -119,7 +124,7 @@ class ErrorCard extends StatelessWidget {
                           context.l10n.errorBookTabNeedReview,
                           style: TextStyle(
                             fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: DS.fontWeightMedium,
                             color: theme.colorScheme.error,
                           ),
                         ),
@@ -148,11 +153,31 @@ class ErrorCard extends StatelessWidget {
                 Text(
                   error.questionText,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (affectedNode != null) ...[
+                  const SizedBox(height: DS.spacing10),
+                  _AffectedKnowledgeTag(
+                    link: affectedNode,
+                    masteryDelta: error.masteryDelta,
+                    onTap: onKnowledgeNodeTap == null
+                        ? null
+                        : () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            onKnowledgeNodeTap!(
+                              affectedNode.nodeId,
+                              error.masteryDelta,
+                            );
+                          },
+                  ),
+                ],
                 const SizedBox(height: DS.spacing12),
 
                 // 掌握度进度条
@@ -177,7 +202,7 @@ class ErrorCard extends StatelessWidget {
                       Text(
                         '${(error.masteryLevel * 100).toInt()}%',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                           color: _getMasteryColor(error.masteryLevel),
                         ),
                       ),
@@ -187,49 +212,34 @@ class ErrorCard extends StatelessWidget {
                 ],
 
                 // 底部元信息
-                Row(
+                Wrap(
+                  spacing: DS.spacing16,
+                  runSpacing: DS.spacing6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Icon(
-                      Icons.replay,
-                      size: 14,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: DS.spacing4),
-                    Text(
-                      context.l10n.errorBookReviewCount(error.reviewCount),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                    _MetaInfoItem(
+                      icon: Icons.replay,
+                      label: context.l10n.errorBookReviewCount(
+                        error.reviewCount,
                       ),
-                    ),
-                    const SizedBox(width: DS.spacing16),
-                    Icon(
-                      Icons.access_time,
-                      size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
+                      textStyle: theme.textTheme.labelSmall,
                     ),
-                    const SizedBox(width: DS.spacing4),
-                    Text(
-                      _formatTime(context, error.createdAt),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    _MetaInfoItem(
+                      icon: Icons.access_time,
+                      label: _formatTime(context, error.createdAt),
+                      color: theme.colorScheme.onSurfaceVariant,
+                      textStyle: theme.textTheme.labelSmall,
                     ),
-                    if (error.latestAnalysis != null) ...[
-                      const Spacer(),
-                      Icon(
-                        Icons.psychology,
-                        size: 14,
+                    if (error.latestAnalysis != null)
+                      _MetaInfoItem(
+                        icon: Icons.psychology,
+                        label: context.l10n.errorBookAIAnalyzed,
                         color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: DS.spacing4),
-                      Text(
-                        context.l10n.errorBookAIAnalyzed,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w500,
+                        textStyle: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: DS.fontWeightMedium,
                         ),
                       ),
-                    ],
                   ],
                 ),
               ],
@@ -238,6 +248,25 @@ class ErrorCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  KnowledgeLink? _affectedKnowledgeLink(ErrorRecord error) {
+    final affectedNodeId = error.affectedNodeId;
+    if (affectedNodeId != null && affectedNodeId.isNotEmpty) {
+      for (final link in error.knowledgeLinks) {
+        if (link.nodeId == affectedNodeId) {
+          return link;
+        }
+      }
+      return KnowledgeLink(nodeId: affectedNodeId, nodeName: '知识节点');
+    }
+
+    for (final link in error.knowledgeLinks) {
+      if (link.isPrimary) {
+        return link;
+      }
+    }
+    return error.knowledgeLinks.isNotEmpty ? error.knowledgeLinks.first : null;
   }
 
   Color _getMasteryColor(double mastery) {
@@ -261,6 +290,119 @@ class ErrorCard extends StatelessWidget {
     } else {
       return DateFormat('MM-dd').format(time);
     }
+  }
+}
+
+class _MetaInfoItem extends StatelessWidget {
+  const _MetaInfoItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.textStyle,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final TextStyle? textStyle;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            label,
+            style: textStyle?.copyWith(color: color),
+          ),
+        ],
+      );
+}
+
+class _AffectedKnowledgeTag extends StatelessWidget {
+  const _AffectedKnowledgeTag({
+    required this.link,
+    required this.masteryDelta,
+    this.onTap,
+  });
+
+  final KnowledgeLink link;
+  final double? masteryDelta;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final delta = masteryDelta;
+    final hasDrop = delta != null && delta < 0;
+    final labelColor =
+        hasDrop ? theme.colorScheme.error : theme.colorScheme.primary;
+    final backgroundColor = labelColor.withValues(alpha: 0.1);
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width - DS.spacing64,
+        ),
+        child: Material(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(6),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing8,
+                vertical: DS.spacing4,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.hub_outlined,
+                    size: 14,
+                    color: labelColor,
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Flexible(
+                    child: Text(
+                      link.nodeName,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: labelColor,
+                        fontWeight: DS.fontWeightSemibold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasDrop) ...[
+                    const SizedBox(width: DS.spacing4),
+                    Icon(
+                      Icons.trending_down_rounded,
+                      size: 14,
+                      color: labelColor,
+                    ),
+                    Text(
+                      delta.toStringAsFixed(delta.abs() >= 1 ? 0 : 1),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: labelColor,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

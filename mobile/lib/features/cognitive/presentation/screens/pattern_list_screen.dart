@@ -369,7 +369,7 @@ class _PatternCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: color,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
           ],

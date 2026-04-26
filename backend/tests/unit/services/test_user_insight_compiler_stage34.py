@@ -36,11 +36,13 @@ async def test_apply_content_signals_writes_capsule_snapshot_when_stage34_shadow
 
     assert state.stable_preferences["content_depth_preference"] == "deep"
     assert state.stable_preferences["content_subject_affinities"] == ["physics", "math"]
-    assert state.stable_preferences["capsule"] == {
-        "favorite_count": 3,
-        "content_depth_preference": "deep",
-        "subject_affinity": ["physics", "math"],
-        "recent_notes": ["revisit", "important"],
-        "mode": "shadow",
-    }
+    capsule = state.stable_preferences["capsule"]
+    assert capsule["favorite_count"] == 3
+    assert capsule["content_depth_preference"] == "deep"
+    assert capsule["subject_affinity"] == ["physics", "math"]
+    assert capsule["recent_notes"] == ["revisit", "important"]
+    assert capsule["mode"] == "shadow"
+    # F10 added method preference extraction fields
+    assert "method_preferences" in capsule
+    assert "method_preference_summary" in capsule
 

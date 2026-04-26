@@ -308,6 +308,8 @@ final galaxyProvider =
   return GalaxyNotifier(repository, ref);
 });
 
+final galaxyRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+
 /// Broadcast when a node crosses a mastery milestone threshold.
 class MasteryMilestoneEvent {
   const MasteryMilestoneEvent({
@@ -412,10 +414,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       PerformanceService.instance.currentTier.removeListener(tierListener);
     }
     unawaited(_milestoneController.close());
-    // Do not stop monitoring here as it might be used by other parts or singleton lifecycle
-    // But for this screen it's probably fine. Let's keep it running for now or stop it?
-    // If GalaxyScreen is the only consumer, we could stop it.
-    // GalaxyPerformanceMonitor.instance.stopMonitoring();
+    GalaxyPerformanceMonitor.instance.stopMonitoring();
     super.dispose();
   }
 
@@ -523,6 +522,23 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _recalculateVisibility();
   }
 
+  Future<void> refreshForTaskCompletion({
+    Map<String, dynamic>? galaxyUpdate,
+  }) async {
+    _repository.clearCache();
+
+    if (galaxyUpdate != null) {
+      _handleNodeUpdated(galaxyUpdate);
+    }
+
+    final hasLoadedGraph = state.nodes.isNotEmpty || state.edges.isNotEmpty;
+    if (!hasLoadedGraph) {
+      return;
+    }
+
+    await loadGalaxy(forceRefresh: true, showLoading: false);
+  }
+
   void _handleEvidencePack(Map<String, dynamic>? data) {
     if (data == null) return;
     final nodes = data['nodes'] as List<dynamic>?;
@@ -618,7 +634,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       if (!mounted || requestId != _layoutRequestId) return;
 
       if (result.isFailure || result.data == null) {
-        final error = result.error ?? 'Unknown error';
+        final error = result.error ?? '未知错误';
         final galaxyError = error is GalaxyError
             ? error
             : GalaxyError.unknown(error.toString());

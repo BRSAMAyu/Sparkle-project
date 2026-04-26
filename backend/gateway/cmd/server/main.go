@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/infra/logger"
 	"go.uber.org/zap"
 )
@@ -25,6 +26,11 @@ func main() {
 	defer logger.Log.Sync()
 
 	cfg := config.Load()
+
+	// Initialize i18n
+	if err := i18n.Init("locales"); err != nil {
+		logger.Log.Warn("Failed to initialize i18n, falling back to defaults", zap.Error(err))
+	}
 
 	// Initialize OpenTelemetry
 	shutdown := initTracer()

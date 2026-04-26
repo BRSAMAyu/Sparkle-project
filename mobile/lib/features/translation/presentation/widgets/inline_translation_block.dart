@@ -125,7 +125,7 @@ class _InlineTranslationBlockState
                       style: TextStyle(
                         fontSize: 13,
                         color: DS.brandPrimaryConst,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: DS.fontWeightMedium,
                       ),
                     ),
                     if (_result != null && _result!.isCacheHit) ...[

@@ -309,3 +309,92 @@ async def test_memory_admin_stage21_kill_switches(db_session, monkeypatch):
         assert put_resp.json()["flags"]["skill_share_enabled"] == "off"
 
     app.dependency_overrides = {}
+
+
+@pytest.mark.asyncio
+async def test_memory_admin_expanded_aurora_kill_switches(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
+    for module in (
+        "app.services.aurora_stage23_kill_switch_service",
+        "app.services.aurora_stage24_policy_kill_switch_service",
+        "app.services.aurora_stage25_reflection_kill_switch_service",
+        "app.services.aurora_stage26_scene_kill_switch_service",
+        "app.services.aurora_stage27_foresight_kill_switch_service",
+        "app.services.aurora_stage28_traits_kill_switch_service",
+        "app.services.aurora_stage29_srl_kill_switch_service",
+        "app.services.aurora_stage30_metacognition_kill_switch_service",
+        "app.services.aurora_stage31_idiographic_kill_switch_service",
+        "app.services.aurora_stage33_kill_switch_service",
+    ):
+        monkeypatch.setattr(f"{module}.cache_service.redis", None)
+
+    user_id = uuid4()
+    admin_user = User(
+        id=user_id,
+        username=f"admin_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+        is_active=True,
+        is_superuser=True,
+    )
+    db_session.add(admin_user)
+    await db_session.commit()
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_superuser():
+        return admin_user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_active_superuser] = override_superuser
+
+    cases = {
+        "stage23": ({"mode": "live"}, "bayesian_mode"),
+        "stage24": ({"mode": "shadow"}, "policy_compiler_mode"),
+        "stage25": ({"mode": "live"}, "reflection_wire_mode"),
+        "stage26": ({"mode": "shadow"}, "mode"),
+        "stage27": ({"mode": "live", "attractor": "live", "deviation": "shadow", "jitai": "off"}, "mode"),
+        "stage28": ({"mode": "live", "nlp_mode": "shadow", "coldstart_mode": "live"}, "mode"),
+        "stage29": (
+            {
+                "mode": "live",
+                "tracker_mode": "shadow",
+                "bridge_mode": "live",
+                "scaffolding_consume_mode": "shadow",
+            },
+            "mode",
+        ),
+        "stage30": (
+            {
+                "mode": "live",
+                "dashboard": "live",
+                "process_scaffolding": "shadow",
+                "fsm_combine": "off",
+            },
+            "mode",
+        ),
+        "stage31": ({"mode": "shadow"}, "mode"),
+        "stage33": (
+            {
+                "mode": "live",
+                "social": "live",
+                "srl": "shadow",
+                "wm_prompt": "shadow",
+                "events": "off",
+            },
+            "mode",
+        ),
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        for stage, (payload, asserted_key) in cases.items():
+            put_resp = await ac.put(f"/api/v1/admin/memory/{stage}/killswitch", json=payload)
+            assert put_resp.status_code == 200
+            assert put_resp.json()["flags"][asserted_key] == payload["mode"]
+
+            get_resp = await ac.get(f"/api/v1/admin/memory/{stage}/killswitch")
+            assert get_resp.status_code == 200
+            assert "flags" in get_resp.json()
+
+    app.dependency_overrides = {}

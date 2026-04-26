@@ -172,7 +172,7 @@ class _SprintHeader extends ConsumerWidget {
                     sprint.name,
                     style: context.sparkleTypography.labelLarge.copyWith(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                   const SizedBox(height: DS.spacing4),
@@ -275,7 +275,7 @@ class _SprintHeader extends ConsumerWidget {
                     '${(sprint.progress * 100).toInt()}%',
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       fontSize: 9,
                     ),
                   ),
@@ -373,7 +373,7 @@ class _SprintFilterChips extends ConsumerWidget {
                   style: context.sparkleTypography.labelSmall.copyWith(
                     color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
                     fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                        isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                   ),
                 ),
                 if (count > 0) ...[

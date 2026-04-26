@@ -256,4 +256,64 @@ void main() {
     expect(result.achievement.id, 'speed_learner');
     expect(result.achievement.name, '速通大师');
   });
+
+  test('getAchievementDetail parses unlock context story', () async {
+    apiClient.getHandler = (path, queryParameters) async {
+      expect(path, ApiEndpoints.achievementDetail('streak_7'));
+      expect(queryParameters, {'locale': 'zh'});
+
+      return Response(
+        requestOptions: RequestOptions(
+          path: ApiEndpoints.achievementDetail('streak_7'),
+        ),
+        data: {
+          'data': {
+            'id': 'streak_7',
+            'name': '连续7天学习',
+            'description': '连续学习7天',
+            'type': 'streak',
+            'rarity': 'rare',
+            'category': 'streak',
+            'is_hidden': false,
+            'sort_order': 1,
+            'trigger_code': 'STREAK_DAYS',
+            'trigger_config': {'days': 7},
+            'visual_effect_type': 'none',
+            'total_unlocked': 1,
+            'created_at': '2026-03-10T00:00:00Z',
+            'updated_at': '2026-03-10T00:00:00Z',
+          },
+          'is_unlocked': true,
+          'user_progress': {
+            'achievement_id': 'streak_7',
+            'progress': 1.0,
+            'progress_value': 7,
+            'progress_target': 7,
+            'is_pinned': false,
+            'share_count': 0,
+            'is_first_unlocker': true,
+            'unlocked_at': '2026-03-10T10:00:00Z',
+            'last_progress_update': '2026-03-10T10:00:00Z',
+            'context_snapshot': {
+              'current_plan': {'name': '考前冲刺', 'days_to_target': 5},
+              'task': {'title': '导数专项练习'},
+            },
+            'context_story':
+                '2026年3月10日，在「考前冲刺」目标日前 5 天，完成了 7 天连续学习，解锁了「连续7天学习」。',
+          },
+        },
+      );
+    };
+
+    final result = await repository.getAchievementDetail('streak_7');
+
+    expect(result.isUnlocked, isTrue);
+    expect(result.progressPercentage, 100);
+    expect(
+      result.userProgress?.unlockedAt,
+      DateTime.parse('2026-03-10T10:00:00Z'),
+    );
+    expect(result.userProgress?.contextSnapshot?['task']['title'], '导数专项练习');
+    expect(result.userProgress?.contextStory, contains('考前冲刺'));
+  });
 }

@@ -8,7 +8,7 @@ Tasks API Endpoints
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -22,17 +22,25 @@ from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.task import Task, TaskStatus, TaskType
-from app.models.task_resources import TaskResourceLink, TaskResourceType
+from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
 from app.models.user import User
 from app.schemas.task import (
+    SubTaskDetail,
     TaskAbandon,
     TaskCompleteRequest,
     TaskCreate,
     TaskDetail,
+    TaskDocumentInfo,
+    TaskDocumentLinkCreate,
+    TaskDocumentSuggestion,
+    TaskDocumentUnlinkRequest,
+    TaskQuickActionRequest,
     TaskRecommendationResponse,
     TaskReorderRequest,
     TaskResourceLinkCreate,
     TaskResourceLinkInfo,
+    TaskSnoozeRequest,
+    TaskStuckRequest,
     TaskSuggestionRequest,
     TaskSuggestionResponse,
     TaskUpdate,
@@ -48,6 +56,8 @@ from app.schemas.task_feedback import (
 from app.services.feedback_service import feedback_service
 from app.services.intelligent_task_service import IntelligentTaskService
 from app.services.seed_library_service import SeedLibraryService
+from app.services.focus_context_service import focus_context_service
+from app.services.task_document_service import task_document_service
 from app.services.task_guide_service import task_guide_service
 from app.services.task_service import TaskService
 from app.task_guidance import TaskGuidance, TaskGuidanceAudience
@@ -55,8 +65,29 @@ from app.task_guidance import TaskGuidance, TaskGuidanceAudience
 router = APIRouter()
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 def _serialize_task_guidance(guidance: TaskGuidance) -> dict[str, Any]:
     return guidance.model_dump(mode="json")
+
+
+def _serialize_task_document(link, file_record) -> TaskDocumentInfo:
+    return TaskDocumentInfo(
+        id=link.id,
+        created_at=link.created_at,
+        updated_at=link.updated_at,
+        deleted_at=link.deleted_at,
+        task_id=link.task_id,
+        file_id=file_record.id,
+        file_name=file_record.file_name,
+        mime_type=file_record.mime_type,
+        file_size=int(file_record.file_size or 0),
+        status=file_record.status,
+        linked_by=link.linked_by,
+        document_quality_score=float(file_record.document_quality_score or 0.0),
+    )
 
 
 async def _get_user_task_or_404(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:
@@ -64,6 +95,45 @@ async def _get_user_task_or_404(db: AsyncSession, task_id: UUID, user_id: UUID) 
     if not task or task.user_id != user_id:
         raise NotFoundError(message="Task not found")
     return task
+
+
+async def _find_today_focus_task(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    exclude_task_id: UUID,
+) -> Task | None:
+    today = date.today()
+    result = await db.execute(
+        select(Task)
+        .where(
+            Task.user_id == user_id,
+            Task.id != exclude_task_id,
+            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.STUCK]),
+            (Task.due_date.is_(None)) | (Task.due_date <= today),
+        )
+        .order_by(Task.order_index.asc(), desc(Task.priority), desc(Task.updated_at))
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+def _action_response(
+    *,
+    action: str,
+    message: str,
+    task: Task,
+    subtasks: list[Any] | None = None,
+) -> dict[str, Any]:
+    data: dict[str, Any] = {"task": TaskDetail.model_validate(task)}
+    if subtasks is not None:
+        data["subtasks"] = [SubTaskDetail.model_validate(item) for item in subtasks]
+    return {
+        "success": True,
+        "action": action,
+        "message": message,
+        "data": data,
+    }
 
 
 async def _resolve_task_resource_defaults(
@@ -113,6 +183,7 @@ async def _resolve_task_resource_defaults(
 
     return title, summary, metadata or None
 
+
 @router.get("", response_model=dict[str, Any])
 async def list_tasks(
     status: TaskStatus | None = Query(None, description="Filter by status"),
@@ -124,7 +195,7 @@ async def list_tasks(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List tasks with filtering and pagination
@@ -145,7 +216,7 @@ async def list_tasks(
         for tag in tags:
             # PostgreSQL: tags @> '["tag"]' checks if array contains the tag
             # Using contains for JSONB array
-            tag_conditions.append(Task.tags.op('@>')(f'["{tag}"]'))
+            tag_conditions.append(Task.tags.op("@>")(f'["{tag}"]'))
         query = query.where(or_(*tag_conditions))
     if due_date_start:
         query = query.where(Task.due_date >= due_date_start)
@@ -170,21 +241,35 @@ async def list_tasks(
             "total": total,
             "page": page,
             "page_size": page_size,
-            "total_pages": (total + page_size - 1) // page_size
-        }
+            "total_pages": (total + page_size - 1) // page_size,
+        },
     }
+
 
 @router.post("", response_model=dict[str, Any])
 async def create_task(
     task_in: TaskCreate,
     generate_guide: bool = Query(False, description="Whether to auto-generate guide"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create a new task
     """
     task = await TaskService.create(db, task_in, current_user.id)
+
+    linked_documents = [
+        _serialize_task_document(link, file_record)
+        for link, file_record in await task_document_service.list_task_documents(
+            db,
+            task_id=task.id,
+            user_id=current_user.id,
+        )
+    ]
+    document_suggestions = [
+        TaskDocumentSuggestion.model_validate(item)
+        for item in await task_document_service.suggest_documents_for_task(db, task=task)
+    ]
 
     if generate_guide and not task.guide_content:
         guidance = await task_guide_service.generate_task_guidance(
@@ -203,15 +288,16 @@ async def create_task(
     try:
         nudge_service = IntelligentTaskService(db)
         nudges = await nudge_service.get_task_nudges(
-            db, current_user.id,
-            {"estimated_minutes": task_in.estimated_minutes, **task_in.model_dump()}
+            db, current_user.id, {"estimated_minutes": task_in.estimated_minutes, **task_in.model_dump()}
         )
     except Exception as e:
         logger.warning(f"Failed to get task nudges: {e}")
 
     return {
         "data": TaskDetail.model_validate(task),
-        "nudges": nudges
+        "nudges": nudges,
+        "linked_documents": linked_documents,
+        "document_suggestions": document_suggestions,
     }
 
 
@@ -236,17 +322,17 @@ async def reorder_tasks(
         "data": [TaskDetail.model_validate(task) for task in tasks],
     }
 
+
 @router.post("/suggestions", response_model=TaskSuggestionResponse)
 async def get_task_suggestions(
-    request: TaskSuggestionRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    request: TaskSuggestionRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     获取任务创建建议 (LLM 驱动)
     """
     service = IntelligentTaskService(db)
     return await service.get_suggestions(current_user.id, request.input_text)
+
 
 @router.get("/recommendations/micro", response_model=list[TaskRecommendationResponse])
 async def get_micro_task_recommendations(
@@ -285,12 +371,10 @@ async def get_today_tasks(
         select(Task)
         .where(
             Task.user_id == current_user.id,
-            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED]),
+            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.STUCK, TaskStatus.COMPLETED]),
         )
         .where(
-            (Task.due_date.is_(None))
-            | (Task.due_date <= today)
-            | (Task.completed_at.is_not(None)),
+            (Task.due_date.is_(None)) | (Task.due_date <= today) | (Task.completed_at.is_not(None)),
         )
         .order_by(Task.order_index.asc(), desc(Task.priority), desc(Task.updated_at))
         .limit(50)
@@ -311,7 +395,7 @@ async def get_recommended_tasks(
         select(Task)
         .where(
             Task.user_id == current_user.id,
-            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]),
+            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.STUCK]),
         )
         .order_by(
             Task.due_date.is_(None),
@@ -340,11 +424,12 @@ async def get_recommended_tasks(
 
     return [TaskDetail.model_validate(task) for task in tasks[:limit]]
 
+
 @router.get("/{task_id}", response_model=dict[str, Any])
 async def get_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get task details
@@ -352,6 +437,76 @@ async def get_task(
     task = await _get_user_task_or_404(db, task_id, current_user.id)
 
     return {"data": TaskDetail.model_validate(task)}
+
+
+@router.get("/{task_id}/documents", response_model=dict[str, Any])
+async def list_task_documents(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List documents explicitly linked to a task."""
+    await _get_user_task_or_404(db, task_id, current_user.id)
+    links = await task_document_service.list_task_documents(
+        db,
+        task_id=task_id,
+        user_id=current_user.id,
+    )
+    return {"data": [_serialize_task_document(link, file_record) for link, file_record in links]}
+
+
+@router.post("/{task_id}/documents", response_model=dict[str, Any])
+async def attach_task_document(
+    payload: TaskDocumentLinkCreate,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Attach a study document to a task."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    try:
+        link = await task_document_service.attach_document(
+            db,
+            task=task,
+            file_id=payload.file_id,
+            linked_by=payload.linked_by,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    await db.commit()
+    await focus_context_service.invalidate_for_task(user_id=current_user.id, task_id=task_id)
+    links = await task_document_service.list_task_documents(
+        db,
+        task_id=task_id,
+        user_id=current_user.id,
+    )
+    attached = next((item for item in links if item[0].id == link.id), None)
+    if attached is None:
+        raise HTTPException(status_code=500, detail="Linked document could not be loaded")
+    return {"data": _serialize_task_document(attached[0], attached[1])}
+
+
+@router.delete("/{task_id}/documents", response_model=dict[str, Any])
+async def detach_task_document(
+    payload: TaskDocumentUnlinkRequest,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Detach a study document from a task."""
+    await _get_user_task_or_404(db, task_id, current_user.id)
+    removed = await task_document_service.detach_document(
+        db,
+        task_id=task_id,
+        file_id=payload.file_id,
+        user_id=current_user.id,
+    )
+    if not removed:
+        raise NotFoundError(message="Task document not found")
+    await db.commit()
+    await focus_context_service.invalidate_for_task(user_id=current_user.id, task_id=task_id)
+    return {"success": True, "task_id": str(task_id), "file_id": str(payload.file_id)}
 
 
 @router.get("/{task_id}/resources", response_model=dict[str, Any])
@@ -425,12 +580,13 @@ async def delete_task_resource(
     await db.commit()
     return None
 
+
 @router.put("/{task_id}", response_model=dict[str, Any])
 async def update_task(
     task_in: TaskUpdate,
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update task
@@ -447,6 +603,7 @@ async def update_task(
     await db.refresh(task)
 
     return {"data": TaskDetail.model_validate(task)}
+
 
 @router.post("/{task_id}/generate-guide", response_model=dict[str, Any])
 async def generate_task_guide(
@@ -549,11 +706,149 @@ async def create_or_refresh_task_guidance(
     return {"data": _serialize_task_guidance(guidance)}
 
 
+# route-tier: authed
+@router.post("/{task_id}/snooze", response_model=dict[str, Any])
+async def snooze_task(
+    request: TaskSnoozeRequest | None = None,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Push one task to a later date without changing the plan structure."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    target_date = (request.target_date if request else None) or (
+        date.today() + timedelta(days=(request.days if request else 1))
+    )
+    task.due_date = target_date
+    tags = list(task.tags or [])
+    if "snoozed" not in tags:
+        tags.append("snoozed")
+    task.tags = tags
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    next_task = await _find_today_focus_task(
+        db,
+        user_id=current_user.id,
+        exclude_task_id=task.id,
+    )
+    if next_task:
+        message = f"已推迟到明天，你现在多一点时间给「{next_task.title}」。"
+    else:
+        message = "已推迟到明天，今天先把节奏放轻一点。"
+    return _action_response(action="snooze", message=message, task=task)
+
+
+# route-tier: authed
+@router.post("/{task_id}/stuck", response_model=dict[str, Any])
+async def mark_task_stuck(
+    request: TaskStuckRequest | None = None,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark a task as stuck and return Aurora's current-context diagnosis."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    payload = request or TaskStuckRequest()
+    try:
+        updated_task, diagnosis = await TaskService.mark_stuck(
+            db,
+            task,
+            stuck_point=payload.stuck_point,
+            recent_steps=payload.recent_steps,
+            current_step_index=payload.current_step_index,
+            elapsed_seconds=payload.elapsed_seconds,
+            trigger=payload.trigger,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return {
+        "success": True,
+        "action": "stuck",
+        "message": "Aurora 已根据当前任务状态给出诊断。",
+        "data": {
+            "task": TaskDetail.model_validate(updated_task),
+            "diagnosis": diagnosis,
+        },
+    }
+
+
+# route-tier: authed
+@router.post("/{task_id}/too-hard", response_model=dict[str, Any])
+# route-tier: authed
+@router.post(
+    "/{task_id}/too_hard",
+    response_model=dict[str, Any],
+    include_in_schema=False,
+)
+async def mark_task_too_hard(
+    request: TaskQuickActionRequest | None = None,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Break a task into smaller subtasks when the current card feels too hard."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    from app.orchestration.adaptive_replanner import AdaptiveReplanner
+
+    replanner = AdaptiveReplanner(db, cache_service.redis)
+    subtasks = await replanner.break_down_single_task_for_too_hard(
+        user_id=current_user.id,
+        task_id=task.id,
+        feedback_text=request.reason if request else None,
+    )
+    await db.commit()
+    await db.refresh(task)
+    for subtask in subtasks:
+        await db.refresh(subtask)
+
+    if subtasks:
+        message = f"我把它拆成 {len(subtasks)} 小步了，先做「{subtasks[0].title}」。"
+    else:
+        message = "我知道这张有点硬，先别硬扛；可以直接找 AI 一起拆卡点。"
+    return _action_response(
+        action="too_hard",
+        message=message,
+        task=task,
+        subtasks=subtasks,
+    )
+
+
+# route-tier: authed
+@router.post("/{task_id}/skip", response_model=dict[str, Any])
+async def skip_task(
+    request: TaskQuickActionRequest | None = None,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Hide a task from active surfaces by marking it abandoned as a quick skip."""
+    reason = (request.reason if request else None) or "quick_action_skip"
+    task = await TaskService.abandon_task(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id,
+        reason=reason,
+    )
+    task.user_note = "Skipped from quick action"
+    task.completed_at = task.completed_at or _utcnow()
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+    return _action_response(
+        action="skip",
+        message="已跳过，这张卡不会再挤在今天了。",
+        task=task,
+    )
+
+
 @router.delete("/{task_id}")
 async def delete_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete task
@@ -566,31 +861,29 @@ async def delete_task(
 
     return {"success": True}
 
+
 @router.post("/{task_id}/start", response_model=dict[str, Any])
 async def start_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Start task (v2.2 修复 - 调用服务层)
 
     调用 TaskService.start_task() 确保状态同步逻辑被执行
     """
-    task = await TaskService.start_task(
-        db=db,
-        task_id=task_id,
-        user_id=current_user.id
-    )
+    task = await TaskService.start_task(db=db, task_id=task_id, user_id=current_user.id)
 
     return {"data": TaskDetail.model_validate(task)}
+
 
 @router.post("/{task_id}/abandon", response_model=dict[str, Any])
 async def abandon_task(
     task_id: UUID = Path(..., description="Task ID"),
     request: TaskAbandon | None = None,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Abandon task (v2.2 修复 - 发布事件)
@@ -600,12 +893,7 @@ async def abandon_task(
     - 发布 task.abandoned 事件 (用于认知分析)
     """
     reason = request.reason if request else None
-    task = await TaskService.abandon_task(
-        db=db,
-        task_id=task_id,
-        user_id=current_user.id,
-        reason=reason
-    )
+    task = await TaskService.abandon_task(db=db, task_id=task_id, user_id=current_user.id, reason=reason)
 
     try:
         from app.services.task_reflection_service import TaskReflectionService
@@ -626,13 +914,14 @@ async def abandon_task(
 
     return {"data": TaskDetail.model_validate(task)}
 
+
 @router.post("/{task_id}/complete", response_model=dict[str, Any])
 async def complete_task(
     request: TaskCompleteRequest,
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key")
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
 ):
     """
     完成任务 (v2.2 增强 - 修复事件发布)
@@ -670,11 +959,7 @@ async def complete_task(
     # 这确保了 task.completed 事件被发布，从而触发 AdaptiveReplanner
     actual_minutes = request.actual_minutes or task.estimated_minutes or 15
     task = await TaskService.complete_task(
-        db=db,
-        task_id=task_id,
-        user_id=current_user.id,
-        actual_minutes=actual_minutes,
-        note=request.note
+        db=db, task_id=task_id, user_id=current_user.id, actual_minutes=actual_minutes, note=request.note
     )
 
     # 以下逻辑由 TaskService.complete() 已处理，无需重复:
@@ -698,8 +983,7 @@ async def complete_task(
             GalaxyService(db)
             node_status = await db.execute(
                 select(UserNodeStatus).where(
-                    UserNodeStatus.user_id == current_user.id,
-                    UserNodeStatus.node_id == task.knowledge_node_id
+                    UserNodeStatus.user_id == current_user.id, UserNodeStatus.node_id == task.knowledge_node_id
                 )
             )
             status_obj = node_status.scalar_one_or_none()
@@ -716,11 +1000,8 @@ async def complete_task(
     next_actions = []
     try:
         from app.services.next_step_service import next_step_service
-        next_actions = await next_step_service.suggest_next_actions(
-            completed_task=task,
-            user=current_user,
-            db=db
-        )
+
+        next_actions = await next_step_service.suggest_next_actions(completed_task=task, user=current_user, db=db)
     except Exception as e:
         logger.warning(f"Failed to generate next actions: {e}")
 
@@ -736,15 +1017,12 @@ async def complete_task(
             task_id=str(task.id),
             actual_minutes=actual_minutes,
             estimated_minutes=task.estimated_minutes,
-            difficulty=task.difficulty if hasattr(task, 'difficulty') else None,
+            difficulty=task.difficulty if hasattr(task, "difficulty") else None,
         )
 
         if unlocked:
             unlocked_achievements = unlocked
-            next_actions.append({
-                "type": "achievement_unlocked",
-                "achievements": unlocked
-            })
+            next_actions.append({"type": "achievement_unlocked", "achievements": unlocked})
             logger.info(f"User {current_user.id} unlocked {len(unlocked)} achievements on task completion")
     except Exception as e:
         logger.warning(f"Achievement processing failed: {e}")
@@ -772,52 +1050,44 @@ async def complete_task(
             "flame_update": {
                 "level_before": 3,
                 "level_after": 3,
-                "brightness_change": 5 + feedback.get("flame_bonus", 0)
+                "brightness_change": 5 + feedback.get("flame_bonus", 0),
             },
-            "stats_update": {
-                "today_completed": 5,
-                "streak_days": 7
-            },
+            "stats_update": {"today_completed": 5, "streak_days": 7},
             "feedback": feedback.get("content"),
             "plan_update": None,  # TaskService.complete 中已处理，无需重复返回
             "galaxy_update": galaxy_update or feedback.get("galaxy_update"),
             "unlocked_achievements": unlocked_achievements,
         },
-        "next_actions": [
-            action.model_dump() if hasattr(action, "model_dump") else action
-            for action in next_actions
-        ],
+        "next_actions": [action.model_dump() if hasattr(action, "model_dump") else action for action in next_actions],
         # 🆕 v2.1: 重试令牌 (在这里简单返回 key 或 生成一个新的 token)
-        "retry_token": x_idempotency_key or "generated-token"
+        "retry_token": x_idempotency_key or "generated-token",
     }
+
 
 @router.post("/confirm-batch/{tool_result_id}", response_model=dict[str, Any])
 async def confirm_generated_tasks(
     tool_result_id: str = Path(..., description="Tool result ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     确认 AI 生成的一批任务 (P0.1 修复)
     """
     from app.services.task_service import TaskService
-    tasks = await TaskService.confirm_tasks_by_tool_result(
-        db, tool_result_id, current_user.id
-    )
-    return {
-        "success": True,
-        "count": len(tasks),
-        "data": [TaskDetail.model_validate(t) for t in tasks]
-    }
+
+    tasks = await TaskService.confirm_tasks_by_tool_result(db, tool_result_id, current_user.id)
+    return {"success": True, "count": len(tasks), "data": [TaskDetail.model_validate(t) for t in tasks]}
+
 
 # ========== Task Feedback Endpoints ==========
+
 
 @router.post("/{task_id}/feedback", response_model=TaskFeedbackSubmitResponse)
 async def submit_task_feedback(
     feedback_in: TaskFeedbackCreate,
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     提交任务反馈（v2.1 增强）
@@ -839,6 +1109,9 @@ async def submit_task_feedback(
             completion_quality=feedback_in.completion_quality,
             feedback_text=feedback_in.feedback_text,
             category=feedback_in.category,
+            stuck_point=feedback_in.stuck_point,
+            effective_method=feedback_in.effective_method,
+            adjustment_intention=feedback_in.adjustment_intention,
         )
 
         # 构建偏好更新详情
@@ -855,6 +1128,12 @@ async def submit_task_feedback(
             data=TaskFeedbackResponse.model_validate(feedback),
             preference_updates=preference_updates,
             reflection_prompt=reflection_prompt,
+            reflection_payload=feedback.reflection_payload,
+            ai_response=(
+                feedback.reflection_payload.get("ai_response")
+                if isinstance(feedback.reflection_payload, dict)
+                else None
+            ),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -880,12 +1159,18 @@ async def submit_task_reflection_answer(
             feedback_id=feedback_id,
             selected_option=reflection_in.selected_option,
             free_text=reflection_in.free_text,
+            stuck_point=reflection_in.stuck_point,
+            effective_method=reflection_in.effective_method,
+            adjustment_intention=reflection_in.adjustment_intention,
         )
         await db.commit()
         return ReflectionAnswerResponse(
             success=True,
-            message="谢谢你的反馈，我会据此优化后续计划。",
+            message=reflection_payload.get("ai_response") or "谢谢你的反馈，我会据此优化后续计划。",
             reflection_payload=reflection_payload,
+            ai_response=reflection_payload.get("ai_response"),
+            memory_id=reflection_payload.get("memory_id"),
+            linked_knowledge_nodes=reflection_payload.get("linked_knowledge_nodes"),
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -895,7 +1180,7 @@ async def submit_task_reflection_answer(
 async def get_task_feedback(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取任务的反馈历史
@@ -915,15 +1200,12 @@ async def get_task_feedback(
     return {
         "success": True,
         "data": [TaskFeedbackResponse.model_validate(f) for f in feedbacks],
-        "total": len(feedbacks)
+        "total": len(feedbacks),
     }
 
 
 @router.get("/feedback/stats", response_model=dict[str, Any])
-async def get_user_feedback_stats(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_user_feedback_stats(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取当前用户的任务反馈统计
 
@@ -944,10 +1226,8 @@ async def get_user_feedback_stats(
             "total_feedbacks": stats["total_feedbacks"],
             "avg_completion_quality": stats["avg_completion_quality"],
             "category_distribution": stats["category_distribution"],
-            "recent_feedbacks": [
-                TaskFeedbackResponse.model_validate(f) for f in stats["recent_feedbacks"]
-            ],
-        }
+            "recent_feedbacks": [TaskFeedbackResponse.model_validate(f) for f in stats["recent_feedbacks"]],
+        },
     }
 
 
@@ -956,7 +1236,7 @@ async def record_next_action_selection(
     selection_in: NextActionSelectionCreate,
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     记录用户对next_action的选择行为
@@ -974,10 +1254,7 @@ async def record_next_action_selection(
 
     # 验证task_id匹配
     if selection_in.task_id != task_id:
-        raise HTTPException(
-            status_code=400,
-            detail="task_id in path does not match task_id in body"
-        )
+        raise HTTPException(status_code=400, detail="task_id in path does not match task_id in body")
 
     service = NextActionSelectionService(db, cache_service.redis)
 
@@ -993,9 +1270,6 @@ async def record_next_action_selection(
             displayed_actions_count=selection_in.displayed_actions_count,
             context=selection_in.context,
         )
-        return {
-            "success": True,
-            "data": selection.to_dict()
-        }
+        return {"success": True, "data": selection.to_dict()}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

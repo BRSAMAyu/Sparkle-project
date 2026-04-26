@@ -159,7 +159,7 @@ class _MilestoneCard extends StatelessWidget {
                         style: TextStyle(
                           color: DS.brandPrimaryConst,
                           fontSize: 36,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -478,7 +478,7 @@ class _TaskCompletionCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 64,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
             const SizedBox(height: 20),

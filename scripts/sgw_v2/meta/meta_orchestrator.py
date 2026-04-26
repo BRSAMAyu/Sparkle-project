@@ -450,6 +450,34 @@ class MetaOrchestrator:
         )
         self.run_db.conn.commit()
 
+    def get_latest_pending_iteration(self) -> dict[str, Any] | None:
+        """Return the newest pending iteration awaiting comparison with a future run."""
+        row = self.run_db.conn.execute(
+            "SELECT * FROM iterations WHERE outcome = 'pending' ORDER BY iteration_number DESC LIMIT 1"
+        ).fetchone()
+        if row is None:
+            return None
+        cols = [desc[0] for desc in self.run_db.conn.execute("SELECT * FROM iterations LIMIT 0").description]
+        return dict(zip(cols, row))
+
+    def set_iteration_outcome(
+        self,
+        iteration_id: str,
+        *,
+        outcome: str,
+        summary_after: dict[str, Any] | None = None,
+    ) -> None:
+        """Finalize an iteration outcome without triggering evaluation logic."""
+        self.run_db.conn.execute(
+            "UPDATE iterations SET outcome = ?, summary_after = ? WHERE iteration_id = ?",
+            (
+                outcome,
+                json.dumps(summary_after or {}, ensure_ascii=False),
+                iteration_id,
+            ),
+        )
+        self.run_db.conn.commit()
+
     def get_iteration_history(self) -> list[dict[str, Any]]:
         """Return all iteration records ordered by iteration_number."""
         rows = self.run_db.conn.execute(

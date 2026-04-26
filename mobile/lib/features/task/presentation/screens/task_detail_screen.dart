@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -80,6 +81,9 @@ class _TaskDetailView extends ConsumerWidget {
                         gap: DS.spacing24,
                         children: [
                           _buildInfoSection(context, ref),
+                          if (task.guideJson != null ||
+                              (task.aiPrompt ?? '').trim().isNotEmpty)
+                            _StructuredGuideSection(task: task),
                           if ((task.userNote ?? '').trim().isNotEmpty)
                             _buildNoteSection(context),
                           _buildSubtaskSection(context, ref),
@@ -131,7 +135,7 @@ class _TaskDetailView extends ConsumerWidget {
                 Icon(Icons.notes_rounded, color: DS.primaryBase, size: 20),
                 const SizedBox(width: DS.spacing8),
                 Text(
-                  '任务说明',
+                  context.l10n.taskDetailNoteSection,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -184,7 +188,7 @@ class _TaskDetailView extends ConsumerWidget {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                '子任务 (${subtaskState.completed}/${subtaskState.total})',
+                context.l10n.taskDetailSubtasks(subtaskState.completed, subtaskState.total),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -204,7 +208,7 @@ class _TaskDetailView extends ConsumerWidget {
                 ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
                 : subtaskState.error != null && subtaskState.total == 0
                     ? Text(
-                        '子任务加载失败：${subtaskState.error}',
+                        context.l10n.taskDetailSubtaskLoadFailed(subtaskState.error ?? ''),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: DS.error,
                             ),
@@ -364,6 +368,23 @@ class _TaskDetailView extends ConsumerWidget {
                                 fontWeight: DS.fontWeightBold,
                               ),
                             ),
+                            if (_taskProtocolKind(task) != null)
+                              Chip(
+                                key: const ValueKey('task-protocol-kind-chip'),
+                                label: Text(
+                                  _taskProtocolKind(task)!,
+                                  style:
+                                      const TextStyle(fontSize: DS.fontSizeSm),
+                                ),
+                                backgroundColor:
+                                    DS.surfaceOverlay.withValues(alpha: 0.92),
+                                avatar: Icon(
+                                  Icons.hub_outlined,
+                                  size: DS.iconSizeXs,
+                                  color: DS.textSecondary,
+                                ),
+                                labelStyle: TextStyle(color: DS.textPrimary),
+                              ),
                           ],
                         ),
                       ],
@@ -553,7 +574,7 @@ class _TaskDetailView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '所属计划',
+                        context.l10n.taskDetailPlanContext,
                         style:
                             Theme.of(context).textTheme.labelMedium?.copyWith(
                                   color: DS.textSecondary,
@@ -637,6 +658,25 @@ class _TaskDetailView extends ConsumerWidget {
     }
   }
 
+  String? _taskProtocolKind(TaskModel task) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final dailySpec = guide['daily_spec'];
+    final candidates = [
+      guide['task_card_template_id'],
+      guide['template_id'],
+      guide['task_kind'],
+      if (dailySpec is Map) dailySpec['task_card_template_id'],
+      if (dailySpec is Map) dailySpec['template_id'],
+      if (dailySpec is Map) dailySpec['task_kind'],
+    ];
+    for (final candidate in candidates) {
+      final text = '$candidate'.trim();
+      if (text.isEmpty || text == 'null' || text == 'generic_task') continue;
+      return text;
+    }
+    return null;
+  }
+
   String _taskStatusLabel(BuildContext context, TaskStatus status) {
     final l10n = context.l10n;
     switch (status) {
@@ -644,6 +684,8 @@ class _TaskDetailView extends ConsumerWidget {
         return l10n.taskStatusPending;
       case TaskStatus.inProgress:
         return l10n.taskStatusInProgress;
+      case TaskStatus.stuck:
+        return l10n.taskStatusStuck;
       case TaskStatus.completed:
         return l10n.taskStatusCompleted;
       case TaskStatus.abandoned:
@@ -656,6 +698,7 @@ class _TaskDetailView extends ConsumerWidget {
       case TaskStatus.pending:
         return DS.warning;
       case TaskStatus.inProgress:
+      case TaskStatus.stuck:
         return DS.info;
       case TaskStatus.completed:
         return DS.success;
@@ -909,6 +952,204 @@ class _BottomActionBar extends ConsumerWidget {
   }
 }
 
+class _StructuredGuideSection extends StatelessWidget {
+  const _StructuredGuideSection({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final methodSteps = (guide['method_steps'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString())
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+    final keyPoints = (guide['key_points'] as List<dynamic>? ?? [])
+        .map((item) => item.toString())
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+
+    return GraphiteCardSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  context.l10n.taskGuideTitle,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ),
+              if ((task.aiPrompt ?? '').trim().isNotEmpty)
+                SparkleButton(
+                  label: context.l10n.taskCopyAiPrompt,
+                  size: ButtonSize.small,
+                  variant: ButtonVariant.secondary,
+                  icon: const Icon(Icons.content_copy_rounded, size: 14),
+                  onPressed: () => _copyAiPrompt(context),
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+          if ((guide['objective']?.toString() ?? '').trim().isNotEmpty)
+            _GuideInfoRow(
+              icon: Icons.track_changes_rounded,
+              label: context.l10n.taskObjective,
+              value: guide['objective'].toString(),
+            ),
+          if ((guide['time_estimate_minutes']?.toString() ?? '')
+              .trim()
+              .isNotEmpty)
+            _GuideInfoRow(
+              icon: Icons.timer_outlined,
+              label: context.l10n.taskEstimatedTime,
+              value: context.l10n.taskDetailStepMinutesValue(guide['time_estimate_minutes'] as int),
+            ),
+          if ((task.successCriteria ??
+                  guide['success_criteria']?.toString() ??
+                  '')
+              .trim()
+              .isNotEmpty)
+            _GuideInfoRow(
+              icon: Icons.verified_outlined,
+              label: context.l10n.taskCompletionCriteria,
+              value: (task.successCriteria ??
+                      guide['success_criteria']?.toString() ??
+                      '')
+                  .trim(),
+            ),
+          if (methodSteps.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Text(
+              context.l10n.taskSteps,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            ...List.generate(
+              methodSteps.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing6),
+                child: Text(
+                  '${index + 1}. ${methodSteps[index]}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                ),
+              ),
+            ),
+          ],
+          if (keyPoints.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Text(
+              context.l10n.taskKeyPoints,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: keyPoints
+                  .map(
+                    (point) => Chip(
+                      label: Text(point),
+                      backgroundColor: DS.surfaceSecondary,
+                      labelStyle: TextStyle(color: DS.textPrimary),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if ((task.aiPrompt ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: DS.spacing16),
+            Row(
+              children: [
+                Expanded(
+                  child: SparkleButton(
+                    label: context.l10n.taskStartFocus,
+                    variant: ButtonVariant.primary,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                    onPressed: () => unawaited(
+                      context.push('/tasks/${task.id}/execute'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: SparkleButton(
+                      label: context.l10n.taskOpenAiAssistant,
+                      variant: ButtonVariant.secondary,
+                      icon: const Icon(Icons.smart_toy_outlined, size: 16),
+                      onPressed: () => unawaited(
+                        context.push('/tasks/${task.id}/execute?panel=assistant'),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyAiPrompt(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: task.aiPrompt ?? ''));
+    if (!context.mounted) return;
+    AppFeedback.success(context, context.l10n.taskDetailCopyAiPromptSuccess);
+  }
+}
+
+class _GuideInfoRow extends StatelessWidget {
+  const _GuideInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DS.spacing8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: DS.primaryBase),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textPrimary,
+                      height: 1.45,
+                    ),
+                children: [
+                  TextSpan(
+                    text: '$label：',
+                    style: const TextStyle(fontWeight: DS.fontWeightBold),
+                  ),
+                  TextSpan(text: value),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _GenerateGuideButton extends ConsumerStatefulWidget {
   const _GenerateGuideButton({required this.taskId});
   final String taskId;
@@ -927,11 +1168,11 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
       await ref.read(taskListProvider.notifier).generateGuide(widget.taskId);
       if (mounted) {
         ref.invalidate(taskDetailProvider(widget.taskId));
-        AppFeedback.success(context, '任务指南已生成');
+        AppFeedback.success(context, context.l10n.taskDetailGuideGenerated);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '生成失败: $e');
+        AppFeedback.error(context, context.l10n.taskDetailGuideGenerateFailed('$e'));
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
@@ -948,7 +1189,7 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
       );
     }
     return SparkleButton(
-      label: 'AI 生成',
+      label: context.l10n.taskAiGenerate,
       size: ButtonSize.small,
       variant: ButtonVariant.secondary,
       icon: const Icon(Icons.auto_awesome, size: 14),

@@ -12,10 +12,16 @@ class TaskChatPanel extends ConsumerStatefulWidget {
   const TaskChatPanel({
     required this.taskId,
     this.isAvailable = true,
+    this.initialExpanded = false,
+    this.initialPrompt,
+    this.initialExtraContext,
     super.key,
   });
   final String taskId;
   final bool isAvailable;
+  final bool initialExpanded;
+  final String? initialPrompt;
+  final Map<String, dynamic>? initialExtraContext;
 
   @override
   ConsumerState<TaskChatPanel> createState() => _TaskChatPanelState();
@@ -24,6 +30,24 @@ class TaskChatPanel extends ConsumerStatefulWidget {
 class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
   final TextEditingController _controller = TextEditingController();
   bool _isExpanded = false;
+  String? _sentInitialPrompt;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initialExpanded;
+    _queueInitialPrompt();
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskChatPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.taskId != widget.taskId) {
+      _sentInitialPrompt = null;
+      _isExpanded = widget.initialExpanded;
+    }
+    _queueInitialPrompt();
+  }
 
   void _sendMessage() {
     final text = _controller.text;
@@ -36,6 +60,33 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
         setState(() => _isExpanded = true);
       }
     }
+  }
+
+  void _queueInitialPrompt() {
+    final prompt = widget.initialPrompt?.trim();
+    if (!widget.isAvailable ||
+        widget.taskId.isEmpty ||
+        prompt == null ||
+        prompt.isEmpty ||
+        prompt == _sentInitialPrompt) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final nextPrompt = widget.initialPrompt?.trim();
+      if (nextPrompt == null ||
+          nextPrompt.isEmpty ||
+          nextPrompt == _sentInitialPrompt) {
+        return;
+      }
+      _sentInitialPrompt = nextPrompt;
+      unawaited(
+        ref.read(taskChatProvider(widget.taskId).notifier).sendMessage(
+              nextPrompt,
+              extraContext: widget.initialExtraContext,
+            ),
+      );
+    });
   }
 
   @override

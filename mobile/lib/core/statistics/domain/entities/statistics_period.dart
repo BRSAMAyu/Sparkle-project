@@ -1,3 +1,5 @@
+import 'package:sparkle/l10n/app_localizations.dart';
+
 /// Time period enumeration for statistics queries
 enum StatisticsPeriod {
   /// Today's data (00:00 to now)
@@ -19,35 +21,30 @@ enum StatisticsPeriod {
 /// Extension for StatisticsPeriod to provide time range calculations
 extension StatisticsPeriodExt on StatisticsPeriod {
   /// Display label in Chinese
-  String get label {
+  String get label => localizedLabel(null);
+
+  /// Localized label
+  String localizedLabel(AppLocalizations? l10n) {
     switch (this) {
       case StatisticsPeriod.today:
-        return '今日';
+        return l10n?.statisticsPeriodToday ?? '今日';
       case StatisticsPeriod.week:
-        return '本周';
+        return l10n?.statisticsPeriodWeek ?? '本周';
       case StatisticsPeriod.month:
-        return '本月';
+        return l10n?.statisticsPeriodMonth ?? '本月';
       case StatisticsPeriod.year:
-        return '今年';
+        return l10n?.statisticsPeriodYear ?? '今年';
       case StatisticsPeriod.custom:
-        return '自定义';
+        return l10n?.statisticsPeriodCustom ?? '自定义';
     }
   }
 
   /// Short label for compact displays
-  String get shortLabel {
-    switch (this) {
-      case StatisticsPeriod.today:
-        return '今日';
-      case StatisticsPeriod.week:
-        return '本周';
-      case StatisticsPeriod.month:
-        return '本月';
-      case StatisticsPeriod.year:
-        return '今年';
-      case StatisticsPeriod.custom:
-        return '自定义';
-    }
+  String get shortLabel => localizedShortLabel(null);
+
+  /// Localized short label
+  String localizedShortLabel(AppLocalizations? l10n) {
+    return localizedLabel(l10n);
   }
 
   /// Get the start time for this period

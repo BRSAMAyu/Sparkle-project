@@ -80,6 +80,19 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     unawaited(_loadSettings());
   }
 
+  void _goBack() {
+    final navigator = Navigator.maybeOf(context);
+    if (navigator?.canPop() ?? false) {
+      navigator!.pop();
+    } else {
+      try {
+        context.go('/profile');
+      } catch (_) {
+        // The screen can be rendered in isolated widget tests without GoRouter.
+      }
+    }
+  }
+
   Future<void> _loadSettings() async {
     if (!AppFeatureFlags.enableUserMemoryControls) {
       setState(() {
@@ -94,12 +107,34 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     });
     try {
       final service = ref.read(memoryApiServiceProvider);
-      final results = await Future.wait<dynamic>([
-        service.getMemorySettings(),
-        service.getPushSettings(),
-      ]);
-      final settings = results[0] as MemorySettingsModel;
-      final pushSettings = results[1] as PushOptInSettingsModel;
+      MemorySettingsModel settings;
+      PushOptInSettingsModel pushSettings;
+      try {
+        settings = await service.getMemorySettings();
+      } catch (_) {
+        settings = MemorySettingsModel(
+          enabled: true,
+          allowPreferences: true,
+          allowGoals: true,
+          allowEpisodic: true,
+          allowInferredEpisodic: true,
+          captureLevel: 'medium',
+          blockedPrefKeys: [],
+          blockedSources: [],
+        );
+      }
+      try {
+        pushSettings = await service.getPushSettings();
+      } catch (_) {
+        pushSettings = PushOptInSettingsModel(
+          enabled: false,
+          allowCommitmentFollowUp: false,
+          allowEngagementRecovery: false,
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+          timezone: 'Asia/Shanghai',
+        );
+      }
       if (!mounted) {
         return;
       }
@@ -207,14 +242,15 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            onPressed: _goBack,
             variant: ButtonVariant.ghost,
+            semanticLabel: '返回',
           ),
           title: Text(
             '记忆控制',
             style: DS.titleLarge.copyWith(
               color: DS.textPrimary,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           iconTheme: IconThemeData(color: DS.textPrimary),
@@ -326,7 +362,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       '社交语义子开关',
                       style: DS.titleMedium.copyWith(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                     const SizedBox(height: DS.sm),
@@ -632,7 +668,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: color,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -648,7 +684,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             if (subtitle != null) ...[
@@ -691,7 +727,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                     title,
                     style: DS.bodyLarge.copyWith(
                       color: enabled ? DS.textPrimary : DS.textDisabled,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                   const SizedBox(height: DS.spacing4),
@@ -729,7 +765,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             title,
             style: DS.bodyMedium.copyWith(
               color: enabled ? DS.textPrimary : DS.textDisabled,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -820,7 +856,7 @@ class _MemoryChoiceChip extends StatelessWidget {
         ),
         labelStyle: DS.bodySmall.copyWith(
           color: selected ? DS.primaryBase : DS.textSecondary,
-          fontWeight: FontWeight.w600,
+          fontWeight: DS.fontWeightSemibold,
         ),
       );
 }
@@ -855,7 +891,7 @@ class _MemoryFilterChip extends StatelessWidget {
           color: enabled
               ? (selected ? DS.primaryBase : DS.textSecondary)
               : DS.textDisabled,
-          fontWeight: FontWeight.w600,
+          fontWeight: DS.fontWeightSemibold,
         ),
         checkmarkColor: DS.primaryBase,
       );

@@ -251,6 +251,19 @@ class UserInsightState(BaseModel):
             ]
             if subjects:
                 items.append(f"- 胶囊主题: {', '.join(subjects)}")
+            method_summaries = [
+                str(item).strip()
+                for item in list(capsule_preferences.get("method_preference_summary") or [])[:2]
+                if str(item).strip()
+            ]
+            if not method_summaries:
+                method_summaries = [
+                    f"用户偏好{str(item.get('label') or '').strip()}"
+                    for item in list(capsule_preferences.get("method_preferences") or [])[:2]
+                    if isinstance(item, dict) and str(item.get("label") or "").strip()
+                ]
+            if method_summaries:
+                items.append(f"- 胶囊方法: {'; '.join(method_summaries)}")
 
         body = "\n".join(items)
         body = self._truncate_to_budget(body)

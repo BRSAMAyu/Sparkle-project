@@ -136,7 +136,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
       ),
       child: ContentConstraint(
         child: ListView(
-          padding: const EdgeInsets.all(DS.spacing24),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
           children: [
             SparkleStaggerItem(
               index: 0,
@@ -325,7 +325,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                        ?.copyWith(fontWeight: DS.fontWeightBold),
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
@@ -406,7 +406,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],

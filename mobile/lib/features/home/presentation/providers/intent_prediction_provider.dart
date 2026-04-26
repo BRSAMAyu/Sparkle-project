@@ -105,7 +105,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       // Sprint-based prediction
       if (sprint != null && sprint.daysLeft <= 3)
         PredictedAction(
-          label: '冲刺冲刺',
+          label: 'Sprint!',
           icon: Icons.flash_on_rounded,
           confidence: 0.9,
           color: DS.warning,
@@ -114,32 +114,32 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       // Next task prediction
       if (nextActions.isNotEmpty)
         PredictedAction(
-          label: '继续"${nextActions.first.title}"',
+          label: 'Continue "${nextActions.first.title}"',
           icon: Icons.play_arrow_rounded,
           confidence: 0.8,
           action: () => _navigateToTaskExecution(nextActions.first.id),
         ),
       // General predictions
       PredictedAction(
-        label: '创建任务',
+        label: 'Create Task',
         icon: Icons.add_task_rounded,
         confidence: 0.6,
         action: _navigateToTaskCreate,
       ),
       PredictedAction(
-        label: '开始专注',
+        label: 'Start Focus',
         icon: Icons.center_focus_strong_rounded,
         confidence: 0.5,
         action: _navigateToFocus,
       ),
       PredictedAction(
-        label: '查看日历',
+        label: 'View Calendar',
         icon: Icons.calendar_today_rounded,
         confidence: 0.4,
         action: _navigateToCalendar,
       ),
       PredictedAction(
-        label: '好奇心胶囊',
+        label: 'Curiosity Capsule',
         icon: Icons.lightbulb_rounded,
         confidence: 0.3,
         action: _navigateToCapsule,
@@ -166,19 +166,19 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       // Generic predictions for longer input without clear intent
       typingPredictions.addAll([
         PredictedAction(
-          label: '发送给AI',
+          label: 'Send to AI',
           icon: Icons.auto_awesome_rounded,
           confidence: 0.7,
           action: () => _sendChatMessage(text),
         ),
         PredictedAction(
-          label: '创建任务',
+          label: 'Create Task',
           icon: Icons.add_task_rounded,
           confidence: 0.5,
           action: () => _navigateToTaskCreate(text),
         ),
         PredictedAction(
-          label: '记录想法',
+          label: 'Note Idea',
           icon: Icons.lightbulb_rounded,
           confidence: 0.4,
           action: () => _createCognitiveFragment(text),
@@ -265,7 +265,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
         : [
             PredictionActionData(
               id: '${insight.predictionId}:chat',
-              label: '继续推进',
+              label: 'Continue',
               actionType: insight.predictedActionType,
               targetRoute: '/chat',
               suggestedPrompt: insight.suggestedPrompt,
@@ -386,14 +386,14 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       case EnhancedIntentType.task:
         return [
           PredictedAction(
-            label: '创建任务',
+            label: 'Create Task',
             icon: Icons.add_task_rounded,
             confidence: confidence,
             color: DS.success,
             action: () => _navigateToTaskCreate(text),
           ),
           PredictedAction(
-            label: '设置提醒',
+            label: 'Set Reminder',
             icon: Icons.notification_add_rounded,
             confidence: confidence * 0.85,
             action: () => _navigateToTaskCreate(text),
@@ -402,14 +402,14 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       case EnhancedIntentType.capsule:
         return [
           PredictedAction(
-            label: '记录想法',
+            label: 'Note Idea',
             icon: Icons.lightbulb_rounded,
             confidence: confidence,
             color: DS.prismPurple,
             action: () => _createCognitiveFragment(text),
           ),
           PredictedAction(
-            label: '认知棱镜',
+            label: 'Cognitive Prism',
             icon: Icons.psychology_rounded,
             confidence: confidence * 0.7,
             action: _navigateToPatterns,
@@ -418,30 +418,30 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       case EnhancedIntentType.translation:
         return [
           PredictedAction(
-            label: '翻译文本',
+            label: 'Translate',
             icon: Icons.translate_rounded,
             confidence: confidence,
             color: DS.info,
             action: () => _sendChatMessage(text),
           ),
           PredictedAction(
-            label: '学习语言',
+            label: 'Learn Language',
             icon: Icons.language_rounded,
             confidence: confidence * 0.75,
-            action: () => _sendChatMessage('请帮我学习$text'),
+            action: () => _sendChatMessage('Help me learn $text'),
           ),
         ];
       case EnhancedIntentType.prism:
         return [
           PredictedAction(
-            label: '查看认知棱镜',
+            label: 'View Cognitive Prism',
             icon: Icons.psychology_rounded,
             confidence: confidence,
             color: DS.brandSecondary,
             action: _navigateToPatterns,
           ),
           PredictedAction(
-            label: '行为分析',
+            label: 'Behavior Analysis',
             icon: Icons.analytics_rounded,
             confidence: confidence * 0.8,
             action: _navigateToPatterns,
@@ -450,14 +450,14 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       case EnhancedIntentType.sprint:
         return [
           PredictedAction(
-            label: '开始冲刺',
+            label: 'Start Sprint',
             icon: Icons.flash_on_rounded,
             confidence: confidence,
             color: DS.warning,
             action: _navigateToFocus,
           ),
           PredictedAction(
-            label: '专注模式',
+            label: 'Focus Mode',
             icon: Icons.center_focus_strong_rounded,
             confidence: confidence * 0.85,
             action: _navigateToFocus,
@@ -466,14 +466,14 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       case EnhancedIntentType.learn:
         return [
           PredictedAction(
-            label: '开始学习',
+            label: 'Start Learning',
             icon: Icons.school_rounded,
             confidence: confidence,
             color: DS.brandPrimary,
             action: () => _sendChatMessage(text),
           ),
           PredictedAction(
-            label: '创建学习计划',
+            label: 'Create Study Plan',
             icon: Icons.edit_calendar_rounded,
             confidence: confidence * 0.7,
             action: () => _navigateToTaskCreate(text),
@@ -482,14 +482,14 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       case EnhancedIntentType.review:
         return [
           PredictedAction(
-            label: '开始复习',
+            label: 'Start Review',
             icon: Icons.replay_rounded,
             confidence: confidence,
             color: DS.info.shade700,
-            action: () => _sendChatMessage('请帮我复习：$text'),
+            action: () => _sendChatMessage('Help me review: $text'),
           ),
           PredictedAction(
-            label: '查看错题本',
+            label: 'View Error Book',
             icon: Icons.menu_book_rounded,
             confidence: confidence * 0.75,
             action: _navigateToErrorBook,
@@ -498,7 +498,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       case EnhancedIntentType.chat:
         return [
           PredictedAction(
-            label: '发送给AI',
+            label: 'Send to AI',
             icon: Icons.auto_awesome_rounded,
             confidence: confidence,
             color: DS.prismBlue,

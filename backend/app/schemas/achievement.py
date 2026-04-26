@@ -1,4 +1,5 @@
 """Achievement Schemas - Achievement system request/response models"""
+
 from __future__ import annotations
 from datetime import date, datetime
 from enum import StrEnum
@@ -12,8 +13,10 @@ from app.schemas.common import BaseSchema
 
 # ========== Achievement Schemas ==========
 
+
 class AchievementBase(BaseSchema):
     """Achievement basic information"""
+
     id: str = Field(description="Achievement ID")
     name: str = Field(description="Achievement name")
     description: str | None = Field(default=None, description="Achievement description")
@@ -33,6 +36,7 @@ class AchievementBase(BaseSchema):
 
 class AchievementDetail(AchievementBase):
     """Achievement detailed information"""
+
     trigger_code: str = Field(description="Trigger code")
     trigger_config: dict[str, Any] | None = Field(default=None, description="Trigger config")
     prerequisites: list[str] | None = Field(default=None, description="Prerequisite achievement IDs")
@@ -44,6 +48,7 @@ class AchievementDetail(AchievementBase):
 
 class UserAchievementBase(BaseModel):
     """User achievement basic information"""
+
     achievement_id: str = Field(description="Achievement ID")
     progress: float = Field(default=0.0, description="Progress 0.0-1.0")
     progress_value: int = Field(default=0, description="Current value")
@@ -53,23 +58,30 @@ class UserAchievementBase(BaseModel):
 
 class UserAchievementDetail(UserAchievementBase):
     """User achievement detailed information"""
+
     user_id: UUID = Field(description="User ID")
     unlocked_at: datetime | None = Field(default=None, description="Unlocked time")
     share_count: int = Field(default=0, description="Share count")
     is_first_unlocker: bool = Field(default=False, description="Is first unlocker")
     last_progress_update: datetime | None = Field(default=None, description="Last progress update")
+    context_snapshot: dict[str, Any] | None = Field(default=None, description="Context captured when unlocked")
+    context_story: str | None = Field(default=None, description="Personalized unlock context story")
 
 
 class UserAchievementProgressPayload(UserAchievementBase):
     """User achievement progress payload for nested achievement responses"""
+
     unlocked_at: datetime | None = Field(default=None, description="Unlocked time")
     share_count: int = Field(default=0, description="Share count")
     is_first_unlocker: bool = Field(default=False, description="Is first unlocker")
     last_progress_update: datetime | None = Field(default=None, description="Last progress update")
+    context_snapshot: dict[str, Any] | None = Field(default=None, description="Context captured when unlocked")
+    context_story: str | None = Field(default=None, description="Personalized unlock context story")
 
 
 class AchievementWithProgress(BaseModel):
     """Achievement with user progress"""
+
     achievement: AchievementDetail = Field(description="Achievement info")
     user_progress: UserAchievementProgressPayload | None = Field(default=None, description="User progress")
     is_unlocked: bool = Field(default=False, description="Is unlocked")
@@ -78,24 +90,31 @@ class AchievementWithProgress(BaseModel):
 
 class AchievementListResponse(BaseModel):
     """Achievement list response"""
+
     data: list[AchievementWithProgress] = Field(default_factory=list, description="Achievement list")
     meta: dict[str, Any] = Field(default_factory=dict, description="Metadata like categories, stats")
 
 
 class CloseToUnlockAchievementListResponse(BaseModel):
     """Close-to-unlock achievement list response"""
+
     data: list[AchievementWithProgress] = Field(default_factory=list, description="Achievement list")
     count: int = Field(default=0, description="Achievement count")
 
 
 class AchievementDetailResponse(BaseModel):
     """Achievement detail response"""
+
     data: AchievementDetail = Field(description="Achievement detail")
     is_unlocked: bool = Field(default=False, description="Whether the user has unlocked the achievement")
+    user_progress: UserAchievementProgressPayload | None = Field(default=None, description="User progress")
+    context_snapshot: dict[str, Any] | None = Field(default=None, description="Context captured when unlocked")
+    context_story: str | None = Field(default=None, description="Personalized unlock context story")
 
 
 class AchievementMapNode(BaseModel):
     """Achievement map node for visualization"""
+
     id: str = Field(description="Achievement ID")
     name: str = Field(description="Achievement name")
     rarity: AchievementRarity = Field(description="Achievement rarity")
@@ -107,7 +126,9 @@ class AchievementMapNode(BaseModel):
     is_hidden: bool = Field(default=False, description="Is hidden")
     prerequisites: list[str] = Field(default_factory=list, description="Prerequisites")
     parent_id: str | None = Field(default=None, description="Parent achievement ID")
-    display_state: str = Field(default="blocked", description="unlocked | ready_to_pursue | close_to_unlock | blocked | hidden_unrevealed")
+    display_state: str = Field(
+        default="blocked", description="unlocked | ready_to_pursue | close_to_unlock | blocked | hidden_unrevealed"
+    )
     is_recommended_target: bool = Field(default=False, description="Is the current best next target")
     reward_preview: list[str] = Field(default_factory=list, description="Reward summary for the node")
     progress_percentage: int = Field(default=0, description="User progress percentage")
@@ -118,6 +139,7 @@ class AchievementMapNode(BaseModel):
 
 class AchievementMapResponse(BaseModel):
     """Achievement map response"""
+
     nodes: list[AchievementMapNode] = Field(default_factory=list, description="Map nodes")
     connections: list[dict[str, Any]] = Field(default_factory=list, description="Connections")
     categories: list[dict[str, Any]] = Field(default_factory=list, description="Categories")
@@ -125,8 +147,10 @@ class AchievementMapResponse(BaseModel):
 
 # ========== Streak Schemas ==========
 
+
 class StreakStatsResponse(BaseModel):
     """User streak statistics"""
+
     current_streak: int = Field(default=0, description="Current streak days")
     max_streak: int = Field(default=0, description="Maximum streak")
     longest_streak: int = Field(default=0, description="Longest streak record")
@@ -140,6 +164,7 @@ class StreakStatsResponse(BaseModel):
 
 class StreakDayRecord(BaseModel):
     """Single streak day record"""
+
     day: date = Field(description="Calendar day")
     status: str = Field(description="active | frozen | missed")
     used_freeze: bool = Field(default=False, description="Whether freeze was used")
@@ -148,13 +173,16 @@ class StreakDayRecord(BaseModel):
 
 class StreakHistoryResponse(BaseModel):
     """Streak history response for calendar view"""
+
     days: list[StreakDayRecord] = Field(default_factory=list, description="Streak day records")
 
 
 # ========== Contract Schemas ==========
 
+
 class ContractCreateRequest(BaseModel):
     """Create contract request"""
+
     target_study_minutes: int = Field(ge=10, le=480, description="Target study minutes per day")
     target_days: int = Field(ge=1, le=100, description="Target consecutive days")
     photon_stake: int = Field(ge=10, description="Photons to stake")
@@ -162,6 +190,7 @@ class ContractCreateRequest(BaseModel):
 
 class ContractResponse(BaseModel):
     """Contract response"""
+
     user_id: UUID = Field(description="User ID")
     target_study_minutes: int = Field(description="Target study minutes per day")
     target_days: int = Field(description="Target consecutive days")
@@ -179,6 +208,7 @@ class ContractResponse(BaseModel):
 
 class ContractCheckResponse(BaseModel):
     """Contract check response"""
+
     has_active_contract: bool = Field(default=False, description="Has active contract")
     contract: ContractResponse | None = Field(default=None, description="Contract detail")
     progress_today: int = Field(default=0, description="Today's study minutes")
@@ -187,8 +217,10 @@ class ContractCheckResponse(BaseModel):
 
 # ========== Galaxy Skin Schemas ==========
 
+
 class GalaxySkinBase(BaseModel):
     """Galaxy skin basic information"""
+
     id: str = Field(description="Skin ID")
     name: str = Field(description="Skin name")
     description: str | None = Field(default=None, description="Description")
@@ -199,6 +231,7 @@ class GalaxySkinBase(BaseModel):
 
 class GalaxySkinDetail(GalaxySkinBase):
     """Galaxy skin detailed information"""
+
     unlock_type: str = Field(description="Unlock type")
     unlock_requirement: dict[str, Any] = Field(description="Unlock requirement")
     skin_config: dict[str, Any] = Field(description="Skin configuration")
@@ -208,14 +241,17 @@ class GalaxySkinDetail(GalaxySkinBase):
 
 class GalaxySkinListResponse(BaseModel):
     """Galaxy skin list response"""
+
     data: list[GalaxySkinDetail] = Field(default_factory=list, description="Skins list")
     equipped_skin_id: str | None = Field(default=None, description="Currently equipped skin")
 
 
 # ========== Title Schemas ==========
 
+
 class UserTitleResponse(BaseModel):
     """User title response"""
+
     title_id: str = Field(description="Title ID")
     title_name: str = Field(description="Title name")
     title_display: str = Field(description="Display text")
@@ -226,14 +262,17 @@ class UserTitleResponse(BaseModel):
 
 class TitleListResponse(BaseModel):
     """User title list response"""
+
     data: list[UserTitleResponse] = Field(default_factory=list, description="Titles list")
     equipped_title: str | None = Field(default=None, description="Currently equipped title")
 
 
 # ========== Event Schemas ==========
 
+
 class AchievementEventType(StrEnum):
     """Achievement event types"""
+
     TASK_COMPLETED = "task_completed"
     DAILY_CHECKIN = "daily_checkin"
     NODE_UNLOCKED = "node_unlocked"
@@ -250,22 +289,27 @@ class AchievementEventType(StrEnum):
 
 class AchievementUnlockEvent(BaseModel):
     """Achievement unlock event"""
+
     achievement_id: str = Field(description="Achievement ID")
     name: str = Field(description="Achievement name")
     rarity: AchievementRarity = Field(description="Achievement rarity")
     visual_effect: dict[str, Any] | None = Field(default=None, description="Visual effect config")
     rewards: list[dict[str, Any]] | None = Field(default=None, description="Rewards")
     unlocked_at: datetime = Field(default_factory=datetime.utcnow, description="Unlock time")
+    context_snapshot: dict[str, Any] | None = Field(default=None, description="Context captured when unlocked")
+    context_story: str | None = Field(default=None, description="Personalized unlock context story")
 
 
 class AchievementEventRequest(BaseModel):
     """Achievement event request (internal use)"""
+
     event_type: AchievementEventType = Field(description="Event type")
     event_data: dict[str, Any] | None = Field(default=None, description="Event data")
 
 
 class AchievementEventProcessResponse(BaseModel):
     """Internal achievement event processing response"""
+
     success: bool = Field(default=True, description="Request success")
     unlocked_count: int = Field(default=0, description="Number of achievements unlocked by this event")
     unlocked: list[dict[str, Any]] = Field(default_factory=list, description="Unlocked achievement payloads")
@@ -350,14 +394,17 @@ class ShareTemplateListResponse(BaseModel):
 
 class AchievementPinResponse(BaseModel):
     """Pin achievement response"""
+
     success: bool = Field(default=True, description="Request success")
     pinned: bool = Field(default=False, description="Whether the achievement is pinned")
 
 
 # ========== Stats Schemas ==========
 
+
 class AchievementStatsResponse(BaseModel):
     """User achievement statistics"""
+
     total_achievements: int = Field(description="Total achievements")
     unlocked_count: int = Field(description="Unlocked count")
     unlocked_percentage: float = Field(description="Unlocked percentage")

@@ -1,6 +1,7 @@
 """
 错题档案 API 路由
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -33,6 +34,7 @@ async def _analyze_error_task(error_id: UUID, user_id: UUID, db_session_factory)
         service = ErrorBookService(session)
         await service.analyze_and_link(error_id, user_id)
 
+
 async def get_error_service(
     db: AsyncSession = Depends(get_db),
 ) -> ErrorBookService:
@@ -44,7 +46,7 @@ async def create_error(
     data: ErrorRecordCreate,
     background_tasks: BackgroundTasks,
     user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    service: ErrorBookService = Depends(get_error_service),
 ):
     """
     创建错题
@@ -60,6 +62,7 @@ async def create_error(
 async def list_errors(
     subject: SubjectEnum | None = Query(None, description="按科目筛选"),
     chapter: str | None = Query(None, description="按章节筛选"),
+    node_id: str | None = Query(None, description="按知识节点筛选"),
     error_type: ErrorTypeEnum | None = Query(None, description="按错因类型筛选"),
     mastery_min: float | None = Query(None, ge=0, le=1, description="掌握度下限"),
     mastery_max: float | None = Query(None, ge=0, le=1, description="掌握度上限"),
@@ -69,7 +72,7 @@ async def list_errors(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    service: ErrorBookService = Depends(get_error_service),
 ):
     """
     获取错题列表
@@ -77,6 +80,7 @@ async def list_errors(
     params = ErrorQueryParams(
         subject=subject,
         chapter=chapter,
+        node_id=node_id,
         error_type=error_type,
         mastery_min=mastery_min,
         mastery_max=mastery_max,
@@ -84,24 +88,19 @@ async def list_errors(
         keyword=keyword,
         cognitive_dimension=cognitive_dimension,
         page=page,
-        page_size=page_size
+        page_size=page_size,
     )
 
     items, total = await service.list_errors(UUID(user_id), params)
 
     return ErrorRecordListResponse(
-        items=items,
-        total=total,
-        page=page,
-        page_size=page_size,
-        has_next=(page * page_size) < total
+        items=items, total=total, page=page, page_size=page_size, has_next=(page * page_size) < total
     )
 
 
 @router.get("/stats", response_model=ReviewStatsResponse)
 async def get_stats(
-    user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
 ):
     """获取错题统计数据"""
     stats = await service.get_review_stats(UUID(user_id))
@@ -113,31 +112,21 @@ async def get_today_review_list(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    service: ErrorBookService = Depends(get_error_service),
 ):
     """获取今日待复习的错题列表"""
-    params = ErrorQueryParams(
-        need_review=True,
-        page=page,
-        page_size=page_size
-    )
+    params = ErrorQueryParams(need_review=True, page=page, page_size=page_size)
 
     items, total = await service.list_errors(UUID(user_id), params)
 
     return ErrorRecordListResponse(
-        items=items,
-        total=total,
-        page=page,
-        page_size=page_size,
-        has_next=(page * page_size) < total
+        items=items, total=total, page=page, page_size=page_size, has_next=(page * page_size) < total
     )
 
 
 @router.get("/{error_id}", response_model=ErrorRecordResponse)
 async def get_error(
-    error_id: UUID,
-    user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    error_id: UUID, user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
 ):
     """获取错题详情（含 AI 分析和关联知识点）"""
     error = await service.get_error(error_id, UUID(user_id))
@@ -153,7 +142,7 @@ async def update_error(
     error_id: UUID,
     data: ErrorRecordUpdate,
     user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    service: ErrorBookService = Depends(get_error_service),
 ):
     """更新错题信息"""
     error = await service.update_error(error_id, UUID(user_id), data)
@@ -164,9 +153,7 @@ async def update_error(
 
 @router.delete("/{error_id}", status_code=204)
 async def delete_error(
-    error_id: UUID,
-    user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    error_id: UUID, user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
 ):
     """删除错题（软删除）"""
     success = await service.delete_error(error_id, UUID(user_id))
@@ -179,7 +166,7 @@ async def re_analyze_error(
     error_id: UUID,
     background_tasks: BackgroundTasks,
     user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    service: ErrorBookService = Depends(get_error_service),
 ):
     """
     重新分析错题
@@ -198,7 +185,7 @@ async def submit_review(
     error_id: UUID,
     data: ReviewAction,
     user_id: str = Depends(get_current_user_id),
-    service: ErrorBookService = Depends(get_error_service)
+    service: ErrorBookService = Depends(get_error_service),
 ):
     """
     提交复习记录

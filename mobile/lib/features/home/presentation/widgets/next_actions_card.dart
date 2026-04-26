@@ -54,7 +54,7 @@ class NextActionsCard extends ConsumerWidget {
                   '下一步',
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                     color: DS.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -521,7 +521,7 @@ class _DefaultNextActionItem extends ConsumerWidget {
               task.title,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
                 color: DS.textPrimary,
               ),
               maxLines: 2,

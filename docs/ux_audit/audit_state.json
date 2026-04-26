@@ -1,0 +1,628 @@
+{
+  "workflow_version": "1.0",
+  "status": "running",
+  "current_round": 16,
+  "reviewer_a_next": 25,
+  "reviewer_b_next": 33,
+  "reviewer_a_last_timestamp": "2026-04-26T13:30:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-26T15:20:00+08:00",
+  "validator_last_timestamp": "2026-04-26T18:00:00+08:00",
+  "steering_notes": "",
+  "architect_override_a": null,
+  "architect_override_b": null,
+  "architect_last_check": "2026-04-25T23:30:00+08:00",
+  "reviewer_a_queue": [
+    "C01",
+    "C03",
+    "C05",
+    "C07",
+    "C09",
+    "C11",
+    "C13",
+    "C15",
+    "C17",
+    "C19",
+    "D01",
+    "D03",
+    "D05",
+    "D07",
+    "D09",
+    "E01",
+    "E03",
+    "E05",
+    "E07",
+    "E09",
+    "E11",
+    "E13",
+    "E15",
+    "E17",
+    "E19"
+  ],
+  "reviewer_b_queue": [
+    "C02",
+    "C04",
+    "C06",
+    "C08",
+    "C10",
+    "C12",
+    "C14",
+    "C16",
+    "C18",
+    "C20",
+    "C03",
+    "C04",
+    "C05",
+    "C02",
+    "C07",
+    "C08",
+    "C12",
+    "D02",
+    "D04",
+    "D06",
+    "D08",
+    "D10",
+    "E02",
+    "E04",
+    "E06",
+    "E08",
+    "E10",
+    "E12",
+    "E14",
+    "E16",
+    "E18",
+    "E20",
+    "D07"
+  ],
+  "chains": {
+    "C01": {
+      "name": "冷启动建模→计划生成→首个任务可见",
+      "description": "新用户完成Aurora建模对话后，系统自动衔接到计划生成，生成后首个任务在计划页可见可执行",
+      "key_files": [
+        "backend/app/orchestration/orchestrator.py",
+        "backend/app/aurora/runtime_v1/service.py",
+        "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
+        "mobile/lib/app/routes.dart"
+      ],
+      "status": "done"
+    },
+    "C02": {
+      "name": "任务完成→Galaxy节点mastery更新→星图颜色变深",
+      "description": "用户完成一个Sprint任务后，对应Galaxy节点mastery立即+0.25，星图颜色在下次打开时变深，不需要手动刷新",
+      "key_files": [
+        "backend/app/services/task_service.py",
+        "backend/app/services/galaxy_service.py",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart",
+        "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
+        "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart"
+      ],
+      "status": "done"
+    },
+    "C03": {
+      "name": "任务卡点(stuck)→卡点帮助面板→Aurora诊断内容",
+      "description": "用户在任务执行中触发stuck状态，stuck_help_sheet弹出，内容来自Aurora真实诊断而非静态文案",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/decision_loop.py",
+        "backend/app/aurora/runtime_v1/service.py",
+        "mobile/lib/features/task/presentation/widgets/stuck_help_sheet.dart",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart"
+      ],
+      "status": "done"
+    },
+    "C04": {
+      "name": "错题录入→修复任务插入→计划页橙色卡可见",
+      "description": "用户记录一个错题后，error_replan_bridge自动在次日计划首位插入15min修复任务，计划页显示橙色卡",
+      "key_files": [
+        "backend/app/services/error_replan_bridge.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
+        "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart"
+      ],
+      "status": "done"
+    },
+    "C05": {
+      "name": "7天冲刺完成→庆祝页→学习档案状态变completed",
+      "description": "用户完成冲刺所有任务后自动跳转sprint_completion_screen，完成后learning_portfolio该条目状态变completed",
+      "key_files": [
+        "backend/app/services/exam_sprint_review_service.py",
+        "backend/app/api/v1/exam_sprint.py",
+        "mobile/lib/features/plan/presentation/screens/sprint_completion_screen.dart",
+        "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart",
+        "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart"
+      ],
+      "status": "done"
+    },
+    "C06": {
+      "name": "Galaxy节点点击→节点详情→开始复习进入chat携带context",
+      "description": "用户点击Galaxy节点，节点详情sheet显示mastery和学习历史，点击'开始复习'跳转chat并携带review_node context",
+      "key_files": [
+        "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
+        "mobile/lib/features/galaxy/presentation/widgets/node_detail_sheet.dart",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart",
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/api/v1/galaxy.py"
+      ],
+      "status": "done"
+    },
+    "C07": {
+      "name": "成就里程碑解锁→推送通知→点击打开庆祝页",
+      "description": "achievement_engine解锁里程碑成就后发推送，用户点击通知进入milestone_celebration_screen并看到正确数据",
+      "key_files": [
+        "backend/app/services/achievement_engine.py",
+        "backend/app/services/achievement_event_consumer.py",
+        "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart",
+        "mobile/lib/core/services/push_navigation_service.dart",
+        "mobile/lib/core/services/deep_link_service.dart"
+      ],
+      "status": "done"
+    },
+    "C08": {
+      "name": "用户≥3天未活跃→comeback消息出现在chat首屏",
+      "description": "用户3天或以上未打开app再次进入chat，看到comeback消息（含离开天数、剩余天数、保底方案），不显示通用欢迎",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/api/v1/aurora.py",
+        "backend/app/core/celery_tasks.py",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart",
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "mobile/lib/features/aurora/data/repositories/aurora_daily_startup_repository.dart"
+      ],
+      "status": "done"
+    },
+    "C09": {
+      "name": "每日启动消息个性化（昨日完成率+今日任务）",
+      "description": "用户每天首次打开chat，看到包含昨日完成率和今日具体任务的个性化启动消息，不是通用问候语",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/api/v1/aurora.py",
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart"
+      ],
+      "status": "done"
+    },
+    "C10": {
+      "name": "跨会话记忆注入（新会话Aurora引用旧内容）",
+      "description": "用户在第二次对话中，Aurora在第一轮回复中主动引用上次会话的内容（目标、已完成、困难），而非从零开始",
+      "key_files": [
+        "backend/app/orchestration/orchestrator.py",
+        "backend/app/core/context_manager.py",
+        "backend/app/orchestration/prompts.py",
+        "backend/app/services/memory_service.py"
+      ],
+      "status": "done"
+    },
+    "C11": {
+      "name": "间隔重复提醒链路（Celery→推送→复习chat）",
+      "description": "Celery定时任务扫描需要复习的Galaxy节点，发送推送，用户点击后进入携带节点context的复习chat",
+      "key_files": [
+        "backend/app/core/celery_tasks.py",
+        "backend/app/services/notification_center_service.py",
+        "mobile/lib/core/services/push_navigation_service.dart",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart"
+      ],
+      "status": "done"
+    },
+    "C12": {
+      "name": "低完成率+临近截止→自适应压缩→计划页显示精简",
+      "description": "用户完成率<50%且距截止≤5天时，次日计划自动压缩为1任务/35分钟，计划页显示精简提示",
+      "key_files": [
+        "backend/app/orchestration/adaptive_replanner.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
+        "backend/app/api/v1/plans.py"
+      ],
+      "status": "done"
+    },
+    "C13": {
+      "name": "每周报告生成→推送→周报卡展示亮点",
+      "description": "周日Celery生成WeeklyGrowthNarrative，推送给用户，用户在insights页看到含highlights/biggest_improvement的展开卡",
+      "key_files": [
+        "backend/app/services/progress_narrative_service.py",
+        "backend/app/core/celery_tasks.py",
+        "mobile/lib/features/insights/data/models/weekly_growth_narrative.dart",
+        "mobile/lib/features/insights/presentation/widgets/weekly_growth_narrative_card.dart"
+      ],
+      "status": "done"
+    },
+    "C14": {
+      "name": "学习档案页完整性（历史冲刺+Galaxy摘要展开）",
+      "description": "用户在profile进入学习档案页，看到所有历史冲刺分组（进行中/已完成/计划中），展开一条可见Galaxy掌握度摘要",
+      "key_files": [
+        "backend/app/api/v1/exam_sprint.py",
+        "backend/app/services/exam_sprint_review_service.py",
+        "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart",
+        "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart",
+        "mobile/lib/features/user/presentation/screens/profile_screen.dart"
+      ],
+      "status": "done"
+    },
+    "C15": {
+      "name": "全局空状态质量（6个关键页面）",
+      "description": "任务列表/错题本/Galaxy星图/成就页/学习洞察/记忆列表在无数据时，每个都显示含操作入口的引导文案，不显示空白或裸零值",
+      "key_files": [
+        "mobile/lib/features/task/",
+        "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart",
+        "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
+        "mobile/lib/features/achievement/",
+        "mobile/lib/features/insights/",
+        "mobile/lib/features/memory/"
+      ],
+      "status": "done"
+    },
+    "C16": {
+      "name": "导航死路检查（完成页/庆祝页/建模完成后）",
+      "description": "sprint_completion_screen、milestone_celebration_screen、modeling完成后，用户知道下一步做什么，back键不会崩溃或去错地方",
+      "key_files": [
+        "mobile/lib/app/routes.dart",
+        "mobile/lib/features/plan/presentation/screens/sprint_completion_screen.dart",
+        "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart",
+        "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart"
+      ],
+      "status": "done"
+    },
+    "C17": {
+      "name": "API失败恢复（加载→错误→重试）",
+      "description": "任何API请求失败时，用户看到有意义的错误提示和重试按钮，而不是白屏、无限转圈或被遗忘的请求",
+      "key_files": [
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "mobile/lib/features/plan/presentation/providers/",
+        "mobile/lib/features/galaxy/presentation/providers/",
+        "mobile/lib/features/aurora/data/repositories/aurora_daily_startup_repository.dart"
+      ],
+      "status": "done"
+    },
+    "C18": {
+      "name": "所有推送通知路由正确性（6种类型）",
+      "description": "每日提醒/间隔重复/回访唤回/里程碑/周报/冲刺提醒六种推送，点击后分别路由到正确的目标页面",
+      "key_files": [
+        "backend/app/core/celery_tasks.py",
+        "mobile/lib/core/services/push_navigation_service.dart",
+        "mobile/lib/core/services/deep_link_service.dart",
+        "mobile/lib/features/home/presentation/screens/notification_list_screen.dart"
+      ],
+      "status": "done"
+    },
+    "C19": {
+      "name": "Aurora建模对话质量（不重复/上下文感知/自然过渡）",
+      "description": "Aurora建模对话不重复问已回答的域，fallback问题根据已知context调整，对话自然衔接到计划生成",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/planning.py",
+        "backend/app/aurora/runtime_v1/chat_adapter.py",
+        "backend/app/aurora/runtime_v1/dashboard.py",
+        "backend/app/aurora/runtime_v1/decision_loop.py"
+      ],
+      "status": "done"
+    },
+    "C20": {
+      "name": "Sprint Pack端到端集成（节点→任务spec→mastery回写）",
+      "description": "Sprint Pack节点出现在计划任务spec中，任务完成后对应节点mastery+0.25，Galaxy星图反映真实进度",
+      "key_files": [
+        "backend/app/sprint_packs/computer_networks_v1.json",
+        "backend/app/orchestration/task_card_generator.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "backend/app/services/task_service.py",
+        "backend/app/services/galaxy_service.py"
+      ],
+      "status": "done"
+    },
+    "D01": {
+      "name": "离线/弱网行为——聊天断线、任务计时器、数据落盘",
+      "description": "用户在地铁/电梯等弱网环境下使用app：聊天消息是否缓存重发？任务计时器是否本地运行？数据是否落盘恢复？WebSocket断线重连后状态是否恢复？",
+      "key_files": [
+        "mobile/lib/core/services/websocket_chat_service_v2.dart",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart",
+        "mobile/lib/features/focus/",
+        "backend/gateway/internal/handler/websocket_proxy.go"
+      ],
+      "status": "done"
+    },
+    "D02": {
+      "name": "错题修复→Galaxy掌握度闭环——修了错题星图真的变亮吗",
+      "description": "用户在错题本记录并复习一道错题后，对应Galaxy节点掌握度是否真正提升？从error_review事件→galaxy_event_consumer→mastery更新→星图刷新的完整链路是否通畅",
+      "key_files": [
+        "backend/app/services/error_book_service.py",
+        "backend/app/services/galaxy_event_consumer.py",
+        "backend/app/services/galaxy_service.py",
+        "backend/app/core/event_bus.py",
+        "mobile/lib/features/galaxy/presentation/providers/galaxy_provider.dart"
+      ],
+      "status": "done"
+    },
+    "D03": {
+      "name": "专注模式→计划/任务联动——专注完成是否更新任务进度",
+      "description": "用户在专注模式完成一个番茄钟后，对应任务的进度是否更新？专注完成事件是否传递给task_service？Aurora是否感知到专注活动？",
+      "key_files": [
+        "mobile/lib/features/focus/presentation/providers/",
+        "backend/app/services/task_service.py",
+        "backend/app/core/event_bus.py",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart"
+      ],
+      "status": "done"
+    },
+    "D04": {
+      "name": "日历→Aurora感知——AI教练知道用户日程吗",
+      "description": "用户的日历事件（考试日期、学习安排）是否被Aurora用于调整计划？calendar数据是否流入context_manager？planning是否参考日历安排？",
+      "key_files": [
+        "mobile/lib/features/calendar/",
+        "backend/app/core/context_manager.py",
+        "backend/app/orchestration/prompts.py",
+        "backend/app/aurora/runtime_v1/dashboard.py"
+      ],
+      "status": "done"
+    },
+    "D05": {
+      "name": "多设备并发——两台设备同时使用数据冲突",
+      "description": "用户在手机和平板上同时使用app：WebSocket是否同时连接？任务状态更新是否冲突？Galaxy掌握度写入是否有竞态？",
+      "key_files": [
+        "backend/gateway/internal/handler/websocket_proxy.go",
+        "backend/app/services/galaxy_service.py",
+        "backend/app/services/task_service.py",
+        "backend/gateway/internal/middleware/auth.go"
+      ],
+      "status": "done"
+    },
+    "D06": {
+      "name": "长期用户（30天+）体验——记忆/归档/推送是否退化",
+      "description": "用户使用30天后：episodic memory是否溢出？学习档案归档是否被截断（MAX_ARCHIVE_ENTRIES=10）？周报叙事是否还是个性化的？推送是否变成重复模板？",
+      "key_files": [
+        "backend/app/services/memory_service.py",
+        "backend/app/services/exam_sprint_review_service.py",
+        "backend/app/services/progress_narrative_service.py",
+        "backend/app/services/notification_center_service.py"
+      ],
+      "status": "done"
+    },
+    "D07": {
+      "name": "设置/隐私控制——用户能控制数据流向吗",
+      "description": "用户在设置页关闭某项数据收集后，该数据是否真的不再发送？隐私设置是否被context_manager和prompt assembly尊重？kill switch是否影响对应功能？",
+      "key_files": [
+        "mobile/lib/features/settings/",
+        "backend/app/aurora/privacy.py",
+        "backend/app/core/kill_switch.py",
+        "backend/app/core/context_manager.py"
+      ],
+      "status": "done"
+    },
+    "D08": {
+      "name": "社区→个人AI体验——伙伴活动影响教练吗",
+      "description": "学习伙伴完成某节点复习后，我的Aurora是否知道？accountability partner进度是否影响我的计划？social_signal_bridge的数据是否真的流入dashboard？",
+      "key_files": [
+        "backend/app/services/social_signal_bridge.py",
+        "backend/app/services/community_service.py",
+        "backend/app/aurora/runtime_v1/dashboard.py",
+        "mobile/lib/features/community/"
+      ],
+      "status": "done"
+    },
+    "D09": {
+      "name": "Go Gateway 中间件——限流误杀与WebSocket断连恢复",
+      "description": "Go Gateway的rate limiter是否会在正常使用下误杀请求？WebSocket proxy断连后是否正确通知Python后端清理状态？CORS/Security Headers是否阻断正常前端请求？",
+      "key_files": [
+        "backend/gateway/internal/middleware/rate_limit.go",
+        "backend/gateway/internal/handler/websocket_proxy.go",
+        "backend/gateway/internal/middleware/cors.go",
+        "backend/gateway/internal/middleware/security.go"
+      ],
+      "status": "done"
+    },
+    "D10": {
+      "name": "数据新鲜度全屏检查——切换屏幕后数据是否陈旧",
+      "description": "用户完成任务后切到Galaxy页——星图是否已更新？完成冲刺后切到档案页——状态是否已是completed？刷新操作（pull-to-refresh）是否每个页面都支持？provider invalidate覆盖是否完整？",
+      "key_files": [
+        "mobile/lib/features/galaxy/presentation/providers/galaxy_provider.dart",
+        "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart",
+        "mobile/lib/features/achievement/presentation/providers/achievement_provider.dart",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart"
+      ],
+      "status": "done"
+    },
+    "E01": {
+      "name": "Proto/gRPC契约完整性——Go与Python接口是否对齐",
+      "description": "proto定义的RPC方法在Go client和Python service中是否都有实现？是否有proto字段在Python端序列化但Go端忽略？请求/响应消息是否严格匹配？",
+      "key_files": [
+        "proto/agent_service.proto",
+        "proto/galaxy_service.proto",
+        "backend/gateway/internal/agent/client.go",
+        "backend/app/services/agent_grpc_service.py"
+      ],
+      "status": "done"
+    },
+    "E02": {
+      "name": "EventBus可靠性——Redis Streams消费组/DLQ/重试",
+      "description": "EventBus发布的每个事件是否都有消费者？DLQ中的死信是否会被重试？消费者崩溃后消息是否丢失？event_bus.py的publish和subscribe是否正确处理异常？",
+      "key_files": [
+        "backend/app/core/event_bus.py",
+        "backend/app/services/achievement_event_consumer.py",
+        "backend/app/services/galaxy_event_consumer.py"
+      ],
+      "status": "done"
+    },
+    "E03": {
+      "name": "Kill Switch实效性——off/shadow/live切换是否真正生效",
+      "description": "将kill switch设为off后，对应功能是否真的停止？shadow模式下计算结果是否被正确丢弃？Prometheus gauge是否准确反映当前状态？drill脚本覆盖了哪些switch？",
+      "key_files": [
+        "backend/app/core/kill_switch.py",
+        "backend/app/aurora/privacy.py",
+        "backend/app/services/social_signal_bridge.py"
+      ],
+      "status": "done"
+    },
+    "E04": {
+      "name": "错题本完整生命周期——录入→OCR→RAG→分析→节点关联→复习→掌握度",
+      "description": "用户拍照录入错题后：OCR是否提取文本？是否进入RAG索引？分析结果是否关联Galaxy节点？复习后掌握度是否更新？从录入到星图变色的完整链路是否通畅？",
+      "key_files": [
+        "backend/app/services/error_book_service.py",
+        "backend/app/services/error_replan_bridge.py",
+        "backend/app/services/galaxy_event_consumer.py",
+        "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart"
+      ],
+      "status": "done"
+    },
+    "E05": {
+      "name": "Achievement Engine事件消费者完整性",
+      "description": "achievement_engine发布19种事件，但achievement_event_consumer是否订阅了所有19种？是否有事件被发布但永远无人消费？解锁通知是否能正确路由到前端？",
+      "key_files": [
+        "backend/app/services/achievement_engine.py",
+        "backend/app/services/achievement_event_consumer.py",
+        "backend/app/core/event_bus.py"
+      ],
+      "status": "done"
+    },
+    "E06": {
+      "name": "学习预测→实际准确度反馈闭环",
+      "description": "TheaterService做出的学习预测（考试分数/通过概率）在考试结束后是否有回填验证？预测偏差是否反馈给模型？用户看到的历史预测是否与实际结果对比？",
+      "key_files": [
+        "backend/app/services/theater/",
+        "backend/app/services/simulation/",
+        "mobile/lib/features/theater/",
+        "mobile/lib/features/simulation/"
+      ],
+      "status": "done"
+    },
+    "E07": {
+      "name": "认知胶囊→行为分析→双核路由数据流",
+      "description": "用户收藏认知胶囊后，该行为是否被behavior_signal_collector捕获？是否流入cognitive_service？是否影响dual_core_router的决策？收藏行为对AI后续对话有任何影响吗？",
+      "key_files": [
+        "backend/app/services/cognitive_service.py",
+        "backend/app/services/behavior_signal_collector.py",
+        "backend/app/orchestration/dual_core_router.py",
+        "mobile/lib/features/cognitive/"
+      ],
+      "status": "done"
+    },
+    "E08": {
+      "name": "WebSocket断线重连——移动端恢复机制",
+      "description": "用户在地铁里WebSocket断开后：客户端是否有指数退避重连？重连后丢失的消息如何补偿？chat_provider是否在重连后刷新？长时间断连是否有用户提示？",
+      "key_files": [
+        "mobile/lib/core/services/websocket_chat_service_v2.dart",
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "backend/gateway/internal/handler/websocket_proxy.go"
+      ],
+      "status": "done"
+    },
+    "E09": {
+      "name": "Sprint Pack Schema验证——4个科目JSON完整性",
+      "description": "sprint_packs目录下的JSON文件是否都符合task_card_generator期望的schema？缺失字段是否有降级处理？所有科目的节点是否都在Galaxy中有对应？",
+      "key_files": [
+        "backend/app/sprint_packs/",
+        "backend/app/orchestration/task_card_generator.py",
+        "backend/app/orchestration/planning_workflow.py"
+      ],
+      "status": "done"
+    },
+    "E10": {
+      "name": "通知偏好设置→实际投递行为一致性",
+      "description": "用户在设置中关闭某类通知后，notification_center_service是否真的停止投递？偏好设置是否被Celery任务尊重？关闭所有通知后是否还有推送漏出？",
+      "key_files": [
+        "mobile/lib/features/settings/",
+        "backend/app/services/notification_center_service.py",
+        "backend/app/core/celery_tasks.py"
+      ],
+      "status": "done"
+    },
+    "E11": {
+      "name": "种子库→聊天集成→计划集成的完整链路",
+      "description": "用户从种子库选择一个学习种子后：能否在聊天中被Aurora引用？能否转化为计划任务？种子质量评分是否影响推荐？种子与Galaxy节点的关联是否被利用？",
+      "key_files": [
+        "mobile/lib/features/seed_library/",
+        "backend/app/services/seed_library_service.py",
+        "backend/app/orchestration/orchestrator.py"
+      ],
+      "status": "done"
+    },
+    "E12": {
+      "name": "专注模式→streak/achievement集成",
+      "description": "用户完成一个专注番茄钟后：streak是否更新？achievement是否触发？专注时长是否计入学习统计？专注完成事件是否发布到EventBus？",
+      "key_files": [
+        "mobile/lib/features/focus/presentation/providers/",
+        "backend/app/services/achievement_engine.py",
+        "backend/app/core/event_bus.py"
+      ],
+      "status": "done"
+    },
+    "E13": {
+      "name": "呼吸练习→任务/专注集成",
+      "description": "用户完成一次呼吸练习后：是否有任何后续引导（回到任务/进入专注）？呼吸练习的完成数据是否被记录？是否能被Aurora感知用于了解用户状态？",
+      "key_files": [
+        "mobile/lib/features/focus/presentation/screens/breathing_exercise_screen.dart",
+        "mobile/lib/features/focus/presentation/providers/",
+        "backend/app/services/behavior_signal_collector.py"
+      ],
+      "status": "done"
+    },
+    "E14": {
+      "name": "Calculator→学习上下文→AI感知",
+      "description": "用户使用内置计算器时：计算历史是否保存？Aurora是否知道用户用了计算器？计算行为是否影响任务难度推荐？计算器与当前学习主题是否有关联？",
+      "key_files": [
+        "mobile/lib/features/tools/",
+        "backend/app/services/behavior_signal_collector.py",
+        "backend/app/core/context_manager.py"
+      ],
+      "status": "done"
+    },
+    "E15": {
+      "name": "DB迁移健康——52个Alembic迁移一致性",
+      "description": "52个Alembic迁移文件是否都能从头顺序执行？是否存在被跳过的迁移？SQLAlchemy模型是否与最新迁移一致？是否有迁移创建了索引但代码未使用？",
+      "key_files": [
+        "backend/alembic/",
+        "backend/alembic/versions/",
+        "backend/app/models/"
+      ],
+      "status": "done"
+    },
+    "E16": {
+      "name": "社区社交功能→个人AI教练数据流",
+      "description": "学习伙伴完成某节点复习后：social_signal_bridge是否捕获？数据是否流入dashboard？Aurora在对话中是否真的引用伙伴进度？accountability partner功能是否端到端通畅？",
+      "key_files": [
+        "backend/app/services/social_signal_bridge.py",
+        "backend/app/services/community_service.py",
+        "backend/app/aurora/runtime_v1/dashboard.py",
+        "mobile/lib/features/community/"
+      ],
+      "status": "done"
+    },
+    "E17": {
+      "name": "Aurora checkpoint surface交互正确性",
+      "description": "Aurora在checkpoint surface暂停时：用户能否正确恢复？恢复后context是否完整？多次暂停/恢复是否导致状态损坏？checkpoint数据是否持久化？",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/aurora/runtime_v1/state.py",
+        "backend/app/aurora/runtime_v1/decision_loop.py"
+      ],
+      "status": "done"
+    },
+    "E18": {
+      "name": "Plan health score计算准确性",
+      "description": "plan health score的计算公式是什么？输入数据（完成率/延迟/压缩次数）是否准确？health score变化是否触发adaptive_replanner？用户是否能看到health score？",
+      "key_files": [
+        "backend/app/orchestration/adaptive_replanner.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart"
+      ],
+      "status": "done"
+    },
+    "E19": {
+      "name": "数据导出/可移植性——用户能取回自己的数据吗",
+      "description": "用户要求导出数据时：是否有API支持？导出格式是否包含所有用户生成内容（聊天/计划/任务/错题/Galaxy）？导出过程是否异步处理大数据量？GDPR删除请求是否真正清除所有数据？",
+      "key_files": [
+        "backend/app/api/v1/",
+        "backend/gateway/internal/handler/",
+        "backend/app/services/memory_service.py"
+      ],
+      "status": "done"
+    },
+    "E20": {
+      "name": "Go Gateway中间件链顺序与安全性",
+      "description": "Go Gateway的16个middleware是否按正确顺序执行？CORS是否在auth之前？rate_limit是否在timeout之前？一个middleware的panic是否会导致后续全部跳过？security headers是否在所有响应路径上都生效？",
+      "key_files": [
+        "backend/gateway/internal/middleware/auth.go",
+        "backend/gateway/internal/middleware/cors.go",
+        "backend/gateway/internal/middleware/rate_limit.go",
+        "backend/gateway/internal/middleware/security.go",
+        "backend/gateway/cmd/server/main.go"
+      ],
+      "status": "done"
+    }
+  }
+}

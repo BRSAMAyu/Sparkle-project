@@ -133,6 +133,14 @@ class ExecutionService:
                 health_snapshot["reachable"] = False
                 health_snapshot["message"] = str(exc)
                 logger.exception("Unexpected OpenClaw node listing failure during health check")
+
+        # Unauthenticated users get a minimal response — no infrastructure details
+        if user_id is None:
+            return {
+                "openclaw_enabled": self._config.enabled,
+                "reachable": bool(health_snapshot.get("reachable")),
+            }
+
         degradation = await self.get_degradation_snapshot()
         return {
             "openclaw_enabled": self._config.enabled,

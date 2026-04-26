@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.aurora.privacy import redact_pii
+from app.config import settings
 
 
 @pytest.mark.parametrize(
@@ -33,4 +34,18 @@ def test_redact_pii_masks_sensitive_markers(raw_text: str, marker: str) -> None:
     ],
 )
 def test_redact_pii_preserves_non_pii_text(raw_text: str) -> None:
+    assert redact_pii(raw_text) == raw_text
+
+
+def test_redact_pii_shadow_computes_without_affecting_live_text(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "shadow", raising=False)
+    raw_text = "我手机号是13812345678"
+
+    assert redact_pii(raw_text) == raw_text
+
+
+def test_redact_pii_off_returns_original_text(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "off", raising=False)
+    raw_text = "邮箱是 test.user@example.com"
+
     assert redact_pii(raw_text) == raw_text

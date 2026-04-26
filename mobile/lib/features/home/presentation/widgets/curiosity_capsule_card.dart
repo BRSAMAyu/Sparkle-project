@@ -251,7 +251,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             style: TextStyle(
               fontSize: 11,
               color: DS.prismPurple,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
         ],

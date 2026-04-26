@@ -50,7 +50,7 @@ class SprintCard extends ConsumerWidget {
           '冲刺',
           style: context.sparkleTypography.labelSmall.copyWith(
             color: DS.textSecondary,
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
           ),
         ),
 
@@ -121,7 +121,7 @@ class SprintCard extends ConsumerWidget {
           child: Text(
             sprint.name,
             style: context.sparkleTypography.labelSmall.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
               color: DS.textPrimary,
             ),
           ),
@@ -161,7 +161,7 @@ class SprintCard extends ConsumerWidget {
             '无冲刺计划',
             style: context.sparkleTypography.labelSmall.copyWith(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
               color: DS.textPrimary,
             ),
           ),

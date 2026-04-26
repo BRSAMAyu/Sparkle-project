@@ -3,6 +3,7 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 
 class RecommendationFeedbackDraft {
@@ -76,7 +77,7 @@ class RecommendationFeedbackPromptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _accentColor(prompt.itemType);
-    final targetLabel = prompt.user?.displayName ?? prompt.group?.name ?? '推荐对象';
+    final targetLabel = prompt.user?.displayName ?? prompt.group?.name ?? context.l10n.recommendationTargetFallback;
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -122,12 +123,12 @@ class RecommendationFeedbackPromptCard extends StatelessWidget {
                         prompt.title,
                         style: context.typo.titleLarge.copyWith(
                           color: DS.textPrimary,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '关于 $targetLabel 的${_stageLabel(prompt.stage)}反馈',
+                        context.l10n.recommendationFeedbackAbout(targetLabel, _stageLabel(context, prompt.stage)),
                         style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -136,7 +137,7 @@ class RecommendationFeedbackPromptCard extends StatelessWidget {
                   ),
                 ),
                 SemanticPill(
-                  label: _stageLabel(prompt.stage),
+                  label: _stageLabel(context, prompt.stage),
                   tone: prompt.isFriend ? PillTone.brand : PillTone.warning,
                   dense: true,
                 ),
@@ -161,7 +162,7 @@ class RecommendationFeedbackPromptCard extends StatelessWidget {
                     .take(3)
                     .map(
                       (tag) => SemanticPill(
-                        label: _reasonLabel(tag),
+                        label: _reasonLabel(context, tag),
                         tone: PillTone.neutral,
                         dense: true,
                       ),
@@ -174,14 +175,14 @@ class RecommendationFeedbackPromptCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '你的反馈会直接更新下一轮推荐权重',
+                    context.l10n.recommendationFeedbackHint,
                     style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                     ),
                   ),
                 ),
                 SparkleButton(
-                  label: '开始校准',
+                  label: context.l10n.recommendationStartCalibration,
                   size: ButtonSize.small,
                   onPressed: onRespond,
                 ),
@@ -235,15 +236,15 @@ class RecommendationFeedbackInsightCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     insight.itemType == RecommendationItemType.friend
-                        ? '你的伙伴匹配偏好'
-                        : '你的社群推荐偏好',
+                        ? context.l10n.recommendationFriendPreferenceTitle
+                        : context.l10n.recommendationGroupPreferenceTitle,
                     style: context.typo.titleLarge.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
                 SemanticPill(
-                  label: '近 ${insight.recentFeedbackCount} 次',
+                  label: context.l10n.recommendationRecentCount(insight.recentFeedbackCount),
                   tone: PillTone.info,
                   dense: true,
                 ),
@@ -252,8 +253,8 @@ class RecommendationFeedbackInsightCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               insight.itemType == RecommendationItemType.friend
-                  ? '系统正在学习你更看重相似度、互补性还是合作舒适度。'
-                  : '系统正在学习你更偏好兴趣对口、活跃氛围还是新鲜发现。',
+                  ? context.l10n.recommendationFriendLearningHint
+                  : context.l10n.recommendationGroupLearningHint,
               style: context.typo.bodyMedium.copyWith(
                 color: DS.textSecondary,
                 height: 1.35,
@@ -268,7 +269,7 @@ class RecommendationFeedbackInsightCard extends StatelessWidget {
                     .map(
                       (entry) => SemanticPill(
                         label:
-                            '${_metricLabel(entry.key)} ${entry.value.toStringAsFixed(1)}',
+                            '${_metricLabel(context, entry.key)} ${entry.value.toStringAsFixed(1)}',
                         tone: PillTone.brand,
                         dense: true,
                       ),
@@ -279,14 +280,18 @@ class RecommendationFeedbackInsightCard extends StatelessWidget {
             if (insight.topNegativeSignals.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                '系统在回避：${insight.topNegativeSignals.take(2).map(_signalLabel).join(' · ')}',
+                context.l10n.recommendationSystemAvoiding(
+                  insight.topNegativeSignals.take(2).map((s) => _signalLabel(context, s)).join(' \u00b7 '),
+                ),
                 style: context.typo.labelSmall.copyWith(color: DS.textSecondary),
               ),
             ],
             if (topAdjustments.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                '当前更偏向：${topAdjustments.map((entry) => _metricLabel(entry.key)).join('、')}',
+                context.l10n.recommendationCurrentlyBiasing(
+                  topAdjustments.map((entry) => _metricLabel(context, entry.key)).join(context.l10n.recommendationListSeparator),
+                ),
                 style: context.typo.labelSmall.copyWith(color: accent),
               ),
             ],
@@ -350,20 +355,20 @@ class _RecommendationFeedbackSheetState
 
   @override
   Widget build(BuildContext context) {
-    final subjectName = widget.user?.displayName ?? widget.group?.name ?? '这条推荐';
+    final subjectName = widget.user?.displayName ?? widget.group?.name ?? context.l10n.recommendationThisItem;
     final issueOptions = widget.itemType == RecommendationItemType.friend
-        ? const ['不够相似', '缺少互补', '不够主动', '压力太大', '不够熟悉']
-        : const ['标签不准', '太冷清', '太拥挤', '氛围一般', '门槛不合适'];
+        ? ['not_similar', 'not_complementary', 'not_proactive', 'too_much_pressure', 'not_familiar']
+        : ['inaccurate_tags', 'too_quiet', 'too_crowded', 'mediocre_vibe', 'unsuitable_threshold'];
     final strengthOptions = widget.itemType == RecommendationItemType.friend
-        ? const ['很契合', '很互补', '很靠谱', '理由清楚']
-        : const ['兴趣对口', '氛围很好', '活跃合适', '理由清楚'];
+        ? ['great_fit', 'complementary', 'reliable', 'clear_reason']
+        : ['interest_match', 'great_vibe', 'active_fit', 'clear_reason'];
 
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: GraphiteModalSurface(
-        title: widget.prompt?.title ?? '帮我们校准推荐',
+        title: widget.prompt?.title ?? context.l10n.recommendationCalibrateTitle,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +376,7 @@ class _RecommendationFeedbackSheetState
             children: [
               Text(
                 widget.prompt?.subtitle ??
-                    '你对 $subjectName 的评价会直接作用到接下来的推荐算法。',
+                    context.l10n.recommendationFeedbackSubtitle(subjectName),
                 style: context.typo.bodyMedium.copyWith(
                   color: DS.textSecondary,
                   height: 1.35,
@@ -386,66 +391,67 @@ class _RecommendationFeedbackSheetState
               ),
               const SizedBox(height: 16),
               _ScoreRow(
-                label: '整体感受',
+                label: context.l10n.recommendationScoreOverall,
                 value: _overallScore,
                 onChanged: (value) => setState(() => _overallScore = value),
               ),
               _ScoreRow(
-                label: '推荐理由清晰度',
+                label: context.l10n.recommendationScoreExplanationClarity,
                 value: _explanationScore,
                 onChanged: (value) => setState(() => _explanationScore = value),
               ),
               _ScoreRow(
-                label: '采取行动的意愿',
+                label: context.l10n.recommendationScoreActionability,
                 value: _actionabilityScore,
                 onChanged: (value) => setState(() => _actionabilityScore = value),
               ),
               if (widget.itemType == RecommendationItemType.friend) ...[
                 _ScoreRow(
-                  label: '契合度',
+                  label: context.l10n.recommendationScoreRelevance,
                   value: _relevanceScore,
                   onChanged: (value) => setState(() => _relevanceScore = value),
                 ),
                 _ScoreRow(
-                  label: '相似度是否到位',
+                  label: context.l10n.recommendationScoreSimilarity,
                   value: _similarityScore,
                   onChanged: (value) => setState(() => _similarityScore = value),
                 ),
                 _ScoreRow(
-                  label: '互补性是否成立',
+                  label: context.l10n.recommendationScoreComplementary,
                   value: _complementaryScore,
                   onChanged: (value) =>
                       setState(() => _complementaryScore = value),
                 ),
                 _ScoreRow(
-                  label: '合作舒适度',
+                  label: context.l10n.recommendationScoreComfort,
                   value: _comfortScore,
                   onChanged: (value) => setState(() => _comfortScore = value),
                 ),
               ] else ...[
                 _ScoreRow(
-                  label: '兴趣匹配度',
+                  label: context.l10n.recommendationScoreInterestMatch,
                   value: _interestMatchScore,
                   onChanged: (value) =>
                       setState(() => _interestMatchScore = value),
                 ),
                 _ScoreRow(
-                  label: '活跃度是否合适',
+                  label: context.l10n.recommendationScoreActivity,
                   value: _activityScore,
                   onChanged: (value) => setState(() => _activityScore = value),
                 ),
                 _ScoreRow(
-                  label: '社群氛围',
+                  label: context.l10n.recommendationScoreAtmosphere,
                   value: _atmosphereScore,
                   onChanged: (value) => setState(() => _atmosphereScore = value),
                 ),
               ],
               const SizedBox(height: 10),
               _ChipSelector(
-                title: '哪里不够对味',
+                title: context.l10n.recommendationIssuesTitle,
                 options: issueOptions,
                 selected: _issues,
                 tone: PillTone.warning,
+                labelBuilder: (key) => _issueDisplayLabel(context, key),
                 onToggle: (value) {
                   setState(() {
                     if (!_issues.add(value)) {
@@ -456,10 +462,11 @@ class _RecommendationFeedbackSheetState
               ),
               const SizedBox(height: 12),
               _ChipSelector(
-                title: '哪些地方做得好',
+                title: context.l10n.recommendationStrengthsTitle,
                 options: strengthOptions,
                 selected: _strengths,
                 tone: PillTone.success,
+                labelBuilder: (key) => _strengthDisplayLabel(context, key),
                 onToggle: (value) {
                   setState(() {
                     if (!_strengths.add(value)) {
@@ -474,10 +481,10 @@ class _RecommendationFeedbackSheetState
                 minLines: 3,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  labelText: '自然语言补充',
+                  labelText: context.l10n.recommendationFreeTextLabel,
                   hintText: widget.itemType == RecommendationItemType.friend
-                      ? '例如：我更希望责任伙伴跟我节奏接近，但也能在拖延时推我一把。'
-                      : '例如：我想找更对口的小组，最好活跃但不要太嘈杂。',
+                      ? context.l10n.recommendationFriendHint
+                      : context.l10n.recommendationGroupHint,
                 ),
               ),
               const SizedBox(height: 16),
@@ -495,7 +502,7 @@ class _RecommendationFeedbackSheetState
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '我们只使用你填写的分数和总结来优化推荐，不会把私密原始数据直接暴露给其他用户。',
+                        context.l10n.recommendationPrivacyNotice,
                         style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.35,
@@ -510,7 +517,7 @@ class _RecommendationFeedbackSheetState
                 children: [
                   Expanded(
                     child: SparkleButton(
-                      label: '稍后再说',
+                      label: context.l10n.recommendationLater,
                       variant: ButtonVariant.secondary,
                       onPressed: () => Navigator.of(context).pop(),
                     ),
@@ -518,7 +525,7 @@ class _RecommendationFeedbackSheetState
                   const SizedBox(width: 12),
                   Expanded(
                     child: SparkleButton(
-                      label: '提交反馈',
+                      label: context.l10n.recommendationSubmitFeedback,
                       onPressed: _submit,
                     ),
                   ),
@@ -570,10 +577,13 @@ class _TargetSnapshot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _accentColor(itemType);
-    final title = user?.displayName ?? group?.name ?? '推荐对象';
+    final title = user?.displayName ?? group?.name ?? context.l10n.recommendationTargetFallback;
     final subtitle = user != null
-        ? '匹配策略：${user!.nickname ?? user!.username}'
-        : '${group?.memberCount ?? 0} 人 · ${group?.focusTags.take(2).join(' / ') ?? '公开社群'}';
+        ? context.l10n.recommendationMatchingStrategy(user!.nickname ?? user!.username)
+        : context.l10n.recommendationGroupSubtitle(
+            '${group?.memberCount ?? 0}',
+            group?.focusTags.take(2).join(' / ') ?? context.l10n.recommendationPublicGroup,
+          );
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -606,7 +616,7 @@ class _TargetSnapshot extends StatelessWidget {
                 Text(
                   title,
                   style: context.typo.titleLarge.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -621,7 +631,7 @@ class _TargetSnapshot extends StatelessWidget {
           ),
           if (stage != null)
             SemanticPill(
-              label: _stageLabel(stage!),
+              label: _stageLabel(context, stage!),
               tone: itemType == RecommendationItemType.friend
                   ? PillTone.brand
                   : PillTone.warning,
@@ -652,7 +662,7 @@ class _ScoreRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: context.typo.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+            style: context.typo.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -680,6 +690,7 @@ class _ChipSelector extends StatelessWidget {
     required this.selected,
     required this.tone,
     required this.onToggle,
+    this.labelBuilder,
   });
 
   final String title;
@@ -687,6 +698,7 @@ class _ChipSelector extends StatelessWidget {
   final Set<String> selected;
   final PillTone tone;
   final ValueChanged<String> onToggle;
+  final String Function(String)? labelBuilder;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -694,7 +706,7 @@ class _ChipSelector extends StatelessWidget {
       children: [
         Text(
           title,
-          style: context.typo.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+          style: context.typo.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -703,7 +715,7 @@ class _ChipSelector extends StatelessWidget {
           children: options
               .map(
                 (option) => FilterChip(
-                  label: Text(option),
+                  label: Text(labelBuilder != null ? labelBuilder!(option) : option),
                   selected: selected.contains(option),
                   onSelected: (_) => onToggle(option),
                 ),
@@ -718,68 +730,116 @@ Color _accentColor(RecommendationItemType itemType) => itemType == Recommendatio
       ? DS.brandPrimaryConst
       : DS.warning;
 
-String _stageLabel(RecommendationFeedbackStage stage) {
+String _stageLabel(BuildContext context, RecommendationFeedbackStage stage) {
   switch (stage) {
     case RecommendationFeedbackStage.immediate:
-      return '即时';
+      return context.l10n.recommendationStageImmediate;
     case RecommendationFeedbackStage.followUp:
-      return '跟进';
+      return context.l10n.recommendationStageFollowUp;
     case RecommendationFeedbackStage.outcome:
-      return '结果';
+      return context.l10n.recommendationStageOutcome;
   }
 }
 
-String _reasonLabel(String value) {
+String _reasonLabel(BuildContext context, String value) {
   switch (value) {
     case 'subject_overlap':
-      return '主题重合';
+      return context.l10n.recommendationReasonSubjectOverlap;
     case 'preference_alignment':
-      return '学习节奏接近';
+      return context.l10n.recommendationReasonPreferenceAlignment;
     case 'tag_overlap':
-      return '兴趣命中';
+      return context.l10n.recommendationReasonTagOverlap;
     case 'trending':
-      return '近期活跃';
+      return context.l10n.recommendationReasonTrending;
     default:
       return value.replaceAll('_', ' ');
   }
 }
 
-String _metricLabel(String value) {
+String _metricLabel(BuildContext context, String value) {
   switch (value) {
     case 'overall_score':
-      return '整体';
+      return context.l10n.recommendationMetricOverall;
     case 'similarity_score':
-      return '相似度';
+      return context.l10n.recommendationMetricSimilarity;
     case 'comfort_score':
-      return '舒适度';
+      return context.l10n.recommendationMetricComfort;
     case 'interest_match_score':
-      return '兴趣匹配';
+      return context.l10n.recommendationMetricInterestMatch;
     case 'activity_score':
-      return '活跃度';
+      return context.l10n.recommendationMetricActivity;
     case 'subject_overlap':
-      return '主题相似';
+      return context.l10n.recommendationMetricSubjectSimilarity;
     case 'relationship_readiness':
-      return '关系熟悉度';
+      return context.l10n.recommendationMetricRelationshipReadiness;
     case 'tag_score':
-      return '标签匹配';
+      return context.l10n.recommendationMetricTagMatch;
     case 'quality':
-      return '质量';
+      return context.l10n.recommendationMetricQuality;
     default:
       return value.replaceAll('_', ' ');
   }
 }
 
-String _signalLabel(String value) {
+String _signalLabel(BuildContext context, String value) {
   switch (value) {
     case 'too_dissimilar':
-      return '不够相似';
+      return context.l10n.recommendationSignalTooDissimilar;
     case 'want_more_tag_match':
-      return '兴趣不够对口';
+      return context.l10n.recommendationSignalWantMoreTagMatch;
     case 'trustworthy':
-      return '合作感靠谱';
+      return context.l10n.recommendationSignalTrustworthy;
     case 'good_interest_match':
-      return '兴趣对口';
+      return context.l10n.recommendationSignalGoodInterestMatch;
     default:
       return value.replaceAll('_', ' ');
+  }
+}
+
+String _issueDisplayLabel(BuildContext context, String key) {
+  switch (key) {
+    case 'not_similar':
+      return context.l10n.recommendationIssueNotSimilar;
+    case 'not_complementary':
+      return context.l10n.recommendationIssueNotComplementary;
+    case 'not_proactive':
+      return context.l10n.recommendationIssueNotProactive;
+    case 'too_much_pressure':
+      return context.l10n.recommendationIssueTooMuchPressure;
+    case 'not_familiar':
+      return context.l10n.recommendationIssueNotFamiliar;
+    case 'inaccurate_tags':
+      return context.l10n.recommendationIssueInaccurateTags;
+    case 'too_quiet':
+      return context.l10n.recommendationIssueTooQuiet;
+    case 'too_crowded':
+      return context.l10n.recommendationIssueTooCrowded;
+    case 'mediocre_vibe':
+      return context.l10n.recommendationIssueMediocreVibe;
+    case 'unsuitable_threshold':
+      return context.l10n.recommendationIssueUnsuitableThreshold;
+    default:
+      return key;
+  }
+}
+
+String _strengthDisplayLabel(BuildContext context, String key) {
+  switch (key) {
+    case 'great_fit':
+      return context.l10n.recommendationStrengthGreatFit;
+    case 'complementary':
+      return context.l10n.recommendationStrengthComplementary;
+    case 'reliable':
+      return context.l10n.recommendationStrengthReliable;
+    case 'clear_reason':
+      return context.l10n.recommendationStrengthClearReason;
+    case 'interest_match':
+      return context.l10n.recommendationStrengthInterestMatch;
+    case 'great_vibe':
+      return context.l10n.recommendationStrengthGreatVibe;
+    case 'active_fit':
+      return context.l10n.recommendationStrengthActiveFit;
+    default:
+      return key;
   }
 }

@@ -16,6 +16,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     this.onSnooze,
     this.onPushDismiss,
     this.onPushDisableCategory,
+    this.onAccountabilityEncourage,
     super.key,
   });
 
@@ -27,6 +28,7 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback? onSnooze;
   final VoidCallback? onPushDismiss;
   final VoidCallback? onPushDisableCategory;
+  final VoidCallback? onAccountabilityEncourage;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +37,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     final snoozeAction = onSnooze;
     final pushDismissAction = onPushDismiss;
     final pushDisableCategoryAction = onPushDisableCategory;
+    final accountabilityEncourageAction = onAccountabilityEncourage;
 
     return Dismissible(
       key: Key(notification.id),
@@ -208,6 +211,20 @@ class UnifiedNotificationCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (notification.isAccountabilityStruggleAlert) ...[
+                      const SizedBox(height: DS.sm),
+                      if (notification.canSendAccountabilityEncouragement &&
+                          accountabilityEncourageAction != null)
+                        SparkleButton(
+                          onPressed: accountabilityEncourageAction,
+                          label: notification.accountabilityEncouragementLabel,
+                        )
+                      else
+                        Text(
+                          '已鼓励',
+                          style: DS.bodySmall.copyWith(color: DS.success),
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -260,7 +277,7 @@ class UnifiedNotificationCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 10,
           color: badgeColor,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
         ),
       ),
     );
@@ -300,6 +317,17 @@ class UnifiedNotificationCard extends StatelessWidget {
           context.push('/achievements/$achievementId');
         } else {
           context.push('/achievements');
+        }
+        return;
+
+      case 'accountability_struggle_alert':
+      case 'accountability_encouragement_received':
+        final partnershipId =
+            notification.metadata['partnership_id'] as String?;
+        if (partnershipId != null && partnershipId.isNotEmpty) {
+          context.push('/community/accountability/$partnershipId');
+        } else {
+          context.push('/community/accountability');
         }
         return;
 
@@ -358,7 +386,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 Text(
                   '建议动作：${notification.suggestedStep!}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                 ),
               ],

@@ -123,29 +123,38 @@ class EmbeddingService:
                 order.append(provider)
         return order
 
+    # DashScope text-embedding-v4 enforces batch_size <= 10
+    DASHSCOPE_MAX_BATCH = 10
+
     async def _dashscope_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
         if dashscope is None:
             raise RuntimeError("dashscope package is required for dashscope embedding provider")
 
-        def _call():
-            dashscope.api_key = self.dashscope_api_key
-            if self.dashscope_base_url:
-                dashscope.base_http_api_url = self.dashscope_base_url
+        # Split into chunks of DASHSCOPE_MAX_BATCH to comply with API limits
+        all_embeddings: list[list[float]] = []
+        for i in range(0, len(texts), self.DASHSCOPE_MAX_BATCH):
+            chunk = texts[i:i + self.DASHSCOPE_MAX_BATCH]
 
-            payload = {
-                "model": self.dashscope_model,
-                "input": texts,
-                "dimension": self.embedding_dim,
-                "text_type": text_type,
-            }
-            return dashscope.TextEmbedding.call(**payload)
+            def _call(batch=chunk):
+                dashscope.api_key = self.dashscope_api_key
+                if self.dashscope_base_url:
+                    dashscope.base_http_api_url = self.dashscope_base_url
+                payload = {
+                    "model": self.dashscope_model,
+                    "input": batch,
+                    "dimension": self.embedding_dim,
+                    "text_type": text_type,
+                }
+                return dashscope.TextEmbedding.call(**payload)
 
-        resp = await asyncio.to_thread(_call)
-        if resp.status_code != HTTPStatus.OK:
-            raise RuntimeError(f"DashScope embedding failed: {resp.code} {resp.message}")
+            resp = await asyncio.to_thread(_call)
+            if resp.status_code != HTTPStatus.OK:
+                raise RuntimeError(f"DashScope embedding failed: {resp.code} {resp.message}")
 
-        embeddings = resp.output.get("embeddings", [])
-        return [item["embedding"] for item in embeddings]
+            embeddings = resp.output.get("embeddings", [])
+            all_embeddings.extend([item["embedding"] for item in embeddings])
+
+        return all_embeddings
 
     async def _siliconflow_embeddings(self, texts: list[str]) -> list[list[float]]:
         base_url = self.siliconflow_base_url.rstrip("/")

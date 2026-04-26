@@ -47,6 +47,7 @@ from app.models.accountability import (
 )
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.file_storage import StoredFile
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.seed_content import SeedItem, SeedLibrary
@@ -86,11 +87,17 @@ from app.schemas.community import (
     GroupDirectoryResponse,
     GroupDirectorySortEnum,
     GroupFileCategoryStat,
+    GroupFileCreateRequest,
     GroupFileInfo,
     GroupFilePermissions,
     GroupFilePermissionUpdate,
+    GroupFileSortEnum,
+    GroupKnowledgeBaseDocumentCreate,
+    GroupKnowledgeBaseResponse,
+    GroupCollaborativeGalaxyResponse,
     GroupMemberInfo,
     # 群文件
+    FileCopyResponse,
     GroupFileShareRequest,
     # 火堆
     GroupFlameStatus,
@@ -134,6 +141,7 @@ from app.schemas.community import (
     SharedResourceCreate,
     SharedResourceInfo,
     SharedResourceTypeEnum,
+    UserFileShareRequest,
     UserBrief,
     # 隐私设置
     SearchVisibilityEnum,
@@ -168,6 +176,7 @@ from app.services.community_service import (
     CheckinService,
     FriendshipService,
     GroupMessageService,
+    GroupKnowledgeService,
     GroupService,
     GroupTaskService,
     PrivateMessageService,
@@ -378,9 +387,20 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
     )
 
 
-def _build_group_file_info(group_file: GroupFile, member_role) -> GroupFileInfo:
+def _build_group_file_info(
+    group_file: GroupFile,
+    member_role,
+    *,
+    is_in_my_library: bool = False,
+) -> GroupFileInfo:
     shared_by = None
+    uploader_name = None
     if group_file.shared_by:
+        uploader_name = (
+            group_file.shared_by.nickname
+            or group_file.shared_by.full_name
+            or group_file.shared_by.username
+        )
         shared_by = UserBrief(
             id=group_file.shared_by.id,
             username=group_file.shared_by.username,
@@ -399,7 +419,11 @@ def _build_group_file_info(group_file: GroupFile, member_role) -> GroupFileInfo:
         file_id=group_file.file_id,
         shared_by=shared_by,
         category=group_file.category,
+        description=group_file.description,
+        uploader_name=uploader_name,
         tags=group_file.tags or [],
+        trust_level=group_file.trust_level.value,
+        knowledge_base=group_file.is_knowledge_base,
         view_role=group_file.view_role,
         download_role=group_file.download_role,
         manage_role=group_file.manage_role,
@@ -408,8 +432,31 @@ def _build_group_file_info(group_file: GroupFile, member_role) -> GroupFileInfo:
         file_size=stored_file.file_size,
         status=stored_file.status,
         visibility=stored_file.visibility,
+        download_count=group_file.download_count,
+        citation_count=group_file.citation_count,
+        rating_count=group_file.rating_count,
+        average_rating=GroupFileService.average_rating(group_file),
+        quality_score=GroupFileService.quality_score(group_file),
+        retrieval_boost=GroupFileService.retrieval_boost(group_file),
+        is_in_my_library=is_in_my_library,
         can_download=GroupFileService.can_download(member_role, group_file.download_role),
         can_manage=GroupFileService.can_manage(member_role, group_file.manage_role),
+    )
+
+
+def _build_file_copy_response(
+    *,
+    file_id: UUID,
+    status: str,
+    job_id: str | None,
+    already_in_library: bool,
+) -> FileCopyResponse:
+    return FileCopyResponse(
+        file_id=file_id,
+        status=status,
+        job_id=job_id,
+        already_in_library=already_in_library,
+        suggested_nodes_route=f"/api/v1/galaxy/documents/{file_id}/suggested-nodes",
     )
 
 
@@ -1873,6 +1920,62 @@ async def mark_group_messages_read(
 
 # ============ 群文件 ============
 
+@router.post("/groups/{group_id}/files", response_model=GroupFileInfo, summary="分享文件到群组")
+async def create_group_file_share(
+    group_id: UUID,
+    data: GroupFileCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        group_file, stored_file, _job_id = await GroupFileService.share_file(
+            db,
+            group_id=group_id,
+            user_id=current_user.id,
+            file_id=data.file_id,
+            category=data.category,
+            description=data.description,
+            tags=None,
+            view_role=GroupRole.MEMBER,
+            download_role=GroupRole.MEMBER,
+            manage_role=GroupRole.ADMIN,
+        )
+
+        if data.send_message:
+            message_payload = MessageSend(
+                message_type=MessageTypeEnum.FILE_SHARE,
+                content=stored_file.file_name,
+                content_data={
+                    "file_id": str(stored_file.id),
+                    "file_name": stored_file.file_name,
+                    "mime_type": stored_file.mime_type,
+                    "file_size": stored_file.file_size,
+                    "status": stored_file.status,
+                    "category": data.category,
+                    "description": data.description,
+                },
+            )
+            message = await GroupMessageService.send_message(
+                db,
+                group_id,
+                current_user.id,
+                message_payload,
+            )
+            message_info = _build_message_info(message)
+            await manager.broadcast(message_info.model_dump(mode="json"), str(group_id))
+
+        await db.commit()
+        member = await GroupFileService._require_member(db, group_id, current_user.id)
+        detailed_group_file = await GroupFileService._get_group_file(db, group_id=group_id, file_id=data.file_id)
+        return _build_group_file_info(detailed_group_file, member.role, is_in_my_library=True)
+    except PermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/groups/{group_id}/files/{file_id}/share", response_model=GroupFileInfo, summary="分享文件到群组")
 async def share_group_file(
     group_id: UUID,
@@ -1883,12 +1986,13 @@ async def share_group_file(
 ):
     try:
         permissions = data.permissions or GroupFilePermissions()
-        group_file, stored_file = await GroupFileService.share_file(
+        group_file, stored_file, _job_id = await GroupFileService.share_file(
             db,
             group_id=group_id,
             user_id=current_user.id,
             file_id=file_id,
             category=data.category,
+            description=data.description,
             tags=data.tags,
             view_role=GroupRole(permissions.view_role.value),
             download_role=GroupRole(permissions.download_role.value),
@@ -1918,7 +2022,11 @@ async def share_group_file(
 
         await db.commit()
         member = await GroupFileService._require_member(db, group_id, current_user.id)
-        return _build_group_file_info(group_file, member.role)
+        detailed_group_file = await GroupFileService._get_group_file(db, group_id=group_id, file_id=file_id)
+        return _build_group_file_info(detailed_group_file, member.role, is_in_my_library=True)
+    except PermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -1928,8 +2036,10 @@ async def share_group_file(
 async def list_group_files(
     group_id: UUID,
     category: str | None = Query(default=None),
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    search_query: str | None = Query(default=None),
+    sort_by: GroupFileSortEnum = Query(default=GroupFileSortEnum.LATEST),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1939,10 +2049,208 @@ async def list_group_files(
             group_id=group_id,
             user_id=current_user.id,
             category=category,
-            limit=limit,
-            offset=offset,
+            search_query=search_query,
+            sort_by=sort_by.value,
+            page=page,
+            page_size=page_size,
         )
-        return [_build_group_file_info(item, member_role) for item in group_files]
+        return [
+            _build_group_file_info(item.group_file, member_role, is_in_my_library=item.is_in_my_library)
+            for item in group_files
+        ]
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post(
+    "/groups/{group_id}/files/{file_id}/copy-to-library",
+    response_model=FileCopyResponse,
+    summary="复制群文件到个人资料库",
+)
+async def copy_group_file_to_library(
+    group_id: UUID,
+    file_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        result = await GroupFileService.copy_to_library(
+            db,
+            group_id=group_id,
+            file_id=file_id,
+            user_id=current_user.id,
+        )
+        await db.commit()
+
+        if result.notify_owner_id:
+            from app.schemas.notification import NotificationCreate
+            from app.services.notification_service import NotificationService
+
+            copier_name = current_user.nickname or current_user.full_name or current_user.username or "群成员"
+            await NotificationService.create(
+                db,
+                result.notify_owner_id,
+                NotificationCreate(
+                    title="你的文档被保存了",
+                    content=f"{copier_name} 已将你的文档复制到个人资料库",
+                    type="document_copied",
+                    data={
+                        "source": "group_file",
+                        "group_id": str(group_id),
+                        "source_file_id": str(file_id),
+                        "copied_file_id": str(result.stored_file.id),
+                        "copied_by_user_id": str(current_user.id),
+                    },
+                ),
+            )
+
+        return _build_file_copy_response(
+            file_id=result.stored_file.id,
+            status=result.stored_file.status,
+            job_id=result.job_id,
+            already_in_library=result.already_exists,
+        )
+    except PermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/users/{user_id}/share-file",
+    response_model=FileCopyResponse,
+    summary="直接分享文件给单个用户",
+)
+async def share_file_to_user(
+    user_id: UUID,
+    data: UserFileShareRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        if user_id == current_user.id:
+            raise HTTPException(status_code=400, detail="不能分享给自己")
+
+        owner_file = await GroupFileService._get_owned_file(db, user_id=current_user.id, file_id=data.file_id)
+        if owner_file.visibility == "friends":
+            are_friends = await FriendshipService.are_friends(db, current_user.id, user_id)
+            if not are_friends:
+                raise HTTPException(status_code=403, detail="好友可见文件只能分享给好友")
+
+        result = await GroupFileService.share_file_to_user(
+            db,
+            owner_id=current_user.id,
+            target_user_id=user_id,
+            file_id=data.file_id,
+        )
+
+        message = await PrivateMessageService.send_message(
+            db,
+            current_user.id,
+            PrivateMessageSend(
+                target_user_id=user_id,
+                message_type=MessageTypeEnum.FILE_SHARE,
+                content=owner_file.file_name,
+                content_data={
+                    "file_id": str(owner_file.id),
+                    "shared_copy_file_id": str(result.stored_file.id),
+                    "file_name": owner_file.file_name,
+                    "mime_type": owner_file.mime_type,
+                    "file_size": owner_file.file_size,
+                    "status": result.stored_file.status,
+                },
+            ),
+        )
+
+        await db.commit()
+        message_info = _build_private_message_info(message)
+        await manager.send_personal_message(message_info.model_dump(mode="json"), str(user_id))
+        await manager.send_personal_message(message_info.model_dump(mode="json"), str(current_user.id))
+
+        return _build_file_copy_response(
+            file_id=result.stored_file.id,
+            status=result.stored_file.status,
+            job_id=result.job_id,
+            already_in_library=result.already_exists,
+        )
+    except HTTPException:
+        await db.rollback()
+        raise
+    except PermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/groups/{group_id}/knowledge-base/documents",
+    response_model=GroupFileInfo,
+    summary="添加群组官方知识库文档",
+)
+async def add_group_knowledge_base_document(
+    group_id: UUID,
+    data: GroupKnowledgeBaseDocumentCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        group_file, _galaxy = await GroupKnowledgeService.designate_official_document(
+            db,
+            group_id=group_id,
+            user_id=current_user.id,
+            file_id=data.file_id,
+            category=data.category,
+            tags=data.tags,
+        )
+        await db.commit()
+        member = await GroupService._require_active_member(db, group_id, current_user.id)
+        return _build_group_file_info(group_file, member.role)
+    except ValueError as e:
+        await db.rollback()
+        detail = str(e)
+        status_code = 403 if "权限" in detail or "成员" in detail else 400
+        raise HTTPException(status_code=status_code, detail=detail)
+
+
+@router.get(
+    "/groups/{group_id}/knowledge-base",
+    response_model=GroupKnowledgeBaseResponse,
+    summary="获取群组知识库",
+)
+async def get_group_knowledge_base(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        documents, stats, galaxy = await GroupKnowledgeService.get_knowledge_base(db, group_id, current_user.id)
+        member = await GroupService._require_active_member(db, group_id, current_user.id)
+        return GroupKnowledgeBaseResponse(
+            group_id=group_id,
+            collaborative_galaxy_id=galaxy.id if galaxy else None,
+            documents=[_build_group_file_info(item, member.role) for item in documents],
+            stats=stats,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get(
+    "/groups/{group_id}/galaxy",
+    response_model=GroupCollaborativeGalaxyResponse,
+    summary="获取群组协作星图",
+)
+async def get_group_collaborative_galaxy(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await GroupKnowledgeService.get_group_galaxy(db, group_id, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
@@ -1957,7 +2265,7 @@ async def update_group_file_permissions(
 ):
     try:
         member = await GroupFileService._require_member(db, group_id, current_user.id)
-    except ValueError as e:
+    except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
     if member.role not in (GroupRole.ADMIN, GroupRole.OWNER):
@@ -1975,7 +2283,11 @@ async def update_group_file_permissions(
             manage_role=GroupRole(permissions.manage_role.value),
         )
         await db.commit()
-        return _build_group_file_info(group_file, member.role)
+        detailed_group_file = await GroupFileService._get_group_file(db, group_id=group_id, file_id=file_id)
+        return _build_group_file_info(detailed_group_file, member.role)
+    except PermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -1990,7 +2302,7 @@ async def get_group_file_categories(
     try:
         rows = await GroupFileService.category_stats(db, group_id, current_user.id)
         return [GroupFileCategoryStat(category=category, count=count) for category, count in rows]
-    except ValueError as e:
+    except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
 @router.patch("/groups/{group_id}/messages/{message_id}", response_model=MessageInfo, summary="编辑群消息")
@@ -3930,3 +4242,50 @@ async def retry_offline_messages(
         "retried_count": len(messages),
         "message_ids": [str(m.id) for m in messages]
     }
+
+
+@router.get("/recommended-resources", summary="Get recommended shared resources from user's groups")
+async def get_recommended_resources(
+    limit: int = Query(default=5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Recommend high-quality community resources the user hasn't adopted yet."""
+    from app.models.community import GroupMembership
+
+    user_groups = await db.execute(
+        select(GroupMembership.group_id).where(
+            GroupMembership.user_id == current_user.id,
+            GroupMembership.deleted_at.is_(None),
+        )
+    )
+    group_ids = [row[0] for row in user_groups]
+    if not group_ids:
+        return {"recommendations": []}
+
+    high_quality = await db.execute(
+        select(GroupFile)
+        .where(
+            GroupFile.group_id.in_(group_ids),
+            GroupFile.deleted_at.is_(None),
+            GroupFile.trust_level.in_(["verified", "high"]),
+        )
+        .order_by(GroupFile.created_at.desc())
+        .limit(limit)
+    )
+
+    recommendations = []
+    for gf in high_quality.scalars():
+        file_record = await db.get(StoredFile, gf.file_id)
+        if not file_record or file_record.is_deleted:
+            continue
+        recommendations.append({
+            "file_id": str(gf.file_id),
+            "filename": file_record.file_name,
+            "group_id": str(gf.group_id),
+            "shared_by": str(gf.shared_by_id),
+            "trust_level": str(gf.trust_level),
+            "recommendation_reason": "High quality community resource from your study group",
+        })
+
+    return {"recommendations": recommendations, "count": len(recommendations)}

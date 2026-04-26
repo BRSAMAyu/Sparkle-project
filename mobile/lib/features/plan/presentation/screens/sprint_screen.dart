@@ -109,10 +109,10 @@ class _NoActiveSprintView extends StatelessWidget {
                 const SizedBox(height: DS.xl),
                 SparkleButton(
                   onPressed: () {
-                    unawaited(context.push('/plans/new?type=sprint'));
+                    unawaited(context.push('/exam-sprint/setup'));
                   },
                   icon: const Icon(Icons.add),
-                  label: 'Create Sprint Plan',
+                  label: '开始考试冲刺',
                 ),
               ],
             ),

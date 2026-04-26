@@ -88,7 +88,7 @@ class _ToolButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                   color: DS.textSecondary,
                 ),
               ),

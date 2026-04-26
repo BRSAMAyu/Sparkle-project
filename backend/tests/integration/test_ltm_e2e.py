@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Integration DB schema was behind task planning migrations - verified LTM repair flow after Alembic head.
 from datetime import timezone, datetime, timedelta
 from uuid import uuid4
 

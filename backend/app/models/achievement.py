@@ -2,6 +2,7 @@
 Achievement System Models
 成就系统数据模型 - 包含成就定义、用户成就记录、连胜统计、契约等
 """
+
 from __future__ import annotations
 
 
@@ -9,9 +10,12 @@ import enum
 from typing import TypeVar
 
 from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 # Python 3.9 compatible StrEnum
@@ -188,6 +192,9 @@ class UserAchievement(BaseModel):
 
     # 最后更新时间（用于进度变化追踪）
     last_progress_update = Column(DateTime, nullable=True)
+
+    # 解锁时上下文快照：当前计划、任务、触发事件和故事描述
+    context_snapshot = Column(JSONBCompat, nullable=True)
 
     # 关系
     achievement = relationship("Achievement")

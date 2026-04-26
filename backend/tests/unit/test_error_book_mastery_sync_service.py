@@ -105,6 +105,36 @@ def _make_service(node_statuses: dict | None = None):
 
         service._get_or_create_node_status = _mock_get_or_create
 
+    # Stub out GalaxyService bridge so tests don't hit the real DB-backed write path.
+    # Mirror the side-effects that GalaxyService.update_node_mastery applies on
+    # UserNodeStatus so the unit tests still observe BKT / unlock updates.
+    from datetime import datetime, timezone
+
+    async def _mock_write_node_mastery_via_galaxy(
+        *, user_id, node_id, new_mastery, reason, request_id, revision
+    ):
+        existing = _statuses.get(node_id)
+        old_mastery = float(existing.mastery_score) if existing is not None else 0.0
+        if existing is None:
+            existing = _make_node_status(mastery_score=float(new_mastery))
+            existing.is_unlocked = False
+            existing.first_unlock_at = None
+            _statuses[node_id] = existing
+        existing.mastery_score = float(new_mastery)
+        existing.bkt_mastery_prob = round(float(new_mastery) / 100.0, 2)
+        existing.bkt_last_updated_at = datetime.now(timezone.utc)
+        existing.last_study_at = datetime.now(timezone.utc)
+        if not existing.is_unlocked and float(new_mastery) > 0:
+            existing.is_unlocked = True
+            existing.first_unlock_at = datetime.now(timezone.utc)
+        return {
+            "success": True,
+            "old_mastery": old_mastery,
+            "new_mastery": float(new_mastery),
+        }
+
+    service._write_node_mastery_via_galaxy = _mock_write_node_mastery_via_galaxy
+
     return service, db, _statuses
 
 
@@ -119,6 +149,7 @@ async def test_diagnosis_no_linked_nodes_returns_empty():
 
     results = await service.apply_error_diagnosis(uuid4(), error)
     assert results == []
+    assert error.latest_analysis["linking_hint"]["code"] == "missing_knowledge_links"
 
 
 @pytest.mark.asyncio
@@ -138,6 +169,7 @@ async def test_review_no_linked_nodes_returns_empty():
 
     results = await service.apply_review_feedback(uuid4(), error, "remembered")
     assert results == []
+    assert error.latest_analysis["linking_hint"]["action"] == "add_subject_or_link_course"
 
 
 # ===========================================================================
@@ -698,3 +730,65 @@ async def test_diagnosis_skips_immediate_plan_health_when_mastery_not_low_enough
     await service.apply_error_diagnosis(uuid4(), error)
 
     service._evaluate_impacted_plans.assert_not_awaited()
+
+
+# ===========================================================================
+# 20. Single-deduction guarantee: knowledge_gap deducts exactly once
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_knowledge_gap_single_deduction_no_double():
+    """A knowledge_gap error must deduct mastery exactly once (= ERROR_TYPE_IMPACT).
+
+    Regression guard: the async GalaxyEventConsumer._handle_error_created must
+    NOT call GalaxyService.handle_error_created() or any other mastery-modifying
+    path — mastery is updated synchronously by ErrorBookMasterySyncService.
+    """
+    node_id = uuid4()
+    user_id = uuid4()
+    initial_mastery = 60.0
+
+    service, _, statuses = _make_service(node_statuses={node_id: initial_mastery})
+    error = _make_error_record(
+        linked_node_ids=[node_id],
+        error_type="knowledge_gap",
+    )
+
+    results = await service.apply_error_diagnosis(user_id, error)
+
+    assert len(results) == 1
+    expected_delta = ERROR_TYPE_IMPACT["knowledge_gap"]  # -10
+    assert results[0]["delta"] == expected_delta
+    # Net change is exactly one deduction, not double
+    assert statuses[node_id].mastery_score == initial_mastery + expected_delta
+    assert statuses[node_id].mastery_score == 50
+
+
+# ===========================================================================
+# 21. No mastery_score modification in async consumer path (structural guard)
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_diagnosis_and_review_are_single_touch():
+    """End-to-end verification: diagnosis applies ERROR_TYPE_IMPACT once,
+    review applies REVIEW_PERFORMANCE_IMPACT once. Net result is deterministic.
+    """
+    node_id = uuid4()
+    user_id = uuid4()
+
+    service, _, statuses = _make_service(node_statuses={node_id: 70.0})
+    error = _make_error_record(linked_node_ids=[node_id], error_type="knowledge_gap")
+
+    # Diagnosis: 70 + (-10) = 60
+    diag = await service.apply_error_diagnosis(user_id, error)
+    assert len(diag) == 1
+    assert diag[0]["delta"] == ERROR_TYPE_IMPACT["knowledge_gap"]
+    assert statuses[node_id].mastery_score == 60.0
+
+    # Review (remembered): 60 + 4 = 64
+    rev = await service.apply_review_feedback(user_id, error, "remembered")
+    assert len(rev) == 1
+    assert rev[0]["delta"] == REVIEW_PERFORMANCE_IMPACT["remembered"]
+    assert statuses[node_id].mastery_score == 64.0

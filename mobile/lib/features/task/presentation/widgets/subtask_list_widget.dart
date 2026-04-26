@@ -459,7 +459,7 @@ class SubtaskProgressIndicator extends StatelessWidget {
             style: TextStyle(
               color: DS.brandPrimary70Const,
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
         ],

@@ -43,7 +43,7 @@ class CompactTaskCard extends ConsumerWidget {
                       Text(
                         task.title,
                         style: context.sparkleTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: DS.fontWeightMedium,
                           color: DS.textPrimary,
                         ),
                         maxLines: 1,
@@ -116,7 +116,7 @@ class CompactTaskCard extends ConsumerWidget {
         label,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
           color: color,
         ),
       ),
@@ -124,7 +124,10 @@ class CompactTaskCard extends ConsumerWidget {
   }
 
   Widget _buildQuickActionButton(
-      BuildContext context, WidgetRef ref, TaskModel task,) {
+    BuildContext context,
+    WidgetRef ref,
+    TaskModel task,
+  ) {
     switch (task.status) {
       case TaskStatus.pending:
         return _ActionButton(
@@ -136,6 +139,7 @@ class CompactTaskCard extends ConsumerWidget {
           },
         );
       case TaskStatus.inProgress:
+      case TaskStatus.stuck:
         return _ActionButton(
           icon: Icons.check_rounded,
           color: DS.brandPrimaryConst,

@@ -16,6 +16,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 try:
     from circuitbreaker import circuit
@@ -31,7 +32,7 @@ from app.core.redis_utils import resolve_redis_password
 
 logger = logging.getLogger(__name__)
 
-RATE_LIMIT_LUA_PATH = "backend/app/services/lua/rate_limit.lua"
+RATE_LIMIT_LUA_PATH = Path(__file__).resolve().parents[1] / "services" / "lua" / "rate_limit.lua"
 
 
 @dataclass
@@ -352,7 +353,7 @@ class LLMCostGuard:
         if self._quota_script_sha:
             return self._quota_script_sha
         try:
-            with open(RATE_LIMIT_LUA_PATH, encoding="utf-8") as handle:
+            with RATE_LIMIT_LUA_PATH.open(encoding="utf-8") as handle:
                 script = handle.read()
             self._quota_script_sha = await self.redis.script_load(script)
         except Exception as exc:

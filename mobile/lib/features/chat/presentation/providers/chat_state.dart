@@ -18,6 +18,14 @@ enum ChatRunPhase {
   failed,
 }
 
+enum DocumentContextMode {
+  auto,
+  userSelected,
+  taskScope,
+  goalScope,
+  off,
+}
+
 extension ChatRunPhaseX on ChatRunPhase {
   bool get isActive =>
       this == ChatRunPhase.sending ||
@@ -96,8 +104,6 @@ class TransparencyPresentationState {
 }
 
 class ChatState {
-  static const int maxRetainedMessages = 500;
-
   ChatState({
     this.isLoading = false,
     this.isSending = false,
@@ -140,11 +146,15 @@ class ChatState {
     this.currentStepId,
     this.currentStepIndex,
     this.dagExecutionSignal,
+    this.documentRetrievalEnabled = true,
+    this.documentContextMode = DocumentContextMode.auto,
     this.activeRunId,
     this.runPhase = ChatRunPhase.idle,
     this.activeRunSummary,
     this.transparencyPresentationState = const TransparencyPresentationState(),
   });
+
+  static const int maxRetainedMessages = 500;
 
   final bool isLoading;
   final bool isSending;
@@ -187,6 +197,8 @@ class ChatState {
   final int? currentStepId;
   final int? currentStepIndex;
   final DagExecutionSignal? dagExecutionSignal;
+  final bool documentRetrievalEnabled;
+  final DocumentContextMode documentContextMode;
   final String? activeRunId;
   final ChatRunPhase runPhase;
   final ActiveRunSummary? activeRunSummary;
@@ -267,6 +279,8 @@ class ChatState {
     bool clearTransparency = false,
     DagExecutionSignal? dagExecutionSignal,
     bool clearDagExecution = false,
+    bool? documentRetrievalEnabled,
+    DocumentContextMode? documentContextMode,
     String? activeRunId,
     bool clearActiveRunId = false,
     ChatRunPhase? runPhase,
@@ -348,6 +362,10 @@ class ChatState {
         dagExecutionSignal: clearDagExecution
             ? null
             : dagExecutionSignal ?? this.dagExecutionSignal,
+        documentRetrievalEnabled:
+            documentRetrievalEnabled ?? this.documentRetrievalEnabled,
+        documentContextMode:
+            documentContextMode ?? this.documentContextMode,
         activeRunId: clearActiveRunId ? null : activeRunId ?? this.activeRunId,
         runPhase: runPhase ?? this.runPhase,
         activeRunSummary: clearActiveRunSummary

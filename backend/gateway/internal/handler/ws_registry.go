@@ -16,6 +16,7 @@ type ConnectionRegistry struct {
 	signalHub   *service.SignalHub
 	chatHistory *service.ChatHistoryService
 	maxActive   int
+	maxPerUser  int
 }
 
 type connectionEntry struct {
@@ -23,12 +24,13 @@ type connectionEntry struct {
 	writer service.JSONWriteCloser
 }
 
-func NewConnectionRegistry(signalHub *service.SignalHub, chatHistory *service.ChatHistoryService, maxActive int) *ConnectionRegistry {
+func NewConnectionRegistry(signalHub *service.SignalHub, chatHistory *service.ChatHistoryService, maxActive, maxPerUser int) *ConnectionRegistry {
 	return &ConnectionRegistry{
 		connections: make(map[string]map[*websocket.Conn]*connectionEntry),
 		signalHub:   signalHub,
 		chatHistory: chatHistory,
 		maxActive:   maxActive,
+		maxPerUser:  maxPerUser,
 	}
 }
 
@@ -40,6 +42,12 @@ func (r *ConnectionRegistry) Register(userID string, conn *websocket.Conn, write
 			totalActive += len(entries)
 		}
 		if totalActive >= r.maxActive {
+			r.mu.Unlock()
+			return false
+		}
+	}
+	if r.maxPerUser > 0 {
+		if len(r.connections[userID]) >= r.maxPerUser {
 			r.mu.Unlock()
 			return false
 		}
@@ -117,6 +125,41 @@ func (r *ConnectionRegistry) GetWriter(userID string) (service.JSONWriteCloser, 
 		}
 	}
 	return nil, false
+}
+
+// BroadcastToUser sends a JSON message to all active connections for a user.
+// Returns the number of connections that received the message and a list of
+// connections that failed (so callers can unregister them).
+func (r *ConnectionRegistry) BroadcastToUser(userID string, v interface{}) (int, []*websocket.Conn) {
+	r.mu.RLock()
+	entries, ok := r.connections[userID]
+	if !ok || len(entries) == 0 {
+		r.mu.RUnlock()
+		return 0, nil
+	}
+	// Snapshot writers under read lock
+	type writerEntry struct {
+		writer service.JSONWriteCloser
+		conn   *websocket.Conn
+	}
+	var writers []writerEntry
+	for conn, entry := range entries {
+		if entry != nil && entry.writer != nil {
+			writers = append(writers, writerEntry{writer: entry.writer, conn: conn})
+		}
+	}
+	r.mu.RUnlock()
+
+	sent := 0
+	var failed []*websocket.Conn
+	for _, w := range writers {
+		if err := w.writer.WriteJSON(v); err != nil {
+			failed = append(failed, w.conn)
+		} else {
+			sent++
+		}
+	}
+	return sent, failed
 }
 
 // Count returns the number of active connections.

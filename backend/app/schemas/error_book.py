@@ -1,6 +1,7 @@
 """
 错题档案相关的 Pydantic Schema
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,8 +14,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 # 枚举定义
 # ============================================
 
+
 class SubjectEnum(str, Enum):
     """科目枚举"""
+
     MATH = "math"
     PHYSICS = "physics"
     CHEMISTRY = "chemistry"
@@ -30,6 +33,7 @@ class SubjectEnum(str, Enum):
 
 class ErrorTypeEnum(str, Enum):
     """错因分类枚举"""
+
     CONCEPT_CONFUSION = "concept_confusion"
     CALCULATION_ERROR = "calculation_error"
     READING_CARELESS = "reading_careless"
@@ -43,9 +47,11 @@ class ErrorTypeEnum(str, Enum):
 
 class ReviewPerformanceEnum(str, Enum):
     """复习表现枚举"""
+
     REMEMBERED = "remembered"
     FUZZY = "fuzzy"
     FORGOTTEN = "forgotten"
+
 
 COGNITIVE_DIMENSIONS = {
     "memory",
@@ -60,8 +66,10 @@ COGNITIVE_DIMENSIONS = {
 # 错题创建/更新 Schema
 # ============================================
 
+
 class ErrorRecordCreate(BaseModel):
     """创建错题的请求体"""
+
     question_text: str | None = Field(None, max_length=5000, description="题目内容")
     question_image_url: str | None = Field(None, max_length=500, description="题目图片URL")
 
@@ -82,19 +90,20 @@ class ErrorRecordCreate(BaseModel):
                 raise ValueError("Invalid cognitive dimension tag")
         return value
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def check_content_or_image(cls, data):
         if isinstance(data, dict):
-            text = data.get('question_text')
-            image = data.get('question_image_url')
+            text = data.get("question_text")
+            image = data.get("question_image_url")
             if not text and not image:
-                raise ValueError('题目内容和图片不能同时为空')
+                raise ValueError("题目内容和图片不能同时为空")
         return data
 
 
 class ErrorRecordUpdate(BaseModel):
     """更新错题的请求体"""
+
     question_text: str | None = Field(None, max_length=5000)
     user_answer: str | None = Field(None, max_length=2000)
     correct_answer: str | None = Field(None, max_length=2000)
@@ -119,8 +128,18 @@ class ErrorRecordUpdate(BaseModel):
 # AI 分析结果 Schema
 # ============================================
 
+
+class ErrorLinkingHint(BaseModel):
+    """错题无法关联知识点时的引导信息"""
+
+    code: str
+    message: str
+    action: str | None = None
+
+
 class ErrorAnalysisResult(BaseModel):
     """AI 分析结果"""
+
     error_type: ErrorTypeEnum = Field(..., description="错因分类")
     error_type_label: str = Field(..., description="错因分类的中文标签")
     root_cause: str = Field(..., description="错误根因分析")
@@ -129,8 +148,11 @@ class ErrorAnalysisResult(BaseModel):
     recommended_knowledge: list[str] = Field(default_factory=list, description="推荐复习的知识点")
     study_suggestion: str = Field(..., description="学习建议")
     ocr_text: str | None = Field(None, description="OCR识别的文本（如果是图片题）")
+    linking_hint: ErrorLinkingHint | None = Field(None, description="无法关联知识节点时给前端的引导")
 
-    @field_validator("error_type_label", "root_cause", "correct_approach", "study_suggestion", "ocr_text", mode="before")
+    @field_validator(
+        "error_type_label", "root_cause", "correct_approach", "study_suggestion", "ocr_text", mode="before"
+    )
     @classmethod
     def normalize_text_fields(cls, value):
         if value is None:
@@ -153,11 +175,13 @@ class ErrorAnalysisResult(BaseModel):
 # 错题响应 Schema
 # ============================================
 
+
 class KnowledgeLinkBrief(BaseModel):
     """关联知识点的简要信息"""
+
     id: UUID
     name: str
-    relevance: float = 1.0 # Default fallback
+    relevance: float = 1.0  # Default fallback
     is_primary: bool = False
 
     model_config = ConfigDict(from_attributes=True)
@@ -165,6 +189,7 @@ class KnowledgeLinkBrief(BaseModel):
 
 class ErrorRecordResponse(BaseModel):
     """错题详情响应"""
+
     id: UUID
     question_text: str | None
     question_image_url: str | None
@@ -186,6 +211,8 @@ class ErrorRecordResponse(BaseModel):
     ai_analysis_summary: str | None = None
 
     # 关联信息 (Service 层需要手动填充)
+    affected_node_id: UUID | None = None
+    mastery_delta: float | None = None
     knowledge_links: list[KnowledgeLinkBrief] = Field(default_factory=list)
     suggested_concepts: list[str] = Field(default_factory=list)
 
@@ -197,6 +224,7 @@ class ErrorRecordResponse(BaseModel):
 
 class ErrorRecordListResponse(BaseModel):
     """错题列表响应"""
+
     items: list[ErrorRecordResponse]
     total: int
     page: int
@@ -208,14 +236,17 @@ class ErrorRecordListResponse(BaseModel):
 # 复习相关 Schema
 # ============================================
 
+
 class ReviewAction(BaseModel):
     """提交复习记录 (Body)"""
+
     performance: ReviewPerformanceEnum
     time_spent_seconds: int | None = Field(None, ge=0, description="花费时间（秒）")
 
 
 class ReviewStatsResponse(BaseModel):
     """复习统计响应"""
+
     total_errors: int
     mastered_count: int
     need_review_count: int
@@ -227,10 +258,13 @@ class ReviewStatsResponse(BaseModel):
 # 筛选查询 Schema
 # ============================================
 
+
 class ErrorQueryParams(BaseModel):
     """错题查询参数"""
+
     subject: SubjectEnum | None = None
     chapter: str | None = None
+    node_id: str | None = None
     error_type: ErrorTypeEnum | None = None
     mastery_min: float | None = Field(None, ge=0, le=1)
     mastery_max: float | None = Field(None, ge=0, le=1)

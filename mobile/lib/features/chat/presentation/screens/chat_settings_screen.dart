@@ -101,7 +101,7 @@ class ChatSettingsScreen extends ConsumerWidget {
                             '对话体验',
                             style: DS.titleLarge.copyWith(
                               color: DS.textPrimary,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                           const SizedBox(height: DS.spacing4),
@@ -123,7 +123,7 @@ class ChatSettingsScreen extends ConsumerWidget {
               '种子库',
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.sm),
@@ -187,7 +187,7 @@ class ChatSettingsScreen extends ConsumerWidget {
               '界面与能力',
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.sm),
@@ -238,7 +238,7 @@ class ChatSettingsScreen extends ConsumerWidget {
                 '透明化细项',
                 style: DS.titleMedium.copyWith(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.sm),

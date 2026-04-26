@@ -76,6 +76,9 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (sheetContext) => AttachmentPickerSheet(
+          title: '群组资料分享',
+          primaryTitle: '分享学习资料',
+          primarySubtitle: '上传后会同步发到群聊，并进入群知识库',
           onDirectUpload: _openFileUpload,
           onDocumentClean: _openDocumentCleaner,
         ),
@@ -340,7 +343,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         horizontal: DS.spacing12,
         vertical: DS.spacing4,
       ),
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
           borderRadius: BorderRadius.circular(12),
@@ -614,13 +617,10 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
                           _voiceDraftText = '';
                         });
                         _switchToTextMode();
-                        break;
                       case VoiceReleaseAction.send:
                         _sendVoiceTextDirectly(text);
-                        break;
                       case VoiceReleaseAction.commit:
                         _appendVoiceTextToComposer(text);
-                        break;
                     }
                   },
                   onDraftCancelled: () {

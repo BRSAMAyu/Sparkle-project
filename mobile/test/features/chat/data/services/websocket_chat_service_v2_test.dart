@@ -512,10 +512,10 @@ class WebSocketChatServiceV2Parser {
       toolOutput: json['tool_output']?.toString(),
       citations: json['citations'] as List<String>?,
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       completedAt: json['completed_at'] != null
-          ? DateTime.tryParse(json['completed_at'])
+          ? DateTime.tryParse(json['completed_at'].toString())
           : null,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );

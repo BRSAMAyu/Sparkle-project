@@ -37,6 +37,8 @@ from sqlalchemy import and_, asc, desc, func, select  # noqa: F401
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.standard_workflow import create_standard_chat_graph
+from app.aurora.runtime_v1 import AURORA_RUNTIME_MODE_SURFACES, AuroraRuntimeV1Service
+from app.aurora.runtime_v1.control_surface import AuroraHardBounds
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.config import settings
 from app.core.business_metrics import (  # noqa: F401
@@ -91,6 +93,11 @@ from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
 from app.orchestration.grounding_validator import GroundingValidator
+from app.orchestration.graph_rag import (
+    GraphRAGRetriever,
+    filter_graph_rag_result,
+    format_graph_rag_document_context,
+)
 from app.orchestration.lang_graph_planner import LangGraphPlanner
 
 # Multi-Agent Mode Support
@@ -110,6 +117,7 @@ from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
 from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
 from app.orchestration.orchestration_trace import OrchestrationTrace
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
+from app.orchestration.planning_workflow import EXAM_SPRINT_FAST_TRACK_FLAG, PlanningWorkflowManager
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service  # noqa: F401
 from app.orchestration.run_ledger import RunLedgerRecorder
@@ -150,9 +158,12 @@ from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter  # noqa: F401
 from app.services.chat_signal_collector import ChatSignalCollector
 from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
+from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.focus_service import focus_service  # noqa: F401
+from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service  # noqa: F401
+from app.services.memory_service import MemoryService
 from app.services.plan_progress_service import PlanProgressService  # noqa: F401
 from app.services.progress_narrative_service import ProgressNarrativeService  # noqa: F401
 from app.services.plan_execution_record_service import PlanExecutionRecordService  # noqa: F401
@@ -165,6 +176,7 @@ from app.services.self_evolution_service import UnderstandingDepthService  # noq
 from app.services.shadow_prediction_service import shadow_prediction_service
 from app.services.system_update_service import SystemUpdateService, build_system_update  # noqa: F401
 from app.services.user_service import UserService  # noqa: F401
+from app.services.checkpoint_nudge_service import CheckpointDebriefService
 
 # ---------------------------------------------------------------------------
 # Mixin imports
@@ -348,6 +360,7 @@ class ChatOrchestrator(
 
         # Phase 1: Initialize new components
         self.grounding_validator = GroundingValidator(redis_client)
+        self.planning_workflow_manager = PlanningWorkflowManager(redis_client=redis_client)
 
         # Unified Intent Router (Fix #1): 统一功能入口路由
         self.unified_router = UnifiedIntentRouter(
@@ -401,6 +414,1045 @@ class ChatOrchestrator(
         # Ensure tools are registered
         self._ensure_tools_registered()
         self.multi_agent_adapter = MultiAgentWorkflowAdapter(self)
+        self.aurora_runtime_v1 = AuroraRuntimeV1Service(redis_client)
+
+    async def _attach_aurora_planning_sidecar(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        request_id: str,
+        user_message: str,
+        request_extra_context: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState,
+    ) -> str:
+        """Attach Aurora planning detour guidance driven by the Aurora decision loop."""
+        if not user_message or not isinstance(user_context_payload, dict):
+            return ""
+
+        manager = self.planning_workflow_manager
+        try:
+            session = await manager.get_active_session(session_id)
+            if session is None:
+                return ""
+
+            extracted_fields = manager._extract_clarifying_fields(user_message)
+            if manager.is_message_relevant_to_planning(
+                session,
+                user_message,
+                extracted_fields=extracted_fields,
+            ):
+                return ""
+
+            try:
+                parsed_user_id = uuid.UUID(str(user_id))
+            except (TypeError, ValueError):
+                logger.debug("Skipping Aurora planning sidecar for non-UUID user_id: {}", user_id)
+                return ""
+
+            profile_context = {}
+            raw_profile_context = user_context_payload.get("profile_context")
+            if isinstance(raw_profile_context, dict):
+                profile_context = raw_profile_context
+            planning_context = dict(request_extra_context or {})
+            planning_context["profile_context"] = profile_context
+            if isinstance(user_context_payload.get("calendar_context"), dict):
+                planning_context["calendar_context"] = user_context_payload["calendar_context"]
+            elif isinstance(user_context_payload.get("cognitive_context"), dict) and isinstance(
+                user_context_payload["cognitive_context"].get("calendar_context"), dict
+            ):
+                planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
+
+            planning_response = await manager.process_planning_turn(
+                db=active_db,  # type: ignore[arg-type]
+                user_id=parsed_user_id,
+                chat_session_id=session_id,
+                message=user_message,
+                context=planning_context,
+            )
+            if not (planning_response and planning_response.get("bypass_planning")):
+                return ""
+
+            planning_runtime_state = await manager.runtime_adapter.load_state(
+                user_id=str(parsed_user_id),
+                conversation_id=session_id,
+                db=active_db,
+            )
+            if planning_runtime_state is None:
+                return ""
+
+            detour_scaffold = manager.runtime_adapter.build_detour_scaffold(planning_runtime_state)
+            open_tensions = list(detour_scaffold.get("open_tensions") or [])
+            latent_threads = list(detour_scaffold.get("latent_threads") or [])
+            if not open_tensions and not latent_threads:
+                return ""
+
+            sidecar_request_context = dict(request_extra_context or {})
+            sidecar_request_context.update(
+                {
+                    "surface_complete": False,
+                    "modeling_complete": False,
+                    "planning_detour_scaffold": detour_scaffold,
+                    "informational_tensions": open_tensions,
+                    "latent_threads": latent_threads,
+                }
+            )
+
+            control_surface_reading = await self.aurora_runtime_v1._read_control_surface(
+                active_db=active_db,
+                user_id=user_id,
+            )
+            merged_hard_bounds = self._merge_aurora_planning_hard_bounds(
+                control_surface_reading.hard_bounds.model_dump(mode="json"),
+                detour_scaffold.get("hard_bounds"),
+            )
+            control_surface_reading = control_surface_reading.model_copy(update={"hard_bounds": merged_hard_bounds})
+
+            activity_profile = self.aurora_runtime_v1._build_activity_profile(
+                surface=planning_runtime_state.surface,
+                request_extra_context=sidecar_request_context,
+            )
+            activity_profile.update(planning_runtime_state.activity_profile.to_dict())
+            activity_profile.update(self.aurora_runtime_v1._activity_payload(control_surface_reading.adjustable))
+
+            readout = self.aurora_runtime_v1.dashboard_builder.build(
+                surface=planning_runtime_state.surface,
+                user_id=user_id,
+                conversation_id=session_id,
+                request_id=request_id,
+                user_message=user_message,
+                request_extra_context=sidecar_request_context,
+                conversation_context=dict(conversation_context or {}),
+                user_context_payload=user_context_payload,
+                control_surface_reading=control_surface_reading,
+                activity_profile=activity_profile,
+                candidate_affordances=self.aurora_runtime_v1.skill_registry.load_candidate_affordances(
+                    planning_runtime_state.surface
+                ),
+            )
+            decision = await self.aurora_runtime_v1.decision_loop.decide(readout)
+
+            planning_runtime_state = await manager.runtime_adapter.apply_detour_decision(
+                state=planning_runtime_state,
+                db=active_db,
+                action=decision.action,
+                chat_directive=decision.chat_directive,
+                harness_updates=decision.harness_updates,
+            )
+            final_scaffold = manager.runtime_adapter.build_detour_scaffold(planning_runtime_state)
+            sidecar_meta = {
+                "surface": planning_runtime_state.surface,
+                "planning_session_id": planning_runtime_state.planning_session_id or session.planning_session_id,
+                "bypass_planning": True,
+                "decision": decision.to_payload(),
+                "scaffold": final_scaffold,
+                "source": "aurora_decision_loop",
+            }
+            user_context_payload["aurora_planning_sidecar"] = sidecar_meta
+            state.context_data["aurora_planning_sidecar"] = dict(sidecar_meta)
+            return str(decision.action or "")
+        except Exception as exc:
+            logger.debug("Aurora planning sidecar attach skipped: {}", exc)
+            return ""
+
+    @staticmethod
+    def _stringify_response_metadata(metadata: dict[str, Any] | None) -> dict[str, str]:
+        rendered: dict[str, str] = {}
+        for key, value in dict(metadata or {}).items():
+            if isinstance(value, bool):
+                rendered[str(key)] = str(value).lower()
+            elif isinstance(value, (dict, list)):
+                rendered[str(key)] = json.dumps(value, ensure_ascii=False, default=str)
+            elif value is not None:
+                rendered[str(key)] = str(value)
+        return rendered
+
+    @staticmethod
+    def _is_truthy_metadata_flag(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+        if isinstance(value, (int, float)):
+            return value != 0
+        return False
+
+    @classmethod
+    def _extract_fast_track_launch_metadata(
+        cls,
+        planning_response: dict[str, Any] | None,
+    ) -> dict[str, str]:
+        response_payload = dict(planning_response or {})
+        raw_metadata = dict(response_payload.get("metadata") or {})
+        widgets = response_payload.get("widgets")
+
+        plan_id = str(raw_metadata.get("plan_id") or raw_metadata.get("planId") or "").strip()
+        recommended_task_id = str(
+            raw_metadata.get("recommended_task_id") or raw_metadata.get("recommendedTaskId") or ""
+        ).strip()
+        first_day_task_ids: list[str] = []
+
+        if isinstance(widgets, list):
+            for widget in widgets:
+                if not isinstance(widget, dict):
+                    continue
+                widget_type = str(widget.get("type") or "").strip()
+                payload = widget.get("data")
+                if not isinstance(payload, dict):
+                    continue
+
+                if widget_type == "plan_card" and not plan_id:
+                    plan_id = str(payload.get("plan_id") or payload.get("id") or "").strip()
+
+                if widget_type != "task_list":
+                    continue
+
+                tasks = payload.get("tasks")
+                if not isinstance(tasks, list):
+                    continue
+
+                for item in tasks:
+                    if not isinstance(item, dict):
+                        continue
+                    task_id = str(item.get("id") or "").strip()
+                    item_plan_id = str(item.get("plan_id") or item.get("planId") or "").strip()
+                    if item_plan_id and not plan_id:
+                        plan_id = item_plan_id
+                    if not task_id:
+                        continue
+                    if task_id not in first_day_task_ids:
+                        first_day_task_ids.append(task_id)
+                    if not recommended_task_id:
+                        recommended_task_id = task_id
+
+        launch_metadata: dict[str, str] = {}
+        if plan_id:
+            launch_metadata["plan_id"] = plan_id
+            launch_metadata["plan_route"] = f"/plans/{plan_id}"
+        if first_day_task_ids:
+            launch_metadata["first_day_task_ids_json"] = json.dumps(first_day_task_ids, ensure_ascii=False)
+        if recommended_task_id:
+            launch_metadata["recommended_task_id"] = recommended_task_id
+            launch_metadata["recommended_task_route"] = f"/tasks/{recommended_task_id}"
+        return launch_metadata
+
+    @staticmethod
+    def _as_plain_dict(value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    def _build_modeling_complete_fast_track_context(
+        self,
+        *,
+        user_message: str,
+        request_extra_context: dict[str, Any] | None,
+        profile_context: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Recover deterministic planning prefill when Aurora modeling just closed."""
+        manager = self.planning_workflow_manager
+        modeling_output = self._as_plain_dict((request_extra_context or {}).get("modeling_output"))
+        if not modeling_output:
+            profile = self._as_plain_dict(profile_context)
+            preferences = self._as_plain_dict(profile.get("preferences"))
+            cold_start = self._as_plain_dict(preferences.get("cold_start_context"))
+            if cold_start:
+                modeling_output = {
+                    "activity_profile": self._as_plain_dict(profile.get("activity_profile")),
+                    "user_model_snapshot": profile,
+                    "cold_start_context": cold_start,
+                    "galaxy_baseline": (request_extra_context or {}).get("galaxy_baseline"),
+                }
+        if not modeling_output:
+            return None
+
+        bridge = manager.build_plan_from_modeling_output(modeling_output)
+        collected = self._as_plain_dict(bridge.get("collected"))
+        if not collected:
+            return None
+
+        goal_raw = str(bridge.get("goal_raw") or user_message or "").strip()
+        subject = str(collected.get("subject") or collected.get("exam_scope") or goal_raw or "考试科目").strip()
+        fast_track_context = manager.build_exam_sprint_fast_track_context(goal_raw or subject) or {
+            "intent": "exam_sprint",
+            "subject": subject,
+            "pack": None,
+            "sprint_pack_id": "",
+            "pre_filled_scope": str(collected.get("exam_scope") or "").strip(),
+            "pre_filled_domain_hints": [],
+            "collected": {},
+        }
+
+        fast_track_collected = self._as_plain_dict(fast_track_context.get("collected"))
+        cold_start = self._as_plain_dict(fast_track_collected.get("cold_start_context"))
+        for key, value in collected.items():
+            if value in (None, "", [], {}):
+                continue
+            fast_track_collected[key] = value
+            cold_start[key] = value
+        fast_track_collected[EXAM_SPRINT_FAST_TRACK_FLAG] = True
+        fast_track_collected["from_modeling_complete"] = True
+        cold_start[EXAM_SPRINT_FAST_TRACK_FLAG] = True
+        cold_start["from_modeling_complete"] = True
+        fast_track_collected["cold_start_context"] = cold_start
+        fast_track_context["collected"] = fast_track_collected
+        if subject:
+            fast_track_context["subject"] = subject
+        return fast_track_context
+
+    async def _fast_track_exam_sprint(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        user_message: str,
+        request_extra_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+        stream_callback,
+    ) -> bool:
+        """Handle cold-start exam sprint planning before generic sufficiency checks."""
+        if not user_message:
+            return False
+
+        manager = self.planning_workflow_manager
+        try:
+            active_session = await manager.get_active_session(session_id)
+            fast_track_context = None
+            from_modeling_complete = self._is_truthy_metadata_flag(
+                (request_extra_context or {}).get("from_modeling_complete")
+            )
+            if active_session is None or not manager.is_fast_track_exam_sprint_session(active_session):
+                if not from_modeling_complete:
+                    fast_track_context = manager.build_exam_sprint_fast_track_context(user_message)
+                else:
+                    profile_context = {}
+                    if isinstance(user_context_payload, dict) and isinstance(
+                        user_context_payload.get("profile_context"), dict
+                    ):
+                        profile_context = user_context_payload["profile_context"]
+                    fast_track_context = self._build_modeling_complete_fast_track_context(
+                        user_message=user_message,
+                        request_extra_context=request_extra_context,
+                        profile_context=profile_context,
+                    )
+                if not fast_track_context and not from_modeling_complete:
+                    return False
+
+            try:
+                parsed_user_id = uuid.UUID(str(user_id))
+            except (TypeError, ValueError):
+                logger.debug("Skipping exam sprint fast-track for non-UUID user_id: {}", user_id)
+                return False
+
+            profile_context = {}
+            if isinstance(user_context_payload, dict) and isinstance(user_context_payload.get("profile_context"), dict):
+                profile_context = user_context_payload["profile_context"]
+
+            planning_context = dict(request_extra_context or {})
+            planning_context["profile_context"] = profile_context
+            if isinstance(user_context_payload, dict) and isinstance(
+                user_context_payload.get("calendar_context"), dict
+            ):
+                planning_context["calendar_context"] = user_context_payload["calendar_context"]
+            elif (
+                isinstance(user_context_payload, dict)
+                and isinstance(user_context_payload.get("cognitive_context"), dict)
+                and isinstance(user_context_payload["cognitive_context"].get("calendar_context"), dict)
+            ):
+                planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
+            if fast_track_context:
+                planning_context["exam_sprint_fast_track"] = fast_track_context
+
+            planning_response = await manager.process_planning_turn(
+                db=active_db,  # type: ignore[arg-type]
+                user_id=parsed_user_id,
+                chat_session_id=session_id,
+                message=user_message,
+                context=planning_context,
+            )
+            if not planning_response or planning_response.get("bypass_planning"):
+                return False
+
+            text = str(planning_response.get("message") or "").strip()
+            if not text:
+                return False
+
+            metadata = self._stringify_response_metadata(planning_response.get("metadata"))
+            metadata.update(
+                {
+                    "planning_fast_track": "exam_sprint",
+                    "planning_surface": "aurora_planning",
+                    "session_id": session_id,
+                }
+            )
+            metadata.update(self._extract_fast_track_launch_metadata(planning_response))
+            widgets = planning_response.get("widgets")
+            if widgets:
+                metadata["planning_widgets_json"] = json.dumps(widgets, ensure_ascii=False, default=str)
+
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    full_text=text,
+                    finish_reason=agent_service_pb2.STOP,
+                    session_id=session_id,
+                    metadata=metadata,
+                )
+            )
+            await self._persist_assistant_message(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                full_response=text,
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Exam sprint fast-track failed, continuing generic path: {}", exc)
+            return False
+
+    @staticmethod
+    def _merge_aurora_planning_hard_bounds(
+        control_surface_bounds: dict[str, Any] | None,
+        scaffold_bounds: dict[str, Any] | None,
+    ) -> AuroraHardBounds:
+        merged = dict(control_surface_bounds or {})
+        overlay = dict(scaffold_bounds or {})
+
+        for field in ("privacy_boundaries", "disabled_actions"):
+            values: list[str] = []
+            seen: set[str] = set()
+            for candidate in list(merged.get(field) or []) + list(overlay.get(field) or []):
+                token = str(candidate or "").strip().lower()
+                if not token or token in seen:
+                    continue
+                seen.add(token)
+                values.append(token)
+            if values:
+                merged[field] = values
+
+        dnd_windows: list[dict[str, str]] = []
+        seen_windows: set[tuple[str, str]] = set()
+        for candidate in list(merged.get("dnd_windows") or []) + list(overlay.get("dnd_windows") or []):
+            if not isinstance(candidate, dict):
+                continue
+            start = str(candidate.get("start") or "").strip()
+            end = str(candidate.get("end") or "").strip()
+            if not start or not end or (start, end) in seen_windows:
+                continue
+            seen_windows.add((start, end))
+            dnd_windows.append({"start": start, "end": end})
+        if dnd_windows:
+            merged["dnd_windows"] = dnd_windows
+
+        timezone_name = str(overlay.get("timezone_name") or "").strip()
+        if timezone_name:
+            merged["timezone_name"] = timezone_name
+
+        return AuroraHardBounds.model_validate(merged)
+
+    @staticmethod
+    def _safe_float(value: Any) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @classmethod
+    def _extract_struggle_score(cls, payload: Any) -> float | None:
+        if not isinstance(payload, dict):
+            return None
+        direct = cls._safe_float(payload.get("struggle_score"))
+        if direct is not None:
+            return direct
+        for key in ("task_state", "checkpoint_state", "signals", "context", "metadata"):
+            nested = payload.get(key)
+            if isinstance(nested, dict):
+                score = cls._extract_struggle_score(nested)
+                if score is not None:
+                    return score
+        return None
+
+    @staticmethod
+    def _wake_policy_energy(wake_policy: dict[str, Any] | None) -> str:
+        if not isinstance(wake_policy, dict):
+            return ""
+        return str(wake_policy.get("energy") or "").strip().lower()
+
+    @classmethod
+    def _should_record_stressed_session_mood(
+        cls,
+        *,
+        request_extra_context: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None = None,
+        wake_policy: dict[str, Any] | None = None,
+    ) -> bool:
+        if cls._wake_policy_energy(wake_policy) == "full":
+            return True
+
+        request_context = dict(request_extra_context or {})
+        nested_wake_policy = request_context.get("wake_policy")
+        if isinstance(nested_wake_policy, dict) and cls._wake_policy_energy(nested_wake_policy) == "full":
+            return True
+
+        candidates: list[Any] = [request_context]
+        conversation = dict(conversation_context or {})
+        messages = conversation.get("messages")
+        if isinstance(messages, list):
+            candidates.extend(item for item in messages[-6:] if isinstance(item, dict))
+        for candidate in candidates:
+            if isinstance(candidate, dict):
+                candidate_wake_policy = candidate.get("wake_policy")
+                if isinstance(candidate_wake_policy, dict) and cls._wake_policy_energy(candidate_wake_policy) == "full":
+                    return True
+                metadata = candidate.get("metadata")
+                if isinstance(metadata, dict):
+                    metadata_wake_policy = metadata.get("wake_policy")
+                    if (
+                        isinstance(metadata_wake_policy, dict)
+                        and cls._wake_policy_energy(metadata_wake_policy) == "full"
+                    ):
+                        return True
+            score = cls._extract_struggle_score(candidate)
+            if score is not None and score > 0.6:
+                return True
+        return False
+
+    async def _maybe_upsert_session_mood(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        request_extra_context: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None = None,
+        wake_policy: dict[str, Any] | None = None,
+    ) -> None:
+        if not self._should_record_stressed_session_mood(
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            wake_policy=wake_policy,
+        ):
+            return
+        try:
+            await MemoryService(active_db, redis_client=self.redis).upsert_session_mood(
+                user_id=user_id,
+                session_id=session_id,
+                mood_score=0.7,
+                mood_label="stressed",
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to upsert stressed session mood for user {} session {}: {}", user_id, session_id, exc
+            )
+
+    @staticmethod
+    def _resolve_aurora_runtime_surface(request_extra_context: dict[str, Any]) -> str | None:
+        if not getattr(settings, "ENABLE_AURORA_RUNTIME_V1", False):
+            return None
+        explicit_surface = str(request_extra_context.get("aurora_surface") or "").strip()
+        if explicit_surface:
+            return AURORA_RUNTIME_MODE_SURFACES.get(explicit_surface, explicit_surface)
+        mode = str(request_extra_context.get("mode") or "").strip()
+        return AURORA_RUNTIME_MODE_SURFACES.get(mode)
+
+    @staticmethod
+    def _build_aurora_runtime_metadata(
+        *,
+        surface: str,
+        surface_complete: bool,
+        modeling_complete: bool,
+        modeling_snapshot: dict[str, Any] | None = None,
+    ) -> dict[str, str]:
+        meta: dict[str, str] = {
+            "aurora_surface": surface,
+            "aurora_runtime_enabled": "true",
+            "surface_complete": str(surface_complete).lower(),
+            "modeling_complete": str(modeling_complete).lower(),
+        }
+        if modeling_complete and modeling_snapshot:
+            try:
+                meta["modeling_output_json"] = json.dumps(modeling_snapshot, ensure_ascii=False, default=str)
+            except Exception:
+                pass
+        return meta
+
+    @staticmethod
+    def _memory_dict(value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _memory_text(value: Any) -> str:
+        if value in (None, "", [], {}):
+            return ""
+        if isinstance(value, (list, tuple)):
+            return "、".join(str(item).strip() for item in value if str(item).strip())
+        return str(value).strip()
+
+    @classmethod
+    def _first_memory_value(cls, sources: list[dict[str, Any]], keys: tuple[str, ...]) -> str:
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            for key in keys:
+                text = cls._memory_text(source.get(key))
+                if text:
+                    return text
+        return ""
+
+    @staticmethod
+    def _memory_json_dict(value: Any) -> dict[str, Any]:
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str) and value.strip():
+            with contextlib.suppress(Exception):
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    return parsed
+        return {}
+
+    @classmethod
+    def _build_aurora_modeling_memory_summary(
+        cls,
+        *,
+        modeling_snapshot: dict[str, Any] | None,
+        request_extra_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+    ) -> str:
+        snapshot = cls._memory_dict(modeling_snapshot)
+        request_context = cls._memory_dict(request_extra_context)
+        user_context = cls._memory_dict(user_context_payload)
+        profile_context = cls._memory_dict(user_context.get("profile_context") or snapshot.get("user_model_snapshot"))
+        preferences = cls._memory_dict(profile_context.get("preferences"))
+        cold_start = cls._memory_dict(
+            snapshot.get("cold_start_context")
+            or user_context.get("cold_start_context")
+            or profile_context.get("cold_start_context")
+            or preferences.get("cold_start_context")
+        )
+        task_state = cls._memory_dict(request_context.get("task_state") or user_context.get("task_state"))
+        galaxy_baseline = cls._memory_dict(
+            snapshot.get("galaxy_baseline")
+            or request_context.get("galaxy_baseline")
+            or user_context.get("galaxy_baseline")
+        )
+
+        sources = [
+            request_context,
+            task_state,
+            cold_start,
+            profile_context,
+            preferences,
+            snapshot,
+        ]
+        subject = cls._first_memory_value(
+            sources,
+            ("subject", "exam_subject", "course", "topic", "goal_subject"),
+        )
+        goal = cls._first_memory_value(
+            sources,
+            ("goal_raw", "primary_goal_description", "goal", "target", "learning_goal"),
+        )
+        scope = cls._first_memory_value(
+            sources,
+            ("exam_scope", "scope", "study_scope", "material_scope"),
+        )
+        baseline = cls._first_memory_value(
+            sources,
+            ("knowledge_baseline", "baseline", "foundation", "starting_point"),
+        )
+        time_text = cls._first_memory_value(
+            sources,
+            ("time_available", "available_time", "time_constraint", "time_budget"),
+        )
+        if not time_text:
+            daily_hours = cls._first_memory_value(sources, ("daily_available_hours",))
+            days_left = cls._first_memory_value(sources, ("time_constraint_days", "days_left"))
+            time_parts = []
+            if daily_hours:
+                time_parts.append(f"每天约 {daily_hours} 小时")
+            if days_left:
+                time_parts.append(f"剩余约 {days_left} 天")
+            time_text = "，".join(time_parts)
+
+        weak_nodes = cls._memory_text(
+            galaxy_baseline.get("weak_nodes")
+            or cold_start.get("confirmed_weak_nodes")
+            or cold_start.get("galaxy_weak_nodes")
+        )
+        strong_nodes = cls._memory_text(galaxy_baseline.get("strong_nodes"))
+        if weak_nodes and weak_nodes not in baseline:
+            baseline = f"{baseline}；薄弱={weak_nodes}" if baseline else f"薄弱={weak_nodes}"
+        if strong_nodes and strong_nodes not in baseline:
+            baseline = f"{baseline}；优势={strong_nodes}" if baseline else f"优势={strong_nodes}"
+
+        parts = [
+            ("subject", subject),
+            ("goal", goal),
+            ("scope", scope),
+            ("baseline", baseline),
+            ("time", time_text),
+        ]
+        rendered = [f"{label}={text}" for label, text in parts if text]
+        if not rendered:
+            return "Aurora 建模完成：已完成用户学习建模。"
+        return "Aurora 建模完成：" + "；".join(rendered)
+
+    @classmethod
+    def _extract_completion_state_from_response_data(cls, final_response_data: dict[str, Any] | None) -> str:
+        metadata = cls._memory_dict((final_response_data or {}).get("metadata"))
+        ux_result = cls._memory_json_dict(metadata.get("ux_result"))
+        return str(ux_result.get("completion_state") or metadata.get("completion_state") or "").strip().lower()
+
+    async def _find_completed_task_since(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        turn_started_at: datetime | None,
+    ) -> Any | None:
+        if active_db is None or turn_started_at is None:
+            return None
+        try:
+            result = await active_db.execute(
+                select(Task)
+                .where(
+                    Task.user_id == uuid.UUID(str(user_id)),
+                    Task.status == ModelTaskStatus.COMPLETED,
+                    Task.completed_at.is_not(None),
+                    Task.completed_at >= turn_started_at,
+                )
+                .order_by(desc(Task.completed_at))
+                .limit(1)
+            )
+            return result.scalar_one_or_none()
+        except Exception as exc:
+            logger.debug("Skipping completed-task memory lookup: {}", exc)
+            with contextlib.suppress(Exception):
+                await active_db.rollback()
+            return None
+
+    async def _build_task_completion_memory_summary(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        turn_started_at: datetime | None,
+        final_state: WorkflowState | None,
+        final_response_data: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+    ) -> str:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        metadata = self._memory_dict((final_response_data or {}).get("metadata"))
+        for key in ("task_completion", "completed_task", "task_completed"):
+            candidate = context_data.get(key, metadata.get(key))
+            if isinstance(candidate, bool) and candidate:
+                task_context = self._derive_task_context_for_execution(
+                    task_context=context_data.get("task_context"),
+                    plan_context=plan_context,
+                    user_context_payload=context_data.get("user_context"),
+                )
+                topic = self._memory_text((task_context or {}).get("task_description")) or "current task"
+                return f"completed {topic}"
+            if isinstance(candidate, str) and candidate.strip():
+                return f"completed {candidate.strip()}"
+            if isinstance(candidate, dict):
+                status = str(candidate.get("status") or "").strip().lower()
+                completed = candidate.get("completed")
+                if completed is True or status in {"completed", "done", "success"}:
+                    topic = self._memory_text(
+                        candidate.get("topic")
+                        or candidate.get("title")
+                        or candidate.get("task_title")
+                        or candidate.get("name")
+                    )
+                    return f"completed {topic or 'current task'}"
+
+        completed_task = await self._find_completed_task_since(
+            active_db=active_db,
+            user_id=user_id,
+            turn_started_at=turn_started_at,
+        )
+        if completed_task is not None:
+            topic = self._memory_text(getattr(completed_task, "title", ""))
+            return f"completed {topic or str(getattr(completed_task, 'id', 'task'))}"
+
+        completion_state = self._extract_completion_state_from_response_data(final_response_data)
+        task_context = self._derive_task_context_for_execution(
+            task_context=context_data.get("task_context"),
+            plan_context=plan_context,
+            user_context_payload=context_data.get("user_context"),
+        )
+        if completion_state == "done" and task_context and task_context.get("active_task_id"):
+            topic = self._memory_text(task_context.get("task_description"))
+            return f"completed {topic or task_context.get('active_task_id')}"
+        return ""
+
+    @classmethod
+    def _build_error_memory_summary(
+        cls,
+        *,
+        request_extra_context: dict[str, Any] | None,
+        final_state: WorkflowState | None,
+        user_message: str,
+        error: Exception | None,
+    ) -> str:
+        context = cls._memory_dict(request_extra_context)
+        bridge = cls._memory_dict(context.get("error_replan_bridge"))
+        state_context = getattr(final_state, "context_data", {}) or {}
+        candidate = cls._memory_text(
+            bridge.get("node_name")
+            or bridge.get("node")
+            or state_context.get("failed_node")
+            or state_context.get("current_node")
+            or state_context.get("node_name")
+        )
+        if not candidate:
+            errors = getattr(final_state, "errors", None) or []
+            if errors:
+                last_error = str(errors[-1])
+                marker = "Node "
+                if marker in last_error and " failed" in last_error:
+                    candidate = last_error.split(marker, 1)[1].split(" failed", 1)[0].strip()
+                else:
+                    candidate = last_error[:80].strip()
+        if not candidate and error is not None:
+            candidate = type(error).__name__
+        if not candidate:
+            candidate = cls._memory_text(user_message)[:80] or "current turn"
+        return f"struggled with {candidate}"
+
+    async def _write_turn_end_episodic_memory(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        request_id: str,
+        user_message: str,
+        assistant_message: str,
+        event_kind: str,
+        request_extra_context: dict[str, Any] | None = None,
+        user_context_payload: dict[str, Any] | None = None,
+        modeling_snapshot: dict[str, Any] | None = None,
+        final_state: WorkflowState | None = None,
+        final_response_data: dict[str, Any] | None = None,
+        plan_context: dict[str, Any] | None = None,
+        turn_started_at: datetime | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        if active_db is None:
+            return
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except (TypeError, ValueError):
+            return
+
+        summary = ""
+        tags: list[str] = ["turn_end", event_kind]
+        subject_type = "self"
+        importance_score = 0.65
+
+        if event_kind == "aurora_modeling_complete":
+            summary = self._build_aurora_modeling_memory_summary(
+                modeling_snapshot=modeling_snapshot,
+                request_extra_context=request_extra_context,
+                user_context_payload=user_context_payload,
+            )
+            tags.extend(["aurora", "modeling_complete"])
+            subject_type = "learning_profile"
+            importance_score = 0.86
+        elif event_kind == "task_completed":
+            summary = await self._build_task_completion_memory_summary(
+                active_db=active_db,
+                user_id=user_id,
+                turn_started_at=turn_started_at,
+                final_state=final_state,
+                final_response_data=final_response_data,
+                plan_context=plan_context,
+            )
+            tags.append("task_completed")
+            subject_type = "task_outcome"
+            importance_score = 0.72
+        elif event_kind == "error":
+            summary = self._build_error_memory_summary(
+                request_extra_context=request_extra_context,
+                final_state=final_state,
+                user_message=user_message,
+                error=error,
+            )
+            tags.append("struggle")
+            subject_type = "struggle"
+            importance_score = 0.78
+
+        summary = " ".join(str(summary or "").split())
+        if not summary:
+            return
+        if len(summary) > 1800:
+            summary = f"{summary[:1799]}…"
+
+        evidence_id = str(request_id or session_id or uuid.uuid4())
+        semantic_key = hashlib.sha256(
+            f"{user_uuid}:{session_id}:{evidence_id}:{event_kind}:{summary}".encode()
+        ).hexdigest()[:64]
+        try:
+            await MemoryService(active_db).create_episodic_memory(
+                user_id=user_uuid,
+                summary=summary,
+                source_type="chat_turn",
+                source_id=evidence_id[:100],
+                occurred_at=_utcnow().replace(tzinfo=None),
+                importance_score=importance_score,
+                confidence=0.78,
+                tags=tags,
+                evidence_refs=[
+                    {
+                        "type": "chat_turn",
+                        "id": evidence_id,
+                        "schema_version": "chat_turn.v1",
+                    }
+                ],
+                source_lane="direct_capture",
+                semantic_key=semantic_key,
+                subject_type=subject_type,
+                emit_system_update=False,
+            )
+        except Exception as exc:
+            logger.warning("Failed to write turn-end episodic memory: {}", exc)
+
+    async def _stream_aurora_runtime_v1(
+        self,
+        *,
+        request: agent_service_pb2.ChatRequest,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        request_extra_context: dict[str, Any],
+        conversation_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        surface = self._resolve_aurora_runtime_surface(request_extra_context)
+        if surface is None:
+            return
+
+        plan = await self.aurora_runtime_v1.plan_turn(
+            active_db=active_db,
+            user_id=user_id,
+            surface=surface,
+            conversation_id=session_id,
+            request_id=request_id,
+            user_message=request.message or "",
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            user_context_payload=user_context_payload,
+        )
+
+        modeling_snapshot: dict[str, Any] | None = None
+        if plan.modeling_complete:
+            profile_context = (
+                user_context_payload.get("profile_context") if isinstance(user_context_payload, dict) else None
+            )
+            modeling_snapshot = {
+                "activity_profile": plan.activity_profile,
+                "user_model_snapshot": profile_context or {},
+                "cold_start_context": ((profile_context or {}).get("preferences", {}).get("cold_start_context")),
+                "galaxy_baseline": request_extra_context.get("galaxy_baseline"),
+            }
+
+        combined_messages: list[str] = []
+        total_messages = len(plan.messages)
+        if total_messages == 0:
+            terminal_metadata = self._build_aurora_runtime_metadata(
+                surface=plan.surface,
+                surface_complete=plan.surface_complete,
+                modeling_complete=plan.modeling_complete,
+                modeling_snapshot=modeling_snapshot,
+            )
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                session_id=session_id,
+                full_text="",
+                finish_reason=agent_service_pb2.STOP,
+                metadata=terminal_metadata,
+            )
+        for index, message in enumerate(plan.messages):
+            combined_messages.append(message)
+            finish_reason = agent_service_pb2.CONTINUE if index < total_messages - 1 else agent_service_pb2.STOP
+            is_terminal = index == total_messages - 1
+            metadata = self._build_aurora_runtime_metadata(
+                surface=plan.surface,
+                surface_complete=plan.surface_complete if is_terminal else False,
+                modeling_complete=plan.modeling_complete if is_terminal else False,
+                modeling_snapshot=modeling_snapshot if is_terminal else None,
+            )
+            if total_messages > 1:
+                metadata["aurora_message_index"] = str(index)
+                metadata["aurora_message_count"] = str(total_messages)
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                session_id=session_id,
+                full_text=message,
+                finish_reason=finish_reason,
+                metadata=metadata,
+            )
+
+        combined_text = "\n\n".join(item for item in combined_messages if str(item).strip())
+        if combined_text:
+            await self._persist_assistant_message(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                full_response=combined_text,
+            )
+        await self._cache_response(
+            session_id,
+            request_id,
+            {
+                "message": combined_text,
+                "tool_results": [],
+                "metadata": self._build_aurora_runtime_metadata(
+                    surface=plan.surface,
+                    surface_complete=plan.surface_complete,
+                    modeling_complete=plan.modeling_complete,
+                ),
+            },
+        )
+        await self._maybe_upsert_session_mood(
+            active_db=active_db,
+            user_id=user_id,
+            session_id=session_id,
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            wake_policy=plan.wake_policy,
+        )
+        if plan.modeling_complete:
+            await self._write_turn_end_episodic_memory(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                request_id=request_id,
+                user_message=request.message or "",
+                assistant_message=combined_text,
+                event_kind="aurora_modeling_complete",
+                request_extra_context=request_extra_context,
+                user_context_payload=user_context_payload,
+                modeling_snapshot=modeling_snapshot,
+            )
 
     async def _emit_early_ack_progress(
         self,
@@ -862,6 +1914,146 @@ class ChatOrchestrator(
             logger.debug("Execution suggestion detection failed: {}", exc)
             return None
 
+    async def _hydrate_document_context(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_message: str,
+        route_intent: str | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState,
+    ) -> dict[str, Any] | None:
+        """Run document RAG once and attach the prompt-ready document block."""
+        if str(state.context_data.get("document_context") or "").strip():
+            return user_context_payload
+        if state.context_data.get("use_document_context") is False:
+            logger.info("Document context hydration skipped: use_document_context=false")
+            return user_context_payload
+        if active_db is None or not str(user_message or "").strip():
+            return user_context_payload
+
+        decision = state.context_data.get("document_retrieval_decision") or state.context_data.get("retrieval_decision")
+        if not isinstance(decision, dict):
+            user_context_payload = self._attach_retrieval_decision(
+                user_context_payload=user_context_payload,
+                state=state,
+                user_message=user_message,
+                route_intent=route_intent,
+            )
+            decision = state.context_data.get("document_retrieval_decision") or state.context_data.get(
+                "retrieval_decision"
+            )
+        if not (isinstance(decision, dict) and decision.get("should_retrieve")):
+            return user_context_payload
+        if not bool(getattr(settings, "ENABLE_DOCUMENT_CONTEXT_INJECTION", True)):
+            return user_context_payload
+        try:
+            injection_mode = (await AuroraDocContextKillSwitchService().get_mode()).strip().lower()
+        except Exception:
+            injection_mode = (
+                str(getattr(settings, "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE", "live") or "live")
+                .strip()
+                .lower()
+            )
+        if injection_mode == "off":
+            return user_context_payload
+
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except (TypeError, ValueError):
+            return user_context_payload
+
+        conversation_settings = state.context_data.get("conversation_settings")
+        if not isinstance(conversation_settings, dict):
+            conversation_settings = {}
+        include_group_documents = bool(
+            state.context_data.get("include_group_documents")
+            or conversation_settings.get("include_group_documents")
+            or state.context_data.get("group_id")
+            or conversation_settings.get("group_id")
+        )
+        raw_group_ids = state.context_data.get("group_ids") or conversation_settings.get("group_ids") or []
+        group_ids: list[str] = []
+        seen_group_ids: set[str] = set()
+        for item in raw_group_ids:
+            value = str(item or "").strip()
+            if value and value not in seen_group_ids:
+                seen_group_ids.add(value)
+                group_ids.append(value)
+        primary_group_id = str(state.context_data.get("group_id") or conversation_settings.get("group_id") or "").strip()
+        if primary_group_id and primary_group_id not in seen_group_ids:
+            group_ids.append(primary_group_id)
+
+        mode = str(decision.get("retrieval_mode") or "selective")
+        try:
+            knowledge_service = KnowledgeService(active_db)
+            retriever = GraphRAGRetriever(knowledge_service)
+            rag_result = await asyncio.wait_for(
+                retriever.retrieve(
+                    str(user_message or ""),
+                    str(user_uuid),
+                    depth=2 if mode == "aggressive" else 1,
+                    route_intent=route_intent,
+                    include_group_documents=include_group_documents,
+                    group_ids=group_ids,
+                ),
+                timeout=max(6.0, float(getattr(settings, "GRAPHRAG_FASTPATH_TIMEOUT_SECONDS", 2.5) or 2.5) * 3),
+            )
+            filtered_rag = filter_graph_rag_result(rag_result)
+            document_context = format_graph_rag_document_context(rag_result, filtered_rag.chunks)
+            used_chunks = [
+                {
+                    "chunk_id": c.chunk_id,
+                    "source_file_id": c.source_file_id,
+                    "filename": c.filename,
+                    "page_number": c.page_number,
+                    "relevance_score": round(c.relevance_score, 3),
+                    "evidence_strength": c.evidence_strength,
+                }
+                for c in filtered_rag.chunks
+                if c.relevance_score >= 0.3
+            ]
+            excluded_count = filtered_rag.total_retrieved - len(used_chunks)
+            context_receipt = {
+                "used": used_chunks,
+                "used_count": len(used_chunks),
+                "excluded_count": excluded_count,
+                "total_retrieved": filtered_rag.total_retrieved,
+                "mode": mode,
+                "decision_reason": state.context_data.get(
+                    "retrieval_decision", {}
+                ).get("reason_for_user", ""),
+            }
+            metadata = {
+                "source": "graphrag",
+                "mode": mode,
+                "total_retrieved": filtered_rag.total_retrieved,
+                "total_passed": filtered_rag.total_passed,
+                "fallback_triggered": filtered_rag.fallback_triggered,
+                "entities": list(rag_result.entities or []),
+                "injection_mode": injection_mode,
+                "context_receipt": context_receipt,
+            }
+        except Exception as exc:
+            logger.warning(f"GraphRAG document context hydration failed: {exc}")
+            return user_context_payload
+
+        state.context_data["document_context"] = document_context
+        state.context_data["document_context_retrieval"] = metadata
+        state.context_data["document_context_candidate"] = document_context
+        state.context_data["document_context_candidate_chunks"] = metadata["total_passed"]
+        if isinstance(user_context_payload, dict):
+            user_context_payload["document_context"] = document_context
+            user_context_payload["document_context_retrieval"] = metadata
+        logger.info(
+            "Hydrated document context via GraphRAG: mode={} passed={} retrieved={}",
+            mode,
+            metadata["total_passed"],
+            metadata["total_retrieved"],
+        )
+        return user_context_payload
+
     # -----------------------------------------------------------------------
     # process_stream — main entry point (delegates to mixin methods)
     # -----------------------------------------------------------------------
@@ -890,6 +2082,7 @@ class ChatOrchestrator(
 
         try:
             start_time = time.time()
+            turn_started_at = _utcnow().replace(tzinfo=None)
             ACTIVE_SESSIONS.inc()
             request_id = request.request_id
             session_id = request.session_id
@@ -950,7 +2143,87 @@ class ChatOrchestrator(
                         request_extra_context = MessageToDict(request.extra_context)
                     except Exception as exc:
                         logger.warning(f"Failed to parse request extra_context in process_stream: {exc}")
+                request_document_filter = list(getattr(request, "document_filter", []) or [])
+                request_use_document_context = None
+                try:
+                    if request.HasField("use_document_context"):
+                        request_use_document_context = bool(request.use_document_context)
+                        request_extra_context["use_document_context"] = request_use_document_context
+                except ValueError:
+                    request_use_document_context = request_extra_context.get("use_document_context")
+                if request_document_filter:
+                    request_extra_context["document_filter"] = request_document_filter
+                    request_extra_context["selected_document_ids"] = request_document_filter
+                raw_conversation_settings = request_extra_context.get("conversation_settings")
+                conversation_settings = dict(raw_conversation_settings) if isinstance(raw_conversation_settings, dict) else {}
+                raw_group_ids = (
+                    request_extra_context.get("group_ids")
+                    or request_extra_context.get("target_group_ids")
+                    or conversation_settings.get("group_ids")
+                    or []
+                )
+                group_ids: list[str] = []
+                seen_group_ids: set[str] = set()
+                for item in raw_group_ids:
+                    value = str(item or "").strip()
+                    if value and value not in seen_group_ids:
+                        seen_group_ids.add(value)
+                        group_ids.append(value)
+                group_id = str(
+                    request_extra_context.get("group_id")
+                    or request_extra_context.get("target_group_id")
+                    or conversation_settings.get("group_id")
+                    or ""
+                ).strip()
+                if group_id and group_id not in seen_group_ids:
+                    group_ids.append(group_id)
+                include_group_documents = bool(
+                    request_extra_context.get("include_group_documents")
+                    or conversation_settings.get("include_group_documents")
+                    or group_id
+                )
+                request_extra_context["conversation_settings"] = {
+                    "use_document_context": request_use_document_context,
+                    "document_filter": request_document_filter,
+                    "group_id": group_id or None,
+                    "group_ids": group_ids,
+                    "include_group_documents": include_group_documents,
+                }
+                if group_id:
+                    request_extra_context["group_id"] = group_id
+                if group_ids:
+                    request_extra_context["group_ids"] = group_ids
+                request_extra_context["include_group_documents"] = include_group_documents
                 resolved_active_tools = self._resolve_active_tools(request, user_message)
+
+                debrief_response = await CheckpointDebriefService(active_db, self.redis).process_turn(
+                    user_id=uuid.UUID(str(user_id)),
+                    chat_session_id=session_id,
+                    user_message=user_message,
+                    context=request_extra_context,
+                )
+                if debrief_response:
+                    text = str(debrief_response.get("message") or "")
+                    await self._persist_assistant_message(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        full_response=text,
+                    )
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=response_id,
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        full_text=text,
+                        finish_reason=agent_service_pb2.STOP,
+                        session_id=session_id,
+                        metadata={"debrief_mode": "checkpoint"},
+                    )
+                    await self._update_state(session_id, STATE_DONE, "Checkpoint debrief completed")
+                    return
 
                 if chat_mode == CHAT_MODE_STANDARD and not request.HasField("tool_result"):
                     bridge_responses = await self._maybe_short_circuit_bridge_tool(
@@ -1022,6 +2295,24 @@ class ChatOrchestrator(
                     conversation_context,
                     list(request.history),
                 )
+                effective_file_ids = (
+                    [] if request_use_document_context is False else (request_document_filter or list(request.file_ids))
+                )
+                if isinstance(user_context_payload, dict):
+                    user_context_payload["use_document_context"] = request_use_document_context
+                    user_context_payload["document_filter"] = request_document_filter
+                    user_context_payload["selected_document_ids"] = request_document_filter
+                    user_context_payload["conversation_settings"] = dict(request_extra_context["conversation_settings"])
+                initial_document_context_state = {
+                    "use_document_context": request_use_document_context,
+                    "document_filter": request_document_filter,
+                    "selected_document_ids": request_document_filter,
+                    "effective_file_ids": effective_file_ids,
+                    "conversation_settings": dict(request_extra_context["conversation_settings"]),
+                    "group_id": request_extra_context.get("group_id"),
+                    "group_ids": list(request_extra_context.get("group_ids") or []),
+                    "include_group_documents": bool(request_extra_context.get("include_group_documents")),
+                }
 
                 session_feedback_signal = None
                 session_adaptation_context = None
@@ -1107,6 +2398,7 @@ class ChatOrchestrator(
                         )
 
                 state = WorkflowState()
+                state.context_data.update(initial_document_context_state)
                 if user_message:
                     state.append_message("user", user_message)
                 if session_feedback_signal is not None:
@@ -1126,6 +2418,18 @@ class ChatOrchestrator(
                     state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
+
+                await self._attach_aurora_planning_sidecar(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    request_id=request_id,
+                    user_message=user_message,
+                    request_extra_context=request_extra_context,
+                    conversation_context=conversation_context,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
 
                 # Bound stream buffering while preserving critical terminal/content events.
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
@@ -1172,6 +2476,26 @@ class ChatOrchestrator(
                 )
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
+
+                if chat_mode == CHAT_MODE_STANDARD and not request.HasField("tool_result"):
+                    fast_track_handled = await self._fast_track_exam_sprint(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_message=user_message,
+                        request_extra_context=request_extra_context,
+                        user_context_payload=user_context_payload,
+                        stream_callback=stream_callback,
+                    )
+                    if fast_track_handled:
+                        async for queued in self._drain_queue(queue):
+                            yield queued
+                        await self._update_state(session_id, STATE_DONE, "Exam sprint fast-track completed")
+                        REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                        COLLABORATION_SUCCESS.labels(
+                            workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                        ).inc()
+                        return
 
                 # Step 4.5: Proactively emit unread evolution/system updates at session start
                 await self._maybe_enqueue_perceptible_insight(
@@ -1372,10 +2696,19 @@ class ChatOrchestrator(
                             plan_id=plan_id,
                             request_id=request_id,
                             user_message=user_message,
-                            file_ids=list(request.file_ids),
+                            file_ids=effective_file_ids,
+                            use_document_context=request_use_document_context,
                             user_context_payload=user_context_payload,
                             context_targets=[state.context_data],
                         )
+                    user_context_payload = await self._hydrate_document_context(
+                        active_db=active_db,
+                        user_id=user_id,
+                        user_message=user_message,
+                        route_intent=infer_route_intent_from_chat_mode(chat_mode),
+                        user_context_payload=user_context_payload,
+                        state=state,
+                    )
 
                 # Step 6: Prepare runtime context (transparency, tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
@@ -1411,6 +2744,33 @@ class ChatOrchestrator(
                     ).inc()
                     return
 
+                aurora_surface = self._resolve_aurora_runtime_surface(request_extra_context)
+                if aurora_surface is not None:
+                    await self._update_state(session_id, STATE_GENERATING, f"Aurora runtime v1 ({aurora_surface})")
+                    async for queued in self._drain_queue(queue):
+                        yield queued
+                    async for aurora_response in self._stream_aurora_runtime_v1(
+                        request=request,
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        request_extra_context=request_extra_context,
+                        conversation_context=conversation_context,
+                        user_context_payload=user_context_payload,
+                    ):
+                        yield aurora_response
+                    await self._update_state(session_id, STATE_DONE, f"Aurora runtime v1 completed ({aurora_surface})")
+                    REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                    COLLABORATION_SUCCESS.labels(
+                        workflow_type=workflow_id, agents_used="aurora_runtime_v1", outcome="success"
+                    ).inc()
+                    return
+
                 # Step 7: Notifications
                 await self._notify_pending_milestone_proposals(user_id, stream_callback)
                 if plan_switched and plan_id:
@@ -1437,7 +2797,7 @@ class ChatOrchestrator(
                     user_context_payload=user_context_payload,
                     conversation_context=conversation_context,
                     plan_context=plan_context,
-                    file_ids=list(request.file_ids),
+                    file_ids=effective_file_ids,
                     include_references=bool(request.include_references),
                     workflow_id=workflow_id,
                     prompt_version=prompt_version,
@@ -1779,10 +3139,23 @@ class ChatOrchestrator(
                         plan_id=plan_id,
                         request_id=request_id,
                         user_message=user_message,
-                        file_ids=list(request.file_ids),
+                        file_ids=effective_file_ids,
+                        use_document_context=request_use_document_context,
                         user_context_payload=user_context_payload,
                         context_targets=[state.context_data],
                     )
+                user_context_payload = await self._hydrate_document_context(
+                    active_db=active_db,
+                    user_id=user_id,
+                    user_message=user_message,
+                    route_intent=(
+                        unified_routing_result.primary_intent.value
+                        if unified_routing_result and hasattr(unified_routing_result, "primary_intent")
+                        else intent_type
+                    ),
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
@@ -1864,6 +3237,21 @@ class ChatOrchestrator(
                         total_completion_tokens=total_completion_tokens,
                     )
                     await self._cache_response(session_id, request_id, final_response_data)
+                    await self._write_turn_end_episodic_memory(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        request_id=request_id,
+                        user_message=user_message,
+                        assistant_message=str(final_response_data.get("message") or ""),
+                        event_kind="task_completed",
+                        request_extra_context=request_extra_context,
+                        user_context_payload=user_context_payload,
+                        final_state=final_state,
+                        final_response_data=final_response_data,
+                        plan_context=plan_context,
+                        turn_started_at=turn_started_at,
+                    )
                     try:
                         turn_index = 1
                         if isinstance(conversation_context, dict):
@@ -1904,6 +3292,13 @@ class ChatOrchestrator(
                     for update_resp in followup_updates:
                         yield update_resp
                     await self._update_state(session_id, STATE_DONE, "Response completed")
+                    await self._maybe_upsert_session_mood(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        request_extra_context=request_extra_context,
+                        conversation_context=conversation_context,
+                    )
                     yield final_response
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
@@ -1918,6 +3313,21 @@ class ChatOrchestrator(
                 ).inc()
                 logger.opt(exception=e).error("Orchestration Error")
                 await self._update_state(session_id, STATE_FAILED, str(e))
+                await self._write_turn_end_episodic_memory(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    request_id=request_id,
+                    user_message=user_message if "user_message" in locals() else "",
+                    assistant_message="",
+                    event_kind="error",
+                    request_extra_context=(request_extra_context if "request_extra_context" in locals() else None),
+                    user_context_payload=(user_context_payload if "user_context_payload" in locals() else None),
+                    final_state=state if "state" in locals() else None,
+                    plan_context=plan_context if "plan_context" in locals() else None,
+                    turn_started_at=turn_started_at if "turn_started_at" in locals() else None,
+                    error=e,
+                )
                 if transparency_generator is not None and emit_transparency_event is not None:
                     await emit_transparency_event(transparency_generator.get_complete_event())
                 # ✅ Fix C4: Drain queue before yielding error to ensure all queued messages are sent

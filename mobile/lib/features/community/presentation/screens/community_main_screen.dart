@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -110,12 +111,10 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
     final focusMode = ref.read(focusModeProvider);
     ref.read(focusModeProvider.notifier).toggle();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          focusMode
-              ? context.l10n.communityFocusModeDisabled
-              : context.l10n.communityFocusModeEnabled,
-        ),
+      SparkleSnackBar.info(
+        focusMode
+            ? context.l10n.communityFocusModeDisabled
+            : context.l10n.communityFocusModeEnabled,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -153,7 +152,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         PopupMenuItem(
           value: 'favorites',
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.bookmark_outline, size: 18),
               SizedBox(width: DS.spacing10),
               Expanded(child: Text('我的收藏')),
@@ -253,7 +252,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           context.l10n.communityTitle,
           style: DS.titleLarge.copyWith(
             color: DS.textPrimary,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
         centerTitle: false,

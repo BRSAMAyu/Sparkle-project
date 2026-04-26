@@ -348,6 +348,27 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 				}
 			}
 		}
+
+		// Check session-level revocation (device logout)
+		if sid, ok := claims["sid"].(string); ok && sid != "" {
+			sessionRevoked, err := rdb.Exists(ctx, "session_revoked:"+sid).Result()
+			if err != nil {
+				if !redisAvailable && cfg.RedisFailClosed {
+					log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+					return "", false, fmt.Errorf("token validation unavailable")
+				}
+				if err != redis.Nil {
+					if cfg.RedisFailClosed {
+						log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+						return "", false, fmt.Errorf("token validation unavailable")
+					}
+					log.Printf("[SECURITY WARNING] Redis session revocation check failed, allowing token (Fail-Open mode): %v", err)
+				}
+			} else if sessionRevoked > 0 {
+				return "", false, fmt.Errorf("session revoked")
+			}
+		}
+
 	}
 
 	expValue, ok := claims["exp"]

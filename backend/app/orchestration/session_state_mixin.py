@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime
 from typing import Any
 
 from google.protobuf import struct_pb2
@@ -9,15 +10,17 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.business_metrics import CONTEXT_FOCUS_DECISION_TOTAL
 from app.core.metrics import (
     SESSION_FEEDBACK_APPLIED_TOTAL,
     SESSION_FEEDBACK_CONFIDENCE_BUCKET,
     SESSION_FEEDBACK_DETECTED_TOTAL,
     SESSION_FEEDBACK_IGNORED_TOTAL,
 )
-from app.core.business_metrics import CONTEXT_FOCUS_DECISION_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.context_focus import FocusedContextAssembler
+from app.orchestration.retrieval_intent import RetrievalIntentBudgets, build_retrieval_decision
+from app.orchestration.retrieval_intent import ContextPlan
 from app.orchestration.session_feedback import (
     SESSION_FEEDBACK_TTL_SECONDS,
     SessionAdaptationContext,
@@ -29,13 +32,13 @@ from app.orchestration.session_feedback import (
 from app.orchestration.situation_brief import SituationBriefBuilder
 from app.orchestration.soul_compiler import DEFAULT_COMPANION_STATE
 from app.orchestration.statechart_engine import WorkflowState
-from app.services.perceptible_intelligence_service import PerceptibleInsightService
-from app.services.self_evolution_service import UnderstandingDepthService
-from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.companion_state_service import CompanionStateService
 from app.services.intervention_feedback_binding_service import InterventionFeedbackBindingService
-from app.services.user_service import UserService
+from app.services.perceptible_intelligence_service import PerceptibleInsightService
 from app.services.progress_narrative_service import ProgressNarrativeService
+from app.services.self_evolution_service import UnderstandingDepthService
+from app.services.system_update_service import SystemUpdateService
+from app.services.user_service import UserService
 from app.services.user_strategy_state_service import UserStrategyStateService
 
 SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
@@ -678,6 +681,22 @@ class SessionStateMixin:
         session_feedback_signal: dict[str, Any] | None = None,
         force_focus_mode: str | None = None,
     ) -> dict[str, Any] | None:
+        user_context_payload = self._attach_retrieval_decision(
+            user_context_payload=user_context_payload,
+            state=state,
+            user_message=user_message,
+            route_intent=route_intent,
+        )
+        await self._apply_calibration_check(
+            user_id=user_id,
+            state=state,
+            active_db=active_db,
+        )
+        await self._persist_context_plan(
+            user_id=user_id,
+            state=state,
+            active_db=active_db,
+        )
         if not settings.ENABLE_CONTEXT_FOCUSING or not active_db or user_context_payload is None:
             return user_context_payload
 
@@ -732,6 +751,108 @@ class SessionStateMixin:
                 state.context_data["context_briefing_note"] = merged_context.get("context_briefing_note")
             self._copy_companion_runtime_keys(source_context=state.context_data, target_context=merged_context)
         return merged_context
+
+    @staticmethod
+    def _attach_retrieval_decision(
+        *,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState | None,
+        user_message: str,
+        route_intent: str | None,
+    ) -> dict[str, Any] | None:
+        if not isinstance(user_context_payload, dict):
+            return user_context_payload
+
+        decision = build_retrieval_decision(
+            message=user_message,
+            route_intent=route_intent,
+            context=user_context_payload,
+            aurora_doc_context_mode=str(getattr(settings, "AURORA_DOC_CONTEXT_MODE", "auto") or "auto"),
+            document_context_scope=str(
+                user_context_payload.get("document_context_scope", "auto") or "auto"
+            ),
+            budgets=RetrievalIntentBudgets(
+                aggressive=int(getattr(settings, "AURORA_DOC_CONTEXT_AGGRESSIVE_BUDGET_TOKENS", 2200) or 2200),
+                selective=int(getattr(settings, "AURORA_DOC_CONTEXT_SELECTIVE_BUDGET_TOKENS", 900) or 900),
+                ambiguous=int(getattr(settings, "AURORA_DOC_CONTEXT_AMBIGUOUS_BUDGET_TOKENS", 500) or 500),
+            ),
+        )
+        payload = dict(user_context_payload)
+        decision_payload = decision.to_dict()
+        payload["retrieval_decision"] = decision_payload
+        payload["document_retrieval_decision"] = decision_payload
+
+        if state is not None:
+            state.context_data["retrieval_decision"] = decision_payload
+            state.context_data["document_retrieval_decision"] = decision_payload
+            state.context_data["context_plan"] = decision_payload
+            state.context_data["context_plan_timestamp"] = datetime.utcnow().isoformat()
+
+        logger.info(
+            "Document retrieval decision: mode={} should_retrieve={} budget={} reason={}",
+            decision.retrieval_mode,
+            decision.should_retrieve,
+            decision.budget_tokens,
+            decision.reason,
+        )
+        return payload
+
+    async def _apply_calibration_check(
+        self,
+        *,
+        user_id: str,
+        state: WorkflowState | None,
+        active_db: AsyncSession | None,
+    ) -> None:
+        """Check if Aurora self-calibration is needed based on consecutive errors."""
+        if state is None or active_db is None:
+            return
+        context_plan = state.context_data.get("context_plan")
+        if not isinstance(context_plan, dict) or not context_plan.get("should_retrieve"):
+            return
+        try:
+            from app.services.aurora_calibration_service import AuroraCalibrationService
+
+            svc = AuroraCalibrationService(active_db)
+            needed, question = await svc.check_calibration_needed(uuid.UUID(str(user_id)))
+            if needed and question:
+                context_plan["calibration_needed"] = True
+                context_plan["calibration_question"] = question
+                state.context_data["context_plan"] = context_plan
+                logger.info(f"Calibration triggered for user {user_id}")
+        except Exception as exc:
+            logger.debug(f"Calibration check skipped: {exc}")
+
+    async def _persist_context_plan(
+        self,
+        *,
+        user_id: str,
+        state: WorkflowState | None,
+        active_db: AsyncSession | None,
+    ) -> None:
+        if state is None or active_db is None:
+            return
+        context_plan = state.context_data.get("context_plan")
+        if not isinstance(context_plan, dict):
+            return
+        try:
+            from app.models.aurora_stage20 import RoutingDecisionLog
+
+            now = datetime.utcnow()
+            record = RoutingDecisionLog(
+                decision_id=uuid.uuid4(),
+                created_at=now,
+                updated_at=now,
+                user_id=uuid.UUID(str(user_id)),
+                decided_at=now,
+                input_aggregator_snapshot_id=f"context_plan:{user_id}:{now.isoformat(timespec='seconds')}",
+                decision_type="context_plan",
+                decision_payload=context_plan,
+            )
+            active_db.add(record)
+            await active_db.commit()
+        except Exception as exc:
+            logger.debug(f"Failed to persist context plan to routing_decision_log: {exc}")
 
     async def _update_state(self, session_id: str, state: str, details: str = ""):
         """Update FSM State in Redis with persistence"""

@@ -550,7 +550,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noSprintHistory => '暂无冲刺历史';
 
   @override
-  String get loadingFailed => '加载失败';
+  String loadingFailed(Object error) {
+    return '加载失败: $error';
+  }
 
   @override
   String get completionProgress => '完成进度';
@@ -1282,17 +1284,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get achievementEventStatusEnded => '已结束';
 
   @override
-  String achievementEventStartsAt(String time) {
+  String achievementEventStartsAt(Object time) {
     return '开始于$time';
   }
 
   @override
-  String achievementEventEndsAt(String time) {
+  String achievementEventEndsAt(Object time) {
     return '结束于$time';
   }
 
   @override
-  String achievementEventEndsIn(String time) {
+  String achievementEventEndsIn(Object time) {
     return '将于$time结束';
   }
 
@@ -1351,7 +1353,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contractActiveTitle => '当前契约';
 
   @override
-  String contractProgressLabel(int current, int target) {
+  String contractProgressLabel(Object current, Object target) {
     return '已完成$current/$target天';
   }
 
@@ -1359,7 +1361,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contractDailyTarget => '每日目标';
 
   @override
-  String contractMinutesTarget(int current, int target) {
+  String contractMinutesTarget(Object current, Object target) {
     return '$current/$target分钟';
   }
 
@@ -1388,7 +1390,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contractCountdown => '倒计时';
 
   @override
-  String contractDaysRemaining(int days) {
+  String contractDaysRemaining(Object days) {
     return '还剩$days天';
   }
 
@@ -1417,7 +1419,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get streakCalendarTitle => '连胜日历';
 
   @override
-  String streakCalendarRange(int days) {
+  String streakCalendarRange(Object days) {
     return '最近$days天';
   }
 
@@ -1476,6 +1478,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusPaused => '已暂停';
 
   @override
+  String get taskStatusStuck => '卡住了';
+
+  @override
   String get taskActionStart => '开始';
 
   @override
@@ -1500,10 +1505,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskPriorityHigh => '高优先级';
 
   @override
+  String get taskPriorityHighShort => '高';
+
+  @override
+  String get taskPriorityMediumShort => '中';
+
+  @override
+  String get taskPriorityLowShort => '低';
+
+  @override
   String get taskPriorityMedium => '中优先级';
 
   @override
   String get taskPriorityLow => '低优先级';
+
+  @override
+  String get taskListEmptyTitle => '今天还没有待办事项';
+
+  @override
+  String get taskListEmptyDescription => '先放进一件最想推进的小事，系统会帮你把今天逐步铺开。';
+
+  @override
+  String get taskListEmptyAction => '创建第一项任务';
+
+  @override
+  String get taskListReorderDisabledHint => '拖拽排序仅在「全部任务」列表中可用。';
+
+  @override
+  String get taskListPartialErrorHint => '部分数据刷新失败，当前先显示已加载的任务。';
+
+  @override
+  String get taskListFilterTooltip => '优先级筛选';
 
   @override
   String get taskNoTasks => '暂无任务';
@@ -2804,6 +2836,21 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get statisticsAggregationNone => '原始数据';
+
+  @override
+  String get statisticsAggregationHourly => '按小时';
+
+  @override
+  String get statisticsAggregationDaily => '按天';
+
+  @override
+  String get statisticsAggregationWeekly => '按周';
+
+  @override
+  String get statisticsAggregationMonthly => '按月';
+
+  @override
   String get learningModeDepthHigh => '深度+';
 
   @override
@@ -4042,12 +4089,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardStreak => '连胜榜';
 
   @override
-  String leaderboardMyRank(int rank) {
+  String leaderboardMyRank(Object rank) {
     return '我的排名：$rank';
   }
 
   @override
-  String leaderboardPoints(int value) {
+  String leaderboardPoints(Object value) {
     return '$value分';
   }
 
@@ -4180,7 +4227,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskFeedbackStreak => '连胜';
 
   @override
-  String taskFeedbackStreakDays(int count) {
+  String taskFeedbackStreakDays(Object count) {
     return '$count天';
   }
 
@@ -4249,7 +4296,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityMemberFallback => '成员';
 
   @override
-  String communityReadByCount(int count) {
+  String communityReadByCount(Object count) {
     return '$count人已读';
   }
 
@@ -4293,7 +4340,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareResourceNoGroups => '暂无群组';
 
   @override
-  String shareResourceGroupMembers(int count) {
+  String shareResourceGroupMembers(Object count) {
     return '$count名成员';
   }
 
@@ -4379,17 +4426,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarReminderAtStart => '日程开始时';
 
   @override
-  String calendarReminderMinutes(int count) {
+  String calendarReminderMinutes(Object count) {
     return '$count分钟前';
   }
 
   @override
-  String calendarReminderHours(int count) {
+  String calendarReminderHours(Object count) {
     return '$count小时前';
   }
 
   @override
-  String calendarReminderDays(int count) {
+  String calendarReminderDays(Object count) {
     return '$count天前';
   }
 
@@ -4687,12 +4734,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsulePersonalizationTitle => '为什么推荐给你';
 
   @override
-  String capsulePersonalizationBadge(String pattern) {
+  String capsulePersonalizationBadge(Object pattern) {
     return '基于你的$pattern模式';
   }
 
   @override
-  String capsulePersonalizationExplanation(String patterns) {
+  String capsulePersonalizationExplanation(Object patterns) {
     return '基于你最近的$patterns行为模式，AI为你精选了这个知识点。';
   }
 
@@ -4712,12 +4759,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cognitiveTimeMachine => '知识时光机';
 
   @override
-  String cognitiveFutureDays(int count) {
+  String cognitiveFutureDays(Object count) {
     return '未来 $count 天';
   }
 
   @override
-  String cognitiveDaysLater(int count) {
+  String cognitiveDaysLater(Object count) {
     return '$count 天后';
   }
 
@@ -4725,7 +4772,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cognitiveToday => '今天';
 
   @override
-  String cognitiveDayTick(int count) {
+  String cognitiveDayTick(Object count) {
     return '$count天';
   }
 
@@ -4742,7 +4789,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cognitiveSimulating => '模拟中...';
 
   @override
-  String cognitiveReviewNow(int count) {
+  String cognitiveReviewNow(Object count) {
     return '如果现在复习？（$count 个节点）';
   }
 
@@ -4765,7 +4812,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get prismHint => '继续学习和复盘后，认知棱镜会越来越准确地识别你的学习模式。';
 
   @override
-  String prismTotalPatterns(int count) {
+  String prismTotalPatterns(Object count) {
     return '共 $count 个模式';
   }
 
@@ -4773,12 +4820,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleScreenTitle => '好奇心胶囊';
 
   @override
-  String capsuleCurrentTab(int count) {
+  String capsuleCurrentTab(Object count) {
     return '当前胶囊 $count';
   }
 
   @override
-  String capsuleArchiveTab(int count) {
+  String capsuleArchiveTab(Object count) {
     return '历史归档 $count';
   }
 
@@ -4798,7 +4845,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleGenerationPreviewCountLabel => '预计生成';
 
   @override
-  String capsuleGenerationPreviewCount(int count) {
+  String capsuleGenerationPreviewCount(Object count) {
     return '$count 个胶囊';
   }
 
@@ -4812,7 +4859,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get patternCardSolutionLabel => '破解咒语';
 
   @override
-  String patternCardCreatedAt(String date) {
+  String patternCardCreatedAt(Object date) {
     return '创建于：$date';
   }
 
@@ -4823,22 +4870,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleMissing => '胶囊不存在';
 
   @override
-  String capsuleLoadFailed(String error) {
+  String capsuleLoadFailed(Object error) {
     return '加载失败：$error';
   }
 
   @override
-  String capsuleQualityLabel(String rating) {
+  String capsuleQualityLabel(Object rating) {
     return '质量评分：$rating';
   }
 
   @override
-  String capsuleFeedbackCount(int count) {
+  String capsuleFeedbackCount(Object count) {
     return '$count 反馈';
   }
 
   @override
-  String capsuleShareCount(int count) {
+  String capsuleShareCount(Object count) {
     return '$count 分享';
   }
 
@@ -4861,7 +4908,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleFeedbackThanks => '感谢你的反馈';
 
   @override
-  String capsuleSubmitFailed(String error) {
+  String capsuleSubmitFailed(Object error) {
     return '提交失败：$error';
   }
 
@@ -4884,32 +4931,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleNoJobsSubtitle => '在设置页面调整偏好并生成胶囊';
 
   @override
-  String capsuleGeneratingProgress(int progress) {
+  String capsuleGeneratingProgress(Object progress) {
     return '生成中... $progress%';
   }
 
   @override
-  String capsuleDepthPercent(int percent) {
+  String capsuleDepthPercent(Object percent) {
     return '深度：$percent%';
   }
 
   @override
-  String capsuleCuriosityPercent(int percent) {
+  String capsuleCuriosityPercent(Object percent) {
     return '好奇：$percent%';
   }
 
   @override
-  String capsuleRequestedCount(int count) {
+  String capsuleRequestedCount(Object count) {
     return '请求数量：$count';
   }
 
   @override
-  String capsuleActualCount(int count) {
+  String capsuleActualCount(Object count) {
     return '实际数量：$count';
   }
 
   @override
-  String capsuleChipLabel(String id) {
+  String capsuleChipLabel(Object id) {
     return '胶囊 $id';
   }
 
@@ -4950,7 +4997,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get patternTakeAction => '立即行动';
 
   @override
-  String patternDiscoveredOn(String date) {
+  String patternDiscoveredOn(Object date) {
     return '发现于 $date';
   }
 
@@ -4979,12 +5026,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatNewConversation => '新建对话';
 
   @override
-  String chatHistoryLoadFailed(String error) {
+  String chatHistoryLoadFailed(Object error) {
     return '加载失败：$error';
   }
 
   @override
-  String chatHistoryLoadMoreFailed(String error) {
+  String chatHistoryLoadMoreFailed(Object error) {
     return '加载更多失败：$error';
   }
 
@@ -5079,6 +5126,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatHelpful => '有帮助';
 
   @override
+  String get chatCitationExcerptUnavailable => '这条引用暂时还没有可展示的原文摘录。';
+
+  @override
+  String get chatCitationHelpfulPrompt => '这条引用对你有帮助吗？';
+
+  @override
+  String get chatCitationOpenDocument => '前往文档';
+
+  @override
   String get chatNotHelpful => '没帮助';
 
   @override
@@ -5163,7 +5219,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatTeamSheetCollaborationMode => '协作方式';
 
   @override
-  String chatTeamSheetSelectedExperts(int count) {
+  String chatTeamSheetSelectedExperts(Object count) {
     return '已选 $count 位专家';
   }
 
@@ -5216,7 +5272,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatTransparencyTitle => '透明模式';
 
   @override
-  String chatActiveToolsCount(int count) {
+  String chatActiveToolsCount(Object count) {
     return '$count 个工具';
   }
 
@@ -5242,7 +5298,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatExecutionSteps => '执行步骤';
 
   @override
-  String chatExecutionStepsCount(int count) {
+  String chatExecutionStepsCount(Object count) {
     return '$count 个步骤';
   }
 
@@ -5250,7 +5306,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatModeSelect => '选择模式';
 
   @override
-  String chatModeTeamSummary(int count, String mode) {
+  String chatModeTeamSummary(Object count, Object mode) {
     return '$count位专家·$mode';
   }
 
@@ -5372,12 +5428,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookDelete => '删除';
 
   @override
-  String errorBookCreatedAt(String date) {
+  String errorBookCreatedAt(Object date) {
     return '创建于 $date';
   }
 
   @override
-  String errorBookMasteryPercent(int percent) {
+  String errorBookMasteryPercent(Object percent) {
     return '$percent%掌握';
   }
 
@@ -5421,7 +5477,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookKnowledgeLinkTooltip => '查看学习路径';
 
   @override
-  String errorBookKnowledgeLinkSnack(String nodeName) {
+  String errorBookKnowledgeLinkSnack(Object nodeName) {
     return '即将跳转到 $nodeName 知识点';
   }
 
@@ -5450,17 +5506,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookReviewInProgress => '复习功能即将上线';
 
   @override
-  String errorBookDeleteFailedMessage(String error) {
+  String errorBookDeleteFailedMessage(Object error) {
     return '删除失败：$error';
   }
 
   @override
-  String errorBookCognitiveFilter(String dimension) {
+  String errorBookCognitiveFilter(Object dimension) {
     return '正针对 \"$dimension\" 维度进行针对性复习';
   }
 
   @override
-  String errorBookReviewCount(int count) {
+  String errorBookReviewCount(Object count) {
     return '复习 $count 次';
   }
 
@@ -5468,17 +5524,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookAIAnalyzed => 'AI已分析';
 
   @override
-  String errorBookTimeAgoMinutes(int count) {
+  String errorBookTimeAgoMinutes(Object count) {
     return '$count分钟前';
   }
 
   @override
-  String errorBookTimeAgoHours(int count) {
+  String errorBookTimeAgoHours(Object count) {
     return '$count小时前';
   }
 
   @override
-  String errorBookTimeAgoDays(int count) {
+  String errorBookTimeAgoDays(Object count) {
     return '$count天前';
   }
 
@@ -5507,7 +5563,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reviewModeRandomDesc => '随机抽取错题进行复习';
 
   @override
-  String reviewProgress(int current, int total) {
+  String reviewProgress(Object current, Object total) {
     return '进度: $current/$total';
   }
 
@@ -5536,7 +5592,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reviewViewAnswerHint => '先思考答案，再点击查看';
 
   @override
-  String reviewSubmitFailed(String error) {
+  String reviewSubmitFailed(Object error) {
     return '提交失败: $error';
   }
 
@@ -5550,7 +5606,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reviewComplete => '复习完成！';
 
   @override
-  String reviewTotalReviewed(int count) {
+  String reviewTotalReviewed(Object count) {
     return '本次共复习 $count 道题';
   }
 
@@ -5660,9 +5716,81 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityAddFriend => '添加好友';
 
   @override
-  String communityMembers(int count) {
+  String communityMembers(Object count) {
     return '$count 成员';
   }
+
+  @override
+  String get friendsMyFriends => '我的好友';
+
+  @override
+  String get friendsFriendRequests => '好友请求';
+
+  @override
+  String get friendsDiscoverFriends => '发现好友';
+
+  @override
+  String get friendsDeleteFriend => '删除好友';
+
+  @override
+  String friendsConfirmDeleteFriend(Object name) {
+    return '确定要删除好友 $name 吗？';
+  }
+
+  @override
+  String get friendsCancel => '取消';
+
+  @override
+  String get friendsDelete => '删除';
+
+  @override
+  String friendsFriendDeleted(Object name) {
+    return '已将 $name 从好友列表中移除';
+  }
+
+  @override
+  String friendsDeleteFailed(Object error) {
+    return '删除好友失败：$error';
+  }
+
+  @override
+  String get friendsBlockUser => '拉黑用户';
+
+  @override
+  String friendsAfterBlockingHint(Object name) {
+    return '拉黑 $name 后：';
+  }
+
+  @override
+  String get friendsRemoveFromFriendList => '将从你的好友列表中移除';
+
+  @override
+  String get friendsCannotMessageYou => '无法给你发送消息';
+
+  @override
+  String get friendsCannotSendRequest => '无法向你发送好友请求';
+
+  @override
+  String get friendsBlock => '拉黑';
+
+  @override
+  String friendsBlockedSuccess(Object name) {
+    return '已拉黑 $name';
+  }
+
+  @override
+  String friendsBlockFailed(Object error) {
+    return '拉黑用户失败：$error';
+  }
+
+  @override
+  String get friendsBlockedUsersManagement => '管理黑名单';
+
+  @override
+  String get friendsNoPendingRequests => '暂无待处理请求';
+
+  @override
+  String get friendsWantsToBeYourFriend => '想成为你的好友';
 
   @override
   String get taskMonitorTitle => '后台任务监控';
@@ -5710,7 +5838,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planTypeGrowth => '成长计划';
 
   @override
-  String planProgressPercent(String percent) {
+  String planProgressPercent(Object percent) {
     return '$percent% 完成';
   }
 
@@ -5829,6 +5957,70 @@ class AppLocalizationsZh extends AppLocalizations {
   String get knowledgeRelatedNodes => '相关节点';
 
   @override
+  String get knowledgeSourceMaterialsTitle => '来源资料';
+
+  @override
+  String knowledgeSourceMaterialsSummary(Object documents, Object chunks) {
+    return '$documents 份文档 · $chunks 个知识片段';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsPersonalBadge => '我的上传';
+
+  @override
+  String get knowledgeSourceMaterialsSystemBadge => '暂未附带个人笔记';
+
+  @override
+  String knowledgeSourceMaterialsUploadDate(Object date) {
+    return '上传于 $date';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsChunkUnit => '片段';
+
+  @override
+  String get knowledgeSourceMaterialsEmptyTitle => '让这个节点回到你的真实资料里';
+
+  @override
+  String knowledgeSourceMaterialsEmptyBody(Object topic) {
+    return '为「$topic」补充自己的讲义或笔记，让这条知识真正可追溯。';
+  }
+
+  @override
+  String knowledgeSourceMaterialsAddNotes(Object topic) {
+    return '添加关于「$topic」的笔记';
+  }
+
+  @override
+  String get knowledgeSourceMaterialsReadMore => '阅读更多';
+
+  @override
+  String get knowledgeSourceMaterialsNoPreview => '这份资料暂时还没有可展示的片段。';
+
+  @override
+  String get knowledgeSourceMaterialsOpenFailed => '暂时无法打开来源资料。';
+
+  @override
+  String knowledgeSourceMaterialsUploadSaved(Object filename) {
+    return '$filename 已上传，处理并挂接后会显示在这里。';
+  }
+
+  @override
+  String knowledgeSourceMaterialsPage(Object page) {
+    return '第 $page 页';
+  }
+
+  @override
+  String knowledgeSourceMaterialsPages(Object pages) {
+    return '第 $pages 页';
+  }
+
+  @override
+  String knowledgeSourceMaterialsChunk(Object index) {
+    return '片段 $index';
+  }
+
+  @override
   String get knowledgePrerequisites => '前置知识';
 
   @override
@@ -5871,12 +6063,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get knowledgeTomorrow => '明天';
 
   @override
-  String knowledgeDaysLater(int days) {
+  String knowledgeDaysLater(Object days) {
     return '$days天后';
   }
 
   @override
-  String knowledgeWeeksLater(int weeks) {
+  String knowledgeWeeksLater(Object weeks) {
     return '$weeks周后';
   }
 
@@ -5902,12 +6094,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedLibraryCreateFirst => '创建一个新的种子库开始使用';
 
   @override
-  String seedLibraryItemCount(int count) {
+  String seedLibraryItemCount(Object count) {
     return '$count 个条目';
   }
 
   @override
-  String seedLibraryLastUpdated(String date) {
+  String seedLibraryLastUpdated(Object date) {
     return '最后更新: $date';
   }
 
@@ -5957,7 +6149,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedLibraryDeleteTitle => '删除种子库';
 
   @override
-  String seedLibraryDeleteFailed(String error) {
+  String seedLibraryDeleteFailed(Object error) {
     return '删除失败：$error';
   }
 
@@ -6055,12 +6247,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get translationJustNow => '刚刚';
 
   @override
-  String translationMinutesAgo(int minutes) {
+  String translationMinutesAgo(Object minutes) {
     return '$minutes分钟前';
   }
 
   @override
-  String translationHoursAgo(int hours) {
+  String translationHoursAgo(Object hours) {
     return '$hours小时前';
   }
 
@@ -6071,7 +6263,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get translationYesterday => '昨天';
 
   @override
-  String translationDaysAgo(int days) {
+  String translationDaysAgo(Object days) {
     return '$days天前';
   }
 
@@ -6376,10 +6568,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationPermissionGranted => '已授权';
 
   @override
-  String get notificationPermissionDenied => '未授权';
+  String get notificationPermissionDenied => '通知权限被拒绝，请在系统设置中开启';
 
   @override
-  String get notificationPermissionPartial => '部分授权';
+  String get notificationPermissionPartial => '部分通知功能受限，建议开启完整权限';
 
   @override
   String get notificationPermissionRequest => '请求权限';
@@ -7042,6 +7234,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInterventionViewSettings => '查看设置';
 
   @override
+  String get chatOpenStudyMaterialsLibrary => '打开学习资料库';
+
+  @override
   String get chatKnowledgeCitationBody => '知识引用';
 
   @override
@@ -7074,14 +7269,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatModeSectionExpertAccess => '专家协助';
 
   @override
-  String chatModeTransitionToWorkflow(String mode) =>
-      '已切换至$mode，多专家将协作分析';
+  String chatModeTransitionToWorkflow(Object mode) {
+    return '已切换至$mode，多专家将协作分析';
+  }
 
   @override
   String get chatModeTransitionToDirect => '已回到标准对话模式';
 
   @override
-  String chatModeTransitionSwitched(String mode) => '已切换至$mode';
+  String chatModeTransitionSwitched(Object mode) {
+    return '已切换至$mode';
+  }
 
   @override
   String get capabilityCeilingTitle => '能力边界提示';
@@ -7270,6 +7468,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatSourcesUnavailable => '无可用来源';
+
+  @override
+  String get chatStudyMaterialsEmptySubtitle =>
+      '上传你的笔记、课件或 PDF 后，就能在聊天里作为学习资料使用。';
+
+  @override
+  String chatStudyMaterialsAvailable(Object count) {
+    return '$count 份资料可用';
+  }
+
+  @override
+  String chatStudyMaterialsKnowledgeNodes(Object count) {
+    return '$count 个知识节点';
+  }
+
+  @override
+  String get chatStudyMaterialsLabel => '学习资料';
+
+  @override
+  String get chatStudyMaterialsPaused => '学习资料已暂停';
+
+  @override
+  String get chatStudyMaterialsPausedDescription => '下一轮对话将暂停文档检索。';
+
+  @override
+  String get chatStudyMaterialsReady => '已就绪';
 
   @override
   String chatStreakSummary(Object arg0, Object arg1) {
@@ -7473,6 +7697,287 @@ class AppLocalizationsZh extends AppLocalizations {
   String communityGroupMembersCount(Object arg0) {
     return '$arg0';
   }
+
+  @override
+  String get groupKnowledgeBase => '知识库';
+
+  @override
+  String get groupFiles => '学习资料';
+
+  @override
+  String get saveToMyLibrary => '保存到我的库';
+
+  @override
+  String get savedToLibrary => '已保存到你的库';
+
+  @override
+  String get markAsOfficial => '标记为官方';
+
+  @override
+  String get officialResource => '官方';
+
+  @override
+  String get noGroupFiles => '暂无学习资料';
+
+  @override
+  String get noGroupFilesSubtitle => '分享你的笔记，帮助群组成员！';
+
+  @override
+  String get shareFile => '分享文件';
+
+  @override
+  String groupFilesCount(Object count) {
+    return '$count 个文件';
+  }
+
+  @override
+  String get studyMaterialsTitle => '学习资料库';
+
+  @override
+  String get studyMaterialsEntrySubtitle => '查看上传资料、处理进度，并管理知识来源';
+
+  @override
+  String get studyMaterialsHeroEyebrow => '个人知识资料馆';
+
+  @override
+  String get studyMaterialsHeroTitle => '把每一次上传都变成可调用的学习上下文';
+
+  @override
+  String get studyMaterialsHeroSubtitle =>
+      '统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。';
+
+  @override
+  String get studyMaterialsMetricDocs => '资料数';
+
+  @override
+  String get studyMaterialsMetricReady => '已就绪';
+
+  @override
+  String get studyMaterialsMetricInMotion => '处理中';
+
+  @override
+  String get studyMaterialsMetricWeeklyRefs => '周引用';
+
+  @override
+  String get studyMaterialsSearchHint => '搜索文件名、知识节点或引用片段';
+
+  @override
+  String get studyMaterialsFilterTitle => '筛选';
+
+  @override
+  String get studyMaterialsFilterAllStatus => '全部状态';
+
+  @override
+  String get studyMaterialsFilterHighlyCited => '高引用';
+
+  @override
+  String get studyMaterialsFilterAllSubjects => '全部学域';
+
+  @override
+  String studyMaterialsFilterNode(Object nodeName) {
+    return '当前节点：$nodeName';
+  }
+
+  @override
+  String get studyMaterialsFilterClearNode => '清除节点筛选';
+
+  @override
+  String get studyMaterialsDate => '时间';
+
+  @override
+  String get studyMaterialsDateAll => '不限时间';
+
+  @override
+  String get studyMaterialsDate7d => '近 7 天';
+
+  @override
+  String get studyMaterialsDate30d => '近 30 天';
+
+  @override
+  String get studyMaterialsDate90d => '近 90 天';
+
+  @override
+  String get studyMaterialsLoadError => '暂时无法加载学习资料。';
+
+  @override
+  String get studyMaterialsRefreshCta => '重新加载';
+
+  @override
+  String get studyMaterialsUploadCta => '上传学习资料';
+
+  @override
+  String get studyMaterialsUploadCtaShort => '上传';
+
+  @override
+  String get studyMaterialsUploadSuccess => '上传已开始，我们会很快把它映射进你的知识星图。';
+
+  @override
+  String get studyMaterialsDeleteTitle => '删除这份学习资料？';
+
+  @override
+  String studyMaterialsDeleteMessage(Object filename) {
+    return '要从资料库中删除 $filename 吗？这会将它从你的个人资料中移除。';
+  }
+
+  @override
+  String get studyMaterialsDeleteSuccess => '学习资料已删除';
+
+  @override
+  String studyMaterialsDeleteFailure(Object error) {
+    return '删除学习资料失败：$error';
+  }
+
+  @override
+  String get studyMaterialsShareSheetTitle => '分享到群组';
+
+  @override
+  String studyMaterialsShareGroupSubtitle(Object count) {
+    return '$count 位成员';
+  }
+
+  @override
+  String get studyMaterialsShareEmptyGroups => '请先加入或创建群组，再分享学习资料。';
+
+  @override
+  String get studyMaterialsShareLoadGroupsError => '暂时无法加载你的群组列表。';
+
+  @override
+  String studyMaterialsShareSuccess(Object groupName) {
+    return '已分享到 $groupName';
+  }
+
+  @override
+  String studyMaterialsShareFailure(Object error) {
+    return '分享学习资料失败：$error';
+  }
+
+  @override
+  String get studyMaterialsVisibilityGroup => '群组可见';
+
+  @override
+  String get studyMaterialsVisibilityPrivate => '仅自己可见';
+
+  @override
+  String get studyMaterialsAttachedNodesTitle => '挂载的知识星点';
+
+  @override
+  String get studyMaterialsNodesPending => '这份资料还在映射到你的知识星图节点中。';
+
+  @override
+  String get studyMaterialsNodesEmpty => '暂时还没有挂载到任何知识节点。';
+
+  @override
+  String get studyMaterialsTopChunksTitle => '高频引用片段';
+
+  @override
+  String get studyMaterialsTopChunksEmpty => 'Aurora 还没有引用过这份资料。';
+
+  @override
+  String get studyMaterialsConversationCountLabel => '对话数';
+
+  @override
+  String get studyMaterialsReferenceCountLabel => '引用次数';
+
+  @override
+  String get studyMaterialsKnowledgeStarsLabel => '知识星点';
+
+  @override
+  String get studyMaterialsShareAction => '分享';
+
+  @override
+  String get studyMaterialsDeleteAction => '删除';
+
+  @override
+  String get studyMaterialsRefreshAction => '重新处理';
+
+  @override
+  String get studyMaterialsSubjectCosmos => '宇宙';
+
+  @override
+  String get studyMaterialsSubjectTech => '技术';
+
+  @override
+  String get studyMaterialsSubjectArt => '艺术';
+
+  @override
+  String get studyMaterialsSubjectCivilization => '文明';
+
+  @override
+  String get studyMaterialsSubjectLife => '生命';
+
+  @override
+  String get studyMaterialsSubjectWisdom => '智慧';
+
+  @override
+  String get studyMaterialsSubjectGeneral => '通用';
+
+  @override
+  String studyMaterialsUsageWeekly(Object count) {
+    return '本周已被引用 $count 次';
+  }
+
+  @override
+  String studyMaterialsUsageTotal(Object count) {
+    return '累计已被引用 $count 次';
+  }
+
+  @override
+  String get studyMaterialsUsageEmpty => '暂未在对话中被引用';
+
+  @override
+  String studyMaterialsUploadedDays(Object count) {
+    return '$count 天前';
+  }
+
+  @override
+  String studyMaterialsUploadedHours(Object count) {
+    return '$count 小时前';
+  }
+
+  @override
+  String studyMaterialsUploadedMinutes(Object count) {
+    return '$count 分钟前';
+  }
+
+  @override
+  String studyMaterialsStatusProcessingPercent(Object percent) {
+    return '处理中 $percent%';
+  }
+
+  @override
+  String get studyMaterialsStatusProcessing => '处理中';
+
+  @override
+  String studyMaterialsStatusKnowledgeStars(Object count) {
+    return '已映射 $count 个星点';
+  }
+
+  @override
+  String get studyMaterialsStatusReady => '已就绪';
+
+  @override
+  String get studyMaterialsStatusFailed => '处理失败';
+
+  @override
+  String studyMaterialsChunkHitCount(Object count) {
+    return '命中 $count 次';
+  }
+
+  @override
+  String get studyMaterialsNoResultsTitle => '没有匹配的学习资料';
+
+  @override
+  String get studyMaterialsEmptyTitle => '你的学习宇宙正等待点亮';
+
+  @override
+  String get studyMaterialsNoResultsSubtitle => '换个搜索词，或清空筛选条件，看看更多资料。';
+
+  @override
+  String get studyMaterialsEmptySubtitle =>
+      '上传你的第一份笔记、课件或教材，Sparkle 会把它们转成可搜索的知识星图。';
+
+  @override
+  String get studyMaterialsResetFilters => '重置筛选';
 
   @override
   String get communityMessageFallback => '消息加载中...';
@@ -7996,6 +8501,214 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planDetailTitle => '计划详情';
+
+  @override
+  String get planDetailAddExistingTask => '添加已有';
+
+  @override
+  String get planDetailAddNewTask => '新增任务';
+
+  @override
+  String get planDetailAddPhase => '新增阶段';
+
+  @override
+  String get planDetailAiGuide => 'AI执行指南';
+
+  @override
+  String planDetailCompressionDesc(Object taskCount, Object totalMinutes) {
+    return '今天只保留 $taskCount 个任务 / $totalMinutes 分钟，先把主线接回来。';
+  }
+
+  @override
+  String get planDetailCompressionTitle => '已为你精简今日计划';
+
+  @override
+  String get planDetailCommonMistakes => '⚠️ 常见误区';
+
+  @override
+  String get planDetailDailyRhythm => '每日节奏';
+
+  @override
+  String planDetailDayGroupSubtitle(Object count, Object minutes) {
+    return '$count 件 · $minutes 分钟';
+  }
+
+  @override
+  String get planDetailDefaultRecommendation =>
+      '今天不再学新内容，只做高频知识点速览、错题错因回看和 30 分钟短模拟。';
+
+  @override
+  String get planDetailEdit => '编辑计划';
+
+  @override
+  String get planDetailFullPlan => '完整计划';
+
+  @override
+  String get planDetailHealthNeedAttention => '需要关注';
+
+  @override
+  String get planDetailHealthNeedReplan => '需要重排';
+
+  @override
+  String get planDetailHealthReasonDefault => '暂无明确风险原因';
+
+  @override
+  String get planDetailHealthReasonProgressLag => '当前进度落后于时间线，建议优先处理高收益任务。';
+
+  @override
+  String get planDetailHealthReasonTimeOverrun => '最近任务用时偏长，可以考虑压缩下一步。';
+
+  @override
+  String get planDetailHealthReasonTooEasy => '最近反馈偏简单，可以适当提高挑战度。';
+
+  @override
+  String get planDetailHealthReasonTooHard => '最近反馈偏难，适合先拆小或补一个前置概念。';
+
+  @override
+  String planDetailHealthScore(Object score, Object label) {
+    return '计划健康度 $score% · $label';
+  }
+
+  @override
+  String get planDetailHealthStable => '稳定';
+
+  @override
+  String planDetailLearningPathLoadError(Object error) {
+    return '学习路径进度加载失败：$error';
+  }
+
+  @override
+  String get planDetailLoadError => '计划加载失败';
+
+  @override
+  String get planDetailLoadError404 => '计划刚生成完成，详情可能还在同步。点\"重试\"继续加载就好。';
+
+  @override
+  String get planDetailLoadErrorEmpty => '计划详情暂时没加载出来，请重试一次。';
+
+  @override
+  String planDetailLoadErrorGeneric(Object error) {
+    return '计划详情暂时没加载出来：$error';
+  }
+
+  @override
+  String get planDetailLoadErrorTimeout => '加载计划超时了，请检查网络后再试一次。';
+
+  @override
+  String planDetailMinutes(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get planDetailNoPhasesYet => '还没有真实阶段，先创建第一个 phase，把长期计划拆成可执行的小段。';
+
+  @override
+  String planDetailPhasesLoadError(Object error) {
+    return '阶段加载失败：$error';
+  }
+
+  @override
+  String get planDetailPhasesTitle => '计划阶段';
+
+  @override
+  String get planDetailPlanScope => '计划边界';
+
+  @override
+  String planDetailRecommendationDay1(Object thingLabel) {
+    return '今天先做好$thingLabel，你已经走在正确路上了。';
+  }
+
+  @override
+  String planDetailRecommendationDayN(Object day, Object thingLabel) {
+    return '先看 Day $day 的$thingLabel，把节奏稳稳接上。';
+  }
+
+  @override
+  String get planDetailSprintMode7Day => '7 天冲刺模式';
+
+  @override
+  String get planDetailSprintModeExam => '考试冲刺模式';
+
+  @override
+  String get planDetailSprintModeLabel => '考前冲刺模式';
+
+  @override
+  String get planDetailSprintNodesLoading => '冲刺节点还在整理中。';
+
+  @override
+  String get planDetailSprintPackDesc => '今天先把这些高收益节点接稳，任务完成后对应圆点会点亮。';
+
+  @override
+  String get planDetailSprintPackNodes => 'Sprint Pack 节点';
+
+  @override
+  String get planDetailStatusAbandoned => '已放弃';
+
+  @override
+  String get planDetailStatusCompleted => '已完成';
+
+  @override
+  String get planDetailStatusInProgress => '进行中';
+
+  @override
+  String get planDetailStatusPending => '待开始';
+
+  @override
+  String get planDetailStatusStuck => '卡住了';
+
+  @override
+  String get planDetailTaskBlueprint => '任务编排';
+
+  @override
+  String planDetailTaskCount(Object completed, Object total) {
+    return '$completed/$total 任务';
+  }
+
+  @override
+  String planDetailTaskDifficulty(Object difficulty) {
+    return '难度 $difficulty';
+  }
+
+  @override
+  String get planDetailTagErrorRepair => '错题补强';
+
+  @override
+  String get planDetailTagNoNewContent => '不学新内容';
+
+  @override
+  String get planDetailThingCount1 => '这 1 件事';
+
+  @override
+  String planDetailThingCountN(Object count) {
+    return '这 $count 件事';
+  }
+
+  @override
+  String get planDetailTodayFocus => '今日聚焦';
+
+  @override
+  String get planDetailSprintFocus => '冲刺聚焦';
+
+  @override
+  String get planDetailWhyNowErrorFix => '现在修这个错因，能避免后面的任务被同一个漏洞反复拖住。';
+
+  @override
+  String get planDetailWhyNowLearning => '现在先处理它，是为了把今天的学习推进变成一个看得见的输出。';
+
+  @override
+  String get planDetailWhyNowOcr => '现在处理资料，能先把可用信息变成后续任务的入口。';
+
+  @override
+  String get planDetailWhyNowPlanning => '现在整理计划，能让下一步执行少一点犹豫。';
+
+  @override
+  String get planDetailWhyNowReflection => '现在复盘，能把今天的结果转成明天更轻的选择。';
+
+  @override
+  String get planDetailWhyNowSocial => '现在完成协作动作，能让外部反馈及时接进你的学习节奏。';
+
+  @override
+  String get planDetailWhyNowTraining => '现在做练习，能尽快确认刚学的内容是不是真的会用。';
 
   @override
   String get planDueToday => '今日到期';
@@ -8758,6 +9471,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExecutionCompletedTitle => '任务已完成';
 
   @override
+  String get taskConfirmCompleteTitle => '确认完成任务？';
+
+  @override
+  String taskConfirmCompleteBody(Object title) {
+    return '将「$title」标记为已完成。';
+  }
+
+  @override
+  String taskEstimatedMinutesValue(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
   String get taskExecutionConfirmComplete => '确认完成';
 
   @override
@@ -8821,6 +9547,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExecutionSyncFailed => '同步失败';
 
   @override
+  String get taskExecutionFreeFocusCompleted => '自由专注已完成';
+
+  @override
   String get taskExecutionTapToContinue => '点击继续';
 
   @override
@@ -8869,6 +9598,134 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskGenerateGuideTitle => '生成执行指南';
+
+  @override
+  String get taskDetailNoteSection => '任务说明';
+
+  @override
+  String taskDetailSubtasks(Object completed, Object total) {
+    return '子任务 ($completed/$total)';
+  }
+
+  @override
+  String taskDetailSubtaskLoadFailed(Object error) {
+    return '子任务加载失败：$error';
+  }
+
+  @override
+  String get taskDetailAiExpansionTitle => 'AI 拓展相关节点';
+
+  @override
+  String get taskDetailAiExpansionDescription =>
+      '基于当前节点生成 3 个候选相关节点。你可以不选，也可以任选 1 到 3 个真正写入知识星图。';
+
+  @override
+  String get taskDetailGenerateCandidates => '生成候选节点';
+
+  @override
+  String get taskDetailUnknownNode => '未知节点';
+
+  @override
+  String get taskDetailNodeCleanedUp => '这个节点已被清理，星图会在下次刷新后同步。';
+
+  @override
+  String get taskDetailRecentLearningPath => '最近生成的学习路径';
+
+  @override
+  String get taskDetailLightweightPath => '当前为轻量任务路径，不占用计划额度。';
+
+  @override
+  String get taskDetailFullPath => '当前为完整学习计划路径。';
+
+  @override
+  String get taskDetailGeneratedTasks => '已生成任务';
+
+  @override
+  String get taskDetailPlanContext => '所属计划';
+
+  @override
+  String get taskDetailPlanContextLoading => '正在加载所属计划...';
+
+  @override
+  String get taskDetailCopyAiPromptSuccess => 'AI 提示词已复制';
+
+  @override
+  String get taskDetailGuideGenerated => '任务指南已生成';
+
+  @override
+  String taskDetailGuideGenerateFailed(Object error) {
+    return '生成失败: $error';
+  }
+
+  @override
+  String get taskDetailRelationPrerequisite => '前置';
+
+  @override
+  String get taskDetailRelationApplication => '应用';
+
+  @override
+  String get taskDetailRelationEvolution => '进阶';
+
+  @override
+  String get taskDetailRelationRelated => '相关';
+
+  @override
+  String get taskDetailCandidatesProcessed => '候选节点已处理。';
+
+  @override
+  String taskDetailCandidatesApplied(
+      Object count, Object created, Object reused) {
+    return '已处理 $count 个候选节点，新增 $created 个，复用 $reused 个已有节点。';
+  }
+
+  @override
+  String taskDetailCandidatesReused(Object count, Object reused) {
+    return '已处理 $count 个候选节点，复用 $reused 个已有节点。';
+  }
+
+  @override
+  String taskDetailCandidatesAccepted(Object count) {
+    return '已将 $count 个节点纳入星图。';
+  }
+
+  @override
+  String taskDetailNodeExpansionDescription(Object name) {
+    return '围绕「$name」生成 3 个候选节点，再由你决定哪些真正写入知识星图。';
+  }
+
+  @override
+  String get taskDetailGenerateThreeCandidates => '生成 3 个候选节点';
+
+  @override
+  String taskDetailSelectedCount(Object selected, Object total) {
+    return '已选 $selected / $total 个候选节点';
+  }
+
+  @override
+  String taskDetailImportanceLevel(Object level) {
+    return '重要度 $level';
+  }
+
+  @override
+  String get taskDetailRegenerate => '重新生成';
+
+  @override
+  String get taskDetailSkipAll => '本次不纳入';
+
+  @override
+  String taskDetailAcceptIntoGalaxy(Object count) {
+    return '纳入星图（$count）';
+  }
+
+  @override
+  String taskDetailStepMinutesValue(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String taskDetailStepMinutes(Object minutes) {
+    return '$minutes分钟';
+  }
 
   @override
   String get taskGuideEmpty => '暂无指南';
@@ -9004,4 +9861,8458 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personaAdjustInferredPreferenceTitle => '调整推断偏好';
+
+  @override
+  String get languageDialogDescription => '选择你更习惯的阅读与交互语言，界面与系统文案会一起切换。';
+
+  @override
+  String get languageChineseDescription => '更适合中文阅读与本地化表达。';
+
+  @override
+  String get languageEnglishDescription => '适合英文界面与更国际化的内容环境。';
+
+  @override
+  String get learningModeSubtitle => '调整深度与好奇心偏好';
+
+  @override
+  String get learningPreferenceSaving => '保存中…';
+
+  @override
+  String get learningPreferenceSaved => '学习模式偏好已保存';
+
+  @override
+  String learningPreferenceSaveFailed(Object error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get learningPreferenceAutoSaveHint => '拖动后会自动保存到后端';
+
+  @override
+  String get bgmVolume => '音乐音量';
+
+  @override
+  String get bgmScenePreference => '场景偏好';
+
+  @override
+  String bgmPreviewTooltip(Object palette) {
+    return '试听 $palette';
+  }
+
+  @override
+  String get bgmAdvancedControls => '高级控制';
+
+  @override
+  String get bgmAdvancedControlsSubtitle => '控制音乐浓度、轮换频率、阅读保护、专注优先与锁定当前风格';
+
+  @override
+  String get chatPureMode => '纯净模式';
+
+  @override
+  String get chatPureModeSubtitle => '聊天中只保留文字消息，隐藏附加信息卡片与消息下方组件。';
+
+  @override
+  String get motionIntensity => '动效强度';
+
+  @override
+  String get aiUsagePanelUnavailable => '额度面板暂时不可用，但档位切换仍可正常生效。';
+
+  @override
+  String get aiOpsPanelUnavailable => '运营面板暂时不可用，但 AI 档位和使用统计仍可继续使用。';
+
+  @override
+  String get notificationManageSubtitle => '统一管理系统通知、干预通知、免打扰时段与任务提醒。';
+
+  @override
+  String get notificationLoadingPrefs => '正在加载通知偏好...';
+
+  @override
+  String get notificationSystem => '系统通知';
+
+  @override
+  String get notificationSystemSubtitle => '控制任务提醒、成就、系统消息等站内通知';
+
+  @override
+  String get notificationInterventions => '干预通知';
+
+  @override
+  String get notificationInterventionsSubtitle => '控制教练/代理的干预和引导提醒';
+
+  @override
+  String get notificationReminders => '提醒';
+
+  @override
+  String get notificationRemindersSubtitle => '控制任务、计划进度和回归提醒';
+
+  @override
+  String get notificationSpacedRepetition => '复习';
+
+  @override
+  String get notificationSpacedRepetitionSubtitle => '控制 Galaxy 间隔复习节点提醒';
+
+  @override
+  String get notificationWeeklyReport => '周报';
+
+  @override
+  String get notificationWeeklyReportSubtitle => '控制每周成长报告和学习摘要通知';
+
+  @override
+  String get notificationMilestone => '里程碑';
+
+  @override
+  String get notificationMilestoneSubtitle => '控制成就、阶段达成和进度里程碑通知';
+
+  @override
+  String get notificationLevel => '通知级别';
+
+  @override
+  String notificationLevelSwitched(Object level) {
+    return '通知级别已切换为$level';
+  }
+
+  @override
+  String get notificationLevelMinimal => '简洁';
+
+  @override
+  String get notificationLevelStandard => '标准';
+
+  @override
+  String get notificationLevelVerbose => '详细';
+
+  @override
+  String get notificationLevelMinimalDesc => '只保留最必要的提醒，减少打扰。';
+
+  @override
+  String get notificationLevelStandardDesc => '在信息量和打扰频率之间保持平衡。';
+
+  @override
+  String get notificationLevelVerboseDesc => '展示更完整的背景信息和提醒内容。';
+
+  @override
+  String get notificationLevelMinimalPreview => '只保留关键提醒，例如任务即将到期、需要立即处理的系统通知。';
+
+  @override
+  String get notificationLevelStandardPreview =>
+      '保留主要提醒，并在必要时补充简短背景说明，适合大多数场景。';
+
+  @override
+  String get notificationLevelVerbosePreview => '会附带更多上下文，例如为什么提醒你、下一步建议和补充说明。';
+
+  @override
+  String notificationLevelPreviewTitle(Object level) {
+    return '$level通知';
+  }
+
+  @override
+  String get notificationQuietHours => '免打扰时段';
+
+  @override
+  String get notificationQuietHoursSubtitle => '关闭后，系统会按正常节奏推送通知';
+
+  @override
+  String get notificationQuietHoursStart => '开始时间';
+
+  @override
+  String get notificationQuietHoursEnd => '结束时间';
+
+  @override
+  String get notificationQuietHoursHint =>
+      '支持跨午夜，例如 22:00 - 08:00；开始和结束时间不能相同。';
+
+  @override
+  String get notificationQuietHoursSameTimeError => '开始和结束时间不能相同';
+
+  @override
+  String get notificationQuietHoursStartUpdated => '免打扰开始时间已更新';
+
+  @override
+  String get notificationQuietHoursEndUpdated => '免打扰结束时间已更新';
+
+  @override
+  String notificationUpdateFailed(Object error) {
+    return '通知设置更新失败：$error';
+  }
+
+  @override
+  String get aiExecutionEngine => 'AI执行引擎';
+
+  @override
+  String get aiExecutionEngineSubtitle => '连接你的 OpenClaw 实例并监控健康状态';
+
+  @override
+  String get capsuleGenerated => '新的好奇心胶囊已生成';
+
+  @override
+  String get capsuleGeneratedEmpty => '已生成新的胶囊，点击下方即可查看完整内容。';
+
+  @override
+  String get capsuleViewNew => '查看新胶囊';
+
+  @override
+  String get capsulePreviewFailed => '试听失败，请检查音频文件';
+
+  @override
+  String get capsuleScenePreviewFailed => '当前场景试听失败，请检查音频文件';
+
+  @override
+  String aiReasoningModeSwitched(Object mode) {
+    return 'AI 推理模式已切换为$mode';
+  }
+
+  @override
+  String get aiReasoningModeSwitchFailed => 'AI 推理模式切换失败，请稍后重试';
+
+  @override
+  String get aiReasoningFastDesc => '优先更快给出结果，适合短问答、轻量查询和低延迟场景。';
+
+  @override
+  String get aiReasoningBalancedDesc => '在速度和推理深度之间保持平衡，适合大多数日常使用。';
+
+  @override
+  String get aiReasoningDeepDesc => '会投入更多推理预算，适合复杂问题、规划和高精度解释。';
+
+  @override
+  String get taskReminderDisabled => '已关闭';
+
+  @override
+  String get taskReminderEnabledNoTime => '已开启，但暂未选择提醒时间';
+
+  @override
+  String get taskReminderEnabledWithTimes => '已开启';
+
+  @override
+  String taskReminderDaysAgo(Object days) {
+    return '$days天前';
+  }
+
+  @override
+  String taskReminderHoursAgo(Object hours) {
+    return '$hours小时前';
+  }
+
+  @override
+  String taskReminderMinutesAgo(Object minutes) {
+    return '$minutes分钟前';
+  }
+
+  @override
+  String notificationPermissionDeniedTitle(Object error) {
+    return '未授权: $error';
+  }
+
+  @override
+  String get notificationRequestPermission => '请求权限';
+
+  @override
+  String get notificationOpenSettings => '打开设置';
+
+  @override
+  String get notificationPermissionDialogTitle => '通知权限状态';
+
+  @override
+  String get notificationPermissionDialogContent => '通知权限被拒绝，请在系统设置中开启';
+
+  @override
+  String get bgmPaletteAdaptive => '自适应';
+
+  @override
+  String get bgmPaletteClassical => '精选古典';
+
+  @override
+  String get bgmPalettePiano => '钢琴优先';
+
+  @override
+  String get bgmPaletteAiry => '空灵氛围';
+
+  @override
+  String get bgmPaletteWarm => '温暖轻快';
+
+  @override
+  String get bgmPaletteAdaptiveDesc => '系统会按页面功能自动挑选最合适的背景音乐。';
+
+  @override
+  String get bgmPaletteClassicalDesc => '精选古典钢琴与弦乐，会优先使用你本机准备的古典乐库做场景切换。';
+
+  @override
+  String get bgmPalettePianoDesc => '整体更偏轻钢琴与安静旋律，适合长时间陪伴。';
+
+  @override
+  String get bgmPaletteAiryDesc => '整体更偏空灵、梦幻和空间感更强的氛围。';
+
+  @override
+  String get bgmPaletteWarmDesc => '整体更偏温暖、柔和、有人味的轻快底色。';
+
+  @override
+  String get bgmIntensityGentle => '柔和';
+
+  @override
+  String get bgmIntensityBalanced => '平衡';
+
+  @override
+  String get bgmIntensityLush => '丰盈';
+
+  @override
+  String get bgmIntensityGentleDesc => '更适合长时间陪伴，优先轻密度、低干扰和慢切换。';
+
+  @override
+  String get bgmIntensityBalancedDesc => '保留舒适度的同时增加一点层次和存在感。';
+
+  @override
+  String get bgmIntensityLushDesc => '让同一场景更有氛围和包裹感，但仍避免明显突兀。';
+
+  @override
+  String get bgmVarietySteady => '稳定';
+
+  @override
+  String get bgmVarietyBalanced => '均衡';
+
+  @override
+  String get bgmVarietyDynamic => '灵动';
+
+  @override
+  String get bgmVarietySteadyDesc => '尽量减少跳曲和重复变化，让氛围更连贯。';
+
+  @override
+  String get bgmVarietyBalancedDesc => '在连贯和新鲜之间保持中间值。';
+
+  @override
+  String get bgmVarietyDynamicDesc => '降低重复率，让同类页面也能更常听到新变化。';
+
+  @override
+  String get bgmModeAdaptive => '跟随页面';
+
+  @override
+  String get bgmModeContinuous => '播放器模式';
+
+  @override
+  String get bgmModeFocusOnly => '仅专注开启';
+
+  @override
+  String get bgmModeSilent => '全局静音';
+
+  @override
+  String get bgmModeAdaptiveDesc => '首页、聊天、任务、成就等页面会自动切换到对应氛围音乐。';
+
+  @override
+  String get bgmModeContinuousDesc =>
+      '当前曲目会持续播放，不会因为你跳转到别的页面而被打断，适合把 App 当成舒缓音乐播放器。';
+
+  @override
+  String get bgmModeFocusOnlyDesc => '只有专注开始、沉浸和执行任务时才会播放背景音乐，日常页面保持安静。';
+
+  @override
+  String get bgmModeSilentDesc => '保留音效和触感反馈，但所有背景音乐都不会自动播放。';
+
+  @override
+  String get motionIntensityUltra => '超强';
+
+  @override
+  String get motionIntensityHigh => '高';
+
+  @override
+  String get motionIntensityMedium => '中';
+
+  @override
+  String get motionIntensityOff => '关闭';
+
+  @override
+  String get motionIntensityUltraDesc => '保留完整粒子、辉光与复杂动效，适合高性能设备。';
+
+  @override
+  String get motionIntensityHighDesc => '维持大部分视觉层，同时允许系统按帧率自动降级。';
+
+  @override
+  String get motionIntensityMediumDesc => '收敛粒子与辉光，优先稳定和省电，仍保留基础层次感。';
+
+  @override
+  String get motionIntensityOffDesc => '尽量关闭强动效与粒子层，适合偏静态、低刺激或低性能场景。';
+
+  @override
+  String get bgmSectionSubtitleDefault => '按页面与播放器模式管理背景音乐';
+
+  @override
+  String bgmSectionSubtitleWithCount(Object count) {
+    return '当前共 $count 首，可在页面策略和播放器模式之间自由切换';
+  }
+
+  @override
+  String bgmLibraryUpdated(Object count) {
+    return '曲库已更新为 $count 首';
+  }
+
+  @override
+  String get bgmOpenLibrary => '打开曲库';
+
+  @override
+  String get bgmCurated => '精选';
+
+  @override
+  String get bgmImported => '本地导入';
+
+  @override
+  String get bgmBundled => '系统兜底';
+
+  @override
+  String get bgmModeLabel => '模式';
+
+  @override
+  String get bgmPlayerMode => '播放器模式';
+
+  @override
+  String get bgmPageStrategyMode => '页面策略模式';
+
+  @override
+  String get bgmLibraryHint => '新页面里可以点播曲库、导入自己的音乐，并启用「播放器模式」让 BGM 跨页面持续不中断。';
+
+  @override
+  String get bgmNotPlaying => '当前未播放';
+
+  @override
+  String get bgmBundledTrack => '内置场景曲目';
+
+  @override
+  String get bgmWaitingPlayback => '等待播放信息';
+
+  @override
+  String get bgmDisabled => '背景音乐已关闭';
+
+  @override
+  String get bgmGlobalSilent => '当前处于全局静音';
+
+  @override
+  String get bgmContinuousPlaying => '播放器模式持续播放中';
+
+  @override
+  String get bgmNowPlaying => '当前播放';
+
+  @override
+  String get bgmPreviewCurrentScene => '试听当前场景';
+
+  @override
+  String bgmTrackLabel(Object name) {
+    return '曲目: $name';
+  }
+
+  @override
+  String bgmSourceLabel(Object label) {
+    return '来源: $label';
+  }
+
+  @override
+  String get bgmIntensityLabel => '强度';
+
+  @override
+  String get bgmVarietyLabel => '轮换';
+
+  @override
+  String get bgmReadingProtection => '阅读保护';
+
+  @override
+  String get bgmFocusPriority => '专注优先';
+
+  @override
+  String get bgmStyleLocked => '锁定风格';
+
+  @override
+  String get bgmReadingProtectionTitle => '阅读保护';
+
+  @override
+  String get bgmReadingProtectionSubtitle => '聊天、洞察、个人页优先保留低刺激与轻混音';
+
+  @override
+  String get bgmFocusPriorityTitle => '专注优先';
+
+  @override
+  String get bgmFocusPrioritySubtitle => '专注与执行阶段优先选择更纯净、更稳定的曲目';
+
+  @override
+  String get bgmLockStyleTitle => '锁定当前风格';
+
+  @override
+  String get bgmLockStyleSubtitle => '跨普通页面时尽量延续当前气质，不覆盖专注和庆祝场景';
+
+  @override
+  String get bgmAtmosphereIntensity => '氛围强度';
+
+  @override
+  String get bgmVarietyFrequency => '曲目变化频率';
+
+  @override
+  String get aiUsageTodayPreparing => '今日额度统计准备中。';
+
+  @override
+  String get aiUsageTodayTitle => '今日 AI 额度与消耗';
+
+  @override
+  String aiUsageRequests(Object used, Object limit) {
+    return '$used/$limit 次';
+  }
+
+  @override
+  String aiUsageLatency(Object firstToken, Object totalMs) {
+    return '平均首 token ${firstToken}ms · 平均总耗时 ${totalMs}ms';
+  }
+
+  @override
+  String get aiOpsModesAccumulating => '模式级运营指标还在累积中。';
+
+  @override
+  String get aiOpsTopChatModeStandard => '标准对话';
+
+  @override
+  String get aiOpsTopChatModeStudyPlan => '学习规划';
+
+  @override
+  String get aiOpsTopChatModeDeepAnalysis => '深度分析';
+
+  @override
+  String get aiOpsTopChatModeErrorDiagnosis => '诊断纠错';
+
+  @override
+  String get aiOpsTopChatModeExpertAuto => '专家协作';
+
+  @override
+  String get aiOpsUserViewTitle => '用户视角';
+
+  @override
+  String get aiOpsUserViewDesc => '重点看 AI 是否回得快、够稳、能把建议真正推成执行，而不是只看模型层参数。';
+
+  @override
+  String get aiOpsSuccessRate => '成功率';
+
+  @override
+  String get aiOpsAvgFirstToken => '平均首包';
+
+  @override
+  String get aiOpsAvgTotalDuration => '平均总耗时';
+
+  @override
+  String get aiOpsExecutionConversion => '执行转化';
+
+  @override
+  String get aiOpsPredictedAcceptExec => '预测接受后执行';
+
+  @override
+  String aiOpsTopModeSummary(Object topMode) {
+    return '最近最常用的是「$topMode」这条链，说明它已经是用户日常体验里的主力工作流。';
+  }
+
+  @override
+  String get aiOpsDevViewTitle => '开发运营视角';
+
+  @override
+  String get aiOpsDevViewDesc => '这里专门看速度、成本、fallback 和预测转化，用来决定下一轮要优化哪条模式链。';
+
+  @override
+  String get aiOpsMonitoringModes => '监控模式';
+
+  @override
+  String get aiOpsTotalRequests => '请求总量';
+
+  @override
+  String get aiOpsFallback => 'fallback';
+
+  @override
+  String get aiOpsTotalCost => '总成本';
+
+  @override
+  String get aiOpsPromptHit => 'prompt 命中';
+
+  @override
+  String get aiOpsInferenceHit => '推理命中';
+
+  @override
+  String aiOpsPredictionSummary(
+      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
+    return '近 $days 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 $promptUtil%/$inferenceUtil%。';
+  }
+
+  @override
+  String get aiOpsOpenAnalysis => '打开 AI 运营分析页';
+
+  @override
+  String get aiOpsOpenAdminPanel => '打开管理员运营面板';
+
+  @override
+  String get memoryDeclaration => '声明';
+
+  @override
+  String get memoryEvidenceToken => '证据 Token';
+
+  @override
+  String get memoryDecayPolicy => '衰减策略';
+
+  @override
+  String memoryUpdateValue(Object date) {
+    return '更新: $date';
+  }
+
+  @override
+  String memoryConfidenceValue(Object value) {
+    return '置信度: $value';
+  }
+
+  @override
+  String memoryAllowedCaptureSummary(Object types, Object level) {
+    return '已允许捕获：$types\n捕获级别：$level';
+  }
+
+  @override
+  String get memoryAiInferredDisabledHint => '当前已关闭 AI 自动记忆，后续不会继续写入此类推断。';
+
+  @override
+  String get memoryExplanationInferredEpisodic =>
+      '这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。';
+
+  @override
+  String memoryCorrectionSubmittedWithAction(Object action) {
+    return '已提交纠错: $action';
+  }
+
+  @override
+  String memoryCorrectionFailedWithDetail(Object error) {
+    return '纠错失败: $error';
+  }
+
+  @override
+  String tracksCount(Object count) {
+    return '$count 首';
+  }
+
+  @override
+  String get profilePrestigeIdentity => '荣耀身份';
+
+  @override
+  String get profileNoTitleEquipped => '未装备称号';
+
+  @override
+  String get profileRecentHighlights => '近期高光成就';
+
+  @override
+  String get profileNoHighlightsHint => '继续完成学习与冲刺，你的荣耀陈列柜会在这里逐步点亮。';
+
+  @override
+  String get profileTraitQ1Title => '开始新目标时，你更像哪种方式？';
+
+  @override
+  String get profileTraitQ1Structured => '先搭结构再行动';
+
+  @override
+  String get profileTraitQ1Mixed => '先有框架，再边做边调';
+
+  @override
+  String get profileTraitQ1Explore => '先试试看，让方向自己浮现';
+
+  @override
+  String get profileTraitSkip => '跳过';
+
+  @override
+  String get profileTraitQ2Title => '遇到难题时，你更容易从哪里补能量？';
+
+  @override
+  String get profileTraitQ2Solo => '先自己想清楚';
+
+  @override
+  String get profileTraitQ2SmallGroup => '找一两个人讨论';
+
+  @override
+  String get profileTraitQ2Group => '边聊边想最有感觉';
+
+  @override
+  String get profileTraitQ3Title => '当计划被打乱时，你通常最先出现什么反应？';
+
+  @override
+  String get profileTraitQ3Replan => '马上重排，尽快回正';
+
+  @override
+  String get profileTraitQ3Pause => '会卡一下，但能慢慢拉回来';
+
+  @override
+  String get profileTraitQ3Swing => '情绪和节奏都会受影响';
+
+  @override
+  String get profileLearningPortfolio => '学习档案';
+
+  @override
+  String get profileLearningPortfolioSubtitle => '查看所有科目的冲刺历史、进行中与计划中记录';
+
+  @override
+  String get profilePosterStudio => '海报工坊';
+
+  @override
+  String get profilePosterStudioSubtitle => '把成长、计划与灵感做成高质感分享海报';
+
+  @override
+  String get profileMyWay => '我的方式';
+
+  @override
+  String get profileMetacognitionPanel => '自我认识面板';
+
+  @override
+  String get profileMetacognitionHidden => '已隐藏，后台仍会继续计算';
+
+  @override
+  String get profileMetacognitionVisible => '显示过去样本里的判断偏差摘要';
+
+  @override
+  String get profileExportData => '导出我的数据';
+
+  @override
+  String get profileExportPreparing => '正在准备数据，请稍候…';
+
+  @override
+  String get profileExportEmptyFile => '空文件';
+
+  @override
+  String get profileExportShareSubject => 'Sparkle 数据导出';
+
+  @override
+  String profileExportFailed(Object error) {
+    return '导出失败：$error';
+  }
+
+  @override
+  String get profileSubtitleAchievements => '查看已解锁的里程碑与荣誉进度';
+
+  @override
+  String get profileSubtitleVisualElements => '管理背景、粒子和视觉奖励';
+
+  @override
+  String get profileSubtitlePersona => '查看系统理解到的学习特征与偏好';
+
+  @override
+  String get profileSubtitlePersonalInfo => '编辑头像、昵称和基础资料';
+
+  @override
+  String get profileSubtitlePreferences => '管理感官反馈、学习模式与推送偏好';
+
+  @override
+  String get profileSubtitleMyWay => '管理私有 Skill、共享与匿名 fork';
+
+  @override
+  String get profileSubtitleSecurity => '查看安全信息、设备与隐私控制';
+
+  @override
+  String get profileSubtitleMemory => '调整长期记忆与上下文保留策略';
+
+  @override
+  String get profileSubtitleLogout => '安全退出当前账号';
+
+  @override
+  String get profileSubtitleDeleteAccount => '永久移除账号与相关数据';
+
+  @override
+  String get profileSubtitleDefault => '进入此页面继续调整详细设置';
+
+  @override
+  String get chatSelfVisibleOnly => '仅自己可见';
+
+  @override
+  String get chatSelfVisibleDraftDesc => '这条 AI 草稿只保存在你的当前私聊视图里。';
+
+  @override
+  String get chatPromoteToBothVisible => '改为双方都可见';
+
+  @override
+  String get chatPromoteToBothDesc => '把这条草稿放回输入框，由你确认后发送给对方。';
+
+  @override
+  String get chatViewAccessoryContent => '查看附加内容';
+
+  @override
+  String get chatViewAccessoryContentDesc => '在纯净模式下临时展开任务卡和快捷入口';
+
+  @override
+  String get chatActionSuggestion => '行动建议';
+
+  @override
+  String get chatActionSuggestionDesc => '继续完成这一步，或者先确认任务和计划。';
+
+  @override
+  String get chatTheaterTitle => '推演剧场';
+
+  @override
+  String get chatTheaterDesc => '现在最值得先看的是哪条路径，以及它为什么更适合你。';
+
+  @override
+  String get chatSimulationTitle => '学习仿真';
+
+  @override
+  String get chatSimulationDesc => '先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。';
+
+  @override
+  String get chatReportTitle => '学习报告';
+
+  @override
+  String get chatReportDesc => '先看最核心的诊断和下一步动作，再决定是否进入完整报告页。';
+
+  @override
+  String get chatAccessoryContent => '附加内容';
+
+  @override
+  String get chatContinueExploring => '继续探索';
+
+  @override
+  String get chatSwipeToSwitch => '左右滑动切换不同入口';
+
+  @override
+  String get chatViewTheaterDetails => '查看推演详情';
+
+  @override
+  String get chatCurrentLearningTopic => '当前学习主题';
+
+  @override
+  String get chatViewSimulationDetails => '查看模拟详情';
+
+  @override
+  String get chatCollaborationProcess => '协作过程';
+
+  @override
+  String get chatPlanContext => '计划上下文';
+
+  @override
+  String get chatPlanStatus => '计划状态';
+
+  @override
+  String get chatContinueFromConversation => '承接刚才的对话';
+
+  @override
+  String get chatReviewFirstThenExpand => '先看重点，再决定要不要展开完整体验';
+
+  @override
+  String get chatPathLabel => '路径';
+
+  @override
+  String get chatMasteryLabel => '掌握度';
+
+  @override
+  String get chatOpenFullExperience => '打开完整体验';
+
+  @override
+  String get chatContinueInChat => '继续在对话里';
+
+  @override
+  String get chatViewLatestReport => '查看最新学习报告';
+
+  @override
+  String get chatViewLearningReport => '查看学习报告';
+
+  @override
+  String get chatKeyFocusLabel => '重点关注';
+
+  @override
+  String get chatShareResourceInvalidId => '分享资源 ID 无效，无法采纳';
+
+  @override
+  String get chatShareResourceAdopted => '已采纳，跳转中...';
+
+  @override
+  String chatShareResourceAdoptError(Object error) {
+    return '采纳失败: $error';
+  }
+
+  @override
+  String chatTaskConfirmedMessage(Object count) {
+    return '已确认 $count 个任务，开始执行！';
+  }
+
+  @override
+  String get chatViewPlan => '查看计划';
+
+  @override
+  String get chatGoToTaskList => '去任务列表';
+
+  @override
+  String chatConfirmFailed(Object error) {
+    return '确认失败: $error';
+  }
+
+  @override
+  String chatTaskCompletedDoneMinutes(Object minutes) {
+    return '已完成 · $minutes分钟';
+  }
+
+  @override
+  String get chatTaskCompletedDone => '已完成';
+
+  @override
+  String chatPlanProgressLabel(Object percent) {
+    return '进度: $percent%';
+  }
+
+  @override
+  String get chatPromptPreviewCancel => '先不发';
+
+  @override
+  String get chatPromptPreviewSend => '直接发送';
+
+  @override
+  String get chatParticipantLabel => '参与者';
+
+  @override
+  String get chatPromptRefinePath => '继续细化这条路径';
+
+  @override
+  String chatPromptRefinePathMessage(Object topic) {
+    return '继续围绕「$topic」细化第一周最该先做的步骤。';
+  }
+
+  @override
+  String get chatPromptComparePaths => '比较两条路线';
+
+  @override
+  String chatPromptComparePathsMessage(Object pathA, Object pathB) {
+    return '比较一下「$pathA」和「$pathB」的取舍。';
+  }
+
+  @override
+  String get chatPromptDefaultPathA => '路线 A';
+
+  @override
+  String get chatPromptDefaultPathB => '路线 B';
+
+  @override
+  String get chatPromptPrerequisites => '先补什么前置';
+
+  @override
+  String chatPromptPrerequisitesMessage(Object topic) {
+    return '如果我现在就开始学「$topic」，最该先补的前置是什么？';
+  }
+
+  @override
+  String get chatPromptExamFocus => '考试重点是什么';
+
+  @override
+  String chatPromptExamFocusMessage(Object topic) {
+    return '围绕「$topic」，告诉我最容易成为考试重点的部分和原因。';
+  }
+
+  @override
+  String get chatPromptMakePlan => '给我排成计划';
+
+  @override
+  String chatPromptMakePlanMessage(Object topic) {
+    return '把「$topic」这条路径改写成 7 天可执行的小计划。';
+  }
+
+  @override
+  String get chatPromptSimulateRound => '继续模拟一轮';
+
+  @override
+  String chatPromptSimulateRoundMessage(Object topic) {
+    return '继续围绕「$topic」模拟一轮，我想继续跟进这个学习场景。';
+  }
+
+  @override
+  String get chatOneOfTheRoles => '其中一个角色';
+
+  @override
+  String get chatPromptLetMeAnswer => '让我来回答';
+
+  @override
+  String chatPromptLetMeAnswerMessage(Object speaker, Object topic) {
+    return '让 $speaker 围绕「$topic」继续追问我一个关键问题，我来回答。';
+  }
+
+  @override
+  String get chatPromptPracticeExplain => '练习讲给别人听';
+
+  @override
+  String chatPromptPracticeExplainMessage(Object topic) {
+    return '围绕「$topic」安排一轮需要我讲给别人听的仿真。';
+  }
+
+  @override
+  String get chatPromptErrorDiagnosis => '换成错因诊断';
+
+  @override
+  String chatPromptErrorDiagnosisMessage(Object topic) {
+    return '把「$topic」切到错因诊断模式，帮我定位真正的卡点。';
+  }
+
+  @override
+  String get chatPromptOrderActions => '排今天行动顺序';
+
+  @override
+  String get chatPromptOrderActionsMessage => '根据这份学习报告，帮我排一个今天就能开始的行动顺序。';
+
+  @override
+  String get chatPromptExpandKeyIssue => '展开重点问题';
+
+  @override
+  String chatPromptExpandKeyIssueMessage(Object highlight) {
+    return '展开讲讲为什么「$highlight」最值得先处理。';
+  }
+
+  @override
+  String get chatPromptPrioritizeArea => '先补哪一块';
+
+  @override
+  String chatPromptPrioritizeAreaMessage(Object area) {
+    return '根据这份报告，先帮我解释为什么「$area」应该优先处理。';
+  }
+
+  @override
+  String get chatPromptConvertToPlan => '转成 7 天计划';
+
+  @override
+  String get chatPromptConvertToPlanMessage => '把这份学习报告改写成我接下来 7 天的执行顺序。';
+
+  @override
+  String get chatPromptReviewOutline => '帮我做复盘提纲';
+
+  @override
+  String get chatPromptReviewOutlineMessage => '根据这份学习报告，给我一份今晚就能用的复盘提纲。';
+
+  @override
+  String dashboardBottleneckPrompt(Object topic) {
+    return '我想换个方式理解$topic。请结合这个卡点，帮我调整接下来的学习路径。';
+  }
+
+  @override
+  String get dashboardSetFirstGoal => '先定下你的第一个目标';
+
+  @override
+  String get dashboardSetFirstGoalSummary => '告诉我你最近最想推进的一件事，我会立刻帮你拆成可执行的计划。';
+
+  @override
+  String get dashboardStartWithAI => '和 AI 定目标';
+
+  @override
+  String get dashboardOpenTaskList => '查看任务列表';
+
+  @override
+  String get dashboardDueToday => '今天截止';
+
+  @override
+  String dashboardOverdueDays(Object days) {
+    return '已逾期 $days 天';
+  }
+
+  @override
+  String dashboardDaysLeft(Object days) {
+    return '还有 $days 天';
+  }
+
+  @override
+  String get dashboardMainMove => '1 个重点动作';
+
+  @override
+  String dashboardMoreQueued(Object count) {
+    return '另有 $count 项待推进';
+  }
+
+  @override
+  String dashboardProgress(Object percent) {
+    return '$percent% 进度';
+  }
+
+  @override
+  String get dashboardTodayBriefing => '今日总览';
+
+  @override
+  String get dashboardBriefingSummary => '把最重要的事情压缩成一张卡';
+
+  @override
+  String get dashboardSparkleObservation => 'Sparkle 的观察';
+
+  @override
+  String get dashboardStartWithThis => '今天先做这一步';
+
+  @override
+  String get dashboardGrowthSignal => '最近最明显的变化';
+
+  @override
+  String dashboardMoreTasksQueued(Object count) {
+    return '除了当前重点，还有 $count 项任务在队列中。';
+  }
+
+  @override
+  String get dashboardStartFocus => '开始专注';
+
+  @override
+  String get dashboardStartHere => '先做这个';
+
+  @override
+  String get dashboardOpenTasks => '查看任务';
+
+  @override
+  String get dashboardTaskList => '任务列表';
+
+  @override
+  String get dashboardActivePlan => '当前主计划';
+
+  @override
+  String dashboardPhaseLabel(Object phase) {
+    return '阶段：$phase';
+  }
+
+  @override
+  String get dashboardPhaseInProgress => '进行中';
+
+  @override
+  String dashboardDaysToDeadline(Object days) {
+    return '距离截止还有 $days 天';
+  }
+
+  @override
+  String get dashboardPrediction => '预测建议';
+
+  @override
+  String dashboardMessagesCount(Object count) {
+    return '$count 条消息';
+  }
+
+  @override
+  String dashboardAlertsCount(Object count) {
+    return '$count 条通知';
+  }
+
+  @override
+  String dashboardInsightsCount(Object count) {
+    return '$count 条洞察';
+  }
+
+  @override
+  String get dashboardReviewPending => '夜间复盘待处理';
+
+  @override
+  String get dashboardUpdatesInsights => '更新与洞察';
+
+  @override
+  String planEditTypeTitle(Object type) {
+    return '编辑$type';
+  }
+
+  @override
+  String get planUpdated => '计划已更新';
+
+  @override
+  String get planGuideFillNameAndGoalFirst => '先填写计划名称和计划目标，再生成 AI 指南';
+
+  @override
+  String get planGuideGeneratedHuman => '已生成给用户看的执行指南';
+
+  @override
+  String get planGuideGeneratedAi => '已生成给 AI 使用的执行版本';
+
+  @override
+  String planGuideGenerationFailed(Object error) {
+    return '计划指南生成失败：$error';
+  }
+
+  @override
+  String get planSuggestedGrowthTask1 => '建立本周主线推进清单';
+
+  @override
+  String get planSuggestedGrowthTask2 => '完成一次阶段复盘';
+
+  @override
+  String get planSuggestedSprintTask1 => '确认冲刺目标与验收标准';
+
+  @override
+  String get planSuggestedSprintTask2 => '完成冲刺关键里程碑';
+
+  @override
+  String get planSave => '保存计划';
+
+  @override
+  String get planStepBasics => '计划定位';
+
+  @override
+  String get planStepSchedule => '时间结构';
+
+  @override
+  String get planStepTasks => '任务编排';
+
+  @override
+  String get planStepGuide => '计划边界与指南';
+
+  @override
+  String get planStepReview => '确认预览';
+
+  @override
+  String get planAiVersionCopied => 'AI 版本已复制';
+
+  @override
+  String get planBasicsDescription => '先定义这是一张真正的计划卡，而不是普通任务。';
+
+  @override
+  String get planBasicsNameHint => '例如：6 周英语口语提升 / 期中冲刺收束';
+
+  @override
+  String get planBasicsNameRequired => '请先填写计划名称';
+
+  @override
+  String get planBasicsSubjectLabel => '主题方向';
+
+  @override
+  String get planBasicsSubjectHint => '英语、Flutter、考研数学、论文阅读...';
+
+  @override
+  String get planBasicsGoalLabelGrowth => '长期目标';
+
+  @override
+  String get planBasicsGoalLabelSprint => '冲刺目标';
+
+  @override
+  String get planBasicsGoalHintGrowth => '写清楚这个成长计划最终想形成什么能力、习惯或成果。';
+
+  @override
+  String get planBasicsGoalHintSprint => '写清楚这次冲刺的结果、验收标准和不能偏离的主线。';
+
+  @override
+  String get planBasicsGoalRequired => '请写出这张计划卡的目标';
+
+  @override
+  String get planBasicsPriorityLabel => '计划优先级';
+
+  @override
+  String get planPriorityNormalValue => '正常';
+
+  @override
+  String get planPriorityCriticalValue => '关键';
+
+  @override
+  String get planScheduleDescription => '把持续时间、每日投入和提醒节奏一次性定清楚。';
+
+  @override
+  String get planScheduleDailyMinutesLabel => '每日可投入时长';
+
+  @override
+  String planScheduleMinutesUnit(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String planScheduleTotalHours(Object hours) {
+    return '总预估工时 $hours 小时';
+  }
+
+  @override
+  String get planScheduleTargetDateUnset => '暂未设置';
+
+  @override
+  String get planScheduleReminderTime => '每日提醒时间';
+
+  @override
+  String get planScheduleStageLabel => '当前计划阶段';
+
+  @override
+  String get planScheduleStageSprint => '冲刺推进';
+
+  @override
+  String get planScheduleStageDaily => '日常执行';
+
+  @override
+  String get planScheduleStageReview => '复盘调优';
+
+  @override
+  String get planScheduleStagePaused => '暂时暂停';
+
+  @override
+  String get planScheduleChipWeekday => '工作日推进，周末复盘';
+
+  @override
+  String get planScheduleChipMorning => '早晨启动，晚上收束';
+
+  @override
+  String get planScheduleChipAfternoon => '午后主攻，夜间轻复盘';
+
+  @override
+  String get planScheduleRhythmLabel => '节奏说明';
+
+  @override
+  String get planScheduleRhythmHint => '例如：周一到周五推进，周六复盘，周日补缺';
+
+  @override
+  String get planTasksDescription => '这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。';
+
+  @override
+  String get planTasksBlueprintLabel => '任务编排说明';
+
+  @override
+  String get planTasksBlueprintHint => '例如：先搭框架，再每天推进主线，最后统一复盘补漏。';
+
+  @override
+  String get planTasksRefExisting => '参考已有任务';
+
+  @override
+  String planTasksMinutesDifficulty(Object minutes, Object difficulty) {
+    return '$minutes 分钟 · 难度 $difficulty';
+  }
+
+  @override
+  String get planTasksCopyToPlan => '复制进计划';
+
+  @override
+  String get planTasksNewTaskLabel => '新增计划任务';
+
+  @override
+  String get planTasksNewTaskHint => '例如：完成一轮章节梳理';
+
+  @override
+  String get planTasksDurationLabel => '时长';
+
+  @override
+  String get planTasksAddToPlan => '加入计划任务';
+
+  @override
+  String get planTasksEmpty => '当前还没有计划任务';
+
+  @override
+  String get planGuideScopeLabel => '计划边界与注意事项';
+
+  @override
+  String get planGuideScopeHint => '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。';
+
+  @override
+  String get planGuidePerspectiveLabel => '任务指南视角';
+
+  @override
+  String get planGuideForHuman => '给自己看';
+
+  @override
+  String get planGuideForAi => '给 AI 用';
+
+  @override
+  String get planGuideHumanInfo => '用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。';
+
+  @override
+  String get planGuideAiInfo => 'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。';
+
+  @override
+  String get planGuideHumanTitle => '用户版执行指南';
+
+  @override
+  String get planGuideAiTitle => '给 AI 的执行版本';
+
+  @override
+  String get planGuideGenerating => '生成中';
+
+  @override
+  String get planGuideGenerateHuman => '生成用户版';
+
+  @override
+  String get planGuideGenerateAi => '生成 AI 版';
+
+  @override
+  String get planGuideHumanHint => '生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。';
+
+  @override
+  String get planGuideAiEmpty => '还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。';
+
+  @override
+  String get planGuideCopyAi => '复制 AI 版';
+
+  @override
+  String planReviewSummary(Object planType, Object minutes, Object hours) {
+    return '$planType · $minutes 分钟/天 · $hours 小时';
+  }
+
+  @override
+  String get planReviewEditInfo => '保存后会更新计划描述，并为新增草案创建新的计划任务。';
+
+  @override
+  String get planReviewCreateInfo => '创建后会生成一张更完整的计划卡，并同步创建计划任务。';
+
+  @override
+  String get planReviewFinalDescription => '最终写入的计划描述';
+
+  @override
+  String get taskExecutionChatAboutStuckPoint => '和 Sparkle 聊聊这个卡点';
+
+  @override
+  String get taskExecutionSentToAurora => '已发送给 Aurora';
+
+  @override
+  String get taskExecutionStuckPromptIntro => '我在做这个任务时卡住了，想和你一起拆一下具体卡点。';
+
+  @override
+  String taskExecutionStuckTaskLabel(Object title) {
+    return '任务：$title';
+  }
+
+  @override
+  String taskExecutionStuckEstimatedTime(Object minutes) {
+    return '预估时间：$minutes分钟';
+  }
+
+  @override
+  String taskExecutionStuckFocusCue(Object cue) {
+    return '今日焦点：$cue';
+  }
+
+  @override
+  String taskExecutionStuckSteps(Object steps) {
+    return '任务步骤：$steps';
+  }
+
+  @override
+  String taskExecutionStuckCriteria(Object criteria) {
+    return '完成标准：$criteria';
+  }
+
+  @override
+  String taskExecutionStuckSuggestion(Object suggestion) {
+    return '卡住时建议：$suggestion';
+  }
+
+  @override
+  String get taskExecutionStuckClarifyPrompt =>
+      '请先问我一个最关键的澄清问题，然后把下一步缩小到5分钟内能开始。';
+
+  @override
+  String get taskExecutionStuckTooltip => '卡住了？';
+
+  @override
+  String get taskExecutionStuckLabel => '卡住了?';
+
+  @override
+  String taskExecutionAuroraDiagnosticUnavailable(Object error) {
+    return 'Aurora 诊断暂时不可用：$error';
+  }
+
+  @override
+  String get taskExecutionResetTimer => '重置';
+
+  @override
+  String get taskExecutionAiHandoffFailed => 'AI 执行发起失败';
+
+  @override
+  String get taskExecutionAiCompleted => 'AI 已完成本次执行';
+
+  @override
+  String get taskExecutionAiPartial => 'AI 已完成部分内容，请继续查看';
+
+  @override
+  String get taskExecutionAiFailed => 'AI 执行失败';
+
+  @override
+  String get taskExecutionAiWaitingApproval => 'AI 正在等待你的确认';
+
+  @override
+  String taskExecutionAiHandedOff(Object status) {
+    return '任务已交给 AI，当前状态：$status';
+  }
+
+  @override
+  String get taskExecutionPermissionInsufficientQueued =>
+      '当前执行权限不足，任务已加入等待队列。补齐权限后可统一重试。';
+
+  @override
+  String get taskExecutionAiConfirmFailed => 'AI 结果确认失败';
+
+  @override
+  String get taskExecutionAiResultConfirmed => 'AI 结果已确认，任务状态已同步';
+
+  @override
+  String get taskExecutionRejectFailed => '取回任务失败';
+
+  @override
+  String get taskExecutionTaskReturned => '任务已交还给你继续处理';
+
+  @override
+  String get taskExecutionAiTakingOver => 'AI 正在接管这个任务';
+
+  @override
+  String get taskExecutionAiNotStarted => 'AI 执行尚未开始';
+
+  @override
+  String taskExecutionAiStatusLabel(Object status) {
+    return 'AI 状态：$status';
+  }
+
+  @override
+  String get taskExecutionSendingToOpenclaw => 'Sparkle 正在把任务发送给 OpenClaw。';
+
+  @override
+  String get taskExecutionDigitalTaskHint => '适合数字执行的任务可以在这里一键转交。';
+
+  @override
+  String taskExecutionValidationLabel(Object passed, Object total) {
+    return '校验 $passed/$total';
+  }
+
+  @override
+  String taskExecutionResultLabel(Object text) {
+    return '结果：$text';
+  }
+
+  @override
+  String taskExecutionApprovalRequestLabel(Object count) {
+    return ' · 审批请求 $count';
+  }
+
+  @override
+  String taskExecutionGoalWithTrust(Object goal, Object trust) {
+    return '目标：$goal · $trust';
+  }
+
+  @override
+  String taskExecutionResultTrust(Object trust) {
+    return '结果信任：$trust';
+  }
+
+  @override
+  String taskExecutionTemplateLabel(Object name) {
+    return '模板 $name';
+  }
+
+  @override
+  String taskExecutionStrategyLabel(Object variant) {
+    return '策略 $variant';
+  }
+
+  @override
+  String taskExecutionNodeLabel(Object label) {
+    return '节点 $label';
+  }
+
+  @override
+  String get taskExecutionAiTakingOverLoading => 'AI 接管中...';
+
+  @override
+  String get taskExecutionRehandoffToAi => '重新交给 AI';
+
+  @override
+  String get taskExecutionHandoffToAiAgain => '再次交给 AI';
+
+  @override
+  String get taskExecutionWaitingConfirm => '等待确认';
+
+  @override
+  String get taskExecutionAiRunning => 'AI 执行中';
+
+  @override
+  String get taskExecutionHandoffToAi => '交给 AI 执行';
+
+  @override
+  String get taskExecutionRecommendedTemplates => '推荐执行模板';
+
+  @override
+  String get taskExecutionOpenclawConnectedNoPermission =>
+      'OpenClaw 能连上，但当前没有执行权限';
+
+  @override
+  String get taskExecutionOpenclawOfflineQueued => 'OpenClaw 当前离线，可先加入等待队列';
+
+  @override
+  String get taskExecutionOpenclawNotConnected => 'OpenClaw 尚未连接';
+
+  @override
+  String get taskExecutionOpenclawPermissionHint =>
+      '当前令牌能访问网关，但执行会被权限拦住。你可以先把任务排队，等权限修好后统一重试。';
+
+  @override
+  String get taskExecutionOpenclawOfflineHint =>
+      '你可以先继续委派，等引擎恢复后再统一重试，不需要在这个任务页停住。';
+
+  @override
+  String get taskExecutionOpenclawNotConnectedHint =>
+      '先完成一次连接，之后任务页和聊天页都会把它当成同一个执行入口来使用。';
+
+  @override
+  String get taskExecutionViewAction => '查看';
+
+  @override
+  String get taskExecutionConnectAction => '连接';
+
+  @override
+  String get taskExecutionDismissHint => '关闭提示';
+
+  @override
+  String get taskExecutionMetricConnectedNoPermission => '已连到网关但无执行权限';
+
+  @override
+  String get taskExecutionMetricConfiguredOffline => '已配置但离线';
+
+  @override
+  String get taskExecutionMetricNotConfigured => '尚未配置';
+
+  @override
+  String taskExecutionMetricQueuedTasks(Object count) {
+    return '$count 个任务已排队';
+  }
+
+  @override
+  String get taskExecutionSuggestionFixPermission => '建议先修权限再重试';
+
+  @override
+  String get taskExecutionSuggestionQueueFirst => '建议先排队再统一重试';
+
+  @override
+  String get taskExecutionSuggestionConnectFirst => '建议先连接再委派';
+
+  @override
+  String get taskExecutionNudgeCurrentStatus => '当前状态';
+
+  @override
+  String get taskExecutionNudgeStatusPermissionIssue =>
+      '这台设备已经能访问 OpenClaw 网关，但当前认证没有真正发起执行的权限。';
+
+  @override
+  String get taskExecutionNudgeStatusOffline => '连接信息还在，但引擎暂时不在线。';
+
+  @override
+  String get taskExecutionNudgeStatusNotConnected => '这台设备还没有接入 OpenClaw。';
+
+  @override
+  String get taskExecutionNudgeWhyThisPrompt => '为什么现在看到这个提示';
+
+  @override
+  String get taskExecutionNudgeWhyThisPromptValue =>
+      '你正在一个支持 AI 委派的任务里，而且当前执行入口还没有准备好。';
+
+  @override
+  String get taskExecutionNudgeNextAction => '下一步动作';
+
+  @override
+  String get taskExecutionNudgeNextActionPermissionIssue =>
+      '打开 OpenClaw Hub 更换具备执行权限的令牌，或切到已配对的 WebSocket 连接；修好后再统一重试队列。';
+
+  @override
+  String get taskExecutionNudgeNextActionOffline =>
+      '继续把任务加入等待队列，或去 OpenClaw Hub 恢复连接后统一重试。';
+
+  @override
+  String get taskExecutionNudgeNextActionNotConnected =>
+      '打开 OpenClaw Hub 完成连接，之后再回到这里发起委派。';
+
+  @override
+  String get taskExecutionCompletedToday => '今天完成了！';
+
+  @override
+  String get taskExecutionCompletionCheckHint =>
+      '先对照完成标准看一眼。符合了就收下这次完成；还差一点也没关系，继续拆小就好。';
+
+  @override
+  String get taskExecutionCompletionCriteria => '完成标准';
+
+  @override
+  String get taskExecutionNoCriteriaHint => '这张卡没有写明确完成标准，就按你今天最小可交付的一步来判断。';
+
+  @override
+  String get taskExecutionCriteriaMatchQuestion => '对照标准，是否符合？';
+
+  @override
+  String get taskExecutionCriteriaNotMet => '还不符合';
+
+  @override
+  String get taskExecutionContinueOrRetryTomorrow => '那就继续，或者标记明天重新做';
+
+  @override
+  String get taskExecutionCriteriaMetComplete => '符合，完成';
+
+  @override
+  String get taskExecutionRejectReasonInaccurate => '结果不准确';
+
+  @override
+  String get taskExecutionRejectReasonIncomplete => '结果不完整';
+
+  @override
+  String get taskExecutionRejectReasonSafety => '安全顾虑';
+
+  @override
+  String get taskExecutionRejectReasonSelfDo => '我想自己做';
+
+  @override
+  String get taskExecutionRejectReasonTitle => '退回原因';
+
+  @override
+  String get taskExecutionRejectDescription =>
+      '告诉 Sparkle 为什么这次结果不适合直接采纳，后续会据此调整执行方式。';
+
+  @override
+  String get taskExecutionRejectAdditionalNote => '补充说明';
+
+  @override
+  String get taskExecutionRejectNoteHint => '例如：缺少来源、结论太武断、我想保留自己的表达方式';
+
+  @override
+  String get taskExecutionRejectConfirm => '确认退回';
+
+  @override
+  String get taskExecutionUserRetrievedTask => '用户取回任务';
+
+  @override
+  String planDetailTaskLoadFailed(Object error) {
+    return '加载任务失败: $error';
+  }
+
+  @override
+  String get planDetailNoExternalTasks => '没有可添加的外部任务';
+
+  @override
+  String get planDetailAddExistingTaskTitle => '将已有任务添加到本计划';
+
+  @override
+  String get planDetailTaskUnassigned => '未分配';
+
+  @override
+  String get planDetailTaskInAnotherPlan => '当前在其他计划中';
+
+  @override
+  String get planDetailGroupUnassigned => '未分配的任务';
+
+  @override
+  String get planDetailGroupOtherPlans => '来自其他计划的任务';
+
+  @override
+  String get planDetailTaskAdded => '任务已添加到计划';
+
+  @override
+  String planDetailAddTaskFailed(Object error) {
+    return '添加任务失败: $error';
+  }
+
+  @override
+  String planDetailDayLabel(Object day) {
+    return '第 $day 天';
+  }
+
+  @override
+  String planDetailWeightedProgress(Object percent) {
+    return '加权进度 $percent%';
+  }
+
+  @override
+  String get planDetailCreatePhaseTitle => '创建阶段';
+
+  @override
+  String get planDetailPhaseNameLabel => '阶段名称';
+
+  @override
+  String get planDetailPhaseNameHint => '基础 / 构建 / 复习';
+
+  @override
+  String get planDetailPhaseCreated => '阶段已创建';
+
+  @override
+  String planDetailCreatePhaseFailed(Object error) {
+    return '创建阶段失败: $error';
+  }
+
+  @override
+  String get planDetailPhaseActivated => '阶段已激活';
+
+  @override
+  String planDetailActivatePhaseFailed(Object error) {
+    return '激活失败: $error';
+  }
+
+  @override
+  String get planDetailPhaseNeedsFeedback => '此阶段需要反馈后才能推进';
+
+  @override
+  String get planDetailPhaseCompleted => '阶段已完成';
+
+  @override
+  String planDetailCompletePhaseFailed(Object error) {
+    return '完成阶段失败: $error';
+  }
+
+  @override
+  String planDetailPhaseFeedbackTitle(Object title) {
+    return '阶段反馈 · $title';
+  }
+
+  @override
+  String get planDetailPhaseAlignmentQuestion => '你觉得这个阶段的契合度如何？';
+
+  @override
+  String get planDetailPhaseReflectionLabel => '反思';
+
+  @override
+  String get planDetailPhaseReflectionHint => '哪些做得好，哪些失败了，发生了什么变化？';
+
+  @override
+  String get planDetailPhaseBlocked => '我在这个阶段遇到了阻碍';
+
+  @override
+  String get planDetailPhaseLifeChanged => '我的生活状况发生了变化';
+
+  @override
+  String get planDetailPhaseRequestReview => '请求 compass 审阅';
+
+  @override
+  String get planDetailPhaseActivate => '激活';
+
+  @override
+  String get planDetailPhaseComplete => '完成';
+
+  @override
+  String get planDetailPhaseFeedback => '反馈';
+
+  @override
+  String get planDetailFeedbackSavedWithReview => '反馈已保存，已建议 compass 审阅';
+
+  @override
+  String get planDetailFeedbackSaved => '反馈已保存';
+
+  @override
+  String planDetailSubmitFeedbackFailed(Object error) {
+    return '提交反馈失败: $error';
+  }
+
+  @override
+  String planDetailPhaseStats(
+      Object progress, Object completed, Object occurrences, Object tasks) {
+    return '$progress% · $completed/$occurrences 次发生 · $tasks 个任务';
+  }
+
+  @override
+  String get theaterTitle => '知识推演剧场';
+
+  @override
+  String get theaterContinuityBanner =>
+      '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。';
+
+  @override
+  String theaterShareTopic(Object topic) {
+    return '推演主题：$topic';
+  }
+
+  @override
+  String theaterShareMessage(Object route, Object suggestion, Object topic) {
+    return '我刚在 Sparkle 推演了一条学习路径：$topic\n$route\n$suggestion';
+  }
+
+  @override
+  String get theaterShareSuggestion => '先把关键节点和风险看清楚，再决定怎么学。';
+
+  @override
+  String get theaterRecordActualTitle => '记录 7 天后的真实表现';
+
+  @override
+  String get theaterRecordActualDesc => '回填真实完成率和掌握度后，剧场会给你一份预测校准反馈。';
+
+  @override
+  String get theaterActualCompletionRate => '真实完成率';
+
+  @override
+  String get theaterActualMastery => '真实掌握度';
+
+  @override
+  String get theaterSubmitCalibration => '提交校准';
+
+  @override
+  String get theaterNodeDescriptionFallback => '这个节点是当前推演中的关键知识点。';
+
+  @override
+  String get theaterNodeCurrentMastery => '当前掌握度';
+
+  @override
+  String get theaterNodePredictedMastery => '预测掌握度';
+
+  @override
+  String get theaterNodeDelta => '变化';
+
+  @override
+  String get theaterNodeRisk => '风险';
+
+  @override
+  String get theaterNodeRoleInPath => '它在当前路径里的作用';
+
+  @override
+  String theaterNodeStepLabel(Object dayLabel, Object index) {
+    return '$dayLabel · 第 $index 步';
+  }
+
+  @override
+  String theaterNodeNextAction(Object minutes) {
+    return '下一步动作：先用约 $minutes 分钟处理这个节点，再进入后续步骤。';
+  }
+
+  @override
+  String get theaterWhatIfStart => '开始假设推演';
+
+  @override
+  String get theaterViewGalaxyRef => '查看星图参考';
+
+  @override
+  String get theaterNodeNotInWhatIfPath => '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。';
+
+  @override
+  String get theaterNodeNoGalaxyRef => '这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。';
+
+  @override
+  String get theaterPromoteNodeFailed => '加入知识星图失败，请稍后再试。';
+
+  @override
+  String theaterPromoteNodeCreated(Object nodeName) {
+    return '已将「$nodeName」加入知识星图，可以继续完善节点内容。';
+  }
+
+  @override
+  String theaterPromoteNodeFound(Object nodeName) {
+    return '已定位到知识星图中的「$nodeName」，你可以继续完善节点内容。';
+  }
+
+  @override
+  String get theaterGoImprove => '去完善';
+
+  @override
+  String theaterEdgeStrength(Object strength) {
+    return '关系强度 $strength%';
+  }
+
+  @override
+  String get theaterRiskHigh => '高风险';
+
+  @override
+  String get theaterRiskMedium => '中风险';
+
+  @override
+  String get theaterRiskLow => '低风险';
+
+  @override
+  String get theaterRelationPrerequisite => '前置依赖';
+
+  @override
+  String get theaterRelationExplains => '解释关系';
+
+  @override
+  String get theaterRelationSupports => '支持关系';
+
+  @override
+  String get theaterRelationContradicts => '矛盾关系';
+
+  @override
+  String theaterSelectedNode(Object nodeName) {
+    return '已选节点 · $nodeName';
+  }
+
+  @override
+  String get theaterNodeTapHint => '点击节点可查看详细推演说明。';
+
+  @override
+  String get theaterNodeStatCurrent => '当前';
+
+  @override
+  String get theaterNodeStatPredicted => '预测';
+
+  @override
+  String get theaterNodeStatLift => '提升';
+
+  @override
+  String get theaterNodeStatSource => '来源';
+
+  @override
+  String get theaterComposerEyebrow => '推演决策面板';
+
+  @override
+  String get theaterComposerTitle => '先定目标，再看清多条路径';
+
+  @override
+  String get theaterComposerSubtitle =>
+      '先确定想推进的目标，再比较切入方式、主要风险和每日投入，最后决定要不要采纳这条路径。';
+
+  @override
+  String get theaterComposerCurrentTarget => '当前目标';
+
+  @override
+  String get theaterComposerWaitingInput => '等待输入';
+
+  @override
+  String get theaterComposerRecommendedEntry => '推荐切入';
+
+  @override
+  String get theaterComposerInputPrompt => '输入后即可开始';
+
+  @override
+  String get theaterComposerOutput => '输出结果';
+
+  @override
+  String get theaterComposerOutputDesc => '路径 + 风险 + 检查点';
+
+  @override
+  String get theaterComposerLoading => '推演中...';
+
+  @override
+  String get theaterComposerStart => '开始推演';
+
+  @override
+  String theaterComposerTrySuggestion(Object topic) {
+    return '试试 $topic';
+  }
+
+  @override
+  String get theaterComposerHint => '例如：两周内掌握线性代数的特征值部分';
+
+  @override
+  String get theaterComposerGenerating => '生成';
+
+  @override
+  String get theaterTopBarAdjustTarget => '调整目标';
+
+  @override
+  String get theaterTopBarShare => '分享推演';
+
+  @override
+  String get theaterTopBarNoGalaxyRef => '当前没有可打开的知识星图参考节点';
+
+  @override
+  String get theaterTopBarViewGalaxy => '查看知识星图';
+
+  @override
+  String theaterTopBarTarget(Object name) {
+    return '目标 · $name';
+  }
+
+  @override
+  String theaterTopBarPath(Object title) {
+    return '路径 · $title';
+  }
+
+  @override
+  String theaterTopBarMode(Object mode) {
+    return '模式 · $mode';
+  }
+
+  @override
+  String theaterTopBarRefMap(Object count) {
+    return '参考映射 $count';
+  }
+
+  @override
+  String get theaterTopBarFreeForm => '纯自由推演';
+
+  @override
+  String theaterTopBarMastery(Object value) {
+    return '掌握度 $value%';
+  }
+
+  @override
+  String get theaterSettingsTitle => '调整推演目标';
+
+  @override
+  String get theaterSettingsSubtitle =>
+      '这里可以重新设定目标和建议起点，收起后会把舞台空间完整还给关系图谱与讨论流。';
+
+  @override
+  String get theaterSettingsContinuity => '这次推演仍然承接你刚才的对话上下文。';
+
+  @override
+  String theaterSettingsCurrentTarget(Object name) {
+    return '当前目标：$name';
+  }
+
+  @override
+  String get theaterSettingsLabel => '重新设定推演目标';
+
+  @override
+  String get theaterSettingsHint => '例如：两周内掌握线性代数的特征值部分';
+
+  @override
+  String get theaterSettingsGenerate => '生成新推演';
+
+  @override
+  String get theaterSettingsSuggestions => '建议起点';
+
+  @override
+  String get theaterTabGraph => '图谱';
+
+  @override
+  String get theaterTabPaths => '路径';
+
+  @override
+  String get theaterTabDiscussion => '讨论';
+
+  @override
+  String get theaterTabCalibration => '校准';
+
+  @override
+  String get theaterIntroChangeTarget => '换个目标';
+
+  @override
+  String get theaterIntroTitle => '选一个目标，AI 帮你看清多条路径';
+
+  @override
+  String get theaterIntroSteps =>
+      '1. 选择一个目标\n2. AI 推演多条学习路径\n3. 采纳最适合你的方案并同步到 Sprint';
+
+  @override
+  String get theaterIntroStartFirst => '开始第一次推演';
+
+  @override
+  String get theaterIntroLastSnapshot => '最近一次推演';
+
+  @override
+  String get theaterIntroSuggestions => '从这些主题开始更顺手';
+
+  @override
+  String get theaterEmptyTitle => '这次还没生成可采纳路径';
+
+  @override
+  String get theaterEmptyMessage =>
+      '系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。';
+
+  @override
+  String theaterGraphRecommended(Object title) {
+    return '推荐路径 · $title';
+  }
+
+  @override
+  String theaterGraphEstimatedMastery(Object value) {
+    return '预计掌握 $value%';
+  }
+
+  @override
+  String theaterGraphRisk(Object risk) {
+    return '风险 · $risk';
+  }
+
+  @override
+  String theaterGraphMode(Object mode) {
+    return '模式 · $mode';
+  }
+
+  @override
+  String theaterGraphRefCount(Object count) {
+    return '映射参考 $count';
+  }
+
+  @override
+  String get theaterGraphPendingEntry => '候选待入图';
+
+  @override
+  String theaterGraphNodeCount(Object count) {
+    return '$count 个节点';
+  }
+
+  @override
+  String get theaterGraphMainStage => '关系图谱主舞台';
+
+  @override
+  String get theaterGraphWithGalaxy => '含星图参考';
+
+  @override
+  String get theaterGraphStandalone => '独立自由图谱';
+
+  @override
+  String get theaterGraphInstructions => '单指拖动画布，双指缩放，双击可回正，点按节点可查看详情并加入知识星图。';
+
+  @override
+  String get theaterCalibrationTitle => '校准与落地';
+
+  @override
+  String get theaterCalibrationSubtitle => '把推演变成计划、快照和真实反馈，形成闭环。';
+
+  @override
+  String get theaterRetry => '重试';
+
+  @override
+  String get theaterGotIt => '知道了';
+
+  @override
+  String get theaterSemanticMatchTitle => '自由节点与星图参考';
+
+  @override
+  String theaterSemanticMatchItem(Object freeform, Object galaxy) {
+    return '$freeform 对应参考 $galaxy';
+  }
+
+  @override
+  String get theaterLoadingTitle => 'AI 正在搭建这场推演...';
+
+  @override
+  String get theaterLoadingSubtitle => '图谱、路径和风险判断会按阶段依次完成，你可以先看它推进到哪一步了。';
+
+  @override
+  String get theaterStageBuildGraph => '构建知识图谱';
+
+  @override
+  String get theaterStageAnalyzePaths => '分析学习路径';
+
+  @override
+  String get theaterStageGenerateRisk => '生成风险预测';
+
+  @override
+  String get theaterStagePrepare => '准备推演完成';
+
+  @override
+  String get theaterTimelineTitle => '推演时间轴';
+
+  @override
+  String get theaterTimelineSubtitle => '现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。';
+
+  @override
+  String get theaterTimelinePause => '暂停播放';
+
+  @override
+  String get theaterTimelineAutoPlay => '自动播放';
+
+  @override
+  String get theaterTimelineReset => '回到起点';
+
+  @override
+  String get theaterTimelineCurrentPhase => '当前阶段';
+
+  @override
+  String get theaterTimelineWaitingPath => '等待路径生成';
+
+  @override
+  String get theaterTimelineBaseline => '基线预测';
+
+  @override
+  String get theaterTimelineDiscussionHere => '讲到这里';
+
+  @override
+  String get theaterTimelineMastery => '当前预测掌握度';
+
+  @override
+  String get theaterTimelineCompletion => '当前预测完成率';
+
+  @override
+  String theaterTimelinePhaseWithSteps(
+      Object compare, Object label, Object step) {
+    return '当前阶段：$label · $step · $compare';
+  }
+
+  @override
+  String get theaterTimelineWaitingDeduction => '等待推演';
+
+  @override
+  String get theaterRouteList => '列表';
+
+  @override
+  String get theaterRouteCompare => '对比';
+
+  @override
+  String get theaterRouteComparisonTitle => '路径对比';
+
+  @override
+  String theaterRouteAdoptedPlan(Object planName) {
+    return '已创建计划：$planName';
+  }
+
+  @override
+  String theaterRouteFirstWeekTasks(Object tasks) {
+    return '首周任务：$tasks';
+  }
+
+  @override
+  String get theaterRouteRiskControllable => '整体可控';
+
+  @override
+  String get theaterRouteRiskPacing => '需要留意节奏';
+
+  @override
+  String theaterRouteEstimatedRange(Object high, Object low) {
+    return '预估 $low-$high%';
+  }
+
+  @override
+  String get theaterRouteDataQualityLow => '参考估算';
+
+  @override
+  String get theaterRouteDataQualityMedium => '基于有限数据';
+
+  @override
+  String theaterRouteDataQualityHigh(Object score) {
+    return '数据充分度 $score%';
+  }
+
+  @override
+  String get theaterRouteDataQualityFallback => '数据参考';
+
+  @override
+  String get theaterRouteDataNoteLow => '当前缺少该主题的真实学习记录，建议把区间估算当作参考，而不是精确预测。';
+
+  @override
+  String get theaterRouteDataNoteMedium => '当前只覆盖到部分图谱与校准数据，百分比判断仍需要继续观察。';
+
+  @override
+  String get theaterRouteModeAnchored => '图谱锚定';
+
+  @override
+  String get theaterRouteModeHybrid => '智能混合';
+
+  @override
+  String get theaterRouteModeFree => '自由推演';
+
+  @override
+  String get theaterRouteModeDeducing => '推演中';
+
+  @override
+  String get theaterNodeGalaxySyncing => '同步中...';
+
+  @override
+  String get theaterNodeOpenGalaxy => '打开知识星图';
+
+  @override
+  String get theaterNodeAddToGalaxy => '加入知识星图';
+
+  @override
+  String get theaterNodeSourceExplicit => '星图节点';
+
+  @override
+  String get theaterNodeSourceHybrid => '参考映射';
+
+  @override
+  String get theaterNodeSourcePending => '候选节点';
+
+  @override
+  String get theaterNodeSourceFree => '自由节点';
+
+  @override
+  String get theaterNodeBannerOpenGalaxy => '这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。';
+
+  @override
+  String get theaterNodeBannerHasMapping =>
+      '这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。';
+
+  @override
+  String get theaterNodeBannerFreeform => '这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。';
+
+  @override
+  String get theaterRouteRecommended => '推荐';
+
+  @override
+  String get theaterRouteAdopting => '采纳中';
+
+  @override
+  String get theaterRouteAdopt => '采纳此路径';
+
+  @override
+  String get theaterRouteSimulate => '带去模拟';
+
+  @override
+  String theaterRouteCompletion(Object value) {
+    return '完成率 $value';
+  }
+
+  @override
+  String theaterRouteMasteryLabel(Object value) {
+    return '掌握度 $value';
+  }
+
+  @override
+  String theaterRouteDailyMinutes(Object minutes) {
+    return '日均 $minutes 分钟';
+  }
+
+  @override
+  String theaterRouteRiskCount(Object count) {
+    return '$count 个风险点';
+  }
+
+  @override
+  String theaterRouteScore(Object score) {
+    return '综合 $score 分';
+  }
+
+  @override
+  String theaterRouteRangePrediction(Object completionHigh,
+      Object completionLow, Object masteryHigh, Object masteryLow) {
+    return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
+  }
+
+  @override
+  String get theaterRouteRecommendedBaseline => '推荐基线';
+
+  @override
+  String get theaterRouteCompletionRate => '完成率';
+
+  @override
+  String get theaterRouteMasteryRate => '掌握度';
+
+  @override
+  String get theaterRouteDailyTime => '日均时间';
+
+  @override
+  String get theaterRouteRiskLevel => '风险数';
+
+  @override
+  String get theaterRouteOverallScore => '综合分';
+
+  @override
+  String get theaterRouteDataNote => '数据说明';
+
+  @override
+  String theaterRouteCompletionRange(Object high, Object low) {
+    return '完成率区间 $low%-$high%';
+  }
+
+  @override
+  String theaterRouteMasteryRange(Object high, Object low) {
+    return '掌握度区间 $low%-$high%';
+  }
+
+  @override
+  String get theaterRouteSimulateFromCurrent => '带去模拟';
+
+  @override
+  String get theaterRouteSimulateAfterSwitch => '切换后模拟';
+
+  @override
+  String get theaterRouteSwitchToThis => '切换到此路径';
+
+  @override
+  String theaterRouteStepMinutes(Object dayLabel, Object minutes) {
+    return '$dayLabel · $minutes 分钟';
+  }
+
+  @override
+  String get theaterDismissTooltip => '关闭提示';
+
+  @override
+  String get theaterCompactComparisonTitle => '路径对比';
+
+  @override
+  String theaterCompactComparisonSummary(Object summary) {
+    return '对照路径：$summary';
+  }
+
+  @override
+  String theaterCompactComparisonCurrent(Object title) {
+    return '当前 · $title';
+  }
+
+  @override
+  String theaterCompactComparisonMastery(Object value) {
+    return '掌握 $value%';
+  }
+
+  @override
+  String theaterCompactComparisonTime(Object minutes) {
+    return '时间 $minutes 分/天';
+  }
+
+  @override
+  String theaterCompactComparisonAlt(Object title) {
+    return '对照 · $title';
+  }
+
+  @override
+  String get theaterCompactOpenDetail => '进入路径页细比';
+
+  @override
+  String theaterCompactFallbackSingle(Object name) {
+    return '先聚焦 $name。';
+  }
+
+  @override
+  String theaterCompactFallbackMulti(Object first, Object last) {
+    return '先补 $first，再推进 $last。';
+  }
+
+  @override
+  String get theaterComparisonTitle => '路径对比';
+
+  @override
+  String get theaterComparisonSubtitle =>
+      '把当前方案和另一条代表性路径放在一起比较，更容易判断该走稳一点还是快一点。';
+
+  @override
+  String get theaterComparisonMetric => '指标';
+
+  @override
+  String get theaterComparisonEstimatedMastery => '预计掌握度';
+
+  @override
+  String get theaterComparisonTimeInvestment => '时间投入';
+
+  @override
+  String get theaterComparisonRiskLevel => '风险等级';
+
+  @override
+  String get theaterComparisonRiskLow => '低';
+
+  @override
+  String get theaterComparisonRiskMediumHigh => '中高';
+
+  @override
+  String get theaterComparisonRiskMedium => '中';
+
+  @override
+  String get theaterBranchDeltaTitle => '假设分支对比';
+
+  @override
+  String get theaterBranchDeltaPath => '分支路径';
+
+  @override
+  String get theaterBranchDeltaWhatIf => '假设推演';
+
+  @override
+  String get theaterWhatIfTitle => 'What-if 沙盘';
+
+  @override
+  String get theaterWhatIfSubtitle => '点选想跳过的节点，先看预计影响，再生成完整推演结果。';
+
+  @override
+  String get theaterWhatIfPreviewTitle => '预计影响预览';
+
+  @override
+  String get theaterWhatIfPreviewMastery => '掌握度';
+
+  @override
+  String get theaterWhatIfPreviewCompletion => '完成率';
+
+  @override
+  String get theaterWhatIfNoNodesSelected => '当前没有标记跳过节点，保持原始路径。';
+
+  @override
+  String theaterWhatIfNodesSkipped(Object nodes) {
+    return '你已标记跳过 $nodes。';
+  }
+
+  @override
+  String get theaterWhatIfSelectFirst => '先选择一个节点';
+
+  @override
+  String get theaterWhatIfGenerateFull => '生成完整假设推演结果';
+
+  @override
+  String theaterWhatIfOriginal(Object original) {
+    return '原始 $original';
+  }
+
+  @override
+  String theaterWhatIfAdjusted(Object adjusted) {
+    return '调整后 $adjusted';
+  }
+
+  @override
+  String theaterWhatIfRemainingPath(Object path) {
+    return '分支剩余路径：$path';
+  }
+
+  @override
+  String get theaterDiscussionTitle => '专家圆桌';
+
+  @override
+  String get theaterSnapshotSaving => '保存中';
+
+  @override
+  String get theaterSnapshotSave => '保存当前快照';
+
+  @override
+  String get theaterSnapshotTitle => '保存当前快照';
+
+  @override
+  String get theaterSnapshotNoSnapshot => '把当前推演保存下来，稍后可以继续回看。';
+
+  @override
+  String theaterSnapshotSaved(Object title) {
+    return '已保存：$title';
+  }
+
+  @override
+  String get theaterAccuracyTitle => '预测校准';
+
+  @override
+  String get theaterAccuracyWithinRange => '这次真实结果落在预测区间内，当前模型区间覆盖命中。';
+
+  @override
+  String get theaterAccuracyOutsideRange => '这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。';
+
+  @override
+  String theaterAccuracyDueDate(Object date) {
+    return '建议回填日期：$date';
+  }
+
+  @override
+  String get theaterAccuracyRecordActual => '记录实际表现';
+
+  @override
+  String theaterAccuracySampleCount(Object count) {
+    return '样本 $count';
+  }
+
+  @override
+  String theaterAccuracyAvgScore(Object score) {
+    return '平均准确度 $score%';
+  }
+
+  @override
+  String theaterAccuracyConfidenceScore(Object score) {
+    return '数据充分度 $score%';
+  }
+
+  @override
+  String theaterAccuracyCoverageRate(Object rate) {
+    return '区间命中 $rate%';
+  }
+
+  @override
+  String get theaterAccuracyScoreNote => '数据充分度反映当前预测所依据的数据量和校准次数，不是预测准确度。';
+
+  @override
+  String get theaterAccuracyNoSamples => '还没有历史回填样本，当前预测会优先展示区间而不是绝对值。';
+
+  @override
+  String theaterAccuracyHistoryBias(Object completionBias, Object masteryBias) {
+    return '历史偏差：完成率 $completionBias%， 掌握度 $masteryBias%。';
+  }
+
+  @override
+  String get theaterAdoptionSynced => '已同步到你的 Sprint';
+
+  @override
+  String get theaterAdoptionFirstWeekTasks => '首周任务';
+
+  @override
+  String theaterAdoptionCheckpoints(Object dates) {
+    return '检查点：$dates';
+  }
+
+  @override
+  String get theaterAdoptionViewPlan => '查看计划';
+
+  @override
+  String get theaterAdoptionContinueExploring => '继续探索';
+
+  @override
+  String get planCreateEditingGrowth => '编辑成长计划';
+
+  @override
+  String get planCreateEditingSprint => '编辑冲刺计划';
+
+  @override
+  String get planCreateSavePlan => '保存计划';
+
+  @override
+  String get planCreateStepPositioning => '计划定位';
+
+  @override
+  String get planCreateStepTimeStructure => '时间结构';
+
+  @override
+  String get planCreateStepTaskBlueprint => '任务编排';
+
+  @override
+  String get planCreateStepBoundariesGuide => '计划边界与指南';
+
+  @override
+  String get planCreateStepReviewConfirm => '确认预览';
+
+  @override
+  String get planCreateBasicsSubtitle => '先定义这是一张真正的计划卡，而不是普通任务。';
+
+  @override
+  String get planCreateNameHint => '例如：6 周英语口语提升 / 期中冲刺收束';
+
+  @override
+  String get planCreateSubjectLabel => '主题方向';
+
+  @override
+  String get planCreateSubjectHint => '英语、Flutter、考研数学、论文阅读...';
+
+  @override
+  String get planCreateGrowthGoalLabel => '长期目标';
+
+  @override
+  String get planCreateSprintGoalLabel => '冲刺目标';
+
+  @override
+  String get planCreateGrowthGoalHint => '写清楚这个成长计划最终想形成什么能力、习惯或成果。';
+
+  @override
+  String get planCreateSprintGoalHint => '写清楚这次冲刺的结果、验收标准和不能偏离的主线。';
+
+  @override
+  String get planCreateGoalRequired => '请写出这张计划卡的目标';
+
+  @override
+  String get planCreateScheduleSubtitle => '把持续时间、每日投入和提醒节奏一次性定清楚。';
+
+  @override
+  String get planCreateDailyMinutesLabel => '每日可投入时长';
+
+  @override
+  String planCreateTotalEstimatedHours(Object hours) {
+    return '总预估工时 $hours 小时';
+  }
+
+  @override
+  String get planCreateDailyReminderTime => '每日提醒时间';
+
+  @override
+  String get planCreatePlanStageLabel => '当前计划阶段';
+
+  @override
+  String get planCreateStageSprint => '冲刺推进';
+
+  @override
+  String get planCreateStageDaily => '日常执行';
+
+  @override
+  String get planCreateStageReview => '复盘调优';
+
+  @override
+  String get planCreateStagePaused => '暂时暂停';
+
+  @override
+  String get planCreateScheduleChipWorkday => '工作日推进，周末复盘';
+
+  @override
+  String get planCreateScheduleChipMorning => '早晨启动，晚上收束';
+
+  @override
+  String get planCreateScheduleChipAfternoon => '午后主攻，夜间轻复盘';
+
+  @override
+  String get planCreateScheduleLabel => '节奏说明';
+
+  @override
+  String get planCreateScheduleHint => '例如：周一到周五推进，周六复盘，周日补缺';
+
+  @override
+  String get planCreateTasksSubtitle =>
+      '这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。';
+
+  @override
+  String get planCreateTaskBlueprintLabel => '任务编排说明';
+
+  @override
+  String get planCreateTaskBlueprintHint => '例如：先搭框架，再每天推进主线，最后统一复盘补漏。';
+
+  @override
+  String get planCreateReferenceExistingTasks => '参考已有任务';
+
+  @override
+  String get planCreateCopyToPlan => '复制进计划';
+
+  @override
+  String get planCreateNewTaskLabel => '新增计划任务';
+
+  @override
+  String get planCreateNewTaskHint => '例如：完成一轮章节梳理';
+
+  @override
+  String get planCreateDurationLabel => '时长';
+
+  @override
+  String get planCreateDifficultyLabel => '难度';
+
+  @override
+  String get planCreateAddTaskToPlan => '加入计划任务';
+
+  @override
+  String get planCreateNoTasks => '当前还没有计划任务';
+
+  @override
+  String get planCreateScopeLabel => '计划边界与注意事项';
+
+  @override
+  String get planCreateScopeHint => '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。';
+
+  @override
+  String get planCreateGuidePerspective => '任务指南视角';
+
+  @override
+  String get planCreateGuideForSelf => '给自己看';
+
+  @override
+  String get planCreateGuideForAi => '给 AI 用';
+
+  @override
+  String get planCreateGuideHumanDescription =>
+      '用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。';
+
+  @override
+  String get planCreateGuideAiDescription =>
+      'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。';
+
+  @override
+  String get planCreateGuideHumanTitle => '用户版执行指南';
+
+  @override
+  String get planCreateGuideAiTitle => '给 AI 的执行版本';
+
+  @override
+  String get planCreateGenerateHumanGuide => '生成用户版';
+
+  @override
+  String get planCreateGenerateAiGuide => '生成 AI 版';
+
+  @override
+  String get planCreateGuideHint => '生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。';
+
+  @override
+  String get planCreateAiGuideEmpty => '还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。';
+
+  @override
+  String get planCreateCopyAiGuide => '复制 AI 版';
+
+  @override
+  String get planCreateAiGuideCopied => 'AI 版本已复制';
+
+  @override
+  String planCreateReviewSummary(
+      Object dailyMinutes, Object hours, Object type) {
+    return '$type · $dailyMinutes 分钟/天 · $hours 小时';
+  }
+
+  @override
+  String get planCreateReviewEditDescription => '保存后会更新计划描述，并为新增草案创建新的计划任务。';
+
+  @override
+  String get planCreateReviewCreateDescription => '创建后会生成一张更完整的计划卡，并同步创建计划任务。';
+
+  @override
+  String get planCreateFinalDescription => '最终写入的计划描述';
+
+  @override
+  String planCreateMinutes(Object value) {
+    return '$value 分钟';
+  }
+
+  @override
+  String planCreateTaskSubtitle(Object difficulty, Object minutes) {
+    return '$minutes 分钟 · 难度 $difficulty';
+  }
+
+  @override
+  String get predictedIntentTitle => '系统预测';
+
+  @override
+  String get predictedIntentCollapsedTitle => '系统预测已收起';
+
+  @override
+  String get predictedIntentCollapsedExpand => '需要时再展开查看建议';
+
+  @override
+  String get predictedIntentCollapsedUpdated => '上次更新于';
+
+  @override
+  String get predictedIntentSummary => '基于画像、最近 24 小时行为与任务节奏';
+
+  @override
+  String get predictedIntentSuggestedCont => '建议接续';
+
+  @override
+  String get predictedIntentWaiting => '预测结果已生成，等待可继续指令';
+
+  @override
+  String predictedIntentConfidence(Object percent) {
+    return '可信度 $percent%';
+  }
+
+  @override
+  String get predictedIntentWhy => '为什么这样预测';
+
+  @override
+  String get predictedIntentContinuing => '正在衔接…';
+
+  @override
+  String get predictedIntentContinue => '按这个继续';
+
+  @override
+  String get predictedIntentError => '继续对话时出现问题，请稍后重试';
+
+  @override
+  String get predictedActionResumePriority => '继续重点任务';
+
+  @override
+  String get predictedActionStudyPlan => '生成学习计划';
+
+  @override
+  String get predictedActionDiagnose => '问题诊断';
+
+  @override
+  String get predictedActionCreateTask => '落成任务';
+
+  @override
+  String get predictedActionInstantResult => '即时结果';
+
+  @override
+  String get predictedActionReviewProgress => '复盘进展';
+
+  @override
+  String get predictedActionPlanNext => '规划下一步';
+
+  @override
+  String get predictedActionReflection => '快速反思';
+
+  @override
+  String get predictedActionDefault => '预测意图';
+
+  @override
+  String get predictedWindowNow => '就是现在';
+
+  @override
+  String get predictedWindow30m => '未来 30 分钟';
+
+  @override
+  String get predictedWindow1h => '未来 1 小时';
+
+  @override
+  String get predictedWindow2h => '未来 2 小时';
+
+  @override
+  String get predictedWindow6h => '未来 6 小时';
+
+  @override
+  String get predictedWindowToday => '今天内';
+
+  @override
+  String get predictedSourceLongRange => '长期预测';
+
+  @override
+  String get predictedSourceRules => '规则兜底';
+
+  @override
+  String get predictedFreshnessJustNow => '刚刚更新';
+
+  @override
+  String predictedFreshnessMinutes(Object count) {
+    return '$count 分钟前';
+  }
+
+  @override
+  String predictedFreshnessHours(Object count) {
+    return '$count 小时前';
+  }
+
+  @override
+  String predictedFreshnessDays(Object count) {
+    return '$count 天前';
+  }
+
+  @override
+  String get predictedCategoryPrefTitle => '同类请求里的近期偏好';
+
+  @override
+  String predictedCategoryPrefHint(Object category, Object tool) {
+    return '在$category里，近期结果更常把「$tool」推到前面。';
+  }
+
+  @override
+  String get predictedCategoryPrefCaveat =>
+      '仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。';
+
+  @override
+  String get predictedCategoryPlan => '规划类请求';
+
+  @override
+  String get predictedCategoryTask => '任务类请求';
+
+  @override
+  String get predictedCategoryFocus => '专注支持类请求';
+
+  @override
+  String get predictedCategoryGrowth => '成长推进类请求';
+
+  @override
+  String get predictedCategoryQuery => '查询类请求';
+
+  @override
+  String get predictedCategoryKnowledge => '知识类请求';
+
+  @override
+  String get predictedCategoryReview => '复盘类请求';
+
+  @override
+  String get predictedCategoryResearch => '研究类请求';
+
+  @override
+  String get predictedCategoryMemory => '记忆整理类请求';
+
+  @override
+  String get predictedCategoryCognitive => '认知整理类请求';
+
+  @override
+  String get predictedCategoryDefault => '同类请求';
+
+  @override
+  String get predictedToolCreatePlan => '生成计划';
+
+  @override
+  String get predictedToolGenerateTasks => '展开计划步骤';
+
+  @override
+  String get predictedToolCreateTask => '落成任务';
+
+  @override
+  String get predictedToolListTasks => '查看任务列表';
+
+  @override
+  String get predictedToolUpdateTask => '更新任务';
+
+  @override
+  String get predictedToolQueryKnowledge => '查询知识';
+
+  @override
+  String get predictedToolExplainConcept => '解释概念';
+
+  @override
+  String get predictedToolReviewProgress => '复盘进度';
+
+  @override
+  String get predictedToolGenerateSummary => '生成总结';
+
+  @override
+  String get predictedToolSuggestSchedule => '建议排期';
+
+  @override
+  String get examSprintHighFreqCoverage => '高频考点覆盖率';
+
+  @override
+  String get examSprintMistakeRepair => '错题修复率';
+
+  @override
+  String get examSprintStudyStreak => '连续学习天数';
+
+  @override
+  String examSprintStreakDays(Object days) {
+    return '$days 天';
+  }
+
+  @override
+  String get examSprintKeepRhythm => '保持节奏';
+
+  @override
+  String examSprintHighYieldWeak(Object topics) {
+    return '高收益低掌握：$topics';
+  }
+
+  @override
+  String get examSprintNoTasksToday => '今天还没有排入冲刺任务。';
+
+  @override
+  String get examSprintExamDayReady => '今天考试 · 你已经准备好了 🎓';
+
+  @override
+  String get examSprintExamTips => '考场建议';
+
+  @override
+  String get examSprintRecordResult => '记录考试结果';
+
+  @override
+  String get examSprintDashboardTitle => '考试冲刺仪表盘';
+
+  @override
+  String get examSprintModeHighScore => '冲高模式';
+
+  @override
+  String get examSprintModeHold => '稳分模式';
+
+  @override
+  String get examSprintModePass => '保过模式';
+
+  @override
+  String get examSprintModeDefault => '冲刺模式';
+
+  @override
+  String get examSprintExamDay => '今天考试';
+
+  @override
+  String examSprintCountdown(Object days) {
+    return '距考试还有 $days 天';
+  }
+
+  @override
+  String examSprintTodayTasks(Object completed, Object total) {
+    return '今天已完成 $completed/$total 项任务';
+  }
+
+  @override
+  String examSprintDaysLeft(Object days) {
+    return '离考试还有 $days';
+  }
+
+  @override
+  String examSprintTodayDone(Object completed, Object total) {
+    return '今日 $completed/$total 完成';
+  }
+
+  @override
+  String get examSprintTodaySprintTasks => '今日冲刺任务';
+
+  @override
+  String get examSprintHideLater => '收起后续天';
+
+  @override
+  String examSprintShowLater(Object count) {
+    return '展开后续 $count 天';
+  }
+
+  @override
+  String examSprintDayIndex(Object index) {
+    return '第 $index 天';
+  }
+
+  @override
+  String examSprintDateFormat(Object month, Object day) {
+    return '$month月$day日';
+  }
+
+  @override
+  String get examSprintNoSprintTasks => '今天还没有排入任务';
+
+  @override
+  String examSprintMinLabel(Object minutes, Object status) {
+    return '$minutes 分钟 · $status';
+  }
+
+  @override
+  String get examSprintStatusDone => '已完成';
+
+  @override
+  String get examSprintStatusInProgress => '进行中';
+
+  @override
+  String get examSprintStatusPending => '待开始';
+
+  @override
+  String get insightHubTitle => '学习洞察';
+
+  @override
+  String insightHubRecommendedSeeds(Object count) {
+    return '现在有 $count 个推荐场景可以直接开始模拟。';
+  }
+
+  @override
+  String get insightHubFallbackSummary => '把推演、仿真和报告收进一条更轻量的学习动线。';
+
+  @override
+  String get insightHubSimulation => '学习仿真';
+
+  @override
+  String get insightHubTheater => '推演剧场';
+
+  @override
+  String get insightHubReport => '学习报告';
+
+  @override
+  String get insightHubEnterOverview => '进入洞察总览';
+
+  @override
+  String get insightHubCompactSimulation => '仿真';
+
+  @override
+  String get insightHubCompactTheater => '推演';
+
+  @override
+  String get insightHubCompactReport => '报告';
+
+  @override
+  String get insightHubRefreshWarning => '部分洞察数据尚未刷新，点击后会继续显示已有内容。';
+
+  @override
+  String insightHubSeedsToExplore(Object count) {
+    return '$count 个推荐场景待探索';
+  }
+
+  @override
+  String get insightHubCompactFallback => '仿真、推演和报告现在收在同一张卡里';
+
+  @override
+  String get insightHubNoRecentTheater => '最近暂无推演';
+
+  @override
+  String get insightHubContinueLastTheater => '继续上次推演';
+
+  @override
+  String insightHubContinueTopic(Object topic) {
+    return '继续 $topic';
+  }
+
+  @override
+  String get insightHubContinueLastSimulation => '继续上次仿真';
+
+  @override
+  String insightHubRecommendedSeedsCount(Object count) {
+    return '$count 个推荐场景';
+  }
+
+  @override
+  String insightHubContinueSession(Object topic) {
+    return '继续 $topic';
+  }
+
+  @override
+  String get insightHubStartSimulation => '开始一轮新模拟';
+
+  @override
+  String get insightHubNoRecentReport => '最近暂无报告';
+
+  @override
+  String insightHubMasteryPercent(Object percent) {
+    return '掌握度 $percent%';
+  }
+
+  @override
+  String get insightHubRefreshFailed => '洞察内容暂时没有刷新成功，当前先显示已有内容。';
+
+  @override
+  String get insightHubRetry => '重试';
+
+  @override
+  String get memoryPanel => '记忆面板';
+
+  @override
+  String get memoryPanelAdjust => '调整';
+
+  @override
+  String get memoryPanelAiAutoMemories => 'AI 自动记忆';
+
+  @override
+  String get memoryPanelAiInferredDescription => 'AI 推断自聊天，默认仅作记忆展示，不参与下游决策。';
+
+  @override
+  String get memoryPanelClearFilter => '清空筛选';
+
+  @override
+  String get memoryPanelCommitmentDismissed => '已忽略该承诺';
+
+  @override
+  String memoryPanelConfidenceValue(Object value) {
+    return '置信度 $value';
+  }
+
+  @override
+  String memoryPanelConflictFailed(Object error) {
+    return '处理冲突失败: $error';
+  }
+
+  @override
+  String get memoryPanelConflictResolvedA => '已按候选 A 处理';
+
+  @override
+  String get memoryPanelConflictResolvedB => '已按候选 B 处理';
+
+  @override
+  String get memoryPanelConflictResolvedNone => '已撤销这组冲突候选';
+
+  @override
+  String memoryPanelCorrectionCount(Object count) {
+    return '纠错 $count';
+  }
+
+  @override
+  String get memoryPanelDate => '日期';
+
+  @override
+  String memoryPanelDeviationsDetected(Object count) {
+    return '检测到 $count 个偏离';
+  }
+
+  @override
+  String get memoryPanelDimCompletionRate => '完成率';
+
+  @override
+  String get memoryPanelDimEngagement => '投入度';
+
+  @override
+  String get memoryPanelDimMood => '情绪';
+
+  @override
+  String get memoryPanelDimPace => '节奏';
+
+  @override
+  String get memoryPanelDimPlanAdherence => '计划跟随';
+
+  @override
+  String memoryPanelDismissFailed(Object error) {
+    return '忽略失败: $error';
+  }
+
+  @override
+  String get memoryPanelEmptyDescription =>
+      '先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。';
+
+  @override
+  String get memoryPanelEmptyFilterDescription => '试试清空筛选条件，重新查看所有已整理的记忆。';
+
+  @override
+  String get memoryPanelEmptyFilterTitle => '暂无符合条件的记忆';
+
+  @override
+  String get memoryPanelEmptyTitle => '记忆面板还没有内容';
+
+  @override
+  String get memoryPanelEvidenceAll => '证据全部';
+
+  @override
+  String get memoryPanelEvidenceMissing => '缺失';
+
+  @override
+  String get memoryPanelEvidenceOk => 'OK';
+
+  @override
+  String get memoryPanelEvidenceRedacted => '已隐藏';
+
+  @override
+  String get memoryPanelForesightHint => '前瞻提示';
+
+  @override
+  String memoryPanelImportanceValue(Object value) {
+    return '重要度 $value';
+  }
+
+  @override
+  String memoryPanelItemCount(Object count) {
+    return '$count 条';
+  }
+
+  @override
+  String memoryPanelLoadFailed(Object error) {
+    return '记忆面板加载失败: $error';
+  }
+
+  @override
+  String memoryPanelMarkFailed(Object error) {
+    return '标记失败: $error';
+  }
+
+  @override
+  String get memoryPanelMarkedComplete => '已标记为完成';
+
+  @override
+  String get memoryPanelMetricsNone => '指标: -';
+
+  @override
+  String get memoryPanelNotUpdated => '未更新';
+
+  @override
+  String get memoryPanelRecentScenes => '最近场景';
+
+  @override
+  String get memoryPanelRevoke => '撤销';
+
+  @override
+  String memoryPanelRevokeFailed(Object error) {
+    return '撤销失败: $error';
+  }
+
+  @override
+  String get memoryPanelRevokeThis => '撤销此条';
+
+  @override
+  String get memoryPanelRevokedAutoMemory => '已撤销 AI 自动记忆';
+
+  @override
+  String get memoryPanelRevoking => '撤销中';
+
+  @override
+  String memoryPanelSceneMemories(Object time, Object count) {
+    return '$time · $count 条记忆';
+  }
+
+  @override
+  String get memoryPanelUnavailable => '记忆面板不可用';
+
+  @override
+  String memoryPanelValidUntil(Object policy) {
+    return '有效期 $policy';
+  }
+
+  @override
+  String get theaterComposerDeducing => '推演中';
+
+  @override
+  String theaterWhatIfCombinedResult(
+      Object originalMastery,
+      Object originalCompletion,
+      Object predictedMastery,
+      Object predictedCompletion) {
+    return '原始 $originalMastery% / $originalCompletion%  →  调整后 $predictedMastery% / $predictedCompletion%';
+  }
+
+  @override
+  String theaterAccuracyPredictedActual(Object predictedCompletion,
+      Object predictedMastery, Object actualCompletion, Object actualMastery) {
+    return '预测 $predictedCompletion% / $predictedMastery%， 实际 $actualCompletion% / $actualMastery%';
+  }
+
+  @override
+  String theaterPerDayUnit(Object minutes) {
+    return '$minutes 分/天';
+  }
+
+  @override
+  String get simulationTitle => '学习场景模拟';
+
+  @override
+  String get simulationCurrentSimulation => '当前模拟';
+
+  @override
+  String get simulationBackToTheater => '回到剧场';
+
+  @override
+  String get simulationRunning => '模拟进行中...';
+
+  @override
+  String get simulationStartSimulation => '开始这场模拟';
+
+  @override
+  String get simulationAwaitingInput => '等待输入';
+
+  @override
+  String get simulationClearTopic => '清空主题';
+
+  @override
+  String get simulationRecommendedScenarios => '推荐场景';
+
+  @override
+  String get simulationGenerate => '生成';
+
+  @override
+  String get simulationRefresh => '刷新';
+
+  @override
+  String get simulationStartSimButton => '开始模拟';
+
+  @override
+  String get simulationGoToTheater => '去推演';
+
+  @override
+  String get simulationContinueSim => '继续模拟';
+
+  @override
+  String get simulationPauseSim => '暂停模拟';
+
+  @override
+  String get simulationCollapseInsight => '收起洞察';
+
+  @override
+  String get simulationViewInsight => '查看洞察';
+
+  @override
+  String get simulationCollapseSettings => '收起设置';
+
+  @override
+  String get simulationSimSettings => '模拟设置';
+
+  @override
+  String get simulationYourTurnTitle => '轮到你回应';
+
+  @override
+  String get simulationYourResponseArea => '你的回应区';
+
+  @override
+  String get simulationCollapse => '收起';
+
+  @override
+  String get simulationJoinDiscussion => '轮到你加入这场讨论';
+
+  @override
+  String get simulationOrInputJudgment => '或者输入你的判断';
+
+  @override
+  String get simulationSubmitting => '提交中...';
+
+  @override
+  String get simulationSubmitJudgment => '提交我的判断';
+
+  @override
+  String get simulationContinueInChat => '带回聊天继续';
+
+  @override
+  String get simulationAdjustSimulation => '调整这场模拟';
+
+  @override
+  String get simulationDiscussionRounds => '讨论轮数';
+
+  @override
+  String get simulationFacilitationStyleTitle => '展开方式';
+
+  @override
+  String get simulationParticipantsTitle => '参与角色';
+
+  @override
+  String get simulationRestoreDefault => '恢复推荐';
+
+  @override
+  String get simulationCustomHistoricalRole => '自定义历史人物';
+
+  @override
+  String get simulationAdd => '添加';
+
+  @override
+  String get simulationRestartSim => '重新开始这场模拟';
+
+  @override
+  String get simulationContinue => '继续';
+
+  @override
+  String get simulationPause => '暂停';
+
+  @override
+  String get simulationAwaitingStart => '等待开始';
+
+  @override
+  String get simulationGatheringParticipants => '正在召集参与者';
+
+  @override
+  String get simulationWaitingFirstRound => '等待首轮';
+
+  @override
+  String get simulationRolesPending => '角色待加入';
+
+  @override
+  String get simulationGeneratingInBackground => '后台仍在继续生成';
+
+  @override
+  String get simulationPausedForeground => '前台已暂停播放';
+
+  @override
+  String get simulationImmersiveDiscussion => '沉浸讨论流';
+
+  @override
+  String get simulationCurrentDiscussion => '当前讨论流';
+
+  @override
+  String get simulationWillAppearLive => '开始后会实时出现每一轮讨论。';
+
+  @override
+  String get simulationNoInsightYet => '暂未生成洞察总结。';
+
+  @override
+  String get simulationInsightSummaryTitle => '洞察总结';
+
+  @override
+  String get simulationGeneratingReport => '生成中...';
+
+  @override
+  String get simulationGenerateLearningReport => '生成学习报告';
+
+  @override
+  String get simulationContinueToTheater => '以此推演';
+
+  @override
+  String get simulationShareInsight => '分享洞察';
+
+  @override
+  String get simulationCoreArguments => '核心论点';
+
+  @override
+  String get simulationUnresolvedDisagreements => '未解决的分歧';
+
+  @override
+  String get simulationYourContribution => '你的贡献';
+
+  @override
+  String get simulationExposedKnowledgeGaps => '暴露的知识盲区';
+
+  @override
+  String get simulationSuggestedNextSteps => '建议下一步';
+
+  @override
+  String get simulationStructuredInsightGenerated => '已生成结构化洞察总结。';
+
+  @override
+  String get simulationEmptyGenerating => '模拟正在生成中...';
+
+  @override
+  String get simulationEmptyStartPrompt => '开始一次学习场景模拟，让角色逐轮讨论这个主题。';
+
+  @override
+  String get simulationCurrentScene => '当前场景';
+
+  @override
+  String get simulationCurrentGoal => '当前目标';
+
+  @override
+  String get simulationInteractionStyle => '互动方式';
+
+  @override
+  String get simulationRoleDiscussionUserJoin => '角色讨论 + 你来接话';
+
+  @override
+  String get simulationTopicHint => '输入一个知识点或主题';
+
+  @override
+  String get simulationTopicHintExample => '例如：特征值与特征向量';
+
+  @override
+  String get simulationStartSimulationTopicAction => '开始围绕这个问题模拟';
+
+  @override
+  String get simulationUserInputTopicHint => '输入你想要讨论的学习主题或问题';
+
+  @override
+  String get simulationUserInputTopicHelper => '完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题';
+
+  @override
+  String get simulationRecommendedEmptyHint => '还没有推荐种子，你可以先手动输入主题开始。';
+
+  @override
+  String get simulationRecommendedUserInputHint =>
+      '现在先从你最想讨论的具体问题开始。等积累更多真实学习记录后，系统会再给出基于数据的推荐主题。';
+
+  @override
+  String get simulationRecommendedPickHint => '先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。';
+
+  @override
+  String get simulationScenarioAdjustHint => '调整场景后，讨论的角色关系与推进方式也会一起变化。';
+
+  @override
+  String get simulationFacilitationFitHint => '让讨论更贴合当前主题。';
+
+  @override
+  String get simulationDiscussionNote =>
+      '这里可以完整调整主题、场景、轮数、展开方式和参与角色，开始后讨论会按这套设置运行。';
+
+  @override
+  String get simulationParticipantHint =>
+      '你可以明确指定想邀请谁参与这场讨论。至少保留 1 位，最多 6 位角色。';
+
+  @override
+  String get simulationRunningStatusHint => '模拟进行中，新的轮次会实时出现在下方。';
+
+  @override
+  String get simulationScenarioEyebrow => '学习场景模拟';
+
+  @override
+  String get simulationScenarioTitle => '开始这场学习模拟';
+
+  @override
+  String get simulationScenarioSubtitle =>
+      '先选讨论场景，再输入一个你想推开的主题。开始后会自动收束成沉浸式讨论界面。';
+
+  @override
+  String get simulationRoleDiscussionValue => '角色讨论 + 你来接话';
+
+  @override
+  String get simulationJudgeExampleHint => '例如：我会先补几何直觉，再回来刷一道题验证';
+
+  @override
+  String get simulationInteractionExplain => '先给出你的判断，下一轮才会真正围绕你的想法继续展开。';
+
+  @override
+  String get simulationInteractionHint =>
+      '建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。';
+
+  @override
+  String get simulationContinuitySubtitle =>
+      '这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。';
+
+  @override
+  String simulationBridgeCurrentlyVerifyingFormat(Object routeTitle) {
+    return '正在验证路径「$routeTitle」';
+  }
+
+  @override
+  String get simulationBridgeVerifyingRoute => '正在验证一条推演路径';
+
+  @override
+  String simulationBridgeVerificationDescWithTarget(Object targetName) {
+    return '这轮模拟来自知识剧场，目标是 $targetName。你可以随时带着当前进度回到剧场继续采纳或校准。';
+  }
+
+  @override
+  String get simulationBridgeVerificationContext =>
+      '这轮模拟来自知识剧场，当前上下文会和原推演保持关联。';
+
+  @override
+  String simulationInteractionModeFormat(Object mode) {
+    return '互动模式：$mode';
+  }
+
+  @override
+  String get simulationInteractionOpenQuestion => '开放追问';
+
+  @override
+  String get simulationInteractionViewpointChallenge => '观点挑战';
+
+  @override
+  String get simulationInteractionBinaryChoice => '二选一判断';
+
+  @override
+  String get simulationInteractionChoice => '选择判断';
+
+  @override
+  String simulationCurrentFocusFormat(Object speaker) {
+    return '当前焦点：$speaker';
+  }
+
+  @override
+  String simulationTopicFormat(Object topic) {
+    return '主题：$topic';
+  }
+
+  @override
+  String simulationTopicAndSpeakerFormat(Object topic, Object speaker) {
+    return '主题：$topic · 当前发言 $speaker';
+  }
+
+  @override
+  String simulationRoundN(Object round) {
+    return '第 $round 轮';
+  }
+
+  @override
+  String simulationRoleCountFormat(Object count) {
+    return '$count 角色';
+  }
+
+  @override
+  String simulationRunningRoundN(Object round, Object total) {
+    return '正在第 $round/$total 轮';
+  }
+
+  @override
+  String simulationRoundViewpoints(Object count) {
+    return '$count 轮观点';
+  }
+
+  @override
+  String simulationRoleCountLong(Object count) {
+    return '$count 位角色';
+  }
+
+  @override
+  String simulationRoundFormatLabel(Object current, Object max) {
+    return '$current / $max 轮';
+  }
+
+  @override
+  String simulationRoundSliderLabel(Object count) {
+    return '$count 轮';
+  }
+
+  @override
+  String get simulationParticipantDefaultStatus => '当前将按系统默认角色运行。';
+
+  @override
+  String simulationParticipantCurrentStatus(Object names) {
+    return '当前参与：$names';
+  }
+
+  @override
+  String simulationBulletParticipants(Object names) {
+    return '参与者：$names';
+  }
+
+  @override
+  String simulationBulletRounds(Object count) {
+    return '总轮次：$count 轮，适合沉淀为下一步推演或复盘报告。';
+  }
+
+  @override
+  String simulationBulletOpening(Object message) {
+    return '开场重点：$message';
+  }
+
+  @override
+  String simulationRoundFormatShort(Object current, Object total) {
+    return '$current/$total 轮';
+  }
+
+  @override
+  String get simulationContinueInChatContext => '继续刚才的学习模拟。';
+
+  @override
+  String simulationContinueTopicLabel(Object topic) {
+    return '主题：$topic';
+  }
+
+  @override
+  String simulationContinueScenarioLabel(Object label) {
+    return '场景：$label';
+  }
+
+  @override
+  String simulationContinueCurrentQuestion(Object question) {
+    return '当前问题：$question';
+  }
+
+  @override
+  String simulationContinueMyResponse(Object reply) {
+    return '我的回应：$reply';
+  }
+
+  @override
+  String get simulationBalancedPush => '平衡推进';
+
+  @override
+  String get simulationDebateClash => '分歧碰撞';
+
+  @override
+  String get simulationGuidedBreakdown => '引导拆解';
+
+  @override
+  String get simulationPracticalApply => '应用落地';
+
+  @override
+  String get simulationReportReturnException => '学习报告返回格式异常';
+
+  @override
+  String simulationReportGenerationFailed(Object error) {
+    return '生成学习报告失败：$error';
+  }
+
+  @override
+  String get simulationReportTitle => '这份报告已接收本次模拟中暴露的问题';
+
+  @override
+  String get simulationReportSummary => '你在模拟里暴露出的分歧和知识盲区，已经被带入这份正式报告。';
+
+  @override
+  String simulationShareCreated(Object topic, Object scenario, Object insight) {
+    return '我刚在 Sparkle 跑了一场学习仿真：$topic\n场景：$scenario\n洞察：$insight';
+  }
+
+  @override
+  String simulationShareTitle(Object topic) {
+    return '学习场景模拟 · $topic';
+  }
+
+  @override
+  String simulationShareRawText(Object topic, Object scenario, Object insight) {
+    return '学习场景模拟\n主题：$topic\n场景：$scenario\n洞察：$insight';
+  }
+
+  @override
+  String get simulationCustomFigureHint => '例如：张居正 / 俾斯麦';
+
+  @override
+  String simulationTopicCurrentFocusFormat(Object topic, Object speaker) {
+    return '主题：$topic · 当前发言 $speaker';
+  }
+
+  @override
+  String simulationCurrentFocusLabel(Object speaker) {
+    return '当前焦点：$speaker';
+  }
+
+  @override
+  String simulationImmersiveTopicAndFocus(Object topic, Object speaker) {
+    return '主题：$topic · 当前发言 $speaker';
+  }
+
+  @override
+  String get simulationWaitingInput => '等待输入';
+
+  @override
+  String get simulationScenarioDescStudyGroup =>
+      '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。';
+
+  @override
+  String get simulationScenarioDescKnowledgeDebate =>
+      '让不同立场直接碰撞，适合验证观点、证据和边界条件。';
+
+  @override
+  String get simulationScenarioDescHistoricalRoleplay =>
+      '带入人物与时代约束，让讨论像真实历史现场一样推进。';
+
+  @override
+  String get simulationScenarioDescSocraticDialogue =>
+      '通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。';
+
+  @override
+  String get simulationScenarioDescCaseAnalysis => '围绕具体案例做拆解、诊断和决策，适合实务型主题。';
+
+  @override
+  String get simulationScenarioDescWhatIfPath => '比较不同学习或行动路线，适合规划、取舍与资源分配。';
+
+  @override
+  String get simulationScenarioDescConceptMapBuild =>
+      '把知识点织成结构图，适合建立全局框架与连接关系。';
+
+  @override
+  String get simulationScenarioDescErrorDiagnosis => '专注识别错因、纠偏路径与验证方式，适合查漏补缺。';
+
+  @override
+  String get simulationFacilitationDescBalanced =>
+      '适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。';
+
+  @override
+  String get simulationFacilitationDescDebate => '主动放大争议和证据冲突，更适合需要碰撞观点的主题。';
+
+  @override
+  String get simulationFacilitationDescGuided => '更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。';
+
+  @override
+  String get simulationFacilitationDescPractical => '优先讨论行动、验证和现实约束，适合技能与方案推演。';
+
+  @override
+  String get simulationRoleHonorsStudent => '优等生';
+
+  @override
+  String get simulationRoleMidStudent => '中等生';
+
+  @override
+  String get simulationRoleQuestioner => '追问者';
+
+  @override
+  String get simulationRoleSummarizer => '总结者';
+
+  @override
+  String get simulationRolePracticeCoach => '练习教练';
+
+  @override
+  String get simulationRoleProExpert => '正方专家';
+
+  @override
+  String get simulationRoleConExpert => '反方专家';
+
+  @override
+  String get simulationRoleModerator => '主持协调';
+
+  @override
+  String get simulationRoleEvidenceReviewer => '证据审查员';
+
+  @override
+  String get simulationRolePursuer => '追问者';
+
+  @override
+  String get simulationRoleHistoryMentor => '历史导师';
+
+  @override
+  String get simulationRoleKeyFigure => '关键人物';
+
+  @override
+  String get simulationRoleEraObserver => '时代观察者';
+
+  @override
+  String get simulationRoleStrategyAdvisor => '策略顾问';
+
+  @override
+  String get simulationRoleRecorder => '记录官';
+
+  @override
+  String get simulationRoleSocrates => '苏格拉底';
+
+  @override
+  String get simulationRoleSkeptic => '怀疑者';
+
+  @override
+  String get simulationRoleDeconstructor => '拆解者';
+
+  @override
+  String get simulationRoleApplier => '应用者';
+
+  @override
+  String get simulationRoleCaseMentor => '案例导师';
+
+  @override
+  String get simulationRoleDiagnostician => '诊断官';
+
+  @override
+  String get simulationRolePractitioner => '实践派';
+
+  @override
+  String get simulationRoleCounterExample => '反例提出者';
+
+  @override
+  String get simulationRoleDecisionRecorder => '决策记录官';
+
+  @override
+  String get simulationRoleCurrentRoute => '当前路线';
+
+  @override
+  String get simulationRoleRadicalRoute => '激进路线';
+
+  @override
+  String get simulationRoleRiskObserver => '风险观察者';
+
+  @override
+  String get simulationRoleResourceScheduler => '资源调度者';
+
+  @override
+  String get simulationRoleVerifier => '验证者';
+
+  @override
+  String get simulationRoleStructurer => '结构师';
+
+  @override
+  String get simulationRoleConnector => '连接者';
+
+  @override
+  String get simulationRoleCounterExampleChecker => '反例检查员';
+
+  @override
+  String get simulationRoleBridgeBuilder => '桥梁构建者';
+
+  @override
+  String get simulationRoleErrorAnalyst => '错因分析师';
+
+  @override
+  String get simulationRoleCorrectionCoach => '纠偏教练';
+
+  @override
+  String get simulationRoleQuestionDeconstructor => '题面解构者';
+
+  @override
+  String get simulationRoleMigrationCoach => '迁移教练';
+
+  @override
+  String get simulationRoleStudyBuddy => '学习伙伴';
+
+  @override
+  String get simulationRoleCurrentDiscussionTitle => '当前讨论流';
+
+  @override
+  String simulationBulletOpeningFormat(Object message) {
+    return '开场重点：$message';
+  }
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault0 => '学习伙伴';
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault1 => '提问者';
+
+  @override
+  String get simulationScenarioParticipantOptionsDefault2 => '总结者';
+
+  @override
+  String get simulationScenarioLabelStudyGroup => '学习小组';
+
+  @override
+  String get simulationScenarioLabelKnowledgeDebate => '知识辩论';
+
+  @override
+  String get simulationScenarioLabelHistoricalRoleplay => '历史角色扮演';
+
+  @override
+  String get simulationScenarioLabelSocraticDialogue => '苏格拉底对话';
+
+  @override
+  String get simulationScenarioLabelCaseAnalysis => '案例分析';
+
+  @override
+  String get simulationScenarioLabelWhatIfPath => '如果路径';
+
+  @override
+  String get simulationScenarioLabelConceptMapBuild => '概念图构建';
+
+  @override
+  String get simulationScenarioLabelErrorDiagnosis => '错误诊断';
+
+  @override
+  String get openclawPairImportedSaved => '已导入并保存 OpenClaw 配对配置';
+
+  @override
+  String get openclawPairImportedVerifyFailed => '配对配置已导入，但当前连接验证失败';
+
+  @override
+  String get openclawClipboardNoPairingPayload =>
+      '剪贴板里没有识别到 OpenClaw 配对串或二维码 JSON';
+
+  @override
+  String get openclawImportedFromClipboard => '已从剪贴板导入 OpenClaw 配对配置';
+
+  @override
+  String openclawConnectedToDevice(Object deviceName) {
+    return '已连接到 $deviceName';
+  }
+
+  @override
+  String openclawImportedDevicePairing(Object deviceName) {
+    return '已导入 $deviceName 的配对配置';
+  }
+
+  @override
+  String get openclawScannedPairingImported => '已扫码导入 OpenClaw 配对配置';
+
+  @override
+  String openclawScannedConnectedToDevice(Object deviceName) {
+    return '已扫码连接到 $deviceName';
+  }
+
+  @override
+  String get openclawUnrecognizedContent =>
+      '无法识别这段内容，请检查是否包含 gateway_url 与 token';
+
+  @override
+  String get openclawCameraPermissionNeeded =>
+      '需要相机权限才能扫码配对。你也可以改用\"从剪贴板导入\"或\"粘贴配对串\"。';
+
+  @override
+  String get openclawQrNotPairingContent => '扫到的二维码不是可识别的 OpenClaw 配对内容';
+
+  @override
+  String get openclawRemoteTemplateFilled => '已填入远程连接模板，接下来补入授权令牌或导入配对串即可';
+
+  @override
+  String get openclawPairingCodeExpired => '配对码已过期';
+
+  @override
+  String openclawPairingExpiresSeconds(Object seconds) {
+    return '请在 $seconds 秒内完成配对';
+  }
+
+  @override
+  String openclawPairingExpiresMinutes(Object minutes, Object seconds) {
+    return '请在 $minutes 分 $seconds 秒内完成配对';
+  }
+
+  @override
+  String get openclawInvalidUrlFormat =>
+      '请输入以 http://、https://、ws:// 或 wss:// 开头的地址';
+
+  @override
+  String get openclawValidAddressRequired => '请输入有效的 OpenClaw 地址';
+
+  @override
+  String get openclawDisconnected => '已断开 OpenClaw 连接';
+
+  @override
+  String openclawPairingCodeGenerated(Object code) {
+    return '已生成配对码 $code';
+  }
+
+  @override
+  String get openclawDeviceTokenRequired => '请输入设备令牌后再完成配对';
+
+  @override
+  String get openclawDevicePairingComplete => '设备配对已完成';
+
+  @override
+  String get openclawNoExecutionPermission => '当前网关可访问，但没有执行权限，暂时无法重试队列';
+
+  @override
+  String get openclawExecutionEndpointUnavailable =>
+      '当前网关可访问，但执行入口不可用，暂时无法重试队列';
+
+  @override
+  String get openclawExecutionEngineNotConnected => '执行引擎尚未连接，暂时无法重试队列';
+
+  @override
+  String openclawQueuedTasksResubmitted(Object count) {
+    return '已重新提交 $count 个排队任务';
+  }
+
+  @override
+  String get openclawNoRetryableTasks => '当前没有可重试的排队任务';
+
+  @override
+  String get openclawPairingCodeCopied => '配对码已复制';
+
+  @override
+  String get openclawImportPairingString => '导入配对串';
+
+  @override
+  String get openclawPairingOrQrLabel => '配对串或二维码内容';
+
+  @override
+  String get openclawPairingPasteHint =>
+      '粘贴 OpenClaw 桌面端分享的 JSON、openclaw://pair?... 链接，或包含 gateway_url / pair_token 的文本';
+
+  @override
+  String get openclawImportAndSave => '导入并保存';
+
+  @override
+  String get openclawApplyWizard => '应用向导';
+
+  @override
+  String get openclawDisconnect => '断开连接';
+
+  @override
+  String get openclawDisconnectConfirmBody => '这会清除本地保存的 OpenClaw 连接配置。';
+
+  @override
+  String get openclawDisconnectAction => '断开';
+
+  @override
+  String get openclawGatewayOnlineNoExecPermission => '网关在线，但当前令牌没有执行权限';
+
+  @override
+  String get openclawGatewayOnlineExecNotReady => '网关在线，但执行接口没有准备好';
+
+  @override
+  String get openclawNeedExecutionChainCheck => '需要补一层执行链路排查';
+
+  @override
+  String get openclawTroubleshootNoPermissionBody =>
+      '当前状态说明健康检查能通过，但真正发起执行会被拒绝。优先更换具备 `operator.write` scope 的令牌，或改用设备配对 + WebSocket。';
+
+  @override
+  String get openclawTroubleshootMissingEndpointBody =>
+      '当前地址可访问，但缺少 `/v1/responses` 执行入口。请确认 OpenClaw 网关版本、代理转发和 transport 选择是否一致。';
+
+  @override
+  String get openclawTroubleshootGenericBody =>
+      '建议先重新测试连接，再检查网关地址、认证方式和 transport 是否与 OpenClaw 当前实例一致。';
+
+  @override
+  String get openclawStatusReadyForTasks => '已准备好接手任务';
+
+  @override
+  String get openclawStatusConfirmingConnection => '正在确认连接状态';
+
+  @override
+  String get openclawStatusOnlineNoPermission => '网关在线，但没有执行权限';
+
+  @override
+  String get openclawStatusNotConnected => '暂时还没连上';
+
+  @override
+  String get openclawStatusNotConfigured => '还没有接入 OpenClaw';
+
+  @override
+  String get openclawStatusConnectedSubtitle =>
+      '连接保持正常，你可以直接从任务页或聊天页把工作交给 OpenClaw。';
+
+  @override
+  String get openclawStatusConnectingSubtitle => '我们正在确认引擎状态，保存后的结果会同步显示在这里。';
+
+  @override
+  String get openclawStatusNoPermissionSubtitle =>
+      '当前令牌能访问网关，但真正执行会被拒绝。这里需要处理权限，而不是单纯重填地址。';
+
+  @override
+  String get openclawStatusErrorSubtitleFallback => '先检查地址、认证方式和传输协议，再重新测试连接。';
+
+  @override
+  String get openclawStatusDisconnectedSubtitle =>
+      '完成一次连接后，之后的委派、排队和最近活动都会在各入口自动联动。';
+
+  @override
+  String get openclawUnsavedChanges => '未保存更改';
+
+  @override
+  String get openclawDevicePairing => '设备配对';
+
+  @override
+  String get openclawTokenAuth => '令牌认证';
+
+  @override
+  String openclawQueuedRequestCount(Object count) {
+    return '$count 个待处理';
+  }
+
+  @override
+  String get openclawQuickConnect => '快速接入';
+
+  @override
+  String get openclawCustomConfig => '自定义配置';
+
+  @override
+  String get openclawCustomConfigDesc => '使用自定义网关地址和令牌连接';
+
+  @override
+  String get openclawGuestMainDesc => '使用本地网关直连';
+
+  @override
+  String get openclawGuestMainLabel => '本地网关';
+
+  @override
+  String get openclawImportFromClipboard => '从剪贴板导入';
+
+  @override
+  String get openclawPastePairingString => '粘贴配对串';
+
+  @override
+  String get openclawScanToPair => '扫码配对';
+
+  @override
+  String get openclawTailscaleRemoteNode => 'Tailscale 远程节点';
+
+  @override
+  String get openclawTailscaleIpOrDomain => 'Tailscale IP 或域名';
+
+  @override
+  String get openclawTailscaleHint => '例如 100.88.1.24 或 devbox.tail123.ts.net';
+
+  @override
+  String get openclawTailscaleHelperText =>
+      '如果你的 OpenClaw 暴露在 Tailscale 上，这里只需要填节点 IP 或 MagicDNS 域名，Sparkle 会自动补上标准端口与 WebSocket 连接方式。';
+
+  @override
+  String get openclawTailscaleLabel => 'Tailscale';
+
+  @override
+  String get openclawCloudflareTunnel => 'Cloudflare Tunnel';
+
+  @override
+  String get openclawTunnelDomain => 'Tunnel 域名';
+
+  @override
+  String get openclawCloudflareHint => '例如 openclaw.example.com';
+
+  @override
+  String get openclawCloudflareHelperText =>
+      '如果你通过 Cloudflare Tunnel 暴露 OpenClaw，这里填入域名即可。Sparkle 会按 HTTPS/WSS 方式生成连接配置。';
+
+  @override
+  String get openclawCloudflareLabel => 'Cloudflare';
+
+  @override
+  String openclawPresetSelected(Object label) {
+    return '已选中\"$label\"。连接细节会自动填入；如果随后提示缺执行权限，优先更换具备 `operator.write` scope 的令牌，或改用设备配对。';
+  }
+
+  @override
+  String get openclawGatewayAddress => '网关地址';
+
+  @override
+  String get openclawGatewayHint => '例如 http://localhost:8080';
+
+  @override
+  String get openclawAuthMode => '认证方式';
+
+  @override
+  String get openclawAuthToken => '认证令牌';
+
+  @override
+  String get openclawAuthTokenHint => '粘贴 OpenClaw 网关令牌';
+
+  @override
+  String get openclawDeviceToken => '设备令牌';
+
+  @override
+  String get openclawDeviceTokenHint => '配对完成后粘贴设备令牌';
+
+  @override
+  String get openclawPairingCode => '配对码';
+
+  @override
+  String get openclawPairingCodeInstructions =>
+      '请在 OpenClaw 桌面端输入这 6 位配对码，然后把返回的设备令牌粘贴到上方。';
+
+  @override
+  String get openclawGeneratePairingCode => '生成配对码';
+
+  @override
+  String get openclawCompletePairing => '完成配对';
+
+  @override
+  String get openclawCancelPairing => '取消配对';
+
+  @override
+  String get openclawTransportProtocol => '传输协议';
+
+  @override
+  String get openclawDeviceAuthDesc => '适合与本机 OpenClaw 配对，一次完成后后续连接会更顺手。';
+
+  @override
+  String get openclawTokenAuthDesc => '适合你已经有现成的网关令牌，需要快速验证或切换环境时使用。';
+
+  @override
+  String get openclawWebSocketTransportDesc =>
+      'WebSocket 更适合保持持续连接，适合频繁委派和状态回推。';
+
+  @override
+  String get openclawHttpTransportDesc => 'HTTP 更适合手动验证和快速测试连接。';
+
+  @override
+  String get openclawDefaultConnectionReady => '已为你准备好默认连接细节';
+
+  @override
+  String get openclawTestConnection => '测试连接';
+
+  @override
+  String get openclawSaveConfig => '保存配置';
+
+  @override
+  String get openclawRetryQueue => '重试队列';
+
+  @override
+  String get accountabilityPartnerDefault => '责任伙伴';
+
+  @override
+  String get accountabilityEndPartnership => '结束伙伴关系';
+
+  @override
+  String get accountabilityDashboardLoadFailed => '伙伴工作台加载失败';
+
+  @override
+  String get accountabilityNudgeSentDefault => '已通过站内提醒发送，对方在线时会实时看到';
+
+  @override
+  String get accountabilityNudgeCooldown =>
+      '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。';
+
+  @override
+  String get accountabilityNudgeFailed => '提醒发送失败，请稍后再试';
+
+  @override
+  String get accountabilityEndPartnershipConfirm => '确定要结束这段责任伙伴关系吗？';
+
+  @override
+  String get accountabilityPartnershipEnded => '伙伴关系已结束';
+
+  @override
+  String get accountabilityMyGoal => '我的目标';
+
+  @override
+  String get accountabilityGoalNotSet => '还没有填写目标';
+
+  @override
+  String get accountabilityGrowingTogether => '伙伴共成长';
+
+  @override
+  String get accountabilityRecentShares => '最近分享';
+
+  @override
+  String get accountabilitySharedItem => '已分享内容';
+
+  @override
+  String get accountabilityMonthlyHeatmap => '月度打卡热力图';
+
+  @override
+  String get accountabilityPartnerAchievements => '伙伴成就';
+
+  @override
+  String get accountabilityPartnerNoAchievements => '伙伴还没有解锁专属成就，先互相打卡一轮试试看。';
+
+  @override
+  String get accountabilityRecentCheckins => '最近打卡';
+
+  @override
+  String get accountabilityNoCheckinRecords => '还没有打卡记录';
+
+  @override
+  String get accountabilityNoCheckinHint => '今天先发一条简短进展，伙伴关系就会开始有温度。';
+
+  @override
+  String get accountabilityCheckedInToday => '今天已打卡';
+
+  @override
+  String get accountabilityCheckInToday => '今日打卡';
+
+  @override
+  String get accountabilityTotalCheckins => '总打卡';
+
+  @override
+  String get accountabilityCheckedIn => '已打卡';
+
+  @override
+  String get accountabilityCheckin => '打卡';
+
+  @override
+  String get accountabilityNudge => '提醒';
+
+  @override
+  String get accountabilityShare => '分享';
+
+  @override
+  String get accountabilityChat => '聊天';
+
+  @override
+  String get accountabilityInviteSentWait => '邀请已发出，等待对方确认后才能进入伙伴工作台。';
+
+  @override
+  String get accountabilityInvitePendingConfirm => '这条伙伴邀请还待你确认，先去邀请页处理后再回来。';
+
+  @override
+  String get accountabilityDashboardNotAvailable => '当前伙伴关系暂时不可进入完整工作台。';
+
+  @override
+  String get accountabilityInvitePending => '伙伴邀请待处理';
+
+  @override
+  String get accountabilityDashboardUnavailable => '伙伴工作台暂不可用';
+
+  @override
+  String get accountabilityViewStatus => '查看状态';
+
+  @override
+  String get accountabilityHandleInvite => '去处理邀请';
+
+  @override
+  String get accountabilityContinueChat => '继续聊天';
+
+  @override
+  String get accountabilityNoPendingPolicies => '当前没有待执行的问责策略。';
+
+  @override
+  String get accountabilityPendingPolicies => '待执行策略';
+
+  @override
+  String get accountabilityNoRecentReflections => '最近还没有新的跨事件反思。';
+
+  @override
+  String get accountabilityRecentReflections => '近期反思';
+
+  @override
+  String get accountabilityForesightHint => '前瞻提示';
+
+  @override
+  String get accountabilityNoForesightHint => '暂无前瞻提示。';
+
+  @override
+  String get accountabilityInterventionIneffective => '干预未奏效';
+
+  @override
+  String get accountabilityPlanStall => '计划停滞';
+
+  @override
+  String get accountabilityOverload => '负荷过载';
+
+  @override
+  String get accountabilityTooDifficult => '任务过难';
+
+  @override
+  String get accountabilityUnclear => '任务不清晰';
+
+  @override
+  String get accountabilityAbandoned => '中途放下';
+
+  @override
+  String get accountabilityReflectionSummary => '反思摘要';
+
+  @override
+  String get accountabilityDimPace => '节奏';
+
+  @override
+  String get accountabilityDimCompletionRate => '完成率';
+
+  @override
+  String get accountabilityDimEngagement => '投入度';
+
+  @override
+  String get accountabilityDimMood => '情绪';
+
+  @override
+  String get accountabilityDimPlanAdherence => '计划跟随';
+
+  @override
+  String get accountabilityMoodLow => '低落';
+
+  @override
+  String get accountabilityMoodOkay => '一般';
+
+  @override
+  String get accountabilityMoodSteady => '平稳';
+
+  @override
+  String get accountabilityMoodGood => '不错';
+
+  @override
+  String get accountabilityMoodGreat => '很棒';
+
+  @override
+  String get accountabilityPartner => '伙伴';
+
+  @override
+  String get accountabilityLike => '点赞';
+
+  @override
+  String get accountabilityEncourage => '鼓励';
+
+  @override
+  String get accountabilityEncourageSent => '已为伙伴点亮鼓励';
+
+  @override
+  String get accountabilitySendEncourage => '发送鼓励';
+
+  @override
+  String get accountabilityEncourageHint => '写一句你想对伙伴说的话';
+
+  @override
+  String get accountabilitySend => '发送';
+
+  @override
+  String get accountabilityEncourageDelivered => '鼓励已送达';
+
+  @override
+  String get accountabilityTodayProgressHint => '今日进展...';
+
+  @override
+  String get accountabilityTodayMood => '今日心情:';
+
+  @override
+  String get accountabilityPublishCheckin => '发布打卡';
+
+  @override
+  String get accountabilityProgressRequired => '请写一句今天的进展';
+
+  @override
+  String get accountabilityCheckinSuccess => '打卡成功，伙伴已经能看到了';
+
+  @override
+  String get openclawImportedPairing => '已导入 OpenClaw 配对配置';
+
+  @override
+  String accountabilityPartnerGoal(Object partnerName) {
+    return '$partnerName 的目标';
+  }
+
+  @override
+  String get accountabilityPartnerGoalNotSet => '对方还没填写目标';
+
+  @override
+  String get accountabilityMe => '我';
+
+  @override
+  String get accountabilityThem => 'TA';
+
+  @override
+  String accountabilityStreakDays(Object days) {
+    return '$days 天';
+  }
+
+  @override
+  String accountabilityCheckinMinutes(Object minutes) {
+    return '$minutes分钟';
+  }
+
+  @override
+  String accountabilityDaysTogether(Object days) {
+    return '一起坚持了 $days 天';
+  }
+
+  @override
+  String accountabilityMyStreakDays(Object days) {
+    return '我 $days 天';
+  }
+
+  @override
+  String accountabilityPartnerStreakDays(Object days) {
+    return 'TA $days 天';
+  }
+
+  @override
+  String accountabilityMyAchievementsUnlocked(Object count) {
+    return '我解锁 $count 个成就';
+  }
+
+  @override
+  String accountabilityPartnerAchievementsUnlocked(Object count) {
+    return 'TA 解锁 $count 个成就';
+  }
+
+  @override
+  String accountabilityStreakRank(Object myRank, Object partnerRank) {
+    return '连续打卡榜：你第 $myRank，伙伴第 $partnerRank';
+  }
+
+  @override
+  String accountabilityDeviationsDetected(Object count) {
+    return '检测到 $count 个偏离';
+  }
+
+  @override
+  String accountabilityUpdatedAt(Object time) {
+    return '更新时间 $time';
+  }
+
+  @override
+  String get accountabilityZeroItems => '0 条';
+
+  @override
+  String accountabilityItemCount(Object count) {
+    return '$count 条';
+  }
+
+  @override
+  String accountabilityPoliciesReady(Object count) {
+    return '已有 $count 条策略就绪，等待事件触发。';
+  }
+
+  @override
+  String accountabilityReflectionsGenerated(Object count) {
+    return '最近已生成 $count 条反思摘要。';
+  }
+
+  @override
+  String accountabilityPoliciesPending(Object count, Object time) {
+    return '已有 $count 条策略待执行，下一次触发在 $time。';
+  }
+
+  @override
+  String accountabilityReflectionsLatest(Object category, Object time) {
+    return '最近一次聚焦 $category，更新时间 $time。';
+  }
+
+  @override
+  String accountabilityInvestedTime(Object minutes) {
+    return '投入时长: $minutes 分钟';
+  }
+
+  @override
+  String accountabilityMinutes(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get accountabilityEnd => '结束';
+
+  @override
+  String get accountabilityOperationFailed => '操作失败';
+
+  @override
+  String get accountabilityLikeFailed => '点赞失败';
+
+  @override
+  String get accountabilitySendFailed => '发送失败';
+
+  @override
+  String get accountabilityCheckinFailed => '打卡失败';
+
+  @override
+  String get openclawHubGatewayNoPermission => '当前网关可访问，但没有执行权限，暂时无法重试队列';
+
+  @override
+  String get openclawHubEndpointUnavailable => '当前网关可访问，但执行入口不可用，暂时无法重试队列';
+
+  @override
+  String get openclawHubEngineNotConnected => '执行引擎尚未连接，暂时无法重试队列';
+
+  @override
+  String get openclawHubNoRetryQueuedItems => '当前没有可重试的排队任务';
+
+  @override
+  String get openclawHubQueueCleared => '等待队列已清空';
+
+  @override
+  String get openclawHubConnectedDiagnostics => 'OpenClaw 已连接，点击查看诊断';
+
+  @override
+  String get openclawHubGatewayNoPermissionDiagnostics => '网关可达但缺少执行权限，点击查看诊断';
+
+  @override
+  String get openclawHubEndpointIssueDiagnostics => '网关可达但执行入口异常，点击查看诊断';
+
+  @override
+  String get openclawHubQueuedTasksDiagnostics => '当前有排队任务，点击查看诊断';
+
+  @override
+  String get openclawHubNotConnectedDiagnostics => 'OpenClaw 连接未完成，点击查看诊断';
+
+  @override
+  String get openclawHubOverviewGatewayNoPermission => '网关在线，但没有执行权限';
+
+  @override
+  String get openclawHubOverviewEndpointIssue => '网关在线，但执行入口不可用';
+
+  @override
+  String get openclawHubOverviewReady => 'OpenClaw 已准备好接手';
+
+  @override
+  String get openclawHubOverviewTasksWaiting => '已有任务在等它恢复';
+
+  @override
+  String get openclawHubOverviewConfigSaved => '连接信息已保存，当前还没连上';
+
+  @override
+  String get openclawHubOverviewConnectFirst => '先接入 OpenClaw，再开始稳定委派';
+
+  @override
+  String get openclawHubOverviewGatewayNoPermissionDesc =>
+      '当前这台网关可以访问，但真正执行会被权限拦住。先补可写 scope，或改用设备配对 + WebSocket，才算闭环接通。';
+
+  @override
+  String get openclawHubOverviewEndpointIssueDesc =>
+      '当前地址本身可访问，但执行接口还没准备好。优先检查 `/v1/responses`、代理转发和 transport 选择是否一致。';
+
+  @override
+  String get openclawHubOverviewConnectedDesc =>
+      '连接保持正常，适合从任务页或聊天页直接把网页调研、整理和抓取类任务交给它。';
+
+  @override
+  String get openclawHubOverviewDefaultDesc =>
+      '连接完成后，首页、聊天和任务页会共享同一个执行中心，不再四处寻找入口。';
+
+  @override
+  String get openclawHubActionHintPermission =>
+      '现在最值得先做的是更换具备执行权限的令牌，或切到已配对的 WebSocket 连接。';
+
+  @override
+  String get openclawHubActionHintEndpoint =>
+      '现在最值得先做的是检查执行接口与 transport，让网关从“可达”变成“可执行”。';
+
+  @override
+  String get openclawHubActionHintRetryQueue => '现在最值得先做的是把等待队列重新提交。';
+
+  @override
+  String get openclawHubActionHintReconnect => '现在最值得先做的是恢复连接，让已排队的任务继续执行。';
+
+  @override
+  String get openclawHubActionHintNewDelegation => '现在最值得先做的是回到聊天或任务页发起新的委派。';
+
+  @override
+  String get openclawHubActionHintCompleteConnection =>
+      '现在最值得先做的是完成连接，让 OpenClaw 真正成为你的执行伴侣。';
+
+  @override
+  String get openclawHubAppBarTitle => 'OpenClaw 执行中心';
+
+  @override
+  String get openclawHubMetricConnectedNoPermission => '已连接但无执行权限';
+
+  @override
+  String get openclawHubMetricConnectedEndpointIssue => '已连接但执行入口异常';
+
+  @override
+  String get openclawHubMetricConnected => '已连接';
+
+  @override
+  String get openclawHubMetricNotConnected => '未连接';
+
+  @override
+  String get openclawHubMetricPairedDevice => '已配对设备';
+
+  @override
+  String get openclawHubMetricTokenAuth => '令牌认证';
+
+  @override
+  String get openclawHubButtonContinueSetup => '继续设置';
+
+  @override
+  String get openclawHubButtonViewQueue => '查看队列';
+
+  @override
+  String get openclawHubButtonAutomation => '自动化';
+
+  @override
+  String get openclawHubButtonEnterChat => '进入聊天';
+
+  @override
+  String get openclawHubButtonViewTasks => '查看任务';
+
+  @override
+  String get openclawHubSectionConnectionTitle => '连接与控制';
+
+  @override
+  String get openclawHubSectionConnectionSubtitle =>
+      '先用摘要看清当前连接，再决定是否展开编辑，避免一进来就被整张表单打断。';
+
+  @override
+  String get openclawHubCollapseConnectionEdit => '收起连接编辑';
+
+  @override
+  String get openclawHubExpandConnectionEdit => '编辑连接方式';
+
+  @override
+  String get openclawHubGatewayUrlEmpty => '尚未填写网关地址';
+
+  @override
+  String get openclawHubConnectionSummaryPermission =>
+      '这台网关已经能访问，但当前认证没有真正发起执行的权限；更适合先修权限，再统一重试队列。';
+
+  @override
+  String get openclawHubConnectionSummaryEndpoint =>
+      '网关本身可达，但执行接口还没准备好；先检查 transport 和 `/v1/responses` 会更有效。';
+
+  @override
+  String get openclawHubConnectionSummaryConnected =>
+      '当前连接保持稳定，适合继续使用现有方式直接委派。';
+
+  @override
+  String get openclawHubConnectionSummaryConfigured =>
+      '配置已经在本地保存好，展开后可以微调认证方式、协议和配对流程。';
+
+  @override
+  String get openclawHubConnectionSummaryFirstTime =>
+      '第一次接入通常只需要填地址，再选择令牌认证或设备配对中的一种。';
+
+  @override
+  String get openclawHubSectionDevicesTitle => '设备与亲和性';
+
+  @override
+  String get openclawHubSectionDevicesSubtitle =>
+      '把“哪类任务优先发到哪台设备”显式配置出来，避免每次都让系统猜你的偏好。';
+
+  @override
+  String get openclawHubCollapseDeviceDetails => '收起设备详情';
+
+  @override
+  String get openclawHubExpandDeviceDetails => '查看设备与偏好';
+
+  @override
+  String get openclawHubDevicesSummaryEmpty =>
+      '节点列表会在成功接入 OpenClaw 后自动出现。设备越清晰，后面的多节点调度和降级体验就越稳定。';
+
+  @override
+  String get openclawHubSectionQueueTitle => '队列与委派';
+
+  @override
+  String get openclawHubSectionQueueSubtitle =>
+      '让你先知道现在最该做什么，再决定是否展开看完整队列和模板能力。';
+
+  @override
+  String get openclawHubCollapseQueueDetails => '收起队列详情';
+
+  @override
+  String get openclawHubExpandQueueDetails => '查看全部队列';
+
+  @override
+  String get openclawHubQueueSummaryConnected =>
+      '你现在最适合先把排队任务重新提交，等引擎把积压处理完再发起新的委派。';
+
+  @override
+  String get openclawHubQueueSummaryNotConnected =>
+      '你已经把任务排好了，下一步先恢复连接，之后就能一口气继续执行。';
+
+  @override
+  String get openclawHubQueueSummaryConnectedEmpty =>
+      '当前没有等待中的任务，最适合回到聊天或任务页发起新的委派。';
+
+  @override
+  String get openclawHubQueueSummaryNotConnectedEmpty =>
+      '当前也没有排队任务，可以先完成连接，再决定要不要开始第一笔委派。';
+
+  @override
+  String get openclawHubQueueEmptyLabel => '等待队列当前为空';
+
+  @override
+  String get openclawHubButtonRetryQueue => '重试队列';
+
+  @override
+  String get openclawHubButtonClearQueue => '清空队列';
+
+  @override
+  String get openclawHubAvailableTemplates => '可用模板 / 能力说明';
+
+  @override
+  String get openclawHubTemplatesEmptyHint =>
+      '模板会在你打开具体任务后按需加载；现在可以先把连接、队列和最近活动整理顺，再回到具体任务开始委派。';
+
+  @override
+  String get openclawHubSectionAutomationTitle => '自动化与批量';
+
+  @override
+  String get openclawHubSectionAutomationSubtitle =>
+      '把一次性的批量执行和长期的定时/条件执行放进同一个操作台，避免执行能力只停留在单次点击。';
+
+  @override
+  String get openclawHubCollapseAutomationDetails => '收起自动化详情';
+
+  @override
+  String get openclawHubExpandAutomationDetails => '查看自动化能力';
+
+  @override
+  String get openclawHubAutomationSummaryEmpty =>
+      '你还没有任何自动化。展开后可以创建每天定时执行、事件触发或条件轮询，并直接从这里发起批量委派。';
+
+  @override
+  String get openclawHubSectionActivityTitle => '最近活动';
+
+  @override
+  String get openclawHubSectionActivitySubtitle =>
+      '用高密度时间线看最近的委派，不需要再在不同任务页之间来回翻找。';
+
+  @override
+  String get openclawHubCollapseActivityDetails => '收起活动详情';
+
+  @override
+  String get openclawHubExpandActivityDetails => '查看全部活动';
+
+  @override
+  String get openclawHubActivityEmptyHint =>
+      '暂时还没有最近执行。你可以从首页卡牌、任务执行页或聊天入口发起第一笔委派。';
+
+  @override
+  String get openclawHubActivityHint => '可继续查看该任务的执行详情。';
+
+  @override
+  String get openclawHubActivityOpenTask => '打开任务执行';
+
+  @override
+  String get openclawHubStatusRecorded => '已记录';
+
+  @override
+  String openclawHubRetryQueuedSuccess(Object count) {
+    return '已重新提交 $count 个排队任务';
+  }
+
+  @override
+  String openclawHubLastExecutionStatus(Object status) {
+    return '最近一次执行状态是“$status”，你可以从这里继续查看连接、队列和活动。';
+  }
+
+  @override
+  String openclawHubPendingDelegationsDesc(Object count) {
+    return '你已经有 $count 个委派在等待恢复连接，先把引擎重新连上会最有效。';
+  }
+
+  @override
+  String openclawHubQueuedTasksCount(Object count) {
+    return '$count 个排队任务';
+  }
+
+  @override
+  String openclawHubNodeCount(Object count) {
+    return '$count 个节点';
+  }
+
+  @override
+  String openclawHubAutomationCount(Object count) {
+    return '$count 条自动化';
+  }
+
+  @override
+  String openclawHubLatestBatch(Object completed, Object total) {
+    return '最近批量 $completed/$total';
+  }
+
+  @override
+  String openclawHubLastTrustLabel(Object label) {
+    return '最近一次信任判断：$label';
+  }
+
+  @override
+  String openclawHubDevicesSummaryActiveWithCount(Object count) {
+    return '当前已发现 $count 台节点。你可以在这里为浏览器、终端、文档和接口任务指定偏好设备，离线时 Sparkle 会自动找备用节点。';
+  }
+
+  @override
+  String openclawHubAutomationSummaryActiveWithCount(Object count) {
+    return '当前已有 $count 条自动化在运行。批量委派摘要和定时任务状态也会持续在这里汇总。';
+  }
+
+  @override
+  String openclawHubTaskLabel(Object taskId) {
+    return '任务 $taskId';
+  }
+
+  @override
+  String openclawHubTaskLabelTemplate(Object templateId) {
+    return '模板 $templateId';
+  }
+
+  @override
+  String openclawHubTaskLabelSource(Object source) {
+    return '来源 $source';
+  }
+
+  @override
+  String get seedLibraryDetailFriendlyError => '系统暂时没能完成这次应用，请稍后再试';
+
+  @override
+  String get seedLibraryDetailUserRatings => '用户评分';
+
+  @override
+  String get seedLibraryDetailQualityBreakdown => '质量评分拆解';
+
+  @override
+  String get seedLibraryDetailQualityBreakdownDesc =>
+      '列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。';
+
+  @override
+  String get seedLibraryDetailQualityComprehensive => '综合';
+
+  @override
+  String get seedLibraryDetailQualitySystem => '系统';
+
+  @override
+  String get seedLibraryDetailQualityUser => '用户';
+
+  @override
+  String get seedLibraryDetailApplyToSystem => '应用到系统';
+
+  @override
+  String get seedLibraryDetailAppliedSuccess => '已应用到系统';
+
+  @override
+  String get seedLibraryDetailPausedSuccess => '已暂停使用该种子库';
+
+  @override
+  String get seedLibraryDetailStatusUpdated => '种子库状态已更新';
+
+  @override
+  String get seedLibraryDetailPauseUse => '暂停使用';
+
+  @override
+  String get seedLibraryDetailApplyLibrary => '应用种子库';
+
+  @override
+  String get seedLibraryDetailSetPrimarySuccess => '已设为优先使用';
+
+  @override
+  String get seedLibraryDetailSetPrimary => '设为主用';
+
+  @override
+  String get seedLibraryDetailMarkedNotSuitableSuccess => '已记录“此种子不适合我”';
+
+  @override
+  String get seedLibraryDetailMarkNotSuitable => '此种子不适合我';
+
+  @override
+  String get seedLibraryDetailEditRating => '修改评分';
+
+  @override
+  String get seedLibraryDetailGiveRating => '给个评分';
+
+  @override
+  String get seedLibraryDetailSubscriptionStatusEnabled => '已启用';
+
+  @override
+  String get seedLibraryDetailSubscriptionStatusDisabled => '已订阅未启用';
+
+  @override
+  String get seedLibraryDetailActiveSubscriptions => '协同中的种子库';
+
+  @override
+  String get seedLibraryDetailActiveSubscriptionsDesc =>
+      '你可以同时启用多个种子库。系统会优先使用高优先级种子库，再融合其他已启用种子库的内容。';
+
+  @override
+  String get seedLibraryDetailFallbackName => '种子库';
+
+  @override
+  String get seedLibraryDetailNoResultsUnderFilter => '当前筛选条件下没有内容';
+
+  @override
+  String get seedLibraryDetailUsageFewShot => '用于增强 AI 在相似任务中的回答风格和示例质量';
+
+  @override
+  String get seedLibraryDetailUsageTeachingContent =>
+      '用于给学习计划、任务说明和知识讲解提供高质量教学内容';
+
+  @override
+  String get seedLibraryDetailUsageReplyTemplate => '用于改善系统回复模板和表达稳定性';
+
+  @override
+  String get seedLibraryDetailUsageCustom => '用于你自己的内容偏好和专属示例沉淀';
+
+  @override
+  String get seedLibraryDetailFilterTitle => '筛选内容';
+
+  @override
+  String get seedLibraryDetailFilterDesc => '按内容类型、难度和启用状态筛选当前种子库里的条目。';
+
+  @override
+  String get seedLibraryDetailFilterContentType => '内容类型';
+
+  @override
+  String get seedLibraryDetailFilterAll => '全部';
+
+  @override
+  String get seedLibraryDetailFilterDifficulty => '难度';
+
+  @override
+  String get seedLibraryDetailFilterShowInactive => '显示已停用内容';
+
+  @override
+  String get seedLibraryDetailFilterShowInactiveDesc => '关闭时仅展示当前仍在使用的条目';
+
+  @override
+  String get seedLibraryDetailFilterReset => '重置';
+
+  @override
+  String get seedLibraryDetailFilterDone => '完成';
+
+  @override
+  String get seedLibraryDetailRatingTitle => '给这个种子库评分';
+
+  @override
+  String get seedLibraryDetailRatingDescription => '你的评分会影响这个种子库的展示质量分。';
+
+  @override
+  String get seedLibraryDetailRatingCommentLabel => '评价说明（可选）';
+
+  @override
+  String get seedLibraryDetailRatingSubmitted => '评分已提交';
+
+  @override
+  String get seedLibraryDetailSubmitRating => '提交评分';
+
+  @override
+  String get seedLibraryDetailContentBody => '正文';
+
+  @override
+  String get seedLibraryDetailStructuredContent => '结构化内容';
+
+  @override
+  String get seedLibraryDetailEditLibrary => '编辑种子库';
+
+  @override
+  String get seedLibraryDetailEditName => '名称';
+
+  @override
+  String get seedLibraryDetailEditNameEmpty => '名称不能为空';
+
+  @override
+  String get seedLibraryDetailEditDescriptionOptional => '描述（可选）';
+
+  @override
+  String get seedLibraryDetailEditCancel => '取消';
+
+  @override
+  String get seedLibraryDetailEditSave => '保存';
+
+  @override
+  String get seedLibraryDetailLibraryUpdated => '种子库已更新';
+
+  @override
+  String get seedLibraryDetailAddItem => '添加种子内容';
+
+  @override
+  String get seedLibraryDetailAddItemType => '内容类型';
+
+  @override
+  String get seedLibraryDetailAddItemTitle => '标题';
+
+  @override
+  String get seedLibraryDetailAddItemContent => '内容';
+
+  @override
+  String get seedLibraryDetailAddItemSubject => '主题/学科';
+
+  @override
+  String get seedLibraryDetailAddItemDifficulty => '难度';
+
+  @override
+  String get seedLibraryDetailAddItemUnset => '未设置';
+
+  @override
+  String get seedLibraryDetailAddItemTags => '标签（逗号分隔）';
+
+  @override
+  String get seedLibraryDetailAddItemSave => '保存内容';
+
+  @override
+  String get seedLibraryDetailAddItemSuccess => '种子内容已添加';
+
+  @override
+  String get seedLibraryDetailImportCannotRead => '无法读取文件内容';
+
+  @override
+  String get seedLibraryDetailImportInvalidJson =>
+      'JSON 格式无效，需为数组或 [items:[...]]';
+
+  @override
+  String get seedLibraryDetailImportNoItems => '文件中没有可导入的内容项';
+
+  @override
+  String seedLibraryDetailApplyFailed(Object error) {
+    return '应用失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailSetPrimaryFailed(Object error) {
+    return '设置失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailMarkNotSuitableFailed(Object error) {
+    return '记录失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailCurrentStatus(Object status, Object priority) {
+    return '当前状态：$status · 优先级 $priority';
+  }
+
+  @override
+  String seedLibraryDetailUsageAppliedEnabled(Object hint) {
+    return '当前已生效。$hint；系统会按优先级把它与其他启用中的种子库一起使用。';
+  }
+
+  @override
+  String seedLibraryDetailUsageSubscribedNotEnabled(Object hint) {
+    return '当前已订阅但未启用。启用后，$hint。';
+  }
+
+  @override
+  String seedLibraryDetailUsageNotApplied(Object hint) {
+    return '当前尚未应用。应用后，$hint。';
+  }
+
+  @override
+  String seedLibraryDetailCurrentRating(Object score) {
+    return '当前评分：$score / 10';
+  }
+
+  @override
+  String seedLibraryDetailRatingFailed(Object error) {
+    return '评分失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailAddItemFailed(Object error) {
+    return '添加失败：$error';
+  }
+
+  @override
+  String seedLibraryDetailImportResult(Object imported, Object failed) {
+    return '导入完成：成功 $imported 条，失败 $failed 条';
+  }
+
+  @override
+  String seedLibraryDetailImportFailed(Object error) {
+    return '导入失败：$error';
+  }
+
+  @override
+  String get recommendationTargetFallback => '推荐对象';
+
+  @override
+  String get recommendationThisItem => '这条推荐';
+
+  @override
+  String recommendationFeedbackAbout(Object target, Object stage) {
+    return '关于 $target 的$stage反馈';
+  }
+
+  @override
+  String get recommendationFeedbackHint => '你的反馈会直接更新下一轮推荐权重';
+
+  @override
+  String get recommendationStartCalibration => '开始校准';
+
+  @override
+  String get recommendationFriendPreferenceTitle => '你的伙伴匹配偏好';
+
+  @override
+  String get recommendationGroupPreferenceTitle => '你的社群推荐偏好';
+
+  @override
+  String recommendationRecentCount(Object count) {
+    return '近 $count 次';
+  }
+
+  @override
+  String get recommendationFriendLearningHint => '系统正在学习你更看重相似度、互补性还是合作舒适度。';
+
+  @override
+  String get recommendationGroupLearningHint => '系统正在学习你更偏好兴趣对口、活跃氛围还是新鲜发现。';
+
+  @override
+  String recommendationSystemAvoiding(Object signals) {
+    return '系统在回避：$signals';
+  }
+
+  @override
+  String recommendationCurrentlyBiasing(Object metrics) {
+    return '当前更偏向：$metrics';
+  }
+
+  @override
+  String get recommendationListSeparator => '、';
+
+  @override
+  String get recommendationCalibrateTitle => '帮我们校准推荐';
+
+  @override
+  String recommendationFeedbackSubtitle(Object subject) {
+    return '你对 $subject 的评价会直接作用到接下来的推荐算法。';
+  }
+
+  @override
+  String get recommendationScoreOverall => '整体感受';
+
+  @override
+  String get recommendationScoreExplanationClarity => '推荐理由清晰度';
+
+  @override
+  String get recommendationScoreActionability => '采取行动的意愿';
+
+  @override
+  String get recommendationScoreRelevance => '契合度';
+
+  @override
+  String get recommendationScoreSimilarity => '相似度是否到位';
+
+  @override
+  String get recommendationScoreComplementary => '互补性是否成立';
+
+  @override
+  String get recommendationScoreComfort => '合作舒适度';
+
+  @override
+  String get recommendationScoreInterestMatch => '兴趣匹配度';
+
+  @override
+  String get recommendationScoreActivity => '活跃度是否合适';
+
+  @override
+  String get recommendationScoreAtmosphere => '社群氛围';
+
+  @override
+  String get recommendationIssuesTitle => '哪里不够对味';
+
+  @override
+  String get recommendationStrengthsTitle => '哪些地方做得好';
+
+  @override
+  String get recommendationFreeTextLabel => '自然语言补充';
+
+  @override
+  String get recommendationFriendHint => '例如：我更希望责任伙伴跟我节奏接近，但也能在拖延时推我一把。';
+
+  @override
+  String get recommendationGroupHint => '例如：我想找更对口的小组，最好活跃但不要太嘈杂。';
+
+  @override
+  String get recommendationPrivacyNotice =>
+      '我们只使用你填写的分数和总结来优化推荐，不会把私密原始数据直接暴露给其他用户。';
+
+  @override
+  String get recommendationLater => '稍后再说';
+
+  @override
+  String get recommendationSubmitFeedback => '提交反馈';
+
+  @override
+  String recommendationMatchingStrategy(Object name) {
+    return '匹配策略：$name';
+  }
+
+  @override
+  String recommendationGroupSubtitle(Object count, Object tags) {
+    return '$count 人 · $tags';
+  }
+
+  @override
+  String get recommendationPublicGroup => '公开社群';
+
+  @override
+  String get recommendationStageImmediate => '即时';
+
+  @override
+  String get recommendationStageFollowUp => '跟进';
+
+  @override
+  String get recommendationStageOutcome => '结果';
+
+  @override
+  String get recommendationReasonSubjectOverlap => '主题重合';
+
+  @override
+  String get recommendationReasonPreferenceAlignment => '学习节奏接近';
+
+  @override
+  String get recommendationReasonTagOverlap => '兴趣命中';
+
+  @override
+  String get recommendationReasonTrending => '近期活跃';
+
+  @override
+  String get recommendationMetricOverall => '整体';
+
+  @override
+  String get recommendationMetricSimilarity => '相似度';
+
+  @override
+  String get recommendationMetricComfort => '舒适度';
+
+  @override
+  String get recommendationMetricInterestMatch => '兴趣匹配';
+
+  @override
+  String get recommendationMetricActivity => '活跃度';
+
+  @override
+  String get recommendationMetricSubjectSimilarity => '主题相似';
+
+  @override
+  String get recommendationMetricRelationshipReadiness => '关系熟悉度';
+
+  @override
+  String get recommendationMetricTagMatch => '标签匹配';
+
+  @override
+  String get recommendationMetricQuality => '质量';
+
+  @override
+  String get recommendationSignalTooDissimilar => '不够相似';
+
+  @override
+  String get recommendationSignalWantMoreTagMatch => '兴趣不够对口';
+
+  @override
+  String get recommendationSignalTrustworthy => '合作感靠谱';
+
+  @override
+  String get recommendationSignalGoodInterestMatch => '兴趣对口';
+
+  @override
+  String get recommendationIssueNotSimilar => '不够相似';
+
+  @override
+  String get recommendationIssueNotComplementary => '缺少互补';
+
+  @override
+  String get recommendationIssueNotProactive => '不够主动';
+
+  @override
+  String get recommendationIssueTooMuchPressure => '压力太大';
+
+  @override
+  String get recommendationIssueNotFamiliar => '不够熟悉';
+
+  @override
+  String get recommendationIssueInaccurateTags => '标签不准';
+
+  @override
+  String get recommendationIssueTooQuiet => '太冷清';
+
+  @override
+  String get recommendationIssueTooCrowded => '太拥挤';
+
+  @override
+  String get recommendationIssueMediocreVibe => '氛围一般';
+
+  @override
+  String get recommendationIssueUnsuitableThreshold => '门槛不合适';
+
+  @override
+  String get recommendationStrengthGreatFit => '很契合';
+
+  @override
+  String get recommendationStrengthComplementary => '很互补';
+
+  @override
+  String get recommendationStrengthReliable => '很靠谱';
+
+  @override
+  String get recommendationStrengthClearReason => '理由清楚';
+
+  @override
+  String get recommendationStrengthInterestMatch => '兴趣对口';
+
+  @override
+  String get recommendationStrengthGreatVibe => '氛围很好';
+
+  @override
+  String get recommendationStrengthActiveFit => '活跃合适';
+
+  @override
+  String get personaRefreshPersona => '刷新画像';
+
+  @override
+  String get personaProfileInterpretation => '画像解读';
+
+  @override
+  String get personaProfileInterpretationSubtitle => '先看自然语言总结，再决定要不要展开底层结构';
+
+  @override
+  String get personaL3Subtitle => '优先展示系统已经总结出的可感知结论';
+
+  @override
+  String get personaL1Subtitle => '你明确告诉系统的目标和偏好';
+
+  @override
+  String get personaL2Subtitle => '系统与你协作校准后的标签与能力判断';
+
+  @override
+  String get personaInferenceTitle => '系统推断与策略';
+
+  @override
+  String get personaInferenceSubtitle => '更技术性的推断偏好与当前策略，默认收起';
+
+  @override
+  String get personaQuickAccessSystemUpdates => '系统更新';
+
+  @override
+  String get personaQuickAccessMemorySettings => '记忆设置';
+
+  @override
+  String get personaCoreProfileUnavailable => '核心画像暂时不可用';
+
+  @override
+  String personaDegradedMode(Object message) {
+    return '已切换为降级展示，你仍然可以查看和刷新其它分区。\n$message';
+  }
+
+  @override
+  String get personaRetryFullProfile => '重试完整画像';
+
+  @override
+  String personaActiveGoal(Object goalTitle) {
+    return '你当前最明确的目标是：$goalTitle。';
+  }
+
+  @override
+  String personaLearningPreference(Object learningStyle, Object responseDepth) {
+    return '你的学习偏好更接近$learningStyle，系统回答深度倾向$responseDepth。';
+  }
+
+  @override
+  String personaObservedPattern(Object pattern) {
+    return '系统最近观察到的主要模式是：$pattern。';
+  }
+
+  @override
+  String personaCognitiveClueCount(Object count) {
+    return '画像里已积累 $count 条可用于个性化推荐的认知线索。';
+  }
+
+  @override
+  String get personaProfileSparse => '当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。';
+
+  @override
+  String get personaSimplifiedUnderstanding => '这是系统目前对你的简化理解：';
+
+  @override
+  String get personaSectionRefresh => '刷新';
+
+  @override
+  String get personaSectionLoading => '加载中…';
+
+  @override
+  String personaLoadFailedError(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get personaPreferenceVersionReason => '当前显式偏好与画像上下文版本。';
+
+  @override
+  String get personaActivePreferencesReason => '当前用于 AI 与系统联动的显式偏好。';
+
+  @override
+  String get personaKnowledgeSummaryReason => '知识掌握度与当前活跃学习主题摘要。';
+
+  @override
+  String get personaCognitiveSummaryReason => '当前认知模式与风险信号摘要。';
+
+  @override
+  String get personaInferredDefaultReason => '系统会根据最近行为持续更新这项推断。';
+
+  @override
+  String get personaViewRecord => '查看记录';
+
+  @override
+  String get personaUpdate => '更新';
+
+  @override
+  String get personaAdjust => '调整';
+
+  @override
+  String get personaManualOverride => '手动覆盖';
+
+  @override
+  String get personaPolicy => '策略';
+
+  @override
+  String personaSourcePattern(Object pattern) {
+    return '来源模式：$pattern';
+  }
+
+  @override
+  String get personaActivePolicyReason => '当前已生效的系统策略。';
+
+  @override
+  String personaCorrectionSubmitFailed(Object error) {
+    return '提交修正失败：$error';
+  }
+
+  @override
+  String get personaPreferenceUpdated => '偏好已更新';
+
+  @override
+  String personaPreferenceUpdateFailed(Object error) {
+    return '偏好更新失败：$error';
+  }
+
+  @override
+  String get personaRolledBack => '已回滚到上一版本';
+
+  @override
+  String personaRollbackFailed(Object error) {
+    return '回滚失败：$error';
+  }
+
+  @override
+  String get personaGoalUpdated => '目标已更新';
+
+  @override
+  String personaGoalUpdateFailed(Object error) {
+    return '目标更新失败：$error';
+  }
+
+  @override
+  String get personaInferredAdjusted => '推断偏好已调整';
+
+  @override
+  String personaAdjustFailed(Object error) {
+    return '调整失败：$error';
+  }
+
+  @override
+  String get personaInferredReset => '已恢复系统推断值';
+
+  @override
+  String personaRestoreFailed(Object error) {
+    return '恢复失败：$error';
+  }
+
+  @override
+  String get personaUnknownError => '未知错误';
+
+  @override
+  String get personaHintDecimalRange => '请输入 0.0 到 1.0 之间的数字';
+
+  @override
+  String get personaHintStudyMinutes => '请输入学习时长（分钟）';
+
+  @override
+  String get personaHintPositiveMinutes => '请输入大于 0 的分钟数';
+
+  @override
+  String get personaHintValidPreference => '请输入有效的偏好值';
+
+  @override
+  String get examSprintTitle => '考试冲刺设置';
+
+  @override
+  String examSprintMinutesPerDay(Object minutes) {
+    return '$minutes 分钟/天';
+  }
+
+  @override
+  String get examSprintStep1Subject => '1. 哪门课？';
+
+  @override
+  String get examSprintSubjectHint => '例如：计算机网络 / 高数 / 英语四级';
+
+  @override
+  String get examSprintSubjectRequired => '先告诉我你要冲刺哪门课';
+
+  @override
+  String get examSprintStep2Date => '2. 考试哪天？';
+
+  @override
+  String get examSprintSelectDate => '选择考试日期';
+
+  @override
+  String get examSprintDateHint => '日期会决定冲刺天数和节奏';
+
+  @override
+  String get examSprintStep3Target => '3. 目标是通过、保分还是冲高分？';
+
+  @override
+  String get examSprintStep4Scope => '4. 考试范围 / 老师重点有吗？';
+
+  @override
+  String get examSprintStep4Subtitle =>
+      '可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。';
+
+  @override
+  String get examSprintScopeHint => '例如：重点看传输层、网络层；老师说会考简答和计算题。';
+
+  @override
+  String get examSprintUpload => '上传资料';
+
+  @override
+  String get examSprintNoUpload => '还没上传资料';
+
+  @override
+  String examSprintUploadedCount(Object count) {
+    return '已上传 $count 份资料';
+  }
+
+  @override
+  String get examSprintStep5Baseline => '5. 你现在大概会多少？最怕哪几章？';
+
+  @override
+  String get examSprintWeakChapters => '最怕哪几章？';
+
+  @override
+  String get examSprintStep6Daily => '6. 每天真实能学多久？';
+
+  @override
+  String examSprintMinutesPerDayLabel(Object minutes) {
+    return '$minutes 分钟 / 天';
+  }
+
+  @override
+  String examSprintMinutesLabel(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get examSprintDailyHint => '用「你大概率能坚持」的时间，不用理想状态。';
+
+  @override
+  String get examSprintGenerate => '生成我的第一天任务';
+
+  @override
+  String get examSprintSubmitHint => '提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。';
+
+  @override
+  String get examSprintHeroTitle => '不是填问卷，是一起确定起点';
+
+  @override
+  String get examSprintHeroSubtitle => '填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。';
+
+  @override
+  String get examSprintUploadSuccess => '资料已上传';
+
+  @override
+  String get examSprintSelectDateFirst => '先选择考试日期';
+
+  @override
+  String get examSprintAssessmentComplete => '初步评估已完成';
+
+  @override
+  String examSprintPassProbability(Object percent) {
+    return '通过概率 $percent%';
+  }
+
+  @override
+  String examSprintRecommendedMode(Object mode) {
+    return '建议模式 $mode';
+  }
+
+  @override
+  String get examSprintFirstDayFocus => '第一天先做什么';
+
+  @override
+  String get examSprintStartFirstDay => '开始第一天任务';
+
+  @override
+  String get examSprintViewPlan => '查看计划';
+
+  @override
+  String get examSprintViewFullPlan => '查看整个计划';
+
+  @override
+  String get examSprintBaselineAlmostZero => '几乎要从零开始';
+
+  @override
+  String get examSprintBaselineUnstable => '上过课，但基础还不稳';
+
+  @override
+  String get examSprintBaselinePartial => '有一部分基础，可以边补边冲';
+
+  @override
+  String get examSprintBaselineSolid => '基础不错，重点是提分校准';
+
+  @override
+  String examSprintDayCount(Object count) {
+    return '$count 天';
+  }
+
+  @override
+  String get examSprintTargetPass => '通过';
+
+  @override
+  String get examSprintTargetHold => '保分';
+
+  @override
+  String get examSprintTargetHighScore => '冲高分';
+
+  @override
+  String get memorySettingsTitle => '记忆控制';
+
+  @override
+  String get memorySettingsBack => '返回';
+
+  @override
+  String get memorySettingsDisabled => '记忆控制未启用';
+
+  @override
+  String memorySettingsLoadError(Object error) {
+    return '加载记忆设置失败: $error';
+  }
+
+  @override
+  String memorySettingsSaveError(Object error) {
+    return '保存失败: $error';
+  }
+
+  @override
+  String get memorySettingsSaveSuccess => '记忆设置已更新';
+
+  @override
+  String get memorySettingsUnavailable => '记忆控制不可用';
+
+  @override
+  String get memorySettingsEnabledChip => '记忆已启用';
+
+  @override
+  String get memorySettingsDisabledChip => '记忆已暂停';
+
+  @override
+  String get memorySettingsControllableChip => '偏好可控';
+
+  @override
+  String get memorySettingsDescription =>
+      '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。';
+
+  @override
+  String get memorySettingsEnableTitle => '启用长期记忆';
+
+  @override
+  String get memorySettingsEnableDesc => '关闭后会暂停新的记忆写入，但不会删除历史记录。';
+
+  @override
+  String get memorySettingsSocialTitle => '社交语义子开关';
+
+  @override
+  String get memorySettingsSocialDesc =>
+      'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。';
+
+  @override
+  String get memorySettingsSocialSelf => '自我记忆';
+
+  @override
+  String get memorySettingsSocialPersonMention => '人物提及';
+
+  @override
+  String get memorySettingsSocialRelationship => '关系动态';
+
+  @override
+  String get memorySettingsSocialCommitment => '承诺事项';
+
+  @override
+  String get memorySettingsPushTitle => '主动提醒';
+
+  @override
+  String get memorySettingsPushDesc =>
+      'Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。';
+
+  @override
+  String get memorySettingsPushEnableTitle => '启用主动提醒';
+
+  @override
+  String get memorySettingsPushEnableDesc => '总开关。关闭后 Stage 18 主动提醒会全部停用。';
+
+  @override
+  String get memorySettingsPushFollowUpTitle => '承诺跟进';
+
+  @override
+  String get memorySettingsPushFollowUpDesc => '只针对你明确表达过、且已经逾期的承诺事项。';
+
+  @override
+  String get memorySettingsPushRecoveryTitle => '活跃恢复';
+
+  @override
+  String get memorySettingsPushRecoveryDesc => '只针对曾经连续活跃、且 72 小时未活跃的情况。';
+
+  @override
+  String get memorySettingsQuietHoursTitle => '静默时段';
+
+  @override
+  String get memorySettingsQuietHoursDesc =>
+      '你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。';
+
+  @override
+  String get memorySettingsStartTime => '开始时间';
+
+  @override
+  String get memorySettingsEndTime => '结束时间';
+
+  @override
+  String memorySettingsCurrentTimezone(Object timezone) {
+    return '当前时区：$timezone';
+  }
+
+  @override
+  String get memorySettingsViewInbox => '查看提醒收件箱';
+
+  @override
+  String get memorySettingsTypeTitle => '记忆类型';
+
+  @override
+  String get memorySettingsTypeDesc => '决定哪些内容会被长期记住。';
+
+  @override
+  String get memorySettingsPreferenceTitle => '偏好';
+
+  @override
+  String get memorySettingsPreferenceDesc => '记录回答风格、学习节奏和常见偏好。';
+
+  @override
+  String get memorySettingsGoalTitle => '目标';
+
+  @override
+  String get memorySettingsGoalDesc => '记录已确认的长期目标和阶段意图。';
+
+  @override
+  String get memorySettingsEpisodicTitle => '经历';
+
+  @override
+  String get memorySettingsEpisodicDesc => '记录对后续决策有帮助的关键事件与反馈。';
+
+  @override
+  String get memorySettingsInferredTitle => 'AI 自动记忆';
+
+  @override
+  String get memorySettingsInferredDesc => '允许系统从聊天中推断短期经历；每条都必须可见、可撤销。';
+
+  @override
+  String get memorySettingsCaptureTitle => '捕获强度';
+
+  @override
+  String get memorySettingsCaptureDesc => '越高越积极，但也会记录更多上下文。';
+
+  @override
+  String get memorySettingsCaptureLow => '低';
+
+  @override
+  String get memorySettingsCaptureMedium => '中';
+
+  @override
+  String get memorySettingsCaptureHigh => '高';
+
+  @override
+  String get memorySettingsBlockPrefTitle => '屏蔽偏好';
+
+  @override
+  String get memorySettingsBlockPrefDesc => '不希望长期存储的偏好项可以在这里关闭。';
+
+  @override
+  String get memorySettingsBlockSourceTitle => '屏蔽来源';
+
+  @override
+  String get memorySettingsBlockSourceDesc => '限制哪些入口不会写入长期记忆。';
+
+  @override
+  String get memorySettingsSaveButton => '保存设置';
+
+  @override
+  String get memorySettingsSaving => '保存中...';
+
+  @override
+  String get reportLearningAnalysisReport => '学习分析报告';
+
+  @override
+  String get reportContinuationSubtitle => '继续查看本次学习旅程的分析报告';
+
+  @override
+  String get reportPartialDataDisclaimer => '部分数据，仅供参考';
+
+  @override
+  String get reportPartialDataMessage => '当前基于部分学习记录生成，结果可能不够全面。';
+
+  @override
+  String get reportDiagnosisPanelEyebrow => '学习诊断面板';
+
+  @override
+  String get reportOpenGalaxy => '打开知识星图';
+
+  @override
+  String reportPrioritizeNode(Object nodeName) {
+    return '优先处理 $nodeName';
+  }
+
+  @override
+  String get reportRangeWeek => '本周';
+
+  @override
+  String get reportRangeMonth => '本月';
+
+  @override
+  String get reportRangeAll => '全部';
+
+  @override
+  String get reportCurrentLearningTopic => '当前学习主题';
+
+  @override
+  String get reportMasteryTrendTitle => '掌握度趋势';
+
+  @override
+  String get reportPartialDataPill => '部分数据，仅供参考';
+
+  @override
+  String get reportTrendEmptyTitle => '完成更多学习后将在此展示趋势分析';
+
+  @override
+  String get reportTrendEmptyMessage => '当前还没有足够的真实学习记录来生成趋势，请先完成学习任务、练习或复盘。';
+
+  @override
+  String get reportTrendChartHint => '拖动或点按时间点，就能把这条线和当时的学习投入一起看清楚。';
+
+  @override
+  String get reportRadarChartTitle => '掌握度雷达图';
+
+  @override
+  String get reportRadarSubtitleInsufficient => '完成更多学习后将在此展示掌握度分析';
+
+  @override
+  String get reportRadarSubtitleNoComparison => '点击任一维度查看更细的掌握情况';
+
+  @override
+  String get reportRadarSubtitleWithComparison => '当前报告已叠加上次轮廓，可点击维度查看详情';
+
+  @override
+  String get reportRadarEmptyMessage => '掌握度雷达图需要真实学习记录支撑，先开始一次学习并留下结果。';
+
+  @override
+  String get reportKeyMetricsTitle => '关键指标';
+
+  @override
+  String get reportMetricTotalMastery => '总掌握度';
+
+  @override
+  String get reportMetricKnowledgeCount => '知识点数';
+
+  @override
+  String get reportMetricStrengths => '强项';
+
+  @override
+  String get reportMetricWeaknesses => '薄弱点';
+
+  @override
+  String get reportExecutionProfileLoadFailed => '执行画像暂时没有加载出来，不影响你先阅读本次学习报告。';
+
+  @override
+  String get reportKeyDimensionsTitle => '重点知识维度';
+
+  @override
+  String get reportAiAnalysisTitle => 'AI 分析报告';
+
+  @override
+  String get reportBackToGalaxy => '回到 Galaxy';
+
+  @override
+  String get reportViewSprintHistory => '查看 Sprint 历史';
+
+  @override
+  String reportShareTitle(Object mastery) {
+    return '学习报告 · 平均掌握度 $mastery%';
+  }
+
+  @override
+  String get reportShareSubtitleSummary => '本轮学习分析摘要';
+
+  @override
+  String reportShareSubtitlePriority(Object nodeName) {
+    return '优先补强 $nodeName';
+  }
+
+  @override
+  String reportShareMetadataDimensions(Object count) {
+    return '$count 个维度';
+  }
+
+  @override
+  String reportShareMessageWithMastery(Object mastery) {
+    return '我刚在 Sparkle 生成了一份学习分析报告，平均掌握度 $mastery%。';
+  }
+
+  @override
+  String reportShareMessageWithNode(Object nodeName) {
+    return '我刚在 Sparkle 生成了一份学习分析报告，当前优先补强的是 $nodeName。';
+  }
+
+  @override
+  String reportHeroTitlePriority(Object nodeName) {
+    return '当前最该先收口的是 $nodeName';
+  }
+
+  @override
+  String get reportHeroTitleStable => '你的稳定区已经开始成形';
+
+  @override
+  String get reportHeroTitleBuild => '先用真实学习记录建立分析基础';
+
+  @override
+  String reportHeroSubtitleDeltaUp(Object nodeName) {
+    return '整体掌握度还在抬升，但 $nodeName 依然是最容易拖慢进度的环节，优先补它最划算。';
+  }
+
+  @override
+  String reportHeroSubtitleDeltaDown(Object nodeName) {
+    return '最近节奏有一点回落，先别继续铺开范围，优先把 $nodeName 重新拉稳。';
+  }
+
+  @override
+  String get reportHeroSubtitleStrong =>
+      '这份报告已经把当前强项、薄弱点和趋势放到同一个面板里，先看重点，再决定下一步。';
+
+  @override
+  String get reportHeroSubtitleDefault => '先用这份报告确认方向，后续随着更多记录补齐，趋势会越来越清楚。';
+
+  @override
+  String get reportMetricAvgMastery => '平均掌握度';
+
+  @override
+  String get reportMetricPriority => '优先补强';
+
+  @override
+  String get reportMetricCurrentStrength => '当前强项';
+
+  @override
+  String get reportMetricTrendChange => '变化趋势';
+
+  @override
+  String get reportPlaceholderEmpty => '暂无学习报告数据。';
+
+  @override
+  String get reportContinueReading => '继续阅读报告';
+
+  @override
+  String get reportEvidenceAndAdvice => '证据与建议';
+
+  @override
+  String get reportGotIt => '知道了';
+
+  @override
+  String get reportMasteryStable => '掌握稳定';
+
+  @override
+  String get reportMasteryConsolidate => '仍可巩固';
+
+  @override
+  String get reportMasteryNeedFocus => '需要重点补强';
+
+  @override
+  String get reportGuidanceStable => '这个知识点已经比较稳，可以更多地通过应用题和迁移练习来保持熟练度。';
+
+  @override
+  String get reportGuidanceConsolidate =>
+      '这个知识点理解基本建立，但在连续推理或综合题里可能还会波动，适合再补一轮刻意练习。';
+
+  @override
+  String get reportGuidanceNeedFocus =>
+      '这个知识点当前是明显薄弱环节，建议先回到定义、例题和前置概念，再重新做相关练习。';
+
+  @override
+  String get reportChartFirstReport => '第一份报告已经准备好了。下次再来看，这里就会出现你的趋势变化线。';
+
+  @override
+  String reportChartMasteryLabel(Object mastery) {
+    return '掌握度 $mastery%';
+  }
+
+  @override
+  String reportChartStudyMinutes(Object minutes) {
+    return '学习时长 $minutes 分钟';
+  }
+
+  @override
+  String reportChartMinutesShort(Object count) {
+    return '$count分';
+  }
+
+  @override
+  String get reportChartZeroMinutes => '0分';
+
+  @override
+  String get reportLegendMastery => '掌握度';
+
+  @override
+  String get reportLegendStudyDuration => '学习时长';
+
+  @override
+  String get reportDiagnosisSummaryTitle => '诊断摘要';
+
+  @override
+  String get reportDiagnosisSummaryDesc =>
+      '先回答三个最关键的问题：你现在最稳的地方在哪里、最该补的地方在哪里、整体是在上升还是停滞。';
+
+  @override
+  String get reportDiagnosisTitleStrength => '当前强项';
+
+  @override
+  String get reportDiagnosisTitleWeakness => '主要短板';
+
+  @override
+  String get reportDiagnosisTitleTrend => '整体趋势';
+
+  @override
+  String get reportDiagnosisHeadlinePending => '待生成';
+
+  @override
+  String get reportDiagnosisStrengthBodyPending => '生成更多学习记录后，这里会出现最稳的知识点。';
+
+  @override
+  String get reportDiagnosisStrengthBodyData => '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。';
+
+  @override
+  String get reportDiagnosisWeaknessBodyPending => '当前还没有足够数据定位短板。';
+
+  @override
+  String get reportDiagnosisWeaknessBodyData => '这是最值得先补的切入口，优先回到定义、例题和前置关系。';
+
+  @override
+  String get reportDiagnosisWeaknessFallback => '薄弱项';
+
+  @override
+  String get reportDiagnosisTrendWaitingComparison => '等待历史对比';
+
+  @override
+  String get reportDiagnosisTrendBodyPending => '再积累一到两份报告后，这里会显示你的连续变化趋势。';
+
+  @override
+  String get reportDiagnosisTrendBodyUp => '掌握度在继续抬升，接下来更适合做巩固和迁移。';
+
+  @override
+  String get reportDiagnosisTrendBodyDown => '最近有回落迹象，建议减少铺开面，先收口当前薄弱点。';
+
+  @override
+  String get reportTagConsolidate => '可继续巩固';
+
+  @override
+  String get reportTagProcessFirst => '建议先处理';
+
+  @override
+  String get reportTagProcessSoon => '建议尽快处理';
+
+  @override
+  String get reportTagKeepRhythm => '保持当前节奏';
+
+  @override
+  String get reportTagCloseGap => '建议尽快收口';
+
+  @override
+  String get reportTagAwaitMore => '等待更多记录';
+
+  @override
+  String get reportTagObserve => '建议继续观察';
+
+  @override
+  String get reportActionTitle => '下一步行动';
+
+  @override
+  String get reportActionDescNoWeakness =>
+      '先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。';
+
+  @override
+  String reportActionDescWithWeakness(Object weakNode, Object strongNode) {
+    return '优先围绕 $weakNode 收口，再用 $strongNode 做迁移练习，能更快把整体掌握度拉起来。';
+  }
+
+  @override
+  String reportActionExploreNode(Object nodeName) {
+    return '推演 $nodeName';
+  }
+
+  @override
+  String get reportActionWeaknessFallback => '薄弱项';
+
+  @override
+  String get reportActionStrengthFallback => '当前强项';
+
+  @override
+  String get reportActionEnterSimulation => '进入学习仿真';
+
+  @override
+  String get reportTrendAutoFillTitle => '趋势会随着更多报告自动补全';
+
+  @override
+  String get reportTrendFirstReportMessage =>
+      '第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。';
+
+  @override
+  String get reportTrendLoadingHistory => '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。';
+
+  @override
+  String get reportAiExecutionAssistant => 'AI执行助手';
+
+  @override
+  String get reportAiExecutionDesc =>
+      'Sparkle 会记住哪些任务更适合交给 AI，以及这些委派实际帮你节省了多少时间。';
+
+  @override
+  String get reportStatTotalExecutions => '总执行';
+
+  @override
+  String get reportStatUnitTimes => '次';
+
+  @override
+  String get reportStatSuccessRate => '成功率';
+
+  @override
+  String get reportStatTimeSaved => '节省时间';
+
+  @override
+  String get reportStatUnitHours => '小时';
+
+  @override
+  String get reportStatUnitMinutes => '分钟';
+
+  @override
+  String reportStatByTypeFormat(Object key, Object count, Object rate) {
+    return '$key: $count次 · $rate%';
+  }
+
+  @override
+  String get bgmLibraryTitle => 'BGM 曲库与播放器';
+
+  @override
+  String get bgmLibraryRefresh => '刷新';
+
+  @override
+  String get bgmLibraryNoImport => '没有导入新曲目';
+
+  @override
+  String bgmLibraryImportedCount(Object count) {
+    return '已导入 $count 首本地音乐';
+  }
+
+  @override
+  String bgmLibraryPlayingSwitched(Object title) {
+    return '正在播放 $title，已切换到播放器模式';
+  }
+
+  @override
+  String bgmLibraryRemoved(Object title) {
+    return '已移除 $title';
+  }
+
+  @override
+  String get bgmLibraryEmptyFilter => '当前筛选下没有曲目，可以尝试切换筛选或导入本地音乐。';
+
+  @override
+  String get bgmLibraryNotPlaying => '当前未播放';
+
+  @override
+  String get bgmLibraryWaitingPlay => '等待播放中';
+
+  @override
+  String get bgmLibraryBrowseHint => '你可以在这里直接点播曲库里的任意曲目';
+
+  @override
+  String get bgmLibraryNowPlaying => '当前播放';
+
+  @override
+  String get bgmLibraryPlayerMode => '播放器模式';
+
+  @override
+  String get bgmLibraryPlayerModeDesc =>
+      '播放器模式下音乐不会因页面跳转而被打断，适合把 Sparkle 当成舒缓音乐播放器来用。';
+
+  @override
+  String get bgmLibraryEnableBgm => '启用背景音乐';
+
+  @override
+  String get bgmLibraryDisableHint => '关闭后播放器页也不会继续播放背景音乐';
+
+  @override
+  String get bgmLibraryQuickStrategy => '快速策略调节';
+
+  @override
+  String get bgmLibraryQuickStrategyDesc => '这里保留最常用的调节项，完整细项仍然可以在设置页里继续调整。';
+
+  @override
+  String get bgmLibraryStyleOrientation => '风格取向';
+
+  @override
+  String get bgmLibraryIntensityLabel => '氛围强度';
+
+  @override
+  String get bgmLibraryVarietyLabel => '轮换节奏';
+
+  @override
+  String get bgmLibraryStats => '曲库状态';
+
+  @override
+  String get bgmLibraryTotalTracks => '总曲目';
+
+  @override
+  String get bgmLibraryCurated => '精选曲库';
+
+  @override
+  String get bgmLibraryImportedLabel => '本地导入';
+
+  @override
+  String get bgmLibraryBundled => '系统兜底';
+
+  @override
+  String bgmLibraryImportDir(Object path) {
+    return '本地导入目录：$path';
+  }
+
+  @override
+  String bgmLibraryCacheDir(Object path) {
+    return '下载缓存目录：$path';
+  }
+
+  @override
+  String get bgmLibraryDirReadyNote =>
+      '这两个目录已经准备好，后续可以直接接“默认只打包少量曲目，其余从服务器下载到本地”的轻量化方案。';
+
+  @override
+  String get bgmLibraryImportManage => '导入与管理';
+
+  @override
+  String get bgmLibraryImportManageDesc =>
+      '你可以把自己的舒缓音乐直接导入进来。点播任意曲目时，系统会自动切换到播放器模式，后续跳页也不会中断。';
+
+  @override
+  String get bgmLibraryImportLocal => '导入本地歌曲';
+
+  @override
+  String get bgmLibrarySearchHint => '搜索曲目、专辑或场景标签';
+
+  @override
+  String get bgmLibraryFilterAll => '全部';
+
+  @override
+  String get bgmLibraryPlaying => '播放中';
+
+  @override
+  String get bgmLibraryPlay => '播放';
+
+  @override
+  String get bgmLibraryRemove => '移除';
+
+  @override
+  String get bgmLibraryTags => '标签';
+
+  @override
+  String get bgmLibraryStyle => '风格';
+
+  @override
+  String get bgmLibraryEnergy => '能量';
+
+  @override
+  String get bgmLibraryDensity => '密度';
+
+  @override
+  String get bgmLibraryModeAdaptive => '跟随页面';
+
+  @override
+  String get bgmLibraryModeContinuous => '播放器模式';
+
+  @override
+  String get bgmLibraryModeFocusOnly => '仅专注';
+
+  @override
+  String get bgmLibraryModeSilent => '静音';
+
+  @override
+  String get bgmLibraryPaletteAdaptive => '自适应';
+
+  @override
+  String get bgmLibraryPaletteClassical => '精选古典';
+
+  @override
+  String get bgmLibraryPalettePiano => '钢琴优先';
+
+  @override
+  String get bgmLibraryPaletteAiry => '空灵氛围';
+
+  @override
+  String get bgmLibraryPaletteWarm => '温暖轻快';
+
+  @override
+  String get bgmLibraryIntensityGentle => '柔和';
+
+  @override
+  String get bgmLibraryIntensityBalanced => '平衡';
+
+  @override
+  String get bgmLibraryIntensityLush => '丰盈';
+
+  @override
+  String get bgmLibraryVarietySteady => '稳定';
+
+  @override
+  String get bgmLibraryVarietyBalanced => '均衡';
+
+  @override
+  String get bgmLibraryVarietyDynamic => '灵动';
+
+  @override
+  String get bgmLibrarySourceCurated => '精选曲库';
+
+  @override
+  String get bgmLibrarySourceImported => '本地导入';
+
+  @override
+  String get bgmLibrarySourceBundled => '系统兜底';
+
+  @override
+  String get galaxyDraftReviewScreenTitle => '审核知识星';
+
+  @override
+  String galaxyDraftReviewPromptTitle(Object count, Object documentName) {
+    return '我们从 $documentName 里找到了 $count 颗知识星，要现在看看吗？';
+  }
+
+  @override
+  String get galaxyDraftReviewPromptBody =>
+      '你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。';
+
+  @override
+  String get galaxyDraftReviewNow => '现在审核';
+
+  @override
+  String get galaxyDraftReviewLater => '稍后再看';
+
+  @override
+  String galaxyDraftPendingIndicator(Object batchCount, Object draftCount) {
+    return '$batchCount 份待审核 · $draftCount 颗星';
+  }
+
+  @override
+  String galaxyDraftReviewProgress(Object current, Object total) {
+    return '第 $current / $total 颗';
+  }
+
+  @override
+  String get galaxyDraftCompletionReady => '准备把它们送进你的星图';
+
+  @override
+  String get galaxyDraftLongPressHint => '右滑通过，左滑跳过，长按还能先改一下名字或描述。';
+
+  @override
+  String get galaxyDraftLongPressShort => '长按可编辑';
+
+  @override
+  String get galaxyDraftApprove => '通过';
+
+  @override
+  String get galaxyDraftSkip => '跳过';
+
+  @override
+  String get galaxyDraftMerge => '合并';
+
+  @override
+  String get galaxyDraftExcerpts => '这颗星里装着什么';
+
+  @override
+  String galaxyDraftSimilarityLabel(Object nodeName, Object percent) {
+    return '与已有节点相似：$nodeName（$percent%）';
+  }
+
+  @override
+  String get galaxyDraftEditTitle => '调整这颗知识星';
+
+  @override
+  String get galaxyDraftNameLabel => '节点名称';
+
+  @override
+  String get galaxyDraftDescriptionLabel => '节点描述';
+
+  @override
+  String get galaxyDraftEditSave => '保存修改';
+
+  @override
+  String get galaxyDraftReviewEmptyTitle => '现在没有待确认的知识星';
+
+  @override
+  String get galaxyDraftReviewEmptyBody => '等文档处理完成后，新的知识草稿会先落到这里，等你点头再进入星图。';
+
+  @override
+  String get galaxyDraftBackToGalaxy => '回到星图';
+
+  @override
+  String galaxyDraftCompletionTitle(Object accepted, Object total) {
+    return '已确认 $accepted / $total 颗知识星';
+  }
+
+  @override
+  String galaxyDraftCompletionBody(Object documentName) {
+    return '$documentName 里的这些知识星，已经准备好飞进你的星图。';
+  }
+
+  @override
+  String get galaxyDraftCompletionNothingAdded => '这批草稿先放一放也没关系，之后随时还能回来继续看。';
+
+  @override
+  String galaxyDraftCompletionSummary(Object accepted, Object total) {
+    return '$accepted / $total 颗知识星已加入你的星图！';
+  }
+
+  @override
+  String get galaxyUploadFabLabel => '添加学习资料';
+
+  @override
+  String get galaxyUploadDocumentHere => '在这里上传文档';
+
+  @override
+  String get galaxyNodeAddMaterial => '将资料添加到这个节点';
+
+  @override
+  String get galaxyUploadTargetGalaxyCore => '银河核心';
+
+  @override
+  String get galaxyUploadTargetSelectedConstellation => '这片星域';
+
+  @override
+  String get galaxyUploadAlreadyInProgress => '已经有一份学习资料正在飞向你的星图。';
+
+  @override
+  String get galaxyUploadStatusUploading => '上传中...';
+
+  @override
+  String get galaxyUploadStatusQueued => '上传完成，正在进入轨道...';
+
+  @override
+  String get galaxyUploadStatusExtracting => '提取内容中...';
+
+  @override
+  String get galaxyUploadStatusFindingKnowledge => '寻找知识中...';
+
+  @override
+  String get galaxyUploadStatusBuildingNodes => '编织新星中...';
+
+  @override
+  String get galaxyUploadSuccessTitle => '处理完成！';
+
+  @override
+  String galaxyUploadSuccessBody(Object count) {
+    return '处理完成！共发现 $count 个知识概念。';
+  }
+
+  @override
+  String galaxyUploadSuccessChip(Object count) {
+    return '发现了 $count 个概念';
+  }
+
+  @override
+  String get galaxyUploadFailedTitle => '这颗星还没落稳';
+
+  @override
+  String get galaxyUploadFailedBody => '文档在落入星图前滑了出去，准备好时再试一次就好。';
+
+  @override
+  String get galaxyUploadRetry => '重新上传';
+
+  @override
+  String galaxyUploadHeadingTo(Object target) {
+    return '正飞向 $target';
+  }
+
+  @override
+  String get galaxyUploadStepUpload => '上传';
+
+  @override
+  String get galaxyUploadStepExtract => '提取';
+
+  @override
+  String get galaxyUploadStepFind => '寻知';
+
+  @override
+  String get galaxyUploadStepComplete => '完成';
+
+  @override
+  String get executionEngineTitle => 'AI执行引擎';
+
+  @override
+  String get executionConnectionSuccess => '连接成功';
+
+  @override
+  String get executionConnectionFailure => '连接失败';
+
+  @override
+  String get executionConfigSavedConnected => '配置已保存并连接成功';
+
+  @override
+  String get executionConfigSavedUnavailable => '配置已保存，但当前引擎不可达';
+
+  @override
+  String get executionResultPreview => '结果预览';
+
+  @override
+  String get executionReplay => '执行回放';
+
+  @override
+  String get executionSelfVerification => '自验证';
+
+  @override
+  String get executionSelfVerificationHint => '自验证提示';
+
+  @override
+  String get executionResultComparison => '结果对比';
+
+  @override
+  String get executionAdoptResult => '采纳结果';
+
+  @override
+  String get executionRejectResult => '退回修改';
+
+  @override
+  String get executionViewDetails => '查看详情';
+
+  @override
+  String get executionCollapseDetails => '收起详情';
+
+  @override
+  String get executionQueueAction => '加入等待队列';
+
+  @override
+  String get executionConnectEngine => '先连接 AI执行引擎';
+
+  @override
+  String get executionEngineOffline => 'AI执行引擎当前离线';
+
+  @override
+  String get executionEngineNotConnected => 'AI执行引擎尚未连接';
+
+  @override
+  String get executionOfflineQueueTitle => '离线等待队列';
+
+  @override
+  String get executionAboutEngineTitle => '什么是AI执行引擎？';
+
+  @override
+  String get executionAboutEngineBody =>
+      'AI执行引擎（OpenClaw）可以自动完成网页调研、文档整理等任务。你可以在自己的电脑上运行 OpenClaw，然后在这里连接它。';
+
+  @override
+  String get taskCopyAiPrompt => '复制AI提示词';
+
+  @override
+  String get taskObjective => '目标';
+
+  @override
+  String get taskEstimatedTime => '预计时间';
+
+  @override
+  String get taskCompletionCriteria => '完成标准';
+
+  @override
+  String get taskSteps => '步骤';
+
+  @override
+  String get taskKeyPoints => '关键点';
+
+  @override
+  String get taskStartFocus => '开始专注';
+
+  @override
+  String get taskOpenAiAssistant => '打开AI助手';
+
+  @override
+  String get taskAiGenerate => 'AI 生成';
+
+  @override
+  String get knowledgeMasteryLevelMastered => '已掌握';
+
+  @override
+  String get knowledgeMasteryLevelPracticing => '熟练中';
+
+  @override
+  String get knowledgeMasteryLevelBeginner => '初涉';
+
+  @override
+  String get knowledgeMasteryLevelUntouched => '未学习';
+
+  @override
+  String get executionStatusDraft => '待准备';
+
+  @override
+  String get executionStatusReady => '准备完成';
+
+  @override
+  String get executionStatusQueued => '排队中';
+
+  @override
+  String get executionStatusDispatched => '已发送';
+
+  @override
+  String get executionStatusRunning => '执行中';
+
+  @override
+  String get executionStatusWaitingApproval => '等待确认';
+
+  @override
+  String get executionStatusSucceeded => '执行成功';
+
+  @override
+  String get executionStatusPartial => '部分完成';
+
+  @override
+  String get executionStatusFailed => '执行失败';
+
+  @override
+  String get executionStatusCanceled => '已取消';
+
+  @override
+  String get executionStatusTimedOut => '执行超时';
+
+  @override
+  String get executionStatusHandedBack => '已交还';
+
+  @override
+  String get executionStatusUnknown => '状态未知';
+
+  @override
+  String get executionTrustRaw => '原始结果';
+
+  @override
+  String get executionTrustValidated => '已校验';
+
+  @override
+  String get executionTrustTrusted => '可信结果';
+
+  @override
+  String get executionTrustUnknown => '待评估';
+
+  @override
+  String get nextActionQuickReviewTitle => '快速回顾';
+
+  @override
+  String get nextActionQuickReviewDescription => '回顾刚才的核心要点';
+
+  @override
+  String get nextActionLightExpandTitle => '拓展学习';
+
+  @override
+  String get nextActionLightExpandDescription => '了解相关知识点';
+
+  @override
+  String get nextActionPracticeApplyTitle => '实践应用';
+
+  @override
+  String get nextActionPracticeApplyDescription => '应用所学知识';
+
+  @override
+  String get nextActionRestBreakTitle => '休息一下';
+
+  @override
+  String get nextActionRestBreakDescription => '适当休息，保持状态';
+
+  @override
+  String get nextActionContinuePlanTitle => '继续计划';
+
+  @override
+  String get nextActionContinuePlanDescription => '继续按计划学习';
+
+  @override
+  String get knowledgeRelationPrerequisite => '前置知识';
+
+  @override
+  String get knowledgeRelationRelated => '相关知识';
+
+  @override
+  String get knowledgeRelationApplication => '应用';
+
+  @override
+  String get knowledgeRelationComposition => '组成部分';
+
+  @override
+  String get knowledgeRelationEvolution => '演进';
+
+  @override
+  String get knowledgeRelationDefault => '关联';
+
+  @override
+  String get knowledgeMasteryLevelLocked => '未解锁';
+
+  @override
+  String get knowledgeMasteryLevelBrilliant => '璀璨';
+
+  @override
+  String get knowledgeMasteryLevelShining => '闪耀';
+
+  @override
+  String get knowledgeMasteryLevelGlimmer => '微光';
+
+  @override
+  String get knowledgeMasteryLevelUnlit => '未点亮';
+
+  @override
+  String get interventionPhaseForethought => '规划中';
+
+  @override
+  String get interventionPhasePerformance => '执行中';
+
+  @override
+  String get interventionPhaseSelfReflection => '复盘中';
+
+  @override
+  String get stuckHelpTitle => '别担心，我们来看看卡在哪里';
+
+  @override
+  String get stuckHelpAskAi => '要不要让AI来看看？';
+
+  @override
+  String get stuckHelpChatWithSparkle => '和Sparkle聊聊这个问题';
+
+  @override
+  String get stuckHelpContinue => '好了，继续';
+
+  @override
+  String get stuckHelpSuggestion1 => '把卡住的具体位置写下来';
+
+  @override
+  String get stuckHelpSuggestion2 => '换一个更小的子问题';
+
+  @override
+  String get stuckHelpSuggestion3 => '先完成你确实会的部分';
+
+  @override
+  String get stuckHelpSuggestion4 => '给自己限时5分钟';
+
+  @override
+  String get stuckHelpSuggestion5 => '标记这个点，继续其他部分';
+
+  @override
+  String get stuckHelpAuroraSteps => 'Aurora 两步帮扶';
+
+  @override
+  String get stuckHelpFallbackOrder => '卡住时按这个顺序救火';
+
+  @override
+  String get stuckHelpWhatToDo => '具体该怎么做';
+
+  @override
+  String get stuckHelpDiagnose => '诊断问题';
+
+  @override
+  String get stuckHelpFix => '精准修复';
+
+  @override
+  String get taskQuickActionSnoozed => '已推迟到明天，今天轻一点。';
+
+  @override
+  String get taskQuickActionTooHard => '拆好了，先做第一小步。';
+
+  @override
+  String get taskQuickActionSkipped => '已跳过，这张卡先不打扰你。';
+
+  @override
+  String get taskQuickActionAdjusted => '已经帮你调整好了。';
+
+  @override
+  String get taskQuickActionSnoozing => '好，我先把它挪到明天。';
+
+  @override
+  String get taskQuickActionSimplifying => '我来把这张卡拆小一点。';
+
+  @override
+  String get taskQuickActionSkipping => '收到，我先把它从今天拿开。';
+
+  @override
+  String get executionResultNoText => '暂无文本结果。';
+
+  @override
+  String get executionResultNoStructured => '暂无结构化结果字段。';
+
+  @override
+  String get executionResultNoCode => '暂无代码结果。';
+
+  @override
+  String get executionResultNoLinks => '暂无链接结果。';
+
+  @override
+  String get executionResultArtifacts => '附件产物';
+
+  @override
+  String executionResultMoreFields(Object count) {
+    return '还有 $count 个字段';
+  }
+
+  @override
+  String executionResultNoPreview(Object type) {
+    return '当前附件类型为 $type，还没有更详细的预览内容。';
+  }
+
+  @override
+  String get executionResultLinkCopied => '链接已复制';
+
+  @override
+  String get executionResultCopyLink => '复制链接';
+
+  @override
+  String executionResultArtifactType(Object type) {
+    return '类型：$type';
+  }
+
+  @override
+  String get executionResultArtifactFallback => '附件';
+
+  @override
+  String get onboardingVoiceInput => '语音输入';
+
+  @override
+  String get onboardingVoiceInputEn => '英语语音输入';
+
+  @override
+  String get onboardingVoiceInputDesc => '开启麦克风权限，支持语音指令与听写输入';
+
+  @override
+  String get onboardingVoiceInputDescEn => '开启英语语音输入，支持语音指令与听写';
+
+  @override
+  String get onboardingPermissionEnable => '启用';
+
+  @override
+  String get onboardingPermissionEnabled => '已启用';
+
+  @override
+  String get onboardingPermissionReady => '就绪 — 已全部设置好';
+
+  @override
+  String get onboardingPermissionPending => '尚未启用，启用后可使用语音功能。';
+
+  @override
+  String get onboardingPermissionWorking => '请求中...';
+
+  @override
+  String homeNotificationUnreadMessages(Object count) {
+    return '$count 条未读消息';
+  }
+
+  @override
+  String homeNotificationUnreadNotifications(Object count) {
+    return '$count 条未读通知';
+  }
+
+  @override
+  String get splashSubtitle => '从第一秒开始，进入更聪明也更有温度的学习旅程。';
+
+  @override
+  String get taskGuidePanelCollapse => '收起指南';
+
+  @override
+  String get taskGuidePanelExpand => '展开指南';
+
+  @override
+  String get taskGuidePanelEstimatedTimeCustom => '预估时间：按自己的节奏';
+
+  @override
+  String taskGuidePanelEstimatedTimeMinutes(Object minutes) {
+    return '预估时间：$minutes 分钟';
+  }
+
+  @override
+  String get taskGuidePanelTodayFocus => '今日焦点';
+
+  @override
+  String get taskGuidePanelSteps => '步骤';
+
+  @override
+  String get taskGuidePanelKeyHints => '关键提示';
+
+  @override
+  String get taskGuidePanelCompletionCriteria => '完成标准';
+
+  @override
+  String get taskGuidePanelTapToMark => '点一下就能标记你已经完成的标准。';
+
+  @override
+  String get taskGuidePanelCommonMistakes => '常见陷阱';
+
+  @override
+  String get taskGuidePanelNoDetailedGuide => '这张卡还没有更细的指南，先从你能确定的一小步开始。';
+
+  @override
+  String get taskGuidePanelFailSafeRule => '失手时降压规则';
+
+  @override
+  String taskGuidePanelFailSafeRuleContent(Object rule) {
+    return '失手规则：$rule';
+  }
+
+  @override
+  String get taskGuidePanelAskAiTriggers => '遇到这些情况时问 AI';
+
+  @override
+  String get taskGuidePanelStepInProgress => '当前进行中';
+
+  @override
+  String taskGuidePanelCompletedSteps(Object completed, Object total) {
+    return '已完成 $completed/$total';
+  }
+
+  @override
+  String taskGuidePanelCompletedCriteria(Object completed, Object total) {
+    return '$completed/$total';
+  }
+
+  @override
+  String taskGuidePanelExpectedOutput(Object output) {
+    return '期望产出：$output';
+  }
+
+  @override
+  String taskGuidePanelFallbackLastStep(Object output) {
+    return '最后用 $output 做一个最小检查。';
+  }
+
+  @override
+  String get taskGuidePanelFallbackLastStepDefault => '最后做一个最小检查，确认今天真的会了。';
+
+  @override
+  String get taskGuidePanelFallbackSplitStep => '把这一小步拆成你现在能立刻开始的版本。';
+
+  @override
+  String get taskGuidePanelFallbackOutput1 => '留下这一步的起手框架或关键词。';
+
+  @override
+  String get taskGuidePanelFallbackOutput2 => '完成一次不看答案的独立输出。';
+
+  @override
+  String get taskGuidePanelFallbackOutput3 => '标出关键缺口，并补一句提醒。';
+
+  @override
+  String taskGuidePanelFallbackOutputCheck(Object check) {
+    return '完成最小检查：$check。';
+  }
+
+  @override
+  String get taskGuidePanelFallbackOutputCheckDefault => '完成最小检查，确认不是只看懂。';
+
+  @override
+  String get reviewPlanHubTitle => '复习计划中心';
+
+  @override
+  String get reviewPlanHubTodayList => '今日复习清单';
+
+  @override
+  String get reviewPlanHubNightlyReview => '夜间回顾';
+
+  @override
+  String get reviewPlanHubNoActivePlan => '还没有活跃计划';
+
+  @override
+  String get reviewPlanHubStartToday => '开始今日复习';
+
+  @override
+  String get reviewPlanHubOpenReview => '打开复习页';
+
+  @override
+  String get reviewPlanHubViewReview => '查看复习页';
+
+  @override
+  String get reviewPlanHubViewTonight => '查看今晚回顾';
+
+  @override
+  String get reviewPlanHubCreatePlan => '去创建计划';
+
+  @override
+  String get reviewPlanHubStartTodayReview => '开始今天的复习';
+
+  @override
+  String get reviewPlanHubHeroDescription => '把错题复习、夜间回顾和计划任务放在同一个入口里管理。';
+
+  @override
+  String get reviewPlanHubHeroSubtitle =>
+      '这里不会替代原有复习页，而是把今天值得回看的东西先排好，再带你进入具体执行。';
+
+  @override
+  String get reviewPlanHubPlanIntegration => '和长期/冲刺计划联动';
+
+  @override
+  String get reviewPlanHubTodayPlanTasks => '今天建议优先回看的计划任务';
+
+  @override
+  String get reviewPlanHubNoDueErrors => '今天没有到期错题，但仍然可以检查计划任务与夜间复盘。';
+
+  @override
+  String reviewPlanHubHasErrors(Object count) {
+    return '今天有 $count 条待复习错题，适合先完成高优先级回看。';
+  }
+
+  @override
+  String get reviewPlanHubNoNightlyReview => '今晚还没有生成夜间回顾，先完成主线复习也可以。';
+
+  @override
+  String get reviewPlanHubHasNightlyReview => '系统已经生成夜间回顾，适合在收尾时统一查看。';
+
+  @override
+  String get reviewPlanHubNightlyUnavailable => '夜间回顾暂不可用，先按计划推进今日复习。';
+
+  @override
+  String reviewPlanHubLoadFailed(Object error) {
+    return '复习列表暂时加载失败：$error';
+  }
+
+  @override
+  String get reviewPlanHubCreatePlanFirst =>
+      '先创建成长计划或冲刺计划，复习计划中心才会把计划任务和复习节奏串起来。';
+
+  @override
+  String get reviewPlanHubNoPlanTasks => '今天没有关联到计划的待推进任务，可以先做错题复习或回到计划里补任务。';
+
+  @override
+  String reviewPlanHubSprintProgress(Object percent, Object days) {
+    return '冲刺进度 $percent% · 剩余 $days 天';
+  }
+
+  @override
+  String reviewPlanHubGrowthProgress(Object percent, Object mastery) {
+    return '成长进度 $percent% · 掌握 $mastery%';
+  }
+
+  @override
+  String get reviewPlanHubPlanTask => '计划任务';
+
+  @override
+  String reviewPlanHubTaskSubtitle(Object plan, Object minutes) {
+    return '$plan · $minutes 分钟';
+  }
+
+  @override
+  String get taskQuickActionSnooze => '推迟到明天';
+
+  @override
+  String get taskQuickActionTooHardLabel => '标记为太难';
+
+  @override
+  String get taskQuickActionSkip => '跳过';
+
+  @override
+  String get taskQuickActionHelp => '寻求帮助';
+
+  @override
+  String get statisticsExportTitle => '导出统计数据';
+
+  @override
+  String get statisticsExportFormat => '选择导出格式';
+
+  @override
+  String get statisticsExportIncludeCharts => '包含图表数据';
+
+  @override
+  String get statisticsExportAs => '导出为';
+
+  @override
+  String get statisticsExportStructured => '结构化数据';
+
+  @override
+  String get statisticsExportSpreadsheet => '电子表格';
+
+  @override
+  String get statisticsExportHDImage => '高清图片';
+
+  @override
+  String get statisticsExportPDF => 'PDF文档';
+
+  @override
+  String statisticsExportFailed(Object error) {
+    return '导出失败: $error';
+  }
+
+  @override
+  String get statisticsShareTitle => '分享统计数据';
+
+  @override
+  String get statisticsShareWechat => '微信';
+
+  @override
+  String get statisticsShareMoments => '朋友圈';
+
+  @override
+  String get statisticsShareSaveImage => '保存图片';
+
+  @override
+  String get statisticsShareCopyLink => '复制链接';
+
+  @override
+  String get statisticsShareMore => '更多';
+
+  @override
+  String get statisticsWatermark => '星火AI学习助手';
+
+  @override
+  String statisticsDateFormat(Object day, Object month, Object year) {
+    return '$year年$month月$day日';
+  }
+
+  @override
+  String get statisticsTypeFocus => '专注';
+
+  @override
+  String get statisticsTypeAgent => '智能体';
+
+  @override
+  String get statisticsTypeCapsule => '胶囊';
+
+  @override
+  String get statisticsTypeLearning => '学习';
+
+  @override
+  String get statisticsPeriodToday => '今日';
+
+  @override
+  String get statisticsPeriodWeek => '本周';
+
+  @override
+  String get statisticsPeriodMonth => '本月';
+
+  @override
+  String get statisticsPeriodYear => '今年';
+
+  @override
+  String get statisticsPeriodCustom => '自定义';
+
+  @override
+  String get statisticsNoData => '暂无数据';
+
+  @override
+  String get statisticsLegendLow => '低';
+
+  @override
+  String get statisticsLegendMedium => '中';
+
+  @override
+  String get statisticsLegendHigh => '高';
+
+  @override
+  String get statisticsChartMon => '一';
+
+  @override
+  String get statisticsChartWed => '三';
+
+  @override
+  String get statisticsChartFri => '五';
+
+  @override
+  String get statisticsChartMonth1 => '一月';
+
+  @override
+  String get statisticsChartMonth2 => '二月';
+
+  @override
+  String get statisticsChartMonth3 => '三月';
+
+  @override
+  String get statisticsChartMonth4 => '四月';
+
+  @override
+  String get statisticsChartMonth5 => '五月';
+
+  @override
+  String get statisticsChartMonth6 => '六月';
+
+  @override
+  String get statisticsChartMonth7 => '七月';
+
+  @override
+  String get statisticsChartMonth8 => '八月';
+
+  @override
+  String get statisticsChartMonth9 => '九月';
+
+  @override
+  String get statisticsChartMonth10 => '十月';
+
+  @override
+  String get statisticsChartMonth11 => '十一月';
+
+  @override
+  String get statisticsChartMonth12 => '十二月';
+
+  @override
+  String get statisticsExportImageReport => '图片报告';
+
+  @override
+  String get statisticsExportPDFReport => 'PDF报告';
+
+  @override
+  String get interventionStartNow => '开始';
+
+  @override
+  String get interventionLater => '稍后';
+
+  @override
+  String get fileUploadTitle => '上传文件';
+
+  @override
+  String get fileUploadDesc => '支持文档与图片，上传到对话后可继续分享或引用。';
+
+  @override
+  String get fileUploadType => '文件';
+
+  @override
+  String get fileUploadSize => '大小';
+
+  @override
+  String get fileUploadClickToSelect => '点击选择文件';
+
+  @override
+  String get fileUploadSupportedFormats => 'PDF、DOCX、PPTX、TXT 和常见图片都支持';
+
+  @override
+  String get fileUploadSelected => '已选择文件';
+
+  @override
+  String fileUploadFormat(Object size, Object type) {
+    return '$type · $size';
+  }
+
+  @override
+  String fileUploadProgress(Object percent) {
+    return '上传中 $percent%';
+  }
+
+  @override
+  String get fileUploadSelect => '选择文件';
+
+  @override
+  String get fileUploadReselect => '重新选择';
+
+  @override
+  String get fileUploadStart => '开始上传';
+
+  @override
+  String get fileUploadResume => '继续上传';
+
+  @override
+  String get fileUploadNetworkError => '网络中断，可点击继续上传';
+
+  @override
+  String fileUploadFailed(Object error) {
+    return '上传失败: $error';
+  }
+
+  @override
+  String get errorBookCorrectApproach => '正确思路';
+
+  @override
+  String get errorBookSimilarTraps => '类似易错点';
+
+  @override
+  String get errorBookStudySuggestion => '学习建议';
+
+  @override
+  String get errorBookKnowledgeRelated => '关联知识点';
+
+  @override
+  String get errorBookAnalyzing => 'AI 正在分析中...';
+
+  @override
+  String get errorBookAnalyzingDesc => '正在分析错题原因、生成学习建议并关联知识点，预计需要 3-5 秒';
+
+  @override
+  String get simulationSceneStudyGroup => '虚拟学习小组';
+
+  @override
+  String get simulationSceneKnowledgeDebate => '知识辩论';
+
+  @override
+  String get simulationSceneHistoricalRoleplay => '历史角色扮演';
+
+  @override
+  String get simulationSceneSocraticDialogue => '苏格拉底式对话';
+
+  @override
+  String get simulationSceneCaseAnalysis => '案例拆解';
+
+  @override
+  String get simulationSceneWhatIfPath => '假设分支推演';
+
+  @override
+  String get simulationSceneConceptMapBuild => '概念图共建';
+
+  @override
+  String get simulationSceneErrorDiagnosis => '错因诊断';
+
+  @override
+  String get simulationStateWaiting => '等待你的判断';
+
+  @override
+  String get simulationStateCompleted => '讨论已收束';
+
+  @override
+  String get simulationStateRunning => '正在推进讨论';
+
+  @override
+  String get simulationStatePending => '正在准备';
+
+  @override
+  String get simulationStateReady => '准备中';
+
+  @override
+  String get simulationStanceSupporting => '支持派';
+
+  @override
+  String get simulationStanceSupportive => '补充支持';
+
+  @override
+  String get simulationStanceOpposing => '反方质疑';
+
+  @override
+  String get simulationStanceModerating => '居中协调';
+
+  @override
+  String get simulationStanceProbing => '追问推进';
+
+  @override
+  String get simulationStanceChallenging => '提出质疑';
+
+  @override
+  String get simulationStanceImmersive => '沉浸代入';
+
+  @override
+  String get simulationStanceContextual => '补充背景';
+
+  @override
+  String get simulationStanceReflective => '回看反思';
+
+  @override
+  String get simulationActionChallenge => '提出质疑';
+
+  @override
+  String get simulationActionSynthesize => '整合观点';
+
+  @override
+  String get simulationActionOpen => '打开话题';
+
+  @override
+  String get simulationActionGuideUser => '邀请你作答';
+
+  @override
+  String get simulationActionProbe => '继续追问';
+
+  @override
+  String get simulationActionExtend => '展开补充';
+
+  @override
+  String get simulationActionUserResponse => '你的回应';
+
+  @override
+  String get simulationSourceGalaxy => '知识星图';
+
+  @override
+  String get simulationSourceTasks => '任务记录';
+
+  @override
+  String get simulationSourcePlan => '学习计划';
+
+  @override
+  String get simulationSourceStarterGraph => '起步图谱';
+
+  @override
+  String get simulationSourceKnowledgeGraph => '知识图谱';
+
+  @override
+  String get simulationSourceTemplate => '默认角色模板';
+
+  @override
+  String get simulationSourceErrorBook => '错题记录';
+
+  @override
+  String get simulationSourceOnboardingProfile => '学习画像';
+
+  @override
+  String get simulationRoleAnalyst => '分析者';
+
+  @override
+  String get simulationRoleExpert => '专家';
+
+  @override
+  String get simulationRoleCoach => '教练';
+
+  @override
+  String get simulationRoleNavigator => '导航者';
+
+  @override
+  String get simulationRoleChallenger => '质疑者';
+
+  @override
+  String get simulationRoleSupporter => '支持者';
+
+  @override
+  String get simulationRoleObserver => '观察者';
+
+  @override
+  String get simulationRoleMentor => '导师';
+
+  @override
+  String get simulationRoleBuilder => '搭建者';
+
+  @override
+  String get simulationBubbleSpotlight => '当前焦点发言';
+
+  @override
+  String simulationBubbleReplyTo(Object speaker) {
+    return '承接 $speaker 的观点';
+  }
+
+  @override
+  String simulationBubbleStance(Object stance) {
+    return '立场 $stance';
+  }
+
+  @override
+  String simulationBubbleReply(Object speaker) {
+    return '回应 $speaker';
+  }
+
+  @override
+  String simulationBubbleRound(Object round) {
+    return '第 $round 轮';
+  }
+
+  @override
+  String get achievementPrestigeLane => '声望进阶线';
+
+  @override
+  String get weatherTitleSunny => '晴空万里';
+
+  @override
+  String get weatherTitleCloudy => '薄雾弥漫';
+
+  @override
+  String get weatherTitleRainy => '风雨欲来';
+
+  @override
+  String get weatherTitleMeteor => '繁星入梦';
+
+  @override
+  String get weatherSubtitleSunny => '光感轻轻上扬，今天适合稳定推进。';
+
+  @override
+  String get weatherSubtitleCloudy => '边界柔和，适合整理思路与留白。';
+
+  @override
+  String get weatherSubtitleRainy => '环境收拢，适合沉浸、专注与减少噪声。';
+
+  @override
+  String get weatherSubtitleMeteor => '灵感高亮，适合冲刺、突破与留下痕迹。';
+
+  @override
+  String get weatherCompactSunny => '明亮推进';
+
+  @override
+  String get weatherCompactCloudy => '轻缓整理';
+
+  @override
+  String get weatherCompactRainy => '深潜聚焦';
+
+  @override
+  String get weatherCompactMeteor => '高光冲刺';
+
+  @override
+  String get weatherAmbientSunny => '空气更通透了，节奏也更容易启动。';
+
+  @override
+  String get weatherAmbientCloudy => '雾层抹平了边界，画面更安静。';
+
+  @override
+  String get weatherAmbientRainy => '雨幕把外界压低了，注意力更容易收束。';
+
+  @override
+  String get weatherAmbientMeteor => '星迹开始拉长，灵感窗口正在打开。';
+
+  @override
+  String get weatherGuideTitle => '天气图鉴';
+
+  @override
+  String get weatherGuidePreview => '天气预览';
+
+  @override
+  String get weatherGuidePreviewSubtitle =>
+      '这里可以预览系统里的全部天气表现。预览不会改动真实天气，只用于帮助你理解视觉效果与设定。';
+
+  @override
+  String get weatherGuideCriteria => '判定标准';
+
+  @override
+  String get weatherGuideCriteriaSubtitle => '真实天气依然由你的近期数据决定，下面是当前系统的主要参考规则。';
+
+  @override
+  String get weatherGuideRule1Title => '晴空是默认状态';
+
+  @override
+  String get weatherGuideRule1Body => '当系统没有检测到明显的高压、拖延或强势冲刺信号时，会保持晴空。';
+
+  @override
+  String get weatherGuideRule2Title => '薄雾代表节奏变慢';
+
+  @override
+  String get weatherGuideRule2Body =>
+      '冲刺剩余 7 天内且进度低于 20%，或连续 2 天没有完成任务时，天气更容易转为薄雾。';
+
+  @override
+  String get weatherGuideRule3Title => '风雨代表压力偏高';
+
+  @override
+  String get weatherGuideRule3Body =>
+      '冲刺剩余少于 3 天且进度低于 50% 时，系统会倾向给出风雨状态，提醒你尽快收束焦点。';
+
+  @override
+  String get weatherGuideRule4Title => '焦虑会覆盖基础判断';
+
+  @override
+  String get weatherGuideRule4Body => '如果近期焦虑指标高于 50%，系统会优先给出风雨天气，用来提示当前负荷偏高。';
+
+  @override
+  String get weatherGuideRule5Title => '流星代表高势能';
+
+  @override
+  String get weatherGuideRule5Body => '当当前冲刺进度高于 80% 时，系统更容易进入流星天气，强调你的推进势头。';
+
+  @override
+  String get weatherGuideCurrent => '当前';
+
+  @override
+  String get weatherGuideCurrentWeather => '当前天气';
+
+  @override
+  String get weatherGuideConditionFallback => '当前天气会根据你的真实数据自动更新。';
+
+  @override
+  String weatherGuideConditionPrefix(Object condition) {
+    return '当前判定：$condition';
+  }
+
+  @override
+  String get weatherGuideDisclaimer =>
+      '这个页面用于理解天气系统的视觉效果与判定逻辑。真正显示给你的天气，仍然会跟随你的真实任务、冲刺和状态数据动态更新。';
+
+  @override
+  String weatherGuideTriggerPrefix(Object trigger) {
+    return '真实触发参考：$trigger';
+  }
+
+  @override
+  String get intentPredictionSprintSprint => '冲刺冲刺';
+
+  @override
+  String intentPredictionContinue(Object title) {
+    return '继续\"$title\"';
+  }
+
+  @override
+  String get intentPredictionCreateTask => '创建任务';
+
+  @override
+  String get intentPredictionStartFocus => '开始专注';
+
+  @override
+  String get intentPredictionViewCalendar => '查看日历';
+
+  @override
+  String get intentPredictionCuriosityCapsule => '好奇心胶囊';
+
+  @override
+  String get intentPredictionSendToAI => '发送给AI';
+
+  @override
+  String get intentPredictionNoteIdea => '记录想法';
+
+  @override
+  String get intentPredictionSetReminder => '设置提醒';
+
+  @override
+  String get intentPredictionCognitivePrism => '认知棱镜';
+
+  @override
+  String get intentPredictionTranslate => '翻译文本';
+
+  @override
+  String get intentPredictionLearnLanguage => '学习语言';
+
+  @override
+  String get intentPredictionViewPrism => '查看认知棱镜';
+
+  @override
+  String get intentPredictionBehaviorAnalysis => '行为分析';
+
+  @override
+  String get intentPredictionStartSprint => '开始冲刺';
+
+  @override
+  String get intentPredictionFocusMode => '专注模式';
+
+  @override
+  String get intentPredictionStartLearning => '开始学习';
+
+  @override
+  String get intentPredictionCreateStudyPlan => '创建学习计划';
+
+  @override
+  String get intentPredictionStartReview => '开始复习';
+
+  @override
+  String get intentPredictionViewErrorBook => '查看错题本';
+
+  @override
+  String get intentPredictionContinuePriority => '继续重点任务';
+
+  @override
+  String get intentPrediction25Min => '先做 25 分钟';
+
+  @override
+  String get flashCapsuleTitle => '闪念胶囊';
+
+  @override
+  String get flashCapsuleSubtitle => '把一闪而过的疑点及时落地成错题线索，减少【知道有问题但没记住】的损耗。';
+
+  @override
+  String get flashCapsuleHistory => '历史胶囊';
+
+  @override
+  String get flashCapsuleHistoryEmpty => '还没有保存过闪念胶囊。';
+
+  @override
+  String get flashCapsuleHistoryDesc => '这里会显示你之前保存过的闪念与思考胶囊。';
+
+  @override
+  String get flashCapsuleNoHistory => '暂无历史胶囊';
+
+  @override
+  String get flashCapsuleNoHistoryDesc => '保存一次闪念胶囊后，就能在这里继续回看。';
+
+  @override
+  String get flashCapsuleUnnamed => '未命名胶囊';
+
+  @override
+  String get flashCapsuleNoDesc => '暂无补充描述';
+
+  @override
+  String get flashCapsuleSyncPending => '待同步';
+
+  @override
+  String get flashCapsuleContent => '记录内容';
+
+  @override
+  String get flashCapsuleContentSubtitle => '选择科目、错误类型，再补充知识点和描述。';
+
+  @override
+  String get flashCapsuleSubject => '科目';
+
+  @override
+  String get flashCapsuleSelectSubject => '选择科目';
+
+  @override
+  String get flashCapsuleKnowledgePoint => '知识点';
+
+  @override
+  String get flashCapsuleKnowledgeHint => '例如：三角函数求导、牛顿第二定律...';
+
+  @override
+  String get flashCapsuleErrorDesc => '错误描述';
+
+  @override
+  String get flashCapsuleErrorHint => '记录你是怎么错的、卡在什么地方、下次要如何避免。';
+
+  @override
+  String get flashCapsuleKpLength => '知识点长度';
+
+  @override
+  String get flashCapsuleDescLength => '描述长度';
+
+  @override
+  String get flashCapsuleCognitiveDim => '认知维度';
+
+  @override
+  String get flashCapsuleHistoryView => '查看历史';
+
+  @override
+  String get flashCapsuleSaving => '记录中...';
+
+  @override
+  String get flashCapsuleSave => '保存胶囊';
+
+  @override
+  String flashCapsuleSubjectCount(Object count) {
+    return '$count 个科目';
+  }
+
+  @override
+  String flashCapsuleHistoryCount(Object count) {
+    return '$count 条历史胶囊';
+  }
+
+  @override
+  String get flashCapsuleSaved => '已保存胶囊，并同步到错题本';
+
+  @override
+  String get flashCapsuleSavedNoSync => '胶囊已保存，错题本同步稍后重试';
+
+  @override
+  String flashCapsuleSaveFailed(Object error) {
+    return '记录失败: $error';
+  }
+
+  @override
+  String get flashCapsuleSyncFailed => '请补全知识点和错误描述';
+
+  @override
+  String get flashCapsuleSaveError => '胶囊保存失败，请稍后重试';
+
+  @override
+  String flashCapsuleLoadError(Object error) {
+    return '加载历史胶囊失败: $error';
+  }
+
+  @override
+  String get flashCapsuleErrorConcept => '概念混淆';
+
+  @override
+  String get flashCapsuleErrorCalc => '计算错误';
+
+  @override
+  String get flashCapsuleErrorReading => '审题不清';
+
+  @override
+  String get flashCapsuleErrorMemory => '知识遗忘';
+
+  @override
+  String get flashCapsuleErrorMethod => '方法不当';
+
+  @override
+  String get flashCapsuleErrorOther => '其他';
+
+  @override
+  String get flashCapsuleSubjectMath => '数学';
+
+  @override
+  String get flashCapsuleSubjectPhysics => '物理';
+
+  @override
+  String get flashCapsuleSubjectChemistry => '化学';
+
+  @override
+  String get flashCapsuleSubjectBiology => '生物';
+
+  @override
+  String get flashCapsuleSubjectEnglish => '英语';
+
+  @override
+  String get flashCapsuleSubjectChinese => '语文';
+
+  @override
+  String get flashCapsuleSubjectComputer => '计算机';
+
+  @override
+  String get flashCapsuleSubjectOther => '其他';
+
+  @override
+  String get flashCapsuleTagFlash => '闪念';
+
+  @override
+  String get flashCapsuleTagThink => '思考';
+
+  @override
+  String get vocabularyLookupTitle => '查词';
+
+  @override
+  String get vocabularyLookupSubtitle =>
+      '用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。';
+
+  @override
+  String get vocabularyLookupInput => '查询输入';
+
+  @override
+  String get vocabularyLookupInputSubtitle =>
+      '输入英文单词后回车或点击查询。Oxford 词典优先，本地离线包会先于网络命中。';
+
+  @override
+  String get vocabularyLookupSearch => '查询';
+
+  @override
+  String get vocabularyLookupInputHint => '输入英文单词...';
+
+  @override
+  String get vocabularyLookupResults => '查询结果';
+
+  @override
+  String get vocabularyLookupResultsSubtitle => '词义、例句、关联词和模型生成句都在这里。';
+
+  @override
+  String get vocabularyLookupStartTyping => '输入单词开始查询';
+
+  @override
+  String get vocabularyLookupTemporarilyFailed => '查询暂时失败';
+
+  @override
+  String get vocabularyLookupErrorDesc => '查询完成后可以直接收藏到生词本，并继续生成例句。';
+
+  @override
+  String get vocabularyLookupDefinitions => '释义';
+
+  @override
+  String get vocabularyLookupDictExamples => '词典例句';
+
+  @override
+  String get vocabularyLookupGeneratedExample => '模型生成例句';
+
+  @override
+  String get vocabularyLookupRelatedWords => '关联词汇';
+
+  @override
+  String get vocabularyLookupInWordbook => '已在生词本中';
+
+  @override
+  String get vocabularyLookupCanAdd => '可加入生词本';
+
+  @override
+  String get vocabularyLookupWaitingAssoc => '等待关联词';
+
+  @override
+  String vocabularyLookupAssocCount(Object count) {
+    return '$count 个关联词';
+  }
+
+  @override
+  String vocabularyLookupOfflineCount(Object count) {
+    return '$count 个离线词典包';
+  }
+
+  @override
+  String get vocabularyLookupNoOffline => '未下载离线词典';
+
+  @override
+  String get vocabularyLookupManageOffline => '管理离线词典';
+
+  @override
+  String get vocabularyLookupDownloadOffline => '下载离线词典';
+
+  @override
+  String get vocabularyLookupOfflinePackages => '离线词典包';
+
+  @override
+  String get vocabularyLookupOfflineDesc =>
+      '优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。';
+
+  @override
+  String get vocabularyLookupInstalled => '已安装';
+
+  @override
+  String get vocabularyLookupPackageDesc => 'Oxford 优先离线词典包';
+
+  @override
+  String vocabularyLookupEntryCount(Object count) {
+    return '$count 词条';
+  }
+
+  @override
+  String vocabularyLookupSizeBytes(Object size) {
+    return '$size';
+  }
+
+  @override
+  String vocabularyLookupInstalledAt(Object date) {
+    return '安装于 $date';
+  }
+
+  @override
+  String get vocabularyLookupReDownload => '重新下载';
+
+  @override
+  String get vocabularyLookupDownloadLocal => '下载到本地';
+
+  @override
+  String get vocabularyLookupRemove => '移除';
+
+  @override
+  String get vocabularyLookupGenerateSentence => '生成例句';
+
+  @override
+  String get vocabularyLookupRemoveFromWordbook => '移出生词本';
+
+  @override
+  String get vocabularyLookupAddToWordbook => '加入生词本';
+
+  @override
+  String vocabularyLookupPos(Object pos) {
+    return '词性 · $pos';
+  }
+
+  @override
+  String vocabularyLookupAddedToWordbook(Object word) {
+    return '已添加「$word」到生词本';
+  }
+
+  @override
+  String vocabularyLookupRemovedFromWordbook(Object word) {
+    return '已从生词本移除「$word」';
+  }
+
+  @override
+  String get vocabularyLookupEnterWord => '请输入要查询的单词';
+
+  @override
+  String get vocabularyLookupOfflineDownloaded => '离线词典已下载，可优先本地查词';
+
+  @override
+  String vocabularyLookupOfflineDownloadFailed(Object error) {
+    return '离线词典下载失败: $error';
+  }
+
+  @override
+  String get vocabularyLookupOfflineRemoved => '已移除离线词典包';
+
+  @override
+  String vocabularyLookupOfflineRemoveFailed(Object error) {
+    return '移除离线词典包失败: $error';
+  }
+
+  @override
+  String get vocabularyLookupNoPackage => '暂无可下载的离线词典包';
+
+  @override
+  String get vocabularyLookupDownloading => '下载中...';
+
+  @override
+  String vocabularyLookupPackageScope(Object scope) {
+    return '$scope';
+  }
+
+  @override
+  String vocabularyLookupPackageInstallDate(Object date) {
+    return '安装于 $date';
+  }
+
+  @override
+  String get entityCardActionLabel => '执行';
+
+  @override
+  String get entityCardTitleFallback => '未命名卡片';
+
+  @override
+  String get entityCardEntityFallback => '未命名实体';
+
+  @override
+  String get entityCardTaskFallback => '未命名任务';
+
+  @override
+  String get entityCardPlanFallback => '学习计划';
+
+  @override
+  String get entityCardKnowledgeFallback => '知识节点';
+
+  @override
+  String entityCardTaskListFallback(Object count) {
+    return '$count 个可执行任务';
+  }
+
+  @override
+  String get entityCardTaskListSummary => 'AI 已整理任务列表';
+
+  @override
+  String get visualSlotAvatarBorder => '头像边框';
+
+  @override
+  String get visualSlotTitleBar => '称号条';
+
+  @override
+  String get visualSlotProfileBanner => '主页横幅';
+
+  @override
+  String get visualSlotAchievementFrame => '成就主题框';
+
+  @override
+  String get visualSlotHomeAmbience => '首页氛围';
+
+  @override
+  String get visualSlotStarMapEffect => '星图征服特效';
+
+  @override
+  String get visualSlotStreakFlame => '连胜火焰';
+
+  @override
+  String get visualSlotDisplayPedestal => '陈列台座';
+
+  @override
+  String get visualSlotBackground => '背景';
+
+  @override
+  String get visualSlotParticle => '粒子';
+
+  @override
+  String get visualSlotEffect => '特效';
+
+  @override
+  String get visualSlotBundle => '套装';
+
+  @override
+  String get visualSlotHomeAtmo => '首页氛围';
+
+  @override
+  String get visualSlotParticleTrail => '粒子轨迹';
+
+  @override
+  String get visualSlotGloryEffect => '荣耀特效';
+
+  @override
+  String get visualSlotProfile => '个人主页';
+
+  @override
+  String get visualSlotAchievementHeader => '成就页头图';
+
+  @override
+  String get visualSlotAchievementPage => '成就页';
+
+  @override
+  String get visualSlotDetailModal => '详情弹窗';
+
+  @override
+  String get visualSlotAvatarArea => '头像身份区';
+
+  @override
+  String get visualSlotNicknameBar => '昵称称号条';
+
+  @override
+  String get visualSlotDisplayArea => '陈列区';
+
+  @override
+  String get visualSlotGloryShowcase => '荣耀柜台';
+
+  @override
+  String get visualSlotStarMapPage => '星图页';
+
+  @override
+  String get visualSlotStreakDisplay => '连胜展示';
+
+  @override
+  String get visualSlotConquestTrail => '征服轨迹';
+
+  @override
+  String get visualSlotHomePage => '首页氛围';
+
+  @override
+  String get visualSlotHomeParticle => '首页粒子';
+
+  @override
+  String get visualUnlockSystem => '系统提供';
+
+  @override
+  String get visualUnlockAchievement => '成就解锁';
+
+  @override
+  String get visualUnlockShop => '商店获取';
+
+  @override
+  String get visualUnlockEvent => '活动限定';
+
+  @override
+  String get visualUnlockSeason => '赛季奖励';
+
+  @override
+  String get errorDefaultTitle => '哎呀，出错了';
+
+  @override
+  String get warningDefaultTitle => '温馨提示';
+
+  @override
+  String get infoDefaultTitle => '小提示';
+
+  @override
+  String get retryLabel => '重试';
+
+  @override
+  String get emptyStateTitle => '暂无数据';
+
+  @override
+  String get emptyStateTitleNone => '数据为空';
+
+  @override
+  String get auroraStatusReady => 'Aurora 已校准';
+
+  @override
+  String get auroraStatusRecalibrating => 'Aurora 正在校准';
+
+  @override
+  String get auroraStatusPartial => 'Aurora 正在理解';
+
+  @override
+  String get auroraStatusMissing => 'Aurora 初始化中';
+
+  @override
+  String get auroraStatusInactive => 'Aurora 待激活';
+
+  @override
+  String get auroraFacetAboutYou => '关于你';
+
+  @override
+  String get auroraFacetAboutGoal => '关于目标';
+
+  @override
+  String get auroraFacetAboutNow => '关于现在';
+
+  @override
+  String get auroraFacetAboutJudgment => '关于我的判断';
+
+  @override
+  String get auroraFacetReady => '已连通';
+
+  @override
+  String get auroraFacetRecalibrating => '重校准中';
+
+  @override
+  String get auroraFacetPartial => '补全中';
+
+  @override
+  String get auroraFacetMissing => '未形成';
+
+  @override
+  String auroraConfidenceLabel(Object percent) {
+    return '把握 $percent%';
+  }
+
+  @override
+  String auroraFreshnessLabel(Object age) {
+    return '$age前更新';
+  }
+
+  @override
+  String get auroraActionConfirm => '看起来对';
+
+  @override
+  String get auroraActionDisagree => '不太对';
+
+  @override
+  String get auroraActionRecalibrate => '重新校准';
+
+  @override
+  String get auroraActionViewDetails => '查看 Aurora 详情';
+
+  @override
+  String get auroraActionCloseDetails => '关闭';
+
+  @override
+  String get auroraLoading => 'Aurora 加载中';
+
+  @override
+  String get auroraEvidence => '基于';
+
+  @override
+  String get auroraNeedsConfirm => 'Aurora 需要确认';
+
+  @override
+  String get auroraStrategyRisk => 'Aurora 策略风险升高';
+
+  @override
+  String get auroraBackground => 'Aurora 已退回后台';
+
+  @override
+  String get auroraCalibrationTitle => 'Aurora 正在校准';
+
+  @override
+  String get auroraCalibrationObserved => '我观察到';
+
+  @override
+  String get auroraCalibrationJudgment => '我的判断';
+
+  @override
+  String get auroraCalibrationUncertainty => '我可能判断错的地方';
+
+  @override
+  String get auroraCalibrationSuggestion => '我的建议';
+
+  @override
+  String get auroraCalibrationConfirm => '需要你确认';
+
+  @override
+  String get auroraCalibrationComplete => '校准完成，回到标准层。';
+
+  @override
+  String get auroraCalibrationExit => 'Aurora 已退回后台';
+
+  @override
+  String get auroraCorrectNotRight => '不是这个方向';
+
+  @override
+  String get auroraCorrectShorter => '更短一点';
+
+  @override
+  String get auroraCorrectDirect => '直接出题';
+
+  @override
+  String get auroraCorrectRecalibrate => '重新校准';
+
+  @override
+  String auroraSourceBadge(Object source) {
+    return '基于：$source';
+  }
+
+  @override
+  String get auroraJudgmentTag => 'Aurora 判断';
+
+  @override
+  String get auroraPhaseDiagnosis => '诊断';
+
+  @override
+  String get auroraPhaseStrategy => '策略';
+
+  @override
+  String get auroraPhaseExecution => '执行';
+
+  @override
+  String get auroraPhaseCheckpoint => '检查点';
+
+  @override
+  String get auroraInputHint => '告诉 Sparkle 任何想法...';
+
+  @override
+  String get auroraBandSensing => 'Aurora 轻量感知中';
+
+  @override
+  String get auroraBandCalibrated => 'Aurora 已校准';
+
+  @override
+  String get auroraBandRiskFound => 'Aurora 发现策略风险';
+
+  @override
+  String get auroraBandNeedsConfirm => 'Aurora 需要确认一个判断';
+
+  @override
+  String get auroraBandCalibrationAvailable => '深度校准可用';
+
+  @override
+  String get auroraBandCoolingDown => 'Aurora 校准冷却中';
+
+  @override
+  String auroraWakeAvailable(Object count) {
+    return '深度校准可用（今日还剩 $count 次）';
+  }
+
+  @override
+  String auroraWakeCooling(Object minutes) {
+    return '校准冷却中 · 还需 $minutes 分钟';
+  }
+
+  @override
+  String get auroraWakeQuickFallback => '快速校准';
+
+  @override
+  String get auroraWakeViewUpdates => '查看刚才更新了什么';
 }

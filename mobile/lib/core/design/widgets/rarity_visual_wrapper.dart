@@ -348,10 +348,12 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
     if (widget.showShimmer && level.index >= _RarityLevel.rare.index) {
       children.add(
         Positioned.fill(
-          child: _ShimmerLayer(
-            controller: _shimmerController,
-            rarityColor: rarityColor,
-            borderRadius: widget.borderRadius,
+          child: IgnorePointer(
+            child: _ShimmerLayer(
+              controller: _shimmerController,
+              rarityColor: rarityColor,
+              borderRadius: widget.borderRadius,
+            ),
           ),
         ),
       );
@@ -361,10 +363,12 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
     if (widget.showGlow && _isActuallyNewlyUnlocked) {
       children.add(
         Positioned.fill(
-          child: _GlowLayer(
-            controller: _glowController,
-            rarityColor: rarityColor,
-            borderRadius: widget.borderRadius,
+          child: IgnorePointer(
+            child: _GlowLayer(
+              controller: _glowController,
+              rarityColor: rarityColor,
+              borderRadius: widget.borderRadius,
+            ),
           ),
         ),
       );
@@ -374,11 +378,13 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
     if (level.index >= _RarityLevel.epic.index) {
       children.add(
         Positioned.fill(
-          child: _RotatingGradientBorder(
-            controller: _borderRotationController,
-            colors: _getGradientColors(),
-            borderRadius: widget.borderRadius,
-            borderWidth: level == _RarityLevel.legendary ? 2.5 : 2.0,
+          child: IgnorePointer(
+            child: _RotatingGradientBorder(
+              controller: _borderRotationController,
+              colors: _getGradientColors(),
+              borderRadius: widget.borderRadius,
+              borderWidth: level == _RarityLevel.legendary ? 2.5 : 2.0,
+            ),
           ),
         ),
       );
@@ -389,10 +395,12 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
       final particleCount = level == _RarityLevel.legendary ? 4 : 2;
       children.add(
         Positioned.fill(
-          child: _OrbitalParticlesLayer(
-            controller: _particleController,
-            rarityColor: particleColor,
-            particleCount: particleCount,
+          child: IgnorePointer(
+            child: _OrbitalParticlesLayer(
+              controller: _particleController,
+              rarityColor: particleColor,
+              particleCount: particleCount,
+            ),
           ),
         ),
       );
@@ -408,12 +416,14 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
     if (level.index >= _RarityLevel.epic.index) {
       children.add(
         Positioned.fill(
-          child: CustomPaint(
-            painter: _RotatingGradientBorderPainter(
-              rotation: 0,
-              colors: _getGradientColors(),
-              borderRadius: widget.borderRadius,
-              borderWidth: level == _RarityLevel.legendary ? 2.5 : 2.0,
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _RotatingGradientBorderPainter(
+                rotation: 0,
+                colors: _getGradientColors(),
+                borderRadius: widget.borderRadius,
+                borderWidth: level == _RarityLevel.legendary ? 2.5 : 2.0,
+              ),
             ),
           ),
         ),

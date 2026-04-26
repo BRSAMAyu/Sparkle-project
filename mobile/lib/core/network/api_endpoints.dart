@@ -24,6 +24,7 @@ class ApiEndpoints {
   static const String unlinkSocial = '/users/me/unlink-social';
   static const String userSessions = '/users/me/sessions';
   static const String securityLog = '/users/me/security-log';
+  static const String meExport = '/users/me/export';
 
   // Files
   static const String filesPrepareUpload = '/files/upload/prepare';
@@ -33,6 +34,11 @@ class ApiEndpoints {
   static String fileThumbnail(String id) => '/files/$id/thumbnail';
   static const String myFiles = '/me/files';
   static const String myFilesSearch = '/me/files/search';
+  static String galaxyDocumentNodes(String id) => '/galaxy/documents/$id/nodes';
+  static const String documentsUpload = '/documents/upload';
+  static String documentConfirmUpload(String fileId) =>
+      '/documents/$fileId/confirm-upload';
+  static String documentStatus(String fileId) => '/documents/$fileId/status';
 
   // Vocabulary / Dictionary
   static const String vocabularyLookup = '/vocabulary/lookup';
@@ -53,6 +59,10 @@ class ApiEndpoints {
   static String startTask(String id) => '/tasks/$id/start';
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
+  static String snoozeTask(String id) => '/tasks/$id/snooze';
+  static String taskStuck(String id) => '/tasks/$id/stuck';
+  static String taskTooHard(String id) => '/tasks/$id/too-hard';
+  static String skipTask(String id) => '/tasks/$id/skip';
   static String taskGenerateGuide(String id) => '/tasks/$id/generate-guide';
   static String taskFeedback(String id) => '/tasks/$id/feedback';
   static String taskFeedbackReflection(String feedbackId) =>
@@ -149,8 +159,9 @@ class ApiEndpoints {
       '/client-telemetry/events/batch';
   static const String clientTelemetrySummary = '/client-telemetry/summary';
   static const String eventsIngest = '/events/ingest';
-  static const String healthCapacity = '/health/capacity';
-  static const String healthPrometheusAlerts = '/health/prometheus/alerts';
+  static const String toolHistoryClientEvents = '/tool-history/client-events';
+  static const String healthCapacity = '/health/user-capacity';
+  static const String healthPrometheusAlerts = '/health/user-alerts';
 
   // Notification Center
   static const String notificationCenterNotifications =
@@ -168,11 +179,37 @@ class ApiEndpoints {
   static const String statsOverview = '/stats/overview';
   static const String statsWeekly = '/stats/weekly';
   static const String statsFlame = '/stats/flame';
+  static const String statsActivityHeatmap = '/stats/activity/heatmap';
   static const String growthDashboard = '/growth/dashboard';
+  static const String growthWeeklyNarrative = '/growth/weekly-narrative';
+  static const String growthWeeklyNarrativeGenerate =
+      '/growth/weekly-narrative/generate';
+  static const String examSprintIntake = '/exam-sprint/intake';
+  static const String examSprintDashboard = '/exam-sprint/dashboard';
+  static const String examSprintPostExamReview =
+      '/exam-sprint/post-exam-review';
+  static const String examSprintCompletion = '/exam-sprint/completion';
+  static const String examSprintPortfolio = '/exam-sprint/portfolio';
   static const String profileChatOpening = '/profile/chat-opening';
+  static const String auroraDailyStartup = '/aurora/daily-startup';
+  static const String auroraComebackContext = '/aurora/comeback-context';
+  static const String auroraCalibrationCards = '/aurora/calibration-cards';
+  static String auroraCalibrationCardRespond(String id) =>
+      '/aurora/calibration-cards/$id/respond';
+  static const String auroraControlSurface = '/aurora/control-surface';
+  static const String auroraModelingStatus = '/aurora/modeling-status';
+  static const String auroraPredictedOptions = '/aurora/predicted-options';
+  static const String auroraCoreSessionStart = '/aurora/core-session/start';
+  static const String auroraCoreSessionRespond = '/aurora/core-session/respond';
+  static const String auroraCoreSessionCurrent = '/aurora/core-session/current';
+  static String auroraCoreSessionClose(String id) =>
+      '/aurora/core-session/$id/close';
+  static const String auroraChipTelemetry = '/aurora/telemetry/chip-selected';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
+  static const String galaxyContributionStats = '/galaxy/contribution-stats';
+  static const String galaxyDrafts = '/galaxy/drafts';
   static const String galaxyViewport = '/galaxy/nodes/viewport';
   static const String galaxyPositions = '/galaxy/nodes/positions';
   static String galaxyUpdateMastery(String id) => '/galaxy/nodes/$id/mastery';
@@ -181,6 +218,8 @@ class ApiEndpoints {
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
   static const String galaxyEvents = '/galaxy/events';
   static String galaxyNodeDetail(String id) => '/galaxy/node/$id';
+  static String galaxyNodeHistory(String id) => '/galaxy/node/$id/history';
+  static String galaxyNodeChunks(String id) => '/galaxy/node/$id/chunks';
   static String galaxyNodeFavorite(String id) => '/galaxy/node/$id/favorite';
   static String galaxyNodeExpansionCandidates(String id) =>
       '/galaxy/node/$id/expansion/candidates';
@@ -188,6 +227,19 @@ class ApiEndpoints {
       '/galaxy/node/$id/expansion/apply';
   static String galaxyNodeDecayPause(String id) =>
       '/galaxy/node/$id/decay/pause';
+  static String galaxyDocumentSuggestedNodes(String fileId) =>
+      '/galaxy/documents/$fileId/suggested-nodes';
+  static String galaxyDocumentReviewNodes(String fileId) =>
+      '/galaxy/documents/$fileId/review-nodes';
+  static String galaxyDocumentApproveAll(String fileId) =>
+      '/galaxy/documents/$fileId/approve-all';
+  static String galaxyNodeAttachDocument(String nodeId) =>
+      '/galaxy/node/$nodeId/documents';
+  static String galaxyNodeDetachDocument(String nodeId, String fileId) =>
+      '/galaxy/node/$nodeId/documents/$fileId';
+  static String galaxyDocumentMove(String fileId) =>
+      '/galaxy/documents/$fileId/move';
+  static const String citationFeedback = '/documents/feedback/citation';
 
   // Learning Paths
   static String learningPath(String targetNodeId) =>
@@ -537,6 +589,10 @@ class ApiEndpoints {
   static String accountabilityCheckin(String id) =>
       '/accountability/$id/checkin';
   static String accountabilityNudge(String id) => '/accountability/$id/nudge';
+  static String accountabilityStruggleAlertEncourage(String notificationId) =>
+      '/accountability/struggle-alerts/$notificationId/encourage';
+  static String accountabilityHintDismiss(String notificationId) =>
+      '/accountability/hints/$notificationId/dismiss';
   static String accountabilityDashboard(String id) =>
       '/accountability/$id/dashboard';
   static String accountabilityStats(String id) => '/accountability/$id/stats';

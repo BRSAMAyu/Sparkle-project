@@ -323,7 +323,7 @@ class AgentStatusIndicator extends StatelessWidget {
               statusText,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: config.color,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

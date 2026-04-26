@@ -200,7 +200,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             context.l10n.intentPreviewDetectedCount(_intents.length),
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
               color: DS.textPrimary,
             ),
           ),
@@ -265,7 +265,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                   child: Text(
                     _getIntentLabel(intent.type),
                     style: TextStyle(
-                      fontWeight: FontWeight.w500,
+                      fontWeight: DS.fontWeightMedium,
                       color: DS.textPrimary,
                     ),
                   ),
@@ -284,7 +284,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                     style: TextStyle(
                       color: DS.onBrandPrimary,
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: DS.fontWeightMedium,
                     ),
                   ),
                 ),
@@ -354,7 +354,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                   title,
                   style: TextStyle(
                     color: DS.info,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                 ),
               ),

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
-from datetime import UTC, date, datetime, time, timedelta
 import hashlib
 import json
 import math
 import os
+from collections import defaultdict
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -194,10 +194,7 @@ class IdiographicAssociationService:
             return {"user_id": str(user_id), "mode": "off", "path_mode": "C"}
 
         daily_vectors = await self._build_daily_vectors(user_id, reference_time)
-        await self._upsert_daily_vectors(user_id, daily_vectors)
-
         changepoints = self._detect_recent_changepoints(daily_vectors)
-        await self._upsert_changepoints(user_id, changepoints, reference_time)
 
         effective_days = self._effective_window_days(daily_vectors, changepoints)
         series_by_dim = self._series_by_dim(daily_vectors, effective_days)
@@ -219,28 +216,32 @@ class IdiographicAssociationService:
             else []
         )
         disconfirmed_until = await self._load_disconfirmed_pairs(user_id, reference_time)
-        await self._upsert_associations(
-            user_id=user_id,
-            reference_time=reference_time,
-            effective_days=effective_days,
-            active_days=active_days,
-            path_mode=path_mode,
-            correlation_results=correlation_results,
-            disconfirmed_until=disconfirmed_until,
-        )
-        summary = await self.build_aggregator_summary(user_id, now=reference_time)
-        await self._write_summary_cache(user_id, summary)
 
-        if publish_event and self.event_bus is not None:
-            await self.event_bus.publish(
-                "idiographic.updated",
-                {
-                    "event_type": "idiographic.updated",
-                    "user_id": str(user_id),
-                    "path_mode": path_mode,
-                    "active_days": active_days,
-                },
+        if mode == "live":
+            await self._upsert_daily_vectors(user_id, daily_vectors)
+            await self._upsert_changepoints(user_id, changepoints, reference_time)
+            await self._upsert_associations(
+                user_id=user_id,
+                reference_time=reference_time,
+                effective_days=effective_days,
+                active_days=active_days,
+                path_mode=path_mode,
+                correlation_results=correlation_results,
+                disconfirmed_until=disconfirmed_until,
             )
+            summary = await self.build_aggregator_summary(user_id, now=reference_time)
+            await self._write_summary_cache(user_id, summary)
+
+            if publish_event and self.event_bus is not None:
+                await self.event_bus.publish(
+                    "idiographic.updated",
+                    {
+                        "event_type": "idiographic.updated",
+                        "user_id": str(user_id),
+                        "path_mode": path_mode,
+                        "active_days": active_days,
+                    },
+                )
         return {
             "user_id": str(user_id),
             "mode": mode,
@@ -258,7 +259,7 @@ class IdiographicAssociationService:
         now: datetime | None = None,
     ) -> IdiographicSummaryValue | None:
         reference_time = now or self.now_factory()
-        if await self.kill_switch.get_mode() == "off":
+        if await self.kill_switch.get_mode() != "live":
             return None
         cached = await self._read_summary_cache(user_id)
         if cached is not None:

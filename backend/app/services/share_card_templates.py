@@ -12,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from app.core.i18n import I18n
+
 
 @dataclass(slots=True)
 class TemplateStyle:
@@ -81,8 +83,8 @@ COSMIC_STYLES: dict[str, TemplateStyle] = {
 
 COSMIC_TEMPLATE = ShareCardTemplate(
     id="cosmic",
-    name="星空",
-    description="渐变背景 + 粒子 + 光晕效果",
+    name=I18n.t("share_card.cosmic_name", locale="zh"),
+    description=I18n.t("share_card.cosmic_desc", locale="zh"),
     style_map=COSMIC_STYLES,
 )
 
@@ -128,8 +130,8 @@ MINIMAL_STYLES: dict[str, TemplateStyle] = {
 
 MINIMAL_TEMPLATE = ShareCardTemplate(
     id="minimal",
-    name="简约",
-    description="纯色背景 + 极简装饰",
+    name=I18n.t("share_card.minimal_name", locale="zh"),
+    description=I18n.t("share_card.minimal_desc", locale="zh"),
     style_map=MINIMAL_STYLES,
 )
 
@@ -183,8 +185,8 @@ NEON_STYLES: dict[str, TemplateStyle] = {
 
 NEON_TEMPLATE = ShareCardTemplate(
     id="neon",
-    name="霓虹",
-    description="深色背景 + 霓虹发光效果",
+    name=I18n.t("share_card.neon_name", locale="zh"),
+    description=I18n.t("share_card.neon_desc", locale="zh"),
     style_map=NEON_STYLES,
 )
 
@@ -238,8 +240,8 @@ ELEGANT_STYLES: dict[str, TemplateStyle] = {
 
 ELEGANT_TEMPLATE = ShareCardTemplate(
     id="elegant",
-    name="典雅",
-    description="金色边框 + 优雅字体",
+    name=I18n.t("share_card.elegant_name", locale="zh"),
+    description=I18n.t("share_card.elegant_desc", locale="zh"),
     style_map=ELEGANT_STYLES,
 )
 

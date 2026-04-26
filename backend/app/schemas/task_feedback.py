@@ -2,6 +2,7 @@
 Task Feedback Schemas
 """
 from __future__ import annotations
+
 from typing import Any
 from uuid import UUID
 
@@ -25,6 +26,9 @@ class TaskFeedbackCreate(BaseModel):
     completion_quality: int | None = Field(None, ge=1, le=5, description="完成质量评分 (1-5)")
     feedback_text: str | None = Field(None, max_length=2000, description="用户文字反馈")
     category: str | None = Field(None, description="反馈分类")
+    stuck_point: str | None = Field(None, max_length=1000, description="任务中卡住的位置")
+    effective_method: str | None = Field(None, max_length=1000, description="让用户觉得有进展的方法")
+    adjustment_intention: str | None = Field(None, max_length=1000, description="下次计划调整的做法")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -32,6 +36,9 @@ class TaskFeedbackCreate(BaseModel):
                 "completion_quality": 5,
                 "feedback_text": "这个任务很有帮助！",
                 "category": "just_right",
+                "stuck_point": "公式会背，但不知道什么时候套用",
+                "effective_method": "先画状态图再列式",
+                "adjustment_intention": "下次先做一道代表题再刷题",
             }
         }
     )
@@ -123,6 +130,8 @@ class TaskFeedbackSubmitResponse(BaseModel):
     data: TaskFeedbackResponse | None = Field(None, description="反馈数据")
     preference_updates: PreferenceUpdateDetail | None = Field(None, description="偏好更新详情")
     reflection_prompt: dict[str, Any] | None = Field(None, description="可选的反思引导卡片")
+    reflection_payload: dict[str, Any] | None = Field(None, description="结构化反思处理结果")
+    ai_response: str | None = Field(None, description="AI 对本次反思的连接性回应")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -143,6 +152,9 @@ class ReflectionAnswerCreate(BaseModel):
     """提交反思答案"""
     selected_option: str | None = Field(None, max_length=200, description="选择的原因标签")
     free_text: str | None = Field(None, max_length=1000, description="补充说明")
+    stuck_point: str | None = Field(None, max_length=1000, description="任务中卡住的位置")
+    effective_method: str | None = Field(None, max_length=1000, description="让用户觉得有进展的方法")
+    adjustment_intention: str | None = Field(None, max_length=1000, description="下次计划调整的做法")
 
 
 class ReflectionAnswerResponse(BaseModel):
@@ -150,3 +162,6 @@ class ReflectionAnswerResponse(BaseModel):
     success: bool
     message: str
     reflection_payload: dict[str, Any] | None = None
+    ai_response: str | None = None
+    memory_id: str | None = None
+    linked_knowledge_nodes: list[dict[str, Any]] | None = None

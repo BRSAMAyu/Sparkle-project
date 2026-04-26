@@ -48,6 +48,9 @@ class PlanModel {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.healthScore,
+    this.healthStatus,
+    this.healthReasons = const [],
     this.description,
     this.targetDate,
     this.subject,
@@ -55,6 +58,7 @@ class PlanModel {
     this.tasks,
     this.source,
     this.sourceMetadata,
+    this.dayHighlights,
     this.planStage = PlanStage.sprint,
     this.priority = PlanPriority.normal,
     this.isPrimary = false,
@@ -78,6 +82,12 @@ class PlanModel {
   @JsonKey(name: 'mastery_level')
   final double masteryLevel;
   final double progress;
+  @JsonKey(name: 'health_score')
+  final double? healthScore;
+  @JsonKey(name: 'health_status')
+  final String? healthStatus;
+  @JsonKey(name: 'health_reasons')
+  final List<String> healthReasons;
   @JsonKey(name: 'is_active')
   final bool isActive;
   @JsonKey(name: 'created_at')
@@ -88,12 +98,30 @@ class PlanModel {
   final String? source;
   @JsonKey(name: 'source_metadata')
   final Map<String, dynamic>? sourceMetadata;
+  @JsonKey(name: 'day_highlights')
+  final PlanDayHighlights? dayHighlights;
   @JsonKey(name: 'plan_stage')
   final PlanStage planStage;
   final PlanPriority priority;
   @JsonKey(name: 'is_primary')
   final bool isPrimary;
   Map<String, dynamic> toJson() => _$PlanModelToJson(this);
+}
+
+@JsonSerializable()
+class PlanDayHighlights {
+  PlanDayHighlights({
+    required this.day,
+    required this.recommendation,
+    required this.tasks,
+  });
+
+  factory PlanDayHighlights.fromJson(Map<String, dynamic> json) =>
+      _$PlanDayHighlightsFromJson(json);
+  final int day;
+  final String recommendation;
+  final List<TaskModel> tasks;
+  Map<String, dynamic> toJson() => _$PlanDayHighlightsToJson(this);
 }
 
 @JsonSerializable()

@@ -112,6 +112,7 @@ from app.models.custom_expert import CustomExpertProfile, CustomExpertSource, Cu
 from app.models.decision_record import DecisionRecord
 from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry
 from app.models.document_chunks import DocumentChunk
+from app.models.document_feedback import DocumentRetrievalFeedback
 from app.models.error_book import ErrorRecord
 from app.models.event import TrackingEvent
 from app.models.event_bus_dlq import EventBusDLQEntry
@@ -138,13 +139,14 @@ from app.models.file_storage import StoredFile
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.galaxy import (
     ExpansionFeedback,
+    KnowledgeNodeDocument,
     KnowledgeNode,
     NodeExpansionQueue,
     NodeRelation,
     StudyRecord,
     UserNodeStatus,
 )
-from app.models.group_files import GroupFile
+from app.models.group_files import GroupFile, GroupFileTrustLevel
 from app.models.idempotency_key import IdempotencyKey
 from app.models.intervention import (
     InterventionAuditLog,
@@ -210,6 +212,7 @@ from app.models.simulation_run import SimulationRun
 from app.models.subject import Subject
 from app.models.calendar_event import CalendarEvent, EventSource
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.task_document import TaskDocument
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
 from app.models.theater_candidate_bundle import TheaterCandidateBundle
@@ -273,6 +276,7 @@ __all__ = [
     "PushHistory",
     "PushDeliveryRecord",
     "KnowledgeNode",
+    "KnowledgeNodeDocument",
     "UserNodeStatus",
     "NodeRelation",
     "StudyRecord",
@@ -326,6 +330,7 @@ __all__ = [
     "StoredFile",
     "DocumentChunk",
     "GroupFile",
+    "GroupFileTrustLevel",
     "IRTItemParameter",
     "UserIRTAbility",
     "TrackingEvent",
@@ -375,6 +380,7 @@ __all__ = [
     "UserPreferencesCenter",
     "DecisionRecord",
     "DistilledStrategyCacheEntry",
+    "DocumentRetrievalFeedback",
     # Seed Content Library
     "SeedLibrary",
     "SeedItem",

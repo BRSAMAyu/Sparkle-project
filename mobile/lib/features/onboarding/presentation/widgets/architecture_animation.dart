@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 
 /// 架构可视化动画 - 必杀技 C
 ///
@@ -393,6 +394,7 @@ class _ArchitecturePainter extends CustomPainter {
           color: DS.brandPrimary.withValues(alpha: opacity),
           fontSize: 16,
           fontWeight: FontWeight.bold,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textAlign: TextAlign.center,

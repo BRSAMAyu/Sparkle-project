@@ -19,7 +19,10 @@ class VocabularyRepository {
       ApiEndpoints.vocabularyLookup,
       queryParameters: {'word': normalized},
     );
-    final payload = response.data as Map<String, dynamic>;
+    final payload = response.data;
+    if (payload is! Map<String, dynamic>) {
+      throw Exception('Invalid response from vocabulary lookup service');
+    }
     await _offlineDictionaryService.cacheLookupResult(payload);
     return payload;
   }

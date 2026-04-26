@@ -452,7 +452,7 @@ class _AchievementShareBottomSheetState
               ),
               const SizedBox(height: DS.sm),
               Text(
-                'Loading...',
+                '加载中...',
                 style: TextStyle(
                   color: DS.textTertiary,
                   fontSize: 12,
@@ -714,7 +714,7 @@ class _AchievementShareBottomSheetState
         break;
       case ShareResult.error:
         if (mounted) {
-          AppFeedback.error(context, context.l10n.shareFailed('Unknown error'));
+          AppFeedback.error(context, context.l10n.shareFailed('未知错误'));
         }
     }
   }

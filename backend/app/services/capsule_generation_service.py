@@ -24,6 +24,7 @@ from app.models.capsule_generation_job import CapsuleGenerationJob, JobStatus
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.core.i18n import I18n
 from app.services.llm_service import get_llm_service_for_specific_model
 
 
@@ -328,7 +329,7 @@ class CapsuleGenerationService:
             return 0
 
         for job in jobs:
-            job.mark_failed("胶囊生成队列处理超时，已自动切换到即时生成。")
+            job.mark_failed(I18n.t("capsule.expired_job", locale="zh"))
             if job.started_at is None:
                 job.progress = 0.0
             db.add(job)
@@ -426,22 +427,22 @@ class CapsuleGenerationService:
         thinking_mode: bool,
     ) -> str:
         depth_instruction = {
-            DepthLevel.SHALLOW: "简洁明了，用很短篇幅点出最值得继续探索的一个角度。",
-            DepthLevel.MEDIUM: "适度展开，讲清背景、关键点与下一步探索方向。",
-            DepthLevel.DEEP: "深度解析，解释原理、迁移意义，以及可以继续思考的问题。",
+            DepthLevel.SHALLOW: I18n.t("capsule.depth_shallow", locale="zh"),
+            DepthLevel.MEDIUM: I18n.t("capsule.depth_medium", locale="zh"),
+            DepthLevel.DEEP: I18n.t("capsule.depth_deep", locale="zh"),
         }
         curiosity_value = float(user_context.get("curiosity_preference") or 0.5)
         if curiosity_value < 0.35:
-            exploration_instruction = "保持聚焦，只围绕当前学习主题做一步延伸。"
+            exploration_instruction = I18n.t("capsule.curiosity_low", locale="zh")
         elif curiosity_value > 0.75:
-            exploration_instruction = "鼓励跨主题联想，加入一个意想不到但合理的连接点。"
+            exploration_instruction = I18n.t("capsule.curiosity_high", locale="zh")
         else:
-            exploration_instruction = "在当前主题附近做中等幅度拓展。"
+            exploration_instruction = I18n.t("capsule.curiosity_medium", locale="zh")
 
         mode_instruction = (
-            "先充分思考结构与洞见，再输出最终 JSON。不要输出思考过程。"
+            I18n.t("capsule.mode_thinking", locale="zh")
             if thinking_mode
-            else "直接输出高质量结果，不展开冗长推理。"
+            else I18n.t("capsule.mode_direct", locale="zh")
         )
 
         base_prompt = f"""你是 Sparkle AI 的好奇心胶囊生成器。
@@ -473,15 +474,15 @@ class CapsuleGenerationService:
                 name = pattern.get("name")
                 solution_hint = pattern.get("solution_hint")
                 if name == "Planning Optimism":
-                    hints.append("用户容易低估时间，适合加入可执行的拆解或节奏提示。")
+                    hints.append(I18n.t("capsule.pattern_hint_planning_optimism", locale="zh"))
                 elif name == "Focus Decay":
-                    hints.append("用户近期专注力波动，适合给出轻量、能快速启动的切入点。")
+                    hints.append(I18n.t("capsule.pattern_hint_focus_decay", locale="zh"))
                 elif name == "Procrastination":
-                    hints.append("用户有拖延倾向，内容应降低启动阻力。")
+                    hints.append(I18n.t("capsule.pattern_hint_procrastination", locale="zh"))
                 elif name and solution_hint:
-                    hints.append(f"结合模式「{name}」：{solution_hint}")
+                    hints.append(I18n.t("capsule.pattern_hint_custom", locale="zh", name=name, hint=solution_hint))
                 elif name:
-                    hints.append(f"结合模式「{name}」做个性化调整。")
+                    hints.append(I18n.t("capsule.pattern_hint_custom_no_solution", locale="zh", name=name))
             if hints:
                 base_prompt += "\n\n个性化约束：\n" + "\n".join(f"- {hint}" for hint in hints)
 
@@ -497,10 +498,10 @@ class CapsuleGenerationService:
     ) -> dict[str, Any]:
         recent_tasks = user_context.get("recent_tasks", [])
         selected_task = None
-        topic = "有趣的知识点"
+        topic = I18n.t("capsule.topic_fallback", locale="zh")
         if recent_tasks:
             selected_task = recent_tasks[index % len(recent_tasks)]
-            topic = selected_task.get("title", "学习内容")
+            topic = selected_task.get("title", I18n.t("capsule.learning_content_fallback", locale="zh"))
 
         system_prompt = self._build_personalized_prompt(
             user_context=user_context,
@@ -532,20 +533,18 @@ class CapsuleGenerationService:
             if not result or not isinstance(result, dict):
                 raise ValueError("Invalid LLM response")
             return {
-                "title": result.get("title", f"关于 {topic} 的延伸思考"),
-                "content": result.get("content", f"从 **{topic}** 再往前走一步，会看到更多联系。"),
-                "subject": topic if isinstance(topic, str) else "学习拓展",
+                "title": result.get("title", I18n.t("capsule.fallback_title_generic", locale="zh", topic=topic)),
+                "content": result.get("content", I18n.t("capsule.fallback_content_generic", locale="zh", topic=topic)),
+                "subject": topic if isinstance(topic, str) else I18n.t("capsule.subject_fallback", locale="zh"),
                 "task_id": selected_task.get("id") if selected_task else None,
                 "quality_score": float(result.get("quality_score", 0.5)),
             }
         except Exception as exc:
             logger.error("[CapsuleGen] Content generation failed with {}: {}", model_name, exc)
             return {
-                "title": f"探索 {topic}",
-                "content": f"""关于 **{topic}** 的一个延伸视角：
-
-这个主题不仅关乎当前内容，也可能和你接下来要学的知识建立联系。""",
-                "subject": topic if isinstance(topic, str) else "学习拓展",
+                "title": I18n.t("capsule.fallback_title", locale="zh", topic=topic),
+                "content": I18n.t("capsule.fallback_content", locale="zh", topic=topic),
+                "subject": topic if isinstance(topic, str) else I18n.t("capsule.subject_fallback", locale="zh"),
                 "task_id": selected_task.get("id") if selected_task else None,
                 "quality_score": 0.3,
             }
@@ -585,7 +584,7 @@ class CapsuleGenerationService:
 
         return {
             "user_id": str(user_id),
-            "nickname": user.nickname or "学习者",
+            "nickname": user.nickname or I18n.t("capsule.user_nickname_fallback", locale="zh"),
             "depth_preference": depth_preference,
             "curiosity_preference": curiosity_preference,
             "generation_type": generation_type,

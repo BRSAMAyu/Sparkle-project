@@ -26,7 +26,7 @@ class ReviewPerformanceButtons extends StatelessWidget {
             child: Text(
               '你对这道题的掌握情况？',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -153,7 +153,7 @@ class _PerformanceButton extends StatelessWidget {
               Text(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: color,
                 ),
                 textAlign: TextAlign.center,
@@ -314,7 +314,7 @@ class _PerformanceOption extends StatelessWidget {
                     Text(
                       label,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                         color: color,
                       ),
                     ),

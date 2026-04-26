@@ -87,6 +87,20 @@ class WidgetEvent extends ChatStreamEvent {
 }
 
 /// 完成事件
+class ContinueEvent extends ChatStreamEvent {
+  ContinueEvent({
+    this.finishReason,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.metadata,
+    super.sessionId,
+  });
+  final String? finishReason;
+}
+
+/// 完成事件
 class DoneEvent extends ChatStreamEvent {
   DoneEvent({
     this.finishReason,

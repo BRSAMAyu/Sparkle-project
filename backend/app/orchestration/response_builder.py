@@ -297,6 +297,12 @@ class ResponseBuilderMixin:
                 routing_preview,
                 ensure_ascii=False,
             )
+        doc_retrieval_meta = final_state.context_data.get("document_context_retrieval")
+        if isinstance(doc_retrieval_meta, dict) and doc_retrieval_meta.get("context_receipt"):
+            response_metadata["context_receipt"] = json.dumps(
+                doc_retrieval_meta["context_receipt"],
+                ensure_ascii=False,
+            )
         roundtable_turns = final_state.context_data.get("roundtable_turns")
         if isinstance(roundtable_turns, list) and roundtable_turns:
             response_metadata["roundtable_turns"] = json.dumps(

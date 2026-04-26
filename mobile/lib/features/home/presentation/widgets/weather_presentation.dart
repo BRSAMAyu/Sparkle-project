@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 enum WeatherStatusDensity {
   compact,
@@ -71,10 +72,10 @@ WeatherPresentationData resolveWeatherPresentation(
       final accent = blend(DS.neutral400, DS.brandPrimary, isDark ? 0.18 : 0.1);
       return WeatherPresentationData(
         type: type,
-        title: '薄雾弥漫',
-        subtitle: '边界柔和，适合整理思路与留白。',
-        compactHint: '轻缓整理',
-        ambientHint: '雾层抹平了边界，画面更安静。',
+        title: context.l10n.weatherTitleCloudy,
+        subtitle: context.l10n.weatherSubtitleCloudy,
+        compactHint: context.l10n.weatherCompactCloudy,
+        ambientHint: context.l10n.weatherAmbientCloudy,
         icon: Icons.cloud_rounded,
         accent: accent,
         softAccent: blend(surfaceB, accent, isDark ? 0.18 : 0.1),
@@ -96,10 +97,10 @@ WeatherPresentationData resolveWeatherPresentation(
       final accent = blend(DS.info, DS.brandPrimary, isDark ? 0.18 : 0.1);
       return WeatherPresentationData(
         type: type,
-        title: '风雨欲来',
-        subtitle: '环境收拢，适合沉浸、专注与减少噪声。',
-        compactHint: '深潜聚焦',
-        ambientHint: '雨幕把外界压低了，注意力更容易收束。',
+        title: context.l10n.weatherTitleRainy,
+        subtitle: context.l10n.weatherSubtitleRainy,
+        compactHint: context.l10n.weatherCompactRainy,
+        ambientHint: context.l10n.weatherAmbientRainy,
         icon: Icons.thunderstorm_rounded,
         accent: accent,
         softAccent: blend(surfaceB, accent, isDark ? 0.2 : 0.12),
@@ -122,10 +123,10 @@ WeatherPresentationData resolveWeatherPresentation(
           blend(DS.brandSecondary, DS.brandPrimary, isDark ? 0.12 : 0.08);
       return WeatherPresentationData(
         type: type,
-        title: '繁星入梦',
-        subtitle: '灵感高亮，适合冲刺、突破与留下痕迹。',
-        compactHint: '高光冲刺',
-        ambientHint: '星迹开始拉长，灵感窗口正在打开。',
+        title: context.l10n.weatherTitleMeteor,
+        subtitle: context.l10n.weatherSubtitleMeteor,
+        compactHint: context.l10n.weatherCompactMeteor,
+        ambientHint: context.l10n.weatherAmbientMeteor,
         icon: Icons.auto_awesome_rounded,
         accent: accent,
         softAccent: blend(surfaceB, accent, isDark ? 0.2 : 0.1),
@@ -149,10 +150,10 @@ WeatherPresentationData resolveWeatherPresentation(
           blend(DS.brandPrimary, DS.brandSecondary, isDark ? 0.12 : 0.08);
       return WeatherPresentationData(
         type: 'sunny',
-        title: '晴空万里',
-        subtitle: '光感轻轻上扬，今天适合稳定推进。',
-        compactHint: '明亮推进',
-        ambientHint: '空气更通透了，节奏也更容易启动。',
+        title: context.l10n.weatherTitleSunny,
+        subtitle: context.l10n.weatherSubtitleSunny,
+        compactHint: context.l10n.weatherCompactSunny,
+        ambientHint: context.l10n.weatherAmbientSunny,
         icon: Icons.wb_sunny_rounded,
         accent: accent,
         softAccent: blend(surfaceB, accent, isDark ? 0.16 : 0.08),

@@ -1481,8 +1481,8 @@ Please review this plan and provide your assessment."""
         Returns:
             Status dictionary
         """
-        # Get the stored action/review
-        action = await pending_actions_store.get(review_id, user_id)
+        # Atomically claim the action (get-and-delete) to prevent concurrent processing
+        action = await pending_actions_store.claim(review_id, user_id)
         if not action:
             logger.warning(f"Review not found or expired: {review_id}")
             return {
@@ -1510,9 +1510,6 @@ Please review this plan and provide your assessment."""
                 await self._trigger_information_collection(
                     plan_id=plan_id, user_id=user_id, feedback=user_comment or "用户连续两次否定方案"
                 )
-
-                # 清理存储的action
-                await pending_actions_store.delete(review_id, user_id)
 
                 return {
                     "status": "information_collection_triggered",
@@ -1556,9 +1553,6 @@ Please review this plan and provide your assessment."""
                     logger.info(f"User decision feedback appended (new entry) for plan {plan_id}")
             except Exception as e:
                 logger.warning(f"Failed to write user decision feedback: {e}")
-
-        # Clean up the stored action
-        await pending_actions_store.delete(review_id, user_id)
 
         return {
             "status": "success",

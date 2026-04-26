@@ -26,6 +26,7 @@ SERVICE_PATHS = [
     REPO_ROOT / "backend/app/services/aurora_stage34_kill_switch_service.py",
     REPO_ROOT / "backend/app/services/aurora_stage35_kill_switch_service.py",
     REPO_ROOT / "backend/app/services/aurora_stage40_calendar_kill_switch_service.py",
+    REPO_ROOT / "backend/app/services/aurora_doc_context_kill_switch_service.py",
 ]
 MODE_SETTINGS = {
     "AURORA_STAGE18_AGGREGATOR_MODE",
@@ -69,8 +70,12 @@ MODE_SETTINGS = {
     "AURORA_STAGE35_MODE",
     "AURORA_STAGE35_METACOG_ROUTER_MODE",
     "AURORA_STAGE40_CALENDAR_MODE",
+    "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE",
 }
-MODE_PATTERN = re.compile(r"^\s*(?P<name>[A-Z0-9_]+):\s*str\s*=\s*\"(?P<value>[^\"]+)\"", re.MULTILINE)
+MODE_PATTERN = re.compile(
+    r"^\s*(?P<name>[A-Z0-9_]+):\s*str\s*=\s*(?:\(\s*)?\"(?P<value>[^\"]+)\"",
+    re.MULTILINE,
+)
 ALLOWED = {"off", "shadow", "live"}
 
 

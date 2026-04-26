@@ -1,6 +1,7 @@
 """Plan Schemas - Plan creation, update, query, etc."""
 
 from __future__ import annotations
+
 from datetime import date
 from uuid import UUID
 
@@ -64,10 +65,20 @@ class PlanBase(BaseSchema):
     subject: str | None = Field(description="Subject/Course")
     target_date: date | None = Field(description="Target date")
     progress: float = Field(description="Progress percentage")
+    health_score: float | None = Field(default=None, ge=0, le=1, description="Plan health score")
+    health_status: str | None = Field(default=None, description="Plan health status")
     is_active: bool = Field(description="Is active")
     priority: PlanPriority = Field(description="Plan priority")
     is_primary: bool = Field(description="Is primary plan")
     plan_stage: PlanStage = Field(description="Plan stage")
+
+
+class PlanDayHighlights(BaseModel):
+    """Today-first plan highlight payload."""
+
+    day: int = Field(default=1, ge=1, description="Highlighted day number")
+    recommendation: str = Field(description="AI coach recommendation for the highlighted day")
+    tasks: list[TaskDetail] = Field(default_factory=list, description="Tasks for the highlighted day")
 
 
 class PlanDetail(PlanBase):
@@ -80,9 +91,17 @@ class PlanDetail(PlanBase):
     mastery_level: float = Field(description="Mastery level")
     task_count: int = Field(default=0, description="Total tasks")
     completed_task_count: int = Field(default=0, description="Completed tasks")
+    health_reasons: list[str] = Field(default_factory=list, description="Plan health diagnostic reasons")
+    health_metrics: dict | None = Field(default=None, description="Plan health diagnostic metrics")
+    requires_adjustment: bool = Field(default=False, description="Whether plan health requires adjustment")
+    recommended_action: str | None = Field(default=None, description="Recommended plan health action")
     source: str | None = Field(default=None, description="Plan source (e.g., 'learning_path')")
     source_metadata: dict | None = Field(default=None, description="Source-specific metadata")
     tasks: list[TaskDetail] | None = Field(default=None, description="Related tasks for the plan")
+    day_highlights: PlanDayHighlights | None = Field(
+        default=None,
+        description="Today-first highlights for plan detail",
+    )
 
 
 class PlanProgress(BaseModel):
@@ -91,6 +110,9 @@ class PlanProgress(BaseModel):
     plan_id: UUID = Field(description="Plan ID")
     progress: float = Field(description="Progress percentage")
     mastery_level: float = Field(description="Mastery level")
+    health_score: float | None = Field(default=None, ge=0, le=1, description="Plan health score")
+    health_status: str | None = Field(default=None, description="Plan health status")
+    health_reasons: list[str] = Field(default_factory=list, description="Plan health diagnostic reasons")
     total_tasks: int = Field(description="Total tasks")
     completed_tasks: int = Field(description="Completed tasks")
     total_minutes_spent: int = Field(description="Total minutes spent")

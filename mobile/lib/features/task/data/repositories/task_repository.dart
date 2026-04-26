@@ -14,6 +14,7 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
+import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
 
@@ -43,27 +44,73 @@ class TaskGuidanceModel {
   });
 
   factory TaskGuidanceModel.fromJson(Map<String, dynamic> json) {
+    dynamic valueForKeys(List<String> keys) {
+      for (final key in keys) {
+        if (json.containsKey(key)) {
+          return json[key];
+        }
+      }
+      return null;
+    }
+
+    String readString(List<String> keys, {String fallback = ''}) {
+      final value = valueForKeys(keys);
+      return value?.toString() ?? fallback;
+    }
+
+    DateTime readDateTime(List<String> keys) {
+      final value = valueForKeys(keys);
+      if (value is DateTime) {
+        return value;
+      }
+      final parsed = DateTime.tryParse(value?.toString() ?? '');
+      if (parsed == null) {
+        throw FormatException(
+          'Invalid task guidance datetime for ${keys.first}: $value',
+        );
+      }
+      return parsed;
+    }
+
+    DateTime? readNullableDateTime(List<String> keys) {
+      final value = valueForKeys(keys);
+      if (value == null) {
+        return null;
+      }
+      if (value is DateTime) {
+        return value;
+      }
+      return DateTime.tryParse(value.toString());
+    }
+
     final audienceValue =
-        (json['audience'] as String? ?? 'human').toLowerCase();
+        readString(['audience'], fallback: 'human').toLowerCase();
     final audience = audienceValue == 'ai'
         ? TaskGuidanceAudience.ai
         : TaskGuidanceAudience.human;
     return TaskGuidanceModel(
-      id: json['id'] as String,
-      taskId: json['task_id'] as String,
-      userId: json['user_id'] as String,
+      id: readString(['id']),
+      taskId: readString(['task_id', 'taskId']),
+      userId: readString(['user_id', 'userId']),
       audience: audience,
-      content: json['content'] as String? ?? '',
-      generatedBy: json['generated_by'] as String? ?? 'unknown',
-      policyVersion:
-          json['policy_version'] as String? ?? 'stage4.task_guidance.v1',
-      contentFormat: json['content_format'] as String? ?? 'markdown',
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      sourceGuidanceId: json['source_guidance_id'] as String?,
-      sourceTaskUpdatedAt: json['source_task_updated_at'] != null
-          ? DateTime.tryParse(json['source_task_updated_at'] as String)
-          : null,
+      content: readString(['content']),
+      generatedBy:
+          readString(['generated_by', 'generatedBy'], fallback: 'unknown'),
+      policyVersion: readString(
+        ['policy_version', 'policyVersion'],
+        fallback: 'stage4.task_guidance.v1',
+      ),
+      contentFormat: readString(
+        ['content_format', 'contentFormat'],
+        fallback: 'markdown',
+      ),
+      createdAt: readDateTime(['created_at', 'createdAt']),
+      updatedAt: readDateTime(['updated_at', 'updatedAt']),
+      sourceGuidanceId:
+          valueForKeys(['source_guidance_id', 'sourceGuidanceId'])?.toString(),
+      sourceTaskUpdatedAt: readNullableDateTime(
+        ['source_task_updated_at', 'sourceTaskUpdatedAt'],
+      ),
     );
   }
 
@@ -79,6 +126,73 @@ class TaskGuidanceModel {
   final DateTime updatedAt;
   final String? sourceGuidanceId;
   final DateTime? sourceTaskUpdatedAt;
+}
+
+class TaskQuickActionResult {
+  const TaskQuickActionResult({
+    required this.action,
+    required this.message,
+    required this.task,
+    this.subtasks = const [],
+  });
+
+  factory TaskQuickActionResult.fromResponse(Map<String, dynamic> response) {
+    final payload = ApiResponseParser.unwrapMap(
+      response,
+      action: 'taskQuickAction',
+    );
+    final taskPayload = (payload['task'] is Map<String, dynamic>)
+        ? payload['task'] as Map<String, dynamic>
+        : payload;
+    final subtasksPayload = payload['subtasks'] as List<dynamic>? ?? const [];
+
+    return TaskQuickActionResult(
+      action:
+          response['action']?.toString() ?? payload['action']?.toString() ?? '',
+      message: response['message']?.toString() ??
+          payload['message']?.toString() ??
+          '',
+      task: TaskModel.fromJson(taskPayload),
+      subtasks: subtasksPayload
+          .whereType<Map<String, dynamic>>()
+          .map(SubTaskModel.fromJson)
+          .toList(),
+    );
+  }
+
+  final String action;
+  final String message;
+  final TaskModel task;
+  final List<SubTaskModel> subtasks;
+}
+
+class TaskStuckResult {
+  const TaskStuckResult({
+    required this.task,
+    required this.diagnosis,
+    required this.message,
+  });
+
+  factory TaskStuckResult.fromResponse(Map<String, dynamic> response) {
+    final payload = ApiResponseParser.unwrapMap(response, action: 'taskStuck');
+    final taskPayload = (payload['task'] is Map<String, dynamic>)
+        ? payload['task'] as Map<String, dynamic>
+        : payload;
+    final diagnosisPayload = payload['diagnosis'] is Map<String, dynamic>
+        ? payload['diagnosis'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    return TaskStuckResult(
+      task: TaskModel.fromJson(taskPayload),
+      diagnosis: diagnosisPayload,
+      message: response['message']?.toString() ??
+          payload['message']?.toString() ??
+          '',
+    );
+  }
+
+  final TaskModel task;
+  final Map<String, dynamic> diagnosis;
+  final String message;
 }
 
 class TaskRepository {
@@ -151,6 +265,16 @@ class TaskRepository {
 
   String _taskGuidancePath(String taskId) =>
       '${ApiEndpoints.task(taskId)}/guidance';
+
+  TaskQuickActionResult _parseQuickActionResponse(
+    Map<String, dynamic>? responseData, {
+    required String action,
+  }) {
+    if (responseData == null) {
+      throw Exception('$action response is empty');
+    }
+    return TaskQuickActionResult.fromResponse(responseData);
+  }
 
   Future<PaginatedResponse<TaskModel>> getTasks({
     Map<String, dynamic>? filters,
@@ -616,7 +740,7 @@ class TaskRepository {
       // Handle both wrapped and direct formats
       final taskData =
           ApiResponseParser.unwrapMap(payload, action: 'createTaskWithNudges');
-      final nudgesData = payload['nudges'] as List<dynamic>?;
+      final nudgesData = _extractNudges(payload, taskData);
       final taskModel = TaskModel.fromJson(taskData);
       final nudges = nudgesData
               ?.map((json) => TaskNudge.fromJson(json as Map<String, dynamic>))
@@ -626,6 +750,27 @@ class TaskRepository {
     } on DioException catch (e) {
       return _handleDioError(e, 'createTaskWithNudges');
     }
+  }
+
+  List<dynamic>? _extractNudges(
+    Map<String, dynamic> responsePayload,
+    Map<String, dynamic> taskPayload,
+  ) {
+    final candidates = <dynamic>[
+      responsePayload['nudges'],
+      responsePayload['nudge'],
+      taskPayload['nudges'],
+      taskPayload['nudge'],
+    ];
+    for (final candidate in candidates) {
+      if (candidate is List<dynamic>) {
+        return candidate;
+      }
+      if (candidate is Map<String, dynamic>) {
+        return <dynamic>[candidate];
+      }
+    }
+    return null;
   }
 
   Future<TaskModel> updateTask(String id, TaskUpdate task) async {
@@ -814,6 +959,171 @@ class TaskRepository {
     }
   }
 
+  Future<TaskQuickActionResult> snoozeTask(
+    String id, {
+    int days = 1,
+    DateTime? targetDate,
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final existing = DemoDataService().demoTasks[existingIndex];
+      final nextDate = targetDate ?? DateTime.now().add(Duration(days: days));
+      final updated = existing.copyWith(
+        dueDate: DateTime(nextDate.year, nextDate.month, nextDate.day),
+        tags: {
+          ...existing.tags,
+          'snoozed',
+        }.toList(),
+        updatedAt: DateTime.now(),
+      );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskQuickActionResult(
+        action: 'snooze',
+        message: '已推迟到明天，今天先把节奏放轻一点。',
+        task: updated,
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.snoozeTask(id),
+        data: {
+          'days': days,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+          if (targetDate != null)
+            'target_date': DateFormat('yyyy-MM-dd').format(targetDate),
+        },
+      );
+      return _parseQuickActionResponse(response.data, action: 'snoozeTask');
+    } on DioException catch (e) {
+      return _handleDioError(e, 'snoozeTask');
+    }
+  }
+
+  Future<TaskQuickActionResult> markTaskTooHard(
+    String id, {
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final existing = DemoDataService().demoTasks[existingIndex];
+      final now = DateTime.now();
+      final subtasks = [
+        SubTaskModel(
+          id: 'demo_${id}_step_1',
+          parentTaskId: id,
+          title: '先找出最卡的一点',
+          order: 0,
+          status: SubTaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+          estimatedMinutes: 5,
+          guideContent: '只定位卡点，不解决整张任务卡。',
+        ),
+        SubTaskModel(
+          id: 'demo_${id}_step_2',
+          parentTaskId: id,
+          title: '把这个卡点讲成一句人话',
+          order: 1,
+          status: SubTaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+          estimatedMinutes: 10,
+          guideContent: '先讲清楚，再决定下一步。',
+        ),
+        SubTaskModel(
+          id: 'demo_${id}_step_3',
+          parentTaskId: id,
+          title: '做一个最小验证动作',
+          order: 2,
+          status: SubTaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+          estimatedMinutes: 10,
+          guideContent: '只验证刚拆出来的这一步。',
+        ),
+      ];
+      final updated = existing.copyWith(
+        difficulty: existing.difficulty > 1 ? existing.difficulty - 1 : 1,
+        subtasksTotal: subtasks.length,
+        tags: {
+          ...existing.tags,
+          'too_hard',
+          'adaptive_breakdown',
+        }.toList(),
+        updatedAt: now,
+      );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskQuickActionResult(
+        action: 'too_hard',
+        message: '我把它拆成 3 小步了，先做「${subtasks.first.title}」。',
+        task: updated,
+        subtasks: subtasks,
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.taskTooHard(id),
+        data: {
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      return _parseQuickActionResponse(
+        response.data,
+        action: 'markTaskTooHard',
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'markTaskTooHard');
+    }
+  }
+
+  Future<TaskQuickActionResult> skipTask(
+    String id, {
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final updated = DemoDataService().demoTasks[existingIndex].copyWith(
+            status: TaskStatus.abandoned,
+            userNote: 'Skipped from quick action',
+            completedAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskQuickActionResult(
+        action: 'skip',
+        message: '已跳过，这张卡不会再挤在今天了。',
+        task: updated,
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.skipTask(id),
+        data: {
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      return _parseQuickActionResponse(response.data, action: 'skipTask');
+    } on DioException catch (e) {
+      return _handleDioError(e, 'skipTask');
+    }
+  }
+
   String _demoGuide(String title) => '''
 # $title
 
@@ -871,6 +1181,62 @@ class TaskRepository {
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'startTask');
+    }
+  }
+
+  Future<TaskStuckResult> markTaskStuck(
+    String id, {
+    String? stuckPoint,
+    List<String> recentSteps = const [],
+    int? currentStepIndex,
+    int? elapsedSeconds,
+    String? trigger,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final existing = DemoDataService().demoTasks[existingIndex];
+      final diagnosis = <String, dynamic>{
+        'diagnosis_question': '你现在最像卡在哪一步？',
+        'diagnosis_options': ['概念没想清', '步骤顺序乱了', '题目条件不会用'],
+        'targeted_fix': '先只做一个 5 分钟内能完成的小动作。',
+        'check_question': '下一步你能先写下哪一句？',
+        'source': 'demo',
+      };
+      final updated = existing.copyWith(
+        status: TaskStatus.stuck,
+        guideJson: {
+          ...?existing.guideJson,
+          'stuck_help': diagnosis,
+        },
+        updatedAt: DateTime.now(),
+      );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskStuckResult(
+        task: updated,
+        diagnosis: diagnosis,
+        message: 'Aurora 已根据当前任务状态给出诊断。',
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.taskStuck(id),
+        data: {
+          if (stuckPoint != null && stuckPoint.isNotEmpty)
+            'stuck_point': stuckPoint,
+          if (recentSteps.isNotEmpty) 'recent_steps': recentSteps,
+          if (currentStepIndex != null) 'current_step_index': currentStepIndex,
+          if (elapsedSeconds != null) 'elapsed_seconds': elapsedSeconds,
+          if (trigger != null && trigger.isNotEmpty) 'trigger': trigger,
+        },
+      );
+      return TaskStuckResult.fromResponse(response.data ?? <String, dynamic>{});
+    } on DioException catch (e) {
+      return _handleDioError(e, 'markTaskStuck');
     }
   }
 
@@ -1041,6 +1407,9 @@ class TaskRepository {
     String feedbackId, {
     String? selectedOption,
     String? freeText,
+    String? stuckPoint,
+    String? effectiveMethod,
+    String? adjustmentIntention,
   }) async {
     if (DemoDataService.isDemoMode) {
       return;
@@ -1052,6 +1421,12 @@ class TaskRepository {
           if (selectedOption != null && selectedOption.isNotEmpty)
             'selected_option': selectedOption,
           if (freeText != null && freeText.isNotEmpty) 'free_text': freeText,
+          if (stuckPoint != null && stuckPoint.isNotEmpty)
+            'stuck_point': stuckPoint,
+          if (effectiveMethod != null && effectiveMethod.isNotEmpty)
+            'effective_method': effectiveMethod,
+          if (adjustmentIntention != null && adjustmentIntention.isNotEmpty)
+            'adjustment_intention': adjustmentIntention,
         },
       );
     } on DioException catch (e) {

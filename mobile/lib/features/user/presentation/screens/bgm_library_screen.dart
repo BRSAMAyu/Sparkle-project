@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 
 class BgmLibraryScreen extends StatefulWidget {
@@ -107,10 +109,10 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            imported.isEmpty ? '没有导入新曲目' : '已导入 ${imported.length} 首本地音乐',
-          ),
+        SparkleSnackBar.info(
+          imported.isEmpty
+              ? context.l10n.bgmLibraryNoImport
+              : context.l10n.bgmLibraryImportedCount(imported.length),
         ),
       );
       await _loadData();
@@ -133,7 +135,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('正在播放 ${entry.title}，已切换到播放器模式')),
+      SparkleSnackBar.info(context.l10n.bgmLibraryPlayingSwitched(entry.title)),
     );
     await _loadData();
   }
@@ -144,7 +146,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已移除 ${entry.title}')),
+      SparkleSnackBar.success(context.l10n.bgmLibraryRemoved(entry.title)),
     );
     await _loadData();
   }
@@ -173,14 +175,14 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
     final snapshot = _librarySnapshot;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BGM 曲库与播放器'),
+        title: Text(context.l10n.bgmLibraryTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
-            tooltip: '刷新',
+            tooltip: context.l10n.bgmLibraryRefresh,
             onPressed: _loading ? null : () => unawaited(_loadData()),
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -213,7 +215,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(DS.spacing16),
                       child: Text(
-                        '当前筛选下没有曲目，可以尝试切换筛选或导入本地音乐。',
+                        context.l10n.bgmLibraryEmptyFilter,
                         style: DS.bodyMedium.copyWith(color: DS.textSecondary),
                       ),
                     ),
@@ -227,9 +229,9 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
 
   Widget _buildNowPlayingCard() {
     final snapshot = _playbackSnapshot;
-    final title = snapshot?.trackTitle ?? snapshot?.trackId ?? '当前未播放';
-    final subtitle = snapshot?.album ?? snapshot?.sourceLabel ?? '等待播放中';
-    final reason = snapshot?.selectionReason ?? '你可以在这里直接点播曲库里的任意曲目';
+    final title = snapshot?.trackTitle ?? snapshot?.trackId ?? context.l10n.bgmLibraryNotPlaying;
+    final subtitle = snapshot?.album ?? snapshot?.sourceLabel ?? context.l10n.bgmLibraryWaitingPlay;
+    final reason = snapshot?.selectionReason ?? context.l10n.bgmLibraryBrowseHint;
     return GraphiteCardSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +240,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
             children: [
               const Icon(Icons.graphic_eq_rounded),
               const SizedBox(width: DS.spacing8),
-              Text('当前播放', style: DS.bodyLarge),
+              Text(context.l10n.bgmLibraryNowPlaying, style: DS.bodyLarge),
             ],
           ),
           const SizedBox(height: DS.spacing12),
@@ -263,10 +265,10 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('播放器模式', style: DS.bodyLarge),
+          Text(context.l10n.bgmLibraryPlayerMode, style: DS.bodyLarge),
           const SizedBox(height: DS.spacing6),
           Text(
-            '播放器模式下音乐不会因页面跳转而被打断，适合把 Sparkle 当成舒缓音乐播放器来用。',
+            context.l10n.bgmLibraryPlayerModeDesc,
             style: DS.bodySmall.copyWith(color: DS.textSecondary, height: 1.4),
           ),
           const SizedBox(height: DS.spacing12),
@@ -286,8 +288,8 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
           const SizedBox(height: DS.spacing12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('启用背景音乐'),
-            subtitle: const Text('关闭后播放器页也不会继续播放背景音乐'),
+            title: Text(context.l10n.bgmLibraryEnableBgm),
+            subtitle: Text(context.l10n.bgmLibraryDisableHint),
             value: _enabled,
             onChanged: (value) => unawaited(_setEnabled(value)),
             activeThumbColor: DS.primaryBase,
@@ -315,15 +317,15 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('快速策略调节', style: DS.bodyLarge),
+          Text(context.l10n.bgmLibraryQuickStrategy, style: DS.bodyLarge),
           const SizedBox(height: DS.spacing6),
           Text(
-            '这里保留最常用的调节项，完整细项仍然可以在设置页里继续调整。',
+            context.l10n.bgmLibraryQuickStrategyDesc,
             style: DS.bodySmall.copyWith(color: DS.textSecondary, height: 1.4),
           ),
           const SizedBox(height: DS.spacing12),
           _buildChipGroup<BgmPalette>(
-            title: '风格取向',
+            title: context.l10n.bgmLibraryStyleOrientation,
             values: BgmPalette.values,
             selected: _palette,
             labelBuilder: _paletteLabel,
@@ -331,7 +333,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
           ),
           const SizedBox(height: DS.spacing12),
           _buildChipGroup<BgmIntensity>(
-            title: '氛围强度',
+            title: context.l10n.bgmLibraryIntensityLabel,
             values: BgmIntensity.values,
             selected: _intensity,
             labelBuilder: _intensityLabel,
@@ -339,7 +341,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
           ),
           const SizedBox(height: DS.spacing12),
           _buildChipGroup<BgmVariety>(
-            title: '轮换节奏',
+            title: context.l10n.bgmLibraryVarietyLabel,
             values: BgmVariety.values,
             selected: _variety,
             labelBuilder: _varietyLabel,
@@ -358,31 +360,31 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('曲库状态', style: DS.bodyLarge),
+          Text(context.l10n.bgmLibraryStats, style: DS.bodyLarge),
           const SizedBox(height: DS.spacing12),
           Wrap(
             spacing: DS.spacing10,
             runSpacing: DS.spacing10,
             children: [
-              _buildStatChip('总曲目', '${snapshot.totalCount}'),
-              _buildStatChip('精选曲库', '${snapshot.curatedCount}'),
-              _buildStatChip('本地导入', '${snapshot.importedCount}'),
-              _buildStatChip('系统兜底', '${snapshot.bundledCount}'),
+              _buildStatChip(context.l10n.bgmLibraryTotalTracks, '${snapshot.totalCount}'),
+              _buildStatChip(context.l10n.bgmLibraryCurated, '${snapshot.curatedCount}'),
+              _buildStatChip(context.l10n.bgmLibraryImportedLabel, '${snapshot.importedCount}'),
+              _buildStatChip(context.l10n.bgmLibraryBundled, '${snapshot.bundledCount}'),
             ],
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '本地导入目录：${snapshot.importDirectoryPath}',
+            context.l10n.bgmLibraryImportDir(snapshot.importDirectoryPath),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            '下载缓存目录：${snapshot.downloadDirectoryPath}',
+            context.l10n.bgmLibraryCacheDir(snapshot.downloadDirectoryPath),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '这两个目录已经准备好，后续可以直接接“默认只打包少量曲目，其余从服务器下载到本地”的轻量化方案。',
+            context.l10n.bgmLibraryDirReadyNote,
             style: DS.bodySmall.copyWith(color: DS.textSecondary, height: 1.4),
           ),
         ],
@@ -395,10 +397,10 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('导入与管理', style: DS.bodyLarge),
+          Text(context.l10n.bgmLibraryImportManage, style: DS.bodyLarge),
           const SizedBox(height: DS.spacing6),
           Text(
-            '你可以把自己的舒缓音乐直接导入进来。点播任意曲目时，系统会自动切换到播放器模式，后续跳页也不会中断。',
+            context.l10n.bgmLibraryImportManageDesc,
             style: DS.bodySmall.copyWith(color: DS.textSecondary, height: 1.4),
           ),
           const SizedBox(height: DS.spacing12),
@@ -413,16 +415,16 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.library_music_rounded),
-                label: const Text('导入本地歌曲'),
+                label: Text(context.l10n.bgmLibraryImportLocal),
               ),
               const SizedBox(width: DS.spacing12),
               Expanded(
                 child: TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    hintText: '搜索曲目、专辑或场景标签',
-                    prefixIcon: Icon(Icons.search_rounded),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.bgmLibrarySearchHint,
+                    prefixIcon: const Icon(Icons.search_rounded),
                   ),
                 ),
               ),
@@ -439,7 +441,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       runSpacing: DS.spacing8,
       children: [
         ChoiceChip(
-          label: const Text('全部'),
+          label: Text(context.l10n.bgmLibraryFilterAll),
           selected: _sourceFilter == null,
           onSelected: (_) => setState(() => _sourceFilter = null),
         ),
@@ -490,19 +492,19 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
                       borderRadius: DS.borderRadius16,
                     ),
                     child: Text(
-                      '播放中',
+                      context.l10n.bgmLibraryPlaying,
                       style: DS.labelSmall.copyWith(color: DS.primaryBase),
                     ),
                   ),
                 const SizedBox(width: DS.spacing4),
                 IconButton(
-                  tooltip: '播放',
+                  tooltip: context.l10n.bgmLibraryPlay,
                   onPressed: () => unawaited(_playEntry(entry)),
                   icon: const Icon(Icons.play_circle_fill_rounded),
                 ),
                 if (entry.sourceKind == BgmLibrarySourceKind.imported)
                   IconButton(
-                    tooltip: '移除',
+                    tooltip: context.l10n.bgmLibraryRemove,
                     onPressed: () => unawaited(_removeEntry(entry)),
                     icon: const Icon(Icons.delete_outline_rounded),
                   ),
@@ -513,10 +515,10 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
               children: [
-                _buildStatChip('标签', entry.sceneTags.take(3).join(' / ')),
-                _buildStatChip('风格', entry.paletteTags.take(3).join(' / ')),
-                _buildStatChip('能量', entry.energy.toStringAsFixed(2)),
-                _buildStatChip('密度', entry.density.toStringAsFixed(2)),
+                _buildStatChip(context.l10n.bgmLibraryTags, entry.sceneTags.take(3).join(' / ')),
+                _buildStatChip(context.l10n.bgmLibraryStyle, entry.paletteTags.take(3).join(' / ')),
+                _buildStatChip(context.l10n.bgmLibraryEnergy, entry.energy.toStringAsFixed(2)),
+                _buildStatChip(context.l10n.bgmLibraryDensity, entry.density.toStringAsFixed(2)),
               ],
             ),
           ],
@@ -572,36 +574,36 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
   }
 
   String _modeLabel(BgmMode mode) => switch (mode) {
-        BgmMode.adaptive => '跟随页面',
-        BgmMode.continuous => '播放器模式',
-        BgmMode.focusOnly => '仅专注',
-        BgmMode.silent => '静音',
+        BgmMode.adaptive => context.l10n.bgmLibraryModeAdaptive,
+        BgmMode.continuous => context.l10n.bgmLibraryModeContinuous,
+        BgmMode.focusOnly => context.l10n.bgmLibraryModeFocusOnly,
+        BgmMode.silent => context.l10n.bgmLibraryModeSilent,
       };
 
   String _paletteLabel(BgmPalette palette) => switch (palette) {
-        BgmPalette.adaptive => '自适应',
-        BgmPalette.classical => '精选古典',
-        BgmPalette.piano => '钢琴优先',
-        BgmPalette.airy => '空灵氛围',
-        BgmPalette.warm => '温暖轻快',
+        BgmPalette.adaptive => context.l10n.bgmLibraryPaletteAdaptive,
+        BgmPalette.classical => context.l10n.bgmLibraryPaletteClassical,
+        BgmPalette.piano => context.l10n.bgmLibraryPalettePiano,
+        BgmPalette.airy => context.l10n.bgmLibraryPaletteAiry,
+        BgmPalette.warm => context.l10n.bgmLibraryPaletteWarm,
       };
 
   String _intensityLabel(BgmIntensity intensity) => switch (intensity) {
-        BgmIntensity.gentle => '柔和',
-        BgmIntensity.balanced => '平衡',
-        BgmIntensity.lush => '丰盈',
+        BgmIntensity.gentle => context.l10n.bgmLibraryIntensityGentle,
+        BgmIntensity.balanced => context.l10n.bgmLibraryIntensityBalanced,
+        BgmIntensity.lush => context.l10n.bgmLibraryIntensityLush,
       };
 
   String _varietyLabel(BgmVariety variety) => switch (variety) {
-        BgmVariety.steady => '稳定',
-        BgmVariety.balanced => '均衡',
-        BgmVariety.dynamic => '灵动',
+        BgmVariety.steady => context.l10n.bgmLibraryVarietySteady,
+        BgmVariety.balanced => context.l10n.bgmLibraryVarietyBalanced,
+        BgmVariety.dynamic => context.l10n.bgmLibraryVarietyDynamic,
       };
 
   String _sourceLabel(BgmLibrarySourceKind kind) => switch (kind) {
-        BgmLibrarySourceKind.curated => '精选曲库',
-        BgmLibrarySourceKind.imported => '本地导入',
-        BgmLibrarySourceKind.bundled => '系统兜底',
+        BgmLibrarySourceKind.curated => context.l10n.bgmLibrarySourceCurated,
+        BgmLibrarySourceKind.imported => context.l10n.bgmLibrarySourceImported,
+        BgmLibrarySourceKind.bundled => context.l10n.bgmLibrarySourceBundled,
       };
 
   IconData _sourceIcon(BgmLibrarySourceKind kind) => switch (kind) {

@@ -91,6 +91,18 @@
     "name": "速通大师",
     "description": "24小时内解锁20个新知识点"
   },
+  "30_day_learner": {
+    "name": "30 天学习者",
+    "description": "注册 30 天内完成至少 20 个学习日"
+  },
+  "knowledge_explorer_50": {
+    "name": "知识探索者",
+    "description": "掌握 50 个以上知识节点，掌握度超过 0.3"
+  },
+  "sprint_veteran": {
+    "name": "冲刺老兵",
+    "description": "完成至少 2 次冲刺备考"
+  },
   "weekend_warrior": {
     "name": "周末战士",
     "description": "连续4个周末都有学习记录"

@@ -13,7 +13,7 @@ class VisualElementGrid extends StatelessWidget {
     this.onElementTap,
     this.onElementLongPress,
     this.crossAxisCount,
-    this.mainAxisExtent = 180,
+    this.mainAxisExtent = 240,
     this.isCompact = false,
     this.emptyWidget,
   });
@@ -118,7 +118,7 @@ class VisualElementCategoryGrid extends StatelessWidget {
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: DS.spacing12,
                           crossAxisSpacing: DS.spacing12,
-                          mainAxisExtent: 180,
+                          mainAxisExtent: 240,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
@@ -204,7 +204,7 @@ class VisualElementTypeGrid extends StatelessWidget {
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: DS.spacing12,
                           crossAxisSpacing: DS.spacing12,
-                          mainAxisExtent: 180,
+                          mainAxisExtent: 240,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {

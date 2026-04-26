@@ -202,6 +202,35 @@ class PolicyZoo:
         path.write_text(json.dumps(snap.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
         return snap
 
+    def save_config_snapshot(
+        self,
+        *,
+        current_config: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        snapshot_id: str | None = None,
+    ) -> str:
+        """Lightweight snapshot: persist only the config dict + metadata.
+
+        Used by meta_loop when a full PolicyRouter/TemperatureSchedule is not
+        available (e.g. when operating via MetaOrchestrator rather than a
+        standalone PolicyRouter).  The file is stored alongside full snapshots
+        under the name ``<snapshot_id>.config.json`` so they don't collide.
+
+        Returns the snapshot_id string.
+        """
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+        sid = snapshot_id or f"cfg_{compute_config_hash(current_config)}_{now[:10]}"
+        payload = {
+            "snapshot_id": sid,
+            "created_at": now,
+            "config": current_config,
+            "metadata": metadata or {},
+        }
+        path = self.zoo_dir / f"{sid}.config.json"
+        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        return sid
+
     def load_snapshot(self, snapshot_id: str) -> PolicySnapshot | None:
         """Load a snapshot by ID."""
         path = self.zoo_dir / f"{snapshot_id}.json"

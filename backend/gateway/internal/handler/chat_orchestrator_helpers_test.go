@@ -74,6 +74,8 @@ func TestDecodeChatRequestEnvelopeProtoJSON(t *testing.T) {
 		"chatMode":"default",
 		"includeReferences":true,
 		"fileIds":["f1","f2"],
+		"useDocumentContext":false,
+		"documentFilter":["doc-1"],
 		"activeTools":["search","plan"],
 		"userProfile":{"nickname":"tester"},
 		"message":"hello world",
@@ -93,6 +95,12 @@ func TestDecodeChatRequestEnvelopeProtoJSON(t *testing.T) {
 	}
 	if len(input.FileIds) != 2 {
 		t.Fatalf("unexpected file ids: %#v", input.FileIds)
+	}
+	if input.UseDocumentContext == nil || *input.UseDocumentContext {
+		t.Fatalf("expected use document context false, got %#v", input.UseDocumentContext)
+	}
+	if len(input.DocumentFilter) != 1 || input.DocumentFilter[0] != "doc-1" {
+		t.Fatalf("unexpected document filter: %#v", input.DocumentFilter)
 	}
 	if !input.IncludeReferences {
 		t.Fatal("expected include references to be true")

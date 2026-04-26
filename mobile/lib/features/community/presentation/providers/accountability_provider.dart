@@ -5,9 +5,11 @@ import 'package:sparkle/features/community/data/repositories/accountability_repo
 // ─── My Partnerships ──────────────────────────────────────────────────────────
 
 final myPartnershipsProvider = StateNotifierProvider.autoDispose<
-    MyPartnershipsNotifier,
-    AsyncValue<List<AccountabilityPartnershipInfo>>>((ref) => MyPartnershipsNotifier(
-      ref.watch(accountabilityRepositoryProvider),),);
+    MyPartnershipsNotifier, AsyncValue<List<AccountabilityPartnershipInfo>>>(
+  (ref) => MyPartnershipsNotifier(
+    ref.watch(accountabilityRepositoryProvider),
+  ),
+);
 
 final accountabilityOverviewProvider =
     FutureProvider.autoDispose<AccountabilityOverviewInfo>((ref) async {
@@ -21,8 +23,8 @@ final accountabilityDashboardProvider = FutureProvider.autoDispose
   return repo.getDashboard(partnershipId);
 });
 
-class MyPartnershipsNotifier extends StateNotifier<
-    AsyncValue<List<AccountabilityPartnershipInfo>>> {
+class MyPartnershipsNotifier
+    extends StateNotifier<AsyncValue<List<AccountabilityPartnershipInfo>>> {
   MyPartnershipsNotifier(this._repo) : super(const AsyncValue.loading()) {
     load();
   }
@@ -43,7 +45,8 @@ class MyPartnershipsNotifier extends StateNotifier<
     await _repo.endPartnership(partnershipId);
     state.whenData((list) {
       state = AsyncValue.data(
-          list.where((p) => p.id != partnershipId).toList(),);
+        list.where((p) => p.id != partnershipId).toList(),
+      );
     });
   }
 
@@ -73,7 +76,8 @@ final partnershipStatsProvider = FutureProvider.autoDispose
 // ─── Partnership Timeline (per ID) ────────────────────────────────────────────
 
 final partnershipTimelineProvider = FutureProvider.autoDispose
-    .family<List<AccountabilityCheckinInfo>, String>((ref, partnershipId) async {
+    .family<List<AccountabilityCheckinInfo>, String>(
+        (ref, partnershipId) async {
   final repo = ref.watch(accountabilityRepositoryProvider);
   return repo.getTimeline(partnershipId);
 });
@@ -86,11 +90,13 @@ final partnershipHeatmapProvider = FutureProvider.autoDispose
   return repo.getHeatmap(partnershipId);
 });
 
-final partnershipHeatmapYearProvider = Provider.family<int, int>((ref, _) => DateTime.now().year);
+final partnershipHeatmapYearProvider =
+    Provider.family<int, int>((ref, _) => DateTime.now().year);
 
 // ─── Achievements ────────────────────────────────────────────────────────────────
 
-final accountabilityAchievementsProvider = FutureProvider.autoDispose((ref) async {
+final accountabilityAchievementsProvider =
+    FutureProvider.autoDispose((ref) async {
   final repo = ref.watch(accountabilityRepositoryProvider);
   return repo.getAchievements();
 });
@@ -118,15 +124,17 @@ class CheckinInteractionState {
     bool? liked,
     int? likes,
     List<EncouragementMessage>? encouragements,
-  }) => CheckinInteractionState(
-      liked: liked ?? this.liked,
-      likes: likes ?? this.likes,
-      encouragements: encouragements ?? this.encouragements,
-    );
+  }) =>
+      CheckinInteractionState(
+        liked: liked ?? this.liked,
+        likes: likes ?? this.likes,
+        encouragements: encouragements ?? this.encouragements,
+      );
 }
 
 final checkinInteractionProvider = StateProvider.autoDispose
-    .family<CheckinInteractionState, String>((ref, checkinId) => const CheckinInteractionState());
+    .family<CheckinInteractionState, String>(
+        (ref, checkinId) => const CheckinInteractionState());
 
 // ─── Actions ────────────────────────────────────────────────────────────────────
 
@@ -171,7 +179,8 @@ class AccountabilityActions {
           userId: result['encouragement']['user_id'] as String,
           message: result['encouragement']['message'] as String,
           createdAt: DateTime.parse(
-              result['encouragement']['created_at'] as String,),
+            result['encouragement']['created_at'] as String,
+          ),
         ),
       ],
     );
@@ -187,6 +196,16 @@ class AccountabilityActions {
     final repo = ref.read(accountabilityRepositoryProvider);
     return repo.nudgePartner(partnershipId, message: message);
   }
+
+  Future<void> dismissInAppHint(
+    WidgetRef ref,
+    String notificationId,
+  ) async {
+    final repo = ref.read(accountabilityRepositoryProvider);
+    await repo.dismissInAppHint(notificationId);
+    ref.invalidate(accountabilityOverviewProvider);
+  }
 }
 
-final accountabilityActionsProvider = Provider<AccountabilityActions>((ref) => const AccountabilityActions());
+final accountabilityActionsProvider =
+    Provider<AccountabilityActions>((ref) => const AccountabilityActions());

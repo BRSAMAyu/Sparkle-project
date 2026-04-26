@@ -539,7 +539,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                 _previewTitleForPreset(preset),
                 style: const TextStyle(
                   fontSize: DS.fontSizeLg,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing12),

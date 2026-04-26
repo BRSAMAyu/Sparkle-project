@@ -1,16 +1,19 @@
 import asyncio
-import sys
 import os
+import sys
 
 # Add parent directory to path to import app
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from loguru import logger
 from redis.asyncio import Redis
-from redis.commands.search.field import TextField, NumericField, VectorField, TagField
+from redis.commands.search.field import NumericField, TagField, TextField, VectorField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
+
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
-from loguru import logger
+from app.services.rag_indexing_service import RAG_INDEX_PREFIXES
+
 
 async def init_index():
     """Initialize Redis Search Index for RAG v2.0"""
@@ -24,9 +27,9 @@ async def init_index():
         password=resolved_password,
         decode_responses=True
     )
-    
+
     index_name = "idx:knowledge"
-    
+
     try:
         # Check if index exists
         await redis.ft(index_name).info()
@@ -34,14 +37,20 @@ async def init_index():
         await redis.ft(index_name).dropindex(delete_documents=False)
     except Exception:
         pass
-        
+
     logger.info(f"Creating index '{index_name}'...")
-    
+
     # Schema Definition
     schema = (
         TextField("$.content", as_name="content", weight=1.0),
         TextField("$.keywords", as_name="keywords", weight=2.0),
         TagField("$.parent_id", as_name="parent_id"),
+        TagField("$.source_type", as_name="source_type"),
+        TagField("$.user_id", as_name="user_id"),
+        TagField("$.group_id", as_name="group_id"),
+        TagField("$.shared_by_user_id", as_name="shared_by_user_id"),
+        TagField("$.trust_level", as_name="trust_level"),
+        TagField("$.document_scope", as_name="document_scope"),
         TextField("$.parent_name", as_name="parent_name"),
         NumericField("$.subject_id", as_name="subject_id"),
         NumericField("$.importance", as_name="importance"),
@@ -54,14 +63,14 @@ async def init_index():
                 "DIM": settings.EMBEDDING_DIM,
                 "DISTANCE_METRIC": "COSINE",
                 "M": 16,
-                "EF_CONSTRUCTION": 200, 
+                "EF_CONSTRUCTION": 200,
             },
             as_name="vector",
         ),
     )
 
     # Index Definition
-    definition = IndexDefinition(prefix=["sparkle:chunk:"], index_type=IndexType.JSON)
+    definition = IndexDefinition(prefix=RAG_INDEX_PREFIXES, index_type=IndexType.JSON)
 
     try:
         await redis.ft(index_name).create_index(schema, definition=definition)

@@ -38,6 +38,7 @@ class ExpertRoundtableWidget extends StatefulWidget {
     this.routingPreview,
     this.turns = const [],
     this.compact = false,
+    this.initiallyCollapsed = false,
     this.autoCollapse = true,
     this.collapseDelay = const Duration(seconds: 4),
     this.collapseId,
@@ -46,6 +47,7 @@ class ExpertRoundtableWidget extends StatefulWidget {
   final Map<String, dynamic>? routingPreview;
   final List<Map<String, dynamic>> turns;
   final bool compact;
+  final bool initiallyCollapsed;
   final bool autoCollapse;
   final Duration collapseDelay;
   final String? collapseId;
@@ -69,7 +71,8 @@ class _ExpertRoundtableWidgetState extends State<ExpertRoundtableWidget> {
   @override
   void initState() {
     super.initState();
-    _isCollapsed = _collapseId != null && _collapsedIds.contains(_collapseId);
+    _isCollapsed = widget.initiallyCollapsed ||
+        (_collapseId != null && _collapsedIds.contains(_collapseId));
     _scheduleAutoCollapse();
   }
 
@@ -81,7 +84,8 @@ class _ExpertRoundtableWidgetState extends State<ExpertRoundtableWidget> {
         oldWidget.turns != widget.turns;
 
     if (collapseIdChanged) {
-      _isCollapsed = _collapseId != null && _collapsedIds.contains(_collapseId);
+      _isCollapsed = widget.initiallyCollapsed ||
+          (_collapseId != null && _collapsedIds.contains(_collapseId));
     }
 
     if (collapseIdChanged || contentChanged) {
@@ -259,9 +263,15 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(compact ? 12 : 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FC),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? DS.surfacePrimaryElevated
+            : const Color(0xFFF7F9FC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD8E1EF)),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? DS.borderSubtle
+              : const Color(0xFFD8E1EF),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

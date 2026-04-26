@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -808,7 +809,8 @@ async def handoff_task(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Execution failed: {str(exc)}") from exc
+        logger.exception("Execution handoff failed unexpectedly")
+        raise HTTPException(status_code=500, detail="Internal execution error") from exc
 
     if str(request.source or "").strip() == "execution_suggestion":
         await ExecutionPreferenceService(db).record_delegation_suggestion_accepted(

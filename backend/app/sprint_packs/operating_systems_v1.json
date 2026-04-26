@@ -1,0 +1,2314 @@
+{
+  "id": "operating_systems@v1",
+  "name": "操作系统冲刺包",
+  "version": "v1.0",
+  "description": "面向本科操作系统期末考试的完整冲刺知识包，覆盖进程管理、同步与互斥、死锁、内存管理、文件系统、磁盘调度与 I/O 管理。",
+  "subject": "操作系统",
+  "author": "sparkle-core",
+  "created_at": "2026-04-25T00:00:00",
+  "changelog": [
+    "Initial release: 46 knowledge nodes, 18 question archetypes, 58 mistake types, 7d/14d strategy presets."
+  ],
+  "knowledge_nodes": [
+    {
+      "node_id": "os.process_concept",
+      "label": "进程概念与 PCB",
+      "layer": "process_management",
+      "prerequisites": [],
+      "exam_weight": 0.95,
+      "frequency": 0.95,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.pcb_context_switch_confusion",
+        "mistake.process_state_transition_error"
+      ],
+      "recommended_action": "闭卷复述进程定义、PCB 内容、程序与进程区别，并画一次上下文切换示意图"
+    },
+    {
+      "node_id": "os.process_states",
+      "label": "进程状态与状态转换图",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.process_concept"
+      ],
+      "exam_weight": 0.98,
+      "frequency": 0.96,
+      "trainability": 0.9,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.process_state_transition_error",
+        "mistake.ready_blocked_confusion"
+      ],
+      "recommended_action": "闭卷重画五状态模型，逐条标注创建、调度、阻塞、唤醒、时间片到事件"
+    },
+    {
+      "node_id": "os.thread_concept",
+      "label": "线程概念与进程对比",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.process_concept"
+      ],
+      "exam_weight": 0.85,
+      "frequency": 0.85,
+      "trainability": 0.8,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.thread_resource_sharing_error",
+        "mistake.user_kernel_thread_confusion"
+      ],
+      "recommended_action": "列出线程共享/私有资源清单，对比用户级线程与内核级线程的调度代价"
+    },
+    {
+      "node_id": "os.process_control",
+      "label": "进程控制原语",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.process_states"
+      ],
+      "exam_weight": 0.78,
+      "frequency": 0.75,
+      "trainability": 0.78,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.running_ready_event_confusion",
+        "mistake.pcb_context_switch_confusion"
+      ],
+      "recommended_action": "按创建、撤销、阻塞、唤醒四类原语写出触发事件和 PCB 变化"
+    },
+    {
+      "node_id": "os.cpu_scheduling_metrics",
+      "label": "CPU 调度指标",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.process_states"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.scheduling_metric_formula_error",
+        "mistake.fcfs_gantt_order_error"
+      ],
+      "recommended_action": "用一张表默写完成时间、周转时间、带权周转时间、等待时间、响应时间公式"
+    },
+    {
+      "node_id": "os.fcfs_scheduling",
+      "label": "FCFS 先来先服务调度",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.cpu_scheduling_metrics"
+      ],
+      "exam_weight": 0.88,
+      "frequency": 0.85,
+      "trainability": 0.9,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.fcfs_gantt_order_error",
+        "mistake.scheduling_metric_formula_error"
+      ],
+      "recommended_action": "手画一道 FCFS 甘特图，逐列计算完成时间、周转时间和平均等待时间"
+    },
+    {
+      "node_id": "os.sjf_scheduling",
+      "label": "SJF/SPF 短作业优先调度",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.cpu_scheduling_metrics"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.88,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.sjf_preemptive_confusion",
+        "mistake.scheduling_metric_formula_error"
+      ],
+      "recommended_action": "分别做一道非抢占 SJF 和抢占式 SRTF 题，标出每个到达时刻是否需要重新选择"
+    },
+    {
+      "node_id": "os.rr_scheduling",
+      "label": "RR 时间片轮转调度",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.cpu_scheduling_metrics"
+      ],
+      "exam_weight": 0.92,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.rr_time_quantum_boundary_error",
+        "mistake.running_ready_event_confusion"
+      ],
+      "recommended_action": "用就绪队列表追踪 RR 甘特图，尤其记录时间片用完与新进程到达的入队顺序"
+    },
+    {
+      "node_id": "os.priority_scheduling",
+      "label": "优先级调度",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.cpu_scheduling_metrics"
+      ],
+      "exam_weight": 0.82,
+      "frequency": 0.78,
+      "trainability": 0.8,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.priority_tie_break_error",
+        "mistake.starvation_aging_missing"
+      ],
+      "recommended_action": "对比静态/动态、抢占/非抢占优先级调度，并说明饥饿与老化机制"
+    },
+    {
+      "node_id": "os.multilevel_feedback_queue",
+      "label": "多级反馈队列调度",
+      "layer": "process_management",
+      "prerequisites": [
+        "os.rr_scheduling",
+        "os.priority_scheduling"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.45,
+      "trainability": 0.55,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.mlfq_level_update_error",
+        "mistake.starvation_aging_missing"
+      ],
+      "recommended_action": "画三层队列示意图，说明新进程进入、高优先级抢占、时间片用完降级规则"
+    },
+    {
+      "node_id": "os.synchronization_concepts",
+      "label": "同步、互斥与临界区",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.process_concept"
+      ],
+      "exam_weight": 0.93,
+      "frequency": 0.9,
+      "trainability": 0.8,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.critical_section_condition_missing",
+        "mistake.mutual_exclusion_vs_sync_confusion"
+      ],
+      "recommended_action": "默写临界区四项准则，并用一个共享计数器例子区分同步与互斥"
+    },
+    {
+      "node_id": "os.semaphore_pv",
+      "label": "信号量与 P/V 操作",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.synchronization_concepts"
+      ],
+      "exam_weight": 0.97,
+      "frequency": 0.95,
+      "trainability": 0.85,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.pv_order_reversed",
+        "mistake.semaphore_negative_meaning_error"
+      ],
+      "recommended_action": "闭卷写出 P/V 语义，分别用互斥信号量和资源信号量完成两个代码骨架"
+    },
+    {
+      "node_id": "os.semaphore_initial_value",
+      "label": "信号量初值设计",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.semaphore_pv"
+      ],
+      "exam_weight": 0.94,
+      "frequency": 0.9,
+      "trainability": 0.82,
+      "time_cost": 25,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.semaphore_initial_value_error",
+        "mistake.producer_consumer_buffer_count_error"
+      ],
+      "recommended_action": "把每个信号量标注为互斥、空位、产品或顺序约束，再写初值和不变量"
+    },
+    {
+      "node_id": "os.mutex_vs_semaphore",
+      "label": "互斥锁、信号量与条件变量对比",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.synchronization_concepts"
+      ],
+      "exam_weight": 0.72,
+      "frequency": 0.65,
+      "trainability": 0.75,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.mutual_exclusion_vs_sync_confusion",
+        "mistake.monitor_wait_signal_order_error"
+      ],
+      "recommended_action": "用对比表说明 mutex、semaphore、condition variable 的用途、初值和典型代码位置"
+    },
+    {
+      "node_id": "os.monitor",
+      "label": "管程与条件变量",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.semaphore_pv"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.58,
+      "trainability": 0.65,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.monitor_wait_signal_order_error",
+        "mistake.mutual_exclusion_vs_sync_confusion"
+      ],
+      "recommended_action": "复述管程封装共享变量与操作的思想，画 wait/signal 对条件队列的影响"
+    },
+    {
+      "node_id": "os.producer_consumer",
+      "label": "生产者-消费者问题",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.semaphore_pv",
+        "os.semaphore_initial_value"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.85,
+      "trainability": 0.8,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.producer_consumer_buffer_count_error",
+        "mistake.pv_order_reversed"
+      ],
+      "recommended_action": "闭卷写 bounded-buffer 三信号量代码，标注 empty、full、mutex 的不变量"
+    },
+    {
+      "node_id": "os.reader_writer",
+      "label": "读者-写者问题",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.semaphore_pv"
+      ],
+      "exam_weight": 0.82,
+      "frequency": 0.76,
+      "trainability": 0.75,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.reader_writer_starvation_error",
+        "mistake.semaphore_initial_value_error"
+      ],
+      "recommended_action": "写读者优先版本，解释 readcount 何时加锁、何时释放写锁，并指出可能饥饿"
+    },
+    {
+      "node_id": "os.dining_philosophers",
+      "label": "哲学家进餐问题",
+      "layer": "synchronization",
+      "prerequisites": [
+        "os.semaphore_pv",
+        "os.deadlock_conditions"
+      ],
+      "exam_weight": 0.78,
+      "frequency": 0.72,
+      "trainability": 0.75,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.dining_philosopher_deadlock_solution_gap",
+        "mistake.deadlock_conditions_missing"
+      ],
+      "recommended_action": "写出至少两种破坏死锁的方法：限制人数、奇偶拿筷顺序或一次性申请两支筷子"
+    },
+    {
+      "node_id": "os.deadlock_conditions",
+      "label": "死锁四个必要条件",
+      "layer": "deadlock",
+      "prerequisites": [
+        "os.synchronization_concepts"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.93,
+      "trainability": 0.9,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.deadlock_conditions_missing",
+        "mistake.deadlock_condition_vs_strategy_confusion"
+      ],
+      "recommended_action": "闭卷默写互斥、请求保持、不可剥夺、循环等待，并为每个条件写一个反例"
+    },
+    {
+      "node_id": "os.resource_allocation_graph",
+      "label": "资源分配图",
+      "layer": "deadlock",
+      "prerequisites": [
+        "os.deadlock_conditions"
+      ],
+      "exam_weight": 0.82,
+      "frequency": 0.75,
+      "trainability": 0.75,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.resource_allocation_graph_cycle_error",
+        "mistake.deadlock_conditions_missing"
+      ],
+      "recommended_action": "根据请求边和分配边画资源分配图，区分单实例资源与多实例资源的环含义"
+    },
+    {
+      "node_id": "os.banker_algorithm",
+      "label": "银行家算法与安全序列",
+      "layer": "deadlock",
+      "prerequisites": [
+        "os.deadlock_conditions"
+      ],
+      "exam_weight": 0.98,
+      "frequency": 0.92,
+      "trainability": 0.8,
+      "time_cost": 45,
+      "difficulty": 5,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.banker_matrix_asymmetry",
+        "mistake.safe_sequence_incomplete"
+      ],
+      "recommended_action": "手算一题银行家算法，逐步写 Allocation、Max、Need、Available、Work、Finish"
+    },
+    {
+      "node_id": "os.deadlock_detection",
+      "label": "死锁检测算法",
+      "layer": "deadlock",
+      "prerequisites": [
+        "os.resource_allocation_graph"
+      ],
+      "exam_weight": 0.88,
+      "frequency": 0.82,
+      "trainability": 0.75,
+      "time_cost": 40,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.deadlock_detection_finish_vector_error",
+        "mistake.banker_available_work_error"
+      ],
+      "recommended_action": "对比银行家安全性算法与死锁检测算法，完成一张 Work/Finish 迭代表"
+    },
+    {
+      "node_id": "os.deadlock_recovery",
+      "label": "死锁解除与恢复",
+      "layer": "deadlock",
+      "prerequisites": [
+        "os.deadlock_detection"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.55,
+      "trainability": 0.65,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.deadlock_recovery_cost_confusion",
+        "mistake.deadlock_condition_vs_strategy_confusion"
+      ],
+      "recommended_action": "列出资源剥夺、撤销进程、回滚三类恢复手段，并说明选择牺牲进程的代价因素"
+    },
+    {
+      "node_id": "os.deadlock_prevention_avoidance",
+      "label": "死锁预防、避免、检测对比",
+      "layer": "deadlock",
+      "prerequisites": [
+        "os.deadlock_conditions",
+        "os.banker_algorithm"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.75,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.deadlock_condition_vs_strategy_confusion",
+        "mistake.deadlock_conditions_missing"
+      ],
+      "recommended_action": "用一张表对比预防、避免、检测与恢复的核心思想、前提信息和代价"
+    },
+    {
+      "node_id": "os.memory_address_binding",
+      "label": "地址重定位与地址空间",
+      "layer": "memory_management",
+      "prerequisites": [],
+      "exam_weight": 0.72,
+      "frequency": 0.65,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.address_translation_offset_error",
+        "mistake.page_number_offset_split_error"
+      ],
+      "recommended_action": "画逻辑地址到物理地址转换流程，标注装入时、链接时、运行时重定位差异"
+    },
+    {
+      "node_id": "os.contiguous_allocation",
+      "label": "连续内存分配与适应算法",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.memory_address_binding"
+      ],
+      "exam_weight": 0.82,
+      "frequency": 0.75,
+      "trainability": 0.8,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.contiguous_allocation_fragmentation_confusion",
+        "mistake.best_first_worst_fit_confusion"
+      ],
+      "recommended_action": "用同一组空闲分区分别跑首次、最佳、最坏适应算法，比较外部碎片"
+    },
+    {
+      "node_id": "os.paging_basics",
+      "label": "分页存储、页表与地址转换",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.memory_address_binding"
+      ],
+      "exam_weight": 0.97,
+      "frequency": 0.95,
+      "trainability": 0.85,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.page_number_offset_split_error",
+        "mistake.page_table_valid_bit_confusion"
+      ],
+      "recommended_action": "手算页号、页内偏移、物理块号和物理地址，至少完成 3 道页表转换题"
+    },
+    {
+      "node_id": "os.segmentation_basics",
+      "label": "分段存储管理",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.memory_address_binding"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.65,
+      "trainability": 0.75,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.segmentation_limit_check_error",
+        "mistake.address_translation_offset_error"
+      ],
+      "recommended_action": "写出段号、段内地址、段表基址/限长检查流程，对比分页的用户可见性"
+    },
+    {
+      "node_id": "os.segmented_paging",
+      "label": "段页式存储管理",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.segmentation_basics",
+        "os.paging_basics"
+      ],
+      "exam_weight": 0.68,
+      "frequency": 0.6,
+      "trainability": 0.65,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.segmented_paging_address_split_error",
+        "mistake.segmentation_limit_check_error"
+      ],
+      "recommended_action": "画段表到页表再到物理块的两级转换流程，标出段号、页号、页内偏移"
+    },
+    {
+      "node_id": "os.tlb_effective_access_time",
+      "label": "快表 TLB 与有效访问时间",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.paging_basics"
+      ],
+      "exam_weight": 0.78,
+      "frequency": 0.72,
+      "trainability": 0.7,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.tlb_eat_formula_error",
+        "mistake.page_table_valid_bit_confusion"
+      ],
+      "recommended_action": "用命中率 h 推导有效访问时间公式，分别计算命中与未命中访问次数"
+    },
+    {
+      "node_id": "os.page_fault_process",
+      "label": "缺页中断处理流程",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.paging_basics"
+      ],
+      "exam_weight": 0.86,
+      "frequency": 0.82,
+      "trainability": 0.8,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.page_fault_flow_order_error",
+        "mistake.page_table_valid_bit_confusion"
+      ],
+      "recommended_action": "闭卷画缺页中断流程，从访问页表、陷入内核、调页、更新页表到重新执行指令"
+    },
+    {
+      "node_id": "os.fifo_replacement",
+      "label": "FIFO 页面置换算法",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.page_fault_process"
+      ],
+      "exam_weight": 0.86,
+      "frequency": 0.82,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.fifo_belady_confusion",
+        "mistake.page_fault_flow_order_error"
+      ],
+      "recommended_action": "用页面访问串手动维护队列，计算缺页次数并观察 Belady 异常"
+    },
+    {
+      "node_id": "os.lru_replacement",
+      "label": "LRU 页面置换算法",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.page_fault_process"
+      ],
+      "exam_weight": 0.96,
+      "frequency": 0.93,
+      "trainability": 0.8,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.lru_shift_register_error",
+        "mistake.lru_stack_update_error"
+      ],
+      "recommended_action": "用栈法和计数器法各做一遍访问串，特别核对每次命中后的栈更新"
+    },
+    {
+      "node_id": "os.clock_replacement",
+      "label": "Clock/改进型 Clock 页面置换",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.fifo_replacement",
+        "os.lru_replacement"
+      ],
+      "exam_weight": 0.82,
+      "frequency": 0.78,
+      "trainability": 0.75,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.clock_reference_bit_update_error",
+        "mistake.page_fault_flow_order_error"
+      ],
+      "recommended_action": "画环形指针，逐步更新访问位/修改位，记录指针停止位置和被换出页"
+    },
+    {
+      "node_id": "os.working_set_thrashing",
+      "label": "工作集与抖动",
+      "layer": "memory_management",
+      "prerequisites": [
+        "os.page_fault_process"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.55,
+      "trainability": 0.6,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.working_set_window_error",
+        "mistake.thrashing_cause_confusion"
+      ],
+      "recommended_action": "解释局部性原理、工作集窗口和抖动原因，画页框数与缺页率关系图"
+    },
+    {
+      "node_id": "os.file_system_concepts",
+      "label": "文件系统基础与 FCB",
+      "layer": "file_system",
+      "prerequisites": [],
+      "exam_weight": 0.7,
+      "frequency": 0.62,
+      "trainability": 0.7,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.inode_file_name_location_error",
+        "mistake.directory_structure_confusion"
+      ],
+      "recommended_action": "列出文件属性、FCB/目录项职责，并说明文件名通常由目录项维护"
+    },
+    {
+      "node_id": "os.directory_structure",
+      "label": "目录结构与路径解析",
+      "layer": "file_system",
+      "prerequisites": [
+        "os.file_system_concepts"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.68,
+      "trainability": 0.75,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.directory_path_resolution_error",
+        "mistake.directory_structure_confusion"
+      ],
+      "recommended_action": "画单级、二级、树形、无环图目录结构，并追踪一次绝对路径与相对路径查找"
+    },
+    {
+      "node_id": "os.inode_structure",
+      "label": "inode 与文件物理结构",
+      "layer": "file_system",
+      "prerequisites": [
+        "os.file_system_concepts"
+      ],
+      "exam_weight": 0.82,
+      "frequency": 0.75,
+      "trainability": 0.72,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.inode_direct_indirect_error",
+        "mistake.inode_file_name_location_error"
+      ],
+      "recommended_action": "手算直接索引、一级/二级间接索引可寻址容量，并说明 inode 不保存文件名"
+    },
+    {
+      "node_id": "os.free_space_management",
+      "label": "空闲空间管理",
+      "layer": "file_system",
+      "prerequisites": [
+        "os.file_system_concepts"
+      ],
+      "exam_weight": 0.62,
+      "frequency": 0.55,
+      "trainability": 0.65,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.free_space_bitmap_index_error",
+        "mistake.directory_structure_confusion"
+      ],
+      "recommended_action": "对比位示图、空闲链表、成组链接法，完成一道位图块号/位号转换题"
+    },
+    {
+      "node_id": "os.disk_structure_seek_time",
+      "label": "磁盘结构与访问时间",
+      "layer": "io_management",
+      "prerequisites": [],
+      "exam_weight": 0.72,
+      "frequency": 0.65,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.disk_seek_order_error",
+        "mistake.sstf_local_optimum_error"
+      ],
+      "recommended_action": "复述寻道时间、旋转延迟、传输时间，并用给定柱面序列计算磁头移动距离"
+    },
+    {
+      "node_id": "os.sstf_scheduling",
+      "label": "SSTF 磁盘调度",
+      "layer": "io_management",
+      "prerequisites": [
+        "os.disk_structure_seek_time"
+      ],
+      "exam_weight": 0.78,
+      "frequency": 0.72,
+      "trainability": 0.8,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.sstf_local_optimum_error",
+        "mistake.disk_seek_order_error"
+      ],
+      "recommended_action": "逐步选择距离当前磁头最近的请求，记录每一步移动方向和总寻道长度"
+    },
+    {
+      "node_id": "os.look_scheduling",
+      "label": "SCAN/LOOK 磁盘调度",
+      "layer": "io_management",
+      "prerequisites": [
+        "os.disk_structure_seek_time"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.68,
+      "trainability": 0.78,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.look_scan_boundary_error",
+        "mistake.disk_seek_order_error"
+      ],
+      "recommended_action": "画电梯算法移动轨迹，明确 SCAN 到边界、LOOK 到最远请求后折返的差异"
+    },
+    {
+      "node_id": "os.io_device_management",
+      "label": "I/O 设备管理与缓冲",
+      "layer": "io_management",
+      "prerequisites": [],
+      "exam_weight": 0.72,
+      "frequency": 0.65,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.io_buffering_spooling_confusion",
+        "mistake.dma_cpu_involvement_error"
+      ],
+      "recommended_action": "对比程序控制、中断、DMA、通道方式，并说明单缓冲/双缓冲/循环缓冲的收益"
+    },
+    {
+      "node_id": "os.interrupt_handling",
+      "label": "中断处理流程",
+      "layer": "io_management",
+      "prerequisites": [
+        "os.io_device_management"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.75,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.interrupt_handling_order_error",
+        "mistake.interrupt_trap_confusion"
+      ],
+      "recommended_action": "闭卷写中断响应、保护现场、执行服务程序、恢复现场、返回断点的顺序"
+    },
+    {
+      "node_id": "os.dma",
+      "label": "DMA 直接存储器访问",
+      "layer": "io_management",
+      "prerequisites": [
+        "os.io_device_management"
+      ],
+      "exam_weight": 0.78,
+      "frequency": 0.72,
+      "trainability": 0.78,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.dma_cpu_involvement_error",
+        "mistake.interrupt_handling_order_error"
+      ],
+      "recommended_action": "画 CPU、DMA 控制器、内存、设备之间的数据路径，说明 CPU 只负责初始化和结束处理"
+    },
+    {
+      "node_id": "os.spooling",
+      "label": "SPOOLing 与虚拟设备",
+      "layer": "io_management",
+      "prerequisites": [
+        "os.io_device_management"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.48,
+      "trainability": 0.65,
+      "time_cost": 20,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.io_buffering_spooling_confusion",
+        "mistake.dma_cpu_involvement_error"
+      ],
+      "recommended_action": "用打印机例子解释输入井、输出井、守护进程和虚拟独占设备"
+    }
+  ],
+  "question_archetypes": [
+    {
+      "archetype_id": "process_state_diagram",
+      "label": "进程状态转换图题",
+      "knowledge_nodes": [
+        "os.process_concept",
+        "os.process_states",
+        "os.process_control"
+      ],
+      "difficulty": 2,
+      "frequency": 0.95,
+      "common_mistakes": [
+        "mistake.process_state_transition_error",
+        "mistake.ready_blocked_confusion"
+      ],
+      "worked_example_strategy": "给出运行、就绪、阻塞等状态和事件，要求补全状态图并解释每条边"
+    },
+    {
+      "archetype_id": "scheduling_gantt_chart",
+      "label": "进程调度甘特图题",
+      "knowledge_nodes": [
+        "os.cpu_scheduling_metrics",
+        "os.fcfs_scheduling",
+        "os.sjf_scheduling",
+        "os.rr_scheduling",
+        "os.priority_scheduling"
+      ],
+      "difficulty": 3,
+      "frequency": 0.95,
+      "common_mistakes": [
+        "mistake.fcfs_gantt_order_error",
+        "mistake.rr_time_quantum_boundary_error",
+        "mistake.sjf_preemptive_confusion"
+      ],
+      "worked_example_strategy": "给出到达时间、服务时间、优先级和时间片，要求画甘特图并计算平均周转时间"
+    },
+    {
+      "archetype_id": "scheduling_metric_calculation",
+      "label": "调度指标计算题",
+      "knowledge_nodes": [
+        "os.cpu_scheduling_metrics",
+        "os.fcfs_scheduling",
+        "os.sjf_scheduling",
+        "os.rr_scheduling"
+      ],
+      "difficulty": 3,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.scheduling_metric_formula_error",
+        "mistake.priority_tie_break_error"
+      ],
+      "worked_example_strategy": "让用户逐列列出完成时间、周转时间、带权周转时间、等待时间，防止直接套错公式"
+    },
+    {
+      "archetype_id": "semaphore_pv_code_completion",
+      "label": "信号量 P/V 代码补全题",
+      "knowledge_nodes": [
+        "os.semaphore_pv",
+        "os.semaphore_initial_value",
+        "os.synchronization_concepts"
+      ],
+      "difficulty": 4,
+      "frequency": 0.92,
+      "common_mistakes": [
+        "mistake.pv_order_reversed",
+        "mistake.semaphore_initial_value_error"
+      ],
+      "worked_example_strategy": "给出并发伪代码骨架，要求填写 P/V 位置、信号量初值和每个信号量含义"
+    },
+    {
+      "archetype_id": "producer_consumer_code",
+      "label": "生产者-消费者信号量代码题",
+      "knowledge_nodes": [
+        "os.producer_consumer",
+        "os.semaphore_pv",
+        "os.semaphore_initial_value"
+      ],
+      "difficulty": 4,
+      "frequency": 0.85,
+      "common_mistakes": [
+        "mistake.producer_consumer_buffer_count_error",
+        "mistake.pv_order_reversed"
+      ],
+      "worked_example_strategy": "要求用户先写 empty/full/mutex 的不变量，再闭卷写生产者与消费者伪代码"
+    },
+    {
+      "archetype_id": "classic_sync_problem",
+      "label": "经典同步互斥问题改写题",
+      "knowledge_nodes": [
+        "os.reader_writer",
+        "os.dining_philosophers",
+        "os.monitor",
+        "os.mutex_vs_semaphore"
+      ],
+      "difficulty": 4,
+      "frequency": 0.78,
+      "common_mistakes": [
+        "mistake.reader_writer_starvation_error",
+        "mistake.dining_philosopher_deadlock_solution_gap"
+      ],
+      "worked_example_strategy": "给出读者写者或哲学家变体，要求说明避免死锁/饥饿的约束并写核心同步代码"
+    },
+    {
+      "archetype_id": "deadlock_conditions_judgment",
+      "label": "死锁必要条件判断题",
+      "knowledge_nodes": [
+        "os.deadlock_conditions",
+        "os.deadlock_prevention_avoidance",
+        "os.dining_philosophers"
+      ],
+      "difficulty": 2,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.deadlock_conditions_missing",
+        "mistake.deadlock_condition_vs_strategy_confusion"
+      ],
+      "worked_example_strategy": "给出系统场景，要求判断是否可能死锁、满足哪些必要条件、破坏哪个条件可预防"
+    },
+    {
+      "archetype_id": "banker_safety_sequence_matrix",
+      "label": "银行家算法安全序列题",
+      "knowledge_nodes": [
+        "os.banker_algorithm",
+        "os.deadlock_prevention_avoidance"
+      ],
+      "difficulty": 5,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.banker_matrix_asymmetry",
+        "mistake.banker_need_calculation_error",
+        "mistake.safe_sequence_incomplete"
+      ],
+      "worked_example_strategy": "要求先补 Need 矩阵，再用 Work/Finish 表逐步寻找安全序列并判断请求能否立即分配"
+    },
+    {
+      "archetype_id": "deadlock_detection_matrix",
+      "label": "死锁检测矩阵题",
+      "knowledge_nodes": [
+        "os.deadlock_detection",
+        "os.resource_allocation_graph"
+      ],
+      "difficulty": 4,
+      "frequency": 0.82,
+      "common_mistakes": [
+        "mistake.deadlock_detection_finish_vector_error",
+        "mistake.banker_available_work_error"
+      ],
+      "worked_example_strategy": "给出 Allocation、Request、Available，要求迭代 Work/Finish 并输出死锁进程集合"
+    },
+    {
+      "archetype_id": "paging_address_translation",
+      "label": "页表与地址转换计算题",
+      "knowledge_nodes": [
+        "os.paging_basics",
+        "os.tlb_effective_access_time",
+        "os.memory_address_binding"
+      ],
+      "difficulty": 4,
+      "frequency": 0.93,
+      "common_mistakes": [
+        "mistake.page_number_offset_split_error",
+        "mistake.tlb_eat_formula_error"
+      ],
+      "worked_example_strategy": "给出页大小、逻辑地址、页表项和 TLB 命中率，逐步计算页号、偏移、物理地址和 EAT"
+    },
+    {
+      "archetype_id": "page_replacement_trace",
+      "label": "页面置换访问串题",
+      "knowledge_nodes": [
+        "os.fifo_replacement",
+        "os.lru_replacement",
+        "os.clock_replacement",
+        "os.page_fault_process"
+      ],
+      "difficulty": 4,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.lru_shift_register_error",
+        "mistake.lru_stack_update_error",
+        "mistake.clock_reference_bit_update_error"
+      ],
+      "worked_example_strategy": "给出页面访问串和页框数，要求逐格追踪 FIFO、LRU 或 Clock 的内存状态与缺页次数"
+    },
+    {
+      "archetype_id": "memory_allocation_partition",
+      "label": "连续内存分配题",
+      "knowledge_nodes": [
+        "os.contiguous_allocation"
+      ],
+      "difficulty": 3,
+      "frequency": 0.75,
+      "common_mistakes": [
+        "mistake.best_first_worst_fit_confusion",
+        "mistake.contiguous_allocation_fragmentation_confusion"
+      ],
+      "worked_example_strategy": "给出空闲分区表和作业序列，分别按首次、最佳、最坏适应算法更新分区表"
+    },
+    {
+      "archetype_id": "segmentation_paging_comparison",
+      "label": "分页、分段、段页式对比题",
+      "knowledge_nodes": [
+        "os.paging_basics",
+        "os.segmentation_basics",
+        "os.segmented_paging"
+      ],
+      "difficulty": 3,
+      "frequency": 0.76,
+      "common_mistakes": [
+        "mistake.segmentation_limit_check_error",
+        "mistake.segmented_paging_address_split_error"
+      ],
+      "worked_example_strategy": "要求用户从地址结构、碎片类型、用户可见性、共享保护和地址转换步骤对比三者"
+    },
+    {
+      "archetype_id": "inode_file_block_calculation",
+      "label": "inode 文件块寻址计算题",
+      "knowledge_nodes": [
+        "os.inode_structure",
+        "os.file_system_concepts"
+      ],
+      "difficulty": 4,
+      "frequency": 0.75,
+      "common_mistakes": [
+        "mistake.inode_direct_indirect_error",
+        "mistake.inode_file_name_location_error"
+      ],
+      "worked_example_strategy": "给出块大小、指针大小、直接/间接索引数，计算最大文件长度和某逻辑块的索引路径"
+    },
+    {
+      "archetype_id": "directory_path_analysis",
+      "label": "目录结构与路径解析题",
+      "knowledge_nodes": [
+        "os.directory_structure",
+        "os.file_system_concepts"
+      ],
+      "difficulty": 3,
+      "frequency": 0.68,
+      "common_mistakes": [
+        "mistake.directory_path_resolution_error",
+        "mistake.directory_structure_confusion"
+      ],
+      "worked_example_strategy": "给出目录树和当前目录，要求解析绝对/相对路径、硬链接/符号链接或访问次数"
+    },
+    {
+      "archetype_id": "disk_scheduling_trace",
+      "label": "磁盘调度移动轨迹题",
+      "knowledge_nodes": [
+        "os.disk_structure_seek_time",
+        "os.sstf_scheduling",
+        "os.look_scheduling"
+      ],
+      "difficulty": 3,
+      "frequency": 0.78,
+      "common_mistakes": [
+        "mistake.disk_seek_order_error",
+        "mistake.sstf_local_optimum_error",
+        "mistake.look_scan_boundary_error"
+      ],
+      "worked_example_strategy": "给出初始磁头位置、移动方向和请求序列，要求按 SSTF/SCAN/LOOK 计算服务顺序和总移动量"
+    },
+    {
+      "archetype_id": "io_dma_interrupt_concept",
+      "label": "I/O、DMA 与中断流程题",
+      "knowledge_nodes": [
+        "os.io_device_management",
+        "os.interrupt_handling",
+        "os.dma",
+        "os.spooling"
+      ],
+      "difficulty": 3,
+      "frequency": 0.72,
+      "common_mistakes": [
+        "mistake.dma_cpu_involvement_error",
+        "mistake.interrupt_handling_order_error",
+        "mistake.io_buffering_spooling_confusion"
+      ],
+      "worked_example_strategy": "让用户按时间顺序描述一次 DMA 传输和中断处理，区分 CPU、控制器和内存职责"
+    },
+    {
+      "archetype_id": "integrated_os_case_analysis",
+      "label": "操作系统综合场景分析题",
+      "knowledge_nodes": [
+        "os.process_states",
+        "os.semaphore_pv",
+        "os.banker_algorithm",
+        "os.paging_basics",
+        "os.lru_replacement",
+        "os.interrupt_handling"
+      ],
+      "difficulty": 5,
+      "frequency": 0.7,
+      "common_mistakes": [
+        "mistake.process_state_transition_error",
+        "mistake.banker_matrix_asymmetry",
+        "mistake.page_fault_flow_order_error"
+      ],
+      "worked_example_strategy": "给出一个程序运行场景，要求串联进程阻塞/唤醒、缺页中断、资源申请和 I/O 完成中断"
+    }
+  ],
+  "mistake_types": [
+    {
+      "mistake_id": "mistake.process_state_transition_error",
+      "label": "进程状态转换图画错",
+      "related_nodes": [
+        "os.process_concept",
+        "os.process_states",
+        "os.process_control"
+      ],
+      "repair_strategy": "重画五状态模型，只用事件标边：调度、时间片到、等待事件、事件完成；禁止直接画阻塞到运行"
+    },
+    {
+      "mistake_id": "mistake.ready_blocked_confusion",
+      "label": "就绪态和阻塞态混淆",
+      "related_nodes": [
+        "os.process_states"
+      ],
+      "repair_strategy": "用 CPU 缺失和事件未完成两个条件判别：只差 CPU 是就绪，等待 I/O/资源/信号是阻塞"
+    },
+    {
+      "mistake_id": "mistake.running_ready_event_confusion",
+      "label": "运行态到就绪态事件写错",
+      "related_nodes": [
+        "os.process_states",
+        "os.process_control",
+        "os.rr_scheduling"
+      ],
+      "repair_strategy": "把时间片用完、被高优先级抢占统一归为运行到就绪，把主动等待事件归为运行到阻塞"
+    },
+    {
+      "mistake_id": "mistake.pcb_context_switch_confusion",
+      "label": "PCB 与上下文切换内容混淆",
+      "related_nodes": [
+        "os.process_concept",
+        "os.process_control"
+      ],
+      "repair_strategy": "列出 PCB 至少包含 PID、状态、寄存器现场、调度信息、内存信息、打开文件信息，并说明切换时保存/恢复现场"
+    },
+    {
+      "mistake_id": "mistake.thread_resource_sharing_error",
+      "label": "线程共享资源和私有资源分不清",
+      "related_nodes": [
+        "os.thread_concept"
+      ],
+      "repair_strategy": "默写线程共享进程地址空间和文件，私有程序计数器、寄存器、栈，并用一道判断题巩固"
+    },
+    {
+      "mistake_id": "mistake.user_kernel_thread_confusion",
+      "label": "用户级线程和内核级线程混淆",
+      "related_nodes": [
+        "os.thread_concept"
+      ],
+      "repair_strategy": "用是否被内核感知、切换代价、阻塞影响范围、并行能力四列对比两类线程"
+    },
+    {
+      "mistake_id": "mistake.scheduling_metric_formula_error",
+      "label": "调度指标公式套错",
+      "related_nodes": [
+        "os.cpu_scheduling_metrics",
+        "os.fcfs_scheduling",
+        "os.sjf_scheduling",
+        "os.rr_scheduling"
+      ],
+      "repair_strategy": "强制先列到达时间、开始时间、完成时间，再计算周转=完成-到达，带权周转=周转/服务"
+    },
+    {
+      "mistake_id": "mistake.fcfs_gantt_order_error",
+      "label": "FCFS 甘特图按服务时间排序",
+      "related_nodes": [
+        "os.fcfs_scheduling",
+        "os.cpu_scheduling_metrics"
+      ],
+      "repair_strategy": "把 FCFS 规则写在题旁：只看进入就绪队列的先后顺序，不看服务时间长短"
+    },
+    {
+      "mistake_id": "mistake.sjf_preemptive_confusion",
+      "label": "SJF 非抢占和 SRTF 抢占混淆",
+      "related_nodes": [
+        "os.sjf_scheduling"
+      ],
+      "repair_strategy": "每到一个新进程到达时先判断题目是否抢占；非抢占运行到完成，抢占式比较剩余时间"
+    },
+    {
+      "mistake_id": "mistake.rr_time_quantum_boundary_error",
+      "label": "RR 时间片边界和入队顺序错误",
+      "related_nodes": [
+        "os.rr_scheduling"
+      ],
+      "repair_strategy": "维护显式就绪队列，遇到时间片结束和新进程同时到达时按题目约定处理，若未说明则写出自己的约定"
+    },
+    {
+      "mistake_id": "mistake.priority_tie_break_error",
+      "label": "优先级相同的破局规则漏写",
+      "related_nodes": [
+        "os.priority_scheduling",
+        "os.cpu_scheduling_metrics"
+      ],
+      "repair_strategy": "优先级相同时默认按到达顺序或题目指定规则处理，并在答案中写明破局规则"
+    },
+    {
+      "mistake_id": "mistake.starvation_aging_missing",
+      "label": "只写优先级调度却漏掉饥饿与老化",
+      "related_nodes": [
+        "os.priority_scheduling",
+        "os.multilevel_feedback_queue"
+      ],
+      "repair_strategy": "回答优先级调度优缺点时固定补一句：低优先级可能饥饿，可用老化提升等待进程优先级"
+    },
+    {
+      "mistake_id": "mistake.mlfq_level_update_error",
+      "label": "多级反馈队列升级降级规则错",
+      "related_nodes": [
+        "os.multilevel_feedback_queue"
+      ],
+      "repair_strategy": "画每一级队列的时间片和优先级，标注用完时间片降级、交互型短作业保持较高优先级"
+    },
+    {
+      "mistake_id": "mistake.critical_section_condition_missing",
+      "label": "临界区准则漏项",
+      "related_nodes": [
+        "os.synchronization_concepts"
+      ],
+      "repair_strategy": "固定默写空闲让进、忙则等待、有限等待、让权等待，并用一句话解释每项含义"
+    },
+    {
+      "mistake_id": "mistake.mutual_exclusion_vs_sync_confusion",
+      "label": "互斥和同步概念混淆",
+      "related_nodes": [
+        "os.synchronization_concepts",
+        "os.mutex_vs_semaphore",
+        "os.monitor"
+      ],
+      "repair_strategy": "把互斥理解为不能同时进入临界区，把同步理解为必须按某种先后关系推进，用两个信号量例子区分"
+    },
+    {
+      "mistake_id": "mistake.pv_order_reversed",
+      "label": "P/V 操作顺序写反",
+      "related_nodes": [
+        "os.semaphore_pv",
+        "os.producer_consumer"
+      ],
+      "repair_strategy": "记住 P 是申请/等待，V 是释放/通知；每段临界区前后必须成对检查资源 P 与 mutex P 的顺序"
+    },
+    {
+      "mistake_id": "mistake.semaphore_initial_value_error",
+      "label": "信号量初值设错",
+      "related_nodes": [
+        "os.semaphore_initial_value",
+        "os.producer_consumer",
+        "os.reader_writer"
+      ],
+      "repair_strategy": "先写信号量含义再写初值：互斥为 1，空缓冲为 N，满缓冲为 0，顺序信号量按先发生事件设定"
+    },
+    {
+      "mistake_id": "mistake.semaphore_negative_meaning_error",
+      "label": "误解信号量负值含义",
+      "related_nodes": [
+        "os.semaphore_pv"
+      ],
+      "repair_strategy": "复述信号量为负时绝对值通常表示等待进程数，非负时表示可用资源数"
+    },
+    {
+      "mistake_id": "mistake.monitor_wait_signal_order_error",
+      "label": "管程 wait/signal 语义顺序错",
+      "related_nodes": [
+        "os.monitor",
+        "os.mutex_vs_semaphore"
+      ],
+      "repair_strategy": "用条件变量队列画 wait 释放管程锁并阻塞、signal 唤醒等待者的流程，区分 Hoare/Mesa 语义"
+    },
+    {
+      "mistake_id": "mistake.producer_consumer_buffer_count_error",
+      "label": "生产者-消费者 empty/full 计数反了",
+      "related_nodes": [
+        "os.producer_consumer",
+        "os.semaphore_initial_value"
+      ],
+      "repair_strategy": "写不变量 empty+full=N，生产前 P(empty)，生产后 V(full)，消费前 P(full)，消费后 V(empty)"
+    },
+    {
+      "mistake_id": "mistake.reader_writer_starvation_error",
+      "label": "读者写者问题忽略饥饿",
+      "related_nodes": [
+        "os.reader_writer"
+      ],
+      "repair_strategy": "说明读者优先可能导致写者饥饿，写者优先可能导致读者等待，公平版本需增加排队信号量"
+    },
+    {
+      "mistake_id": "mistake.dining_philosopher_deadlock_solution_gap",
+      "label": "哲学家问题只描述死锁不写解决约束",
+      "related_nodes": [
+        "os.dining_philosophers"
+      ],
+      "repair_strategy": "至少写一种破坏循环等待的方法：限制最多四人同时拿筷、奇偶顺序、或一次性申请两支筷子"
+    },
+    {
+      "mistake_id": "mistake.deadlock_conditions_missing",
+      "label": "死锁四条件漏写或写错",
+      "related_nodes": [
+        "os.deadlock_conditions",
+        "os.resource_allocation_graph",
+        "os.dining_philosophers"
+      ],
+      "repair_strategy": "用互斥、请求保持、不可剥夺、循环等待四词闭卷默写，再各配一个现实例子"
+    },
+    {
+      "mistake_id": "mistake.deadlock_condition_vs_strategy_confusion",
+      "label": "死锁预防、避免、检测概念混淆",
+      "related_nodes": [
+        "os.deadlock_conditions",
+        "os.deadlock_prevention_avoidance",
+        "os.deadlock_recovery"
+      ],
+      "repair_strategy": "预防是破坏必要条件，避免是动态判断安全状态，检测是允许发生后再查，恢复是处理已发生死锁"
+    },
+    {
+      "mistake_id": "mistake.resource_allocation_graph_cycle_error",
+      "label": "资源分配图有环就断言死锁",
+      "related_nodes": [
+        "os.resource_allocation_graph"
+      ],
+      "repair_strategy": "先判断资源实例数：单实例有环可判死锁，多实例有环只是可能死锁，需进一步检测"
+    },
+    {
+      "mistake_id": "mistake.banker_matrix_asymmetry",
+      "label": "银行家算法矩阵不对称或维度错",
+      "related_nodes": [
+        "os.banker_algorithm"
+      ],
+      "repair_strategy": "检查 Allocation、Max、Need 都是进程 x 资源矩阵，Available/Work 是资源向量，Need=Max-Allocation 逐格计算"
+    },
+    {
+      "mistake_id": "mistake.banker_available_work_error",
+      "label": "银行家算法 Available 与 Work 更新错",
+      "related_nodes": [
+        "os.banker_algorithm",
+        "os.deadlock_detection"
+      ],
+      "repair_strategy": "初始化 Work=Available；每找到一个可完成进程后 Work=Work+Allocation[i]，不要加 Need 或 Max"
+    },
+    {
+      "mistake_id": "mistake.banker_need_calculation_error",
+      "label": "Need 矩阵计算错误",
+      "related_nodes": [
+        "os.banker_algorithm"
+      ],
+      "repair_strategy": "逐格写 Need[i][j]=Max[i][j]-Allocation[i][j]，计算完检查所有值非负且维度一致"
+    },
+    {
+      "mistake_id": "mistake.safe_sequence_incomplete",
+      "label": "安全序列找了一半就停止",
+      "related_nodes": [
+        "os.banker_algorithm"
+      ],
+      "repair_strategy": "安全序列必须包含全部进程；若某轮找不到 Need<=Work 的未完成进程，才判不安全"
+    },
+    {
+      "mistake_id": "mistake.deadlock_detection_finish_vector_error",
+      "label": "死锁检测 Finish 向量初始化错",
+      "related_nodes": [
+        "os.deadlock_detection"
+      ],
+      "repair_strategy": "按检测算法初始化 Finish，资源需求为 0 的进程可特殊处理；每次完成后释放 Allocation 并置 true"
+    },
+    {
+      "mistake_id": "mistake.deadlock_recovery_cost_confusion",
+      "label": "解除死锁时牺牲进程选择依据混乱",
+      "related_nodes": [
+        "os.deadlock_recovery"
+      ],
+      "repair_strategy": "从优先级、已运行时间、还需资源、已占资源、回滚代价、影响用户数六个角度选择牺牲者"
+    },
+    {
+      "mistake_id": "mistake.address_translation_offset_error",
+      "label": "地址转换时基址和偏移相加错",
+      "related_nodes": [
+        "os.memory_address_binding",
+        "os.segmentation_basics"
+      ],
+      "repair_strategy": "先做越界检查，再计算物理地址=基址+偏移；不要把逻辑地址整体直接加基址"
+    },
+    {
+      "mistake_id": "mistake.page_number_offset_split_error",
+      "label": "页号与页内偏移拆分错误",
+      "related_nodes": [
+        "os.paging_basics",
+        "os.memory_address_binding"
+      ],
+      "repair_strategy": "页号=逻辑地址整除页大小，页内偏移=逻辑地址取模页大小；二进制题按低位作为偏移"
+    },
+    {
+      "mistake_id": "mistake.page_table_valid_bit_confusion",
+      "label": "页表有效位和缺页判断混淆",
+      "related_nodes": [
+        "os.paging_basics",
+        "os.tlb_effective_access_time",
+        "os.page_fault_process"
+      ],
+      "repair_strategy": "访问页表时先查有效位；无效触发缺页中断，调入后更新页表项、块号、有效位和可能的 TLB"
+    },
+    {
+      "mistake_id": "mistake.tlb_eat_formula_error",
+      "label": "TLB 有效访问时间公式错误",
+      "related_nodes": [
+        "os.tlb_effective_access_time"
+      ],
+      "repair_strategy": "分别写命中路径和未命中路径时间，再按命中率加权，不要漏掉访问 TLB 的时间"
+    },
+    {
+      "mistake_id": "mistake.segmentation_limit_check_error",
+      "label": "分段地址越界检查漏做",
+      "related_nodes": [
+        "os.segmentation_basics",
+        "os.segmented_paging"
+      ],
+      "repair_strategy": "先比较段内地址和段长，合法后才用段基址加偏移；段号越界和段内地址越界都要检查"
+    },
+    {
+      "mistake_id": "mistake.segmented_paging_address_split_error",
+      "label": "段页式地址字段拆错",
+      "related_nodes": [
+        "os.segmented_paging"
+      ],
+      "repair_strategy": "按段号、段内页号、页内偏移三段拆地址，先查段表得到页表地址，再查页表得到物理块"
+    },
+    {
+      "mistake_id": "mistake.contiguous_allocation_fragmentation_confusion",
+      "label": "内部碎片和外部碎片混淆",
+      "related_nodes": [
+        "os.contiguous_allocation"
+      ],
+      "repair_strategy": "连续可变分区主要产生外部碎片，固定分区和分页可能产生内部碎片；用图标出未用空间位置"
+    },
+    {
+      "mistake_id": "mistake.best_first_worst_fit_confusion",
+      "label": "首次/最佳/最坏适应算法选错分区",
+      "related_nodes": [
+        "os.contiguous_allocation"
+      ],
+      "repair_strategy": "首次适应按地址顺序找第一个足够大分区，最佳适应找最小足够大，最坏适应找最大"
+    },
+    {
+      "mistake_id": "mistake.page_fault_flow_order_error",
+      "label": "缺页中断处理顺序错误",
+      "related_nodes": [
+        "os.page_fault_process",
+        "os.fifo_replacement",
+        "os.clock_replacement"
+      ],
+      "repair_strategy": "按访问页表、发现无效、陷入内核、找空闲块或置换、调页、更新页表、重新执行指令排序"
+    },
+    {
+      "mistake_id": "mistake.fifo_belady_confusion",
+      "label": "FIFO 与 Belady 异常理解错误",
+      "related_nodes": [
+        "os.fifo_replacement"
+      ],
+      "repair_strategy": "用同一访问串对比 3 个页框和 4 个页框的 FIFO 缺页次数，确认页框增多不一定缺页减少"
+    },
+    {
+      "mistake_id": "mistake.lru_shift_register_error",
+      "label": "LRU 位移位运算错误",
+      "related_nodes": [
+        "os.lru_replacement"
+      ],
+      "repair_strategy": "每次时钟滴答先右移历史寄存器，再把被访问页最高位置 1；置换时选历史值最小的页"
+    },
+    {
+      "mistake_id": "mistake.lru_stack_update_error",
+      "label": "LRU 命中后未更新栈",
+      "related_nodes": [
+        "os.lru_replacement"
+      ],
+      "repair_strategy": "每次访问无论命中或缺页，都把该页移动到栈顶；淘汰栈底最久未使用页"
+    },
+    {
+      "mistake_id": "mistake.clock_reference_bit_update_error",
+      "label": "Clock 算法访问位更新错",
+      "related_nodes": [
+        "os.clock_replacement"
+      ],
+      "repair_strategy": "扫描到访问位为 1 的页先置 0 并跳过，扫描到访问位为 0 的页才置换，访问命中需置访问位为 1"
+    },
+    {
+      "mistake_id": "mistake.working_set_window_error",
+      "label": "工作集窗口范围计算错",
+      "related_nodes": [
+        "os.working_set_thrashing"
+      ],
+      "repair_strategy": "工作集是最近 Δ 时间或最近 Δ 次访问中出现过的页面集合，不是出现次数最多的页面集合"
+    },
+    {
+      "mistake_id": "mistake.thrashing_cause_confusion",
+      "label": "抖动原因解释成 CPU 太慢",
+      "related_nodes": [
+        "os.working_set_thrashing"
+      ],
+      "repair_strategy": "强调抖动由页框不足导致频繁缺页，CPU 利用率下降是结果，不是根本原因"
+    },
+    {
+      "mistake_id": "mistake.directory_path_resolution_error",
+      "label": "目录路径解析顺序错误",
+      "related_nodes": [
+        "os.directory_structure"
+      ],
+      "repair_strategy": "从根目录或当前目录逐级查目录项，遇到 . 和 .. 按目录树移动，最后定位文件控制块或 inode"
+    },
+    {
+      "mistake_id": "mistake.directory_structure_confusion",
+      "label": "单级、二级、树形目录特点混淆",
+      "related_nodes": [
+        "os.file_system_concepts",
+        "os.directory_structure",
+        "os.free_space_management"
+      ],
+      "repair_strategy": "用命名冲突、查找效率、共享能力、实现复杂度四列对比目录结构"
+    },
+    {
+      "mistake_id": "mistake.inode_direct_indirect_error",
+      "label": "inode 直接/间接索引容量算错",
+      "related_nodes": [
+        "os.inode_structure"
+      ],
+      "repair_strategy": "先算每个索引块能存多少地址，再分直接、一级、二级、三级间接逐段累加容量"
+    },
+    {
+      "mistake_id": "mistake.inode_file_name_location_error",
+      "label": "误以为 inode 保存文件名",
+      "related_nodes": [
+        "os.inode_structure",
+        "os.file_system_concepts"
+      ],
+      "repair_strategy": "记住目录项保存文件名到 inode 号的映射，inode 保存元数据和数据块指针"
+    },
+    {
+      "mistake_id": "mistake.free_space_bitmap_index_error",
+      "label": "位示图块号和位号换算错",
+      "related_nodes": [
+        "os.free_space_management"
+      ],
+      "repair_strategy": "明确字长和编号起点，块号通常按 行号*字长+位号 计算，并在答案写出编号从 0 还是 1 开始"
+    },
+    {
+      "mistake_id": "mistake.disk_seek_order_error",
+      "label": "磁盘调度服务顺序写错",
+      "related_nodes": [
+        "os.disk_structure_seek_time",
+        "os.sstf_scheduling",
+        "os.look_scheduling"
+      ],
+      "repair_strategy": "每一步都记录当前磁头位置、剩余请求、选择理由和移动距离，避免凭直觉跳选"
+    },
+    {
+      "mistake_id": "mistake.sstf_local_optimum_error",
+      "label": "SSTF 未按当前最近请求选择",
+      "related_nodes": [
+        "os.sstf_scheduling",
+        "os.disk_structure_seek_time"
+      ],
+      "repair_strategy": "SSTF 每次从当前磁头位置重新计算距离，不能按全局排序一次后不变"
+    },
+    {
+      "mistake_id": "mistake.look_scan_boundary_error",
+      "label": "LOOK 和 SCAN 折返边界混淆",
+      "related_nodes": [
+        "os.look_scheduling"
+      ],
+      "repair_strategy": "SCAN 移动到磁盘边界再折返，LOOK 移动到当前方向最远请求后折返；画轴线确认"
+    },
+    {
+      "mistake_id": "mistake.io_buffering_spooling_confusion",
+      "label": "缓冲与 SPOOLing 混淆",
+      "related_nodes": [
+        "os.io_device_management",
+        "os.spooling"
+      ],
+      "repair_strategy": "缓冲解决速度不匹配，SPOOLing 用磁盘和守护进程把独占设备虚拟成共享设备"
+    },
+    {
+      "mistake_id": "mistake.dma_cpu_involvement_error",
+      "label": "DMA 中 CPU 参与程度说错",
+      "related_nodes": [
+        "os.io_device_management",
+        "os.dma",
+        "os.spooling"
+      ],
+      "repair_strategy": "CPU 初始化 DMA 控制器并处理中断，数据块传输过程主要由 DMA 控制器在设备和内存间完成"
+    },
+    {
+      "mistake_id": "mistake.interrupt_trap_confusion",
+      "label": "中断和陷入/异常混淆",
+      "related_nodes": [
+        "os.interrupt_handling"
+      ],
+      "repair_strategy": "外部设备异步请求通常称中断，程序执行内部同步事件称异常或陷入，按来源和同步性区分"
+    },
+    {
+      "mistake_id": "mistake.interrupt_handling_order_error",
+      "label": "中断处理流程顺序错误",
+      "related_nodes": [
+        "os.interrupt_handling",
+        "os.dma"
+      ],
+      "repair_strategy": "按关中断/保护现场、识别中断源、执行服务程序、恢复现场、开中断/返回断点的顺序复述"
+    }
+  ],
+  "paths": {
+    "minimum_pass": {
+      "label": "保过路线（60分底线）",
+      "description": "聚焦进程管理、同步互斥、内存管理和死锁核心题型，优先确保计算与简答基础分不丢",
+      "ordered_nodes": [
+        "os.process_states",
+        "os.process_concept",
+        "os.cpu_scheduling_metrics",
+        "os.fcfs_scheduling",
+        "os.sjf_scheduling",
+        "os.rr_scheduling",
+        "os.synchronization_concepts",
+        "os.semaphore_pv",
+        "os.semaphore_initial_value",
+        "os.producer_consumer",
+        "os.deadlock_conditions",
+        "os.banker_algorithm",
+        "os.deadlock_detection",
+        "os.deadlock_prevention_avoidance",
+        "os.paging_basics",
+        "os.page_fault_process",
+        "os.fifo_replacement",
+        "os.lru_replacement",
+        "os.clock_replacement",
+        "os.tlb_effective_access_time",
+        "os.contiguous_allocation",
+        "os.segmentation_basics",
+        "os.directory_structure",
+        "os.inode_structure",
+        "os.sstf_scheduling",
+        "os.look_scheduling",
+        "os.interrupt_handling",
+        "os.dma"
+      ],
+      "drop_candidates": [
+        "os.multilevel_feedback_queue",
+        "os.monitor",
+        "os.mutex_vs_semaphore",
+        "os.dining_philosophers",
+        "os.deadlock_recovery",
+        "os.memory_address_binding",
+        "os.segmented_paging",
+        "os.working_set_thrashing",
+        "os.file_system_concepts",
+        "os.free_space_management",
+        "os.disk_structure_seek_time",
+        "os.io_device_management",
+        "os.spooling"
+      ]
+    },
+    "score_max": {
+      "label": "满分路线（全面覆盖）",
+      "description": "覆盖所有操作系统知识节点，适合基础较好、目标高分或有 14 天以上复习时间的用户",
+      "ordered_nodes": [
+        "os.process_concept",
+        "os.process_states",
+        "os.thread_concept",
+        "os.process_control",
+        "os.cpu_scheduling_metrics",
+        "os.fcfs_scheduling",
+        "os.sjf_scheduling",
+        "os.rr_scheduling",
+        "os.priority_scheduling",
+        "os.multilevel_feedback_queue",
+        "os.synchronization_concepts",
+        "os.semaphore_pv",
+        "os.semaphore_initial_value",
+        "os.mutex_vs_semaphore",
+        "os.monitor",
+        "os.producer_consumer",
+        "os.reader_writer",
+        "os.dining_philosophers",
+        "os.deadlock_conditions",
+        "os.resource_allocation_graph",
+        "os.banker_algorithm",
+        "os.deadlock_detection",
+        "os.deadlock_recovery",
+        "os.deadlock_prevention_avoidance",
+        "os.memory_address_binding",
+        "os.contiguous_allocation",
+        "os.paging_basics",
+        "os.segmentation_basics",
+        "os.segmented_paging",
+        "os.tlb_effective_access_time",
+        "os.page_fault_process",
+        "os.fifo_replacement",
+        "os.lru_replacement",
+        "os.clock_replacement",
+        "os.working_set_thrashing",
+        "os.file_system_concepts",
+        "os.directory_structure",
+        "os.inode_structure",
+        "os.free_space_management",
+        "os.disk_structure_seek_time",
+        "os.sstf_scheduling",
+        "os.look_scheduling",
+        "os.io_device_management",
+        "os.interrupt_handling",
+        "os.dma",
+        "os.spooling"
+      ]
+    }
+  },
+  "strategy_presets": {
+    "7d": {
+      "label": "7天冲刺策略",
+      "description": "高压保分模式：每天最多 3 个新节点，每天至少一次闭卷输出，优先进程、内存、死锁和 P/V 题型",
+      "daily_ratio": {
+        "new_learning": 0.25,
+        "retrieval_practice": 0.45,
+        "targeted_drill": 0.2,
+        "review_and_adjust": 0.1
+      },
+      "daily_targets": {
+        "max_new_nodes": 3,
+        "retrieval_sessions": 2,
+        "minimum_output": "每天至少完成一次闭卷输出：状态图、甘特图、P/V 代码、银行家表或页表/置换过程任选其一"
+      },
+      "phase_plan": [
+        {
+          "phase": 1,
+          "days": "1",
+          "focus": "进程状态 + 调度指标",
+          "nodes": [
+            "os.process_states",
+            "os.cpu_scheduling_metrics",
+            "os.fcfs_scheduling"
+          ],
+          "output": "闭卷画进程状态转换图，并完成 1 道 FCFS 甘特图和指标计算"
+        },
+        {
+          "phase": 2,
+          "days": "2",
+          "focus": "SJF/RR/优先级调度",
+          "nodes": [
+            "os.sjf_scheduling",
+            "os.rr_scheduling",
+            "os.priority_scheduling"
+          ],
+          "output": "完成 2 道甘特图题，写出每题平均周转时间和等待时间"
+        },
+        {
+          "phase": 3,
+          "days": "3",
+          "focus": "信号量与经典同步",
+          "nodes": [
+            "os.semaphore_pv",
+            "os.semaphore_initial_value",
+            "os.producer_consumer"
+          ],
+          "output": "闭卷写生产者-消费者 P/V 代码，标注 empty/full/mutex 初值"
+        },
+        {
+          "phase": 4,
+          "days": "4",
+          "focus": "死锁条件 + 银行家算法",
+          "nodes": [
+            "os.deadlock_conditions",
+            "os.banker_algorithm",
+            "os.deadlock_detection"
+          ],
+          "output": "完成 1 道银行家算法安全序列题和 1 道死锁检测矩阵题"
+        },
+        {
+          "phase": 5,
+          "days": "5",
+          "focus": "分页、缺页与置换",
+          "nodes": [
+            "os.paging_basics",
+            "os.page_fault_process",
+            "os.lru_replacement"
+          ],
+          "output": "完成 2 道页表地址转换题和 1 道 LRU 访问串题"
+        },
+        {
+          "phase": 6,
+          "days": "6",
+          "focus": "FIFO/Clock + 文件与磁盘核心",
+          "nodes": [
+            "os.fifo_replacement",
+            "os.clock_replacement",
+            "os.inode_structure"
+          ],
+          "output": "完成 FIFO/Clock 对比表，手算一道 inode 容量或磁盘调度题"
+        },
+        {
+          "phase": 7,
+          "days": "7",
+          "focus": "模拟验收 + 薄弱修复",
+          "nodes": [
+            "os.sstf_scheduling",
+            "os.look_scheduling",
+            "os.interrupt_handling"
+          ],
+          "output": "做一套 45 分钟综合小卷，覆盖甘特图、P/V、银行家、页表、页面置换和磁盘调度"
+        }
+      ]
+    },
+    "14d": {
+      "label": "14天冲刺策略",
+      "description": "两轮复习模式：第 1 轮建立知识骨架，第 2 轮以检索、错题和综合题为主",
+      "daily_ratio": {
+        "new_learning": 0.3,
+        "retrieval_practice": 0.3,
+        "spaced_review": 0.25,
+        "targeted_drill": 0.15
+      },
+      "daily_targets": {
+        "max_new_nodes": 4,
+        "retrieval_sessions": 2,
+        "minimum_output": "每天完成至少一次闭卷输出或阶段小测；第 8 天起新知识减半，错题重做加倍"
+      },
+      "phase_plan": [
+        {
+          "phase": 1,
+          "days": "1-2",
+          "focus": "第一轮：进程基础与 CPU 调度",
+          "nodes": [
+            "os.process_concept",
+            "os.process_states",
+            "os.thread_concept",
+            "os.cpu_scheduling_metrics",
+            "os.fcfs_scheduling",
+            "os.sjf_scheduling",
+            "os.rr_scheduling",
+            "os.priority_scheduling"
+          ],
+          "output": "完成调度算法对比表和 3 道甘特图题"
+        },
+        {
+          "phase": 2,
+          "days": "3-4",
+          "focus": "第一轮：同步互斥与经典问题",
+          "nodes": [
+            "os.synchronization_concepts",
+            "os.semaphore_pv",
+            "os.semaphore_initial_value",
+            "os.producer_consumer",
+            "os.reader_writer",
+            "os.dining_philosophers",
+            "os.monitor"
+          ],
+          "output": "闭卷写 2 个 P/V 代码模板，并解释每个信号量初值"
+        },
+        {
+          "phase": 3,
+          "days": "5-6",
+          "focus": "第一轮：死锁与资源分配",
+          "nodes": [
+            "os.deadlock_conditions",
+            "os.resource_allocation_graph",
+            "os.banker_algorithm",
+            "os.deadlock_detection",
+            "os.deadlock_recovery",
+            "os.deadlock_prevention_avoidance"
+          ],
+          "output": "完成 2 道银行家算法题和 1 道死锁检测题"
+        },
+        {
+          "phase": 4,
+          "days": "7-8",
+          "focus": "第一轮：内存管理",
+          "nodes": [
+            "os.memory_address_binding",
+            "os.contiguous_allocation",
+            "os.paging_basics",
+            "os.segmentation_basics",
+            "os.segmented_paging",
+            "os.tlb_effective_access_time",
+            "os.page_fault_process"
+          ],
+          "output": "完成页表地址转换、TLB 有效访问时间和分段越界检查各 1 题"
+        },
+        {
+          "phase": 5,
+          "days": "9-10",
+          "focus": "第一轮收尾：页面置换、文件系统、I/O",
+          "nodes": [
+            "os.fifo_replacement",
+            "os.lru_replacement",
+            "os.clock_replacement",
+            "os.working_set_thrashing",
+            "os.file_system_concepts",
+            "os.directory_structure",
+            "os.inode_structure",
+            "os.free_space_management",
+            "os.disk_structure_seek_time",
+            "os.sstf_scheduling",
+            "os.look_scheduling",
+            "os.io_device_management",
+            "os.interrupt_handling",
+            "os.dma"
+          ],
+          "output": "完成页面置换访问串、inode 容量计算、磁盘调度轨迹和 DMA 流程题各 1 道"
+        },
+        {
+          "phase": 6,
+          "days": "11-13",
+          "focus": "第二轮：错题重做 + 综合输出",
+          "nodes": [
+            "os.process_states",
+            "os.rr_scheduling",
+            "os.semaphore_pv",
+            "os.banker_algorithm",
+            "os.paging_basics",
+            "os.lru_replacement",
+            "os.inode_structure",
+            "os.look_scheduling"
+          ],
+          "output": "每天做 1 套 30 分钟混合题，所有错题必须闭卷重做一次"
+        },
+        {
+          "phase": 7,
+          "days": "14",
+          "focus": "最终模拟 + 考前压缩复盘",
+          "nodes": [],
+          "output": "完成一次完整模拟测验，考后只修复最高频错题，不再扩展新知识"
+        }
+      ]
+    }
+  },
+  "task_card_templates": [
+    {
+      "template_id": "concept_recall_card",
+      "label": "概念闭卷复述卡",
+      "description": "闭卷默写核心概念、对比表和流程图，用输出倒逼记忆",
+      "steps": [
+        "看一眼知识点标题，不展开笔记",
+        "闭卷写出定义、关键字段、流程或对比维度",
+        "对照教材/笔记标记遗漏项",
+        "用红笔补写遗漏，再闭卷复述一次"
+      ],
+      "done_criteria": "闭卷复述覆盖 90% 以上关键点，核心术语无混淆",
+      "duration_minutes": 20
+    },
+    {
+      "template_id": "gantt_chart_drill_card",
+      "label": "调度甘特图训练卡",
+      "description": "针对 FCFS/SJF/RR/优先级调度进行集中计算训练",
+      "steps": [
+        "列出到达时间、服务时间、优先级和时间片",
+        "逐时刻维护就绪队列并画甘特图",
+        "计算完成时间、周转时间、带权周转时间和等待时间",
+        "对照答案检查边界时刻和入队顺序"
+      ],
+      "done_criteria": "至少 2 道调度题甘特图和平均指标全部正确",
+      "duration_minutes": 35
+    },
+    {
+      "template_id": "pv_code_card",
+      "label": "P/V 代码闭卷卡",
+      "description": "用信号量含义和不变量驱动同步互斥代码输出",
+      "steps": [
+        "先写每个信号量的含义和初值",
+        "标出临界区和前置资源条件",
+        "闭卷写 P/V 伪代码",
+        "检查是否死锁、是否遗漏互斥、是否可能饥饿"
+      ],
+      "done_criteria": "代码能解释每个 P/V 的必要性，信号量初值和顺序正确",
+      "duration_minutes": 30
+    },
+    {
+      "template_id": "matrix_algorithm_card",
+      "label": "矩阵算法训练卡",
+      "description": "针对银行家算法和死锁检测矩阵题进行逐步表格训练",
+      "steps": [
+        "检查 Allocation、Max、Need、Available 或 Request 的维度",
+        "逐格计算 Need 或初始化 Work/Finish",
+        "每轮只选择 Need/Request 小于等于 Work 的进程",
+        "写出 Work 更新过程和最终结论"
+      ],
+      "done_criteria": "安全序列或死锁进程集合正确，矩阵维度和 Work 更新无错误",
+      "duration_minutes": 40
+    },
+    {
+      "template_id": "memory_trace_card",
+      "label": "内存访问追踪卡",
+      "description": "训练页表地址转换、缺页中断和页面置换访问串",
+      "steps": [
+        "拆分页号、页内偏移或访问串",
+        "逐步查页表/TLB 或维护页框状态",
+        "记录每次命中、缺页、置换和页表更新",
+        "最后统计物理地址、有效访问时间或缺页次数"
+      ],
+      "done_criteria": "中间表格完整，缺页次数和地址转换结果正确",
+      "duration_minutes": 35
+    }
+  ],
+  "checkpoint_rules": {
+    "pass_threshold": 60,
+    "high_score_threshold": 80,
+    "mastery_minimum": {
+      "minimum_pass_nodes": 65,
+      "score_max_nodes": 75
+    },
+    "checkpoint_intervals": {
+      "7d": [
+        3,
+        5,
+        7
+      ],
+      "14d": [
+        4,
+        7,
+        10,
+        14
+      ]
+    },
+    "upgrade_criteria": {
+      "minimum_pass_to_score_max": {
+        "condition": "所有 minimum_pass 节点掌握度 >= 70%",
+        "action": "unlock score_max drop_candidates 节点"
+      }
+    },
+    "downgrade_criteria": {
+      "score_max_to_minimum_pass": {
+        "condition": "连续2次检查点 minimum_pass 节点掌握度低于 55%",
+        "action": "回退到 minimum_pass 路线，暂停 score_max 专项内容"
+      }
+    }
+  },
+  "last_24h_strategy": {
+    "label": "考前24小时策略",
+    "description": "最后一天不扩展新内容，聚焦最高收益图、表、算法和代码模板",
+    "focus": [
+      {
+        "node_id": "os.process_states",
+        "label": "进程状态转换图",
+        "recommended_action": "闭卷重画五状态模型，口头解释每条转换边的触发事件"
+      },
+      {
+        "node_id": "os.cpu_scheduling_metrics",
+        "label": "调度算法快速对比",
+        "recommended_action": "用一张表对比 FCFS、SJF、RR、优先级的抢占性、优点、缺点和易错边界"
+      },
+      {
+        "node_id": "os.rr_scheduling",
+        "label": "RR 甘特图",
+        "recommended_action": "重做一道时间片轮转题，只检查就绪队列入队顺序和完成时间"
+      },
+      {
+        "node_id": "os.banker_algorithm",
+        "label": "死锁银行家算法",
+        "recommended_action": "手算一题安全序列，逐格检查 Need=Max-Allocation 和 Work 更新"
+      },
+      {
+        "node_id": "os.deadlock_conditions",
+        "label": "死锁四条件",
+        "recommended_action": "闭卷默写四个必要条件，并说出预防时分别破坏哪个条件"
+      },
+      {
+        "node_id": "os.semaphore_pv",
+        "label": "信号量 P/V 写法",
+        "recommended_action": "闭卷写 P/V 语义和生产者-消费者模板，重点检查 P/V 顺序"
+      },
+      {
+        "node_id": "os.semaphore_initial_value",
+        "label": "信号量初值",
+        "recommended_action": "快速复核互斥、资源计数、顺序约束三类信号量初值"
+      },
+      {
+        "node_id": "os.paging_basics",
+        "label": "页表地址转换",
+        "recommended_action": "做 1 道页号/偏移/物理地址转换题，确保页大小单位不出错"
+      },
+      {
+        "node_id": "os.lru_replacement",
+        "label": "LRU 页面置换",
+        "recommended_action": "用栈法追踪一条访问串，命中后也要更新最近使用顺序"
+      },
+      {
+        "node_id": "os.look_scheduling",
+        "label": "磁盘调度 SSTF/LOOK",
+        "recommended_action": "画磁头移动轴线，对比 SSTF 当前最近和 LOOK 到最远请求折返"
+      }
+    ],
+    "mock_exam": {
+      "duration_minutes": 45,
+      "question_count": 8,
+      "coverage_labels": [
+        "进程状态图",
+        "调度甘特图",
+        "信号量 P/V",
+        "银行家算法",
+        "页表与页面置换",
+        "inode 或磁盘调度",
+        "DMA/中断流程"
+      ],
+      "instruction": "做一套 6-8 题短模拟，覆盖进程状态、调度、P/V、银行家、分页/置换、文件系统和 I/O 流程"
+    },
+    "schedule": [
+      {
+        "time_block": "上午",
+        "duration_minutes": 90,
+        "focus": "高频图和算法速览",
+        "activities": [
+          "闭卷画进程状态转换图",
+          "复述 FCFS/SJF/RR/优先级调度差异",
+          "手算一题银行家算法安全序列"
+        ]
+      },
+      {
+        "time_block": "下午",
+        "duration_minutes": 90,
+        "focus": "P/V 与内存题型补强",
+        "activities": [
+          "闭卷写生产者-消费者 P/V 模板",
+          "完成页表地址转换和 LRU 访问串各 1 题",
+          "只订正错题，不学习新算法"
+        ]
+      },
+      {
+        "time_block": "傍晚",
+        "duration_minutes": 45,
+        "focus": "模拟验收",
+        "activities": [
+          "做一套 6-8 题精简模拟",
+          "只检查高频错因：初值、矩阵、页号偏移、甘特图边界"
+        ]
+      },
+      {
+        "time_block": "晚间",
+        "duration_minutes": 30,
+        "focus": "轻量复盘 + 收尾",
+        "activities": [
+          "过一遍死锁四条件、调度公式、P/V 语义",
+          "整理考试用品",
+          "保证睡眠，不熬夜刷新题"
+        ]
+      }
+    ],
+    "forbidden_actions": [
+      "不学习全新的低频知识点",
+      "不做耗时超过15分钟的单题",
+      "不重抄整章笔记",
+      "不熬夜复习"
+    ]
+  },
+  "aurora_rules": {
+    "medium_aurora": {
+      "label": "中等强度自适应介入",
+      "trigger_conditions": [
+        "连续2次检索练习正确率低于 60%",
+        "单个知识节点掌握度连续3天无提升",
+        "用户主动表达'学不进去'或'太抽象'"
+      ],
+      "actions": [
+        "自动降低该节点关联题目的难度",
+        "增加概念对比、流程图和半填空任务卡",
+        "缩短单次学习时长，增加间隔复述"
+      ]
+    },
+    "full_aurora": {
+      "label": "全量自适应介入",
+      "trigger_conditions": [
+        "整体估计分数低于 40%",
+        "连续3次检查点未达到最低通过阈值",
+        "单个核心节点掌握度低于 30%",
+        "用户连续3天未完成任何检索练习"
+      ],
+      "actions": [
+        "回退到 minimum_pass 路线",
+        "每天只安排1个核心计算或代码题型",
+        "增加状态图、甘特图、矩阵表和 P/V 模板的闭卷输出比例",
+        "触发主动鼓励和节奏调整建议",
+        "考虑调整目标模式为'保过'"
+      ]
+    }
+  },
+  "priority_formula": "priority = exam_weight * frequency * (1 - current_mastery) * trainability * (minimum_pass_required ? 1.3 : 1.0) * (days_left <= 7 && !minimum_pass_required ? 0.6 : 1.0)",
+  "priority_matrix": {
+    "formula": "priority = exam_weight * frequency * gap * trainability / (time_cost * difficulty)",
+    "variables": {
+      "gap": "1.0 - current_mastery (defaults to 1.0 if unknown)",
+      "time_pressure_boost": "1.3 if days_left<=3, 1.1 if days_left<=7, else 1.0",
+      "minimum_pass_boost": "1.2 if minimum_pass_required else 1.0"
+    },
+    "note": "Higher score = higher priority. Schedule minimum_pass nodes first."
+  }
+}

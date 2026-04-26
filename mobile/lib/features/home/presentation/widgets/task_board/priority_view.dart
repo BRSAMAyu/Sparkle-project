@@ -125,7 +125,7 @@ class _PrioritySection extends StatelessWidget {
                 '$title (${tasks.length})',
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ],

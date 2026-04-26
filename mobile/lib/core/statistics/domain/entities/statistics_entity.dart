@@ -1,4 +1,5 @@
 import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Statistics type enumeration
 enum StatisticsType {
@@ -78,16 +79,19 @@ abstract class StatisticsEntity {
 /// Extension for StatisticsType to provide display names and icons
 extension StatisticsTypeExt on StatisticsType {
   /// Display name in Chinese
-  String get displayName {
+  String get displayName => localizedDisplayName(null);
+
+  /// Localized display name
+  String localizedDisplayName(AppLocalizations? l10n) {
     switch (this) {
       case StatisticsType.focus:
-        return '专注';
+        return l10n?.statisticsTypeFocus ?? '专注';
       case StatisticsType.agent:
-        return '智能体';
+        return l10n?.statisticsTypeAgent ?? '智能体';
       case StatisticsType.capsule:
-        return '胶囊';
+        return l10n?.statisticsTypeCapsule ?? '胶囊';
       case StatisticsType.learning:
-        return '学习';
+        return l10n?.statisticsTypeLearning ?? '学习';
     }
   }
 

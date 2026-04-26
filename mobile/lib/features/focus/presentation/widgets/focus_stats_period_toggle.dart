@@ -59,7 +59,7 @@ class FocusStatsPeriodToggle extends StatelessWidget {
                       color: isSelected ? DS.textOnPrimary : DS.neutral600,
                       fontSize: 13,
                       fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                          isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
                     ),
                   ),
                 ),

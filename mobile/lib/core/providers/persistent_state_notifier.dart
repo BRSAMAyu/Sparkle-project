@@ -132,7 +132,7 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
         namespace,
         key,
         json,
-        debounce: debounce == Duration.zero ? Duration.zero : const Duration(milliseconds: 300),
+        debounce: Duration.zero,
       );
     } catch (e) {
       debugPrint('PersistentStateNotifier: Failed to save state for $namespace.$key: $e');

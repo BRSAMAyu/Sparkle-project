@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from app.core.agent_profiles import AgentRole, TaskType
+from app.core.i18n import I18n
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.chat_modes import (
     CHAT_MODE_DEEP_ANALYSIS,
@@ -58,11 +59,15 @@ class MultiAgentWorkflowAdapter:
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         result_holder = result_holder if result_holder is not None else {}
         config = get_workflow_config(chat_mode)
+        user_context = context_data.get("user_context") or {}
+        locale = user_context.get("language", "en")
+
         if not config:
             async for chunk in self._fallback_simple_stream(
                 message=message,
                 chat_mode=chat_mode,
                 context_data=context_data,
+                locale=locale,
             ):
                 yield chunk
             return
@@ -70,7 +75,7 @@ class MultiAgentWorkflowAdapter:
         yield agent_service_pb2.ChatResponse(
             status_update=agent_service_pb2.AgentStatus(
                 state=agent_service_pb2.AgentStatus.THINKING,
-                details="正在分析并规划任务...",
+                details=I18n.t("workflow.analyzing", locale=locale),
                 active_agent=agent_service_pb2.ORCHESTRATOR,
             )
         )
@@ -92,6 +97,7 @@ class MultiAgentWorkflowAdapter:
                 "planning_mode": "langgraph",
                 "_planning_mode": True,
             },
+            locale=locale,
         )
 
         plan = self._apply_tool_policy(plan, config, context_data)
@@ -104,7 +110,8 @@ class MultiAgentWorkflowAdapter:
                 message=message,
                 chat_mode=chat_mode,
                 context_data=context_data,
-                extra_notice="本轮未生成可执行工具计划，已回退为模式化回答。",
+                extra_notice=I18n.t("workflow.fallback_notice", locale=locale),
+                locale=locale,
             ):
                 yield chunk
             yield agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP)
@@ -113,7 +120,7 @@ class MultiAgentWorkflowAdapter:
         yield agent_service_pb2.ChatResponse(
             status_update=agent_service_pb2.AgentStatus(
                 state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                details=f"正在执行 {len(plan.tool_calls)} 个任务...",
+                details=I18n.t("workflow.executing", locale=locale, count=len(plan.tool_calls)),
                 active_agent=agent_service_pb2.ORCHESTRATOR,
             )
         )
@@ -131,7 +138,7 @@ class MultiAgentWorkflowAdapter:
             user_id=user_id,
             db_session=db_session,
         )
-        summary_text = self._format_execution_summary(execution_result, validation_result)
+        summary_text = self._format_execution_summary(execution_result, validation_result, locale=locale)
         result_holder["execution_summary"] = summary_text
         await self._publish_feedback(
             plan=plan,
@@ -150,6 +157,7 @@ class MultiAgentWorkflowAdapter:
             execution_summary=summary_text,
             synthesis_template=config.synthesis_template,
             context_data=context_data,
+            locale=locale,
         ):
             yield chunk
 
@@ -230,6 +238,7 @@ class MultiAgentWorkflowAdapter:
         execution_summary: str,
         synthesis_template: str,
         context_data: dict[str, Any],
+        locale: str = "en",
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         summary = execution_summary
         synthesis_role = self._resolve_synthesis_agent_role(chat_mode)
@@ -260,7 +269,12 @@ class MultiAgentWorkflowAdapter:
             ),
             chat_mode=chat_mode,
         )
-        synthesis_guidance = synthesis_template or self._default_synthesis_prompt(chat_mode)
+        document_context = str(
+            context_data.get("document_context") or user_context.get("document_context") or ""
+        ).strip()
+        if document_context:
+            base_system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
+        synthesis_guidance = synthesis_template or self._default_synthesis_prompt(chat_mode, locale=locale)
         validation_issues = getattr(validation_result, "issues", None) or []
         validation_summary = (
             f"validation_status={validation_result.validation_status}, "
@@ -270,25 +284,24 @@ class MultiAgentWorkflowAdapter:
         answer_experts = context_data.get("answer_experts")
         answer_expert_instruction = ""
         if isinstance(answer_experts, list) and answer_experts:
-            answer_expert_instruction = (
-                "\n4. 最终综合时优先吸收以下专家视角并明确其贡献："
-                + "、".join(str(item) for item in answer_experts if str(item).strip())
-            )
+            experts_text = "、".join(str(item) for item in answer_experts if str(item).strip())
+            answer_expert_instruction = "\n" + I18n.t("synthesis.expert_contribution", locale=locale, experts=experts_text)
+
         if validation_issues:
             validation_summary += "\nissues=" + " | ".join(str(issue) for issue in validation_issues[:5])
 
         system_prompt = (
             f"{base_system_prompt}\n\n"
-            "## 多Agent综合约束\n"
+            f"{I18n.t('synthesis.multi_agent_constraints', locale=locale)}\n"
             f"{synthesis_guidance}\n\n"
-            "请同时参考以下要点：\n"
-            "1. 最终回答必须以已执行完成的工具结果为事实基础。\n"
-            "2. 保留用户画像、历史上下文、当前计划上下文的一致性。\n"
-            "3. 如果执行结果与用户期待有偏差，要明确指出边界与下一步。"
+            f"{I18n.t('synthesis.refer_to_points', locale=locale)}\n"
+            f"{I18n.t('synthesis.fact_based', locale=locale)}\n"
+            f"{I18n.t('synthesis.consistency', locale=locale)}\n"
+            f"{I18n.t('synthesis.deviation', locale=locale)}"
             f"{answer_expert_instruction}\n\n"
-            "## 已验证的执行结果摘要\n"
+            f"{I18n.t('synthesis.executed_results', locale=locale)}\n"
             f"{summary}\n\n"
-            "## 执行质量验证\n"
+            f"{I18n.t('synthesis.execution_quality', locale=locale)}\n"
             f"{validation_summary}"
         )
 
@@ -313,9 +326,9 @@ class MultiAgentWorkflowAdapter:
                     },
                     status_update=agent_service_pb2.AgentStatus(
                         state=agent_service_pb2.AgentStatus.GENERATING,
-                        details="正在合成最终结果...",
+                        details=I18n.t("workflow.synthesizing", locale=locale),
                         active_agent=agent_service_pb2.ORCHESTRATOR,
-                    )
+                    ),
                 )
                 first_chunk = False
             emitted_content = True
@@ -329,15 +342,11 @@ class MultiAgentWorkflowAdapter:
                     },
                     status_update=agent_service_pb2.AgentStatus(
                         state=agent_service_pb2.AgentStatus.GENERATING,
-                        details="正在合成最终结果...",
+                        details=I18n.t("workflow.synthesizing", locale=locale),
                         active_agent=agent_service_pb2.ORCHESTRATOR,
-                    )
+                    ),
                 )
-            fallback_text = (
-                "已完成多Agent执行，以下是结构化摘要：\n"
-                f"{summary}\n\n"
-                "如需我继续输出完整报告，请告诉我你关注的重点。"
-            )
+            fallback_text = I18n.t("workflow.fallback_summary", locale=locale, summary=summary)
             yield agent_service_pb2.ChatResponse(delta=fallback_text)
 
     @staticmethod
@@ -382,10 +391,12 @@ class MultiAgentWorkflowAdapter:
             return self.llm_service
         return await get_configured_llm_service(agent_role, task_type)
 
-    def _format_execution_summary(self, execution_result, validation_result) -> str:
+    def _format_execution_summary(self, execution_result, validation_result, locale: str = "en") -> str:
         lines = []
         for sr in execution_result.step_results:
-            status = "成功" if sr.tool_result.success else "失败"
+            success_text = "Success" if locale == "en" else "成功"
+            fail_text = "Failure" if locale == "en" else "失败"
+            status = success_text if sr.tool_result.success else fail_text
             data_text = ""
             if sr.output_data:
                 data_text = str(sr.output_data)
@@ -396,26 +407,26 @@ class MultiAgentWorkflowAdapter:
             lines.append(f"- [{status}] {sr.tool_name}: {data_text}")
 
         lines.append(
-            f"验证结果: status={validation_result.validation_status}, score={validation_result.quality_score:.2f}, "
-            f"aborted={validation_result.aborted}"
+            I18n.t(
+                "workflow.validation_status",
+                locale=locale,
+                status=validation_result.validation_status,
+                score=f"{validation_result.quality_score:.2f}",
+                aborted=validation_result.aborted,
+            )
         )
         if validation_result.issues:
-            lines.append("主要问题: " + " | ".join(validation_result.issues[:5]))
+            issues_text = " | ".join(validation_result.issues[:5])
+            lines.append(I18n.t("workflow.main_issues", locale=locale, issues=issues_text))
         return "\n".join(lines)
 
-    def _default_synthesis_prompt(self, chat_mode: str) -> str:
+    def _default_synthesis_prompt(self, chat_mode: str, locale: str = "en") -> str:
         prompts = {
-            CHAT_MODE_DEEP_ANALYSIS: (
-                "你是深度分析综合器。请输出：关键结论、证据链、反方与边界、应用建议。"
-            ),
-            CHAT_MODE_STUDY_PLAN: (
-                "你是学习计划综合器。请输出：目标、里程碑、每周计划、每日执行模板、复盘机制。"
-            ),
-            CHAT_MODE_ERROR_DIAGNOSIS: (
-                "你是错题诊断综合器。请输出：错误类型、根因分析、正确路径、针对性练习、复发预防。"
-            ),
+            CHAT_MODE_DEEP_ANALYSIS: I18n.t("synthesis.deep_analysis", locale=locale),
+            CHAT_MODE_STUDY_PLAN: I18n.t("synthesis.study_plan", locale=locale),
+            CHAT_MODE_ERROR_DIAGNOSIS: I18n.t("synthesis.error_diagnosis", locale=locale),
         }
-        return prompts.get(chat_mode, "你是任务结果综合器。请基于执行结果输出清晰结论。")
+        return prompts.get(chat_mode, I18n.t("synthesis.default", locale=locale))
 
     async def _fallback_simple_stream(
         self,
@@ -424,6 +435,7 @@ class MultiAgentWorkflowAdapter:
         chat_mode: str,
         context_data: dict[str, Any],
         extra_notice: str | None = None,
+        locale: str = "en",
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         preamble = extra_notice or ""
         synthesis_role = self._resolve_synthesis_agent_role(chat_mode)
@@ -453,10 +465,20 @@ class MultiAgentWorkflowAdapter:
             ),
             chat_mode=chat_mode,
         )
-        system = (
-            f"{base_prompt}\n\n"
-            f"## 模式回退说明\n你当前处于 {chat_mode} 模式，但本轮未形成可执行计划。"
+        document_context = str(
+            context_data.get("document_context") or user_context.get("document_context") or ""
+        ).strip()
+        if document_context:
+            base_prompt += f"\n\n## Retrieved Documents\n{document_context}"
+        
+        mode_fallback_header = "## Mode Fallback Explanation" if locale == "en" else "## 模式回退说明"
+        mode_fallback_text = (
+            f"You are currently in {chat_mode} mode, but no executable plan was formed this round."
+            if locale == "en"
+            else f"你当前处于 {chat_mode} 模式，但本轮未形成可执行计划。"
         )
+        
+        system = f"{base_prompt}\n\n{mode_fallback_header}\n{mode_fallback_text}"
         if preamble:
             system += f"\n{preamble}"
 

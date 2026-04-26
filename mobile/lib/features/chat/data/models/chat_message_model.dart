@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:uuid/uuid.dart';
 
@@ -40,6 +41,7 @@ class ChatMessageModel {
     this.promptVersion,
     this.agentCollaboration,
     this.uxEnvelope,
+    this.rawMetadata,
     this.orchestrationTrace,
     this.modeSuggestion,
     this.collaborationNarrative,
@@ -54,7 +56,15 @@ class ChatMessageModel {
     normalized['role'] = _normalizeRoleJsonValue(json['role']);
     normalized['conversation_id'] =
         json['conversation_id'] ?? json['session_id'];
-    return _$ChatMessageModelFromJson(normalized);
+    final rawMeta = json['meta'];
+    final message = _$ChatMessageModelFromJson(normalized);
+    if (rawMeta is Map<String, dynamic>) {
+      return message.copyWith(rawMetadata: Map<String, dynamic>.from(rawMeta));
+    }
+    if (rawMeta is Map) {
+      return message.copyWith(rawMetadata: Map<String, dynamic>.from(rawMeta));
+    }
+    return message;
   }
   final String id;
   @JsonKey(name: 'user_id')
@@ -117,6 +127,9 @@ class ChatMessageModel {
   final Map<String, dynamic>? uxEnvelope;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
+  final Map<String, dynamic>? rawMetadata;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
   final Map<String, dynamic>? orchestrationTrace;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -161,6 +174,7 @@ class ChatMessageModel {
     String? promptVersion,
     Map<String, dynamic>? agentCollaboration,
     Map<String, dynamic>? uxEnvelope,
+    Map<String, dynamic>? rawMetadata,
     Map<String, dynamic>? orchestrationTrace,
     Map<String, dynamic>? modeSuggestion,
     String? collaborationNarrative,
@@ -193,6 +207,7 @@ class ChatMessageModel {
         promptVersion: promptVersion ?? this.promptVersion,
         agentCollaboration: agentCollaboration ?? this.agentCollaboration,
         uxEnvelope: uxEnvelope ?? this.uxEnvelope,
+        rawMetadata: rawMetadata ?? this.rawMetadata,
         orchestrationTrace: orchestrationTrace ?? this.orchestrationTrace,
         modeSuggestion: modeSuggestion ?? this.modeSuggestion,
         collaborationNarrative:
@@ -201,6 +216,8 @@ class ChatMessageModel {
         agentsInvolved: agentsInvolved ?? this.agentsInvolved,
         agentActivities: agentActivities ?? this.agentActivities,
       );
+
+  List<ChatCitation> get citations => ChatCitation.listFromMessage(this);
 }
 
 String _normalizeRoleJsonValue(Object? rawRole) {
@@ -229,6 +246,237 @@ String _normalizeRoleJsonValue(Object? rawRole) {
         'ChatMessageModel: unsupported role "$role", defaulting to assistant',
       );
       return MessageRole.assistant.name;
+  }
+}
+
+class ChatCitation {
+  const ChatCitation({
+    required this.raw,
+    this.id,
+    this.fileId,
+    this.title,
+    this.excerpt,
+    this.sectionTitle,
+    this.chapterLabel,
+    this.pageNumber,
+    this.chunkIndex,
+    this.score,
+    this.deepLink,
+    this.url,
+  });
+
+  factory ChatCitation.fromMap(Map<String, dynamic> json) {
+    String? stringFor(List<String> keys) {
+      for (final key in keys) {
+        final value = json[key]?.toString().trim();
+        if (value != null && value.isNotEmpty) {
+          return value;
+        }
+      }
+      return null;
+    }
+
+    int? intFor(List<String> keys) {
+      for (final key in keys) {
+        final value = json[key];
+        if (value is int) {
+          return value;
+        }
+        if (value is num) {
+          return value.toInt();
+        }
+        if (value is String) {
+          final parsed = int.tryParse(value.trim());
+          if (parsed != null) {
+            return parsed;
+          }
+        }
+      }
+      return null;
+    }
+
+    double? doubleFor(List<String> keys) {
+      for (final key in keys) {
+        final value = json[key];
+        if (value is double) {
+          return value;
+        }
+        if (value is num) {
+          return value.toDouble();
+        }
+        if (value is String) {
+          final parsed = double.tryParse(value.trim());
+          if (parsed != null) {
+            return parsed;
+          }
+        }
+      }
+      return null;
+    }
+
+    final title = stringFor([
+      'title',
+      'file_name',
+      'filename',
+      'document_name',
+      'document_title',
+      'source_name',
+    ]);
+    final sectionTitle = stringFor([
+      'section_title',
+      'section',
+      'heading',
+      'subheading',
+      'locator',
+    ]);
+    final chapterLabel = stringFor([
+      'chapter',
+      'chapter_label',
+      'chapter_title',
+    ]);
+    final excerpt = stringFor([
+      'excerpt',
+      'content',
+      'quoted_text',
+      'quote',
+      'text',
+      'chunk_text',
+    ]);
+    final deepLink = stringFor([
+      'document_deep_link',
+      'deep_link',
+      'document_route',
+    ]);
+    final url = stringFor(['url']);
+
+    return ChatCitation(
+      raw: Map<String, dynamic>.from(json),
+      id: stringFor(['id', 'citation_id']),
+      fileId: stringFor(['file_id', 'document_id', 'source_id']),
+      title: title,
+      excerpt: excerpt,
+      sectionTitle: sectionTitle,
+      chapterLabel: chapterLabel,
+      pageNumber: intFor(['page_number', 'page', 'page_index']),
+      chunkIndex: intFor(['chunk_index', 'chunk', 'chunk_id']),
+      score: doubleFor(['score']),
+      deepLink: deepLink,
+      url: url,
+    );
+  }
+
+  final String? id;
+  final String? fileId;
+  final String? title;
+  final String? excerpt;
+  final String? sectionTitle;
+  final String? chapterLabel;
+  final int? pageNumber;
+  final int? chunkIndex;
+  final double? score;
+  final String? deepLink;
+  final String? url;
+  final Map<String, dynamic> raw;
+
+  static List<ChatCitation> listFromMessage(ChatMessageModel message) {
+    final citations = <ChatCitation>[];
+    final seenKeys = <String>{};
+
+    void appendFromList(dynamic rawList) {
+      if (rawList is! List) {
+        return;
+      }
+      for (final item in rawList) {
+        Map<String, dynamic>? map;
+        if (item is Map<String, dynamic>) {
+          map = Map<String, dynamic>.from(item);
+        } else if (item is Map) {
+          map = Map<String, dynamic>.from(item);
+        }
+        if (map == null || map.isEmpty) {
+          continue;
+        }
+        final citation = ChatCitation.fromMap(map);
+        final key = citation.feedbackKey;
+        if (seenKeys.add(key)) {
+          citations.add(citation);
+        }
+      }
+    }
+
+    appendFromList(message.rawMetadata?['citations']);
+
+    for (final widget in message.widgets ?? const <WidgetPayload>[]) {
+      if (widget.type == 'source_summary') {
+        appendFromList(widget.data['citations']);
+      }
+    }
+
+    return List<ChatCitation>.unmodifiable(citations);
+  }
+
+  String get feedbackKey => [
+        id,
+        fileId,
+        title,
+        sectionTitle,
+        pageNumber?.toString(),
+        chunkIndex?.toString(),
+      ].whereType<String>().where((value) => value.isNotEmpty).join('::');
+
+  String get chipTitle {
+    final resolved = title?.trim();
+    if (resolved != null && resolved.isNotEmpty) {
+      return resolved;
+    }
+    if (fileId?.isNotEmpty ?? false) {
+      return fileId!;
+    }
+    return 'Source';
+  }
+
+  String get locatorLabel {
+    final parts = <String>[];
+    final chapter = chapterLabel?.trim();
+    final section = sectionTitle?.trim();
+    if (chapter != null && chapter.isNotEmpty) {
+      parts.add(chapter);
+    }
+    if (section != null && section.isNotEmpty && section != chapter) {
+      parts.add(section);
+    }
+    if (pageNumber != null && pageNumber! > 0) {
+      parts.add('p.$pageNumber');
+    }
+    if (parts.isEmpty && chunkIndex != null) {
+      parts.add('Chunk ${chunkIndex! + 1}');
+    }
+    return parts.join(' · ');
+  }
+
+  String get chipLabel {
+    final locator = locatorLabel;
+    if (locator.isEmpty) {
+      return chipTitle;
+    }
+    return '$chipTitle · $locator';
+  }
+
+  String get excerptText {
+    final value = excerpt?.trim();
+    return value ?? '';
+  }
+
+  String? get navigationTarget {
+    final direct = deepLink?.trim();
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+    final sourceUrl = url?.trim();
+    if (sourceUrl != null && sourceUrl.isNotEmpty) {
+      return sourceUrl;
+    }
+    return null;
   }
 }
 
@@ -335,8 +583,20 @@ List<Map<String, dynamic>>? _reasoningStepsToJson(List<ReasoningStep>? steps) {
 class WidgetPayload {
   WidgetPayload({required this.type, required this.data});
 
-  factory WidgetPayload.fromJson(Map<String, dynamic> json) =>
-      _$WidgetPayloadFromJson(json);
+  factory WidgetPayload.fromJson(Map<String, dynamic> json) => WidgetPayload(
+        type: sanitizeNullableDisplayText(json['type']) ?? 'unknown',
+        data: json['data'] is Map<String, dynamic>
+            ? sanitizeTextMap(
+                Map<String, dynamic>.from(json['data'] as Map<String, dynamic>),
+              )
+            : json['data'] is Map
+                ? sanitizeTextMap(
+                    Map<String, dynamic>.from(
+                      json['data'] as Map<Object?, Object?>,
+                    ),
+                  )
+                : const <String, dynamic>{},
+      );
   final String
       type; // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'
   final Map<String, dynamic> data;

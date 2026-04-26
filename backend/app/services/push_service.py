@@ -1,5 +1,6 @@
 from datetime import timezone, datetime, timedelta
 from typing import Any
+from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from loguru import logger
@@ -20,6 +21,25 @@ from app.services.push_strategies import (
     MemoryStrategy,
     SprintStrategy,
 )
+
+PUSH_TRIGGER_TYPES = {
+    "MEMORY": "memory",
+    "SPRINT": "sprint",
+    "INACTIVITY": "inactivity",
+    "CURIOSITY": "curiosity",
+    "EMPTY_CAPSULE": "empty_capsule",
+    "STRUGGLE_DETECTED": "struggle_detected",
+}
+STRUGGLE_DETECTED = PUSH_TRIGGER_TYPES["STRUGGLE_DETECTED"]
+NON_JUDGMENTAL_BLOCKLIST = ("失败", "没做到", "你又")
+
+
+def _coerce_uuid(value: str | UUID) -> UUID:
+    return value if isinstance(value, UUID) else UUID(str(value))
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class PushService:
@@ -85,6 +105,10 @@ class PushService:
             logger.debug(f"User {user.id} reached frequency cap.")
             return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
+        if await self._check_schedule_and_quiet_hours(user.id):
+            logger.info(f"User {user.id} is in schedule DND or quiet hours, skipping push")
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
+
         strategies = [
             SprintStrategy(self.db),
             MemoryStrategy(self.db),
@@ -94,17 +118,22 @@ class PushService:
         ]
 
         trigger_strategy = None
+        trigger_type = ""
         for strategy in strategies:
             if await strategy.should_trigger(user, policy):
                 trigger_strategy = strategy
+                trigger_type = strategy.trigger_type
                 break
 
         if not trigger_strategy:
             return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
+        if await self._check_notification_type_disabled(user.id, trigger_type):
+            logger.info(f"User {user.id} disabled notification type {trigger_type}, skipping push")
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": trigger_type}
+
         # 4. Generate Content
         # For curiosity, we might generate capsule inside get_context_data or separate
-        trigger_type = trigger_strategy.trigger_type
 
         if trigger_type == "curiosity":
             # Generate capsule first
@@ -134,6 +163,131 @@ class PushService:
 
         return {"triggered": True, "sent": True, "shadowed": False, "trigger_type": trigger_type}
 
+    async def send_struggle_nudge(
+        self,
+        *,
+        user_id: str,
+        message_hint: str,
+        struggle_context: dict,
+    ) -> bool:
+        """
+        发送挣扎关怀推送。
+
+        关键约束：
+        1. 检查 DND 时间段（从 ControlSurface 读取）
+        2. 最大推送频率：每8小时1次
+        3. 语言必须非审判性
+        """
+        if any(token in str(message_hint or "") for token in NON_JUDGMENTAL_BLOCKLIST):
+            logger.warning("Blocked judgmental struggle nudge for user {}", user_id)
+            return False
+
+        user_uuid = _coerce_uuid(user_id)
+        result = await self.db.execute(select(User).where(User.id == user_uuid, User.is_active.is_(True)))
+        user = result.scalar_one_or_none()
+        if user is None:
+            return False
+
+        if await self._is_in_control_surface_dnd(user_uuid):
+            logger.info("User {} is in Aurora DND window, skipping struggle nudge", user_uuid)
+            return False
+
+        if await self._recent_struggle_nudge_sent(user_uuid):
+            logger.debug("User {} reached struggle nudge 8h cooldown", user_uuid)
+            return False
+
+        engine = get_personalization_engine(self.db, self.redis)
+        policy = await engine.get_push_policy_profile(user_uuid)
+        if policy.silent_during_focus:
+            logger.info("User {} is in focus mode, skipping struggle nudge", user_uuid)
+            return False
+
+        if user.push_preference is None:
+            user.push_preference = PushPreference(user_id=user_uuid)
+            self.db.add(user.push_preference)
+            await self.db.flush()
+
+        data = {
+            "trigger_type": STRUGGLE_DETECTED,
+            "struggle_score": struggle_context.get("struggle_score"),
+            "primary_signal": struggle_context.get("primary_signal"),
+            "struggle_context": struggle_context,
+        }
+        content = {
+            "title": "Aurora 想和你一起看一下节奏",
+            "body": str(message_hint or "").strip() or "你最近的学习节奏可能有些阻力，我们一起看一下怎么调轻一点。",
+        }
+        await self._send_push(user, STRUGGLE_DETECTED, content, data, policy)
+        return True
+
+    async def _is_in_control_surface_dnd(self, user_id: UUID) -> bool:
+        try:
+            from app.aurora.runtime_v1.control_surface import ControlSurfaceService
+
+            reading = await ControlSurfaceService(self.db, self.redis).read_control_surface(user_id)
+            hard_bounds = reading.hard_bounds
+            return hard_bounds.is_action_disabled("proactive_follow_up") or hard_bounds.is_within_dnd(
+                datetime.now(timezone.utc)
+            )
+        except Exception as exc:
+            logger.warning("Failed to read Aurora control surface for struggle nudge: {}", exc)
+            return False
+
+    async def _check_schedule_and_quiet_hours(self, user_id: UUID) -> bool:
+        """Check if push should be suppressed due to schedule or quiet hours.
+        Returns True if push should be BLOCKED."""
+        try:
+            from app.services.preference_consumption_service import PreferenceConsumptionService
+
+            consumption = PreferenceConsumptionService(self.db, self.redis)
+            return await consumption.should_suppress_push(user_id)
+        except Exception as exc:
+            logger.warning(f"Failed to check schedule/quiet hours for {user_id}: {exc}")
+            return False
+
+    async def _check_notification_type_disabled(self, user_id: UUID, trigger_type: str) -> bool:
+        """Check if the specific notification type is disabled by user preference.
+        Returns True if BLOCKED."""
+        try:
+            from app.services.preference_consumption_service import PreferenceConsumptionService
+
+            consumption = PreferenceConsumptionService(self.db, self.redis)
+            notif_config = await consumption.get_notification_config(user_id)
+            disabled_types = set(notif_config.get("disabled_types", []))
+            notification_level = notif_config.get("notification_level", "standard")
+
+            if notification_level == "minimal":
+                return True
+
+            if trigger_type in disabled_types:
+                return True
+
+            if not notif_config.get("enable_system", True) and trigger_type in (
+                "memory", "sprint", "inactivity"
+            ):
+                return True
+
+            if not notif_config.get("enable_interventions", True) and trigger_type in (
+                "curiosity", "empty_capsule", "struggle_detected"
+            ):
+                return True
+
+            return False
+        except Exception as exc:
+            logger.warning(f"Failed to check notification type disabled for {user_id}: {exc}")
+            return False
+
+    async def _recent_struggle_nudge_sent(self, user_id: UUID) -> bool:
+        since = _utcnow() - timedelta(hours=8)
+        result = await self.db.execute(
+            select(func.count(PushHistory.id)).where(
+                PushHistory.user_id == user_id,
+                PushHistory.trigger_type == STRUGGLE_DETECTED,
+                PushHistory.created_at >= since,
+            )
+        )
+        return int(result.scalar() or 0) > 0
+
     async def _check_frequency_cap(self, user: User, policy: PushPolicyProfile) -> bool:
         """
         Check if user reached daily cap or is in cooldown.
@@ -149,7 +303,7 @@ class PushService:
         if prefs and prefs.last_push_time:
             last_time = prefs.last_push_time
             if last_time.tzinfo is None:
-                last_time = last_time.replace(tzinfo=UTC)
+                last_time = last_time.replace(tzinfo=timezone.utc)
 
             min_interval = timedelta(minutes=policy.min_interval_minutes)
             if (now - last_time) < min_interval:
@@ -181,6 +335,7 @@ class PushService:
     def _is_active_time(self, policy: PushPolicyProfile) -> bool:
         """
         Check if current time is within user's active slots.
+        Respects weekly schedule preferences for busy/relax/fragmented slots.
         """
         try:
             tz = ZoneInfo(policy.timezone or "Asia/Shanghai")

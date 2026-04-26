@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 
 enum ResultContentType {
   plainText,
@@ -28,22 +30,17 @@ class ExecutionResultRenderer extends StatelessWidget {
   static ResultContentType detectContentType(Map<String, dynamic> output) {
     final text =
         output['text'] as String? ?? output['content'] as String? ?? '';
-    final hasLinks =
-        output.containsKey('urls') ||
+    final hasLinks = output.containsKey('urls') ||
         output.containsKey('links') ||
         output.containsKey('sources');
-    final hasNonLinkContent =
-        text.trim().isNotEmpty ||
+    final hasNonLinkContent = text.trim().isNotEmpty ||
         output.keys.any(
           (key) => key != 'urls' && key != 'links' && key != 'sources',
         );
-    final indentedLines = text
-        .split('\n')
-        .where((line) => line.startsWith('    '))
-        .length;
+    final indentedLines =
+        text.split('\n').where((line) => line.startsWith('    ')).length;
     final hasCode = text.contains('```') || indentedLines > 3;
-    final hasMarkdown =
-        text.contains('# ') ||
+    final hasMarkdown = text.contains('# ') ||
         text.contains('**') ||
         text.contains('- ') ||
         text.contains('| ');
@@ -65,12 +62,12 @@ class ExecutionResultRenderer extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildContent(context, contentType),
-        if ((artifacts ?? const []).isNotEmpty) ...[
+        if ((artifacts ?? []).isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Divider(color: DS.borderSubtle, height: 1),
           const SizedBox(height: DS.spacing12),
           Text(
-            '附件产物',
+            context.l10n.executionResultArtifacts,
             style: DS.bodySmall.copyWith(
               fontWeight: DS.fontWeightBold,
               color: DS.textSecondary,
@@ -116,8 +113,7 @@ class ExecutionResultRenderer extends StatelessWidget {
   }
 
   static String _extractPrimaryText(Map<String, dynamic> output) {
-    final text =
-        output['text'] as String? ??
+    final text = output['text'] as String? ??
         output['content'] as String? ??
         output['summary'] as String? ??
         '';
@@ -136,12 +132,12 @@ class _PlainTextBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SelectableText(
-      text.isEmpty ? '暂无文本结果。' : text,
-      style: DS.bodySmall.copyWith(
-        color: DS.textPrimary,
-        height: 1.5,
-      ),
-    );
+        text.isEmpty ? context.l10n.executionResultNoText : text,
+        style: DS.bodySmall.copyWith(
+          color: DS.textPrimary,
+          height: 1.5,
+        ),
+      );
 }
 
 class _StructuredBlock extends StatelessWidget {
@@ -158,7 +154,9 @@ class _StructuredBlock extends StatelessWidget {
       return value.map((item) => '$item').join(', ');
     }
     if (value is Map) {
-      return value.entries.map((entry) => '${entry.key}: ${entry.value}').join(', ');
+      return value.entries
+          .map((entry) => '${entry.key}: ${entry.value}')
+          .join(', ');
     }
     return '$value';
   }
@@ -169,7 +167,7 @@ class _StructuredBlock extends StatelessWidget {
     final visibleEntries = expanded ? entries : entries.take(5).toList();
     if (entries.isEmpty) {
       return Text(
-        '暂无结构化结果字段。',
+        context.l10n.executionResultNoStructured,
         style: DS.bodySmall.copyWith(color: DS.textSecondary),
       );
     }
@@ -204,7 +202,8 @@ class _StructuredBlock extends StatelessWidget {
         ),
         if (!expanded && entries.length > visibleEntries.length)
           Text(
-            '还有 ${entries.length - visibleEntries.length} 个字段',
+            context.l10n.executionResultMoreFields(
+                entries.length - visibleEntries.length),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
       ],
@@ -292,11 +291,12 @@ class _CodeBlock extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: SelectableText(
-        text.isEmpty ? '暂无代码结果。' : text,
+        text.isEmpty ? context.l10n.executionResultNoCode : text,
         style: DS.bodySmall.copyWith(
           color: DS.textPrimary,
           height: 1.5,
           fontFamily: 'monospace',
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
     );
@@ -309,26 +309,30 @@ class _LinkListBlock extends StatelessWidget {
   final Map<String, dynamic> parsedOutput;
 
   List<Map<String, String>> _extractLinks() {
-    final rawLinks =
-        parsedOutput['urls'] ?? parsedOutput['links'] ?? parsedOutput['sources'];
+    final rawLinks = parsedOutput['urls'] ??
+        parsedOutput['links'] ??
+        parsedOutput['sources'];
     if (rawLinks is! List) return const [];
-    return rawLinks.map((item) {
-      if (item is Map) {
-        final map = Map<String, dynamic>.from(item);
-        return {
-          'url':
-              map['url']?.toString() ??
-              map['href']?.toString() ??
-              map['link']?.toString() ??
-              '',
-          'title': map['title']?.toString() ?? map['name']?.toString() ?? '',
-        };
-      }
-      return {
-        'url': item.toString(),
-        'title': '',
-      };
-    }).where((item) => (item['url'] ?? '').isNotEmpty).toList();
+    return rawLinks
+        .map((item) {
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(item);
+            return {
+              'url': map['url']?.toString() ??
+                  map['href']?.toString() ??
+                  map['link']?.toString() ??
+                  '',
+              'title':
+                  map['title']?.toString() ?? map['name']?.toString() ?? '',
+            };
+          }
+          return {
+            'url': item.toString(),
+            'title': '',
+          };
+        })
+        .where((item) => (item['url'] ?? '').isNotEmpty)
+        .toList();
   }
 
   String _domainOf(String url) {
@@ -341,7 +345,7 @@ class _LinkListBlock extends StatelessWidget {
     final links = _extractLinks();
     if (links.isEmpty) {
       return Text(
-        '暂无链接结果。',
+        context.l10n.executionResultNoLinks,
         style: DS.bodySmall.copyWith(color: DS.textSecondary),
       );
     }
@@ -411,7 +415,8 @@ class _MixedBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final contentOnly = ExecutionResultRenderer._withoutLinkFields(parsedOutput);
+    final contentOnly =
+        ExecutionResultRenderer._withoutLinkFields(parsedOutput);
     final contentType = ExecutionResultRenderer.detectContentType(contentOnly);
 
     Widget primaryContent;
@@ -464,21 +469,20 @@ class _ArtifactTile extends StatelessWidget {
     return Icons.insert_drive_file_outlined;
   }
 
-  bool _isImage(String type) => type.contains('image') || type.contains('screenshot');
+  bool _isImage(String type) =>
+      type.contains('image') || type.contains('screenshot');
 
   @override
   Widget build(BuildContext context) {
     final type = artifact['type']?.toString().toLowerCase() ?? '';
-    final url =
-        artifact['url']?.toString() ??
+    final url = artifact['url']?.toString() ??
         artifact['uri']?.toString() ??
         artifact['path']?.toString() ??
         '';
-    final name =
-        artifact['name']?.toString() ??
+    final name = artifact['name']?.toString() ??
         artifact['filename']?.toString() ??
         artifact['path']?.toString() ??
-        '附件';
+        context.l10n.executionResultArtifactFallback;
     final size = artifact['size']?.toString();
 
     return Padding(
@@ -633,16 +637,16 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
-              onPressed: () {
-                unawaited(Clipboard.setData(ClipboardData(text: imageUrl)));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('附件链接已复制')),
+                onPressed: () {
+                  unawaited(Clipboard.setData(ClipboardData(text: imageUrl)));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('附件链接已复制')),
                     );
                   }
                 },
                 icon: const Icon(Icons.copy_rounded),
-                label: const Text('复制链接'),
+                label: Text(context.l10n.executionResultCopyLink),
               ),
             ),
           ),
@@ -665,7 +669,7 @@ class _ArtifactPreviewSheet extends StatelessWidget {
   final String url;
   final String type;
 
-  String _previewText() {
+  String _previewText(BuildContext context) {
     final preview = artifact['preview']?.toString();
     if ((preview ?? '').trim().isNotEmpty) return preview!.trim();
     final content = artifact['content']?.toString();
@@ -674,12 +678,13 @@ class _ArtifactPreviewSheet extends StatelessWidget {
     if (pages is List && pages.isNotEmpty) {
       return pages.take(3).map((item) => '$item').join('\n');
     }
-    return '当前附件类型为 ${type.isEmpty ? 'unknown' : type}，还没有更详细的预览内容。';
+    return context.l10n.executionResultNoPreview(
+        type.isEmpty ? context.l10n.commonUnknown : type);
   }
 
   @override
   Widget build(BuildContext context) {
-    final preview = _previewText();
+    final preview = _previewText(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing16),
@@ -695,7 +700,8 @@ class _ArtifactPreviewSheet extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '类型：${type.isEmpty ? '未知附件' : type}',
+              context.l10n.executionResultArtifactType(
+                  type.isEmpty ? context.l10n.commonUnknown : type),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             if (url.isNotEmpty) ...[
@@ -738,12 +744,12 @@ class _ArtifactPreviewSheet extends StatelessWidget {
                       }
                     },
                     icon: const Icon(Icons.copy_rounded),
-                    label: const Text('复制链接'),
+                    label: Text(context.l10n.executionResultCopyLink),
                   ),
                 const Spacer(),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('完成'),
+                  child: Text(context.l10n.commonDone),
                 ),
               ],
             ),

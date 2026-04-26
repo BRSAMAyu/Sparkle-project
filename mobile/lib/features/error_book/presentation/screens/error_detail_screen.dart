@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -269,7 +270,7 @@ class ErrorDetailScreen extends ConsumerWidget {
             ),
             style: theme.textTheme.labelMedium?.copyWith(
               color: color,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
         ],
@@ -378,7 +379,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     return Text(
       title,
       style: theme.textTheme.bodyMedium?.copyWith(
-        fontWeight: FontWeight.w600,
+        fontWeight: DS.fontWeightSemibold,
         color: theme.colorScheme.onSurface,
       ),
     );
@@ -396,7 +397,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         Text(
           '$label：',
           style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
             color: theme.colorScheme.onSurface,
           ),
         ),
@@ -469,7 +470,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Text(
             context.l10n.errorBookQuestionContent,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -512,7 +513,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Text(
             context.l10n.errorBookAnswerComparison,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing16),
@@ -573,7 +574,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ],
@@ -607,7 +608,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 Text(
                   context.l10n.errorBookAiAnalysis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                 ),
                 const Spacer(),
@@ -645,7 +646,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               Text(
                 context.l10n.errorBookKnowledgeLinks,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ],
@@ -683,7 +684,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Text(
             context.l10n.errorBookReviewStats,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing16),
@@ -827,7 +828,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         Text(
           value,
           style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
           ),
         ),
       ],
@@ -860,7 +861,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 16),
               textStyle: const TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
           ),
@@ -882,7 +883,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               context.l10n.errorBookLoadFailed,
               style: const TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -931,23 +932,9 @@ class ErrorDetailScreen extends ConsumerWidget {
   ) async {
     unawaited(ref.read(errorOperationsProvider.notifier).reAnalyze(error.id));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(DS.neutral0),
-              ),
-            ),
-            const SizedBox(width: DS.spacing12),
-            Text(context.l10n.errorBookReanalyzing),
-          ],
-        ),
+      SparkleSnackBar.info(
+        context.l10n.errorBookReanalyzing,
         duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -985,21 +972,14 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           Navigator.of(context).pop(true); // 返回列表页
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.errorBookDeleteSuccess),
-              backgroundColor: DS.success,
-              behavior: SnackBarBehavior.floating,
-            ),
+            SparkleSnackBar.success(context.l10n.errorBookDeleteSuccess),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text(context.l10n.errorBookDeleteFailedMessage(e.toString())),
-              backgroundColor: DS.error,
-              behavior: SnackBarBehavior.floating,
+            SparkleSnackBar.error(
+              context.l10n.errorBookDeleteFailedMessage(e.toString()),
             ),
           );
         }

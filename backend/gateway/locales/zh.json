@@ -1,0 +1,69 @@
+{
+    "chat": {
+        "round_finished": "这轮处理已经完成",
+        "tool_executed": "{tool} 已执行",
+        "update_success": "已更新相关结果。",
+        "tool_failed": "{tool} 执行失败",
+        "impact_partial": "这一步没有成功完成，结果可能部分受影响。",
+        "partial_no_data": "执行已完成，但暂时没有返回可展示的详细对象。",
+        "next_action_default": "继续查看最终回答",
+        "next_action_retry": "补充信息后重试，或换一种方式继续",
+        "understanding": "我先理解你的问题",
+        "planning": "我在整理你的目标和思路",
+        "retrieving": "我在查找相关依据和上下文",
+        "executing": "我在替你执行需要的步骤",
+        "answering": "我在组织最终回答",
+        "evidence_summary_with": "本轮回答带有可展开的依据来源。",
+        "evidence_summary_without": "本轮回答没有附带可展开的引用来源。",
+        "message_length_exceeded": "消息长度超过 {max_length} 字符限制"
+    },
+    "feedback": {
+        "action_confirm_failed": "确认失败，请重试",
+        "task_confirmed": "任务已确认",
+        "task_dismissed": "任务已忽略",
+        "plan_confirmed": "计划已确认",
+        "plan_dismissed": "计划已忽略",
+        "focus_started": "专注已开始",
+        "focus_cancelled": "专注已取消",
+        "execution": {
+            "missing_connection": "缺少执行结果回传所需的连接信息",
+            "cannot_build_rejection": "无法构造拒绝请求",
+            "cannot_create_request": "无法创建执行回传请求",
+            "callback_failed": "执行回传失败: {error}",
+            "cannot_parse_result": "无法解析执行回传结果",
+            "callback_failed_status": "执行回传失败，status={status}",
+            "result_updated": "执行结果已更新",
+            "execution_rejected": "已拒绝这次执行",
+            "title_default": "OpenClaw 执行结果",
+            "next_action_default": "继续查看结果，或直接发送下一条控制指令",
+            "title_waiting": "OpenClaw 仍在等待确认",
+            "next_action_confirm": "继续确认以完成执行",
+            "title_failed": "OpenClaw 执行未完成",
+            "next_action_failed": "补充更明确的指令，或稍后重试",
+            "impact_summary": "这次结果来自用户自己的 OpenClaw 远程执行链路。",
+            "fallback_summary": "OpenClaw 已返回最新执行状态。"
+        },
+        "plan_review": {
+            "approved": "计划已批准，正在执行...",
+            "rejected": "计划已取消",
+            "modify_requested": "请提供修改要求...",
+            "acknowledged": "已确认"
+        }
+    },
+    "auth": {
+        "unsupported_provider": "不支持的身份提供商",
+        "apple_verify_failed": "Apple验证失败：{error}",
+        "create_user_failed": "创建用户失败",
+        "link_apple_failed": "更新苹果登录信息失败",
+        "create_token_failed": "签发令牌失败",
+        "create_refresh_token_failed": "签发刷新令牌失败"
+    },
+    "ratelimit": {
+        "exceeded": "请求过于频繁，请稍后再试",
+        "endpoint_exceeded": "该端点请求过于频繁，请稍后再试",
+        "websocket_exceeded": "WebSocket连接过于频繁，请稍后再试"
+    },
+    "chat_history": {
+        "new_conversation": "新对话"
+    }
+}

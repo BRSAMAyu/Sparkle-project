@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
@@ -74,27 +75,13 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     }
     _recordImpressionIfNeeded(forecast);
 
-    final isChinese = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
+    final l10n = context.l10n;
+    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
     final confidencePercent = (forecast.confidence * 100).round();
-    final sourceLabel = _sourceLabel(
-      forecast.predictionSource,
-      isChinese: isChinese,
-    );
-    final windowLabel = _windowLabel(
-      forecast.predictedWindow,
-      isChinese: isChinese,
-    );
-    final actionLabel = _actionLabel(
-      forecast.predictedActionType,
-      isChinese: isChinese,
-    );
-    final freshnessLabel = _freshnessLabel(
-      forecast.generatedAt,
-      isChinese: isChinese,
-    );
+    final sourceLabel = _sourceLabel(forecast.predictionSource, isChinese: isChinese);
+    final windowLabel = _windowLabel(forecast.predictedWindow, isChinese: isChinese);
+    final actionLabel = _actionLabel(forecast.predictedActionType, isChinese: isChinese);
+    final freshnessLabel = _freshnessLabel(forecast.generatedAt, isChinese: isChinese);
     final primaryAction = forecast.recommendedActions.isNotEmpty
         ? forecast.recommendedActions.first
         : null;
@@ -119,14 +106,10 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
             child: DashboardSectionHeader(
               icon: Icons.psychology_alt_rounded,
               accentColor: DS.info,
-              title: isChinese ? '系统预测已收起' : 'System Prediction Collapsed',
+              title: l10n.predictedIntentCollapsedTitle,
               summary: freshnessLabel == null
-                  ? (isChinese
-                      ? '需要时再展开查看建议'
-                      : 'Expand it again whenever you want to review the recommendation.')
-                  : (isChinese
-                      ? '上次更新于$freshnessLabel'
-                      : 'Last updated $freshnessLabel'),
+                  ? l10n.predictedIntentCollapsedExpand
+                  : '${l10n.predictedIntentCollapsedUpdated} $freshnessLabel',
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -166,10 +149,8 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                 icon: Icons.psychology_alt_rounded,
                 iconSize: 40,
                 accentColor: DS.info,
-                title: isChinese ? '系统预测' : 'System Prediction',
-                summary: isChinese
-                    ? '基于画像、最近 24 小时行为与任务节奏'
-                    : 'Based on your profile, the last 24 hours, and task rhythm',
+                title: l10n.predictedIntentTitle,
+                summary: l10n.predictedIntentSummary,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -220,7 +201,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isChinese ? '建议接续' : 'Suggested Continuation',
+                      l10n.predictedIntentSuggestedCont,
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textTertiary,
                         fontWeight: DS.fontWeightBold,
@@ -229,9 +210,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     const SizedBox(height: DS.spacing6),
                     Text(
                       promptPreview.isEmpty
-                          ? (isChinese
-                              ? '预测结果已生成，等待可继续指令'
-                              : 'The prediction is ready and waiting for a follow-up prompt.')
+                          ? (l10n.predictedIntentWaiting)
                           : promptPreview,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -308,7 +287,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isChinese ? '为什么这样预测' : 'Why the system predicts this',
+                        l10n.predictedIntentWhy,
                         style: context.sparkleTypography.labelSmall.copyWith(
                           color: DS.textTertiary,
                           fontWeight: DS.fontWeightBold,
@@ -355,10 +334,10 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
               const SizedBox(height: 14),
               SparkleButton(
                 label: _isContinuing
-                    ? (isChinese ? '正在衔接…' : 'Continuing...')
+                    ? (l10n.predictedIntentContinuing)
                     : ((primaryAction?.label.isNotEmpty ?? false)
                         ? primaryAction!.label
-                        : (isChinese ? '按这个继续' : 'Continue With This')),
+                        : (l10n.predictedIntentContinue)),
                 icon: Icon(
                   _isContinuing
                       ? Icons.sync_rounded
@@ -477,15 +456,9 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
       ref.invalidate(dashboardProvider);
     } catch (_) {
       if (mounted) {
-        final isChinese = Localizations.localeOf(context)
-            .languageCode
-            .toLowerCase()
-            .startsWith('zh');
         AppFeedback.error(
           context,
-          isChinese
-              ? '继续对话时出现问题，请稍后重试'
-              : 'Something went wrong while continuing. Please try again.',
+          context.l10n.predictedIntentError,
         );
       }
     } finally {

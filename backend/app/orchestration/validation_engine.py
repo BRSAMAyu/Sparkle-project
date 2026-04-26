@@ -18,6 +18,7 @@ from app.orchestration.sufficiency_checker import SufficiencyStatus, sufficiency
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator
 from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.orchestration.statechart_engine import WorkflowState
+from app.services.galaxy_service import GalaxyService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.perceptible_intelligence_service import ProgressComparisonService
@@ -288,6 +289,14 @@ class ValidationEngineMixin:
                 user_message=user_message,
                 prediction=prediction,
             )
+            planning_material_context = await self._build_planning_material_context(
+                active_db=active_db,
+                intent_type=intent_type,
+                user_id=user_id,
+                user_message=user_message,
+                request=request,
+                user_context_payload=user_context_payload,
+            )
             check_result = await sufficiency_checker.check(
                 intent=intent_type,
                 extracted_entities=extracted_entities,
@@ -303,6 +312,7 @@ class ValidationEngineMixin:
                     )
                     if part
                 ) or f"{user_id}:{intent_type}",
+                planning_material_context=planning_material_context,
             )
 
             if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
@@ -642,6 +652,57 @@ class ValidationEngineMixin:
                 logger.warning(f"Failed to persist goal quality mark: {e}")
 
         return False
+
+    # ------------------------------------------------------------------
+    # Planning material sufficiency
+    # ------------------------------------------------------------------
+
+    async def _build_planning_material_context(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        intent_type: str,
+        user_id: str,
+        user_message: str,
+        request: agent_service_pb2.ChatRequest,
+        user_context_payload: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if active_db is None or intent_type not in {"create_plan", "time_planning"}:
+            return None
+
+        payload = user_context_payload if isinstance(user_context_payload, dict) else {}
+        preferred_file_ids = [str(file_id).strip() for file_id in request.file_ids if str(file_id).strip()]
+        if not preferred_file_ids:
+            preferred_file_ids = [
+                str(file_id).strip()
+                for file_id in list(payload.get("file_ids") or [])
+                if str(file_id).strip()
+            ]
+        if not preferred_file_ids:
+            return None
+
+        try:
+            summary = await GalaxyService(active_db).summarize_study_materials_for_planning(
+                user_id=uuid.UUID(user_id),
+                topic_hints=[user_message],
+                preferred_file_ids=preferred_file_ids,
+            )
+        except Exception as exc:
+            logger.warning("Failed to load planning material context for sufficiency check: {}", exc)
+            return None
+
+        matched_documents_count = int(summary.get("matched_documents_count") or 0)
+        has_materials = bool(summary.get("has_materials"))
+        material_gaps: list[str] = []
+        if has_materials and matched_documents_count == 0:
+            material_gaps.append("目前还没有找到和这次规划目标直接匹配的已上传章节资料")
+
+        return {
+            "enabled": True,
+            "subject": user_message,
+            "has_materials": has_materials,
+            "material_gaps": material_gaps,
+        }
 
     # ------------------------------------------------------------------
     # Plan execution validation

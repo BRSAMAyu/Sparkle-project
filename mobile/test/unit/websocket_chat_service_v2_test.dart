@@ -305,6 +305,64 @@ void main() {
       await subB.cancel();
     });
 
+    test('CONTINUE keeps the request stream open until STOP arrives', () async {
+      final stream = service.sendMessage(
+        message: 'init',
+        userId: 'user1',
+        requestId: 'req-continue',
+      );
+
+      final events = <ChatStreamEvent>[];
+      var isDone = false;
+      final sub = stream.listen(
+        events.add,
+        onDone: () => isDone = true,
+      );
+
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'done',
+          'request_id': 'req-continue',
+          'finish_reason': 'CONTINUE',
+          'session_id': 'conv-modeling',
+          'metadata': {
+            'aurora_surface': 'aurora_modeling',
+            'aurora_runtime_enabled': true,
+          },
+        }),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events.whereType<ContinueEvent>().single.finishReason, 'CONTINUE');
+      expect(isDone, isFalse);
+
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'delta',
+          'request_id': 'req-continue',
+          'delta': 'follow-up',
+        }),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events.whereType<TextEvent>().single.content, 'follow-up');
+      expect(isDone, isFalse);
+
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'done',
+          'request_id': 'req-continue',
+          'finish_reason': 'STOP',
+        }),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(events.whereType<DoneEvent>().single.finishReason, 'STOP');
+      expect(isDone, isTrue);
+
+      await sub.cancel();
+    });
+
     test('Synthesizes DoneEvent when full_text arrives without terminal done',
         () async {
       service = WebSocketChatServiceV2(
@@ -333,8 +391,77 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 80));
 
       expect(events.whereType<FullTextEvent>().single.content, 'final answer');
-      expect(events.whereType<DoneEvent>().single.finishReason,
-          'full_text_idle_fallback',);
+      expect(
+        events.whereType<DoneEvent>().single.finishReason,
+        'full_text_idle_fallback',
+      );
+
+      await sub.cancel();
+    });
+
+    test('CONTINUE after full_text keeps the request stream open', () async {
+      service = WebSocketChatServiceV2(
+        container: container,
+        baseUrl: 'ws://test.com',
+        channelFactory: mockFactory,
+        terminalDoneFallbackDelay: const Duration(milliseconds: 30),
+      );
+
+      final stream = service.sendMessage(
+        message: 'init',
+        userId: 'user1',
+        requestId: 'req-fulltext-continue',
+      );
+      final events = <ChatStreamEvent>[];
+      var isDone = false;
+      final sub = stream.listen(
+        events.add,
+        onDone: () => isDone = true,
+      );
+
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'full_text',
+          'full_text': 'segment one',
+          'request_id': 'req-fulltext-continue',
+        }),
+      );
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'done',
+          'request_id': 'req-fulltext-continue',
+          'finish_reason': 'CONTINUE',
+          'session_id': 'conv-modeling',
+        }),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      expect(events.whereType<FullTextEvent>().single.content, 'segment one');
+      expect(events.whereType<ContinueEvent>().single.finishReason, 'CONTINUE');
+      expect(events.whereType<DoneEvent>(), isEmpty);
+      expect(isDone, isFalse);
+
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'delta',
+          'request_id': 'req-fulltext-continue',
+          'delta': 'segment two',
+        }),
+      );
+      mockChannel.simulateIncomingMessage(
+        json.encode({
+          'type': 'done',
+          'request_id': 'req-fulltext-continue',
+          'finish_reason': 'STOP',
+        }),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+
+      expect(events.whereType<TextEvent>().single.content, 'segment two');
+      expect(events.whereType<DoneEvent>().single.finishReason, 'STOP');
+      expect(isDone, isTrue);
 
       await sub.cancel();
     });
@@ -507,6 +634,32 @@ void main() {
       // Should be in reconnecting state
       expect(service.connectionState, WsConnectionState.reconnecting);
       expect(service.reconnectAttempts, 1);
+    });
+
+    test('Broadcasts retryable error event to active request streams',
+        () async {
+      final events = <ChatStreamEvent>[];
+      final stream = service.sendMessage(
+        message: 'retry me',
+        userId: 'user1',
+        requestId: 'retry-request',
+      );
+      final sub = stream.listen(events.add);
+
+      await Future<void>.delayed(Duration.zero);
+      mockChannel.simulateError('Connection reset by peer');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(
+        events.whereType<ErrorEvent>().map((event) => event.code),
+        contains('CONNECTION_ERROR'),
+      );
+      expect(
+        events.whereType<ErrorEvent>().every((event) => event.retryable),
+        isTrue,
+      );
+
+      await sub.cancel();
     });
 
     test('Respects max reconnect attempts', () async {
@@ -747,7 +900,9 @@ void main() {
         expect(events.length, 1);
         expect(events.first, isA<TextEvent>());
         expect(
-            (events.first as TextEvent).metadata?['some_other_field'], 'value',);
+          (events.first as TextEvent).metadata?['some_other_field'],
+          'value',
+        );
 
         await sub.cancel();
       });
@@ -778,8 +933,10 @@ void main() {
         // Should still emit PlanReviewWidgetEvent with available data
         expect(events.length, 1);
         expect(events.first, isA<PlanReviewWidgetEvent>());
-        expect((events.first as PlanReviewWidgetEvent).reviewData['plan_id'],
-            'plan-123',);
+        expect(
+          (events.first as PlanReviewWidgetEvent).reviewData['plan_id'],
+          'plan-123',
+        );
 
         await sub.cancel();
       });
@@ -992,7 +1149,9 @@ void main() {
 
         expect((events[1] as TransparencyStepEvent).currentStep, 2);
         expect(
-            (events[1] as TransparencyStepEvent).stepName, '执行工具: calculator',);
+          (events[1] as TransparencyStepEvent).stepName,
+          '执行工具: calculator',
+        );
 
         await sub.cancel();
       });

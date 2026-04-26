@@ -14,6 +14,7 @@ import 'package:sparkle/features/community/data/repositories/accountability_repo
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_heatmap.dart';
 import 'package:sparkle/features/community/presentation/widgets/achievement_badge.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 责任伙伴工作台
 class AccountabilityDetailScreen extends ConsumerStatefulWidget {
@@ -54,7 +55,7 @@ class _AccountabilityDetailScreenState
         ),
         title: Text(
           dashboardAsync.valueOrNull == null
-              ? '责任伙伴'
+              ? context.l10n.accountabilityPartnerDefault
               : _partnerName(
                   dashboardAsync.valueOrNull!.partnership,
                   currentUserId,
@@ -67,10 +68,10 @@ class _AccountabilityDetailScreenState
                 unawaited(_confirmEnd());
               }
             },
-            itemBuilder: (_) => const [
+            itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'end',
-                child: Text('结束伙伴关系'),
+                child: Text(context.l10n.accountabilityEndPartnership),
               ),
             ],
           ),
@@ -87,7 +88,7 @@ class _AccountabilityDetailScreenState
                 Icon(Icons.error_outline, size: 42, color: DS.error),
                 const SizedBox(height: DS.spacing12),
                 Text(
-                  '伙伴工作台加载失败',
+                  context.l10n.accountabilityDashboardLoadFailed,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -100,7 +101,7 @@ class _AccountabilityDetailScreenState
                 ),
                 const SizedBox(height: DS.spacing12),
                 SparkleButton.primary(
-                  label: '重试',
+                  label: context.l10n.retry,
                   onPressed: () => ref.invalidate(
                     accountabilityDashboardProvider(widget.partnershipId),
                   ),
@@ -170,7 +171,7 @@ class _AccountabilityDetailScreenState
   ) {
     final isInitiator = partnership.initiatorId == currentUserId;
     final partner = isInitiator ? partnership.partner : partnership.initiator;
-    return partner?.displayName ?? '责任伙伴';
+    return partner?.displayName ?? context.l10n.accountabilityPartnerDefault;
   }
 
   void _showCheckinSheet() {
@@ -200,7 +201,7 @@ class _AccountabilityDetailScreenState
       if (mounted) {
         final deliverySummary = (result['delivery_summary'] as String?) ??
             (result['message'] as String?) ??
-            '已通过站内提醒发送，对方在线时会实时看到';
+            context.l10n.accountabilityNudgeSentDefault;
         AppFeedback.success(context, deliverySummary);
       }
     } catch (e) {
@@ -209,10 +210,10 @@ class _AccountabilityDetailScreenState
         if (message.contains('429') || message.contains('cooldown')) {
           AppFeedback.info(
             context,
-            '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。',
+            context.l10n.accountabilityNudgeCooldown,
           );
         } else {
-          AppFeedback.error(context, '提醒发送失败，请稍后再试');
+          AppFeedback.error(context, context.l10n.accountabilityNudgeFailed);
         }
       }
     }
@@ -222,15 +223,15 @@ class _AccountabilityDetailScreenState
     final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('结束伙伴关系'),
-        content: const Text('确定要结束这段责任伙伴关系吗？'),
+        title: Text(context.l10n.accountabilityEndPartnership),
+        content: Text(context.l10n.accountabilityEndPartnershipConfirm),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.cancel,
             onPressed: () => Navigator.pop(ctx, false),
           ),
           SparkleButton(
-            label: '结束',
+            label: context.l10n.accountabilityEnd,
             onPressed: () => Navigator.pop(ctx, true),
             variant: ButtonVariant.destructive,
           ),
@@ -247,11 +248,11 @@ class _AccountabilityDetailScreenState
         ref.invalidate(accountabilityDashboardProvider(widget.partnershipId));
         if (mounted) {
           context.pop();
-          AppFeedback.success(context, '伙伴关系已结束');
+          AppFeedback.success(context, context.l10n.accountabilityPartnershipEnded);
         }
       } catch (e) {
         if (mounted) {
-          AppFeedback.error(context, '操作失败: $e');
+          AppFeedback.error(context, '${context.l10n.accountabilityOperationFailed}: $e');
         }
       }
     }
@@ -281,7 +282,7 @@ class _DashboardView extends StatelessWidget {
     final stats = dashboard.stats;
     final isInitiator = partnership.initiatorId == currentUserId;
     final partner = isInitiator ? partnership.partner : partnership.initiator;
-    final partnerName = partner?.displayName ?? '责任伙伴';
+    final partnerName = partner?.displayName ?? context.l10n.accountabilityPartnerDefault;
     final partnerAchievements =
         ((dashboard.achievements['achievements'] as List<dynamic>?) ?? const [])
             .where(
@@ -338,10 +339,10 @@ class _DashboardView extends StatelessWidget {
                     ? 4
                     : 3,
                 child: _GoalPanel(
-                  title: '我的目标',
+                  title: context.l10n.accountabilityMyGoal,
                   goal: isInitiator
                       ? partnership.initiatorGoal
-                      : partnership.partnerGoal ?? '还没有填写目标',
+                      : partnership.partnerGoal ?? context.l10n.accountabilityGoalNotSet,
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -350,9 +351,9 @@ class _DashboardView extends StatelessWidget {
                     ? 5
                     : 4,
                 child: _GoalPanel(
-                  title: '$partnerName 的目标',
+                  title: context.l10n.accountabilityPartnerGoal(partnerName),
                   goal: isInitiator
-                      ? partnership.partnerGoal ?? '对方还没填写目标'
+                      ? partnership.partnerGoal ?? context.l10n.accountabilityPartnerGoalNotSet
                       : partnership.initiatorGoal,
                 ),
               ),
@@ -362,7 +363,7 @@ class _DashboardView extends StatelessWidget {
                     ? 6
                     : 5,
                 child: _SectionCard(
-                  title: '伙伴共成长',
+                  title: context.l10n.accountabilityGrowingTogether,
                   child: _GrowthSummary(
                     relationshipSummary: dashboard.relationshipSummary,
                     leaderboardSummary: dashboard.leaderboardSummary,
@@ -377,7 +378,7 @@ class _DashboardView extends StatelessWidget {
                       ? 7
                       : 6,
                   child: _SectionCard(
-                    title: '最近分享',
+                    title: context.l10n.accountabilityRecentShares,
                     child: Column(
                       children: dashboard.recentShares
                           .take(3)
@@ -400,9 +401,9 @@ class _DashboardView extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          share['title']?.toString() ?? '已分享内容',
+                                          share['title']?.toString() ?? context.l10n.accountabilitySharedItem,
                                           style: DS.bodyMedium.copyWith(
-                                            fontWeight: FontWeight.w600,
+                                            fontWeight: DS.fontWeightSemibold,
                                           ),
                                         ),
                                         if ((share['comment'] ?? '')
@@ -432,13 +433,13 @@ class _DashboardView extends StatelessWidget {
               SparkleStaggerItem(
                 index: 7,
                 child: _SectionCard(
-                  title: '月度打卡热力图',
+                  title: context.l10n.accountabilityMonthlyHeatmap,
                   child: AccountabilityHeatmap(
                     year: (dashboard.heatmap['year'] as int?) ??
                         DateTime.now().year,
                     heatmap: ((dashboard.heatmap['heatmap']
                                 as List<dynamic>?) ??
-                            const [])
+                            [])
                         .map((item) => Map<String, dynamic>.from(item as Map))
                         .toList(),
                   ),
@@ -448,10 +449,10 @@ class _DashboardView extends StatelessWidget {
               SparkleStaggerItem(
                 index: 6,
                 child: _SectionCard(
-                  title: '伙伴成就',
+                  title: context.l10n.accountabilityPartnerAchievements,
                   child: partnerAchievements.isEmpty
                       ? Text(
-                          '伙伴还没有解锁专属成就，先互相打卡一轮试试看。',
+                          context.l10n.accountabilityPartnerNoAchievements,
                           style: TextStyle(color: DS.textSecondary),
                         )
                       : AchievementGrid(
@@ -462,15 +463,15 @@ class _DashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                '最近打卡',
+                context.l10n.accountabilityRecentCheckins,
                 style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: DS.spacing8),
               if (dashboard.timeline.isEmpty)
                 _SectionCard(
-                  title: '还没有打卡记录',
+                  title: context.l10n.accountabilityNoCheckinRecords,
                   child: Text(
-                    '今天先发一条简短进展，伙伴关系就会开始有温度。',
+                    context.l10n.accountabilityNoCheckinHint,
                     style: TextStyle(color: DS.textSecondary),
                   ),
                 )
@@ -490,7 +491,7 @@ class _DashboardView extends StatelessWidget {
           child: SizedBox(
             width: double.infinity,
             child: SparkleButton(
-              label: stats.myCheckedInToday ? '今天已打卡' : '今日打卡',
+              label: stats.myCheckedInToday ? context.l10n.accountabilityCheckedInToday : context.l10n.accountabilityCheckInToday,
               onPressed: stats.myCheckedInToday ? null : onCheckin,
               disabled: stats.myCheckedInToday || onCheckin == null,
               expand: true,
@@ -546,7 +547,7 @@ class _DashboardHero extends StatelessWidget {
                 Row(
                   children: [
                     _PersonStat(
-                      name: '我',
+                      name: context.l10n.accountabilityMe,
                       streakDays: stats.myStreakDays,
                       checkedInToday: stats.myCheckedInToday,
                     ),
@@ -562,7 +563,7 @@ class _DashboardHero extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '一起坚持了 ${relationshipSummary['days_together'] ?? 0} 天',
+                            context.l10n.accountabilityDaysTogether((relationshipSummary['days_together'] as Object?) ?? 0),
                             style:
                                 DS.bodySmall.copyWith(color: DS.textSecondary),
                             textAlign: TextAlign.center,
@@ -586,7 +587,7 @@ class _DashboardHero extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '总打卡',
+                                  context.l10n.accountabilityTotalCheckins,
                                   style: DS.bodySmall.copyWith(
                                     color: DS.textSecondary,
                                   ),
@@ -599,7 +600,7 @@ class _DashboardHero extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     _PersonStat(
-                      name: 'TA',
+                      name: context.l10n.accountabilityThem,
                       streakDays: stats.partnerStreakDays,
                       checkedInToday: stats.partnerCheckedInToday,
                     ),
@@ -612,22 +613,22 @@ class _DashboardHero extends StatelessWidget {
                   children: [
                     _HeroAction(
                       icon: Icons.check_circle_outline,
-                      label: stats.myCheckedInToday ? '已打卡' : '打卡',
+                      label: stats.myCheckedInToday ? context.l10n.accountabilityCheckedIn : context.l10n.accountabilityCheckin,
                       onTap: onCheckin,
                     ),
                     _HeroAction(
                       icon: Icons.bolt_outlined,
-                      label: '提醒',
+                      label: context.l10n.accountabilityNudge,
                       onTap: onNudge,
                     ),
                     _HeroAction(
                       icon: Icons.share_outlined,
-                      label: '分享',
+                      label: context.l10n.accountabilityShare,
                       onTap: onShare,
                     ),
                     _HeroAction(
                       icon: Icons.chat_bubble_outline,
-                      label: '聊天',
+                      label: context.l10n.accountabilityChat,
                       onTap: onChat,
                     ),
                   ],
@@ -675,7 +676,7 @@ class _HeroAction extends StatelessWidget {
               Text(
                 label,
                 style: DS.labelSmall.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                   color: onTap == null ? DS.textTertiary : null,
                 ),
               ),
@@ -701,11 +702,11 @@ class _InactiveDashboardView extends StatelessWidget {
     final partnership = dashboard.partnership;
     final isInitiator = partnership.initiatorId == currentUserId;
     final partner = isInitiator ? partnership.partner : partnership.initiator;
-    final partnerName = partner?.displayName ?? '责任伙伴';
+    final partnerName = partner?.displayName ?? context.l10n.accountabilityPartnerDefault;
     final isPending = partnership.status == AccountabilityStatus.pending;
     final message = isPending
-        ? (isInitiator ? '邀请已发出，等待对方确认后才能进入伙伴工作台。' : '这条伙伴邀请还待你确认，先去邀请页处理后再回来。')
-        : '当前伙伴关系暂时不可进入完整工作台。';
+        ? (isInitiator ? context.l10n.accountabilityInviteSentWait : context.l10n.accountabilityInvitePendingConfirm)
+        : context.l10n.accountabilityDashboardNotAvailable;
 
     return Center(
       child: Padding(
@@ -721,7 +722,7 @@ class _InactiveDashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                isPending ? '伙伴邀请待处理' : '伙伴工作台暂不可用',
+                isPending ? context.l10n.accountabilityInvitePending : context.l10n.accountabilityDashboardUnavailable,
                 style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: DS.spacing8),
@@ -738,13 +739,13 @@ class _InactiveDashboardView extends StatelessWidget {
                 children: [
                   if (isPending)
                     SparkleButton.primary(
-                      label: isInitiator ? '查看状态' : '去处理邀请',
+                      label: isInitiator ? context.l10n.accountabilityViewStatus : context.l10n.accountabilityHandleInvite,
                       onPressed: () =>
                           unawaited(context.pushNamed('friendRequests')),
                     ),
                   if (canChat)
                     SparkleButton.ghost(
-                      label: '继续聊天',
+                      label: context.l10n.accountabilityContinueChat,
                       onPressed: () => unawaited(context.push(
                         '/chat/private/${partner?.id ?? ''}?name=${Uri.encodeComponent(partnerName)}',
                       )),
@@ -787,19 +788,19 @@ class _GrowthSummary extends StatelessWidget {
           runSpacing: 8,
           children: [
             _TinyMetric(
-              label: '我 ${relationshipSummary['my_streak_days'] ?? 0} 天',
+              label: context.l10n.accountabilityMyStreakDays((relationshipSummary['my_streak_days'] as Object?) ?? 0),
             ),
             _TinyMetric(
-              label: 'TA ${relationshipSummary['partner_streak_days'] ?? 0} 天',
+              label: context.l10n.accountabilityPartnerStreakDays((relationshipSummary['partner_streak_days'] as Object?) ?? 0),
             ),
-            _TinyMetric(label: '我解锁 $myAchievements 个成就'),
-            _TinyMetric(label: 'TA 解锁 $partnerAchievements 个成就'),
+            _TinyMetric(label: context.l10n.accountabilityMyAchievementsUnlocked(myAchievements as Object)),
+            _TinyMetric(label: context.l10n.accountabilityPartnerAchievementsUnlocked(partnerAchievements as Object)),
           ],
         ),
         if (streakBoard.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '连续打卡榜：你第 ${streakBoard['my_rank'] ?? '-'}，伙伴第 ${streakBoard['partner_rank'] ?? '-'}',
+            context.l10n.accountabilityStreakRank((streakBoard['my_rank'] ?? '-') as Object, (streakBoard['partner_rank'] ?? '-') as Object),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
         ],
@@ -859,7 +860,7 @@ class _PersonStat extends StatelessWidget {
           const SizedBox(height: DS.xs),
           Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
           Text(
-            '$streakDays 天',
+            context.l10n.accountabilityStreakDays(streakDays),
             style: TextStyle(fontSize: DS.fontSizeXs, color: DS.brandPrimary),
           ),
         ],
@@ -903,10 +904,10 @@ class _PendingPoliciesCard extends StatelessWidget {
     final count = summary?.count ?? 0;
     final nextTriggerAt = summary?.nextTriggerAt;
     final subtitle = count <= 0
-        ? '当前没有待执行的问责策略。'
+        ? context.l10n.accountabilityNoPendingPolicies
         : nextTriggerAt == null
-            ? '已有 $count 条策略就绪，等待事件触发。'
-            : '已有 $count 条策略待执行，下一次触发在 ${DateFormat('M月d日 HH:mm').format(nextTriggerAt)}。';
+            ? context.l10n.accountabilityPoliciesReady(count)
+            : context.l10n.accountabilityPoliciesPending(count, DateFormat('M月d日 HH:mm').format(nextTriggerAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -917,7 +918,7 @@ class _PendingPoliciesCard extends StatelessWidget {
               Icon(Icons.policy_outlined, color: DS.brandPrimary),
               const SizedBox(width: DS.spacing8),
               Text(
-                '待执行策略',
+                context.l10n.accountabilityPendingPolicies,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -926,9 +927,9 @@ class _PendingPoliciesCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            count <= 0 ? '0 条' : '$count 条',
+            count <= 0 ? context.l10n.accountabilityZeroItems : '$count 条',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing4),
@@ -953,10 +954,10 @@ class _RecentReflectionsCard extends StatelessWidget {
     final lastCategory = summary?.lastCategory;
     final lastAt = summary?.lastAt;
     final subtitle = count <= 0
-        ? '最近还没有新的跨事件反思。'
+        ? context.l10n.accountabilityNoRecentReflections
         : lastAt == null
-            ? '最近已生成 $count 条反思摘要。'
-            : '最近一次聚焦 ${_labelForCategory(lastCategory)}，更新时间 ${DateFormat('M月d日 HH:mm').format(lastAt)}。';
+            ? context.l10n.accountabilityReflectionsGenerated(count)
+            : context.l10n.accountabilityReflectionsLatest(_labelForCategory(context, lastCategory), DateFormat('M月d日 HH:mm').format(lastAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -967,7 +968,7 @@ class _RecentReflectionsCard extends StatelessWidget {
               Icon(Icons.auto_stories_outlined, color: DS.taskReflection),
               const SizedBox(width: DS.spacing8),
               Text(
-                '近期反思',
+                context.l10n.accountabilityRecentReflections,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -976,14 +977,14 @@ class _RecentReflectionsCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            count <= 0 ? '0 条' : '$count 条',
+            count <= 0 ? context.l10n.accountabilityZeroItems : '$count 条',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           if ((lastCategory ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing6),
-            _TinyMetric(label: _labelForCategory(lastCategory)),
+            _TinyMetric(label: _labelForCategory(context, lastCategory)),
           ],
           const SizedBox(height: DS.spacing4),
           Text(
@@ -995,22 +996,22 @@ class _RecentReflectionsCard extends StatelessWidget {
     );
   }
 
-  static String _labelForCategory(String? category) {
+  String _labelForCategory(BuildContext context, String? category) {
     switch (category) {
       case 'intervention_ineffective':
-        return '干预未奏效';
+        return context.l10n.accountabilityInterventionIneffective;
       case 'plan_stall':
-        return '计划停滞';
+        return context.l10n.accountabilityPlanStall;
       case 'overload':
-        return '负荷过载';
+        return context.l10n.accountabilityOverload;
       case 'too_difficult':
-        return '任务过难';
+        return context.l10n.accountabilityTooDifficult;
       case 'unclear':
-        return '任务不清晰';
+        return context.l10n.accountabilityUnclear;
       case 'abandoned':
-        return '中途放下';
+        return context.l10n.accountabilityAbandoned;
       default:
-        return '反思摘要';
+        return context.l10n.accountabilityReflectionSummary;
     }
   }
 }
@@ -1025,10 +1026,10 @@ class _ForesightHintCard extends StatelessWidget {
     final hintText = summary?.hintText;
     final generatedAt = summary?.generatedAt;
     final deviationCount = summary?.deviationCount ?? 0;
-    final confidenceItems = summary?.attractorConfidences ?? const [];
+    final confidenceItems = summary?.attractorConfidences ?? [];
     final subtitle = [
-      if (deviationCount > 0) '检测到 $deviationCount 个偏离',
-      if (generatedAt != null) '更新时间 ${DateFormat('M月d日 HH:mm').format(generatedAt)}',
+      if (deviationCount > 0) context.l10n.accountabilityDeviationsDetected(deviationCount),
+      if (generatedAt != null) context.l10n.accountabilityUpdatedAt(DateFormat('M月d日 HH:mm').format(generatedAt)),
     ].join(' · ');
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
@@ -1040,7 +1041,7 @@ class _ForesightHintCard extends StatelessWidget {
               Icon(Icons.visibility_outlined, color: DS.brandPrimary),
               const SizedBox(width: DS.spacing8),
               Text(
-                '前瞻提示',
+                context.l10n.accountabilityForesightHint,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -1049,7 +1050,7 @@ class _ForesightHintCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            hintText ?? '暂无前瞻提示。',
+            hintText ?? context.l10n.accountabilityNoForesightHint,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (subtitle.isNotEmpty) ...[
@@ -1069,7 +1070,7 @@ class _ForesightHintCard extends StatelessWidget {
                   .map(
                     (item) => _TinyMetric(
                       label:
-                          '${_labelForDim(item.dim)} ${item.confidence.toStringAsFixed(2)}',
+                          '${_labelForDim(context, item.dim)} ${item.confidence.toStringAsFixed(2)}',
                     ),
                   )
                   .toList(),
@@ -1080,18 +1081,18 @@ class _ForesightHintCard extends StatelessWidget {
     );
   }
 
-  static String _labelForDim(String dim) {
+  String _labelForDim(BuildContext context, String dim) {
     switch (dim) {
       case 'study_pace':
-        return '节奏';
+        return context.l10n.accountabilityDimPace;
       case 'completion_rate':
-        return '完成率';
+        return context.l10n.accountabilityDimCompletionRate;
       case 'engagement_level':
-        return '投入度';
+        return context.l10n.accountabilityDimEngagement;
       case 'mood_valence':
-        return '情绪';
+        return context.l10n.accountabilityDimMood;
       case 'plan_adherence':
-        return '计划跟随';
+        return context.l10n.accountabilityDimPlanAdherence;
       default:
         return dim;
     }
@@ -1154,36 +1155,38 @@ class _CheckinMoodVisual {
   final Color color;
 }
 
-const _checkinMoodVisuals = <_CheckinMoodVisual>[
+List<_CheckinMoodVisual> _checkinMoodVisuals(BuildContext context) => [
   _CheckinMoodVisual(
     icon: Icons.sentiment_very_dissatisfied_rounded,
-    label: '低落',
+    label: context.l10n.accountabilityMoodLow,
     color: Color(0xFFE57373),
   ),
   _CheckinMoodVisual(
     icon: Icons.sentiment_dissatisfied_rounded,
-    label: '一般',
+    label: context.l10n.accountabilityMoodOkay,
     color: Color(0xFFFFB74D),
   ),
   _CheckinMoodVisual(
     icon: Icons.sentiment_neutral_rounded,
-    label: '平稳',
+    label: context.l10n.accountabilityMoodSteady,
     color: Color(0xFF90A4AE),
   ),
   _CheckinMoodVisual(
     icon: Icons.sentiment_satisfied_alt_rounded,
-    label: '不错',
+    label: context.l10n.accountabilityMoodGood,
     color: Color(0xFF66BB6A),
   ),
   _CheckinMoodVisual(
     icon: Icons.mood_rounded,
-    label: '很棒',
+    label: context.l10n.accountabilityMoodGreat,
     color: Color(0xFF26A69A),
   ),
 ];
 
-_CheckinMoodVisual _resolveCheckinMoodVisual(int mood) =>
-    _checkinMoodVisuals[(mood - 1).clamp(0, _checkinMoodVisuals.length - 1)];
+_CheckinMoodVisual _resolveCheckinMoodVisual(BuildContext context, int mood) {
+  final visuals = _checkinMoodVisuals(context);
+  return visuals[(mood - 1).clamp(0, visuals.length - 1)];
+}
 
 class _CheckinTile extends ConsumerWidget {
   const _CheckinTile({required this.checkin, required this.isMe});
@@ -1194,8 +1197,8 @@ class _CheckinTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateStr = DateFormat('MM-dd HH:mm').format(checkin.createdAt);
-    final moodVisual = _resolveCheckinMoodVisual(checkin.mood);
-    final authorName = checkin.author?.displayName ?? (isMe ? '我' : '伙伴');
+    final moodVisual = _resolveCheckinMoodVisual(context, checkin.mood);
+    final authorName = checkin.author?.displayName ?? (isMe ? context.l10n.accountabilityMe : context.l10n.accountabilityPartner);
 
     return Container(
       margin: const EdgeInsets.only(bottom: DS.sm),
@@ -1236,7 +1239,7 @@ class _CheckinTile extends ConsumerWidget {
               const SizedBox(width: DS.sm),
               if (checkin.minutes > 0)
                 Text(
-                  '${checkin.minutes}分钟',
+                  context.l10n.accountabilityCheckinMinutes(checkin.minutes),
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     color: DS.textSecondary,
@@ -1275,12 +1278,12 @@ class _CheckinTile extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () => _likeCheckin(context, ref),
                   icon: const Icon(Icons.thumb_up_alt_outlined, size: 16),
-                  label: const Text('点赞'),
+                  label: Text(context.l10n.accountabilityLike),
                 ),
                 TextButton.icon(
                   onPressed: () => _encourageCheckin(context, ref),
                   icon: const Icon(Icons.bolt_outlined, size: 16),
-                  label: const Text('鼓励'),
+                  label: Text(context.l10n.accountabilityEncourage),
                 ),
               ],
             ],
@@ -1323,11 +1326,11 @@ class _CheckinTile extends ConsumerWidget {
           .likeCheckin(ref, checkin.id);
       ref.invalidate(accountabilityDashboardProvider(checkin.partnershipId));
       if (context.mounted) {
-        AppFeedback.success(context, '已为伙伴点亮鼓励');
+        AppFeedback.success(context, context.l10n.accountabilityEncourageSent);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '点赞失败: $e');
+        AppFeedback.error(context, '${context.l10n.accountabilityLikeFailed}: $e');
       }
     }
   }
@@ -1337,23 +1340,23 @@ class _CheckinTile extends ConsumerWidget {
     final message = await showSensoryDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('发送鼓励'),
+        title: Text(context.l10n.accountabilitySendEncourage),
         content: TextField(
           controller: controller,
           maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: '写一句你想对伙伴说的话',
+          decoration: InputDecoration(
+            hintText: context.l10n.accountabilityEncourageHint,
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('发送'),
+            child: Text(context.l10n.accountabilitySend),
           ),
         ],
       ),
@@ -1365,11 +1368,11 @@ class _CheckinTile extends ConsumerWidget {
           .encourageCheckin(ref, checkin.id, message);
       ref.invalidate(accountabilityDashboardProvider(checkin.partnershipId));
       if (context.mounted) {
-        AppFeedback.success(context, '鼓励已送达');
+        AppFeedback.success(context, context.l10n.accountabilityEncourageDelivered);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '发送失败: $e');
+        AppFeedback.error(context, '${context.l10n.accountabilitySendFailed}: $e');
       }
     }
   }
@@ -1424,8 +1427,8 @@ class _AccountabilityCheckinSheetState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '今日打卡',
+              Text(
+                context.l10n.accountabilityCheckInToday,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: DS.fontSizeLg,
@@ -1434,16 +1437,16 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
               TextField(
                 controller: _contentController,
-                decoration: const InputDecoration(
-                  hintText: '今日进展...',
+                decoration: InputDecoration(
+                  hintText: context.l10n.accountabilityTodayProgressHint,
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
                 autofocus: true,
               ),
               const SizedBox(height: DS.spacing16),
-              const Text(
-                '今日心情:',
+              Text(
+                context.l10n.accountabilityTodayMood,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: DS.sm),
@@ -1451,7 +1454,7 @@ class _AccountabilityCheckinSheetState
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(5, (i) {
                   final selected = _mood == i + 1;
-                  final moodVisual = _checkinMoodVisuals[i];
+                  final moodVisual = _checkinMoodVisuals(context)[i];
                   return GestureDetector(
                     onTap: () => setState(() => _mood = i + 1),
                     child: AnimatedContainer(
@@ -1497,21 +1500,21 @@ class _AccountabilityCheckinSheetState
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                '投入时长: $_minutes 分钟',
+                context.l10n.accountabilityInvestedTime(_minutes),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Slider(
                 value: _minutes.toDouble(),
                 max: 360,
                 divisions: 72,
-                label: '$_minutes 分钟',
+                label: context.l10n.accountabilityMinutes(_minutes),
                 onChanged: (v) => setState(() => _minutes = v.toInt()),
               ),
               const SizedBox(height: DS.spacing16),
               SizedBox(
                 width: double.infinity,
                 child: SparkleButton(
-                  label: '发布打卡',
+                  label: context.l10n.accountabilityPublishCheckin,
                   loading: _isLoading,
                   onPressed: _submit,
                   expand: true,
@@ -1527,7 +1530,7 @@ class _AccountabilityCheckinSheetState
   Future<void> _submit() async {
     final content = _contentController.text.trim();
     if (content.isEmpty) {
-      AppFeedback.info(context, '请写一句今天的进展');
+      AppFeedback.info(context, context.l10n.accountabilityProgressRequired);
       return;
     }
 
@@ -1543,11 +1546,11 @@ class _AccountabilityCheckinSheetState
       widget.onDone();
       if (mounted) {
         Navigator.pop(context);
-        AppFeedback.success(context, '打卡成功，伙伴已经能看到了');
+        AppFeedback.success(context, context.l10n.accountabilityCheckinSuccess);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '打卡失败: $e');
+        AppFeedback.error(context, '${context.l10n.accountabilityCheckinFailed}: $e');
       }
     } finally {
       if (mounted) {

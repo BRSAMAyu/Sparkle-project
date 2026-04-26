@@ -1,5 +1,7 @@
 from __future__ import annotations
-from datetime import timezone, datetime, timedelta
+
+import json
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from loguru import logger
@@ -75,6 +77,39 @@ class GalaxyStatsService:
         self.db.add(record)
 
         await self.db.commit()
+
+        # 5.1. Audit log (align with update_node_mastery pipeline)
+        try:
+            from sqlalchemy import text as sa_text
+            await self.db.execute(
+                sa_text(
+                    "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision) "
+                    "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)"
+                ),
+                {
+                    "node_id": node_id,
+                    "user_id": user_id,
+                    "old_mastery": int(old_mastery),
+                    "new_mastery": int(status.mastery_score),
+                    "reason": "task_complete",
+                    "request_id": str(task_id) if task_id else None,
+                    "revision": getattr(status, "revision", 0),
+                },
+            )
+            await self.db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to write mastery audit log for spark_node: {e}")
+
+        # 5.2. Outbox event (align with update_node_mastery pipeline)
+        try:
+            await self._write_spark_outbox_event(
+                user_id=user_id,
+                node_id=node_id,
+                new_mastery=int(status.mastery_score),
+                revision=getattr(status, "revision", 0),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to write spark outbox event: {e}")
 
         # 5.5. 发布掌握度更新事件
         try:
@@ -226,12 +261,18 @@ class GalaxyStatsService:
                 func.count().filter(UserNodeStatus.mastery_score >= 80).label('mastered_count'),
                 func.sum(UserNodeStatus.total_study_minutes).label('total_minutes')
             )
+            .join(KnowledgeNode, KnowledgeNode.id == UserNodeStatus.node_id)
             .where(UserNodeStatus.user_id == user_id)
+            .where((KnowledgeNode.status.is_(None)) | (KnowledgeNode.status == "published"))
         )
         result = await self.db.execute(query)
         row = result.one()
 
-        total_query = select(func.count()).select_from(KnowledgeNode)
+        total_query = (
+            select(func.count())
+            .select_from(KnowledgeNode)
+            .where((KnowledgeNode.status.is_(None)) | (KnowledgeNode.status == "published"))
+        )
         total_result = await self.db.execute(total_query)
         total_count = total_result.scalar() or 0
 
@@ -362,6 +403,38 @@ class GalaxyStatsService:
         return heatmap
 
     # --- Helpers ---
+
+    async def _write_spark_outbox_event(
+        self,
+        user_id: UUID,
+        node_id: UUID,
+        new_mastery: int,
+        revision: int,
+    ) -> None:
+        """Write mastery outbox event for spark_node, mirroring update_node_mastery pipeline."""
+        from sqlalchemy import text as sa_text
+
+        payload = {
+            "user_id": str(user_id),
+            "node_id": str(node_id),
+            "mastery_score": new_mastery,
+            "revision": revision,
+            "timestamp": _utcnow().isoformat(),
+        }
+        await self.db.execute(
+            sa_text(
+                "INSERT INTO event_outbox (aggregate_id, event_type, payload, created_at) "
+                "VALUES (:aggregate_id, :event_type, :payload::jsonb, :created_at)"
+            ),
+            {
+                "aggregate_id": str(user_id),
+                "event_type": "galaxy.node.mastery_updated",
+                "payload": json.dumps(payload),
+                "created_at": _utcnow(),
+            },
+        )
+        await self.db.commit()
+
     def _calculate_mastery_delta(self, study_minutes: int, importance_level: int) -> float:
         time_factor = min(study_minutes / 30.0, 2.0)
         difficulty_factor = 1 + (importance_level - 1) * 0.1
