@@ -125,6 +125,37 @@ Transform the Knowledge Star Map (知识星图/Galaxy) from a "stale map" into a
 6. [ ] Seed demo data with document-node links
 7. [ ] End-to-end closed-loop user experience test
 
+### Bugs Fixed During Integration
+| Bug | Fix | File | Commit |
+|-----|-----|------|--------|
+| Gateway route conflict (`/health` twice) | Removed duplicate health proxy route | `proxy_routes.go` | e2c04511 |
+| Alembic duplicate index | Removed `index=True` from column defs | `df1a2b3c4d5e` migration | e2c04511 |
+| Alembic multiple heads | Created merge migration | `merge_galaxy_doc_20260426.py` | e2c04511 |
+| gRPC NameError (`_get_default_icon`) | Moved func defs before usage | `agent_activity.py` | e2c04511 |
+| gRPC proto import path | Created symlinks for error_book pb2 | `app/gen/proto/error_book/` | e2c04511 |
+| Missing `AttachNodeDocumentRequest` | Added Pydantic model class | `galaxy.py` | cd2cd59a |
+| Gateway missing Galaxy doc routes | Added 12 proxy routes | `galaxy_handler.go` | 1dbe9a61 |
+| Gin param name conflict | Changed `:node_id` to `:id` | `galaxy_handler.go` | 1dbe9a61 |
+
+### Live API Verification (2026-04-26 20:14)
+All endpoints tested via Go Gateway (8080) → Python API (8000):
+
+| Endpoint | Method | Result |
+|----------|--------|--------|
+| `/api/v1/galaxy/drafts` | GET | `{"drafts":[]}` |
+| `/api/v1/galaxy/graph` | GET | 238 nodes, 40 relations |
+| `/api/v1/documents/upload` | POST | presigned URL returned |
+| `/api/v1/documents/{id}/status` | GET | `{"status":"queued"}` |
+| `/api/v1/galaxy/nodes/{id}/chunks` | GET | `{"chunks":[]}` |
+| `/api/v1/aurora/modeling-status` | GET | domain coverage returned |
+| `make smoke` | CLI | All passed |
+
+### Remaining Work
+1. [ ] Seed demo data with document-node relationships
+2. [ ] Build and test Flutter UI (iOS simulator)
+3. [ ] End-to-end chat with document citations test
+4. [ ] Verify citation feedback → quality score loop with real data
+
 ### Key Data Gaps
 - `knowledge_node_documents` table: 0 links (no documents attached to nodes yet)
 - Need demo data with node-document relationships for testing
