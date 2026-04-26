@@ -41,7 +41,6 @@ async def get_user_settings(
         if isinstance(notif_raw, dict):
             notification_prefs = notif_raw
         elif isinstance(notif_raw, str):
-            import json
             notification_prefs = json.loads(notif_raw)
     except Exception:
         pass
