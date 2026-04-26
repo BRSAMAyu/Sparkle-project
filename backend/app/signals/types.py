@@ -344,6 +344,10 @@ class ModelWriteEntry:
             "ttl": self.ttl,
         }
 
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> ModelWriteEntry:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
 
 @dataclass
 class ModelWriteDirective:
@@ -364,9 +368,9 @@ class ModelWriteDirective:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> ModelWriteDirective:
-        writes_data = d.get("writes", [])
-        writes = [ModelWriteEntry(**{k: v for k, v in w.items() if k in ModelWriteEntry.__dataclass_fields__}) for w in writes_data]
-        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__ and k != "writes"}, writes=writes)
+        writes = [ModelWriteEntry.from_dict(w) for w in d.get("writes", [])]
+        kwargs = {k: v for k, v in d.items() if k in cls.__dataclass_fields__ and k != "writes"}
+        return cls(writes=writes, **kwargs)
 
 
 # ── 4f. UXDirective ─────────────────────────────────────────────────────

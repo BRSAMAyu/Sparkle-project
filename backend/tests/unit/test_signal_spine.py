@@ -2937,7 +2937,7 @@ def test_ux_directive_undigested_material():
 def test_ux_directive_no_match_status_band():
     """Unmatched signal with status_band visibility → default UXDirective."""
     engine = PolicyEngine()
-    signal, decision = _policy_and_signal("material_utilization", "material_underutilized")
+    signal, decision = _policy_and_signal("safety_boundary", "some_unknown_claim")
     decision.visibility = "status_band"
     uxd = engine.build_ux_directive(decision, signal)
     assert uxd is not None
@@ -2945,11 +2945,12 @@ def test_ux_directive_no_match_status_band():
 
 
 def test_ux_directive_no_match_receipt():
-    """Unmatched signal with receipt visibility → None."""
+    """Unmatched claim → default UXDirective (fallback)."""
     engine = PolicyEngine()
-    signal, decision = _policy_and_signal("material_utilization", "material_underutilized")
+    signal, decision = _policy_and_signal("safety_boundary", "some_unknown_claim")
     uxd = engine.build_ux_directive(decision, signal)
-    assert uxd is None
+    assert uxd is not None
+    assert uxd.status_band_state == "normal"
 
 
 def test_ux_directive_serialization():
@@ -2982,7 +2983,75 @@ async def test_spine_pipeline_stores_ux_directive(spine):
     assert uxd.status_band_state == "risk_detected"
 
 
-# ── RetrievalDirective Tests ─────────────────────────────────────────
+def test_ux_directive_material_underutilized():
+    """material_underutilized → normal status + context receipt."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("material_utilization", "material_underutilized")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "normal"
+    assert uxd.show_context_receipt is True
+
+
+def test_ux_directive_pre_exam_silence():
+    """pre_exam_silence → strategy_active status band."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("recall_needed", "pre_exam_silence")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "strategy_active"
+
+
+def test_ux_directive_cohort_mistake():
+    """cohort_mistake_detected → normal status band."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("community_cohort_pattern", "cohort_mistake_detected")
+    uxd = engine.build_ux_directive(decision, signal)
+    assert uxd is not None
+    assert uxd.status_band_state == "normal"
+
+
+def test_plan_directive_task_missed():
+    """recall_needed/task_missed → insert_task."""
+    engine = PolicyEngine()
+    signal, decision = _policy_and_signal("recall_needed", "task_missed")
+    pd = engine.build_plan_directive(decision, signal)
+    assert pd is not None
+    assert pd.plan_action == "insert_task"
+    assert pd.constraints["recovery_task"] is True
+
+
+def test_model_write_entry_from_dict():
+    """ModelWriteEntry.from_dict round-trips correctly."""
+    from app.signals.types import ModelWriteEntry
+    entry = ModelWriteEntry(
+        target_model="user_state", claim="test",
+        scope="current_sprint", confidence=0.8,
+        needs_user_confirmation=True, ttl="48h",
+    )
+    d = entry.to_dict()
+    entry2 = ModelWriteEntry.from_dict(d)
+    assert entry2.target_model == "user_state"
+    assert entry2.needs_user_confirmation is True
+
+
+@pytest.mark.asyncio
+async def test_spine_trace_includes_secondary_directive_ids(spine):
+    """Spine pipeline appends PlanDirective/UXDirective IDs to CausalTrace."""
+    signal = ActionableSignal(
+        signal_id="sig_trace", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    trace = await spine._run_signal_pipeline(user_id="u_trace_dirs", signal=signal)
+    assert trace is not None
+    # Should have at least ExecutionDirective + PlanDirective + UXDirective IDs
+    assert len(trace.directive_ids) >= 2
+    # PlanDirective should be present (task_too_large has plan mapping)
+    plan_dir = await spine.get_plan_directive("u_trace_dirs")
+    assert plan_dir is not None
+    assert plan_dir.directive_id in trace.directive_ids
 
 def test_retrieval_directive_roundtrip():
     """RetrievalDirective serialization round-trip."""

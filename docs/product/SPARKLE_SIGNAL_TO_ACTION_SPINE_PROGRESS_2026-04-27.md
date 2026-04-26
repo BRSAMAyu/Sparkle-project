@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-198/198 tests passing:
+204/204 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -187,9 +187,10 @@
 - Layer 6 ResponseDirective: 7 tests (5 standalone + 2 integration)
 - Layer 6 NotificationDirective: 8 tests (6 standalone + 2 integration)
 - Layer 6 RetrievalDirective: 4 tests
-- Layer 6 PlanDirective: tests (via PolicyEngine integration)
-- Layer 6 ModelWriteDirective: tests (via PolicyEngine integration)
-- Layer 6 UXDirective: tests (via SpineOrchestrator integration)
+- Layer 6 PlanDirective: 8 tests (6 standalone + 2 integration)
+- Layer 6 ModelWriteDirective: 8 tests (7 standalone + 1 integration)
+- Layer 6 UXDirective: 14 tests (11 standalone + 1 integration + 2 edge)
+- Opus review regression tests: 3 tests (trace IDs, material_underutilized, ModelWriteEntry.from_dict)
 
 ---
 
@@ -394,6 +395,121 @@
 
 ---
 
+## Layer 6: PlanDirective
+
+**目标**: 8 层架构第 6 层 — 控制计划和重规划
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `PlanDirective` 数据结构 | plan_action / scope / constraints |
+| `PolicyEngine.build_plan_directive()` | 从 signal 构建 PlanDirective |
+| `SpineOrchestrator.get_plan_directive()` | 供 planning service 消费 |
+
+### 触发映射
+
+| 信号 | plan_action | scope | 约束 |
+|------|------------|-------|------|
+| recent_task_too_large | local_replan | next_48h | do_not_rebuild + insert_recovery |
+| transfer_failure | local_replan | current_sprint | avoid_new_chapter + insert_practice |
+| exam_rescue_detected | full_replan | current_sprint | preserve_deadline + prefer_high_yield |
+| momentum_stalled | local_replan | next_48h | do_not_rebuild + insert_easy_win |
+| task_missed | insert_task | next_48h | recovery_task + adjust_deadlines |
+
+### 验收标准
+
+- [x] task_granularity_fit → local_replan with recovery task
+- [x] transfer_failure → local_replan with practice task
+- [x] exam_rescue → full_replan with high yield
+- [x] momentum_stalled → local_replan with easy win
+- [x] task_missed → insert_task
+- [x] 非匹配信号 → None
+- [x] 序列化/反序列化正确
+- [x] Spine pipeline 自动存储
+
+---
+
+## Layer 6: ModelWriteDirective
+
+**目标**: 8 层架构第 6 层 — 控制写入哪个模型、写入多深
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `ModelWriteEntry` 数据结构 | target_model / claim / scope / confidence / needs_user_confirmation / ttl |
+| `ModelWriteDirective` 数据结构 | writes 列表（上限 5 条） |
+| `PolicyEngine.build_model_write_directive()` | 从 signal 构建 ModelWriteDirective |
+| `SpineOrchestrator.get_model_write_directive()` | 供 state_aggregator 消费 |
+
+### 写入映射
+
+| 信号 | writes |
+|------|--------|
+| recent_task_too_large | user_state + sparkle_self_model (degraded) |
+| transfer_failure | user_state (knowledge consolidation) |
+| exam_rescue_detected | user_state (needs confirmation) |
+| momentum_high | sparkle_self_model (encouragement effective) |
+
+### 验收标准
+
+- [x] task_timeout → 2 writes, self_model has degraded confidence
+- [x] transfer_failure → 1 write (user_state)
+- [x] exam_rescue → 1 write needing user confirmation
+- [x] momentum_high → self_model write
+- [x] 非匹配信号 → None
+- [x] writes 列表上限 5 条
+- [x] ModelWriteEntry.from_dict 一致性
+- [x] 序列化/反序列化正确
+- [x] Spine pipeline 自动存储
+
+---
+
+## Layer 6: UXDirective
+
+**目标**: 8 层架构第 6 层 — 控制状态带、回执、Aurora 可见性
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `UXDirective` 数据结构 | status_band_state / show_context_receipt / show_strategy_receipt / predicted_reply_options / allow_full_aurora_wake |
+| `PolicyEngine.build_ux_directive()` | 从 signal 构建 UXDirective，通过 reply engine 填充 predicted_reply_options |
+| `SpineOrchestrator.get_ux_directive()` | 供 UX layer 消费 |
+
+### 状态带映射
+
+| 信号 | status_band_state | 说明 |
+|------|-------------------|------|
+| recent_task_too_large | risk_detected | 风险状态带 + 策略回执 |
+| transfer_failure | risk_detected | 风险状态带 + 策略回执 |
+| exam_rescue_detected | strategy_active | 策略激活 + Aurora 可唤醒 |
+| momentum_high | milestone | 里程碑 |
+| momentum_stalled | risk_detected | 风险 |
+| undigested_material / task_not_started | normal | 上下文回执 |
+| task_missed / pre_exam_silence | risk/strategy | 各有针对性 |
+| material_underutilized | normal | 上下文回执 |
+| cohort_mistake / shared_resource | normal | 内联提示 |
+
+### 验收标准
+
+- [x] task_timeout → risk_detected + strategy receipt
+- [x] exam_rescue → strategy_active + aurora wake allowed
+- [x] momentum_high → milestone
+- [x] momentum_stalled → risk_detected
+- [x] undigested_material → normal + context receipt
+- [x] material_underutilized → normal + context receipt
+- [x] pre_exam_silence → strategy_active
+- [x] cohort_mistake → normal
+- [x] predicted_reply_options 从 reply engine 填充（requires_user_confirmation）
+- [x] 所有 claim 都有 UX 映射（无遗漏）
+- [x] CausalTrace 包含所有二级 directive ID
+- [x] 序列化/反序列化正确
+- [x] Spine pipeline 自动存储
+
+---
+
 ## P3: Production Event Handler Wiring
 
 **目标**: SpineOrchestrator 方法接入生产代码的事件处理器
@@ -555,6 +671,9 @@
 | StateEntry | ✅ 完成 | `signals/types.py` |
 | ResponseDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
 | NotificationDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
+| PlanDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
+| ModelWriteDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
+| UXDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
 
 ### 架构原则检查清单
 

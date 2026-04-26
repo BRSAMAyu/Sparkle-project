@@ -31,10 +31,13 @@ from app.signals.types import (
     ActionableSignal,
     CausalTrace,
     DirectiveApplicationAudit,
+    ModelWriteDirective,
     NotificationDirective,
     ExecutionDirective,
+    PlanDirective,
     PolicyDecision,
     ResponseDirective,
+    UXDirective,
     UserVisibleReceipt,
     _uid,
 )
@@ -57,7 +60,6 @@ class SpineOrchestrator:
         self.redis = redis_client
         self.trace_store = CausalTraceStore(redis_client)
         self.timeout_detector = TaskTimeoutDetector(redis_client)
-        self.policy_engine = PolicyEngine()
         self.achievement_consumer = AchievementReinforcementConsumer()
         self.recall_detector = RecallOpportunityDetector()
         self.exam_rescue = ExamRescueDetector()
@@ -69,6 +71,7 @@ class SpineOrchestrator:
         self.wake_judge = AuroraWakeJudge()
         self.signal_ranker = SignalRanker()
         self.state_register = StateRegister(redis_client)
+        self.policy_engine = PolicyEngine(reply_engine=self.reply_engine)
 
     async def on_task_completed(
         self,
@@ -140,6 +143,24 @@ class SpineOrchestrator:
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
         if notif_dir:
             await self._store_notification_directive(user_id, notif_dir)
+
+        # Step 4d: Build and store PlanDirective
+        plan_dir = self.policy_engine.build_plan_directive(decision, signal)
+        if plan_dir:
+            await self._store_plan_directive(user_id, plan_dir)
+            trace.directive_ids.append(plan_dir.directive_id)
+
+        # Step 4e: Build and store ModelWriteDirective
+        mw_dir = self.policy_engine.build_model_write_directive(decision, signal)
+        if mw_dir:
+            await self._store_model_write_directive(user_id, mw_dir)
+            trace.directive_ids.append(mw_dir.directive_id)
+
+        # Step 4f: Build and store UXDirective
+        ux_dir = self.policy_engine.build_ux_directive(decision, signal)
+        if ux_dir:
+            await self._store_ux_directive(user_id, ux_dir)
+            trace.directive_ids.append(ux_dir.directive_id)
 
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":
@@ -382,6 +403,24 @@ class SpineOrchestrator:
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
         if notif_dir:
             await self._store_notification_directive(user_id, notif_dir)
+
+        # Build and store PlanDirective
+        plan_dir = self.policy_engine.build_plan_directive(decision, signal)
+        if plan_dir:
+            await self._store_plan_directive(user_id, plan_dir)
+            trace.directive_ids.append(plan_dir.directive_id)
+
+        # Build and store ModelWriteDirective
+        mw_dir = self.policy_engine.build_model_write_directive(decision, signal)
+        if mw_dir:
+            await self._store_model_write_directive(user_id, mw_dir)
+            trace.directive_ids.append(mw_dir.directive_id)
+
+        # Build and store UXDirective
+        ux_dir = self.policy_engine.build_ux_directive(decision, signal)
+        if ux_dir:
+            await self._store_ux_directive(user_id, ux_dir)
+            trace.directive_ids.append(ux_dir.directive_id)
 
         if decision.visibility == "receipt":
             receipt = UserVisibleReceipt(
@@ -647,3 +686,45 @@ class SpineOrchestrator:
         if not raw:
             return None
         return NotificationDirective.from_dict(json.loads(raw))
+
+    # ── Layer 6: PlanDirective ──────────────────────────────────────────
+
+    async def _store_plan_directive(self, user_id: str, pd: PlanDirective) -> None:
+        import json
+        key = f"spine:plan_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(pd.to_dict()), ex=72 * 3600)
+
+    async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
+        import json
+        raw = await self.redis.get(f"spine:plan_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return PlanDirective.from_dict(json.loads(raw))
+
+    # ── Layer 6: ModelWriteDirective ────────────────────────────────────
+
+    async def _store_model_write_directive(self, user_id: str, mwd: ModelWriteDirective) -> None:
+        import json
+        key = f"spine:model_write_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(mwd.to_dict()), ex=72 * 3600)
+
+    async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
+        import json
+        raw = await self.redis.get(f"spine:model_write_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return ModelWriteDirective.from_dict(json.loads(raw))
+
+    # ── Layer 6: UXDirective ────────────────────────────────────────────
+
+    async def _store_ux_directive(self, user_id: str, uxd: UXDirective) -> None:
+        import json
+        key = f"spine:ux_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(uxd.to_dict()), ex=72 * 3600)
+
+    async def get_ux_directive(self, user_id: str) -> UXDirective | None:
+        import json
+        raw = await self.redis.get(f"spine:ux_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return UXDirective.from_dict(json.loads(raw))

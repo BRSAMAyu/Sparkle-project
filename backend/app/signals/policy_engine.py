@@ -217,6 +217,9 @@ _DIRECTIVE_SCOPE = "today"
 class PolicyEngine:
     """Signal → PolicyDecision → ExecutionDirective（固定规则版）。"""
 
+    def __init__(self, reply_engine: Any | None = None):
+        self._reply_engine = reply_engine
+
     async def evaluate(
         self,
         signal: ActionableSignal,
@@ -575,7 +578,7 @@ class PolicyEngine:
         return ModelWriteDirective(
             directive_id=_uid("mwd"),
             policy_decision_id=decision.policy_decision_id,
-            writes=writes,
+            writes=writes[:5],  # cap at 5 entries
         )
 
     # Signal → UX state mapping
@@ -610,9 +613,35 @@ class PolicyEngine:
             "show_context_receipt": True,
             "allow_full_aurora_wake": False,
         },
+        "task_not_started": {
+            "status_band_state": "normal",
+            "show_context_receipt": True,
+            "allow_full_aurora_wake": False,
+        },
         "task_missed": {
             "status_band_state": "risk_detected",
             "show_strategy_receipt": True,
+            "allow_full_aurora_wake": False,
+        },
+        "pre_exam_silence": {
+            "status_band_state": "strategy_active",
+            "show_context_receipt": True,
+            "allow_full_aurora_wake": False,
+        },
+        "material_underutilized": {
+            "status_band_state": "normal",
+            "show_context_receipt": True,
+            "show_strategy_receipt": False,
+            "allow_full_aurora_wake": False,
+        },
+        "cohort_mistake_detected": {
+            "status_band_state": "normal",
+            "show_context_receipt": False,
+            "allow_full_aurora_wake": False,
+        },
+        "shared_resource_relevant": {
+            "status_band_state": "normal",
+            "show_context_receipt": False,
             "allow_full_aurora_wake": False,
         },
     }
@@ -625,7 +654,7 @@ class PolicyEngine:
         """从 PolicyDecision 构建 UXDirective — 控制状态带、回执、Aurora 可见性。"""
         params = self._UX_STATE_MAP.get(signal.claim)
         if not params:
-            # Default UX for unmatched signals
+            # Default UX for unmatched signals with status_band visibility
             if decision.visibility == "status_band":
                 return UXDirective(
                     directive_id=_uid("uxd"),
@@ -634,7 +663,21 @@ class PolicyEngine:
                     show_context_receipt=True,
                     show_strategy_receipt=False,
                 )
-            return None
+            # receipt/inline_hint signals without explicit mapping → default UX
+            return UXDirective(
+                directive_id=_uid("uxd"),
+                policy_decision_id=decision.policy_decision_id,
+                status_band_state="normal",
+                show_context_receipt=True,
+                show_strategy_receipt=decision.requires_user_confirmation,
+            )
+
+        # Populate predicted_reply_options from reply engine
+        predicted_options: list[str] = []
+        if self._reply_engine and decision.requires_user_confirmation:
+            question = self._reply_engine.generate_options(signal)
+            if question:
+                predicted_options = [opt.label for opt in question.options]
 
         return UXDirective(
             directive_id=_uid("uxd"),
@@ -643,4 +686,5 @@ class PolicyEngine:
             show_context_receipt=params.get("show_context_receipt", True),
             show_strategy_receipt=params.get("show_strategy_receipt", False),
             allow_full_aurora_wake=params.get("allow_full_aurora_wake", False),
+            predicted_reply_options=predicted_options,
         )
