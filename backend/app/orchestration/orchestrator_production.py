@@ -999,12 +999,31 @@ class ProductionChatOrchestrator:
                     if runtime_context_data.get(key) is not None:
                         user_context_data[key] = runtime_context_data[key]
             context_data = runtime_context_data
+
+            # Signal-to-Action Spine: fetch ResponseDirective for prompt modulation
+            spine_response_directive = None
+            try:
+                from app.signals.spine_orchestrator import SpineOrchestrator
+                _spine = SpineOrchestrator(self.redis)
+                _resp_dir = await _spine.get_response_directive(str(user_id))
+                if _resp_dir:
+                    spine_response_directive = {
+                        "tone": _resp_dir.tone,
+                        "length": _resp_dir.length,
+                        "avoid": list(_resp_dir.avoid or []),
+                        "must_acknowledge": list(_resp_dir.must_acknowledge or []),
+                        "include_user_options": _resp_dir.include_user_options,
+                    }
+            except Exception:
+                pass
+
             base_system_prompt = build_system_prompt(
                 user_context_data,
                 conversation_history=conversation_context,
                 plan_context=plan_context,
                 session_feedback_instruction=str((context_data or {}).get("session_feedback_instruction") or ""),
                 dual_core_instruction=str((context_data or {}).get("dual_core_prompt_instruction") or ""),
+                spine_response_directive=spine_response_directive,
             )
 
             if preferred_tools_hint:

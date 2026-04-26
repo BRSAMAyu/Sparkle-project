@@ -882,6 +882,7 @@ def build_system_prompt(
     context_level: str = "full",  # full | light
     chat_mode: str = "standard",
     model_key: str | None = None,  # P2: model-aware prompt budget
+    spine_response_directive: dict | None = None,  # Signal-to-Action Spine ResponseDirective
 ) -> str:
     """
 
@@ -1556,6 +1557,36 @@ def build_system_prompt(
     if prompt_version == "v2":
 
         prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
+
+    # Signal-to-Action Spine: inject ResponseDirective constraints
+    if spine_response_directive:
+        tone = spine_response_directive.get("tone", "calm_direct")
+        length = spine_response_directive.get("length", "medium")
+        avoid_list = spine_response_directive.get("avoid", [])
+        must_acknowledge = spine_response_directive.get("must_acknowledge", [])
+        include_options = spine_response_directive.get("include_user_options", True)
+
+        tone_map = {
+            "calm_direct": "稳定、直接",
+            "calm_urgent": "稳定但紧迫",
+            "direct_but_reassuring": "直接但让人安心",
+            "encouraging_diagnostic": "鼓励性诊断",
+            "encouraging_low_pressure": "鼓励、低压",
+            "recognition_not_praise": "认可但不空洞赞美",
+            "helpful_suggestion": "有帮助的建议",
+        }
+        length_map = {"short": "简短（1-3句）", "medium": "适中", "long": "详细"}
+
+        spine_section = "\n\n## 策略调整指令\n"
+        spine_section += f"- 语气：{tone_map.get(tone, tone)}\n"
+        spine_section += f"- 长度：{length_map.get(length, length)}\n"
+        if avoid_list:
+            spine_section += f"- 避免：{', '.join(avoid_list)}\n"
+        if must_acknowledge:
+            spine_section += f"- 必须承认：{', '.join(must_acknowledge)}\n"
+        if include_options:
+            spine_section += "- 提供可操作选项\n"
+        prompt += spine_section
 
     prompt += (
         "\n\n## 输出格式约束\n"

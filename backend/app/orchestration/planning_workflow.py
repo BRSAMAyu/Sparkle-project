@@ -977,17 +977,69 @@ class PlanningWorkflowManager:
         galaxy_weak_nodes = list(session.collected.get("galaxy_weak_nodes") or [])
         phases = list(strategy.get("phases") or [])
 
-        # Signal-to-Action Spine: fetch active directive for this user
+        # Signal-to-Action Spine: fetch active directives for this user
         spine = None
         spine_directive = None
+        plan_directive = None
         try:
             from app.signals.spine_orchestrator import SpineOrchestrator
             spine = SpineOrchestrator(cache_service.redis)
             spine_directive = await spine.get_active_directive(str(user_id))
             if spine_directive:
                 logger.info("Spine directive active for user {}: {}", user_id, list(spine_directive.hard_constraints.keys()))
+            plan_directive = await spine.get_plan_directive(str(user_id))
+            if plan_directive:
+                logger.info("Spine plan_directive active for user {}: action={} constraints={}", user_id, plan_directive.plan_action, list(plan_directive.constraints.keys()))
         except Exception as _spine_exc:
             logger.debug("Spine directive fetch skipped: {}", _spine_exc)
+
+        # Apply PlanDirective constraints to the planning flow
+        if plan_directive is not None:
+            constraints = plan_directive.constraints
+            if constraints.get("do_not_rebuild_entire_plan") and phases:
+                # local_replan: only adjust recent days, preserve existing structure
+                logger.info("PlanDirective: local_replan — preserving existing plan structure")
+            if constraints.get("insert_recovery_task") and phases:
+                # Insert a recovery task as day 1 of first phase
+                recovery_task = {
+                    "day": 1,
+                    "focus": "恢复节奏",
+                    "task_kind": "recovery_review",
+                    "estimated_minutes": 25,
+                    "difficulty": 2,
+                }
+                phases[0]["tasks"] = [recovery_task] + list(phases[0].get("tasks", []))
+                logger.info("PlanDirective: inserted recovery task at day 1")
+            if constraints.get("insert_practice_task") and phases:
+                practice_task = {
+                    "day": 1,
+                    "focus": "巩固练习",
+                    "task_kind": "worked_example_then_drill",
+                    "estimated_minutes": 25,
+                    "difficulty": 2,
+                }
+                phases[0]["tasks"] = [practice_task] + list(phases[0].get("tasks", []))
+                logger.info("PlanDirective: inserted practice task at day 1")
+            if constraints.get("insert_easy_win") and phases:
+                easy_task = {
+                    "day": 1,
+                    "focus": "轻松切入",
+                    "task_kind": "light_review",
+                    "estimated_minutes": 15,
+                    "difficulty": 1,
+                }
+                phases[0]["tasks"] = [easy_task] + list(phases[0].get("tasks", []))
+                logger.info("PlanDirective: inserted easy-win task at day 1")
+            if constraints.get("recovery_task") and phases:
+                rec_task = {
+                    "day": 1,
+                    "focus": "任务恢复",
+                    "task_kind": "recovery_review",
+                    "estimated_minutes": 20,
+                    "difficulty": 2,
+                }
+                phases[0]["tasks"] = [rec_task] + list(phases[0].get("tasks", []))
+                logger.info("PlanDirective: inserted missed-task recovery")
 
         for index, phase in enumerate(phases, start=1):
             for day_spec in self._daily_task_specs(
