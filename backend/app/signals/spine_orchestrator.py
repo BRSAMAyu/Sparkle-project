@@ -39,6 +39,7 @@ from app.signals.types import (
     PlanDirective,
     PolicyDecision,
     ResponseDirective,
+    RetrievalDirective,
     UXDirective,
     UserVisibleReceipt,
     _uid,
@@ -152,6 +153,11 @@ class SpineOrchestrator:
         if notif_dir:
             await self._store_notification_directive(user_id, notif_dir)
 
+        # Step 4c2: Build and store RetrievalDirective
+        ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
+        if ret_dir:
+            await self._store_retrieval_directive(user_id, ret_dir)
+
         # Step 4d: Build and store PlanDirective
         plan_dir = self.policy_engine.build_plan_directive(decision, signal)
         if plan_dir:
@@ -163,6 +169,7 @@ class SpineOrchestrator:
         if mw_dir:
             await self._store_model_write_directive(user_id, mw_dir)
             trace.directive_ids.append(mw_dir.directive_id)
+            await self._apply_model_writes(user_id, mw_dir)
 
         # Step 4f: Build and store UXDirective
         ux_dir = self.policy_engine.build_ux_directive(decision, signal)
@@ -426,6 +433,11 @@ class SpineOrchestrator:
         if notif_dir:
             await self._store_notification_directive(user_id, notif_dir)
 
+        # Build and store RetrievalDirective
+        ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
+        if ret_dir:
+            await self._store_retrieval_directive(user_id, ret_dir)
+
         # Build and store PlanDirective
         plan_dir = self.policy_engine.build_plan_directive(decision, signal)
         if plan_dir:
@@ -437,6 +449,7 @@ class SpineOrchestrator:
         if mw_dir:
             await self._store_model_write_directive(user_id, mw_dir)
             trace.directive_ids.append(mw_dir.directive_id)
+            await self._apply_model_writes(user_id, mw_dir)
 
         # Build and store UXDirective
         ux_dir = self.policy_engine.build_ux_directive(decision, signal)
@@ -710,6 +723,18 @@ class SpineOrchestrator:
             return None
         return NotificationDirective.from_dict(json.loads(raw))
 
+    async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
+        import json
+        key = f"spine:retrieval_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
+
+    async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
+        import json
+        raw = await self.redis.get(f"spine:retrieval_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return RetrievalDirective.from_dict(json.loads(raw))
+
     # ── Layer 6: PlanDirective ──────────────────────────────────────────
 
     async def _store_plan_directive(self, user_id: str, pd: PlanDirective) -> None:
@@ -737,6 +762,34 @@ class SpineOrchestrator:
         if not raw:
             return None
         return ModelWriteDirective.from_dict(json.loads(raw))
+
+    async def _apply_model_writes(self, user_id: str, mwd: ModelWriteDirective) -> None:
+        """Apply model write claims to user state (confidence-gated, auto-apply only)."""
+        import json
+        for entry in mwd.writes:
+            # Only auto-apply high-confidence claims that don't need user confirmation
+            if entry.needs_user_confirmation or entry.confidence < 0.7:
+                continue
+            key = f"spine:model_claim:{user_id}:{entry.target_model}:{entry.scope}"
+            await self.redis.set(
+                key,
+                json.dumps({
+                    "claim": entry.claim,
+                    "confidence": entry.confidence,
+                    "source": "spine_auto",
+                    "directive_id": mwd.directive_id,
+                }),
+                ex=self._ttl_to_seconds(entry.ttl),
+            )
+
+    @staticmethod
+    def _ttl_to_seconds(ttl: str) -> int:
+        """Parse TTL like '72h' to seconds."""
+        if ttl.endswith("h"):
+            return int(ttl[:-1]) * 3600
+        if ttl.endswith("d"):
+            return int(ttl[:-1]) * 86400
+        return 72 * 3600  # default
 
     # ── Layer 6: UXDirective ────────────────────────────────────────────
 

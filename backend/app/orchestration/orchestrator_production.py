@@ -774,13 +774,27 @@ class ProductionChatOrchestrator:
                 try:
                     if active_db and user_id:
                         with TRACER.start_as_current_span("rag.graphrag"):
+                            # Signal-to-Action Spine: apply RetrievalDirective
+                            _retrieval_top_k = 5
+                            _retrieval_depth = 2
+                            try:
+                                from app.signals.spine_orchestrator import SpineOrchestrator
+                                _spine_rag = SpineOrchestrator(self.redis)
+                                _ret_dir = await _spine_rag.get_retrieval_directive(str(user_id))
+                                if _ret_dir:
+                                    _retrieval_top_k = max(1, min(20, _ret_dir.token_budget // 600))
+                                    if _ret_dir.pollution_guard == "strict":
+                                        _retrieval_depth = 1
+                            except Exception:
+                                pass
+
                             # 使用 GraphKnowledgeService 进行增强的 GraphRAG 检索
                             graph_ks = GraphKnowledgeService(active_db)
                             rag_result = await graph_ks.graph_rag_search(
                                 query=request.message if request.HasField("message") else "",
                                 user_id=uuid.UUID(user_id),
-                                depth=2,
-                                top_k=5
+                                depth=_retrieval_depth,
+                                top_k=_retrieval_top_k
                             )
                         knowledge_context = rag_result.get("context", "")
 

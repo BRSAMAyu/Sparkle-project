@@ -193,6 +193,7 @@
 - Opus review regression tests: 3 tests (trace IDs, material_underutilized, ModelWriteEntry.from_dict)
 - Layer 8 OutcomeRecorder: 10 tests (7 standalone + 2 integration + 1 serialization)
 - Decision Realization Metrics: 8 tests (6 standalone + 2 integration)
+- P4 Production directive consumption: 7 tests (3 prompt injection + 4 plan directive round-trip)
 
 ---
 
@@ -602,7 +603,34 @@
 
 ---
 
-## P1-1: AchievementReinforcementConsumer
+## P4: Production Directive Consumption Wiring
+
+**目标**: Spine 输出的 7 类 Directive 被下游生产模块消费，驱动真实行为变化
+
+### Directive Consumption Map
+
+| Directive Type | Consumer Module | 状态 |
+|---------------|----------------|------|
+| ExecutionDirective | `planning_workflow.py` (task spec modification) | ✅ WIRED |
+| ResponseDirective | `orchestrator_production.py` → `prompts.py` (tone/length/avoid injection) | ✅ WIRED |
+| PlanDirective | `planning_workflow.py` (recovery/practice/easy-win task insertion) | ✅ WIRED |
+| NotificationDirective | `notification_service` (push control) | 🔲 TODO |
+| RetrievalDirective | RAG pipeline (source filtering) | 🔲 TODO |
+| UXDirective | frontend state (status band / receipt display) | 🔲 TODO |
+| ModelWriteDirective | `state_aggregator` (model claims write) | 🔲 TODO |
+
+### 验收标准
+
+- [x] ResponseDirective: tone/length/avoid/must_acknowledge 注入 build_system_prompt
+- [x] PlanDirective: insert_recovery_task / insert_practice_task / insert_easy_win 任务前插
+- [x] orchestrator_production 使用 get_response_directive() 独立获取
+- [x] planning_workflow 使用 get_plan_directive() 独立获取
+- [x] 所有消费点 try/except 包裹，spine 故障不影响主流程
+- [x] Opus review: 修复 None-safe tasks 访问、移除冗余 Redis 读取、添加 debug logging
+- [ ] NotificationDirective 消费接入
+- [ ] RetrievalDirective 消费接入
+- [ ] UXDirective 消费接入
+- [ ] ModelWriteDirective 消费接入
 
 **目标**: 成就回流 — achievement → growth momentum → tone/nudge/challenge 调整
 

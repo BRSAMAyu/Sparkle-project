@@ -3627,3 +3627,169 @@ async def test_orchestrator_production_fetches_response_directive():
     assert fetched.length == "short"
     assert "复杂解释" in fetched.avoid
     assert "时间紧迫" in fetched.must_acknowledge
+
+
+@pytest.mark.asyncio
+async def test_model_write_auto_apply():
+    """High-confidence model writes auto-apply to Redis user state."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import ModelWriteDirective, ModelWriteEntry
+    import json
+
+    mwd = ModelWriteDirective(
+        directive_id="mw_auto",
+        policy_decision_id="pol_auto",
+        writes=[
+            ModelWriteEntry(
+                target_model="user_state",
+                claim="user struggles with transfer problems",
+                scope="current_sprint",
+                confidence=0.85,
+                needs_user_confirmation=False,
+                ttl="48h",
+            ),
+            ModelWriteEntry(
+                target_model="sparkle_self_model",
+                claim="user may need scaffolding",
+                scope="turn",
+                confidence=0.5,  # below threshold
+                needs_user_confirmation=False,
+            ),
+            ModelWriteEntry(
+                target_model="cognitive_profile",
+                claim="advanced pattern detected",
+                scope="strategy",
+                confidence=0.9,
+                needs_user_confirmation=True,  # needs confirmation
+            ),
+        ],
+    )
+
+    spine = SpineOrchestrator(redis_client=redis)
+    await spine._apply_model_writes("u_mw", mwd)
+
+    # Only the first entry should be applied (high confidence, no confirmation needed)
+    claim_key = "spine:model_claim:u_mw:user_state:current_sprint"
+    raw = await redis.get(claim_key)
+    assert raw is not None
+    claim = json.loads(raw)
+    assert claim["claim"] == "user struggles with transfer problems"
+    assert claim["source"] == "spine_auto"
+
+    # Low confidence entry should NOT be applied
+    low_key = "spine:model_claim:u_mw:sparkle_self_model:turn"
+    assert await redis.get(low_key) is None
+
+    # Needs-confirmation entry should NOT be applied
+    confirm_key = "spine:model_claim:u_mw:cognitive_profile:strategy"
+    assert await redis.get(confirm_key) is None
+
+
+@pytest.mark.asyncio
+async def test_retrieval_directive_store_fetch():
+    """RetrievalDirective round-trip through spine storage."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import RetrievalDirective
+    import json
+
+    rd = RetrievalDirective(
+        directive_id="ret_test",
+        policy_decision_id="pol_ret",
+        retrieval_mode="task_bound_graph_rag",
+        source_scope="task_bound",
+        pollution_guard="strict",
+        token_budget=2400,
+    )
+    await redis.set(
+        f"spine:retrieval_directive:u_ret:latest",
+        json.dumps(rd.to_dict()),
+        ex=72 * 3600,
+    )
+
+    spine = SpineOrchestrator(redis_client=redis)
+    fetched = await spine.get_retrieval_directive("u_ret")
+    assert fetched is not None
+    assert fetched.retrieval_mode == "task_bound_graph_rag"
+    assert fetched.pollution_guard == "strict"
+    assert fetched.token_budget == 2400
+
+
+@pytest.mark.asyncio
+async def test_retrieval_directive_pipeline_storage():
+    """Signal pipeline stores RetrievalDirective for matched claims."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    signal = ActionableSignal(
+        signal_id="sig_ret", source_event_ids=[], source_system="test",
+        state_key="material_utilization", claim="material_underutilized",
+        confidence=0.9, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    spine = SpineOrchestrator(redis_client=redis)
+    await spine._run_signal_pipeline(user_id="u_retpipe", signal=signal)
+
+    fetched = await spine.get_retrieval_directive("u_retpipe")
+    assert fetched is not None
+    assert fetched.retrieval_mode == "targeted_source_rag"
+
+
+@pytest.mark.asyncio
+async def test_ux_directive_store_fetch():
+    """UXDirective round-trip through spine storage."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import UXDirective
+    import json
+
+    uxd = UXDirective(
+        directive_id="ux_test",
+        policy_decision_id="pol_ux",
+        status_band_state="risk_detected",
+        show_context_receipt=True,
+        show_strategy_receipt=True,
+        predicted_reply_options=["确认调整", "恢复原计划"],
+    )
+    await redis.set(
+        f"spine:ux_directive:u_ux:latest",
+        json.dumps(uxd.to_dict()),
+        ex=72 * 3600,
+    )
+
+    spine = SpineOrchestrator(redis_client=redis)
+    fetched = await spine.get_ux_directive("u_ux")
+    assert fetched is not None
+    assert fetched.status_band_state == "risk_detected"
+    assert fetched.show_context_receipt is True
+    assert "确认调整" in fetched.predicted_reply_options
+
+
+@pytest.mark.asyncio
+async def test_notification_directive_store_fetch():
+    """NotificationDirective round-trip through spine storage."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import NotificationDirective
+    import json
+
+    nd = NotificationDirective(
+        directive_id="notif_test",
+        policy_decision_id="pol_notif",
+        allowed=True,
+        channel="push",
+        trigger="first_task_not_started",
+        message_strategy="low_effort_next_step",
+    )
+    await redis.set(
+        f"spine:notification_directive:u_notif:latest",
+        json.dumps(nd.to_dict()),
+        ex=72 * 3600,
+    )
+
+    spine = SpineOrchestrator(redis_client=redis)
+    fetched = await spine.get_notification_directive("u_notif")
+    assert fetched is not None
+    assert fetched.trigger == "first_task_not_started"
+    assert fetched.allowed is True
