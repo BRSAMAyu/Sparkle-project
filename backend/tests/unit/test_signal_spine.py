@@ -1407,3 +1407,213 @@ def test_recall_cooldown(recall_detector):
     """冷却期返回正确值。"""
     assert recall_detector.get_cooldown_seconds("pre_exam_silence") == 1800
     assert recall_detector.get_cooldown_seconds("task_not_started") == 7200
+
+
+# ── P1-2: AuroraWakeEligibility Tests ─────────────────────────────
+
+from app.signals.aurora_wake import AuroraWakeJudge
+
+
+@pytest.fixture
+def wake_judge():
+    return AuroraWakeJudge()
+
+
+def test_wake_strategy_failure(wake_judge):
+    """连续 2 次负向 → strategy_recalibration。"""
+    result = wake_judge.judge(
+        user_id="u1",
+        quota_remaining=2,
+        cooldown_status="available",
+        consecutive_negative_outcomes=2,
+    )
+    assert result.can_wake is True
+    assert result.recommended_session_type == "strategy_recalibration"
+    assert "consecutive_strategy_failure" in result.wake_reasons
+
+
+def test_wake_user_requested(wake_judge):
+    """用户主动请求 → deep_review。"""
+    result = wake_judge.judge(
+        user_id="u1",
+        quota_remaining=1,
+        cooldown_status="available",
+        user_requested_deep_review=True,
+    )
+    assert result.can_wake is True
+    assert result.recommended_session_type == "deep_review"
+
+
+def test_wake_momentum_stalled(wake_judge):
+    """动量停滞 → motivation_check。"""
+    result = wake_judge.judge(
+        user_id="u1",
+        quota_remaining=3,
+        cooldown_status="available",
+        momentum_stalled=True,
+    )
+    assert result.can_wake is True
+    assert "momentum_stalled" in result.wake_reasons
+
+
+def test_wake_no_reason(wake_judge):
+    """无唤醒理由 → 不可唤醒。"""
+    result = wake_judge.judge(
+        user_id="u1",
+        quota_remaining=3,
+        cooldown_status="available",
+    )
+    assert result.can_wake is False
+    assert result.wake_reasons == []
+
+
+def test_wake_quota_exhausted(wake_judge):
+    """配额耗尽 → 不可唤醒（即使有理由）。"""
+    result = wake_judge.judge(
+        user_id="u1",
+        quota_remaining=0,
+        cooldown_status="available",
+        consecutive_negative_outcomes=3,
+    )
+    assert result.can_wake is False
+    assert result.cooldown_status == "exhausted"
+
+
+def test_wake_cooldown_active(wake_judge):
+    """冷却中 → 不可唤醒。"""
+    result = wake_judge.judge(
+        user_id="u1",
+        quota_remaining=2,
+        cooldown_status="cooling",
+        cooldown_minutes_left=30,
+        consecutive_negative_outcomes=2,
+    )
+    assert result.can_wake is False
+    assert result.cooldown_minutes_left == 30
+
+
+def test_wake_serialization(wake_judge):
+    """AuroraWakeEligibility to_dict。"""
+    result = wake_judge.judge(
+        user_id="u1",
+        quota_remaining=1,
+        cooldown_status="available",
+        user_requested_deep_review=True,
+    )
+    d = result.to_dict()
+    assert d["can_wake"] is True
+    assert d["quota_remaining"] == 1
+
+
+# ── P1-6: CommunitySignal v1 Tests ────────────────────────────────
+
+from app.signals.community_signal import CommunitySignalDetector
+
+
+@pytest.fixture
+def community_detector():
+    return CommunitySignalDetector()
+
+
+def test_community_cohort_mistake(community_detector):
+    """群体 >= 5 + 出错率 >= 40% → 检测到共性错因。"""
+    pattern = community_detector.detect_cohort_mistake(
+        knowledge_node_id="tcp_congestion",
+        subject="computer_networks",
+        mistake_type="concept_confusion",
+        cohort_size=10,
+        error_count=6,
+        common_misconception="混淆拥塞控制和流量控制",
+    )
+    assert pattern is not None
+    assert pattern.frequency_ratio == 0.6
+
+
+def test_community_cohort_too_small(community_detector):
+    """群体 < 5 → 不检测（隐私保护）。"""
+    pattern = community_detector.detect_cohort_mistake(
+        knowledge_node_id="tcp",
+        subject="cn", mistake_type="test",
+        cohort_size=3, error_count=3,
+        common_misconception="test",
+    )
+    assert pattern is None
+
+
+def test_community_cohort_low_ratio(community_detector):
+    """出错率 < 40% → 不检测。"""
+    pattern = community_detector.detect_cohort_mistake(
+        knowledge_node_id="tcp", subject="cn", mistake_type="test",
+        cohort_size=10, error_count=3,
+        common_misconception="test",
+    )
+    assert pattern is None
+
+
+def test_community_shared_resource(community_detector):
+    """使用人数 >= 3 + 相关度 >= 0.5 → 推荐资料。"""
+    rec = community_detector.detect_shared_resource(
+        resource_id="r1",
+        resource_title="计网速通笔记",
+        subject="computer_networks",
+        recommendation_reason="highly_rated_by_cohort",
+        peer_count=8,
+        relevance_score=0.75,
+    )
+    assert rec is not None
+    assert rec.peer_count == 8
+
+
+def test_community_shared_resource_low_relevance(community_detector):
+    """相关度 < 0.5 → 不推荐。"""
+    rec = community_detector.detect_shared_resource(
+        resource_id="r2", resource_title="test", subject="cn",
+        recommendation_reason="test", peer_count=5, relevance_score=0.3,
+    )
+    assert rec is None
+
+
+def test_community_shared_resource_too_few_peers(community_detector):
+    """使用人数 < 3 → 不推荐。"""
+    rec = community_detector.detect_shared_resource(
+        resource_id="r3", resource_title="test", subject="cn",
+        recommendation_reason="test", peer_count=1, relevance_score=0.9,
+    )
+    assert rec is None
+
+
+def test_community_mistake_to_signal(community_detector):
+    """CohortMistakePattern → ActionableSignal，priority <= medium。"""
+    pattern = community_detector.detect_cohort_mistake(
+        knowledge_node_id="tcp",
+        subject="cn", mistake_type="confusion",
+        cohort_size=10, error_count=7,
+        common_misconception="test",
+    )
+    signal = community_detector.to_actionable_signal(pattern)
+    assert signal.state_key == "community_cohort_pattern"
+    assert signal.priority == "medium"
+    assert signal.confidence <= 0.85
+
+
+def test_community_resource_to_signal(community_detector):
+    """SharedResourceRecommendation → ActionableSignal，priority=low。"""
+    rec = community_detector.detect_shared_resource(
+        resource_id="r1", resource_title="test", subject="cn",
+        recommendation_reason="test", peer_count=5, relevance_score=0.8,
+    )
+    signal = community_detector.to_actionable_signal(rec)
+    assert signal.state_key == "community_resource_recommendation"
+    assert signal.priority == "low"
+
+
+def test_community_no_high_priority(community_detector):
+    """社群信号优先级永远不超过 medium（铁律验证）。"""
+    # 构造极端情况
+    pattern = community_detector.detect_cohort_mistake(
+        knowledge_node_id="x", subject="s", mistake_type="m",
+        cohort_size=100, error_count=99,
+        common_misconception="extreme",
+    )
+    signal = community_detector.to_actionable_signal(pattern)
+    assert signal.priority in ("low", "medium")
