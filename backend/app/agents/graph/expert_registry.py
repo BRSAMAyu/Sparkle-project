@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Callable
+from dataclasses import dataclass, field
+from typing import Any, Callable
 
 from app.agents.graph.nodes.deep_analyst import deep_analyst_node
 from app.agents.graph.nodes.error_analyst import error_analyst_node
@@ -24,6 +24,79 @@ class GraphExpertSpec:
     aliases: tuple[str, ...] = ()
     default_rank: int = 100
     supports_collaboration: bool = True
+
+
+@dataclass
+class SubjectPolicy:
+    """Per-subject tuning policy exposed to router/planner/executor."""
+    subject_id: str
+    display_name: str
+    aliases: tuple[str, ...] = ()
+    expert_id: str | None = None
+    planning_prompt_override: str | None = None
+    system_prompt_override: str | None = None
+    preferred_tools: list[str] = field(default_factory=list)
+    model_strategy: str = "default"  # "default", "deep", "fast"
+    difficulty_levels: list[str] = field(default_factory=lambda: ["basic", "intermediate", "advanced"])
+
+
+_SUBJECT_POLICY_REGISTRY: dict[str, SubjectPolicy] = {}
+
+
+def register_subject_policy(policy: SubjectPolicy) -> None:
+    _SUBJECT_POLICY_REGISTRY[policy.subject_id] = policy
+    for alias in policy.aliases:
+        _SUBJECT_POLICY_REGISTRY[alias] = policy
+
+
+def get_subject_policy(subject: str) -> SubjectPolicy | None:
+    return _SUBJECT_POLICY_REGISTRY.get(subject.lower().strip())
+
+
+def list_subject_policies() -> list[SubjectPolicy]:
+    seen_ids: set[str] = set()
+    policies: list[SubjectPolicy] = []
+    for p in _SUBJECT_POLICY_REGISTRY.values():
+        if p.subject_id not in seen_ids:
+            seen_ids.add(p.subject_id)
+            policies.append(p)
+    return policies
+
+
+def _init_default_subject_policies() -> None:
+    register_subject_policy(SubjectPolicy(
+        subject_id="math", display_name="Mathematics",
+        aliases=("高数", "数学", "线性代数", "概率论", "微积分", "calculus", "algebra"),
+        expert_id="math_agent", model_strategy="deep",
+    ))
+    register_subject_policy(SubjectPolicy(
+        subject_id="code", display_name="Programming",
+        aliases=("编程", "代码", "python", "java", "编程", "计算机", "cs"),
+        expert_id="code_agent", model_strategy="default",
+    ))
+    register_subject_policy(SubjectPolicy(
+        subject_id="writing", display_name="Writing",
+        aliases=("写作", "作文", "论文", "essay"),
+        expert_id="writing_agent", model_strategy="default",
+    ))
+    register_subject_policy(SubjectPolicy(
+        subject_id="science", display_name="Science",
+        aliases=("物理", "化学", "生物", "physics", "chemistry", "biology", "理科"),
+        expert_id="science_agent", model_strategy="deep",
+    ))
+    register_subject_policy(SubjectPolicy(
+        subject_id="english", display_name="English",
+        aliases=("英语", "英语四六级", "cet", "ielts", "toefl", "gre"),
+        expert_id=None, model_strategy="default",
+    ))
+    register_subject_policy(SubjectPolicy(
+        subject_id="exam", display_name="Exam Prep",
+        aliases=("考试", "期末", "期中", "备考", "高考", "考研", "finals", "midterm"),
+        expert_id="exam_oracle", model_strategy="deep",
+    ))
+
+
+_init_default_subject_policies()
 
 
 _math_node = create_specialist_node(

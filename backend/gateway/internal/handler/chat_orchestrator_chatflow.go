@@ -48,9 +48,12 @@ func shortHash(parts ...string) string {
 	return hex.EncodeToString(h.Sum(nil))[:12]
 }
 
-func semanticCacheScope(userID, chatMode, userContextJSON string, fileIDs []string, includeReferences bool) string {
+func semanticCacheScope(userID, chatMode, userContextJSON string, fileIDs []string, includeReferences bool, activeTools []string, extraContext map[string]interface{}) string {
 	sortedFileIDs := append([]string(nil), fileIDs...)
 	sort.Strings(sortedFileIDs)
+
+	sortedActiveTools := append([]string(nil), activeTools...)
+	sort.Strings(sortedActiveTools)
 
 	referencesFlag := "refs_off"
 	if includeReferences {
@@ -59,13 +62,19 @@ func semanticCacheScope(userID, chatMode, userContextJSON string, fileIDs []stri
 
 	contextHash := shortHash(userContextJSON)
 	fileHash := shortHash(strings.Join(sortedFileIDs, ","))
+	toolsHash := shortHash(strings.Join(sortedActiveTools, ","))
+
+	extraCtxJSON, _ := json.Marshal(extraContext)
+	extraHash := shortHash(string(extraCtxJSON))
 
 	return fmt.Sprintf(
-		"user:%s|mode:%s|ctx:%s|files:%s|%s",
+		"user:%s|mode:%s|ctx:%s|files:%s|tools:%s|extra:%s|%s",
 		userID,
 		normalizeChatMode(chatMode),
 		contextHash,
 		fileHash,
+		toolsHash,
+		extraHash,
 		referencesFlag,
 	)
 }
@@ -314,8 +323,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		userContextJSON,
 		input.FileIds,
 		input.IncludeReferences,
+		input.ActiveTools,
+		input.ExtraContext,
 	)
-	if h.semantic != nil {
+	// Skip cache when request carries orchestration-bearing fields
+	// (active_tools, tool results, or extra_context) — these must hit
+	// the Python orchestrator to preserve graph/tool/HITL behavior.
+	shouldSkipCache := len(input.ActiveTools) > 0 || input.IsToolResult || len(input.ExtraContext) > 0
+	if h.semantic != nil && !shouldSkipCache {
 		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
 		cachedResp, err := h.semantic.SearchExact(cacheCtx, cacheScope, input.Message)
 		cacheSpan.End()
