@@ -264,6 +264,18 @@ class AchievementEventConsumer:
                     event=event,
                 )
                 await self._refresh_achievement_profile_signals(db, user_uuid)
+
+                # P3: Signal-to-Action Spine — achievement reinforcement
+                try:
+                    from app.signals.spine_orchestrator import SpineOrchestrator
+                    spine = SpineOrchestrator(cache_service.redis)
+                    await spine.on_achievement_event(
+                        user_id=str(user_id),
+                        achievement_type=event.get("achievement_type", "generic"),
+                        achievement_id=str(achievement_id),
+                    )
+                except Exception as spine_err:
+                    logger.debug(f"Spine on_achievement_event skipped: {spine_err}")
         except Exception as e:
             logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
 

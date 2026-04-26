@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-120/120 tests passing:
+125/125 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -181,6 +181,7 @@
 - P1-6 CommunitySignal: 9 tests
 - PolicyEngine rules: 6 tests
 - P2 Spine integration: 17 tests (6 original + 11 full wiring)
+- P3 Production wiring: 5 tests
 
 ---
 
@@ -201,6 +202,28 @@
 | AuroraWakeJudge | `check_aurora_wake()` | ✅ WIRED |
 | AchievementReinforcementConsumer | `on_achievement_event()` | ✅ WIRED (prior) |
 | RecallOpportunityDetector | `on_recall_check()` | ✅ WIRED (prior) |
+
+---
+
+## P3: Production Event Handler Wiring
+
+**目标**: SpineOrchestrator 方法接入生产代码的事件处理器
+
+### Production Wiring Points
+
+| Production Module | SpineOrchestrator 方法 | 状态 |
+|------------------|----------------------|------|
+| `achievement_event_consumer._handle_achievement_unlocked()` | `on_achievement_event()` | ✅ WIRED |
+| `orchestrator.process_stream()` (first message) | `on_first_message()` | ✅ WIRED |
+| `orchestrator.process_stream()` (user return ≥60min) | `on_user_return()` | ✅ WIRED |
+
+### 验收标准
+
+- [x] achievement unlocked → spine.on_achievement_event() 调用
+- [x] 首条消息（conversation empty）→ spine.on_first_message() 检测考试救援
+- [x] 用户返回（elapsed ≥60min）→ spine.on_user_return() 检测陈旧状态
+- [x] 所有 spine 调用包裹在 try/except 中，不影响主流程
+- [x] SpineOrchestrator 实例化使用 self.redis（orchestrator）/ cache_service.redis（consumer）
 
 ---
 

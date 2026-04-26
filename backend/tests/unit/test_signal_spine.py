@@ -1975,3 +1975,71 @@ async def test_spine_self_model_outcome(spine):
         actual_outcome={"completed": True, "user_feedback": ""},
     )
     assert outcome.attribution["effect"] == "effective"
+
+
+# ── P3: Production Wiring Tests ───────────────────────────────────────
+
+
+def test_achievement_consumer_imports_spine():
+    """Verify achievement_event_consumer has spine import path."""
+    import ast
+    import inspect
+    from app.services.achievement_event_consumer import AchievementEventConsumer
+    source = inspect.getsource(AchievementEventConsumer._handle_achievement_unlocked)
+    assert "SpineOrchestrator" in source
+    assert "on_achievement_event" in source
+
+
+def test_orchestrator_imports_spine():
+    """Verify orchestrator has spine exam rescue + stale guard wiring."""
+    import inspect
+    from app.orchestration.orchestrator import ChatOrchestrator
+    source = inspect.getsource(ChatOrchestrator.process_stream)
+    assert "on_first_message" in source
+    assert "on_user_return" in source
+    assert "SpineOrchestrator" in source
+
+
+@pytest.mark.asyncio
+async def test_spine_on_achievement_event_from_consumer():
+    """Simulate achievement_event_consumer calling spine.on_achievement_event."""
+    spine = SpineOrchestrator(FakeRedis())
+    trace = await spine.on_achievement_event(
+        user_id="u_ach",
+        achievement_type="streak",
+        achievement_id="ach_123",
+        recent_unlocks=5,
+        active_streaks=3,
+        in_progress_count=2,
+    )
+    # High momentum (5 unlocks + 3 streaks) should produce a signal
+    assert trace is not None
+    assert "user_response" in trace.outcome_to_measure
+
+
+@pytest.mark.asyncio
+async def test_spine_on_first_message_exam_rescue():
+    """Simulate first-message exam rescue via spine."""
+    spine = SpineOrchestrator(FakeRedis())
+    trace = await spine.on_first_message(
+        user_id="u_exam",
+        message="我7天后计网考试，零基础，想先别挂",
+    )
+    assert trace is not None
+    assert "user_response" in trace.outcome_to_measure
+
+
+@pytest.mark.asyncio
+async def test_spine_on_user_return_stale():
+    """Simulate user return after 2 hours."""
+    spine = SpineOrchestrator(FakeRedis())
+    trace = await spine.on_user_return(
+        user_id="u_stale",
+        time_context={
+            "now": "2026-04-27T12:00:00",
+            "elapsed_since_last_interaction_min": 120,
+            "active_task_id": None,
+        },
+    )
+    assert trace is not None
+    assert "user_responded_to_stale_check" in trace.outcome_to_measure

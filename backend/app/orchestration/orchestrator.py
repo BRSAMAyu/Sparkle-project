@@ -2336,6 +2336,42 @@ class ChatOrchestrator(
                     ),
                 )
 
+                # P3: Signal-to-Action Spine — exam rescue & stale state
+                if not request.HasField("tool_result") and user_message:
+                    try:
+                        from app.signals.spine_orchestrator import SpineOrchestrator
+                        _spine = SpineOrchestrator(self.redis)
+
+                        # First-message exam rescue detection
+                        _conv_msgs = (conversation_context or {}).get("messages") or []
+                        if len(_conv_msgs) == 0:
+                            await _spine.on_first_message(
+                                user_id=user_id,
+                                message=user_message,
+                            )
+
+                        # Stale-state guard on user return
+                        _analytics = (user_context_payload or {}).get("analytics_summary") or {}
+                        _last_active = _analytics.get("last_activity_time") or _analytics.get("last_login")
+                        if _last_active:
+                            from datetime import datetime as _dt
+                            if isinstance(_last_active, str):
+                                with contextlib.suppress(ValueError):
+                                    _last_active = _dt.fromisoformat(_last_active)
+                            if isinstance(_last_active, _dt):
+                                _elapsed_min = (_utcnow().replace(tzinfo=None) - _last_active.replace(tzinfo=None)).total_seconds() / 60
+                                if _elapsed_min >= 60:
+                                    await _spine.on_user_return(
+                                        user_id=user_id,
+                                        time_context={
+                                            "now": _utcnow().isoformat(),
+                                            "elapsed_since_last_interaction_min": _elapsed_min,
+                                            "active_task_id": None,
+                                        },
+                                    )
+                    except Exception as _spine_err:
+                        logger.debug(f"Spine signal check skipped: {_spine_err}")
+
                 expert_routing_decision = None
                 requested_experts: list[str] = []
                 answer_experts: list[str] = []
