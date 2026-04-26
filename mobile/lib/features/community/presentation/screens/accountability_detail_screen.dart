@@ -1328,7 +1328,7 @@ class _CheckinTile extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '点赞失败: $e');
+        AppFeedback.error(context, '${context.l10n.accountabilityLikeFailed}: $e');
       }
     }
   }

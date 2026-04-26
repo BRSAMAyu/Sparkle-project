@@ -883,7 +883,7 @@ class _OpenClawConnectionPanelState
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: Text(
-                      '已选中“${selectedPreset.label}”。连接细节会自动填入；如果随后提示缺执行权限，优先更换具备 `operator.write` scope 的令牌，或改用设备配对。',
+                      context.l10n.openclawPresetSelected(selectedPreset.label),
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,

@@ -1930,7 +1930,7 @@ class _SimulationInlineInteractionSection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '你的回应区',
+                  context.l10n.simulationYourResponseArea,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -1939,7 +1939,7 @@ class _SimulationInlineInteractionSection extends StatelessWidget {
               TextButton.icon(
                 onPressed: onCollapse,
                 icon: const Icon(Icons.expand_less_rounded),
-                label: const Text('收起'),
+                label: Text(context.l10n.simulationCollapse),
               ),
             ],
           ),
@@ -2068,7 +2068,7 @@ class _SimulationInteractionCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '轮到你加入这场讨论',
+                  context.l10n.simulationJoinDiscussion,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -2078,7 +2078,7 @@ class _SimulationInteractionCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '先给出你的判断，下一轮才会真正围绕你的想法继续展开。',
+            context.l10n.simulationInteractionExplain,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.4,
@@ -2095,7 +2095,7 @@ class _SimulationInteractionCard extends StatelessWidget {
             const SizedBox(height: 10),
             _StatusBadge(
               icon: Icons.touch_app_rounded,
-              label: '互动模式：${_interactionLabel(interactionType)}',
+              label: context.l10n.simulationInteractionModeFormat(_interactionLabel(interactionType)),
             ),
           ],
           if (localizedOptions.isNotEmpty) ...[
@@ -2151,10 +2151,10 @@ class _SimulationInteractionCard extends StatelessWidget {
             enabled: !isSubmitting,
             minLines: 1,
             maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: '或者输入你的判断',
-              hintText: '例如：我会先补几何直觉，再回来刷一道题验证',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.simulationOrInputJudgment,
+              hintText: context.l10n.simulationJudgeExampleHint,
+              border: const OutlineInputBorder(),
             ),
             onSubmitted: (_) => onSubmitText(),
           ),
@@ -2166,7 +2166,7 @@ class _SimulationInteractionCard extends StatelessWidget {
               FilledButton.icon(
                 onPressed: isSubmitting ? null : onSubmitText,
                 icon: const Icon(Icons.send_rounded),
-                label: Text(isSubmitting ? '提交中...' : '提交我的判断'),
+                label: Text(isSubmitting ? context.l10n.simulationSubmitting : context.l10n.simulationSubmitJudgment),
               ),
               if (localizedSuggestedReplies.isNotEmpty)
                 OutlinedButton.icon(
@@ -2181,7 +2181,7 @@ class _SimulationInteractionCard extends StatelessWidget {
                           );
                         },
                   icon: const Icon(Icons.chat_bubble_outline_rounded),
-                  label: const Text('带回聊天继续'),
+                  label: Text(context.l10n.simulationContinueInChat),
                 ),
             ],
           ),

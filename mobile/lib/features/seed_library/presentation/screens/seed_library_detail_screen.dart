@@ -906,13 +906,13 @@ class _SeedLibraryDetailScreenState
               Text(context.l10n.seedLibraryDetailRatingTitle, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: DS.spacing8),
               Text(
-                '你的评分会影响这个种子库的展示质量分。',
+                context.l10n.seedLibraryDetailRatingDescription,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                     ),
               ),
               const SizedBox(height: DS.spacing12),
-              Text('当前评分：${score.toStringAsFixed(1)} / 10'),
+              Text(context.l10n.seedLibraryDetailCurrentRating(score.toStringAsFixed(1))),
               Slider(
                 value: score,
                 max: 10,
@@ -925,7 +925,7 @@ class _SeedLibraryDetailScreenState
                 minLines: 2,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  labelText: '评价说明（可选）',
+                  labelText: context.l10n.seedLibraryDetailRatingCommentLabel,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -954,13 +954,13 @@ class _SeedLibraryDetailScreenState
                               );
                           if (!context.mounted) return;
                           Navigator.pop(context);
-                          AppFeedback.success(context, '评分已提交');
+                          AppFeedback.success(context, context.l10n.seedLibraryDetailRatingSubmitted);
                         } catch (e) {
                           if (!context.mounted) return;
-                          AppFeedback.error(context, '评分失败：$e');
+                          AppFeedback.error(context, context.l10n.seedLibraryDetailRatingFailed(e.toString()));
                         }
                       },
-                      label: '提交评分',
+                      label: context.l10n.seedLibraryDetailSubmitRating,
                       expand: true,
                     ),
                   ),
@@ -1003,7 +1003,7 @@ class _SeedLibraryDetailScreenState
                 if (item.content != null &&
                     item.content!.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
-                  Text('正文', style: Theme.of(context).textTheme.titleMedium),
+                  Text(context.l10n.seedLibraryDetailContentBody, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: DS.spacing8),
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.panel,
