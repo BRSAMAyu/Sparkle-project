@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -467,6 +468,26 @@ class _HeatmapCell extends StatefulWidget {
 
 class _HeatmapCellState extends State<_HeatmapCell> {
   bool _isTooltipVisible = false;
+  Timer? _dismissTimer;
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showTooltip() {
+    _dismissTimer?.cancel();
+    setState(() => _isTooltipVisible = true);
+    _dismissTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _isTooltipVisible = false);
+    });
+  }
+
+  void _hideTooltip() {
+    _dismissTimer?.cancel();
+    if (mounted) setState(() => _isTooltipVisible = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -478,11 +499,7 @@ class _HeatmapCellState extends State<_HeatmapCell> {
           GestureDetector(
             key: ValueKey('learning-heatmap-cell-${widget.dateKey}'),
             behavior: HitTestBehavior.opaque,
-            onTap: () {
-              setState(() {
-                _isTooltipVisible = !_isTooltipVisible;
-              });
-            },
+            onTap: _isTooltipVisible ? _hideTooltip : _showTooltip,
             child: Container(
               width: widget.size,
               height: widget.size,
