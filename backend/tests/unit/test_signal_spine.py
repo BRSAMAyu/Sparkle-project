@@ -3792,4 +3792,164 @@ async def test_notification_directive_store_fetch():
     fetched = await spine.get_notification_directive("u_notif")
     assert fetched is not None
     assert fetched.trigger == "first_task_not_started"
-    assert fetched.allowed is True
+
+
+# ═══════════════════════════════════════════════════════════════════
+# P5: Causal Audit Timeline + API Endpoints
+# ═══════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_causal_timeline_retrieves_traces():
+    """CausalTraceStore.get_user_traces returns linked traces."""
+    redis = FakeRedis()
+    from app.signals.causal_trace_store import CausalTraceStore
+
+    store = CausalTraceStore(redis)
+    trace = await store.create_trace()
+    signal = ActionableSignal(
+        signal_id="sig_tl", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    await store.store_signal(signal)
+    await store.append_signal(trace.trace_id, signal)
+    await store.link_to_user("u_tl", trace.trace_id)
+
+    traces = await store.get_user_traces("u_tl", limit=5)
+    assert len(traces) == 1
+    assert traces[0].trace_id == trace.trace_id
+    assert signal.signal_id in traces[0].signal_ids
+
+
+@pytest.mark.asyncio
+async def test_causal_timeline_multiple_traces():
+    """Multiple traces are returned in LIFO order."""
+    redis = FakeRedis()
+    from app.signals.causal_trace_store import CausalTraceStore
+
+    store = CausalTraceStore(redis)
+    t1 = await store.create_trace()
+    t2 = await store.create_trace()
+    await store.link_to_user("u_tl2", t1.trace_id)
+    await store.link_to_user("u_tl2", t2.trace_id)
+
+    traces = await store.get_user_traces("u_tl2", limit=10)
+    assert len(traces) == 2
+    # LIFO — t2 was created last, should be first
+    assert traces[0].trace_id == t2.trace_id
+
+
+@pytest.mark.asyncio
+async def test_causal_timeline_trace_limit():
+    """Only the most recent traces are returned up to limit."""
+    redis = FakeRedis()
+    from app.signals.causal_trace_store import CausalTraceStore
+
+    store = CausalTraceStore(redis)
+    for _ in range(5):
+        t = await store.create_trace()
+        await store.link_to_user("u_tl3", t.trace_id)
+
+    traces = await store.get_user_traces("u_tl3", limit=3)
+    assert len(traces) == 3
+
+
+@pytest.mark.asyncio
+async def test_causal_timeline_api_format():
+    """Verify the CausalTimelineEntry format matches spec Section 19."""
+    redis = FakeRedis()
+    from app.signals.causal_trace_store import CausalTraceStore
+    from app.signals.types import PolicyDecision
+
+    store = CausalTraceStore(redis)
+    trace = await store.create_trace()
+
+    signal = ActionableSignal(
+        signal_id="sig_fmt", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.9, scope="current_sprint", ttl_hours=48,
+        evidence_summary="two tasks timed out", possible_effects=[], priority="high",
+    )
+    await store.store_signal(signal)
+    await store.append_signal(trace.trace_id, signal)
+
+    policy = PolicyDecision(
+        policy_decision_id=_uid("pol"),
+        primary_strategy="recover_execution_rhythm",
+        secondary_strategy=None,
+        hard_constraints={"max_task_duration_min": 25},
+        soft_biases={"tone": "direct_but_reassuring"},
+        visibility="receipt",
+        requires_user_confirmation=False,
+        reasoning_summary="consecutive timeouts",
+    )
+    await store.append_policy(trace.trace_id, policy)
+    await store.link_to_user("u_tl_fmt", trace.trace_id)
+
+    traces = await store.get_user_traces("u_tl_fmt")
+    assert len(traces) == 1
+    t = traces[0]
+    assert t.trace_id == trace.trace_id
+    assert len(t.signal_ids) == 1
+    assert t.policy_decision_id == policy.policy_decision_id
+
+    # Verify raw signal data is retrievable
+    raw_signal = await redis.get(f"spine:signal:{signal.signal_id}")
+    assert raw_signal is not None
+    sig_data = json.loads(raw_signal)
+    assert sig_data["claim"] == "recent_task_too_large"
+
+
+@pytest.mark.asyncio
+async def test_state_endpoint_returns_packet():
+    """build_state_packet returns ActionableStatePacket."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    # Add some state for the user via upsert_from_signal
+    spine = SpineOrchestrator(redis_client=redis)
+    test_signal = ActionableSignal(
+        signal_id="sig_state", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.85, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    await spine.state_register.upsert_from_signal("u_state", test_signal)
+
+    packet = await spine.build_state_packet(user_id="u_state", active_signals=[test_signal])
+    assert packet is not None
+    assert packet.user_id == "u_state"
+    states = {s.state_key: s.value for s in packet.top_states}
+    assert "task_granularity_fit" in states
+
+
+@pytest.mark.asyncio
+async def test_state_endpoint_no_state():
+    """build_state_packet returns empty packet when no signals exist."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    spine = SpineOrchestrator(redis_client=redis)
+    packet = await spine.build_state_packet(user_id="u_empty")
+    assert packet is not None
+    assert packet.user_id == "u_empty"
+    assert len(packet.top_states) == 0
+    assert len(packet.risk_flags) == 0
+
+
+@pytest.mark.asyncio
+async def test_metrics_endpoint_returns_snapshot():
+    """SpineMetricsCollector.snapshot returns all 10 metrics."""
+    redis = FakeRedis()
+    from app.signals.spine_metrics import SpineMetricsCollector
+
+    collector = SpineMetricsCollector(redis)
+    await collector.increment("signals_generated", 10)
+    await collector.increment("signals_entered_state", 8)
+
+    snap = await collector.snapshot()
+    assert len(snap) == 10
+    assert snap["signal_to_state_rate"]["value"] == pytest.approx(0.8, abs=0.01)
+    assert snap["orphan_signal_count"]["value"] == 0

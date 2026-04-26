@@ -413,3 +413,154 @@ async def submit_spine_receipt_action(
     return {"processed": True, "action": payload.action}
 
 
+# ── Causal Audit Timeline ──────────────────────────────────────────────
+
+
+class CausalTimelineEntry(BaseModel):
+    trace_id: str
+    created_at: str
+    event_summary: str
+    signal: dict[str, Any] | None = None
+    state_patches: list[dict[str, Any]] = Field(default_factory=list)
+    policy_decision: dict[str, Any] | None = None
+    directives: list[dict[str, Any]] = Field(default_factory=list)
+    receipt: dict[str, Any] | None = None
+    outcome: dict[str, Any] | None = None
+
+
+class CausalTimelineResponse(BaseModel):
+    entries: list[CausalTimelineEntry]
+    total: int
+
+
+@router.get("/spine/timeline")
+async def get_causal_timeline(
+    limit: int = Query(default=10, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+) -> CausalTimelineResponse:
+    """Get the Causal Audit Timeline for the current user (Spec Section 19)."""
+    from app.signals.causal_trace_store import CausalTraceStore
+    from app.signals.outcome_recorder import OutcomeRecorder
+
+    redis = cache_service.redis
+    if redis is None:
+        return CausalTimelineResponse(entries=[], total=0)
+
+    store = CausalTraceStore(redis)
+    traces = await store.get_user_traces(str(current_user.id), limit=limit)
+
+    entries: list[CausalTimelineEntry] = []
+    for trace in traces:
+        # Build signal summary
+        signal_data = None
+        if trace.signal_ids:
+            raw = await redis.get(f"spine:signal:{trace.signal_ids[0]}")
+            if raw:
+                from app.signals.types import ActionableSignal
+                signal_data = ActionableSignal.from_dict(
+                    __import__("json").loads(raw)
+                ).to_dict()
+
+        # Build policy summary
+        policy_data = None
+        if trace.policy_ids:
+            raw = await redis.get(f"spine:policy:{trace.policy_ids[0]}")
+            if raw:
+                from app.signals.types import PolicyDecision
+                policy_data = PolicyDecision.from_dict(
+                    __import__("json").loads(raw)
+                ).to_dict()
+
+        # Build directive summaries
+        directives = []
+        for did in trace.directive_ids:
+            # Try execution directive
+            raw = await redis.get(f"spine:directive_raw:{did}")
+            if raw:
+                directives.append(__import__("json").loads(raw))
+                continue
+            # Try other directive types
+            for prefix in ("response", "notification", "plan", "model_write", "ux", "retrieval"):
+                raw = await redis.get(f"spine:{prefix}_directive:{str(current_user.id)}:latest")
+                if raw:
+                    d = __import__("json").loads(raw)
+                    if d.get("directive_id") == did:
+                        directives.append(d)
+                        break
+
+        # Build receipt summary
+        receipt_data = None
+        if trace.receipt_ids:
+            raw = await redis.get(f"spine:receipt:{str(current_user.id)}:latest")
+            if raw:
+                from app.signals.types import UserVisibleReceipt
+                receipt_data = UserVisibleReceipt.from_dict(
+                    __import__("json").loads(raw)
+                ).to_dict()
+
+        # Build outcome summary
+        outcome_data = None
+        try:
+            recorder = OutcomeRecorder(redis)
+            outcome = await recorder.get_outcome_for_trace(trace.trace_id)
+            if outcome:
+                outcome_data = outcome.to_dict()
+        except Exception:
+            pass
+
+        # Human-readable event summary
+        event_parts = []
+        if signal_data:
+            event_parts.append(f"信号: {signal_data.get('claim', '?')}")
+        if policy_data:
+            event_parts.append(f"策略: {policy_data.get('action', '?')}")
+        event_summary = " → ".join(event_parts) if event_parts else "系统事件"
+
+        entries.append(CausalTimelineEntry(
+            trace_id=trace.trace_id,
+            created_at=trace.created_at,
+            event_summary=event_summary,
+            signal=signal_data,
+            state_patches=[],
+            policy_decision=policy_data,
+            directives=directives,
+            receipt=receipt_data,
+            outcome=outcome_data,
+        ))
+
+    return CausalTimelineResponse(entries=entries, total=len(entries))
+
+
+@router.get("/spine/state")
+async def get_spine_state(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get the current ActionableStatePacket for the user (Spec Section 3)."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"active": False}
+    spine = SpineOrchestrator(redis)
+    packet = await spine.build_state_packet(user_id=str(current_user.id))
+    if packet is None:
+        return {"active": False}
+    result = packet.to_dict()
+    result["active"] = True
+    return result
+
+
+@router.get("/spine/metrics")
+async def get_spine_metrics(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get Decision Realization Score metrics (Spec Section 22)."""
+    from app.signals.spine_metrics import SpineMetricsCollector
+
+    redis = cache_service.redis
+    if redis is None:
+        return {}
+    collector = SpineMetricsCollector(redis)
+    return await collector.snapshot()
+
+
