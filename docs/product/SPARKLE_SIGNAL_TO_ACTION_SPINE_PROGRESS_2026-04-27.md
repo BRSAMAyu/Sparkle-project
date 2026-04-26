@@ -156,17 +156,17 @@
 | P1 Item | 状态 | 完成度 | 最后更新 |
 |---------|------|--------|---------|
 | P1-1 AchievementReinforcementConsumer | ✅ 完成 | 6 tests | 2026-04-27 |
-| P1-2 AuroraWakeEligibility | ✅ 完成 (aurora module) | existing | 2026-04-27 |
+| P1-2 AuroraWakeEligibility | ✅ 完成 | 7 tests | 2026-04-27 |
 | P1-3 PredictedReplyOption Engine | ✅ 完成 | 5 steps / 8 tests | 2026-04-27 |
 | P1-4 RecallOpportunity | ✅ 完成 | 10 tests | 2026-04-27 |
 | P1-5 SparkleSelfModel | ✅ 完成 | 6 steps / 9 tests | 2026-04-27 |
-| P1-6 CommunitySignal v1 | ⚠️ Partial | bridge exists, not spine-connected | — |
+| P1-6 CommunitySignal v1 | ✅ 完成 | 9 tests | 2026-04-27 |
 
 ---
 
 ## 当前测试覆盖
 
-81/81 tests passing:
+97/97 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -174,9 +174,11 @@
 - P0-2 StaleStateGuard: 6 tests
 - P0-3 ActionableStatePacket: 7 tests
 - P1-1 AchievementReinforcement: 6 tests
+- P1-2 AuroraWakeEligibility: 7 tests
 - P1-3 PredictedReplyOption: 8 tests
 - P1-4 RecallOpportunity: 10 tests
 - P1-5 SparkleSelfModel: 9 tests
+- P1-6 CommunitySignal: 9 tests
 
 ---
 
