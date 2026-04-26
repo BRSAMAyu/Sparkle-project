@@ -43,16 +43,13 @@ Future<void> showAuroraCoreSession({
     isScrollControlled: true,
     isDismissible: false,
     enableDrag: false,
-    builder: (ctx) => ProviderScope(
-      parent: ref.container,
-      child: _AuroraCoreSessionSheet(
+    builder: (ctx) => _AuroraCoreSessionSheet(
         bandStatus: bandStatus,
         wakeReasons: wakeReasons,
         conversationId: conversationId,
         scope: scope,
         sessionType: sessionType,
       ),
-    ),
   );
 }
 
@@ -334,14 +331,14 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
     );
   }
 
-  Widget _buildLoading() => const Padding(
-        padding: EdgeInsets.all(DS.spacing32),
+  Widget _buildLoading() => Padding(
+        padding: const EdgeInsets.all(DS.spacing32),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(strokeWidth: 2),
-              SizedBox(height: DS.spacing12),
+              const CircularProgressIndicator(strokeWidth: 2),
+              const SizedBox(height: DS.spacing12),
               Text('Aurora 正在准备中…', style: TextStyle(color: DS.textSecondary)),
             ],
           ),

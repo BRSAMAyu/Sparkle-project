@@ -56,7 +56,6 @@ class _OpenClawSettingsScreenState
           ? SparkleSnackBar.error(message)
           : SparkleSnackBar.success(message),
     );
-    );
   }
 
   @override

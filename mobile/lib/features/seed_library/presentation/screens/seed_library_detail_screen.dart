@@ -1410,8 +1410,8 @@ class _SeedLibraryDetailScreenState
           .read(seedLibraryDetailProvider(widget.libraryId).notifier)
           .importItems(items);
       if (!mounted) return;
-      final importedCount = resultData['imported_count'] ?? 0;
-      final failedCount = resultData['failed_count'] ?? 0;
+      final importedCount = (resultData['imported_count'] as int?) ?? 0;
+      final failedCount = (resultData['failed_count'] as int?) ?? 0;
       AppFeedback.success(
         context,
         context.l10n.seedLibraryDetailImportResult(importedCount, failedCount),

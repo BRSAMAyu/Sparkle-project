@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
@@ -265,7 +266,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         // ── Predicted reply options (Aurora modeling chips) ──────────
         if (showPredictedOptions) ...[
           const SizedBox(height: DS.spacing12),
-          if (topGroup!.question.isNotEmpty)
+          if (topGroup.question.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: Text(
@@ -331,7 +332,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     );
   }
 
-  List<Widget> _buildActions(AuroraControlSurfaceSnapshot snapshot, AuroraWakeEligibility wake, dynamic l10n) {
+  List<Widget> _buildActions(AuroraControlSurfaceSnapshot snapshot, AuroraWakeEligibility wake, AppLocalizations l10n) {
     final actions = <Widget>[];
 
     switch (snapshot.overallStatus) {
@@ -519,7 +520,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     }
   }
 
-  String _facetStatusLabel(String status, dynamic l10n) {
+  String _facetStatusLabel(String status, AppLocalizations l10n) {
     return switch (status) {
       'ready' => l10n.auroraFacetReady,
       'recalibrating' => l10n.auroraFacetRecalibrating,
