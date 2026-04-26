@@ -1144,3 +1144,40 @@ async def aggregate_community_errors(
     service = CommunityErrorAggregationService(db)
     updated = await service.aggregate_for_nodes_with_recent_errors()
     return {"status": "ok", "nodes_updated": updated}
+
+
+@router.get("/context-plan/timeline", summary="Get ContextPlan timeline for causal trace")
+async def get_context_plan_timeline(
+    _user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    from app.models.aurora_stage20 import RoutingDecisionLog
+
+    user_uuid = UUID(_user_id)
+    rows = await db.execute(
+        select(
+            RoutingDecisionLog.decision_id,
+            RoutingDecisionLog.decided_at,
+            RoutingDecisionLog.decision_payload,
+        )
+        .where(
+            RoutingDecisionLog.user_id == user_uuid,
+            RoutingDecisionLog.decision_type == "context_plan",
+        )
+        .order_by(desc(RoutingDecisionLog.decided_at))
+        .limit(limit)
+    )
+    events = []
+    for row in rows:
+        payload = row.decision_payload or {}
+        events.append({
+            "decision_id": str(row.decision_id),
+            "decided_at": row.decided_at.isoformat() if row.decided_at else None,
+            "retrieval_mode": payload.get("retrieval_mode"),
+            "reason": payload.get("reason"),
+            "reason_for_user": payload.get("reason_for_user"),
+            "budget_tokens": payload.get("budget_tokens"),
+            "should_retrieve": payload.get("should_retrieve"),
+        })
+    return {"events": events, "count": len(events)}

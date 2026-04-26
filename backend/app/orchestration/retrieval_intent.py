@@ -39,6 +39,8 @@ class ContextPlan:
     citation_required: bool = False
     user_visible_receipt: bool = True
     reason_for_user: str = ""
+    calibration_needed: bool = False
+    calibration_question: str = ""
 
     @property
     def legacy_mode(self) -> str:
@@ -61,6 +63,8 @@ class ContextPlan:
             "citation_required": self.citation_required,
             "user_visible_receipt": self.user_visible_receipt,
             "reason_for_user": self.reason_for_user,
+            "calibration_needed": self.calibration_needed,
+            "calibration_question": self.calibration_question,
         }
 
 
