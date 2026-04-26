@@ -92,6 +92,18 @@ class FakeRedis:
             s.discard(m)
         return before - len(s)
 
+    async def incrby(self, key: str, amount: int = 1) -> int:
+        current = int(self._store.get(key, "0"))
+        current += amount
+        self._store[key] = str(current)
+        return current
+
+    async def incrbyfloat(self, key: str, amount: float = 1.0) -> float:
+        current = float(self._store.get(key, "0"))
+        current += amount
+        self._store[key] = str(current)
+        return current
+
 
 @pytest.fixture
 def fake_redis():

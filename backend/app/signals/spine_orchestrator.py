@@ -28,6 +28,7 @@ from app.signals.community_signal import CommunitySignalDetector
 from app.signals.predicted_reply_options import SpineReplyOptionEngine
 from app.signals.aurora_wake import AuroraWakeJudge
 from app.signals.outcome_recorder import OutcomeRecorder
+from app.signals.spine_metrics import SpineMetricsCollector
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -73,6 +74,7 @@ class SpineOrchestrator:
         self.signal_ranker = SignalRanker()
         self.state_register = StateRegister(redis_client)
         self.outcome_recorder = OutcomeRecorder(redis_client)
+        self.metrics = SpineMetricsCollector(redis_client)
         self.policy_engine = PolicyEngine(reply_engine=self.reply_engine)
 
     async def on_task_completed(
@@ -114,13 +116,16 @@ class SpineOrchestrator:
         # Step 2b: 存储 signal 并链接到 trace
         await self.trace_store.store_signal(signal)
         await self.trace_store.append_signal(trace.trace_id, signal)
+        await self.metrics.record_signal_generated()
 
         # Layer 4: Persist signal state to StateRegister
         await self.state_register.upsert_from_signal(user_id, signal)
+        await self.metrics.record_signal_entered_state()
 
         # Step 3: PolicyEngine
         consecutive = await self.timeout_detector._get_consecutive_timeouts(user_id)
         result = await self.policy_engine.evaluate(signal, context={"consecutive": consecutive})
+        await self.metrics.record_policy_evaluated(matched=result is not None)
 
         if result is None:
             trace.outcome_to_measure = ["signal_no_rule_match"]
@@ -135,6 +140,7 @@ class SpineOrchestrator:
 
         # Step 4: 存储 active directive 供 task_generator 消费
         await self.trace_store.set_active_directive(user_id, directive)
+        await self.metrics.record_directive_generated()
 
         # Step 4b: Build and store ResponseDirective
         response_dir = self.policy_engine.build_response_directive(decision, signal)
@@ -174,6 +180,7 @@ class SpineOrchestrator:
                 related_state_keys=[signal.state_key],
             )
             await self.trace_store.append_receipt(trace.trace_id, receipt)
+            await self.metrics.record_receipt_shown()
             trace = await self.trace_store.get_trace(trace.trace_id) or trace
             # 将 receipt 挂到用户维度，方便前端拉取
             import json
@@ -226,6 +233,10 @@ class SpineOrchestrator:
             directive=directive,
             generated_task=modified_spec,
         )
+
+        # Metrics: track if directive was applied and changed output
+        changed = modified_spec != task_spec
+        await self.metrics.record_directive_applied(changed_output=changed)
 
         # 链接 audit 到最近的 trace
         traces = await self.trace_store.get_user_traces(user_id, limit=1)
@@ -382,11 +393,14 @@ class SpineOrchestrator:
 
         await self.trace_store.store_signal(signal)
         await self.trace_store.append_signal(trace.trace_id, signal)
+        await self.metrics.record_signal_generated()
 
         # Layer 4: Persist signal state to StateRegister
         await self.state_register.upsert_from_signal(user_id, signal)
+        await self.metrics.record_signal_entered_state()
 
         result = await self.policy_engine.evaluate(signal)
+        await self.metrics.record_policy_evaluated(matched=result is not None)
         if result is None:
             trace.outcome_to_measure = ["signal_no_rule_match"]
             await self.trace_store._save_trace(trace)
@@ -395,6 +409,7 @@ class SpineOrchestrator:
         decision, directive = result
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
+        await self.metrics.record_directive_generated()
 
         # Build and store ResponseDirective
         response_dir = self.policy_engine.build_response_directive(decision, signal)
@@ -433,6 +448,7 @@ class SpineOrchestrator:
                 related_state_keys=[signal.state_key],
             )
             await self.trace_store.append_receipt(trace.trace_id, receipt)
+            await self.metrics.record_receipt_shown()
             await self.redis.set(
                 f"spine:receipt:{user_id}:latest",
                 json.dumps(receipt.to_dict()),
@@ -754,3 +770,9 @@ class SpineOrchestrator:
     async def get_outcome_for_trace(self, trace_id: str):
         """获取 CausalTrace 对应的 OutcomeRecord。"""
         return await self.outcome_recorder.get_outcome_for_trace(trace_id)
+
+    # ── Metrics ────────────────────────────────────────────────────────
+
+    async def get_metrics_snapshot(self) -> dict[str, Any]:
+        """获取 Decision Realization Score 指标快照。"""
+        return await self.metrics.snapshot()
