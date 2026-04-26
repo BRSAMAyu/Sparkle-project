@@ -156,7 +156,14 @@ All endpoints tested via Go Gateway (8080) → Python API (8000):
 3. [ ] End-to-end chat with document citations test
 4. [ ] Verify citation feedback → quality score loop with real data
 
-### Key Data Gaps
-- `knowledge_node_documents` table: 0 links (no documents attached to nodes yet)
-- Need demo data with node-document relationships for testing
-- Need to verify `document_quality_score` feedback loop with real data
+### Mobile Fixes Applied
+- aurora_calibration_panel.dart: Added dart:async, typed l10n, fixed DS.titleSmall→DS.titleMedium
+- interactive_decay_timeline.dart: Removed unsupported duration param from SparkleSnackBar.warning
+- api_endpoints.dart: Added 8 document-node API endpoint definitions
+
+### Commits
+1. `e2c04511` — fix: resolve knowledge system integration issues (gateway, alembic, agent_activity)
+2. `cd2cd59a` — fix(galaxy): add missing AttachNodeDocumentRequest model
+3. `1dbe9a61` — feat(gateway): register document-node integration routes in Galaxy handler
+4. `5d741d9c` — fix(mobile): resolve Flutter analysis errors and add missing API endpoints
+5. `eecdcfce` — docs: update knowledge system integration progress
