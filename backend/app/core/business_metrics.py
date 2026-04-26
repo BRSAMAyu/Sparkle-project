@@ -345,6 +345,20 @@ CONTEXT_PACK_OVER_BUDGET = get_or_create_metric(
     ['intent', 'section']
 )
 
+CONTEXT_BUDGET_UTILIZATION = get_or_create_metric(
+    Gauge,
+    'sparkle_context_budget_utilization',
+    'Context budget utilization ratio by source type',
+    ['type']
+)
+
+CONTEXT_BUDGET_OVER_LIMIT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_budget_over_limit_total',
+    'Context budget over-limit events by source type',
+    ['type']
+)
+
 CONTEXT_PACK_INTENT = get_or_create_metric(
     Counter,
     'sparkle_context_pack_intent_total',

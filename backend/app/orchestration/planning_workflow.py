@@ -36,6 +36,7 @@ from app.sprint_packs.sprint_pack_loader import (
     load_pack,
     query_nodes_by_priority,
 )
+from app.services.galaxy_service import GalaxyService
 from app.services.plan_service import PlanService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.task_service import TaskService
@@ -786,6 +787,12 @@ class PlanningWorkflowManager:
             )
             session.bottlenecks = await self._build_bottlenecks(session, aurora_state=runtime_state)
             strategy = self._build_strategy(session, aurora_state=runtime_state)
+            await self._refresh_study_material_context(
+                db=db,
+                user_id=user_id,
+                session=session,
+                strategy=strategy,
+            )
             session.confirmed_strategy = strategy
             auto_generate_from_modeling = self.is_modeling_complete_bridge_session(session)
             session.state = (
@@ -932,6 +939,12 @@ class PlanningWorkflowManager:
         if not strategy:
             strategy = self._build_strategy(session, aurora_state=runtime_state)
             session.confirmed_strategy = strategy
+        await self._refresh_study_material_context(
+            db=db,
+            user_id=user_id,
+            session=session,
+            strategy=strategy,
+        )
 
         days = _safe_int(strategy.get("total_days")) or _safe_int(session.collected.get("time_constraint_days")) or 7
         daily_hours = _safe_int(session.collected.get("daily_available_hours")) or 2
@@ -992,7 +1005,7 @@ class PlanningWorkflowManager:
                     obj_in=TaskCreate(
                         title=(
                             f"Day {day_spec['day']} · {_strip(phase.get('label'))}"
-                            f" - {_strip(day_spec.get('title_focus') or day_spec.get('task_kind') or '检索推进')}"
+                            f" - {self._task_title_focus(day_spec)}"
                         ),
                         type=coerce_task_type(_task_type_for_day_spec(day_spec)),
                         plan_id=plan.id,
@@ -1035,6 +1048,15 @@ class PlanningWorkflowManager:
             first_day_tasks = [
                 task for task in created_tasks if int(task.order_index or 0) // 1000 == 1
             ] or created_tasks[:1]
+            material_context = _as_dict(session.collected.get("study_material_context"))
+            material_gaps = self._dedupe_text(
+                [
+                    _strip(_as_dict(task.guide_json).get("material_gap"))
+                    for task in created_tasks
+                    if _strip(_as_dict(task.guide_json).get("material_gap"))
+                ],
+                limit=6,
+            )
             if last_24h_mode:
                 recommendation = "今天不再学新内容：先过高频知识点，再按错因回看错题，最后完成 30 分钟短模拟。"
             else:
@@ -1048,6 +1070,11 @@ class PlanningWorkflowManager:
                 "day_highlights": {
                     "day": 1,
                     "recommendation": recommendation,
+                },
+                "study_materials": {
+                    "available_materials": list(material_context.get("available_materials") or []),
+                    "documents": list(material_context.get("documents") or [])[:5],
+                    "material_gaps": material_gaps,
                 },
             }
             if last_24h_mode:
@@ -1900,6 +1927,225 @@ class PlanningWorkflowManager:
 
         return fallback
 
+    @staticmethod
+    def _material_match_keys(values: list[Any]) -> list[str]:
+        keys: list[str] = []
+        for raw in values:
+            text = _strip(raw).lower()
+            if not text:
+                continue
+            parts = re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]+", text)
+            for candidate in [text, *parts]:
+                normalized = candidate.strip("_ ").lower()
+                if len(normalized) < 2 or normalized in keys:
+                    continue
+                keys.append(normalized)
+        return keys
+
+    def _material_text_score(self, text: Any, query_keys: list[str]) -> int:
+        haystack = _strip(text).lower()
+        if not haystack or not query_keys:
+            return 0
+        score = 0
+        haystack_keys = self._material_match_keys([haystack])
+        for key in query_keys:
+            if key in haystack:
+                score += 3
+                continue
+            if any(key == hay_key or key in hay_key or hay_key in key for hay_key in haystack_keys):
+                score += 2
+        return score
+
+    def _material_anchor_from_attachment(
+        self,
+        *,
+        doc: dict[str, Any],
+        attachment: dict[str, Any],
+        section_lookup: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        section_titles = [_strip(item) for item in list(attachment.get("section_titles") or []) if _strip(item)]
+        chapter_ref = section_titles[0] if section_titles else _strip(attachment.get("node_name"))
+        section_meta = _as_dict(section_lookup.get(chapter_ref))
+        estimated_minutes = _safe_int(section_meta.get("estimated_read_minutes")) or _safe_int(
+            attachment.get("estimated_read_minutes")
+        )
+        return {
+            "file_id": _strip(doc.get("file_id")),
+            "file_name": _strip(doc.get("file_name")),
+            "chapter_ref": chapter_ref,
+            "node_id": _strip(attachment.get("node_id")),
+            "node_name": _strip(attachment.get("node_name")),
+            "mastery_score": attachment.get("mastery_score"),
+            "estimated_read_minutes": estimated_minutes,
+            "page_numbers": list(section_meta.get("page_numbers") or []),
+            "chunk_count": _safe_int(section_meta.get("chunk_count")) or _safe_int(attachment.get("chunk_count")) or 0,
+        }
+
+    def _material_anchor_from_section(self, *, doc: dict[str, Any], section: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "file_id": _strip(doc.get("file_id")),
+            "file_name": _strip(doc.get("file_name")),
+            "chapter_ref": _strip(section.get("section_title")),
+            "node_id": "",
+            "node_name": "",
+            "mastery_score": None,
+            "estimated_read_minutes": _safe_int(section.get("estimated_read_minutes")) or 0,
+            "page_numbers": list(section.get("page_numbers") or []),
+            "chunk_count": _safe_int(section.get("chunk_count")) or 0,
+        }
+
+    def _material_anchor_score(
+        self,
+        *,
+        anchor: dict[str, Any],
+        query_keys: list[str],
+        doc_preferred: bool,
+    ) -> int:
+        score = 4 if doc_preferred else 0
+        score += self._material_text_score(anchor.get("node_name"), query_keys) * 5
+        score += self._material_text_score(anchor.get("chapter_ref"), query_keys) * 4
+        score += self._material_text_score(anchor.get("file_name"), query_keys)
+        mastery = _optional_float(anchor.get("mastery_score"))
+        if mastery is not None:
+            score += max(0, int(round((100.0 - mastery) / 10.0)))
+        if _safe_int(anchor.get("estimated_read_minutes")):
+            score += 1
+        return score
+
+    def _build_material_anchors_for_spec(
+        self,
+        *,
+        session: PlanningSession,
+        spec: dict[str, Any],
+        phase: dict[str, Any],
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        material_context = _as_dict(session.collected.get("study_material_context"))
+        documents = [
+            dict(item)
+            for item in list(material_context.get("documents") or [])
+            if isinstance(item, dict) and _strip(item.get("file_name"))
+        ]
+        if not documents:
+            return [], None
+
+        subject_strategy = _as_dict(spec.get("subject_strategy"))
+        topic_values = [
+            spec.get("title_focus"),
+            spec.get("focus"),
+            phase.get("focus"),
+            subject_strategy.get("primary_node_label"),
+            *list(subject_strategy.get("node_labels") or []),
+            session.collected.get("subject"),
+            session.collected.get("exam_scope"),
+        ]
+        query_keys = self._material_match_keys(topic_values)
+        if not query_keys:
+            query_keys = self._material_match_keys([session.goal_raw])
+
+        candidates: list[dict[str, Any]] = []
+        for doc in documents:
+            section_lookup = {
+                _strip(section.get("section_title")): dict(section)
+                for section in list(doc.get("sections") or [])
+                if isinstance(section, dict) and _strip(section.get("section_title"))
+            }
+            preferred = bool(doc.get("preferred"))
+            for attachment in list(doc.get("node_attachments") or []):
+                if not isinstance(attachment, dict):
+                    continue
+                anchor = self._material_anchor_from_attachment(doc=doc, attachment=attachment, section_lookup=section_lookup)
+                score = self._material_anchor_score(anchor=anchor, query_keys=query_keys, doc_preferred=preferred)
+                if score <= 0:
+                    continue
+                candidates.append({**anchor, "score": score})
+
+            for section in list(doc.get("sections") or []):
+                if not isinstance(section, dict):
+                    continue
+                anchor = self._material_anchor_from_section(doc=doc, section=section)
+                score = self._material_anchor_score(anchor=anchor, query_keys=query_keys, doc_preferred=preferred)
+                if score <= 0:
+                    continue
+                candidates.append({**anchor, "score": score})
+
+        if not candidates and len(documents) == 1:
+            doc = documents[0]
+            first_section = next(
+                (
+                    dict(section)
+                    for section in list(doc.get("sections") or [])
+                    if isinstance(section, dict) and _strip(section.get("section_title"))
+                ),
+                None,
+            )
+            if first_section is not None:
+                fallback_anchor = self._material_anchor_from_section(doc=doc, section=first_section)
+                fallback_anchor["score"] = 1
+                candidates.append(fallback_anchor)
+
+        deduped: list[dict[str, Any]] = []
+        seen_keys: set[tuple[str, str]] = set()
+        for anchor in sorted(candidates, key=lambda item: (-int(item.get("score") or 0), _strip(item.get("chapter_ref")))):
+            dedupe_key = (_strip(anchor.get("file_id")), _strip(anchor.get("chapter_ref")) or _strip(anchor.get("node_name")))
+            if dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            deduped.append(anchor)
+            if len(deduped) >= 2:
+                break
+
+        if deduped:
+            return deduped, None
+
+        topic_summary = self._format_compact_list(
+            [_strip(item) for item in list(subject_strategy.get("node_labels") or []) if _strip(item)]
+        ) or _strip(spec.get("title_focus")) or _strip(spec.get("focus"))
+        if topic_summary:
+            return [], f"你上传的资料里还没有能直接覆盖 {topic_summary} 的章节材料。"
+        return [], "你上传的资料还没有和今天任务直接对齐的章节材料。"
+
+    def _attach_material_anchors_to_specs(
+        self,
+        *,
+        session: PlanningSession,
+        phase: dict[str, Any],
+        specs: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        annotated: list[dict[str, Any]] = []
+        for raw_spec in specs:
+            spec = dict(raw_spec)
+            anchors, gap_note = self._build_material_anchors_for_spec(session=session, spec=spec, phase=phase)
+            if anchors:
+                spec["material_anchors"] = anchors
+                spec["primary_material_anchor"] = anchors[0]
+            if gap_note:
+                spec["material_gap_note"] = gap_note
+            annotated.append(spec)
+        return annotated
+
+    @staticmethod
+    def _material_anchor_short_label(anchor: dict[str, Any]) -> str:
+        file_name = _strip(anchor.get("file_name"))
+        chapter_ref = _strip(anchor.get("chapter_ref"))
+        if file_name and chapter_ref:
+            return f"{file_name} · {chapter_ref}"
+        return file_name or chapter_ref
+
+    def _format_material_anchor(self, anchor: dict[str, Any]) -> str:
+        label = self._material_anchor_short_label(anchor)
+        minutes = _safe_int(anchor.get("estimated_read_minutes"))
+        if label and minutes:
+            return f"{label}（约 {minutes} 分钟）"
+        return label
+
+    def _task_title_focus(self, day_spec: dict[str, Any]) -> str:
+        title_focus = _strip(day_spec.get("title_focus") or day_spec.get("task_kind") or "检索推进")
+        primary_material = _as_dict(day_spec.get("primary_material_anchor"))
+        material_label = self._material_anchor_short_label(primary_material)
+        if material_label and material_label not in title_focus:
+            return f"{title_focus}（{material_label}）"
+        return title_focus
+
     def _build_task_guide_json(
         self,
         *,
@@ -1925,6 +2171,14 @@ class PlanningWorkflowManager:
             (day_spec or {}).get("minimum_output") or retrieval_policy.get("minimum_output") or "闭卷复述或小测"
         )
         task_kind = _strip((day_spec or {}).get("task_kind") or "retrieval_drill")
+        material_anchors = [
+            dict(item)
+            for item in list((day_spec or {}).get("material_anchors") or [])
+            if isinstance(item, dict) and _strip(item.get("file_name") or item.get("chapter_ref"))
+        ]
+        primary_material = _as_dict((day_spec or {}).get("primary_material_anchor") or (material_anchors[0] if material_anchors else {}))
+        material_gap_note = _strip((day_spec or {}).get("material_gap_note"))
+        material_label = self._format_material_anchor(primary_material) if primary_material else ""
         contract = self._build_daily_task_contract(
             task_kind=task_kind,
             sprint_mode=sprint_mode,
@@ -1978,6 +2232,8 @@ class PlanningWorkflowManager:
             objective = f"Day {day_number or '?'}：优先拿下 {node_summary} 这些考试收益最高的节点。"
         else:
             objective = contract["objective"]
+        if material_label and material_label not in objective:
+            objective = f"{objective} 直接对着你上传的 {material_label} 推进。"
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
         materials = [
             item
@@ -1996,6 +2252,8 @@ class PlanningWorkflowManager:
         ]
         if node_labels:
             guide_steps.insert(0, f"今天优先节点：{self._format_compact_list(node_labels)}。")
+        if material_label:
+            guide_steps.insert(1 if node_labels else 0, f"优先材料锚点：{material_label}。")
         for action in [item for item in list(subject_strategy.get("recommended_actions") or []) if _strip(item)][:2]:
             action_line = action if action.endswith("。") else f"{action}。"
             guide_steps.insert(len(guide_steps), action_line)
@@ -2012,6 +2270,8 @@ class PlanningWorkflowManager:
             min(2, len(guide_steps)),
             f"执行时只围绕今天这一个明确产出动作推进：{output_action}",
         )
+        if material_gap_note:
+            guide_steps.append(material_gap_note if material_gap_note.endswith("。") else f"{material_gap_note}。")
         if method:
             guide_steps.append(f"阶段方法提醒：{method}")
         if sprint_mode == "seven_day_survival":
@@ -2039,6 +2299,10 @@ class PlanningWorkflowManager:
             )
         if materials:
             key_points.append(f"优先吃透手头资料里的高频材料：{'、'.join(materials[:2])}")
+        if material_label:
+            key_points.append(f"材料锚点：{material_label}")
+        if material_gap_note:
+            key_points.append(material_gap_note)
         if session.bottlenecks:
             key_points.extend(
                 _strip(item.get("description")) for item in session.bottlenecks[:1] if _strip(item.get("description"))
@@ -2131,6 +2395,13 @@ class PlanningWorkflowManager:
                 guide_json["must_not_include"] = must_not_include
             if subject_strategy.get("focus_nodes"):
                 guide_json["focus_nodes"] = list(subject_strategy.get("focus_nodes") or [])
+        if material_anchors:
+            guide_json["material_anchors"] = material_anchors
+            guide_json["primary_material"] = primary_material
+            guide_json["material_coverage_status"] = "anchored"
+        elif material_gap_note:
+            guide_json["material_gap"] = material_gap_note
+            guide_json["material_coverage_status"] = "gap"
         raw_weak_nodes = session.collected.get("galaxy_weak_nodes")
         if raw_weak_nodes is None:
             raw_weak_nodes = session.collected.get("weak_nodes")
@@ -2193,6 +2464,68 @@ class PlanningWorkflowManager:
             },
             use_llm=True,
         )
+
+    def _strategy_material_hints(self, *, session: PlanningSession, strategy: dict[str, Any]) -> list[str]:
+        hints = [
+            session.collected.get("subject"),
+            session.collected.get("exam_scope"),
+            session.goal_raw,
+        ]
+        for phase in list(strategy.get("phases") or []):
+            if not isinstance(phase, dict):
+                continue
+            hints.extend(
+                [
+                    phase.get("focus"),
+                    phase.get("label"),
+                    phase.get("output"),
+                ]
+            )
+        return [item for item in self._material_match_keys(hints) if item]
+
+    async def _refresh_study_material_context(
+        self,
+        *,
+        db: AsyncSession,
+        user_id: UUID,
+        session: PlanningSession,
+        strategy: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        preferred_file_ids = [
+            raw
+            for raw in (
+                _listish(session.collected.get("scope_file_ids"))
+                + _listish(_as_dict(session.collected.get("cold_start_context")).get("scope_file_ids"))
+            )
+            if raw
+        ]
+        topic_hints = (
+            self._strategy_material_hints(session=session, strategy=strategy or {})
+            if strategy
+            else self._material_match_keys(
+                [
+                    session.collected.get("subject"),
+                    session.collected.get("exam_scope"),
+                    session.goal_raw,
+                ]
+            )
+        )
+
+        summary = await GalaxyService(db).summarize_study_materials_for_planning(
+            user_id=user_id,
+            topic_hints=topic_hints,
+            preferred_file_ids=preferred_file_ids,
+        )
+        session.collected["study_material_context"] = summary
+
+        existing_materials = [_strip(item) for item in _listish(session.collected.get("available_materials")) if _strip(item)]
+        for filename in list(summary.get("available_materials") or []):
+            label = _strip(filename)
+            if label and label not in existing_materials:
+                existing_materials.append(label)
+        if existing_materials:
+            session.collected["available_materials"] = existing_materials
+        return summary
 
     async def _build_first_day_recommendation(
         self,
@@ -4283,7 +4616,8 @@ class PlanningWorkflowManager:
                     spec["focus"] = f"{spec['focus']}（上次考后复盘标记的弱点）"
 
         adapted_specs = self._apply_next_day_adaptive_generation(phase=phase, session=session, specs=merged_specs)
-        return self._apply_calendar_schedule_to_specs(phase=phase, session=session, specs=adapted_specs)
+        scheduled_specs = self._apply_calendar_schedule_to_specs(phase=phase, session=session, specs=adapted_specs)
+        return self._attach_material_anchors_to_specs(session=session, phase=phase, specs=scheduled_specs)
 
     def _estimated_minutes_for_task(
         self,

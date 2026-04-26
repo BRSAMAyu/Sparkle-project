@@ -22,6 +22,7 @@ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart'
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
+import 'package:sparkle/features/chat/presentation/widgets/assistant_citation_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
 import 'package:sparkle/features/chat/presentation/widgets/capability_ceiling_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
@@ -56,6 +57,7 @@ class ChatBubble extends ConsumerStatefulWidget {
     this.onActionConfirm,
     this.onActionDismiss,
     this.onResponseFeedback,
+    this.onCitationFeedback,
     this.onWidgetAction,
     this.onPromoteSelfVisibleDraft,
     this.isLatestAssistantMessage = false,
@@ -69,6 +71,11 @@ class ChatBubble extends ConsumerStatefulWidget {
   final void Function(WidgetPayload action)? onActionDismiss;
   final void Function(ChatMessageModel message, String feedbackType)?
       onResponseFeedback;
+  final Future<void> Function(
+    ChatMessageModel message,
+    ChatCitation citation,
+    bool helpful,
+  )? onCitationFeedback;
   final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
   final void Function(dynamic message)? onPromoteSelfVisibleDraft;
@@ -318,7 +325,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         switch (widgetItem.type) {
           case 'continuity_banner':
           case 'mode_explanation':
+            return true;
           case 'source_summary':
+            if (widget.message is ChatMessageModel &&
+                (widget.message as ChatMessageModel).citations.isNotEmpty) {
+              return false;
+            }
             return true;
           case 'next_actions':
             return widget.isLatestAssistantMessage;
@@ -588,7 +600,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   w.data['intervention_id'] ??
                   w.data['request_id']) !=
               null;
-          return           _AccessoryPreviewPage(
+          return _AccessoryPreviewPage(
             title: context.l10n.chatActionSuggestion,
             subtitle: context.l10n.chatActionSuggestionDesc,
             child: ActionCard(
@@ -600,16 +612,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   ? () => widget.onActionDismiss!(w)
                   : null,
               onConfirmTasks: (toolResultId) async {
-                final planId =
-                    w.data['plan_id']?.toString() ?? w.data['planId']?.toString();
+                final planId = w.data['plan_id']?.toString() ??
+                    w.data['planId']?.toString();
                 await _confirmGeneratedTasks(
                   toolResultId: toolResultId,
                   planId: planId,
                 );
               },
               onConfirmAllTasks: (toolResultId) async {
-                final planId =
-                    w.data['plan_id']?.toString() ?? w.data['planId']?.toString();
+                final planId = w.data['plan_id']?.toString() ??
+                    w.data['planId']?.toString();
                 await _confirmGeneratedTasks(
                   toolResultId: toolResultId,
                   planId: planId,
@@ -762,8 +774,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                           : Theme.of(dialogContext)
                                               .colorScheme
                                               .outlineVariant,
-                                      borderRadius:
-                                          BorderRadius.circular(999),
+                                      borderRadius: BorderRadius.circular(999),
                                     ),
                                   ),
                                 ),
@@ -1127,6 +1138,24 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                               ),
                             ),
                             if (!chatPureMode &&
+                                widget.message is ChatMessageModel &&
+                                !_isUser &&
+                                (widget.message as ChatMessageModel)
+                                    .citations
+                                    .isNotEmpty)
+                              AssistantCitationStrip(
+                                message: widget.message as ChatMessageModel,
+                                onCitationFeedback: widget.onCitationFeedback ==
+                                        null
+                                    ? null
+                                    : (citation, helpful) =>
+                                        widget.onCitationFeedback!(
+                                          widget.message as ChatMessageModel,
+                                          citation,
+                                          helpful,
+                                        ),
+                              ),
+                            if (!chatPureMode &&
                                 (_metadataWidgets.isNotEmpty ||
                                     (widget.message is ChatMessageModel &&
                                         ((widget.message as ChatMessageModel)
@@ -1236,17 +1265,19 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             sourceChatSessionId,
                                       )
                                     : _buildInsightShortcutPill(
-                                        title: context.l10n.chatViewTheaterDetails,
+                                        title:
+                                            context.l10n.chatViewTheaterDetails,
                                         icon: Icons.auto_graph_rounded,
                                         onTap: () => context.push(
                                           _resolveInsightDeepLink(
                                             deepLink: theaterDeepLink,
                                             fallbackPath: TheaterRoutes.theater,
                                             fallbackQuery: {
-                                                      'topic':
-                                                          predictionPreview['topic']
-                                                                  ?.toString() ??
-                                                              context.l10n.chatCurrentLearningTopic,
+                                              'topic': predictionPreview[
+                                                          'topic']
+                                                      ?.toString() ??
+                                                  context.l10n
+                                                      .chatCurrentLearningTopic,
                                             },
                                             sourceChatSessionId:
                                                 sourceChatSessionId,
@@ -1273,7 +1304,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             sourceChatSessionId,
                                       )
                                     : _buildInsightShortcutPill(
-                                        title: context.l10n.chatViewSimulationDetails,
+                                        title: context
+                                            .l10n.chatViewSimulationDetails,
                                         icon: Icons.groups_rounded,
                                         onTap: () => context.push(
                                           _resolveInsightDeepLink(
@@ -1281,10 +1313,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             fallbackPath:
                                                 SimulationRoutes.simulation,
                                             fallbackQuery: {
-                                              'topic':
-                                                  simulationPreview['topic']
-                                                          ?.toString() ??
-                                                      context.l10n.chatCurrentLearningTopic,
+                                              'topic': simulationPreview[
+                                                          'topic']
+                                                      ?.toString() ??
+                                                  context.l10n
+                                                      .chatCurrentLearningTopic,
                                               'scenario_key': simulationPreview[
                                                           'scenario_key']
                                                       ?.toString() ??
@@ -1358,7 +1391,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       )
                                     : _buildStaticAccessoryPill(
                                         icon: Icons.hub_rounded,
-                                        label: context.l10n.chatCollaborationProcess,
+                                        label: context
+                                            .l10n.chatCollaborationProcess,
                                       ),
                               ),
                             if (!chatPureMode)
@@ -1566,8 +1600,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
   List<String> _recentTopicHints() {
     final messages = ref.read(chatProvider).messages;
-    final recentText = messages
-        .reversed
+    final recentText = messages.reversed
         .take(6)
         .map((item) => item.content)
         .where((item) => item.trim().isNotEmpty)
@@ -1607,8 +1640,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       'there',
       'which',
     };
-    for (final match
-        in RegExp(r'[\u4e00-\u9fff]{2,6}|[A-Za-z]{4,}').allMatches(normalized)) {
+    for (final match in RegExp(r'[\u4e00-\u9fff]{2,6}|[A-Za-z]{4,}')
+        .allMatches(normalized)) {
       final token = match.group(0)?.trim() ?? '';
       if (token.isEmpty || stopWords.contains(token)) {
         continue;
@@ -1644,7 +1677,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   List<_InlinePromptAction> _theaterPromptActions(
     Map<String, dynamic> preview,
   ) {
-    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
+    final topic =
+        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final paths = (preview['paths'] as List<dynamic>? ?? [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
@@ -1663,13 +1697,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         _InlinePromptAction(
           label: context.l10n.chatPromptComparePaths,
           prompt: context.l10n.chatPromptComparePathsMessage(
-            paths[0]['title']?.toString() ?? context.l10n.chatPromptDefaultPathA,
-            paths[1]['title']?.toString() ?? context.l10n.chatPromptDefaultPathB,
+            paths[0]['title']?.toString() ??
+                context.l10n.chatPromptDefaultPathA,
+            paths[1]['title']?.toString() ??
+                context.l10n.chatPromptDefaultPathB,
           ),
           onTap: () => _continueInlinePrompt(
             context.l10n.chatPromptComparePathsMessage(
-              paths[0]['title']?.toString() ?? context.l10n.chatPromptDefaultPathA,
-              paths[1]['title']?.toString() ?? context.l10n.chatPromptDefaultPathB,
+              paths[0]['title']?.toString() ??
+                  context.l10n.chatPromptDefaultPathA,
+              paths[1]['title']?.toString() ??
+                  context.l10n.chatPromptDefaultPathB,
             ),
           ),
         ),
@@ -1714,7 +1752,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   List<_InlinePromptAction> _simulationPromptActions(
     Map<String, dynamic> preview,
   ) {
-    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
+    final topic =
+        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final rounds = (preview['round_preview'] as List<dynamic>? ?? [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
@@ -1787,12 +1826,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       ),
     ];
     if ((highlight ?? '').isNotEmpty) {
+      final resolvedHighlight = highlight!;
       actions.add(
         _InlinePromptAction(
           label: context.l10n.chatPromptExpandKeyIssue,
-          prompt: context.l10n.chatPromptExpandKeyIssueMessage(highlight!),
+          prompt: context.l10n.chatPromptExpandKeyIssueMessage(
+            resolvedHighlight,
+          ),
           onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptExpandKeyIssueMessage(highlight!),
+            context.l10n.chatPromptExpandKeyIssueMessage(resolvedHighlight),
           ),
         ),
       );
@@ -1800,9 +1842,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       actions.add(
         _InlinePromptAction(
           label: context.l10n.chatPromptPrioritizeArea,
-          prompt: context.l10n.chatPromptPrioritizeAreaMessage(report.mastery.first.nodeName),
+          prompt: context.l10n
+              .chatPromptPrioritizeAreaMessage(report.mastery.first.nodeName),
           onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptPrioritizeAreaMessage(report.mastery.first.nodeName),
+            context.l10n
+                .chatPromptPrioritizeAreaMessage(report.mastery.first.nodeName),
           ),
         ),
       );
@@ -1839,7 +1883,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required String? deepLink,
     required String? sourceChatSessionId,
   }) {
-    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
+    final topic =
+        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final paths = (preview['paths'] as List<dynamic>? ?? [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
@@ -1878,7 +1923,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required String? deepLink,
     required String? sourceChatSessionId,
   }) {
-    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
+    final topic =
+        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final scenarioKey = preview['scenario_key']?.toString() ?? 'study_group';
     final rounds = (preview['round_preview'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
@@ -1927,7 +1973,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         .map((item) => item.toString())
         .where((item) => item.isNotEmpty)
         .toList();
-    final summary = preview['summary']?.toString() ?? context.l10n.chatViewLatestReport;
+    final summary =
+        preview['summary']?.toString() ?? context.l10n.chatViewLatestReport;
     final triggerSummary = report.triggerSummary;
     final promptActions = _reportPromptActions(preview);
     final resolvedDeepLink = _resolveInsightDeepLink(
@@ -1941,7 +1988,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       title: context.l10n.chatViewLearningReport,
       subtitle: summary,
       bullets: highlights.isNotEmpty
-          ? highlights.map((item) => '${context.l10n.chatKeyFocusLabel}: $item').toList()
+          ? highlights
+              .map((item) => '${context.l10n.chatKeyFocusLabel}: $item')
+              .toList()
           : report.mastery
               .take(3)
               .map(
@@ -2491,7 +2540,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       final count = countRaw is num
           ? countRaw.toInt()
           : int.tryParse(countRaw?.toString() ?? '') ?? 1;
-      final actionLabel = planId != null ? context.l10n.chatViewPlan : context.l10n.chatGoToTaskList;
+      final actionLabel = planId != null
+          ? context.l10n.chatViewPlan
+          : context.l10n.chatGoToTaskList;
       final route = planId != null ? '/plans/$planId' : '/tasks';
       AppFeedback.undoable(
         context: context,
@@ -2615,7 +2666,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       }
     } catch (e) {
       if (!context.mounted) return;
-      AppFeedback.error(context, context.l10n.chatShareResourceAdoptError(e.toString()));
+      AppFeedback.error(
+        context,
+        context.l10n.chatShareResourceAdoptError(e.toString()),
+      );
     }
   }
 
@@ -2700,12 +2754,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     return switch (type) {
       MessageType.taskShare => () {
           final duration = safeGetInt(meta['estimated_minutes']) ?? 0;
-          return duration > 0 ? context.l10n.chatTaskCompletedDoneMinutes(duration) : context.l10n.chatTaskCompletedDone;
+          return duration > 0
+              ? context.l10n.chatTaskCompletedDoneMinutes(duration)
+              : context.l10n.chatTaskCompletedDone;
         }(),
       MessageType.planShare => () {
           final progress = safeGetDouble(meta['progress']);
           return progress != null
-              ? context.l10n.chatPlanProgressLabel((progress * 100).toStringAsFixed(0))
+              ? context.l10n
+                  .chatPlanProgressLabel((progress * 100).toStringAsFixed(0))
               : null;
         }(),
       MessageType.capsuleShare => safeGetString(data['resource_summary']) ??
@@ -2922,7 +2979,8 @@ class _InsightLinkCard extends StatelessWidget {
                         (item) => Tooltip(
                           message: item.prompt,
                           child: GestureDetector(
-                            onLongPress: () => _showPromptPreview(context, item),
+                            onLongPress: () =>
+                                _showPromptPreview(context, item),
                             child: ActionChip(
                               avatar: const Icon(
                                 Icons.chat_bubble_outline_rounded,

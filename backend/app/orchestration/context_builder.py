@@ -24,6 +24,7 @@ from sqlalchemy import and_, asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.i18n import I18n
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import CognitiveFragment
@@ -247,10 +248,14 @@ class ContextBuilderMixin:
             prefs = user_context_data.get("preferences")
             if isinstance(prefs, dict):
                 flame_level = prefs.get("flame_level")
+            
+            locale = user_context_data.get("language", "zh-CN")
+            unknown_text = I18n.t("common.unknown", locale=locale)
+            
             identity = {
-                "nickname": user_context_data.get("nickname", "未知"),
+                "nickname": user_context_data.get("nickname", unknown_text),
                 "timezone": user_context_data.get("timezone", "Asia/Shanghai"),
-                "language": user_context_data.get("language", "zh-CN"),
+                "language": locale,
                 "is_pro": user_context_data.get("is_pro", False),
                 "persona_type": user_context_data.get("persona_type"),
                 "flame_level": flame_level,
@@ -349,7 +354,7 @@ class ContextBuilderMixin:
     # _get_cognitive_insights
     # ------------------------------------------------------------------
 
-    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
+    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession, locale: str = "en") -> dict[str, Any]:
         """获取认知模式摘要，注入 LLM 上下文
 
         当用户有已识别的行为模式时，LLM 可以在合适时机主动展示认知棱镜。
@@ -417,7 +422,7 @@ class ContextBuilderMixin:
                     "policy_signals": list(set(policy_signals)),
                     "top_patterns": top_patterns,
                     "recent_observation": recent_observation,
-                    "current_guidance": self._build_cognitive_prompt_guidance(top_patterns),
+                    "current_guidance": self._build_cognitive_prompt_guidance(top_patterns, locale=locale),
                 }
         except Exception as e:
             logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
@@ -635,10 +640,16 @@ class ContextBuilderMixin:
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
             experiment_cohort = self._experiment_cohort_for_user(user_id)
+            
+            locale = "zh-CN"
+            if base_user_context_data:
+                locale = base_user_context_data.get("language", "zh-CN")
+
             returning_context = await self._build_returning_context(
                 user_id=user_id,
                 session_id=session_id,
                 db_session=db_session,
+                locale=locale,
             )
             understanding_depth = None
             if settings.ENABLE_PERCEPTIBLE_INTELLIGENCE:
@@ -687,7 +698,7 @@ class ContextBuilderMixin:
                 # Use data from new orchestrator
                 user_context_data = base_user_context_data or {
                     "user_id": user_id,
-                    "nickname": "同学",
+                    "nickname": I18n.t("common.unknown", locale=locale),
                 }
 
                 # Fetch active plans manually if not in cognitive context yet
@@ -712,7 +723,7 @@ class ContextBuilderMixin:
                 ]
 
                 # P0: 认知棱镜上下文注入
-                cognitive_insights = await self._get_cognitive_insights(user_id, db_session)
+                cognitive_insights = await self._get_cognitive_insights(user_id, db_session, locale=locale)
 
                 # P1: 种子库 few-shot 示例注入
                 seed_library_context = await self._get_seed_library_context(user_id, db_session)
@@ -956,6 +967,7 @@ class ContextBuilderMixin:
         user_id: str,
         session_id: str | None,
         db_session: AsyncSession,
+        locale: str = "en",
     ) -> dict[str, Any] | None:
         if not session_id or not self.redis:
             return None
@@ -1015,12 +1027,15 @@ class ContextBuilderMixin:
             )
             next_due = upcoming_result.first()
 
-            progress_text = "你上次离开前还没有留下明确的完成记录。"
+            progress_text = I18n.t("context.no_progress_record", locale=locale)
             if latest_completed:
-                progress_text = f"你上次推进到「{str(latest_completed[0])}」这一步。"
-            due_text = f"离开期间有 {overdue_count} 个任务进入截止窗口。"
+                progress_text = I18n.t("context.last_progress", locale=locale, step=str(latest_completed[0]))
+            
+            due_text = I18n.t("context.overdue_tasks", locale=locale, count=overdue_count)
             if next_due:
-                due_text = f"离开期间有 {overdue_count} 个任务进入截止窗口，最近的是「{str(next_due[0])}」。"
+                due_text = I18n.t("context.overdue_tasks_with_next", locale=locale, count=overdue_count, title=str(next_due[0]))
+
+            welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
 
             payload = {
                 "days_away": max(int(silence_gap.days), 3),
@@ -1028,7 +1043,7 @@ class ContextBuilderMixin:
                 "last_progress": progress_text,
                 "overdue_task_count": overdue_count,
                 "next_due_task_title": str(next_due[0]) if next_due else "",
-                "welcome_back_message": f"{progress_text}{due_text} 欢迎回来，我们可以从这里继续。",
+                "welcome_back_message": welcome_back,
                 "briefing_text": f"{progress_text}{due_text}",
             }
             await self.redis.setex(redis_key, 24 * 60 * 60, "1")
@@ -1214,8 +1229,10 @@ class ContextBuilderMixin:
                                         patch={"constraints": {"require_phase_rollback": False}},
                                         bump_version=False,
                                     )
+                                    
+                                    locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
                                     plan_context["mode"] = "phase_rollback"
-                                    plan_context["rollback_reason"] = "2次连续拒绝，需重新收集信息"
+                                    plan_context["rollback_reason"] = I18n.t("context.rollback_reason", locale=locale)
                                     if plan_state.feedback_log:
                                         plan_context["previous_feedback"] = plan_state.feedback_log[-2:]
                             except Exception as e:
@@ -1263,21 +1280,8 @@ class ContextBuilderMixin:
         return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context
 
     @staticmethod
-    def _build_cognitive_prompt_guidance(top_patterns: list[dict[str, Any]]) -> str:
-        if not top_patterns:
-            return ""
-
-        haystack = " ".join(
-            str(item.get(key) or "").lower()
-            for item in top_patterns
-            for key in ("canonical_key", "pattern_name", "description")
-        )
-        if any(token in haystack for token in ("procrast", "avoid", "拖延", "回避", "focus_decay")):
-            return "留意这是不是在回避一个概念或启动动作。先搭桥，再给任务。"
-        if any(token in haystack for token in ("perfection", "完美主义")):
-            return "表达上更支持、更低压力，先帮助用户开始，不要把第一步说得过重。"
-        if any(token in haystack for token in ("blindspot", "confusion", "concept", "盲点", "误区", "不理解")):
-            return "优先澄清理解偏差和概念卡点，再推进执行建议。"
-        if any(token in haystack for token in ("overload", "burnout", "anxious", "overwhelmed", "过载", "焦虑")):
-            return "先降低心理负荷和认知摩擦，再推进高要求的任务。"
-        return "结合这些模式，把建议收紧为更容易接受、也更贴近真实阻力的下一步。"
+    def _coerce_session_uuid(session_id: str) -> uuid.UUID:
+        try:
+            return uuid.UUID(session_id)
+        except ValueError:
+            return uuid.UUID(int=0)

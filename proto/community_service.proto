@@ -30,6 +30,13 @@ enum GroupRole {
   MEMBER = 3;
 }
 
+enum GroupFileTrustLevel {
+  GROUP_FILE_TRUST_LEVEL_UNSPECIFIED = 0;
+  GROUP_FILE_MEMBER = 1;
+  GROUP_FILE_VERIFIED = 2;
+  GROUP_FILE_OFFICIAL = 3;
+}
+
 enum MessageType {
   MESSAGE_TYPE_UNSPECIFIED = 0;
   TEXT = 1;
@@ -143,6 +150,89 @@ message GroupMemberInfo {
   google.protobuf.Timestamp last_active_at = 7;
 }
 
+message GroupKnowledgeBaseDocumentAddRequest {
+  UUID group_id = 1;
+  UUID file_id = 2;
+  string category = 3;
+  repeated string tags = 4;
+}
+
+message GroupKnowledgeBaseDocumentInfo {
+  UUID file_id = 1;
+  string file_name = 2;
+  string mime_type = 3;
+  int64 file_size = 4;
+  string category = 5;
+  repeated string tags = 6;
+  GroupFileTrustLevel trust_level = 7;
+  bool knowledge_base = 8;
+  int32 download_count = 9;
+  int32 citation_count = 10;
+  int32 rating_count = 11;
+  float average_rating = 12;
+  float quality_score = 13;
+  float retrieval_boost = 14;
+}
+
+message GroupKnowledgeBaseStats {
+  int32 total_documents = 1;
+  int32 official_count = 2;
+  int32 verified_count = 3;
+  int32 member_count = 4;
+  int32 total_downloads = 5;
+  int32 total_citations = 6;
+  float average_rating = 7;
+}
+
+message GroupKnowledgeBaseInfo {
+  UUID group_id = 1;
+  UUID collaborative_galaxy_id = 2;
+  repeated GroupKnowledgeBaseDocumentInfo documents = 3;
+  GroupKnowledgeBaseStats stats = 4;
+}
+
+message GroupCollaborativeGalaxyNode {
+  string id = 1;
+  string label = 2;
+  string node_type = 3;
+  GroupFileTrustLevel trust_level = 4;
+  bool knowledge_base = 5;
+  UUID file_id = 6;
+  UUID source_document_id = 7;
+  string category = 8;
+  repeated string tags = 9;
+  float quality_score = 10;
+  int32 citation_count = 11;
+  int32 download_count = 12;
+  float average_rating = 13;
+  float position_x = 14;
+  float position_y = 15;
+}
+
+message GroupCollaborativeGalaxyRelation {
+  string source_id = 1;
+  string target_id = 2;
+  string relation_type = 3;
+  float strength = 4;
+}
+
+message GroupCollaborativeGalaxyStats {
+  int32 total_nodes = 1;
+  int32 document_nodes = 2;
+  int32 concept_nodes = 3;
+  int32 total_relations = 4;
+}
+
+message GroupCollaborativeGalaxyInfo {
+  UUID galaxy_id = 1;
+  UUID group_id = 2;
+  string name = 3;
+  string scope = 4;
+  repeated GroupCollaborativeGalaxyNode nodes = 5;
+  repeated GroupCollaborativeGalaxyRelation relations = 6;
+  GroupCollaborativeGalaxyStats stats = 7;
+}
+
 // ============ 消息系统 ============
 
 message MessageSend {
@@ -250,6 +340,9 @@ service CommunityService {
   rpc GetMyGroups(google.protobuf.Empty) returns (stream GroupInfo);
   rpc SearchGroups(SearchGroupsRequest) returns (stream GroupInfo);
   rpc GetGroupMembers(UUID) returns (stream GroupMemberInfo);
+  rpc AddGroupKnowledgeBaseDocument(GroupKnowledgeBaseDocumentAddRequest) returns (GroupKnowledgeBaseDocumentInfo);
+  rpc GetGroupKnowledgeBase(UUID) returns (GroupKnowledgeBaseInfo);
+  rpc GetGroupCollaborativeGalaxy(UUID) returns (GroupCollaborativeGalaxyInfo);
 
   // 群消息系统
   rpc SendGroupMessage(SendGroupMessageRequest) returns (MessageInfo);

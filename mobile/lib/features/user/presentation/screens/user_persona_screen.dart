@@ -69,7 +69,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         title: Text(l10n.personaMyProfile),
         actions: [
           IconButton(
-            tooltip: '刷新画像',
+            tooltip: l10n.personaRefreshPersona,
             onPressed: () => unawaited(_refreshPersona(ref)),
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -125,6 +125,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final patterns = _normalizeEntries(layer3['patterns']);
     final fragments = _normalizeEntries(layer3['fragments']);
     final readableSummary = _buildReadableSummary(
+      l10n: l10n,
       goals: goals,
       preferences: preferences,
       patterns: patterns,
@@ -141,7 +142,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             if (profileLoadError != null) ...[
               SparkleStaggerItem(
                 index: 0,
-                child: _buildProfileLoadWarning(profileLoadError, ref),
+                child: _buildProfileLoadWarning(l10n, profileLoadError, ref),
               ),
               const SizedBox(height: DS.spacing12),
             ],
@@ -158,15 +159,15 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
               index: profileLoadError != null ? 3 : 2,
               child: _buildCollapsibleSection(
                 sectionKey: 'summary',
-                title: '画像解读',
-                subtitle: '先看自然语言总结，再决定要不要展开底层结构',
-                child: _buildReadableSummaryCard(readableSummary),
+                title: l10n.personaProfileInterpretation,
+                subtitle: l10n.personaProfileInterpretationSubtitle,
+                child: _buildReadableSummaryCard(l10n, readableSummary),
               ),
             ),
             _buildCollapsibleSection(
               sectionKey: 'l3',
               title: l10n.personaL3Title,
-              subtitle: '优先展示系统已经总结出的可感知结论',
+              subtitle: l10n.personaL3Subtitle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -196,7 +197,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             _buildCollapsibleSection(
               sectionKey: 'l1',
               title: l10n.personaL1Title,
-              subtitle: '你明确告诉系统的目标和偏好',
+              subtitle: l10n.personaL1Subtitle,
               child: Column(
                 children: [
                   _subSectionList(
@@ -219,7 +220,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             _buildCollapsibleSection(
               sectionKey: 'l2',
               title: l10n.personaL2Title,
-              subtitle: '系统与你协作校准后的标签与能力判断',
+              subtitle: l10n.personaL2Subtitle,
               child: Column(
                 children: [
                   _subSectionList(
@@ -262,8 +263,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             ),
             _buildCollapsibleSection(
               sectionKey: 'inference',
-              title: '系统推断与策略',
-              subtitle: '更技术性的推断偏好与当前策略，默认收起',
+              title: l10n.personaInferenceTitle,
+              subtitle: l10n.personaInferenceSubtitle,
               child: Column(
                 children: [
                   _buildAsyncSection(
@@ -319,18 +320,19 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           children: [
             SparkleButton.ghost(
               onPressed: () => context.push(UserRoutes.systemUpdates),
-              label: '系统更新',
+              label: l10n.personaQuickAccessSystemUpdates,
             ),
             if (AppFeatureFlags.enableUserMemoryControls)
               SparkleButton.ghost(
                 onPressed: () => context.push(MemoryRoutes.settings),
-                label: '记忆设置',
+                label: l10n.personaQuickAccessMemorySettings,
               ),
           ],
         ),
       );
 
-  Widget _buildProfileLoadWarning(String message, WidgetRef ref) =>
+  Widget _buildProfileLoadWarning(
+      AppLocalizations l10n, String message, WidgetRef ref) =>
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.all(DS.spacing12),
@@ -343,7 +345,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: Text(
-                    '核心画像暂时不可用',
+                    l10n.personaCoreProfileUnavailable,
                     style: TextStyle(
                       fontWeight: DS.fontWeightSemibold,
                       color: DS.textPrimary,
@@ -354,7 +356,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '已切换为降级展示，你仍然可以查看和刷新其它分区。\n$message',
+              l10n.personaDegradedMode(message),
               style: TextStyle(
                 color: DS.textSecondary,
                 height: 1.45,
@@ -363,7 +365,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             const SizedBox(height: DS.spacing12),
             SparkleButton.ghost(
               onPressed: () => unawaited(_refreshPersona(ref)),
-              label: '重试完整画像',
+              label: l10n.personaRetryFullProfile,
             ),
           ],
         ),
@@ -437,6 +439,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   List<String> _buildReadableSummary({
+    required AppLocalizations l10n,
     required List<Map<String, dynamic>> goals,
     required List<Map<String, dynamic>> preferences,
     required List<Map<String, dynamic>> patterns,
@@ -452,7 +455,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           activeGoal['value']?.toString() ??
           '';
       if (goalTitle.isNotEmpty) {
-        lines.add(normalizeRichText('你当前最明确的目标是：$goalTitle。'));
+        lines.add(normalizeRichText(l10n.personaActiveGoal(goalTitle)));
       }
     }
 
@@ -470,7 +473,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     if (learningStyle != null || responseDepth != null) {
       lines.add(
         normalizeRichText(
-          '你的学习偏好更接近${learningStyle ?? '当前未明确'}，系统回答深度倾向${responseDepth ?? '自适应'}。',
+          l10n.personaLearningPreference(
+            learningStyle ?? 'unspecified',
+            responseDepth ?? 'adaptive',
+          ),
         ),
       );
     }
@@ -481,24 +487,25 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             patterns.first['content']?.toString())
         : null;
     if (firstPattern != null && firstPattern.isNotEmpty) {
-      lines.add(normalizeRichText('系统最近观察到的主要模式是：$firstPattern。'));
+      lines.add(normalizeRichText(l10n.personaObservedPattern(firstPattern)));
     }
 
     if (fragments.isNotEmpty) {
       lines.add(
-        normalizeRichText('画像里已积累 ${fragments.length} 条可用于个性化推荐的认知线索。'),
+        normalizeRichText(l10n.personaCognitiveClueCount(fragments.length)),
       );
     }
 
     if (lines.isEmpty) {
       lines.add(
-        normalizeRichText('当前画像还比较稀疏，继续使用后这里会变成更自然、更具体的总结。'),
+        normalizeRichText(l10n.personaProfileSparse),
       );
     }
     return lines;
   }
 
-  Widget _buildReadableSummaryCard(List<String> summaryLines) {
+  Widget _buildReadableSummaryCard(
+      AppLocalizations l10n, List<String> summaryLines) {
     final summaryMarkdown = summaryLines
         .map((line) => '- ${normalizeRichText(line).trim()}')
         .join('\n');
@@ -507,7 +514,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '这是系统目前对你的简化理解：',
+           l10n.personaSimplifiedUnderstanding,
           style: TextStyle(
             fontWeight: DS.fontWeightSemibold,
             color: DS.textPrimary,
@@ -555,7 +562,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   ),
                 ),
                 IconButton(
-                  tooltip: '刷新',
+                  tooltip: l10n.personaSectionRefresh,
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                 ),
@@ -584,22 +591,22 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                     const SizedBox(width: DS.spacing8),
-                    Text(
-                      '加载中…',
-                      style: TextStyle(color: DS.neutral500),
+                     Text(
+                       l10n.personaSectionLoading,
+                       style: TextStyle(color: DS.neutral500),
                     ),
                   ],
                 ),
               ],
               error: (error, stack) => [
-                Text(
-                  '加载失败：${_friendlyError(error)}',
-                  style: TextStyle(color: DS.error),
-                ),
-                const SizedBox(height: DS.spacing8),
-                SparkleButton.ghost(
-                  onPressed: onRetry,
-                  label: '重试',
+                 Text(
+                   l10n.personaLoadFailedError(_friendlyError(error)),
+                   style: TextStyle(color: DS.error),
+                 ),
+                 const SizedBox(height: DS.spacing8),
+                 SparkleButton.ghost(
+                   onPressed: onRetry,
+                   label: l10n.retry,
                 ),
               ],
             ),
@@ -622,14 +629,14 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         contextData['cognitive_summary'] as Map<String, dynamic>? ?? {};
 
     final rows = <Widget>[
-      _metadataRow(
-        l10n,
-        'Preference Version: ${preferenceVersion ?? 0}',
-        const <String, dynamic>{
-          'level': 'readonly',
-          'reason': '当前显式偏好与画像上下文版本。',
-        },
-      ),
+       _metadataRow(
+         l10n,
+         'Preference Version: ${preferenceVersion ?? 0}',
+         <String, dynamic>{
+           'level': 'readonly',
+           'reason': l10n.personaPreferenceVersionReason,
+         },
+       ),
     ];
 
     if (preferences.isNotEmpty) {
@@ -637,10 +644,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         _metadataRow(
           l10n,
           'Active Preferences: ${preferences.entries.map((entry) => '${entry.key}=${entry.value}').join(', ')}',
-          const <String, dynamic>{
-            'level': 'readonly',
-            'reason': '当前用于 AI 与系统联动的显式偏好。',
-          },
+           <String, dynamic>{
+             'level': 'readonly',
+             'reason': l10n.personaActivePreferencesReason,
+           },
         ),
       );
     }
@@ -663,9 +670,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         'Knowledge Summary: mastery=${overallMastery ?? '-'}'
         '${weakSpots.isNotEmpty ? ', weak=${weakSpots.join(' / ')}' : ''}'
         '${activeSubjects.isNotEmpty ? ', active=${activeSubjects.join(' / ')}' : ''}',
-        const <String, dynamic>{
+        <String, dynamic>{
           'level': 'readonly',
-          'reason': '知识掌握度与当前活跃学习主题摘要。',
+          'reason': l10n.personaKnowledgeSummaryReason,
         },
       ),
     );
@@ -688,9 +695,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         'Cognitive Summary: dominant=${dominantPattern ?? '-'}'
         '${activePatterns.isNotEmpty ? ', patterns=${activePatterns.join(' / ')}' : ''}'
         '${riskSignals.isNotEmpty ? ', risks=${riskSignals.join(' / ')}' : ''}',
-        const <String, dynamic>{
+        <String, dynamic>{
           'level': 'readonly',
-          'reason': '当前认知模式与风险信号摘要。',
+          'reason': l10n.personaCognitiveSummaryReason,
         },
       ),
     );
@@ -714,7 +721,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final overridden = item['overridden'] == true;
     final metadata = <String, dynamic>{
       'level': adjustable ? 'editable' : 'readonly',
-      'reason': explanation.isNotEmpty ? explanation : '系统会根据最近行为持续更新这项推断。',
+      'reason': explanation.isNotEmpty ? explanation : l10n.personaInferredDefaultReason,
       'confidence': null,
     };
     final actions = <Widget>[
@@ -723,7 +730,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           MemoryRoutes.detail,
           extra: MemoryDetailArgs.preferenceKey(key),
         ),
-        label: '查看记录',
+         label: l10n.personaViewRecord,
       ),
       if (adjustable)
         SparkleButton.ghost(
@@ -733,12 +740,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             key,
             value,
           ),
-          label: overridden ? '更新' : '调整',
+           label: overridden ? l10n.personaUpdate : l10n.personaAdjust,
         ),
       if (overridden)
         SparkleButton.ghost(
           onPressed: () => _resetOverride(ref, context, key),
-          label: '重置',
+           label: l10n.commonReset,
         ),
     ];
     return KeyedSubtree(
@@ -748,7 +755,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         children: [
           _metadataRow(
             l10n,
-            '$label: ${_formatValue(value)}（${overridden ? '手动覆盖' : sourceLabel}）',
+            '$label: ${_formatValue(value)}（${overridden ? l10n.personaManualOverride : sourceLabel}）',
             metadata,
           ),
           Padding(
@@ -822,7 +829,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   Widget _policyRow(AppLocalizations l10n, Map<String, dynamic> item) {
     final profileLabel = item['profile_label']?.toString() ??
         item['profile']?.toString() ??
-        '策略';
+        l10n.personaPolicy;
     final signal = item['signal_label']?.toString() ??
         item['signal']?.toString() ??
         'policy';
@@ -836,7 +843,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       <String, dynamic>{
         'level': 'readonly',
         'reason':
-            sourcePattern.isNotEmpty ? '来源模式：$sourcePattern' : '当前已生效的系统策略。',
+            sourcePattern.isNotEmpty ? l10n.personaSourcePattern(sourcePattern) : l10n.personaActivePolicyReason,
         'confidence': null,
       },
     );
@@ -1205,7 +1212,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 }
               } catch (error) {
                 if (context.mounted) {
-                  AppFeedback.error(context, '提交修正失败：${_friendlyError(error)}');
+                  AppFeedback.error(context, l10n.personaCorrectionSubmitFailed(_friendlyError(error)));
                 }
               }
             },

@@ -5,16 +5,20 @@ import os
 import re
 import tempfile
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
 from loguru import logger
+from sqlalchemy import desc, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.config.phase5_config import get_quality_threshold_for_doc_type, phase5_config
 from app.core.cache import cache_service
 from app.core.ingestion.ingestion_service import ingestion_service
+from app.models.document_feedback import DocumentRetrievalFeedback
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode
 
@@ -34,7 +38,141 @@ class QualityResult:
     issues: list[str]
 
 class DocumentService:
+    _FEEDBACK_CACHE_VERSION_KEY = "document_feedback:cache_version"
+    _TURN_CITATION_CACHE_PREFIX = "document_feedback:turn"
+    _TURN_CITATION_TTL_SECONDS = 60 * 60
+    _QUALITY_WINDOW_SIZE = 50
+    _QUALITY_PRIOR_WEIGHT = 2.0
+    _IMPLICIT_NEGATIVE_PATTERNS = (
+        r"\b(not relevant|irrelevant|doesn'?t help|does not help|wrong notes|wrong source)\b",
+        r"\b(explain it differently|say that differently|another way|different way|rephrase that)\b",
+        r"(不相关|没帮助|讲得不对|换个方式解释|换种说法|重新解释)",
+    )
+    _IMPLICIT_FOLLOW_UP_PATTERNS = (
+        r"\b(can you|could you|go deeper|tell me more|what about|how about|why|how|which part)\b",
+        r"(可以继续讲|再展开|深入一点|具体一点|那为什么|那怎么|这部分|这一点)",
+    )
+
     # ... existing methods ...
+
+    async def build_contextual_embedding_texts(
+        self,
+        document_title: str,
+        chunks: list[VectorChunk],
+    ) -> list[str]:
+        """
+        Build the text sent to the embedding model.
+
+        The persisted VectorChunk.content is intentionally left unchanged; only the
+        transient embedding input receives contextual retrieval headers.
+        """
+        if not chunks:
+            return []
+        if not settings.ENABLE_CONTEXTUAL_CHUNK_ENRICHMENT:
+            return [chunk.content for chunk in chunks]
+
+        description = await self._generate_contextual_document_description(document_title, chunks)
+        return [
+            self._build_contextual_embedding_text(
+                document_title=document_title,
+                chunk=chunk,
+                document_description=description,
+            )
+            for chunk in chunks
+        ]
+
+    async def _generate_contextual_document_description(
+        self,
+        document_title: str,
+        chunks: list[VectorChunk],
+    ) -> str | None:
+        excerpts = self._build_document_summary_excerpts(chunks)
+        if not excerpts:
+            return None
+
+        try:
+            from app.services.llm_service import llm_service
+
+            response = await llm_service.chat(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "Generate a concise retrieval context for a document. "
+                            "Return only 1-2 factual sentences describing what the document is about, "
+                            "its likely type or audience when clear, and its main topics. "
+                            "Do not invent details that are not supported by the excerpts."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Document title or filename: {document_title or 'Untitled'}\n\n"
+                            f"Representative excerpts:\n{excerpts}"
+                        ),
+                    },
+                ],
+                temperature=0.2,
+            )
+            return self._sanitize_contextual_description(response)
+        except Exception as exc:
+            logger.warning(f"Contextual chunk enrichment summary failed: {exc}")
+            return None
+
+    def _build_document_summary_excerpts(self, chunks: list[VectorChunk]) -> str:
+        selected: list[VectorChunk] = []
+        if chunks:
+            selected.extend(chunks[:3])
+            if len(chunks) > 6:
+                midpoint = len(chunks) // 2
+                selected.extend(chunks[max(3, midpoint - 1):midpoint + 2])
+            selected.extend(chunks[-3:])
+
+        seen: set[str] = set()
+        excerpts: list[str] = []
+        for chunk in selected:
+            content = self._compact_for_context(chunk.content, limit=900)
+            if not content or content in seen:
+                continue
+            seen.add(content)
+            section = self._compact_for_context(chunk.section_title or "", limit=120)
+            prefix = f"Section: {section}\n" if section else ""
+            excerpts.append(f"{prefix}{content}")
+
+        return "\n\n---\n\n".join(excerpts)[:6000]
+
+    def _build_contextual_embedding_text(
+        self,
+        *,
+        document_title: str,
+        chunk: VectorChunk,
+        document_description: str | None,
+    ) -> str:
+        header_parts = [
+            f"From: {self._compact_for_context(document_title or 'Untitled document', limit=160)}"
+        ]
+        section_title = self._compact_for_context(chunk.section_title or "", limit=160)
+        if section_title:
+            header_parts.append(f"Section: {section_title}")
+        if document_description:
+            header_parts.append(document_description)
+
+        return f"[{' | '.join(header_parts)}]\n{chunk.content}"
+
+    def _sanitize_contextual_description(self, description: str) -> str | None:
+        cleaned = self._compact_for_context(description, limit=500)
+        if not cleaned:
+            return None
+        cleaned = cleaned.strip("`'\" ")
+        if cleaned.lower().startswith("document context:"):
+            cleaned = cleaned.split(":", 1)[1].strip()
+        return cleaned or None
+
+    def _compact_for_context(self, text: str, limit: int) -> str:
+        compacted = " ".join((text or "").split())
+        if len(compacted) <= limit:
+            return compacted
+        return compacted[: limit - 3].rstrip() + "..."
 
     def _detect_document_type(self, chunks: list[VectorChunk]) -> str:
         """
@@ -453,6 +591,328 @@ class DocumentService:
             pass
         except Exception as e:
             logger.warning(f"Failed to report quality metrics: {e}")
+
+    # ------------------------------------------------------------------
+    # Document retrieval feedback loop
+    # ------------------------------------------------------------------
+
+    async def publish_citation_feedback(
+        self,
+        *,
+        user_id: str,
+        file_id: str,
+        chunk_id: str | None,
+        rating: int,
+        query_type: str | None = None,
+        conversation_id: str | None = None,
+        feedback_source: str = "explicit",
+        context: dict[str, Any] | None = None,
+        db: AsyncSession | None = None,
+    ) -> None:
+        """Publish a citation feedback signal and fall back to direct persistence if needed."""
+        if rating not in {-1, 1}:
+            raise ValueError("rating must be 1 or -1")
+
+        try:
+            from app.core.event_bus import DocumentCitationFeedbackEvent, event_bus
+
+            event = DocumentCitationFeedbackEvent(
+                user_id=str(user_id),
+                file_id=str(file_id),
+                chunk_id=str(chunk_id) if chunk_id else None,
+                rating=rating,
+                query_type=query_type,
+                feedback_source=feedback_source,
+                conversation_id=conversation_id,
+                context=context,
+            )
+            published = await event_bus.publish(event.event_type, event.to_dict())
+            if published:
+                return
+        except Exception as exc:
+            logger.warning(f"Failed to publish DocumentCitationFeedbackEvent: {exc}")
+
+        if db is None:
+            return
+        await self.persist_feedback_event(
+            db,
+            {
+                "user_id": user_id,
+                "file_id": file_id,
+                "chunk_id": chunk_id,
+                "rating": rating,
+                "query_type": query_type,
+                "feedback_source": feedback_source,
+                "conversation_id": conversation_id,
+                "context": context or {},
+            },
+        )
+
+    async def persist_feedback_event(
+        self,
+        db: AsyncSession,
+        payload: dict[str, Any],
+    ) -> DocumentRetrievalFeedback:
+        """Persist a feedback event payload and refresh the document quality score."""
+        from uuid import UUID as _UUID
+
+        rating = int(payload.get("rating"))
+        if rating not in {-1, 1}:
+            raise ValueError("rating must be 1 or -1")
+
+        record = DocumentRetrievalFeedback(
+            user_id=_UUID(str(payload["user_id"])),
+            file_id=_UUID(str(payload["file_id"])),
+            chunk_id=_UUID(str(payload["chunk_id"])) if payload.get("chunk_id") else None,
+            feedback_score=rating,
+            feedback_source=str(payload.get("feedback_source") or "explicit"),
+            query_intent_type=self._normalize_query_type(payload.get("query_type") or payload.get("query_intent_type")),
+            conversation_id=payload.get("conversation_id"),
+            context=payload.get("context") or {},
+        )
+        db.add(record)
+        await db.flush()
+        await self.recalculate_document_quality_score(db, str(record.file_id))
+        await self._bump_feedback_cache_version()
+        return record
+
+    async def register_turn_citations(
+        self,
+        *,
+        user_id: str,
+        conversation_id: str | None,
+        query: str,
+        query_type: str | None,
+        citations: list[dict[str, Any]],
+    ) -> None:
+        """Cache the most recent cited chunks so the next user turn can emit implicit feedback."""
+        if not conversation_id or not citations:
+            return
+
+        payload = {
+            "user_id": str(user_id),
+            "query": query,
+            "query_type": self._normalize_query_type(query_type),
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "citations": citations,
+        }
+        await cache_service.set(
+            self._turn_citation_cache_key(conversation_id),
+            payload,
+            ttl=self._TURN_CITATION_TTL_SECONDS,
+        )
+
+    async def capture_implicit_feedback_from_message(
+        self,
+        *,
+        user_id: str,
+        conversation_id: str | None,
+        user_message: str,
+        db: AsyncSession | None = None,
+    ) -> list[dict[str, Any]]:
+        """Inspect the next user turn after citations and emit implicit feedback events when warranted."""
+        if not conversation_id or not user_message.strip():
+            return []
+
+        cache_key = self._turn_citation_cache_key(conversation_id)
+        cached = await cache_service.get(cache_key)
+        await cache_service.delete(cache_key)
+        if not isinstance(cached, dict):
+            return []
+        if str(cached.get("user_id") or "") != str(user_id):
+            return []
+
+        inferred = self._infer_implicit_feedback(
+            user_message=user_message,
+            previous_query=str(cached.get("query") or ""),
+            query_type=cached.get("query_type"),
+            citations=list(cached.get("citations") or []),
+        )
+        if not inferred:
+            return []
+
+        emitted: list[dict[str, Any]] = []
+        for item in inferred:
+            await self.publish_citation_feedback(
+                user_id=str(user_id),
+                file_id=str(item["file_id"]),
+                chunk_id=item.get("chunk_id"),
+                rating=int(item["rating"]),
+                query_type=item.get("query_type"),
+                conversation_id=conversation_id,
+                feedback_source=str(item["feedback_source"]),
+                context=item.get("context") or {},
+                db=db,
+            )
+            emitted.append(item)
+        return emitted
+
+    async def recalculate_document_quality_score(self, db: AsyncSession, file_id: str) -> float:
+        """
+        Aggregate a rolling window of feedback records and compute a smoothed
+        quality score in [-1.0, 1.0].
+
+        Group documents use cross-user feedback. Personal documents only use
+        the owner's own feedback for the aggregate.
+        """
+        from uuid import UUID as _UUID
+
+        file_uuid = _UUID(str(file_id))
+        stored_file = await db.get(StoredFile, file_uuid)
+        if stored_file is None:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        feedback_stmt = select(DocumentRetrievalFeedback.feedback_score).where(
+            DocumentRetrievalFeedback.file_id == file_uuid,
+            DocumentRetrievalFeedback.deleted_at.is_(None),
+        )
+        if str(getattr(stored_file, "visibility", "private") or "private").lower() != "group":
+            feedback_stmt = feedback_stmt.where(DocumentRetrievalFeedback.user_id == stored_file.user_id)
+        feedback_stmt = feedback_stmt.order_by(desc(DocumentRetrievalFeedback.created_at)).limit(
+            self._QUALITY_WINDOW_SIZE
+        )
+
+        scores = [int(score) for score in (await db.execute(feedback_stmt)).scalars().all()]
+        total = sum(scores)
+        count = len(scores)
+        score = total / max(count + self._QUALITY_PRIOR_WEIGHT, 1.0)
+        score = max(-1.0, min(1.0, score))
+
+        await db.execute(
+            update(StoredFile)
+            .where(StoredFile.id == file_uuid)
+            .values(document_quality_score=score)
+        )
+        logger.debug(f"Updated quality score for file {file_id}: {score:.4f} (n={count}, sum={total})")
+        return score
+
+    async def get_document_quality_adjustment(self, db: AsyncSession, file_id: str) -> float:
+        """Return the bounded retrieval adjustment derived from the file quality score."""
+        from uuid import UUID as _UUID
+
+        try:
+            stmt = select(StoredFile.document_quality_score).where(
+                StoredFile.id == _UUID(str(file_id)),
+                StoredFile.deleted_at.is_(None),
+            )
+            result = await db.execute(stmt)
+            score_row = result.scalar_one_or_none()
+            quality_score: float = float(score_row) if score_row is not None else 0.0
+        except Exception as exc:
+            logger.warning(f"Failed to fetch quality score for file {file_id}: {exc}")
+            quality_score = 0.0
+
+        if quality_score >= 0:
+            return max(0.0, min(0.3, quality_score * 0.3))
+        return min(0.0, max(-0.2, quality_score * 0.2))
+
+    async def get_document_quality_multiplier(self, db: AsyncSession, file_id: str) -> float:
+        adjustment = await self.get_document_quality_adjustment(db, file_id)
+        return max(0.8, min(1.3, 1.0 + adjustment))
+
+    async def _bump_feedback_cache_version(self) -> int:
+        current = await cache_service.get(self._FEEDBACK_CACHE_VERSION_KEY)
+        try:
+            next_version = int(current or 0) + 1
+        except (TypeError, ValueError):
+            next_version = 1
+        await cache_service.set(self._FEEDBACK_CACHE_VERSION_KEY, next_version, ttl=30 * 24 * 3600)
+        return next_version
+
+    def _turn_citation_cache_key(self, conversation_id: str) -> str:
+        return f"{self._TURN_CITATION_CACHE_PREFIX}:{conversation_id}"
+
+    def _normalize_query_type(self, value: Any) -> str | None:
+        normalized = str(value or "").strip().lower()
+        return normalized or None
+
+    def _infer_implicit_feedback(
+        self,
+        *,
+        user_message: str,
+        previous_query: str,
+        query_type: str | None,
+        citations: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        message = str(user_message or "").strip()
+        if not message or not citations:
+            return []
+
+        feedback_source: str | None = None
+        rating: int | None = None
+        reason: str | None = None
+        if self._matches_feedback_patterns(message, self._IMPLICIT_NEGATIVE_PATTERNS):
+            feedback_source = "implicit_negative"
+            rating = -1
+            reason = "user_requested_different_explanation"
+        elif self._looks_like_topical_follow_up(message, previous_query, citations):
+            feedback_source = "implicit_positive"
+            rating = 1
+            reason = "user_asked_follow_up_about_cited_content"
+
+        if feedback_source is None or rating is None:
+            return []
+
+        return [
+            {
+                "file_id": item["file_id"],
+                "chunk_id": item.get("chunk_id"),
+                "rating": rating,
+                "query_type": query_type,
+                "feedback_source": feedback_source,
+                "context": {
+                    "reason": reason,
+                    "next_user_message": message,
+                    "previous_query": previous_query,
+                    "citation_title": item.get("title"),
+                    "page_number": item.get("page_number"),
+                    "chunk_index": item.get("chunk_index"),
+                },
+            }
+            for item in citations
+            if item.get("file_id")
+        ]
+
+    def _matches_feedback_patterns(self, message: str, patterns: tuple[str, ...]) -> bool:
+        return any(re.search(pattern, message, flags=re.IGNORECASE) for pattern in patterns)
+
+    def _looks_like_topical_follow_up(
+        self,
+        message: str,
+        previous_query: str,
+        citations: list[dict[str, Any]],
+    ) -> bool:
+        if not self._matches_feedback_patterns(message, self._IMPLICIT_FOLLOW_UP_PATTERNS) and "?" not in message:
+            return False
+
+        message_tokens = self._feedback_tokens(message)
+        if not message_tokens:
+            return False
+
+        reference_tokens = self._feedback_tokens(previous_query)
+        for item in citations:
+            reference_tokens.update(
+                self._feedback_tokens(
+                    " ".join(
+                        [
+                            str(item.get("title") or ""),
+                            str(item.get("content_preview") or ""),
+                            str(item.get("section_title") or ""),
+                        ]
+                    )
+                )
+            )
+        if not reference_tokens:
+            return False
+        overlap = len(message_tokens & reference_tokens) / max(len(message_tokens), 1)
+        return overlap >= 0.2
+
+    def _feedback_tokens(self, text: str) -> set[str]:
+        return {
+            token.lower()
+            for token in re.findall(r"[a-zA-Z][a-zA-Z0-9_+-]*|[\u4e00-\u9fff]{1,4}", str(text or ""))
+            if token
+        }
 
     async def draft_knowledge_nodes(self, db_session, file_id: UUID, user_id: UUID, chunks: list[VectorChunk]):
         """

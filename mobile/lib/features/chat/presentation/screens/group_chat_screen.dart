@@ -66,7 +66,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       if (!mounted || !_scrollController.hasClients) {
         return;
       }
-      final target = 0.0;
+      const target = 0.0;
       final position = _scrollController.position;
       if ((position.pixels - target).abs() < 8) {
         _scrollController.jumpTo(target);
@@ -563,6 +563,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     widget.groupId,
                     file.id,
                   );
+                  ref.invalidate(groupChatProvider(widget.groupId));
                   if (!context.mounted) return;
                   AppFeedback.success(
                     context,

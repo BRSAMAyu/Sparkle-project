@@ -184,6 +184,8 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"GET /api/v1/events/*path",
 		"GET /api/v1/signals/*path",
 		"GET /api/v1/preferences/*path",
+		"GET /api/v1/documents/*path",
+		"POST /api/v1/documents/*path",
 		"GET /api/v1/notifications",
 		"GET /api/v1/notification-center",
 		"GET /api/v1/notification-center/*path",

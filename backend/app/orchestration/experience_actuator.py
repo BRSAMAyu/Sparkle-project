@@ -238,6 +238,7 @@ class ExperienceActuator:
         user_message: str,
         file_ids: list[str] | None,
         user_context_payload: dict[str, Any] | None,
+        use_document_context: bool | None = None,
         context_targets: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         user_context = user_context_payload if isinstance(user_context_payload, dict) else None
@@ -294,13 +295,17 @@ class ExperienceActuator:
             )
             decision_context["auto_feedback_binding"] = feedback_runtime
 
-        grounding_runtime = await self._ground_with_user_materials(
-            user_id=user_id,
-            file_ids=file_ids,
-            user_message=user_message,
-            decision_context=decision_context,
-            user_context=user_context,
-        )
+        grounding_runtime = None
+        if use_document_context is False:
+            logger.info("Document grounding skipped: use_document_context=false session_id={}", session_id)
+        else:
+            grounding_runtime = await self._ground_with_user_materials(
+                user_id=user_id,
+                file_ids=file_ids,
+                user_message=user_message,
+                decision_context=decision_context,
+                user_context=user_context,
+            )
         if grounding_runtime:
             runtime_summary["user_material_grounding"] = grounding_runtime
             self._write_targets(targets, {"user_material_grounding": grounding_runtime})

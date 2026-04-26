@@ -14,6 +14,7 @@ import 'package:sparkle/features/calendar/calendar.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/cognitive/cognitive.dart';
 import 'package:sparkle/features/community/community.dart';
+import 'package:sparkle/features/documents/documents.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/features/focus/focus.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
@@ -294,6 +295,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...GalaxyRoutes.routes,
       ...CognitiveRoutes.routes,
       ...CommunityRoutes.routes,
+      ...DocumentLibraryRoutes.routes,
       ...UserRoutes.routes,
       ...MemoryRoutes.routes,
       ...AchievementRoutes.routes,

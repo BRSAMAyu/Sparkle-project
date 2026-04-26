@@ -34,6 +34,7 @@ from app.api.v1 import (
     decay_timemachine,
     devices,
     dlq_admin,
+    documents,
     error_book,
     event_bus_health,
     events,
@@ -101,6 +102,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(data_export.router, prefix="/users", tags=["users"])
 api_router.include_router(suggestions.router, tags=["suggestions"])  # Route already carries /suggestions
+api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])

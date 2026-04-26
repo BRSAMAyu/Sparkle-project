@@ -95,6 +95,46 @@ class ErrorCreated(Event):
 
 
 @_dataclass
+class GroupFileSharedEvent:
+    event_type: str = "group.file.shared"
+    group_id: str = ""
+    file_id: str = ""
+    group_file_id: str = ""
+    shared_by_user_id: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "group_id": self.group_id,
+            "file_id": self.file_id,
+            "group_file_id": self.group_file_id,
+            "shared_by_user_id": self.shared_by_user_id,
+            "triggered_at": self.triggered_at,
+        }
+
+
+@_dataclass
+class GroupFileDeletedEvent:
+    event_type: str = "group.file.deleted"
+    group_id: str = ""
+    file_id: str = ""
+    group_file_id: str = ""
+    shared_by_user_id: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "group_id": self.group_id,
+            "file_id": self.file_id,
+            "group_file_id": self.group_file_id,
+            "shared_by_user_id": self.shared_by_user_id,
+            "triggered_at": self.triggered_at,
+        }
+
+
+@_dataclass
 class MasteryUpdatedFromError:
     event_type: str = "mastery_updated_from_error"
     user_id: str = ""
@@ -748,6 +788,50 @@ class OccurrenceCompletedEvent(Event):
             "series_card_id": self.series_card_id,
             "actual_minutes": self.actual_minutes,
             "completion_quality": self.completion_quality,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class DocumentCitationFeedbackEvent(Event):
+    """Document citation feedback published by explicit UI actions or implicit turn heuristics."""
+
+    def __init__(
+        self,
+        *,
+        user_id: str,
+        file_id: str,
+        chunk_id: str | None,
+        query_type: str | None,
+        rating: int,
+        feedback_source: str,
+        conversation_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ):
+        self.user_id = user_id
+        self.file_id = file_id
+        self.chunk_id = chunk_id
+        self.query_type = query_type
+        self.rating = rating
+        self.feedback_source = feedback_source
+        self.conversation_id = conversation_id
+        self.context = context or {}
+        self.timestamp = datetime.now(timezone.utc)
+
+    @property
+    def event_type(self) -> str:
+        return "document.citation.feedback"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "file_id": self.file_id,
+            "chunk_id": self.chunk_id,
+            "query_type": self.query_type,
+            "rating": self.rating,
+            "feedback_source": self.feedback_source,
+            "conversation_id": self.conversation_id,
+            "context": self.context,
             "timestamp": self.timestamp.isoformat(),
         }
 
@@ -1491,4 +1575,28 @@ class InterventionOutcomeRecorded:
             "effective": self.effective,
             "status": self.status,
             "checked_at": self.checked_at,
+        }
+
+
+@dataclass
+class DocumentCitationFeedbackEvent:
+    """Fired when a user provides feedback on a document citation / retrieved chunk."""
+
+    event_type: str = "document.citation.feedback"
+    user_id: str = ""
+    file_id: str = ""
+    chunk_id: str | None = None
+    feedback_score: int = 0  # 1=positive, -1=negative, 0=neutral
+    query_intent_type: str | None = None
+    conversation_id: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "file_id": self.file_id,
+            "chunk_id": self.chunk_id,
+            "feedback_score": self.feedback_score,
+            "query_intent_type": self.query_intent_type,
+            "conversation_id": self.conversation_id,
         }

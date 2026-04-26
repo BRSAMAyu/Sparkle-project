@@ -34,6 +34,11 @@ class ApiEndpoints {
   static String fileThumbnail(String id) => '/files/$id/thumbnail';
   static const String myFiles = '/me/files';
   static const String myFilesSearch = '/me/files/search';
+  static String galaxyDocumentNodes(String id) => '/galaxy/documents/$id/nodes';
+  static const String documentsUpload = '/documents/upload';
+  static String documentConfirmUpload(String fileId) =>
+      '/documents/$fileId/confirm-upload';
+  static String documentStatus(String fileId) => '/documents/$fileId/status';
 
   // Vocabulary / Dictionary
   static const String vocabularyLookup = '/vocabulary/lookup';
@@ -196,6 +201,7 @@ class ApiEndpoints {
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
   static const String galaxyContributionStats = '/galaxy/contribution-stats';
+  static const String galaxyDrafts = '/galaxy/drafts';
   static const String galaxyViewport = '/galaxy/nodes/viewport';
   static const String galaxyPositions = '/galaxy/nodes/positions';
   static String galaxyUpdateMastery(String id) => '/galaxy/nodes/$id/mastery';
@@ -205,6 +211,7 @@ class ApiEndpoints {
   static const String galaxyEvents = '/galaxy/events';
   static String galaxyNodeDetail(String id) => '/galaxy/node/$id';
   static String galaxyNodeHistory(String id) => '/galaxy/node/$id/history';
+  static String galaxyNodeChunks(String id) => '/galaxy/node/$id/chunks';
   static String galaxyNodeFavorite(String id) => '/galaxy/node/$id/favorite';
   static String galaxyNodeExpansionCandidates(String id) =>
       '/galaxy/node/$id/expansion/candidates';

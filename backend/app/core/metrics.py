@@ -672,6 +672,25 @@ KILL_SWITCH_MODE = get_or_create_metric(
     ["stage", "feature"],
 )
 
+DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_document_context_chunks_injected_total",
+    "Total document-context chunks injected into prompts",
+)
+
+DOCUMENT_CONTEXT_TOKENS_USED = get_or_create_metric(
+    Histogram,
+    "sparkle_document_context_tokens_used",
+    "Document-context prompt tokens used per injected turn",
+    buckets=[0, 64, 128, 256, 512, 768, 1024, 1536, 2048, 3072, 4096],
+)
+
+DOCUMENT_CONTEXT_CACHE_HIT_RATIO = get_or_create_metric(
+    Gauge,
+    "sparkle_document_context_cache_hit_ratio",
+    "Latest document-context cache hit ratio",
+)
+
 LLM_SAFETY_BYPASS_TOTAL = get_or_create_metric(
     Counter,
     "llm_safety_bypass_total",

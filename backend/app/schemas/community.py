@@ -36,6 +36,12 @@ class GroupRoleEnum(str, Enum):
     MEMBER = "member"
 
 
+class GroupFileTrustLevelEnum(str, Enum):
+    OFFICIAL = "official"
+    VERIFIED = "verified"
+    MEMBER = "member"
+
+
 class MessageTypeEnum(str, Enum):
     TEXT = "text"
     TASK_SHARE = "task_share"
@@ -474,12 +480,46 @@ class GroupFilePermissions(BaseModel):
     manage_role: GroupRoleEnum = Field(default=GroupRoleEnum.ADMIN, description="可管理的最低角色")
 
 
+class GroupFileSortEnum(str, Enum):
+    """群文件排序方式"""
+
+    LATEST = "latest"
+    DOWNLOADS = "downloads"
+    NAME = "name"
+
+
+class GroupFileCreateRequest(BaseModel):
+    """创建群文件分享记录"""
+
+    file_id: UUID = Field(description="文件ID")
+    category: str | None = Field(default=None, max_length=64, description="分类")
+    description: str | None = Field(default=None, max_length=500, description="分享描述")
+    send_message: bool = Field(default=True, description="是否发送文件分享消息")
+
+
 class GroupFileShareRequest(BaseModel):
     """分享文件到群组"""
     category: str | None = Field(default=None, max_length=64, description="分类")
+    description: str | None = Field(default=None, max_length=500, description="分享描述")
     tags: list[str] | None = Field(default=None, description="标签")
     permissions: GroupFilePermissions | None = Field(default=None, description="权限设置")
     send_message: bool = Field(default=True, description="是否发送文件分享消息")
+
+
+class UserFileShareRequest(BaseModel):
+    """分享文件给单个用户"""
+
+    file_id: UUID = Field(description="文件ID")
+
+
+class FileCopyResponse(BaseModel):
+    """文件复制结果"""
+
+    file_id: UUID = Field(description="复制后的文件ID")
+    status: str = Field(description="文件处理状态")
+    job_id: str | None = Field(default=None, description="后台处理任务ID")
+    already_in_library: bool = Field(default=False, description="是否已在我的资料库中")
+    suggested_nodes_route: str | None = Field(default=None, description="推荐节点查询路由")
 
 
 class GroupFilePermissionUpdate(BaseModel):
@@ -493,7 +533,11 @@ class GroupFileInfo(BaseSchema):
     file_id: UUID = Field(description="文件ID")
     shared_by: UserBrief | None = Field(description="分享者")
     category: str | None = Field(description="分类")
+    description: str | None = Field(default=None, description="分享描述")
+    uploader_name: str | None = Field(default=None, description="上传者名称")
     tags: list[str] = Field(default_factory=list, description="标签")
+    trust_level: GroupFileTrustLevelEnum = Field(default=GroupFileTrustLevelEnum.MEMBER, description="信任等级")
+    knowledge_base: bool = Field(default=False, description="是否属于群知识库")
     view_role: GroupRoleEnum = Field(description="查看权限")
     download_role: GroupRoleEnum = Field(description="下载权限")
     manage_role: GroupRoleEnum = Field(description="管理权限")
@@ -502,6 +546,13 @@ class GroupFileInfo(BaseSchema):
     file_size: int = Field(description="文件大小")
     status: str = Field(description="处理状态")
     visibility: str = Field(description="可见性")
+    download_count: int = Field(default=0, description="下载次数")
+    citation_count: int = Field(default=0, description="被引用次数")
+    rating_count: int = Field(default=0, description="评分次数")
+    average_rating: float | None = Field(default=None, description="平均评分")
+    quality_score: float = Field(default=0.0, description="综合质量分")
+    retrieval_boost: float = Field(default=1.0, description="群组 RAG 检索加权系数")
+    is_in_my_library: bool = Field(default=False, description="当前用户是否已收藏到个人资料库")
     can_download: bool = Field(description="当前用户是否可下载")
     can_manage: bool = Field(description="当前用户是否可管理")
 
@@ -510,6 +561,86 @@ class GroupFileCategoryStat(BaseModel):
     """群文件分类统计"""
     category: str | None = Field(description="分类")
     count: int = Field(description="数量")
+
+
+class GroupKnowledgeBaseDocumentCreate(BaseModel):
+    """将群文件加入官方知识库"""
+
+    file_id: UUID = Field(description="文件ID")
+    category: str | None = Field(default=None, max_length=64, description="知识库分类")
+    tags: list[str] | None = Field(default=None, description="知识库标签")
+
+
+class GroupKnowledgeBaseStats(BaseModel):
+    """群知识库统计"""
+
+    total_documents: int = Field(default=0, description="文档总数")
+    official_count: int = Field(default=0, description="官方文档数")
+    verified_count: int = Field(default=0, description="已验证文档数")
+    member_count: int = Field(default=0, description="成员文档数")
+    total_downloads: int = Field(default=0, description="总下载次数")
+    total_citations: int = Field(default=0, description="总引用次数")
+    average_rating: float | None = Field(default=None, description="知识库平均评分")
+
+
+class GroupKnowledgeBaseResponse(BaseModel):
+    """群知识库列表响应"""
+
+    group_id: UUID = Field(description="群组ID")
+    collaborative_galaxy_id: UUID | None = Field(default=None, description="群协作星图ID")
+    documents: list[GroupFileInfo] = Field(default_factory=list, description="知识库文档")
+    stats: GroupKnowledgeBaseStats = Field(default_factory=GroupKnowledgeBaseStats, description="知识库统计")
+
+
+class GroupCollaborativeGalaxyNode(BaseModel):
+    """群协作星图节点"""
+
+    id: str = Field(description="节点ID")
+    label: str = Field(description="节点名称")
+    node_type: str = Field(description="节点类型")
+    trust_level: GroupFileTrustLevelEnum = Field(default=GroupFileTrustLevelEnum.MEMBER, description="信任等级")
+    knowledge_base: bool = Field(default=True, description="是否来自知识库")
+    file_id: UUID | None = Field(default=None, description="关联文件ID")
+    source_document_id: UUID | None = Field(default=None, description="来源知识库文档ID")
+    category: str | None = Field(default=None, description="分类")
+    tags: list[str] = Field(default_factory=list, description="标签")
+    quality_score: float = Field(default=0.0, description="综合质量分")
+    citation_count: int = Field(default=0, description="引用次数")
+    download_count: int = Field(default=0, description="下载次数")
+    average_rating: float | None = Field(default=None, description="平均评分")
+    position_x: float | None = Field(default=None, description="星图X坐标")
+    position_y: float | None = Field(default=None, description="星图Y坐标")
+
+
+class GroupCollaborativeGalaxyRelation(BaseModel):
+    """群协作星图关系"""
+
+    source_id: str = Field(description="起点节点ID")
+    target_id: str = Field(description="终点节点ID")
+    relation_type: str = Field(description="关系类型")
+    strength: float = Field(default=1.0, description="关系强度")
+
+
+class GroupCollaborativeGalaxyStats(BaseModel):
+    """群协作星图统计"""
+
+    total_nodes: int = Field(default=0, description="节点总数")
+    document_nodes: int = Field(default=0, description="文档节点数")
+    concept_nodes: int = Field(default=0, description="知识点节点数")
+    total_relations: int = Field(default=0, description="关系总数")
+
+
+class GroupCollaborativeGalaxyResponse(BaseModel):
+    """群协作星图响应"""
+
+    galaxy_id: UUID | None = Field(default=None, description="协作星图ID")
+    group_id: UUID = Field(description="群组ID")
+    name: str = Field(description="星图名称")
+    scope: str = Field(description="星图作用域")
+    nodes: list[GroupCollaborativeGalaxyNode] = Field(default_factory=list, description="节点")
+    relations: list[GroupCollaborativeGalaxyRelation] = Field(default_factory=list, description="关系")
+    edges: list[GroupCollaborativeGalaxyRelation] | None = Field(default=None, description="兼容 edges 字段")
+    stats: GroupCollaborativeGalaxyStats = Field(default_factory=GroupCollaborativeGalaxyStats, description="星图统计")
 
 
 # ============ 群任务 Schemas ============

@@ -118,6 +118,13 @@ message ChatRequest {
   // Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis",
   //         "expert_auto", "expert::<expert_id>"
   string chat_mode = 13;
+
+  // Optional: whether this conversation turn may use the user's study documents.
+  // If unset, the gateway applies the session default.
+  optional bool use_document_context = 14;
+
+  // Optional: session-scoped document filter for retrieval.
+  repeated string document_filter = 15;
 }
 
 // UserProfile defines key user attributes for personalization.

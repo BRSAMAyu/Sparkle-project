@@ -716,12 +716,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   options: pendingInteraction?.options ?? const [],
                   isSubmitting: state.isContinuing,
                   textController: _interactionController,
-                  onReplySelected: (reply) =>
+                  onReplySelected: (String reply) =>
                       unawaited(_continueSimulation(reply)),
                   onSubmitText: () => unawaited(
                     _continueSimulation(_interactionController.text),
                   ),
-                  onContinueInChat: (reply) =>
+                  onContinueInChat: (String reply) =>
                       unawaited(_continueInChat(reply)),
                 ),
               ],
@@ -952,12 +952,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                           options: pendingInteraction?.options ?? const [],
                           isSubmitting: state.isContinuing,
                           textController: _interactionController,
-                          onReplySelected: (reply) =>
+                          onReplySelected: (String reply) =>
                               unawaited(_continueSimulation(reply)),
                           onSubmitText: () => unawaited(
                             _continueSimulation(_interactionController.text),
                           ),
-                          onContinueInChat: (reply) =>
+                          onContinueInChat: (String reply) =>
                               unawaited(_continueInChat(reply)),
                         ),
                       ),
@@ -1894,224 +1894,291 @@ class _SimulationInlineInteractionSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-          Text(
-              context.l10n.simulationAdjustSimulation,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              context.l10n.simulationDiscussionNote,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: topicController,
-              textInputAction: TextInputAction.go,
-              onSubmitted: (_) {
-                if (!isLoading) {
-                  onRun();
-                }
-              },
-              decoration: InputDecoration(
-                labelText: context.l10n.simulationTopicHint,
-                hintText: context.l10n.simulationTopicHintExample,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: scenarioLabels.entries
-                  .map(
-                    (entry) => ChoiceChip(
-                      label: Text(entry.value),
-                      selected: selectedScenarioKey == entry.key,
-                      onSelected: isLoading
-                          ? null
-                          : (selected) {
-                              if (selected) {
-                                onScenarioSelected(entry.key);
-                              }
-                            },
+                    Text(
+                      context.l10n.simulationAdjustSimulation,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Text(
-                scenarioDescriptions[selectedScenarioKey] ??
-                    context.l10n.simulationScenarioAdjustHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.textSecondary,
-                      height: 1.45,
+                    const SizedBox(height: 4),
+                    Text(
+                      context.l10n.simulationDiscussionNote,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.4,
+                          ),
                     ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    context.l10n.simulationDiscussionRounds,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
+                  ],
                 ),
-                _StatusBadge(
-                  icon: Icons.timelapse_rounded,
-                  label: context.l10n.simulationRoundFormatLabel(plannedRoundCount.toString(), maxRoundCount.toString()),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Slider(
-              value: plannedRoundCount.toDouble(),
-              min: 3,
-              max: maxRoundCount.toDouble(),
-              divisions: math.max(0, maxRoundCount - 3),
-              label: context.l10n.simulationRoundSliderLabel(plannedRoundCount),
-              onChanged: (value) => onRoundCountChanged(value.round()),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.simulationFacilitationStyleTitle,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: facilitationLabels.entries.map((entry) {
-                final selected = facilitationStyle == entry.key;
-                return ChoiceChip(
-                  label: Text(entry.value),
-                  selected: selected,
-                  onSelected: isLoading
-                      ? null
-                      : (value) {
-                          if (value) {
-                            onFacilitationStyleSelected(entry.key);
-                          }
-                        },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              facilitationDescriptions[facilitationStyle] ?? context.l10n.simulationFacilitationFitHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    context.l10n.simulationParticipantsTitle,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: isLoading ? null : onResetParticipants,
-                  icon: const Icon(Icons.restart_alt_rounded),
-                  label: Text(context.l10n.simulationRestoreDefault),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              context.l10n.simulationParticipantHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: availableParticipantNames.map((name) {
-                final selected = selectedParticipantNames.contains(name);
-                return FilterChip(
-                  label: Text(name),
-                  selected: selected,
-                  onSelected:
-                      isLoading ? null : (_) => onParticipantToggled(name),
-                );
-              }).toList(),
-            ),
-            if (isHistoricalRoleplay) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: customParticipantController,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: onCustomParticipantAdded,
-                      decoration: InputDecoration(
-                        labelText: context.l10n.simulationCustomHistoricalRole,
-                        hintText: context.l10n.simulationCustomFigureHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  FilledButton.tonalIcon(
-                    onPressed: () => onCustomParticipantAdded(
-                      customParticipantController.text,
-                    ),
-                    icon: const Icon(Icons.add_rounded),
-                    label: Text(context.l10n.simulationAdd),
-                  ),
-                ],
               ),
             ],
-            const SizedBox(height: 10),
-            Text(
-              selectedParticipantNames.isEmpty
-                  ? context.l10n.simulationParticipantDefaultStatus
-                  : context.l10n.simulationParticipantCurrentStatus(selectedParticipantNames.join('、')),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
-                onPressed: isLoading ? null : onRun,
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(isLoading ? context.l10n.simulationRunning : context.l10n.simulationRestartSim),
-              ),
-            ),
-          ],
+          ),
         ),
       );
+    }
+    return child;
+  }
+}
+
+class _SimulationCompactSetupPanel extends StatelessWidget {
+  const _SimulationCompactSetupPanel({
+    required this.topicController,
+    required this.customParticipantController,
+    required this.selectedScenarioKey,
+    required this.scenarioLabels,
+    required this.scenarioDescriptions,
+    required this.isLoading,
+    required this.facilitationStyle,
+    required this.facilitationLabels,
+    required this.facilitationDescriptions,
+    required this.plannedRoundCount,
+    required this.maxRoundCount,
+    required this.selectedParticipantNames,
+    required this.availableParticipantNames,
+    required this.isHistoricalRoleplay,
+    required this.onScenarioSelected,
+    required this.onFacilitationStyleSelected,
+    required this.onRoundCountChanged,
+    required this.onParticipantToggled,
+    required this.onCustomParticipantAdded,
+    required this.onResetParticipants,
+    required this.onRun,
+  });
+
+  final TextEditingController topicController;
+  final TextEditingController customParticipantController;
+  final String selectedScenarioKey;
+  final Map<String, String> scenarioLabels;
+  final Map<String, String> scenarioDescriptions;
+  final bool isLoading;
+  final String facilitationStyle;
+  final Map<String, String> facilitationLabels;
+  final Map<String, String> facilitationDescriptions;
+  final int plannedRoundCount;
+  final int maxRoundCount;
+  final List<String> selectedParticipantNames;
+  final List<String> availableParticipantNames;
+  final bool isHistoricalRoleplay;
+  final ValueChanged<String> onScenarioSelected;
+  final ValueChanged<String> onFacilitationStyleSelected;
+  final ValueChanged<int> onRoundCountChanged;
+  final ValueChanged<String> onParticipantToggled;
+  final ValueChanged<String> onCustomParticipantAdded;
+  final VoidCallback onResetParticipants;
+  final VoidCallback onRun;
+
+  @override
+  Widget build(BuildContext context) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: topicController,
+            textInputAction: TextInputAction.go,
+            onSubmitted: (_) {
+              if (!isLoading) {
+                onRun();
+              }
+            },
+            decoration: InputDecoration(
+              labelText: context.l10n.simulationTopicHint,
+              hintText: context.l10n.simulationTopicHintExample,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: scenarioLabels.entries
+                .map(
+                  (entry) => ChoiceChip(
+                    label: Text(entry.value),
+                    selected: selectedScenarioKey == entry.key,
+                    onSelected: isLoading
+                        ? null
+                        : (selected) {
+                            if (selected) {
+                              onScenarioSelected(entry.key);
+                            }
+                          },
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Text(
+              scenarioDescriptions[selectedScenarioKey] ??
+                  context.l10n.simulationScenarioAdjustHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  context.l10n.simulationDiscussionRounds,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              _StatusBadge(
+                icon: Icons.timelapse_rounded,
+                label: context.l10n.simulationRoundFormatLabel(plannedRoundCount, maxRoundCount),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Slider(
+            value: plannedRoundCount.toDouble(),
+            min: 3,
+            max: maxRoundCount.toDouble(),
+            divisions: math.max(0, maxRoundCount - 3),
+            label: context.l10n.simulationRoundSliderLabel(plannedRoundCount),
+            onChanged: (value) => onRoundCountChanged(value.round()),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.l10n.simulationFacilitationStyleTitle,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: facilitationLabels.entries.map((entry) {
+              final selected = facilitationStyle == entry.key;
+              return ChoiceChip(
+                label: Text(entry.value),
+                selected: selected,
+                onSelected: isLoading
+                    ? null
+                    : (value) {
+                        if (value) {
+                          onFacilitationStyleSelected(entry.key);
+                        }
+                      },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            facilitationDescriptions[facilitationStyle] ?? context.l10n.simulationFacilitationFitHint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  context.l10n.simulationParticipantsTitle,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: isLoading ? null : onResetParticipants,
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: Text(context.l10n.simulationRestoreDefault),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            context.l10n.simulationParticipantHint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: availableParticipantNames.map((name) {
+              final selected = selectedParticipantNames.contains(name);
+              return FilterChip(
+                label: Text(name),
+                selected: selected,
+                onSelected:
+                    isLoading ? null : (_) => onParticipantToggled(name),
+              );
+            }).toList(),
+          ),
+          if (isHistoricalRoleplay) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: customParticipantController,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: onCustomParticipantAdded,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.simulationCustomHistoricalRole,
+                      hintText: context.l10n.simulationCustomFigureHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                FilledButton.tonalIcon(
+                  onPressed: () => onCustomParticipantAdded(
+                    customParticipantController.text,
+                  ),
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text(context.l10n.simulationAdd),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 10),
+          Text(
+            selectedParticipantNames.isEmpty
+                ? context.l10n.simulationParticipantDefaultStatus
+                : context.l10n.simulationParticipantCurrentStatus(selectedParticipantNames.join('、')),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.icon(
+              onPressed: isLoading ? null : onRun,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(isLoading ? context.l10n.simulationRunning : context.l10n.simulationRestartSim),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SimulationStatusCard extends StatelessWidget {
@@ -2156,7 +2223,7 @@ class _SimulationStatusCard extends StatelessWidget {
                       Text(
                         isRunning
                             ? roundCount > 0
-                                ? context.l10n.simulationRunningRoundN(roundCount.toString(), expectedRounds.toString())
+                                ? context.l10n.simulationRunningRoundN(roundCount, expectedRounds)
                                 : context.l10n.simulationGatheringParticipants
                             : context.l10n.simulationAwaitingStart,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -2197,7 +2264,7 @@ class _SimulationStatusCard extends StatelessWidget {
               children: [
                 _StatusBadge(
                   icon: Icons.forum_rounded,
-                  label: roundCount == 0 ? context.l10n.simulationWaitingFirstRound : context.l10n.simulationRoundViewpoints(roundCount.toString()),
+                  label: roundCount == 0 ? context.l10n.simulationWaitingFirstRound : context.l10n.simulationRoundViewpoints(roundCount),
                 ),
                 _StatusBadge(
                   icon: Icons.groups_rounded,
@@ -2517,7 +2584,7 @@ class _SimulationInsightTray extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bulletPoints =
-        session == null ? const <String>[] : _buildBulletPoints(session!);
+        session == null ? const <String>[] : _buildBulletPoints(context, session!);
     final structuredSummary = _parseStructuredSimulationInsight(context, summary);
     final previewText = summary.isEmpty
         ? context.l10n.simulationNoInsightYet
@@ -2649,7 +2716,7 @@ class _SimulationInsightTray extends StatelessWidget {
     );
   }
 
-  List<String> _buildBulletPoints(SimulationSessionModel session) {
+  List<String> _buildBulletPoints(BuildContext context, SimulationSessionModel session) {
     final points = <String>[
       context.l10n.simulationBulletParticipants(session.participants.map((item) => item.name).join('、')),
       context.l10n.simulationBulletRounds(session.rounds.length.toString()),
@@ -2687,6 +2754,7 @@ class _StructuredInsightSectionData {
 }
 
 _StructuredSimulationInsight? _parseStructuredSimulationInsight(
+    BuildContext context,
     String summary) {
   final trimmed = summary.trim();
   if (trimmed.isEmpty) {
@@ -3123,6 +3191,154 @@ class _RoundDivider extends StatelessWidget {
             Expanded(
               child: Divider(
                 color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _SimulationInteractionCard extends StatelessWidget {
+  const _SimulationInteractionCard({
+    required this.prompt,
+    required this.interactionType,
+    required this.suggestedReplies,
+    required this.options,
+    required this.isSubmitting,
+    required this.textController,
+    required this.onReplySelected,
+    required this.onSubmitText,
+    required this.onContinueInChat,
+  });
+
+  final String prompt;
+  final String? interactionType;
+  final List<String> suggestedReplies;
+  final List<String> options;
+  final bool isSubmitting;
+  final TextEditingController textController;
+  final ValueChanged<String> onReplySelected;
+  final VoidCallback onSubmitText;
+  final ValueChanged<String> onContinueInChat;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasOptions = options.isNotEmpty;
+    final hasSuggested = suggestedReplies.isNotEmpty;
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.simulationYourTurnTitle,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            prompt,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  height: 1.45,
+                ),
+          ),
+          if (hasOptions) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: options.map((option) {
+                return FilledButton.tonal(
+                  onPressed: isSubmitting ? null : () => onReplySelected(option),
+                  child: Text(option),
+                );
+              }).toList(),
+            ),
+          ],
+          if (hasSuggested && !hasOptions) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestedReplies.map((reply) {
+                return OutlinedButton(
+                  onPressed: isSubmitting ? null : () => onReplySelected(reply),
+                  child: Text(reply),
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          TextField(
+            controller: textController,
+            minLines: 1,
+            maxLines: 4,
+            textInputAction: TextInputAction.send,
+            onSubmitted: isSubmitting ? null : (_) => onSubmitText(),
+            decoration: InputDecoration(
+              hintText: context.l10n.simulationYourResponseArea,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: isSubmitting ? null : onSubmitText,
+                  child: Text(
+                    isSubmitting
+                        ? context.l10n.simulationSubmitting
+                        : context.l10n.simulationSubmitJudgment,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => onContinueInChat(textController.text),
+                  child: Text(context.l10n.simulationContinueInChat),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineErrorBanner extends StatelessWidget {
+  const _InlineErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 18,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
               ),
             ),
           ],

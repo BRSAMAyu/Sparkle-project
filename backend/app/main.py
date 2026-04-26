@@ -49,9 +49,11 @@ from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
 from app.services.billing_worker import BillingWorker
 from app.services.capsule_event_consumer import CapsuleEventConsumer
+from app.services.document_feedback_event_consumer import DocumentFeedbackEventConsumer
 from app.services.execution_event_consumer import ExecutionEventConsumer
 from app.services.galaxy_execution_consumer import GalaxyExecutionConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
+from app.services.group_file_event_consumer import GroupFileEventConsumer
 from app.services.job_service import JobService
 from app.services.idiographic_association_service import IdiographicAssociationService
 from app.services.preference_event_consumer import PreferenceEventConsumer
@@ -222,6 +224,12 @@ async def lifespan(app: FastAPI):
         galaxy_execution_consumer_task = asyncio.create_task(galaxy_execution_consumer.start())
         app.state.galaxy_execution_consumer_task = galaxy_execution_consumer_task
 
+    group_file_consumer_task = None
+    if cache_service.redis:
+        group_file_consumer = GroupFileEventConsumer(event_bus=event_bus)
+        group_file_consumer_task = asyncio.create_task(group_file_consumer.start())
+        app.state.group_file_consumer_task = group_file_consumer_task
+
     profile_consumer_task = None
     if cache_service.redis:
         profile_consumer = ProfileEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
@@ -237,6 +245,11 @@ async def lifespan(app: FastAPI):
         capsule_consumer = CapsuleEventConsumer(event_bus=event_bus)
         capsule_consumer_task = asyncio.create_task(capsule_consumer.start())
         app.state.capsule_consumer_task = capsule_consumer_task
+
+    if cache_service.redis and event_bus is not None:
+        document_feedback_consumer = DocumentFeedbackEventConsumer(event_bus=event_bus)
+        document_feedback_consumer_task = asyncio.create_task(document_feedback_consumer.start())
+        app.state.document_feedback_consumer_task = document_feedback_consumer_task
 
     if cache_service.redis and event_bus is not None:
         nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
@@ -469,6 +482,12 @@ async def lifespan(app: FastAPI):
         with suppress(asyncio.CancelledError):
             await galaxy_execution_consumer_task
 
+    group_file_consumer_task = getattr(app.state, "group_file_consumer_task", None)
+    if group_file_consumer_task:
+        group_file_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await group_file_consumer_task
+
     profile_consumer_task = getattr(app.state, "profile_consumer_task", None)
     if profile_consumer_task:
         profile_consumer_task.cancel()
@@ -480,6 +499,12 @@ async def lifespan(app: FastAPI):
         cognitive_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await cognitive_consumer_task
+
+    document_feedback_consumer_task = getattr(app.state, "document_feedback_consumer_task", None)
+    if document_feedback_consumer_task:
+        document_feedback_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await document_feedback_consumer_task
 
     nudge_consumer_task = getattr(app.state, "nudge_consumer_task", None)
     if nudge_consumer_task:

@@ -1,15 +1,33 @@
 from datetime import UTC, datetime, timedelta
+import sys
+import types
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
 
+_gen_pkg = types.ModuleType("app.gen")
+_sparkle_pkg = types.ModuleType("app.gen.sparkle")
+_rag_pkg = types.ModuleType("app.gen.sparkle.rag")
+_rag_v1_pkg = types.ModuleType("app.gen.sparkle.rag.v1")
+_gen_pkg.__path__ = []
+_sparkle_pkg.__path__ = []
+_rag_pkg.__path__ = []
+_rag_v1_pkg.evidence_pb2 = types.SimpleNamespace()
+sys.modules.setdefault("app.gen", _gen_pkg)
+sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+sys.modules.setdefault("app.gen.sparkle.rag", _rag_pkg)
+sys.modules.setdefault("app.gen.sparkle.rag.v1", _rag_v1_pkg)
+
 from app.api.v1.plans import get_plan_progress
+from app.models.document_chunks import DocumentChunk
+from app.models.file_storage import StoredFile
 from app.models.focus import FocusSession, FocusStatus, FocusType
-from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument, UserNodeStatus
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.task_document import TaskDocument
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.services.focus_service import FocusService
@@ -365,3 +383,83 @@ async def test_plan_progress_reports_completed_focus_minutes(db_session):
     progress = await get_plan_progress(plan_id=plan.id, current_user=user, db=db_session)
 
     assert progress["total_minutes_spent"] == 25
+
+
+@pytest.mark.asyncio
+async def test_focus_guidance_uses_task_document_context_pool(db_session, monkeypatch):
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    stored_file = StoredFile(
+        user_id=user_id,
+        file_name="OS.pdf",
+        mime_type="application/pdf",
+        file_size=2048,
+        bucket="test",
+        object_key="os.pdf",
+        status="ready",
+    )
+    node = KnowledgeNode(name="CPU Scheduling", description="Scheduling basics")
+    db_session.add_all([user, stored_file, node])
+    await db_session.flush()
+
+    task = Task(
+        user_id=user_id,
+        title="Study Chapter 3 of OS textbook",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=40,
+        difficulty=2,
+        energy_cost=2,
+        status=TaskStatus.PENDING,
+        priority=1,
+        knowledge_node_id=node.id,
+    )
+    db_session.add(task)
+    await db_session.flush()
+    db_session.add(
+        KnowledgeNodeDocument(
+            user_id=user_id,
+            node_id=node.id,
+            file_id=stored_file.id,
+            is_primary=True,
+        )
+    )
+    db_session.add(
+        DocumentChunk(
+            file_id=stored_file.id,
+            user_id=user_id,
+            chunk_index=0,
+            page_numbers=[47],
+            section_title="CPU Scheduling",
+            content="Round-robin scheduling uses a fixed time quantum to share CPU time fairly among processes.",
+        )
+    )
+    await db_session.commit()
+
+    llm_call = AsyncMock(return_value="Based on your notes in OS.pdf, start by comparing the time quantum tradeoff on page 47.")
+    monkeypatch.setattr("app.services.focus_service.focus_llm.call", llm_call)
+
+    response = await FocusService.get_methodological_guidance(
+        "Study Chapter 3 of OS textbook",
+        "How should I think about round-robin scheduling?",
+        db=db_session,
+        task_id=task.id,
+        user_id=user_id,
+    )
+
+    assert "OS.pdf" in response
+    messages = llm_call.await_args.args[0]
+    user_messages = [message["content"] for message in messages if message["role"] == "user"]
+    assert any("Focus Study Context" in content for content in user_messages)
+    assert any("Pages: 47" in content for content in user_messages)
+    assert any("OS.pdf" in content for content in user_messages)
+
+    task_document = await db_session.scalar(select(TaskDocument).where(TaskDocument.task_id == task.id))
+    assert task_document is not None
+    assert task_document.file_id == stored_file.id
+    assert task_document.linked_by == "ai"

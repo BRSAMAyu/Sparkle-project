@@ -1,8 +1,9 @@
 from __future__ import annotations
-from datetime import datetime
-from enum import Enum
+
 import math
 import re
+from datetime import datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +14,6 @@ from app.services.node_sector_service import (
     blend_sector_colors,
     build_sector_visuals,
     dominant_sector_from_weights,
-    normalize_sector_weights,
     parse_sector_code,
     resolve_sector_weights,
 )
@@ -102,6 +102,62 @@ class ApplyNodeExpansionResponse(BaseModel):
     reused_count: int = 0
     created_nodes: list[NodeBase] = Field(default_factory=list)
     reused_nodes: list[NodeBase] = Field(default_factory=list)
+
+
+class SuggestedNodeSimilarity(BaseModel):
+    node_id: UUID
+    name: str
+    similarity: float = Field(..., ge=0.0, le=1.0)
+
+
+class SuggestedDocumentNode(BaseModel):
+    node_id: UUID
+    name: str
+    description: str | None = None
+    confidence_score: float = Field(..., ge=0.0, le=1.0)
+    similarity_to_existing: list[SuggestedNodeSimilarity] = Field(default_factory=list)
+
+
+class SuggestedDocumentNodesResponse(BaseModel):
+    file_id: UUID
+    suggested_nodes: list[SuggestedDocumentNode] = Field(default_factory=list)
+
+
+class DraftGalaxyNode(SuggestedDocumentNode):
+    source_file_id: UUID | None = None
+    source_file_name: str | None = None
+    created_at: datetime | None = None
+
+
+class DraftGalaxyNodesResponse(BaseModel):
+    drafts: list[DraftGalaxyNode] = Field(default_factory=list)
+
+
+class ReviewNodeDecision(BaseModel):
+    node_id: UUID
+    action: str = Field(..., pattern="^(approve|reject|merge)$")
+    edited_name: str | None = Field(None, min_length=1, max_length=255)
+    edited_description: str | None = None
+    merge_into_node_id: UUID | None = None
+
+
+class ReviewDocumentNodesRequest(BaseModel):
+    decisions: list[ReviewNodeDecision] = Field(default_factory=list)
+
+
+class ReviewNodeResult(BaseModel):
+    node_id: UUID
+    action: str
+    status: str
+    merge_into_node_id: UUID | None = None
+
+
+class ReviewDocumentNodesResponse(BaseModel):
+    file_id: UUID
+    approved_count: int = 0
+    rejected_count: int = 0
+    merged_count: int = 0
+    results: list[ReviewNodeResult] = Field(default_factory=list)
 
 
 # ==========================================
@@ -486,7 +542,50 @@ class ReviewSuggestionsResponse(BaseModel):
     next_review_count: int = 0  # 未来 7 天需要复习的总数
 
 
+class NodeDocumentRef(BaseModel):
+    file_id: UUID
+    filename: str
+    file_type: str | None = None
+    upload_date: datetime | None = None
+    chunk_count: int = 0
+    preview_chunks: list[str] = Field(default_factory=list)
+
+
+class NodeKnowledgeStats(BaseModel):
+    total_documents: int = 0
+    total_chunks: int = 0
+    has_personal_uploads: bool = False
+    last_material_added: datetime | None = None
+
+
+class NodeSourceChunk(BaseModel):
+    chunk_id: UUID
+    file_id: UUID
+    filename: str
+    file_type: str | None = None
+    chunk_index: int
+    content: str
+    preview: str
+    page_numbers: list[int] = Field(default_factory=list)
+    section_title: str | None = None
+    quality_score: float | None = None
+    created_at: datetime | None = None
+
+
+class NodeChunksResponse(BaseModel):
+    node_id: UUID
+    chunks: list[NodeSourceChunk] = Field(default_factory=list)
+    total: int = 0
+    page: int = 1
+    page_size: int = 20
+    total_pages: int = 0
+    has_next: bool = False
+    has_prev: bool = False
+
+
 class NodeDetailResponse(BaseModel):
     node: NodeWithStatus
     relations: list[NodeRelationInfo]
+    source_documents: list[NodeDocumentRef] = Field(default_factory=list)
+    knowledge_stats: NodeKnowledgeStats = Field(default_factory=NodeKnowledgeStats)
     # 可以添加更多详情，如学习记录历史等

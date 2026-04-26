@@ -22,7 +22,7 @@ from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.task import Task, TaskStatus, TaskType
-from app.models.task_resources import TaskResourceLink, TaskResourceType
+from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
 from app.models.user import User
 from app.schemas.task import (
     SubTaskDetail,
@@ -30,6 +30,10 @@ from app.schemas.task import (
     TaskCompleteRequest,
     TaskCreate,
     TaskDetail,
+    TaskDocumentInfo,
+    TaskDocumentLinkCreate,
+    TaskDocumentSuggestion,
+    TaskDocumentUnlinkRequest,
     TaskQuickActionRequest,
     TaskRecommendationResponse,
     TaskReorderRequest,
@@ -52,6 +56,8 @@ from app.schemas.task_feedback import (
 from app.services.feedback_service import feedback_service
 from app.services.intelligent_task_service import IntelligentTaskService
 from app.services.seed_library_service import SeedLibraryService
+from app.services.focus_context_service import focus_context_service
+from app.services.task_document_service import task_document_service
 from app.services.task_guide_service import task_guide_service
 from app.services.task_service import TaskService
 from app.task_guidance import TaskGuidance, TaskGuidanceAudience
@@ -65,6 +71,23 @@ def _utcnow() -> datetime:
 
 def _serialize_task_guidance(guidance: TaskGuidance) -> dict[str, Any]:
     return guidance.model_dump(mode="json")
+
+
+def _serialize_task_document(link, file_record) -> TaskDocumentInfo:
+    return TaskDocumentInfo(
+        id=link.id,
+        created_at=link.created_at,
+        updated_at=link.updated_at,
+        deleted_at=link.deleted_at,
+        task_id=link.task_id,
+        file_id=file_record.id,
+        file_name=file_record.file_name,
+        mime_type=file_record.mime_type,
+        file_size=int(file_record.file_size or 0),
+        status=file_record.status,
+        linked_by=link.linked_by,
+        document_quality_score=float(file_record.document_quality_score or 0.0),
+    )
 
 
 async def _get_user_task_or_404(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:
@@ -235,6 +258,19 @@ async def create_task(
     """
     task = await TaskService.create(db, task_in, current_user.id)
 
+    linked_documents = [
+        _serialize_task_document(link, file_record)
+        for link, file_record in await task_document_service.list_task_documents(
+            db,
+            task_id=task.id,
+            user_id=current_user.id,
+        )
+    ]
+    document_suggestions = [
+        TaskDocumentSuggestion.model_validate(item)
+        for item in await task_document_service.suggest_documents_for_task(db, task=task)
+    ]
+
     if generate_guide and not task.guide_content:
         guidance = await task_guide_service.generate_task_guidance(
             task,
@@ -257,7 +293,12 @@ async def create_task(
     except Exception as e:
         logger.warning(f"Failed to get task nudges: {e}")
 
-    return {"data": TaskDetail.model_validate(task), "nudges": nudges}
+    return {
+        "data": TaskDetail.model_validate(task),
+        "nudges": nudges,
+        "linked_documents": linked_documents,
+        "document_suggestions": document_suggestions,
+    }
 
 
 @router.post("/reorder", response_model=dict[str, Any])
@@ -396,6 +437,76 @@ async def get_task(
     task = await _get_user_task_or_404(db, task_id, current_user.id)
 
     return {"data": TaskDetail.model_validate(task)}
+
+
+@router.get("/{task_id}/documents", response_model=dict[str, Any])
+async def list_task_documents(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List documents explicitly linked to a task."""
+    await _get_user_task_or_404(db, task_id, current_user.id)
+    links = await task_document_service.list_task_documents(
+        db,
+        task_id=task_id,
+        user_id=current_user.id,
+    )
+    return {"data": [_serialize_task_document(link, file_record) for link, file_record in links]}
+
+
+@router.post("/{task_id}/documents", response_model=dict[str, Any])
+async def attach_task_document(
+    payload: TaskDocumentLinkCreate,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Attach a study document to a task."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    try:
+        link = await task_document_service.attach_document(
+            db,
+            task=task,
+            file_id=payload.file_id,
+            linked_by=payload.linked_by,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    await db.commit()
+    await focus_context_service.invalidate_for_task(user_id=current_user.id, task_id=task_id)
+    links = await task_document_service.list_task_documents(
+        db,
+        task_id=task_id,
+        user_id=current_user.id,
+    )
+    attached = next((item for item in links if item[0].id == link.id), None)
+    if attached is None:
+        raise HTTPException(status_code=500, detail="Linked document could not be loaded")
+    return {"data": _serialize_task_document(attached[0], attached[1])}
+
+
+@router.delete("/{task_id}/documents", response_model=dict[str, Any])
+async def detach_task_document(
+    payload: TaskDocumentUnlinkRequest,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Detach a study document from a task."""
+    await _get_user_task_or_404(db, task_id, current_user.id)
+    removed = await task_document_service.detach_document(
+        db,
+        task_id=task_id,
+        file_id=payload.file_id,
+        user_id=current_user.id,
+    )
+    if not removed:
+        raise NotFoundError(message="Task document not found")
+    await db.commit()
+    await focus_context_service.invalidate_for_task(user_id=current_user.id, task_id=task_id)
+    return {"success": True, "task_id": str(task_id), "file_id": str(payload.file_id)}
 
 
 @router.get("/{task_id}/resources", response_model=dict[str, Any])

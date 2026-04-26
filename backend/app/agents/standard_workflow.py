@@ -47,12 +47,23 @@ from app.agents.graph.nodes.review_nodes import (
 from app.agents.tool_fallback import ToolExecutionFallback
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
+from app.core.context_pack import ContextBudgetManager, estimate_tokens, format_document_chunks_for_prompt
+from app.core.metrics import DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL, DOCUMENT_CONTEXT_TOKENS_USED
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.chat_modes import CHAT_MODE_TEAM_PREFIX, parse_team_spec
+from app.orchestration.context_focus import infer_route_intent_from_chat_mode
+from app.orchestration.graph_rag import (
+    GraphRAGRetriever,
+    filter_graph_rag_result,
+    filter_retrieved_chunks,
+    format_graph_rag_document_context,
+)
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.statechart_engine import StateGraph, WorkflowState
+from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
+from app.services.document_service import document_service
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import (
@@ -445,7 +456,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             workflow_type="explicit_expert_collaboration",
             handoff_packets=prior_handoffs,
             few_shot_examples=few_shot_examples,
-            extra_instruction=("请用你的专业视角回答下面的问题。" "必须保留你的独特判断，不要假装代表其他专家。"),
+            extra_instruction=("请用你的专业视角回答下面的问题。必须保留你的独特判断，不要假装代表其他专家。"),
         )
         try:
             response = await asyncio.wait_for(
@@ -475,8 +486,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
                 exc,
             )
             response = (
-                f"{runtime['display_name']} 本轮未稳定返回。"
-                "请基于现有专家观点继续完成综合，并明确说明该视角暂时缺席。"
+                f"{runtime['display_name']} 本轮未稳定返回。请基于现有专家观点继续完成综合，并明确说明该视角暂时缺席。"
             )
         expert_output = {
             "expert_id": expert_id,
@@ -705,9 +715,9 @@ def _build_generation_fallback_response(
 
     if snippets:
         joined = "\n".join(snippets)
-        return "我先根据已检索到的知识结果直接回答你：\n" f"{joined}"
+        return f"我先根据已检索到的知识结果直接回答你：\n{joined}"
 
-    return f"我已经收到你的问题“{user_message}”。" "如果你愿意，我可以继续把它整理成更细的步骤、诊断或执行清单。"
+    return f"我已经收到你的问题“{user_message}”。如果你愿意，我可以继续把它整理成更细的步骤、诊断或执行清单。"
 
 
 def _extract_retrieval_snippets(*contexts: str) -> list[str]:
@@ -1025,6 +1035,35 @@ def _select_recent_conversation_messages(
     return messages
 
 
+def _document_group_scope(context_data: dict[str, Any] | None) -> tuple[bool, list[str]]:
+    payload = context_data or {}
+    conversation_settings = payload.get("conversation_settings")
+    if not isinstance(conversation_settings, dict):
+        conversation_settings = {}
+
+    include_group_documents = bool(
+        payload.get("include_group_documents")
+        or conversation_settings.get("include_group_documents")
+        or payload.get("group_id")
+        or conversation_settings.get("group_id")
+    )
+
+    raw_group_ids = payload.get("group_ids") or conversation_settings.get("group_ids") or []
+    group_ids: list[str] = []
+    seen: set[str] = set()
+    for item in raw_group_ids:
+        value = str(item or "").strip()
+        if value and value not in seen:
+            seen.add(value)
+            group_ids.append(value)
+
+    primary_group_id = str(payload.get("group_id") or conversation_settings.get("group_id") or "").strip()
+    if primary_group_id and primary_group_id not in seen:
+        group_ids.append(primary_group_id)
+
+    return include_group_documents, group_ids
+
+
 async def context_builder_node(state: WorkflowState) -> WorkflowState:
     """Build user and conversation context."""
     logger.info("Building context...")
@@ -1043,28 +1082,127 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
     file_ids = state.context_data.get("file_ids") or []
     include_references = bool(state.context_data.get("include_references"))
 
+    existing_document_context = str(state.context_data.get("document_context") or "").strip()
     if not db_session or not user_id or not query:
         state.context_data["knowledge_context"] = ""
-        state.context_data["document_context"] = ""
+        state.context_data["document_context"] = existing_document_context
         return state
 
     try:
         user_uuid = uuid.UUID(str(user_id))
     except ValueError:
         state.context_data["knowledge_context"] = ""
-        state.context_data["document_context"] = ""
+        state.context_data["document_context"] = existing_document_context
         return state
 
     knowledge_context = ""
+    document_context = existing_document_context
+    citations = []
+    turn_citation_payloads: list[dict[str, Any]] = []
+    injected_document_chunks = 0
+    conversation_id = str(state.context_data.get("session_id") or "").strip() or None
+    query_type = "knowledge_query"
+    include_group_documents, group_ids = _document_group_scope(state.context_data)
+    document_context_mode = await AuroraDocContextKillSwitchService().get_mode()
+    state.context_data["document_context_mode"] = document_context_mode
+    state.context_data["document_context_controls"] = {
+        "mode": document_context_mode,
+        "ratio": settings.DOCUMENT_CONTEXT_RATIO,
+        "max_chunks": settings.DOCUMENT_CONTEXT_MAX_CHUNKS,
+        "similarity_threshold": settings.DOCUMENT_CONTEXT_SIMILARITY_THRESHOLD,
+        "recency_boost_days": settings.DOCUMENT_CONTEXT_RECENCY_BOOST_DAYS,
+    }
+    if existing_document_context and document_context_mode == "off":
+        state.context_data["document_context_candidate"] = existing_document_context
+        document_context = ""
+    try:
+        await document_service.capture_implicit_feedback_from_message(
+            user_id=str(user_uuid),
+            conversation_id=conversation_id,
+            user_message=query,
+            db=db_session,
+        )
+    except Exception as exc:
+        logger.warning(f"Implicit document feedback capture failed: {exc}")
     try:
         ks = KnowledgeService(db_session)
         knowledge_context = await ks.retrieve_context(user_id=user_uuid, query=query, limit=5)
+        decision = (
+            state.context_data.get("document_retrieval_decision") or state.context_data.get("retrieval_decision") or {}
+        )
+        route_intent = (
+            state.context_data.get("route_intent")
+            or state.context_data.get("intent_type")
+            or infer_route_intent_from_chat_mode(state.context_data.get("chat_mode"))
+        )
+        if (
+            isinstance(decision, dict)
+            and decision.get("should_retrieve")
+            and not document_context
+            and document_context_mode != "off"
+        ):
+            mode = str(decision.get("retrieval_mode") or "selective")
+            retriever = GraphRAGRetriever(ks)
+            rag_result = await asyncio.wait_for(
+                retriever.retrieve(
+                    query,
+                    str(user_uuid),
+                    depth=2 if mode == "aggressive" else 1,
+                    route_intent=str(route_intent) if route_intent else None,
+                    include_group_documents=include_group_documents,
+                    group_ids=group_ids,
+                ),
+                timeout=max(6.0, float(getattr(settings, "GRAPHRAG_FASTPATH_TIMEOUT_SECONDS", 2.5) or 2.5) * 3),
+            )
+            filtered_rag = filter_graph_rag_result(rag_result)
+            document_context_candidate = format_graph_rag_document_context(rag_result, filtered_rag.chunks)
+            state.context_data["document_context_candidate"] = document_context_candidate
+            state.context_data["document_context_candidate_chunks"] = len(filtered_rag.chunks)
+            document_context = document_context_candidate
+            injected_document_chunks = len(filtered_rag.chunks)
+            state.context_data["document_context_retrieval"] = {
+                "source": "graphrag",
+                "mode": mode,
+                "total_retrieved": filtered_rag.total_retrieved,
+                "total_passed": filtered_rag.total_passed,
+                "fallback_triggered": filtered_rag.fallback_triggered,
+                "entities": list(rag_result.entities or []),
+            }
+            for item in filtered_rag.chunks:
+                turn_citation_payloads.append(
+                    {
+                        "chunk_id": item.chunk_id,
+                        "file_id": item.source_file_id,
+                        "title": item.file_name,
+                        "page_number": item.page_number,
+                        "chunk_index": item.chunk_index,
+                        "section_title": item.metadata.get("section_title"),
+                        "content_preview": item.content[:400],
+                    }
+                )
+                if include_references and item.chunk_id and item.source_file_id:
+                    title = item.file_name or "Study material"
+                    section_title = str(item.metadata.get("section_title") or "").strip()
+                    if section_title:
+                        title = f"{title} - {section_title}"
+                    citations.append(
+                        agent_service_pb2.Citation(
+                            id=str(item.chunk_id),
+                            title=title,
+                            content=item.content[:400] + ("..." if len(item.content) > 400 else ""),
+                            source_type="document",
+                            url="",
+                            score=item.relevance_score,
+                            file_id=str(item.source_file_id),
+                            page_number=item.page_number or 0,
+                            chunk_index=item.chunk_index or 0,
+                            section_title=section_title,
+                        )
+                    )
     except Exception as e:
         logger.warning(f"Knowledge retrieval failed: {e}")
 
-    document_context = ""
-    citations = []
-    if file_ids:
+    if file_ids and document_context_mode in {"shadow", "live"}:
         file_uuid_list = []
         for fid in file_ids:
             try:
@@ -1082,28 +1220,44 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                     query=query,
                     file_ids=file_uuid_list,
                     vector_query=hyde_query,
-                    limit=5,
-                    threshold=0.4,
+                    limit=max(0, int(settings.DOCUMENT_CONTEXT_MAX_CHUNKS or 0)),
+                    threshold=float(settings.DOCUMENT_CONTEXT_SIMILARITY_THRESHOLD),
+                    include_group_documents=include_group_documents,
+                    group_ids=group_ids,
                 )
+                filtered_docs = filter_retrieved_chunks(query=query, chunks=doc_results)
+                state.context_data["document_context_retrieval"] = {
+                    "source": "document_vector_search",
+                    "total_retrieved": filtered_docs.total_retrieved,
+                    "total_passed": filtered_docs.total_passed,
+                    "fallback_triggered": filtered_docs.fallback_triggered,
+                }
 
-                if doc_results:
-                    lines = ["Relevant Documents:"]
-                    for item in doc_results:
+                if filtered_docs.chunks:
+                    document_budget = ContextBudgetManager().allocate().get("document_chunks", 0)
+                    document_context_candidate, document_budget_metadata = format_document_chunks_for_prompt(
+                        filtered_docs.chunks,
+                        budget=document_budget,
+                    )
+                    state.context_data["document_context_budget"] = document_budget_metadata
+                    for item in filtered_docs.chunks:
                         chunk = item.chunk
                         snippet = chunk.content.strip()
                         if len(snippet) > 400:
                             snippet = snippet[:400] + "..."
                         page_number = _first_document_page_number(chunk)
 
-                        label_parts = [item.file_name]
-                        if chunk.section_title:
-                            label_parts.append(chunk.section_title)
-                        if page_number is not None:
-                            label_parts.append(f"p{page_number}")
-                        label_parts.append(f"#{chunk.chunk_index}")
-                        label = " | ".join(label_parts)
-                        lines.append(f"- [{label}] {snippet}")
-
+                        turn_citation_payloads.append(
+                            {
+                                "chunk_id": str(chunk.id),
+                                "file_id": str(chunk.file_id),
+                                "title": item.file_name,
+                                "page_number": page_number,
+                                "chunk_index": chunk.chunk_index,
+                                "section_title": chunk.section_title,
+                                "content_preview": snippet,
+                            }
+                        )
                         if include_references:
                             title = item.file_name
                             if chunk.section_title:
@@ -1116,7 +1270,7 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                                     content=snippet,
                                     source_type="document",
                                     url="",
-                                    score=item.score,
+                                    score=item.relevance_score,
                                     file_id=str(chunk.file_id),
                                     page_number=page_number or 0,
                                     chunk_index=chunk.chunk_index,
@@ -1124,14 +1278,35 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                                 )
                             )
 
-                    document_context = "\n".join(lines)
+                    state.context_data["document_context_candidate"] = document_context_candidate
+                    state.context_data["document_context_candidate_chunks"] = document_budget_metadata.get(
+                        "shown_results",
+                        len(filtered_docs.chunks),
+                    )
+                    document_context = document_context_candidate
+                    injected_document_chunks = int(document_budget_metadata.get("shown_results") or 0)
             except Exception as e:
                 logger.warning(f"Document retrieval failed: {e}")
 
     state.context_data["knowledge_context"] = knowledge_context
     state.context_data["document_context"] = document_context
+    if document_context:
+        DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL.inc(injected_document_chunks)
+        DOCUMENT_CONTEXT_TOKENS_USED.observe(estimate_tokens(document_context))
 
-    if include_references and citations:
+    if turn_citation_payloads:
+        try:
+            await document_service.register_turn_citations(
+                user_id=str(user_uuid),
+                conversation_id=conversation_id,
+                query=query,
+                query_type=query_type,
+                citations=turn_citation_payloads,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to register cited chunks for implicit feedback: {exc}")
+
+    if include_references and citations and document_context_mode != "off":
         stream_callback = state.context_data.get("stream_callback")
         if stream_callback:
             await stream_callback(
@@ -1428,8 +1603,6 @@ Ask about their available time and current tasks if needed.
         if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
         else raw_knowledge_context
     )
-    if knowledge_context:
-        system_prompt += f"\n\n## Retrieved Knowledge\n{knowledge_context}"
 
     raw_document_context = state.context_data.get("document_context") or ""
     document_context = (
@@ -1437,8 +1610,22 @@ Ask about their available time and current tasks if needed.
         if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
         else raw_document_context
     )
-    if document_context:
-        system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
+    context_budget_manager = ContextBudgetManager()
+    context_assembly = context_budget_manager.assemble_prompt(
+        base_system_prompt=system_prompt,
+        user_message=user_message,
+        conversation_history=prompt_conversation_context.get("messages", []),
+        galaxy_knowledge=knowledge_context,
+        document_context=document_context,
+    )
+    system_prompt = context_assembly.system_prompt
+    prompt_conversation_context = {"messages": context_assembly.conversation_history}
+    state.context_data["context_budget"] = {
+        "budgets": context_assembly.budgets,
+        "token_usage": context_assembly.token_usage,
+        "budget_remaining": context_assembly.budget_remaining,
+        "metadata": context_assembly.metadata,
+    }
 
     tools = state.context_data.get("tools_schema", [])
     if _should_disable_tools_for_light_standard_reply(state, user_message):
@@ -2268,6 +2455,11 @@ def _should_use_slim_standard_context(state: WorkflowState, user_message: str) -
         return False
     if context_data.get("file_ids"):
         return False
+    if str(context_data.get("document_context") or "").strip():
+        return False
+    decision = context_data.get("document_retrieval_decision") or context_data.get("retrieval_decision") or {}
+    if isinstance(decision, dict) and decision.get("should_retrieve"):
+        return False
     if context_data.get("planned_tool_sequence"):
         return False
     if context_data.get("selected_experts") or context_data.get("answer_experts"):
@@ -3062,6 +3254,10 @@ async def _execute_single_tool(
                 "redis_client": redis_client,
                 "current_user_message": state.messages[-1]["content"] if state.messages else "",
                 "file_ids": list(state.context_data.get("file_ids") or []),
+                "group_id": state.context_data.get("group_id"),
+                "group_ids": list(state.context_data.get("group_ids") or []),
+                "include_group_documents": state.context_data.get("include_group_documents"),
+                "conversation_settings": state.context_data.get("conversation_settings"),
                 "situation_brief": state.context_data.get("situation_brief"),
                 "user_context_payload": state.context_data.get("user_context_payload"),
                 "plan_context": state.context_data.get("plan_context"),
@@ -3074,9 +3270,9 @@ async def _execute_single_tool(
                 "dual_core_snapshot": state.context_data.get("dual_core_snapshot"),
                 "session_feedback_signal": state.context_data.get("session_feedback_signal"),
                 "progress_snapshot": state.context_data.get("progress_snapshot"),
-                "adaptation_records": (
-                    state.context_data.get("user_context_payload", {}) or {}
-                ).get("adaptation_records"),
+                "adaptation_records": (state.context_data.get("user_context_payload", {}) or {}).get(
+                    "adaptation_records"
+                ),
             },
         )
 

@@ -13,6 +13,8 @@ class KnowledgeDetailResponse {
     this.relations = const [],
     this.relatedTasks = const [],
     this.relatedPlans = const [],
+    this.sourceDocuments = const [],
+    this.knowledgeStats = const NodeKnowledgeStats(),
     this.learningPathSnapshot,
   });
 
@@ -22,6 +24,10 @@ class KnowledgeDetailResponse {
   final List<NodeRelation> relations;
   final List<TaskModel> relatedTasks;
   final List<RelatedPlan> relatedPlans;
+  @JsonKey(name: 'source_documents')
+  final List<NodeSourceDocumentRef> sourceDocuments;
+  @JsonKey(name: 'knowledge_stats')
+  final NodeKnowledgeStats knowledgeStats;
   final KnowledgeUserStats userStats;
   @JsonKey(name: 'learningPathSnapshot')
   final LearningPathSnapshot? learningPathSnapshot;
@@ -216,6 +222,167 @@ class KnowledgeUserStats {
   double get masteryProgress => (masteryScore / 100).clamp(0.0, 1.0);
 
   Map<String, dynamic> toJson() => _$KnowledgeUserStatsToJson(this);
+}
+
+@JsonSerializable()
+class NodeSourceDocumentRef {
+  NodeSourceDocumentRef({
+    required this.fileId,
+    required this.filename,
+    this.fileType,
+    this.uploadDate,
+    this.chunkCount = 0,
+    this.previewChunks = const [],
+  });
+
+  factory NodeSourceDocumentRef.fromJson(Map<String, dynamic> json) =>
+      _$NodeSourceDocumentRefFromJson(json);
+
+  @JsonKey(name: 'file_id')
+  final String fileId;
+  final String filename;
+  @JsonKey(name: 'file_type')
+  final String? fileType;
+  @JsonKey(name: 'upload_date')
+  final DateTime? uploadDate;
+  @JsonKey(name: 'chunk_count')
+  final int chunkCount;
+  @JsonKey(name: 'preview_chunks')
+  final List<String> previewChunks;
+
+  String get normalizedFileType {
+    final lowerName = filename.toLowerCase();
+    final lowerType = (fileType ?? '').toLowerCase();
+    if (lowerName.endsWith('.pdf') || lowerType.contains('pdf')) return 'pdf';
+    if (lowerName.endsWith('.docx') ||
+        lowerName.endsWith('.doc') ||
+        lowerType.contains('word') ||
+        lowerType.contains('msword')) {
+      return 'docx';
+    }
+    if (lowerName.endsWith('.pptx') ||
+        lowerName.endsWith('.ppt') ||
+        lowerType.contains('presentationml') ||
+        lowerType.contains('powerpoint')) {
+      return 'pptx';
+    }
+    if (lowerName.endsWith('.md') ||
+        lowerName.endsWith('.markdown') ||
+        lowerType.contains('markdown')) {
+      return 'md';
+    }
+    if (lowerType.startsWith('image/')) return 'image';
+    return 'file';
+  }
+
+  Map<String, dynamic> toJson() => _$NodeSourceDocumentRefToJson(this);
+}
+
+@JsonSerializable()
+class NodeKnowledgeStats {
+  const NodeKnowledgeStats({
+    this.totalDocuments = 0,
+    this.totalChunks = 0,
+    this.hasPersonalUploads = false,
+    this.lastMaterialAdded,
+  });
+
+  factory NodeKnowledgeStats.fromJson(Map<String, dynamic> json) =>
+      _$NodeKnowledgeStatsFromJson(json);
+
+  @JsonKey(name: 'total_documents')
+  final int totalDocuments;
+  @JsonKey(name: 'total_chunks')
+  final int totalChunks;
+  @JsonKey(name: 'has_personal_uploads')
+  final bool hasPersonalUploads;
+  @JsonKey(name: 'last_material_added')
+  final DateTime? lastMaterialAdded;
+
+  Map<String, dynamic> toJson() => _$NodeKnowledgeStatsToJson(this);
+}
+
+@JsonSerializable()
+class NodeSourceChunk {
+  NodeSourceChunk({
+    required this.chunkId,
+    required this.fileId,
+    required this.filename,
+    required this.chunkIndex,
+    required this.content,
+    required this.preview,
+    this.fileType,
+    this.pageNumbers = const [],
+    this.sectionTitle,
+    this.qualityScore,
+    this.createdAt,
+  });
+
+  factory NodeSourceChunk.fromJson(Map<String, dynamic> json) =>
+      _$NodeSourceChunkFromJson(json);
+
+  @JsonKey(name: 'chunk_id')
+  final String chunkId;
+  @JsonKey(name: 'file_id')
+  final String fileId;
+  final String filename;
+  @JsonKey(name: 'file_type')
+  final String? fileType;
+  @JsonKey(name: 'chunk_index')
+  final int chunkIndex;
+  final String content;
+  final String preview;
+  @JsonKey(name: 'page_numbers')
+  final List<int> pageNumbers;
+  @JsonKey(name: 'section_title')
+  final String? sectionTitle;
+  @JsonKey(name: 'quality_score')
+  final double? qualityScore;
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+
+  String get displayPreview {
+    final trimmed = preview.trim();
+    if (trimmed.isNotEmpty) {
+      return trimmed;
+    }
+    return content.trim();
+  }
+
+  Map<String, dynamic> toJson() => _$NodeSourceChunkToJson(this);
+}
+
+@JsonSerializable()
+class NodeChunksResponse {
+  NodeChunksResponse({
+    required this.nodeId,
+    this.chunks = const [],
+    this.total = 0,
+    this.page = 1,
+    this.pageSize = 20,
+    this.totalPages = 0,
+    this.hasNext = false,
+    this.hasPrev = false,
+  });
+
+  factory NodeChunksResponse.fromJson(Map<String, dynamic> json) =>
+      _$NodeChunksResponseFromJson(json);
+
+  @JsonKey(name: 'node_id')
+  final String nodeId;
+  final List<NodeSourceChunk> chunks;
+  final int total;
+  final int page;
+  @JsonKey(name: 'page_size')
+  final int pageSize;
+  @JsonKey(name: 'total_pages')
+  final int totalPages;
+  @JsonKey(name: 'has_next')
+  final bool hasNext;
+  @JsonKey(name: 'has_prev')
+  final bool hasPrev;
+
+  Map<String, dynamic> toJson() => _$NodeChunksResponseToJson(this);
 }
 
 @JsonSerializable()

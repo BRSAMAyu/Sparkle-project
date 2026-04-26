@@ -323,6 +323,47 @@ class EnhancedGalaxyRepository {
     }
   }
 
+  Future<NetworkResult<NodeChunksResponse>> getNodeSourceChunks(
+    String nodeId, {
+    int page = 1,
+    int pageSize = 100,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return NetworkResult.success(
+        NodeChunksResponse(
+          nodeId: nodeId,
+          page: page,
+          pageSize: pageSize,
+        ),
+      );
+    }
+
+    try {
+      final response = await RetryStrategy.executeWithRetry<NodeChunksResponse>(
+        () async {
+          final response = await _apiClient.get<Map<String, dynamic>>(
+            ApiEndpoints.galaxyNodeChunks(nodeId),
+            queryParameters: {
+              'page': page,
+              'page_size': pageSize,
+            },
+          );
+          final payload = ApiResponseParser.unwrapMap(
+            response.data,
+            action: 'getGalaxyNodeSourceChunks',
+          );
+          return NodeChunksResponse.fromJson(payload);
+        },
+      );
+
+      return NetworkResult.success(response);
+    } on DioException catch (e) {
+      return NetworkResult.failure(GalaxyError.network(e));
+    } catch (e) {
+      return NetworkResult.failure(GalaxyError.unknown(e.toString()));
+    }
+  }
+
   Future<NetworkResult<GalaxyNodeHistory>> getNodeHistory(
     String nodeId, {
     String? packId,

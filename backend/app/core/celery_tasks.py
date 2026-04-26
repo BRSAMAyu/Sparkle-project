@@ -206,6 +206,70 @@ def process_stored_file(
         raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
+@celery_app.task(bind=True, max_retries=6, name="process_group_shared_file")
+def process_group_shared_file(
+    self,
+    group_id: str,
+    file_id: str,
+    shared_by_user_id: str,
+):
+    """
+    Index a shared file into the group-scoped RAG namespace.
+    """
+    import asyncio
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.file_processing_orchestrator import FileProcessingOrchestrator
+
+    async def _process():
+        async with AsyncSessionLocal() as session:
+            orchestrator = FileProcessingOrchestrator(session)
+            return await orchestrator.process_group_file(
+                group_id=UUID(group_id),
+                file_id=UUID(file_id),
+                shared_by_user_id=UUID(shared_by_user_id),
+                external_task_id=self.request.id,
+            )
+
+    try:
+        return asyncio.run(_process())
+    except ValueError as exc:
+        logger.warning(f"Skipping group file processing for group={group_id} file={file_id}: {exc}")
+        return {"status": "skipped", "group_id": group_id, "file_id": file_id, "error": str(exc)}
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=min(300, 2 ** max(1, self.request.retries)))
+
+
+@celery_app.task(bind=True, max_retries=2, name="delete_group_file_index")
+def delete_group_file_index(
+    self,
+    group_id: str,
+    file_id: str,
+):
+    """
+    Remove group-scoped RAG chunks for a deleted/unshared group file.
+    """
+    import asyncio
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.file_processing_orchestrator import FileProcessingOrchestrator
+
+    async def _process():
+        async with AsyncSessionLocal() as session:
+            orchestrator = FileProcessingOrchestrator(session)
+            return await orchestrator.delete_group_file_index(
+                group_id=UUID(group_id),
+                file_id=UUID(file_id),
+            )
+
+    try:
+        return asyncio.run(_process())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
+
+
 @celery_app.task(bind=True, max_retries=2, name="record_token_usage")
 def record_token_usage(
     self,

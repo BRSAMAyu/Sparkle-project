@@ -24,6 +24,7 @@ from app.models.task import Task
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
+from app.services.focus_context_service import focus_context_service
 from app.services.llm_fallback_utils import focus_llm
 from app.services.memory_service import MemoryService
 
@@ -476,11 +477,23 @@ class FocusService:
 
         return {"total_minutes": total_minutes, "pomodoro_count": pomodoro_count, "today_date": today_start.isoformat()}
 
-    @staticmethod
-    async def get_methodological_guidance(task_context: str, user_input: str) -> str:
+    async def get_methodological_guidance(
+        task_context: str,
+        user_input: str,
+        db: AsyncSession | None = None,
+        task_id: UUID | None = None,
+        user_id: UUID | None = None,
+    ) -> str:
         """
         Get methodological guidance from LLM (Hint/Direction, NOT Solution).
+
+        When db, task_id, and user_id are provided and
+        settings.ENABLE_FOCUS_DOCUMENT_CONTEXT is True, study materials attached
+        to the task's knowledge nodes are injected into the prompt so the tutor
+        can reference the student's own uploaded materials.
         """
+        from app.config.settings import settings
+
         system_prompt = """
         You are a Socratic tutor and coach.
         The user is working on a task and feels stuck or needs direction.
@@ -491,11 +504,40 @@ class FocusService:
         3. Ask a guiding question to prompt the user's thinking.
         4. Keep it concise (under 150 words).
         5. Tone: Encouraging, Insightful, Professional.
+        6. When study materials are provided, ground your guidance in them instead of giving generic advice.
+        7. Never invent a page number or quote. Only mention a file name or page when it appears in the provided context.
         """
+
+        document_context = ""
+        if db is not None and task_id is not None and settings.ENABLE_FOCUS_DOCUMENT_CONTEXT:
+            try:
+                task = await db.get(Task, task_id)
+                if task is not None:
+                    document_context = await focus_context_service.get_guidance_context(
+                        db,
+                        user_id=user_id or task.user_id,
+                        task=task,
+                        task_context=task_context,
+                        user_query=user_input,
+                    )
+            except Exception as exc:
+                logger.warning(f"Focus document context fetch failed for task {task_id}: {exc}")
+
+        if document_context:
+            system_prompt = system_prompt.rstrip() + (
+                "\n\nWhen providing Socratic guidance, you may reference specific content"
+                " from the student's uploaded materials listed below."
+                " Guide them to find the answer within their own notes."
+                " Prefer phrasing like 'Based on your notes in ...' and mention page numbers when available."
+            )
+
+        user_message = f"Task: {task_context}\n\nUser Question/Context: {user_input}"
+        if document_context:
+            user_message = f"{document_context}\n\n{user_message}"
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Task: {task_context}\n\nUser Question/Context: {user_input}"},
+            {"role": "user", "content": user_message},
         ]
 
         return await focus_llm.call(

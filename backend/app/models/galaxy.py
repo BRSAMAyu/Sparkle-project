@@ -17,6 +17,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import deferred, relationship
@@ -37,6 +38,8 @@ class CollaborativeGalaxy(BaseModel):
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, unique=True, index=True)
+    galaxy_scope = Column(String(32), default="shared", nullable=False, index=True)
 
     # 可见性: private, shared, public
     visibility = Column(String(20), default="private", nullable=False)
@@ -46,6 +49,7 @@ class CollaborativeGalaxy(BaseModel):
 
     # 关系
     creator = relationship("User", foreign_keys=[created_by])
+    group = relationship("Group")
     subject = relationship("Subject")
     permissions = relationship("GalaxyUserPermission", back_populates="galaxy", cascade="all, delete-orphan")
 
@@ -164,6 +168,29 @@ class KnowledgeNode(BaseModel):
     user_statuses = relationship("UserNodeStatus", back_populates="node", cascade="all, delete-orphan")
     source_relations = relationship("NodeRelation", foreign_keys="NodeRelation.source_node_id", back_populates="source_node", cascade="all, delete-orphan")
     target_relations = relationship("NodeRelation", foreign_keys="NodeRelation.target_node_id", back_populates="target_node", cascade="all, delete-orphan")
+    document_links = relationship("KnowledgeNodeDocument", back_populates="node", cascade="all, delete-orphan")
+
+
+class KnowledgeNodeDocument(BaseModel):
+    """
+    User-managed document attachments for knowledge nodes.
+
+    `KnowledgeNode.source_file_id` remains the legacy/primary provenance pointer;
+    this table stores the full many-to-many attachment surface.
+    """
+    __tablename__ = "knowledge_node_documents"
+    __table_args__ = (
+        UniqueConstraint("user_id", "node_id", "file_id", name="uq_knowledge_node_documents_user_node_file"),
+    )
+
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    node_id = Column(GUID(), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_id = Column(GUID(), ForeignKey("stored_files.id", ondelete="CASCADE"), nullable=False, index=True)
+    is_primary = Column(Boolean, default=False, nullable=False, index=True)
+
+    user = relationship("User")
+    node = relationship("KnowledgeNode", back_populates="document_links")
+    file = relationship("StoredFile", backref="knowledge_node_links")
 
 
 class NodeRelation(BaseModel):

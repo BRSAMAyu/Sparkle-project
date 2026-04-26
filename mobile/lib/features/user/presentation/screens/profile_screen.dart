@@ -11,6 +11,7 @@ import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/documents/documents_routes.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -655,6 +656,15 @@ class ProfileScreen extends ConsumerWidget {
                   subtitle: l10n.profileLearningPortfolioSubtitle,
                   accentColor: const Color(0xFF5F8C72),
                   onTap: () => context.push(PlanRoutes.learningPortfolio),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.auto_stories_outlined,
+                  title: l10n.studyMaterialsTitle,
+                  subtitle: l10n.studyMaterialsEntrySubtitle,
+                  accentColor: const Color(0xFF5C7DCC),
+                  onTap: () => context.push(DocumentLibraryRoutes.library),
                 ),
                 const Divider(height: 1, indent: 60),
                 _buildSettingsTile(

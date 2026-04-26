@@ -19,6 +19,7 @@ export 'domain/entities/galaxy_llm_protocol.dart';
 export 'galaxy_routes.dart';
 export 'presentation/providers/galaxy_display_settings_provider.dart';
 export 'presentation/providers/galaxy_provider.dart';
+export 'presentation/providers/node_source_materials_provider.dart';
 export 'presentation/screens/galaxy_screen.dart';
 export 'presentation/widgets/galaxy/galaxy_controls.dart';
 export 'presentation/widgets/galaxy/graphrag_visualizer.dart';

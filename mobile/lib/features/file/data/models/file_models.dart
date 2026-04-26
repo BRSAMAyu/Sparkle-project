@@ -33,6 +33,87 @@ class UploadSession {
   final String objectKey;
 }
 
+class DocumentUploadSession {
+  DocumentUploadSession({
+    required this.fileId,
+    required this.presignedUrl,
+    required this.expiresIn,
+  });
+
+  factory DocumentUploadSession.fromJson(Map<String, dynamic> json) =>
+      DocumentUploadSession(
+        fileId: json['file_id']?.toString() ?? '',
+        presignedUrl: json['presigned_url']?.toString() ?? '',
+        expiresIn: (json['expires_in'] as num?)?.toInt() ?? 0,
+      );
+
+  final String fileId;
+  final String presignedUrl;
+  final int expiresIn;
+}
+
+class DocumentUploadConfirmation {
+  DocumentUploadConfirmation({
+    required this.jobId,
+    required this.estimatedSeconds,
+  });
+
+  factory DocumentUploadConfirmation.fromJson(Map<String, dynamic> json) =>
+      DocumentUploadConfirmation(
+        jobId: json['job_id']?.toString() ?? '',
+        estimatedSeconds: (json['estimated_seconds'] as num?)?.toInt() ?? 0,
+      );
+
+  final String jobId;
+  final int estimatedSeconds;
+}
+
+class DocumentUploadTicket {
+  DocumentUploadTicket({
+    required this.fileId,
+    required this.jobId,
+    required this.estimatedSeconds,
+    required this.fileName,
+    required this.mimeType,
+    required this.fileSize,
+  });
+
+  final String fileId;
+  final String jobId;
+  final int estimatedSeconds;
+  final String fileName;
+  final String mimeType;
+  final int fileSize;
+}
+
+class DocumentProcessingStatus {
+  DocumentProcessingStatus({
+    required this.status,
+    required this.stage,
+    required this.progressPercent,
+    this.nodesFound,
+    this.error,
+  });
+
+  factory DocumentProcessingStatus.fromJson(Map<String, dynamic> json) =>
+      DocumentProcessingStatus(
+        status: json['status']?.toString() ?? 'queued',
+        stage: json['stage']?.toString() ?? 'queued',
+        progressPercent: (json['progress_percent'] as num?)?.toInt() ?? 0,
+        nodesFound: (json['nodes_found'] as num?)?.toInt(),
+        error: json['error']?.toString(),
+      );
+
+  final String status;
+  final String stage;
+  final int progressPercent;
+  final int? nodesFound;
+  final String? error;
+
+  bool get isDone => status == 'done';
+  bool get isFailed => status == 'failed';
+}
+
 class PresignedUrl {
   PresignedUrl({required this.url, required this.expiresIn});
 
@@ -126,6 +207,9 @@ class GroupFileInfo {
     required this.createdAt,
     required this.updatedAt,
     this.category,
+    this.description,
+    this.trustLevel,
+    this.downloadCount = 0,
     this.tags = const [],
     this.sharedBy,
   });
@@ -155,6 +239,9 @@ class GroupFileInfo {
       updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? '') ??
           DateTime.now(),
       category: json['category']?.toString(),
+      description: json['description']?.toString(),
+      trustLevel: json['trust_level']?.toString(),
+      downloadCount: (json['download_count'] as num?)?.toInt() ?? 0,
       tags: (json['tags'] as List<dynamic>? ?? [])
           .map((e) => e.toString())
           .toList(),
@@ -180,8 +267,18 @@ class GroupFileInfo {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? category;
+  final String? description;
+  final String? trustLevel;
+  final int downloadCount;
   final List<String> tags;
   final UserBrief? sharedBy;
+
+  bool get isOfficial =>
+      trustLevel == 'official' ||
+      tags.any((tag) => tag.toLowerCase() == 'official');
+
+  bool get isInGroupGalaxy =>
+      tags.any((tag) => tag.toLowerCase() == 'group_galaxy');
 }
 
 class GroupFileCategoryStat {

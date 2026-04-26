@@ -9,6 +9,7 @@ Task Schemas - Task creation, update, query, etc.
 from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
@@ -125,6 +126,7 @@ class TaskUpdate(BaseModel):
     order_index: int | None = Field(default=None, description="Display order")
     due_date: date | None = Field(default=None, description="Due date")
     user_note: str | None = Field(default=None, description="User note")
+    knowledge_node_id: UUID | None = Field(default=None, description="Knowledge node ID")
     guide_json: dict | None = Field(default=None, description="Structured user-facing task guide")
     ai_prompt: str | None = Field(default=None, description="Copyable AI prompt scaffold")
     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
@@ -260,6 +262,45 @@ class TaskResourceLinkInfo(BaseSchema):
     resource_metadata: dict | None = Field(default=None, description="Extra metadata")
     order_index: int = Field(default=0, description="Display order")
     is_primary: bool = Field(default=False, description="Primary resource flag")
+
+
+class TaskDocumentLinkCreate(BaseModel):
+    """Attach a document to a task."""
+
+    file_id: UUID = Field(description="Stored file ID")
+    linked_by: Literal["user", "ai"] = Field(default="user", description="Who created the link")
+
+
+class TaskDocumentUnlinkRequest(BaseModel):
+    """Remove a linked document from a task."""
+
+    file_id: UUID = Field(description="Stored file ID")
+
+
+class TaskDocumentInfo(BaseSchema):
+    """Task-linked document."""
+
+    task_id: UUID = Field(description="Task ID")
+    file_id: UUID = Field(description="Stored file ID")
+    file_name: str = Field(description="Original file name")
+    mime_type: str = Field(description="Mime type")
+    file_size: int = Field(description="File size in bytes")
+    status: str = Field(description="Processing status")
+    linked_by: str = Field(description="Link origin")
+    document_quality_score: float = Field(description="Rolling document quality score")
+
+
+class TaskDocumentSuggestion(BaseModel):
+    """Suggested task-document link."""
+
+    file_id: UUID = Field(description="Stored file ID")
+    file_name: str = Field(description="Original file name")
+    reason: str = Field(description="Why this document is relevant")
+    source: str = Field(description="Suggestion source")
+    node_id: UUID | None = Field(default=None, description="Related knowledge node ID")
+    node_name: str | None = Field(default=None, description="Related knowledge node name")
+    linked_by: str = Field(default="ai", description="Suggested link origin")
+    status: str | None = Field(default=None, description="Current file processing status")
 
 
 class TaskSummary(BaseModel):

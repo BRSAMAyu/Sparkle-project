@@ -13,34 +13,53 @@ Refactored to delegate to specialized services:
 from __future__ import annotations
 
 import json
-from datetime import timezone, datetime
+import math
+import re
+from datetime import datetime, timezone
+from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from loguru import logger
-from sqlalchemy import func, inspect, select, text
+from sqlalchemy import and_, delete, func, inspect, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased, undefer
 
 from app.config import settings
 from app.core.cache import cache_service, cached
 from app.core.event_bus import KnowledgeNodeUpdated, MasteryUpdatedFromError, event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
+from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
-from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
+from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
 from app.schemas.galaxy import (
+    DraftGalaxyNode,
     GalaxyContributionNode,
     GalaxyGraphResponse,
+    NodeChunksResponse,
+    NodeDocumentRef,
+    NodeKnowledgeStats,
     NodeRelationInfo,
+    NodeSourceChunk,
     NodeWithStatus,
+    ReviewDocumentNodesResponse,
+    ReviewNodeDecision,
+    ReviewNodeResult,
     SearchResultItem,
     SparkResult,
+    SuggestedDocumentNode,
+    SuggestedNodeSimilarity,
     UserGalaxyContribution,
 )
 from app.services.embedding_service import embedding_service
 from app.services.expansion_service import ExpansionService, validate_knowledge_node_name
+from app.services.galaxy.ontology_generator import (
+    OntologyExtractionResult,
+    OntologyGenerator,
+    relation_type_to_wire_name,
+)
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
-from app.services.galaxy.ontology_generator import relation_type_to_wire_name
-from app.services.galaxy.ontology_generator import OntologyExtractionResult, OntologyGenerator
 from app.services.galaxy.review_urgency_service import ReviewUrgencyService
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
@@ -639,6 +658,24 @@ class GalaxyService:
             self.db.add(edge)
             created_relations.append(edge)
 
+        self.db.add(
+            KnowledgeNodeDocument(
+                user_id=user_id,
+                node_id=root_node.id,
+                file_id=file_id,
+                is_primary=True,
+            )
+        )
+        for child in created_nodes:
+            self.db.add(
+                KnowledgeNodeDocument(
+                    user_id=user_id,
+                    node_id=child.id,
+                    file_id=file_id,
+                    is_primary=False,
+                )
+            )
+
         await self.db.commit()
         await expansion_service._invalidate_after_graph_mutation(user_id)
         return {
@@ -648,9 +685,1622 @@ class GalaxyService:
             "ontology": ontology.to_dict(),
         }
 
+    async def attach_document_to_node(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        file_id: UUID,
+        is_primary: bool = False,
+    ) -> dict[str, object]:
+        node = await self._get_existing_node(node_id)
+        file_record = await self._get_owned_file(user_id, file_id)
+
+        link = await self._upsert_document_link(
+            user_id=user_id,
+            node=node,
+            file_record=file_record,
+            is_primary=is_primary,
+        )
+        await self.db.commit()
+        await self._invalidate_document_attachment_cache(user_id)
+        await self._publish_document_attachment_event(
+            action="attached",
+            user_id=user_id,
+            node_id=node_id,
+            file_id=file_id,
+            is_primary=bool(link.is_primary),
+            chunk_refs=node.chunk_refs,
+        )
+        return await self._document_link_payload(link=link, file_record=file_record, node=node)
+
+    async def detach_document_from_node(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        file_id: UUID,
+    ) -> dict[str, object]:
+        node = await self._get_existing_node(node_id)
+        file_record = await self._get_owned_file(user_id, file_id)
+        link = await self._get_document_link(user_id=user_id, node_id=node_id, file_id=file_id)
+        had_legacy_link = node.source_file_id == file_id
+
+        if not link and not had_legacy_link:
+            raise LookupError("Document attachment not found")
+
+        was_primary = bool(link.is_primary) if link else bool(had_legacy_link)
+        if link:
+            await self.db.execute(delete(KnowledgeNodeDocument).where(KnowledgeNodeDocument.id == link.id))
+        if had_legacy_link:
+            node.source_file_id = None
+            node.chunk_refs = None
+
+        await self.db.commit()
+        await self._invalidate_document_attachment_cache(user_id)
+        await self._publish_document_attachment_event(
+            action="detached",
+            user_id=user_id,
+            node_id=node_id,
+            file_id=file_id,
+            is_primary=was_primary,
+            chunk_refs=None,
+        )
+        return {
+            "status": "success",
+            "action": "detached",
+            "node_id": str(node_id),
+            "file_id": str(file_record.id),
+            "was_primary": was_primary,
+        }
+
+    async def move_document_primary_node(
+        self,
+        *,
+        user_id: UUID,
+        file_id: UUID,
+        from_node_id: UUID,
+        to_node_id: UUID,
+    ) -> dict[str, object]:
+        if from_node_id == to_node_id:
+            raise ValueError("from_node_id and to_node_id must be different")
+
+        file_record = await self._get_owned_file(user_id, file_id)
+        from_node = await self._get_existing_node(from_node_id)
+        to_node = await self._get_existing_node(to_node_id)
+        from_link = await self._get_document_link(user_id=user_id, node_id=from_node_id, file_id=file_id)
+        had_legacy_link = from_node.source_file_id == file_id
+
+        if not from_link and not had_legacy_link:
+            raise LookupError("Source document attachment not found")
+
+        moved_chunk_refs = from_node.chunk_refs if had_legacy_link else None
+
+        if from_link:
+            await self.db.execute(delete(KnowledgeNodeDocument).where(KnowledgeNodeDocument.id == from_link.id))
+        if had_legacy_link:
+            from_node.source_file_id = None
+            from_node.chunk_refs = None
+
+        to_link = await self._upsert_document_link(
+            user_id=user_id,
+            node=to_node,
+            file_record=file_record,
+            is_primary=True,
+        )
+        if moved_chunk_refs is not None and not to_node.chunk_refs:
+            to_node.chunk_refs = moved_chunk_refs
+
+        await self.db.commit()
+        await self._invalidate_document_attachment_cache(user_id)
+        await self._publish_document_attachment_event(
+            action="moved",
+            user_id=user_id,
+            node_id=to_node_id,
+            file_id=file_id,
+            is_primary=True,
+            from_node_id=from_node_id,
+            to_node_id=to_node_id,
+            chunk_refs=to_node.chunk_refs,
+        )
+        return {
+            "status": "success",
+            "action": "moved",
+            "file_id": str(file_record.id),
+            "from_node_id": str(from_node_id),
+            "to_node_id": str(to_node_id),
+            "attachment": await self._document_link_payload(link=to_link, file_record=file_record, node=to_node),
+        }
+
+    async def list_node_documents(self, *, user_id: UUID, node_id: UUID) -> list[dict[str, object]]:
+        node = await self._get_existing_node(node_id)
+        chunk_counts = (
+            select(DocumentChunk.file_id, func.count(DocumentChunk.id).label("chunk_count"))
+            .where(DocumentChunk.user_id == user_id)
+            .group_by(DocumentChunk.file_id)
+            .subquery()
+        )
+        rows = (
+            await self.db.execute(
+                select(KnowledgeNodeDocument, StoredFile, chunk_counts.c.chunk_count)
+                .join(StoredFile, StoredFile.id == KnowledgeNodeDocument.file_id)
+                .outerjoin(chunk_counts, chunk_counts.c.file_id == KnowledgeNodeDocument.file_id)
+                .where(KnowledgeNodeDocument.user_id == user_id)
+                .where(KnowledgeNodeDocument.node_id == node_id)
+                .where(KnowledgeNodeDocument.deleted_at.is_(None))
+                .where(StoredFile.deleted_at.is_(None))
+                .order_by(KnowledgeNodeDocument.is_primary.desc(), StoredFile.file_name.asc())
+            )
+        ).all()
+
+        payloads: list[dict[str, object]] = []
+        seen_file_ids: set[UUID] = set()
+        for link, file_record, chunk_count in rows:
+            seen_file_ids.add(file_record.id)
+            payloads.append(
+                await self._document_link_payload(
+                    link=link,
+                    file_record=file_record,
+                    node=node,
+                    chunk_count=int(chunk_count or 0),
+                )
+            )
+
+        if node.source_file_id and node.source_file_id not in seen_file_ids:
+            legacy_file = await self._get_owned_file_or_none(user_id, node.source_file_id)
+            if legacy_file:
+                payloads.append(
+                    await self._document_link_payload(
+                        link=None,
+                        file_record=legacy_file,
+                        node=node,
+                        is_primary=True,
+                    )
+                )
+
+        return payloads
+
+    async def list_document_nodes(self, *, user_id: UUID, file_id: UUID) -> list[dict[str, object]]:
+        await self._get_owned_file(user_id, file_id)
+        rows = (
+            await self.db.execute(
+                select(KnowledgeNodeDocument, KnowledgeNode)
+                .join(KnowledgeNode, KnowledgeNode.id == KnowledgeNodeDocument.node_id)
+                .where(KnowledgeNodeDocument.user_id == user_id)
+                .where(KnowledgeNodeDocument.file_id == file_id)
+                .where(KnowledgeNodeDocument.deleted_at.is_(None))
+                .where(KnowledgeNode.deleted_at.is_(None))
+                .order_by(KnowledgeNodeDocument.is_primary.desc(), KnowledgeNode.name.asc())
+            )
+        ).all()
+
+        payloads: list[dict[str, object]] = []
+        seen_node_ids: set[UUID] = set()
+        for link, node in rows:
+            seen_node_ids.add(node.id)
+            payloads.append(self._node_link_payload(link=link, node=node))
+
+        legacy_nodes = (
+            await self.db.execute(
+                select(KnowledgeNode)
+                .where(KnowledgeNode.source_file_id == file_id)
+                .where(KnowledgeNode.deleted_at.is_(None))
+                .order_by(KnowledgeNode.name.asc())
+            )
+        ).scalars().all()
+        for node in legacy_nodes:
+            if node.id in seen_node_ids:
+                continue
+            payloads.append(self._node_link_payload(link=None, node=node, is_primary=True))
+
+        return payloads
+
+    async def summarize_study_materials_for_planning(
+        self,
+        *,
+        user_id: UUID,
+        topic_hints: list[str] | None = None,
+        preferred_file_ids: list[UUID | str] | None = None,
+        limit_documents: int = 8,
+    ) -> dict[str, Any]:
+        """Return a planning-oriented summary of uploaded study materials.
+
+        This is an internal integration surface for the planning pipeline. It keeps
+        the existing Galaxy document API intact while exposing richer context:
+        uploaded filenames, node attachments, section structure, and per-node
+        mastery so plans can anchor tasks to actual study materials.
+        """
+        preferred_ids = {
+            file_id
+            for raw_file_id in list(preferred_file_ids or [])
+            if (file_id := self._coerce_uuid_or_none(raw_file_id)) is not None
+        }
+        cleaned_topic_hints = [
+            hint
+            for raw_hint in list(topic_hints or [])
+            if (hint := str(raw_hint or "").strip())
+        ]
+
+        explicit_rows = (
+            await self.db.execute(
+                select(KnowledgeNodeDocument, KnowledgeNode, StoredFile, UserNodeStatus)
+                .join(KnowledgeNode, KnowledgeNode.id == KnowledgeNodeDocument.node_id)
+                .join(StoredFile, StoredFile.id == KnowledgeNodeDocument.file_id)
+                .outerjoin(
+                    UserNodeStatus,
+                    and_(
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.node_id == KnowledgeNode.id,
+                    ),
+                )
+                .where(KnowledgeNodeDocument.user_id == user_id)
+                .where(KnowledgeNodeDocument.deleted_at.is_(None))
+                .where(KnowledgeNode.deleted_at.is_(None))
+                .where(StoredFile.deleted_at.is_(None))
+            )
+        ).all()
+
+        attachment_index: dict[tuple[UUID, UUID], dict[str, Any]] = {}
+        file_records: dict[UUID, StoredFile] = {}
+        node_records: dict[UUID, KnowledgeNode] = {}
+
+        for link, node, file_record, status in explicit_rows:
+            file_records[file_record.id] = file_record
+            node_records[node.id] = node
+            attachment_index[(node.id, file_record.id)] = {
+                "node": node,
+                "file": file_record,
+                "mastery_score": float(getattr(status, "mastery_score", 0.0) or 0.0),
+                "is_primary": bool(link.is_primary),
+                "is_legacy": False,
+            }
+
+        legacy_rows = (
+            await self.db.execute(
+                select(KnowledgeNode, StoredFile, UserNodeStatus)
+                .join(StoredFile, StoredFile.id == KnowledgeNode.source_file_id)
+                .outerjoin(
+                    UserNodeStatus,
+                    and_(
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.node_id == KnowledgeNode.id,
+                    ),
+                )
+                .where(StoredFile.user_id == user_id)
+                .where(KnowledgeNode.source_file_id.is_not(None))
+                .where(KnowledgeNode.deleted_at.is_(None))
+                .where(StoredFile.deleted_at.is_(None))
+            )
+        ).all()
+        for node, file_record, status in legacy_rows:
+            file_records[file_record.id] = file_record
+            node_records[node.id] = node
+            attachment_index.setdefault(
+                (node.id, file_record.id),
+                {
+                    "node": node,
+                    "file": file_record,
+                    "mastery_score": float(getattr(status, "mastery_score", 0.0) or 0.0),
+                    "is_primary": True,
+                    "is_legacy": True,
+                },
+            )
+
+        if not file_records:
+            return {
+                "documents": [],
+                "available_materials": [],
+                "matched_documents_count": 0,
+                "has_materials": False,
+                "topic_hints": cleaned_topic_hints,
+            }
+
+        file_ids = list(file_records.keys())
+        chunk_rows = (
+            await self.db.execute(
+                select(DocumentChunk)
+                .where(DocumentChunk.user_id == user_id)
+                .where(DocumentChunk.file_id.in_(file_ids))
+                .where(DocumentChunk.deleted_at.is_(None))
+                .order_by(DocumentChunk.file_id.asc(), DocumentChunk.chunk_index.asc())
+            )
+        ).scalars().all()
+
+        chunks_by_file: dict[UUID, list[DocumentChunk]] = {}
+        for chunk in chunk_rows:
+            chunks_by_file.setdefault(chunk.file_id, []).append(chunk)
+
+        documents: list[dict[str, Any]] = []
+        matched_documents_count = 0
+        for file_id, file_record in file_records.items():
+            file_chunks = list(chunks_by_file.get(file_id) or [])
+            section_rollups = self._build_planning_section_rollups(file_chunks)
+            document_attachments: list[dict[str, Any]] = []
+
+            for (node_id, attachment_file_id), attachment in attachment_index.items():
+                if attachment_file_id != file_id:
+                    continue
+                node = attachment["node"]
+                node_chunks = self._resolve_node_file_chunks(node=node, file_id=file_id, file_chunks=file_chunks)
+                section_titles = self._ordered_unique(
+                    [
+                        str(chunk.section_title or "").strip()
+                        for chunk in node_chunks
+                        if str(chunk.section_title or "").strip()
+                    ],
+                    limit=6,
+                )
+                attachment_read_minutes = self._estimate_read_minutes(node_chunks)
+                document_attachments.append(
+                    {
+                        "node_id": str(node_id),
+                        "node_name": str(node.name or ""),
+                        "mastery_score": float(attachment.get("mastery_score") or 0.0),
+                        "is_primary": bool(attachment.get("is_primary")),
+                        "section_titles": section_titles,
+                        "estimated_read_minutes": attachment_read_minutes,
+                        "chunk_count": len(node_chunks),
+                    }
+                )
+
+            query_match_score = self._planning_document_query_score(
+                file_name=str(file_record.file_name or ""),
+                section_rollups=section_rollups,
+                attachments=document_attachments,
+                topic_hints=cleaned_topic_hints,
+                preferred=bool(file_id in preferred_ids),
+            )
+            if query_match_score > 0:
+                matched_documents_count += 1
+
+            documents.append(
+                {
+                    "file_id": str(file_record.id),
+                    "file_name": str(file_record.file_name or ""),
+                    "mime_type": str(file_record.mime_type or ""),
+                    "upload_date": file_record.created_at.isoformat() if file_record.created_at else None,
+                    "document_quality_score": float(file_record.document_quality_score or 0.0),
+                    "estimated_read_minutes": self._estimate_read_minutes(file_chunks),
+                    "section_titles": [item["section_title"] for item in section_rollups],
+                    "sections": section_rollups,
+                    "node_attachments": sorted(
+                        document_attachments,
+                        key=lambda item: (
+                            not bool(item.get("is_primary")),
+                            float(item.get("mastery_score") or 0.0),
+                            str(item.get("node_name") or ""),
+                        ),
+                    ),
+                    "query_match_score": query_match_score,
+                    "preferred": bool(file_id in preferred_ids),
+                }
+            )
+
+        if matched_documents_count == 0 and len(documents) == 1:
+            documents[0]["query_match_score"] = max(float(documents[0].get("query_match_score") or 0.0), 0.25)
+            matched_documents_count = 1
+
+        documents.sort(
+            key=lambda item: (
+                float(item.get("query_match_score") or 0.0),
+                1.0 if bool(item.get("preferred")) else 0.0,
+                item.get("upload_date") or "",
+            ),
+            reverse=True,
+        )
+        if limit_documents > 0:
+            documents = documents[:limit_documents]
+
+        return {
+            "documents": documents,
+            "available_materials": [str(item.get("file_name") or "") for item in documents if str(item.get("file_name") or "").strip()],
+            "matched_documents_count": matched_documents_count,
+            "has_materials": bool(documents),
+            "topic_hints": cleaned_topic_hints,
+        }
+
+    @staticmethod
+    def _ordered_unique(items: list[str], *, limit: int | None = None) -> list[str]:
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for item in items:
+            text = str(item or "").strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            ordered.append(text)
+            if limit is not None and len(ordered) >= limit:
+                break
+        return ordered
+
+    @staticmethod
+    def _estimate_read_minutes(chunks: list[DocumentChunk]) -> int:
+        if not chunks:
+            return 0
+
+        latin_words = 0
+        cjk_chars = 0
+        for chunk in chunks:
+            text = str(getattr(chunk, "content", "") or "")
+            latin_words += len(re.findall(r"[A-Za-z0-9_]+", text))
+            cjk_chars += len(re.findall(r"[\u4e00-\u9fff]", text))
+
+        reading_units = latin_words + int(cjk_chars * 0.8)
+        estimated = math.ceil(reading_units / 180) if reading_units else 0
+        return max(estimated, 5 if reading_units else 0)
+
+    def _build_planning_section_rollups(self, chunks: list[DocumentChunk]) -> list[dict[str, Any]]:
+        grouped: dict[str, list[DocumentChunk]] = {}
+        for chunk in chunks:
+            section_title = str(chunk.section_title or "").strip() or "General"
+            grouped.setdefault(section_title, []).append(chunk)
+
+        rollups: list[dict[str, Any]] = []
+        for section_title, section_chunks in grouped.items():
+            pages = sorted(
+                {
+                    int(page)
+                    for section_chunk in section_chunks
+                    for page in list(section_chunk.page_numbers or [])
+                    if isinstance(page, int | float)
+                }
+            )
+            rollups.append(
+                {
+                    "section_title": section_title,
+                    "chunk_count": len(section_chunks),
+                    "page_numbers": pages,
+                    "estimated_read_minutes": self._estimate_read_minutes(section_chunks),
+                }
+            )
+
+        rollups.sort(key=lambda item: (item["section_title"] == "General", item["section_title"].lower()))
+        return rollups
+
+    def _resolve_node_file_chunks(
+        self,
+        *,
+        node: KnowledgeNode,
+        file_id: UUID,
+        file_chunks: list[DocumentChunk],
+    ) -> list[DocumentChunk]:
+        chunk_id_refs, chunk_index_refs, _, has_refs = self._parse_chunk_refs(node.chunk_refs)
+        if has_refs:
+            matched = [
+                chunk
+                for chunk in file_chunks
+                if (chunk_id_refs and chunk.id in chunk_id_refs)
+                or (chunk_index_refs and int(chunk.chunk_index or 0) in chunk_index_refs)
+            ]
+            if matched:
+                return matched
+
+        node_tokens = self._planning_match_keys(
+            [node.name, node.description, *(list(node.keywords or []) if isinstance(node.keywords, list) else [])]
+        )
+        if not node_tokens:
+            return []
+
+        matched_by_title = [
+            chunk
+            for chunk in file_chunks
+            if self._planning_text_matches(str(chunk.section_title or ""), node_tokens)
+        ]
+        if matched_by_title:
+            return matched_by_title
+        return []
+
+    def _planning_document_query_score(
+        self,
+        *,
+        file_name: str,
+        section_rollups: list[dict[str, Any]],
+        attachments: list[dict[str, Any]],
+        topic_hints: list[str],
+        preferred: bool,
+    ) -> float:
+        score = 0.5 if preferred else 0.0
+        query_tokens = self._planning_match_keys(topic_hints)
+        if not query_tokens:
+            return score
+
+        if self._planning_text_matches(file_name, query_tokens):
+            score += 2.0
+
+        for attachment in attachments:
+            node_name = str(attachment.get("node_name") or "")
+            if self._planning_text_matches(node_name, query_tokens):
+                score += 3.0
+            for section_title in list(attachment.get("section_titles") or []):
+                if self._planning_text_matches(str(section_title or ""), query_tokens):
+                    score += 1.5
+                    break
+
+        for section in section_rollups:
+            if self._planning_text_matches(str(section.get("section_title") or ""), query_tokens):
+                score += 1.0
+
+        return round(score, 3)
+
+    @staticmethod
+    def _planning_match_keys(values: list[Any]) -> list[str]:
+        keys: list[str] = []
+        for raw_value in values:
+            text = str(raw_value or "").strip().lower()
+            if not text:
+                continue
+            parts = re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]+", text)
+            candidates = [text, *parts]
+            for candidate in candidates:
+                cleaned = candidate.strip("_ ").lower()
+                if len(cleaned) < 2 or cleaned in keys:
+                    continue
+                keys.append(cleaned)
+        return keys
+
+    def _planning_text_matches(self, text: str, query_tokens: list[str]) -> bool:
+        haystack = str(text or "").strip().lower()
+        if not haystack or not query_tokens:
+            return False
+        haystack_tokens = self._planning_match_keys([haystack])
+        for token in query_tokens:
+            if token in haystack:
+                return True
+            if any(token == hay_token or token in hay_token or hay_token in token for hay_token in haystack_tokens):
+                return True
+        return False
+
+    async def _upsert_document_link(
+        self,
+        *,
+        user_id: UUID,
+        node: KnowledgeNode,
+        file_record: StoredFile,
+        is_primary: bool,
+    ) -> KnowledgeNodeDocument:
+        if is_primary:
+            await self._clear_primary_document_links(user_id=user_id, file_id=file_record.id)
+
+        link = await self._get_document_link(user_id=user_id, node_id=node.id, file_id=file_record.id)
+        if not link:
+            link = KnowledgeNodeDocument(
+                user_id=user_id,
+                node_id=node.id,
+                file_id=file_record.id,
+                is_primary=is_primary,
+            )
+            self.db.add(link)
+        else:
+            link.is_primary = is_primary
+
+        if is_primary:
+            node.source_file_id = file_record.id
+
+        await self.db.flush()
+        return link
+
+    async def _clear_primary_document_links(self, *, user_id: UUID, file_id: UUID) -> None:
+        existing = (
+            await self.db.execute(
+                select(KnowledgeNodeDocument)
+                .where(KnowledgeNodeDocument.user_id == user_id)
+                .where(KnowledgeNodeDocument.file_id == file_id)
+                .where(KnowledgeNodeDocument.is_primary.is_(True))
+                .where(KnowledgeNodeDocument.deleted_at.is_(None))
+            )
+        ).scalars().all()
+        for link in existing:
+            link.is_primary = False
+
+    async def _get_document_link(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        file_id: UUID,
+    ) -> KnowledgeNodeDocument | None:
+        return await self.db.scalar(
+            select(KnowledgeNodeDocument)
+            .where(KnowledgeNodeDocument.user_id == user_id)
+            .where(KnowledgeNodeDocument.node_id == node_id)
+            .where(KnowledgeNodeDocument.file_id == file_id)
+            .where(KnowledgeNodeDocument.deleted_at.is_(None))
+        )
+
+    async def _get_existing_node(self, node_id: UUID) -> KnowledgeNode:
+        node = await self.db.get(KnowledgeNode, node_id)
+        if not node or node.deleted_at is not None:
+            raise LookupError("Knowledge node not found")
+        return node
+
+    async def _get_owned_file(self, user_id: UUID, file_id: UUID) -> StoredFile:
+        file_record = await self._get_owned_file_or_none(user_id, file_id)
+        if not file_record:
+            raise LookupError("Document not found")
+        return file_record
+
+    async def _get_owned_file_or_none(self, user_id: UUID, file_id: UUID) -> StoredFile | None:
+        return await self.db.scalar(
+            select(StoredFile)
+            .where(StoredFile.id == file_id)
+            .where(StoredFile.user_id == user_id)
+            .where(StoredFile.deleted_at.is_(None))
+        )
+
+    async def _document_link_payload(
+        self,
+        *,
+        link: KnowledgeNodeDocument | None,
+        file_record: StoredFile,
+        node: KnowledgeNode,
+        chunk_count: int | None = None,
+        is_primary: bool | None = None,
+    ) -> dict[str, object]:
+        if chunk_count is None:
+            chunk_count = int(
+                await self.db.scalar(
+                    select(func.count(DocumentChunk.id))
+                    .where(DocumentChunk.file_id == file_record.id)
+                    .where(DocumentChunk.user_id == file_record.user_id)
+                )
+                or 0
+            )
+        primary = bool(link.is_primary) if link else bool(is_primary)
+        attached_at = link.created_at if link else node.created_at
+        updated_at = link.updated_at if link else node.updated_at
+        return {
+            "file_id": str(file_record.id),
+            "node_id": str(node.id),
+            "file_name": file_record.file_name,
+            "mime_type": file_record.mime_type,
+            "file_size": int(file_record.file_size or 0),
+            "status": file_record.status,
+            "visibility": file_record.visibility,
+            "is_primary": primary,
+            "chunk_count": chunk_count,
+            "attached_at": attached_at.isoformat() if attached_at else None,
+            "updated_at": updated_at.isoformat() if updated_at else None,
+        }
+
+    def _node_link_payload(
+        self,
+        *,
+        link: KnowledgeNodeDocument | None,
+        node: KnowledgeNode,
+        is_primary: bool | None = None,
+    ) -> dict[str, object]:
+        primary = bool(link.is_primary) if link else bool(is_primary)
+        attached_at = link.created_at if link else node.created_at
+        updated_at = link.updated_at if link else node.updated_at
+        return {
+            "node_id": str(node.id),
+            "file_id": str(link.file_id) if link else str(node.source_file_id),
+            "name": node.name,
+            "description": node.description,
+            "source_type": node.source_type or "seed",
+            "status": node.status or "published",
+            "is_primary": primary,
+            "chunk_refs": node.chunk_refs,
+            "attached_at": attached_at.isoformat() if attached_at else None,
+            "updated_at": updated_at.isoformat() if updated_at else None,
+        }
+
+    async def _invalidate_document_attachment_cache(self, user_id: UUID) -> None:
+        await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
+        await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{user_id}:*")
+        await cache_service.delete_pattern(f"galaxy:node_knowledge_stats:v1:{user_id}:*")
+
+    async def _publish_document_attachment_event(
+        self,
+        *,
+        action: str,
+        user_id: UUID,
+        node_id: UUID,
+        file_id: UUID,
+        is_primary: bool,
+        chunk_refs: object | None,
+        from_node_id: UUID | None = None,
+        to_node_id: UUID | None = None,
+    ) -> None:
+        payload = {
+            "event_type": "galaxy.document_attachment.changed",
+            "action": action,
+            "user_id": str(user_id),
+            "file_id": str(file_id),
+            "node_id": str(node_id),
+            "from_node_id": str(from_node_id) if from_node_id else None,
+            "to_node_id": str(to_node_id) if to_node_id else None,
+            "is_primary": is_primary,
+            "chunk_refs": json.loads(json.dumps(chunk_refs, default=str)) if chunk_refs is not None else None,
+            "timestamp": _utcnow().isoformat(),
+        }
+        try:
+            await event_bus.publish("galaxy.document_attachment.changed", payload)
+        except Exception as exc:
+            logger.warning(
+                "Failed to publish document attachment event action={} user_id={} file_id={} node_id={}: {}",
+                action,
+                user_id,
+                file_id,
+                node_id,
+                exc,
+            )
+
+    async def get_suggested_nodes_for_document(
+        self,
+        *,
+        user_id: UUID,
+        file_id: UUID,
+    ) -> list[SuggestedDocumentNode]:
+        draft_nodes = await self._get_user_draft_nodes(user_id=user_id, file_id=file_id)
+        return await self._build_suggested_node_payloads(draft_nodes)
+
+    async def get_draft_nodes(
+        self,
+        *,
+        user_id: UUID,
+    ) -> list[DraftGalaxyNode]:
+        result = await self.db.execute(
+            select(KnowledgeNode, StoredFile.file_name)
+            .options(undefer(KnowledgeNode.embedding))
+            .join(UserNodeStatus, and_(UserNodeStatus.node_id == KnowledgeNode.id, UserNodeStatus.user_id == user_id))
+            .outerjoin(StoredFile, StoredFile.id == KnowledgeNode.source_file_id)
+            .where(KnowledgeNode.status == "draft")
+            .order_by(KnowledgeNode.created_at.desc())
+        )
+        rows = result.all()
+        suggestions = await self._build_suggested_node_payloads([node for node, _file_name in rows])
+        suggestion_by_id = {item.node_id: item for item in suggestions}
+
+        drafts: list[DraftGalaxyNode] = []
+        for node, file_name in rows:
+            suggestion = suggestion_by_id[node.id]
+            drafts.append(
+                DraftGalaxyNode(
+                    node_id=suggestion.node_id,
+                    name=suggestion.name,
+                    description=suggestion.description,
+                    confidence_score=suggestion.confidence_score,
+                    similarity_to_existing=suggestion.similarity_to_existing,
+                    source_file_id=node.source_file_id,
+                    source_file_name=file_name,
+                    created_at=node.created_at,
+                )
+            )
+        return drafts
+
+    async def review_document_nodes(
+        self,
+        *,
+        user_id: UUID,
+        file_id: UUID,
+        decisions: list[ReviewNodeDecision],
+    ) -> ReviewDocumentNodesResponse:
+        if not decisions:
+            return ReviewDocumentNodesResponse(file_id=file_id)
+
+        results: list[ReviewNodeResult] = []
+        approved_count = 0
+        rejected_count = 0
+        merged_count = 0
+
+        try:
+            for decision in decisions:
+                node = await self._get_user_draft_node(user_id=user_id, node_id=decision.node_id, file_id=file_id)
+                if decision.action == "approve":
+                    self._apply_review_edits(node, decision)
+                    node.status = "published"
+                    node.updated_at = _utcnow()
+                    self.db.add(node)
+                    approved_count += 1
+                    results.append(ReviewNodeResult(node_id=node.id, action="approve", status="published"))
+                    continue
+
+                if decision.action == "reject":
+                    await self._delete_draft_node(node)
+                    rejected_count += 1
+                    results.append(ReviewNodeResult(node_id=node.id, action="reject", status="rejected"))
+                    continue
+
+                if decision.action == "merge":
+                    if decision.merge_into_node_id is None:
+                        raise ValueError("merge_into_node_id is required for merge decisions")
+                    target = await self._get_merge_target(decision.merge_into_node_id)
+                    self._apply_review_edits(node, decision)
+                    await self._merge_draft_node_into_target(
+                        user_id=user_id,
+                        draft_node=node,
+                        target_node=target,
+                    )
+                    merged_count += 1
+                    results.append(
+                        ReviewNodeResult(
+                            node_id=node.id,
+                            action="merge",
+                            status="merged",
+                            merge_into_node_id=target.id,
+                        )
+                    )
+                    continue
+
+                raise ValueError(f"Unsupported review action: {decision.action}")
+
+            await self.db.commit()
+            await NodeSectorService(self.db).invalidate_user_graph_cache(user_id)
+            return ReviewDocumentNodesResponse(
+                file_id=file_id,
+                approved_count=approved_count,
+                rejected_count=rejected_count,
+                merged_count=merged_count,
+                results=results,
+            )
+        except Exception:
+            await self.db.rollback()
+            raise
+
+    async def approve_all_document_nodes(
+        self,
+        *,
+        user_id: UUID,
+        file_id: UUID,
+    ) -> ReviewDocumentNodesResponse:
+        draft_nodes = await self._get_user_draft_nodes(user_id=user_id, file_id=file_id)
+        for node in draft_nodes:
+            node.status = "published"
+            node.updated_at = _utcnow()
+            self.db.add(node)
+
+        await self.db.commit()
+        await NodeSectorService(self.db).invalidate_user_graph_cache(user_id)
+        return ReviewDocumentNodesResponse(
+            file_id=file_id,
+            approved_count=len(draft_nodes),
+            results=[ReviewNodeResult(node_id=node.id, action="approve", status="published") for node in draft_nodes],
+        )
+
+    async def _get_user_draft_nodes(self, *, user_id: UUID, file_id: UUID) -> list[KnowledgeNode]:
+        result = await self.db.execute(
+            select(KnowledgeNode)
+            .options(undefer(KnowledgeNode.embedding))
+            .join(UserNodeStatus, and_(UserNodeStatus.node_id == KnowledgeNode.id, UserNodeStatus.user_id == user_id))
+            .where(KnowledgeNode.source_file_id == file_id)
+            .where(KnowledgeNode.status == "draft")
+            .order_by(KnowledgeNode.created_at.asc())
+        )
+        return list(result.scalars().all())
+
+    async def _get_user_draft_node(self, *, user_id: UUID, node_id: UUID, file_id: UUID) -> KnowledgeNode:
+        result = await self.db.execute(
+            select(KnowledgeNode)
+            .options(undefer(KnowledgeNode.embedding))
+            .join(UserNodeStatus, and_(UserNodeStatus.node_id == KnowledgeNode.id, UserNodeStatus.user_id == user_id))
+            .where(KnowledgeNode.id == node_id)
+            .where(KnowledgeNode.source_file_id == file_id)
+            .where(KnowledgeNode.status == "draft")
+        )
+        node = result.scalar_one_or_none()
+        if node is None:
+            raise ValueError(f"Draft node {node_id} not found for document {file_id}")
+        return node
+
+    async def _get_merge_target(self, node_id: UUID) -> KnowledgeNode:
+        result = await self.db.execute(
+            select(KnowledgeNode)
+            .options(undefer(KnowledgeNode.embedding))
+            .where(KnowledgeNode.id == node_id)
+            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
+        )
+        target = result.scalar_one_or_none()
+        if target is None:
+            raise ValueError(f"Merge target {node_id} not found or is not published")
+        return target
+
+    async def _build_suggested_node_payloads(self, draft_nodes: list[KnowledgeNode]) -> list[SuggestedDocumentNode]:
+        if not draft_nodes:
+            return []
+
+        result = await self.db.execute(
+            select(KnowledgeNode)
+            .options(undefer(KnowledgeNode.embedding))
+            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
+            .where(KnowledgeNode.embedding.isnot(None))
+        )
+        existing_nodes = list(result.scalars().all())
+
+        payloads: list[SuggestedDocumentNode] = []
+        for node in draft_nodes:
+            node_embedding = self._embedding_to_list(node.embedding)
+            scored: list[tuple[KnowledgeNode, float]] = []
+            if node_embedding:
+                for existing in existing_nodes:
+                    if existing.id == node.id:
+                        continue
+                    similarity = self._cosine_similarity(node_embedding, self._embedding_to_list(existing.embedding))
+                    if similarity is not None:
+                        scored.append((existing, similarity))
+
+            scored.sort(key=lambda item: item[1], reverse=True)
+            top_matches = [
+                SuggestedNodeSimilarity(
+                    node_id=existing.id,
+                    name=existing.name,
+                    similarity=round(max(0.0, min(1.0, similarity)), 4),
+                )
+                for existing, similarity in scored[:3]
+            ]
+            max_similarity = top_matches[0].similarity if top_matches else 0.0
+            payloads.append(
+                SuggestedDocumentNode(
+                    node_id=node.id,
+                    name=node.name,
+                    description=node.description,
+                    confidence_score=round(max(0.0, min(1.0, 1.0 - max_similarity)), 4),
+                    similarity_to_existing=top_matches,
+                )
+            )
+        return payloads
+
+    @staticmethod
+    def _embedding_to_list(value: object) -> list[float]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                return []
+        try:
+            return [float(item) for item in value]  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return []
+
+    @staticmethod
+    def _cosine_similarity(left: list[float], right: list[float]) -> float | None:
+        if not left or not right:
+            return None
+        length = min(len(left), len(right))
+        dot = sum(left[index] * right[index] for index in range(length))
+        left_norm = math.sqrt(sum(left[index] * left[index] for index in range(length)))
+        right_norm = math.sqrt(sum(right[index] * right[index] for index in range(length)))
+        if left_norm == 0.0 or right_norm == 0.0:
+            return None
+        return dot / (left_norm * right_norm)
+
+    @staticmethod
+    def _apply_review_edits(node: KnowledgeNode, decision: ReviewNodeDecision) -> None:
+        if decision.edited_name is not None:
+            validate_knowledge_node_name(decision.edited_name)
+            node.name = decision.edited_name
+        if decision.edited_description is not None:
+            node.description = decision.edited_description
+
+    async def _delete_draft_node(self, node: KnowledgeNode) -> None:
+        if node.status != "draft":
+            raise ValueError(f"Only draft nodes can be removed during review (node status: {node.status})")
+        await self.db.execute(
+            delete(NodeRelation).where(
+                or_(NodeRelation.source_node_id == node.id, NodeRelation.target_node_id == node.id)
+            )
+        )
+        await self.db.execute(delete(KnowledgeNodeDocument).where(KnowledgeNodeDocument.node_id == node.id))
+        await self.db.execute(delete(UserNodeStatus).where(UserNodeStatus.node_id == node.id))
+        await self.db.delete(node)
+
+    async def _merge_draft_node_into_target(
+        self,
+        *,
+        user_id: UUID,
+        draft_node: KnowledgeNode,
+        target_node: KnowledgeNode,
+    ) -> None:
+        if draft_node.id == target_node.id:
+            raise ValueError("Cannot merge a draft node into itself")
+
+        target_node.chunk_refs = self._merge_chunk_refs(target_node.chunk_refs, draft_node.chunk_refs)
+        if target_node.source_file_id is None:
+            target_node.source_file_id = draft_node.source_file_id
+        target_node.updated_at = _utcnow()
+        self.db.add(target_node)
+
+        draft_status = await self.db.get(UserNodeStatus, (user_id, draft_node.id))
+        target_status = await self.db.get(UserNodeStatus, (user_id, target_node.id))
+        if target_status is None:
+            target_status = UserNodeStatus(
+                user_id=user_id,
+                node_id=target_node.id,
+                is_unlocked=bool(getattr(draft_status, "is_unlocked", True)),
+                mastery_score=float(getattr(draft_status, "mastery_score", 0.0) or 0.0),
+                bkt_mastery_prob=float(getattr(draft_status, "bkt_mastery_prob", 0.0) or 0.0),
+                first_unlock_at=getattr(draft_status, "first_unlock_at", None) or _utcnow(),
+            )
+            self.db.add(target_status)
+        else:
+            target_status.is_unlocked = True
+            target_status.updated_at = _utcnow()
+
+        await self._transfer_document_links_for_merge(user_id, draft_node.id, target_node.id)
+        await self._rewire_relations_for_merge(draft_node.id, target_node.id)
+        await self._delete_draft_node(draft_node)
+
+    @staticmethod
+    def _merge_chunk_refs(existing: object, incoming: object) -> object:
+        if incoming in (None, [], {}):
+            return existing
+        if existing in (None, [], {}):
+            return incoming
+
+        def as_list(value: object) -> list[object]:
+            if isinstance(value, list):
+                return value
+            return [value]
+
+        if isinstance(existing, dict) or isinstance(incoming, dict):
+            merged: dict[str, object] = {}
+            existing_items = (
+                existing.items() if isinstance(existing, dict) else [(item, True) for item in as_list(existing)]
+            )
+            incoming_items = (
+                incoming.items() if isinstance(incoming, dict) else [(item, True) for item in as_list(incoming)]
+            )
+            merged.update({str(key): value for key, value in existing_items})
+            merged.update({str(key): value for key, value in incoming_items})
+            return merged
+
+        merged_list: list[object] = []
+        for item in [*as_list(existing), *as_list(incoming)]:
+            if item not in merged_list:
+                merged_list.append(item)
+        return merged_list
+
+    async def _rewire_relations_for_merge(self, draft_node_id: UUID, target_node_id: UUID) -> None:
+        result = await self.db.execute(
+            select(NodeRelation).where(
+                or_(NodeRelation.source_node_id == draft_node_id, NodeRelation.target_node_id == draft_node_id)
+            )
+        )
+        for relation in result.scalars().all():
+            new_source_id = target_node_id if relation.source_node_id == draft_node_id else relation.source_node_id
+            new_target_id = target_node_id if relation.target_node_id == draft_node_id else relation.target_node_id
+            if new_source_id == new_target_id:
+                await self.db.delete(relation)
+                continue
+            duplicate = await self.db.scalar(
+                select(NodeRelation).where(
+                    NodeRelation.id != relation.id,
+                    NodeRelation.source_node_id == new_source_id,
+                    NodeRelation.target_node_id == new_target_id,
+                    NodeRelation.relation_type == relation.relation_type,
+                )
+            )
+            if duplicate:
+                duplicate.strength = max(float(duplicate.strength or 0.0), float(relation.strength or 0.0))
+                await self.db.delete(relation)
+                continue
+            relation.source_node_id = new_source_id
+            relation.target_node_id = new_target_id
+            self.db.add(relation)
+
+    async def _transfer_document_links_for_merge(
+        self, user_id: UUID, draft_node_id: UUID, target_node_id: UUID
+    ) -> None:
+        result = await self.db.execute(
+            select(KnowledgeNodeDocument).where(
+                KnowledgeNodeDocument.user_id == user_id,
+                KnowledgeNodeDocument.node_id == draft_node_id,
+                KnowledgeNodeDocument.deleted_at.is_(None),
+            )
+        )
+        for link in result.scalars().all():
+            duplicate = await self.db.scalar(
+                select(KnowledgeNodeDocument).where(
+                    KnowledgeNodeDocument.user_id == user_id,
+                    KnowledgeNodeDocument.node_id == target_node_id,
+                    KnowledgeNodeDocument.file_id == link.file_id,
+                    KnowledgeNodeDocument.deleted_at.is_(None),
+                )
+            )
+            if duplicate:
+                duplicate.is_primary = bool(duplicate.is_primary or link.is_primary)
+                await self.db.delete(link)
+                continue
+            link.node_id = target_node_id
+            self.db.add(link)
+
+    async def get_node_source_documents(self, user_id: UUID, node_id: UUID) -> list[NodeDocumentRef]:
+        """Return source-document provenance for a node, cached separately from mastery detail."""
+        cache_key = f"galaxy:node_source_documents:v1:{user_id}:{node_id}"
+        cached_docs = await cache_service.get(cache_key)
+        if cached_docs is not None:
+            return [NodeDocumentRef.model_validate(item) for item in cached_docs]
+
+        docs = await self._load_node_source_documents(user_id=user_id, node_id=node_id)
+        await cache_service.set(
+            cache_key,
+            [doc.model_dump(mode="json") for doc in docs],
+            ttl=1800,
+        )
+        return docs
+
+    async def get_node_knowledge_stats(self, user_id: UUID, node_id: UUID) -> NodeKnowledgeStats:
+        """Return document-level knowledge stats using a shorter, independent cache."""
+        cache_key = f"galaxy:node_knowledge_stats:v1:{user_id}:{node_id}"
+        cached_stats = await cache_service.get(cache_key)
+        if cached_stats is not None:
+            return NodeKnowledgeStats.model_validate(cached_stats)
+
+        source_documents = await self.get_node_source_documents(user_id=user_id, node_id=node_id)
+        upload_dates = [doc.upload_date for doc in source_documents if doc.upload_date is not None]
+        stats = NodeKnowledgeStats(
+            total_documents=len(source_documents),
+            total_chunks=sum(doc.chunk_count for doc in source_documents),
+            has_personal_uploads=bool(source_documents),
+            last_material_added=max(upload_dates) if upload_dates else None,
+        )
+        await cache_service.set(cache_key, stats.model_dump(mode="json"), ttl=300)
+        return stats
+
+    async def get_node_document_chunks(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> NodeChunksResponse:
+        """Return paginated source chunks attached to a Galaxy node."""
+        page = max(1, page)
+        page_size = max(1, min(page_size, 100))
+        node = await self.db.get(KnowledgeNode, node_id)
+        if not node:
+            return NodeChunksResponse(node_id=node_id, page=page, page_size=page_size)
+
+        chunk_id_refs, chunk_index_refs, chunk_scores, has_refs = self._parse_chunk_refs(node.chunk_refs)
+        file_ids = await self._get_node_source_file_ids(user_id=user_id, node=node)
+        if not file_ids:
+            return NodeChunksResponse(node_id=node_id, page=page, page_size=page_size)
+
+        conditions = []
+        if has_refs:
+            if chunk_id_refs:
+                conditions.append(DocumentChunk.id.in_(chunk_id_refs))
+            if chunk_index_refs:
+                conditions.append(DocumentChunk.chunk_index.in_(chunk_index_refs))
+            if not conditions:
+                return NodeChunksResponse(node_id=node_id, page=page, page_size=page_size)
+
+        count_stmt = (
+            select(func.count(DocumentChunk.id))
+            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
+            .where(DocumentChunk.user_id == user_id)
+            .where(StoredFile.user_id == user_id)
+            .where(DocumentChunk.file_id.in_(file_ids))
+            .where(DocumentChunk.deleted_at.is_(None))
+            .where(StoredFile.deleted_at.is_(None))
+        )
+        if conditions:
+            count_stmt = count_stmt.where(or_(*conditions))
+        total = int((await self.db.execute(count_stmt)).scalar() or 0)
+
+        stmt = (
+            select(DocumentChunk, StoredFile)
+            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
+            .where(DocumentChunk.user_id == user_id)
+            .where(StoredFile.user_id == user_id)
+            .where(DocumentChunk.file_id.in_(file_ids))
+            .where(DocumentChunk.deleted_at.is_(None))
+            .where(StoredFile.deleted_at.is_(None))
+            .order_by(DocumentChunk.chunk_index.asc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        if conditions:
+            stmt = stmt.where(or_(*conditions))
+
+        result = await self.db.execute(stmt)
+        chunks = [
+            self._serialize_node_source_chunk(chunk=chunk, file_record=file_record)
+            for chunk, file_record in result.all()
+        ]
+        if chunk_scores:
+            chunks.sort(key=lambda item: chunk_scores.get(str(item.chunk_id), 0.0), reverse=True)
+
+        total_pages = (total + page_size - 1) // page_size if total else 0
+        return NodeChunksResponse(
+            node_id=node_id,
+            chunks=chunks,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            has_next=page < total_pages,
+            has_prev=page > 1 and total_pages > 0,
+        )
+
+    async def _load_node_source_documents(self, *, user_id: UUID, node_id: UUID) -> list[NodeDocumentRef]:
+        node = await self.db.get(KnowledgeNode, node_id)
+        if not node:
+            return []
+
+        file_ids = await self._get_node_source_file_ids(user_id=user_id, node=node)
+        if not file_ids:
+            return []
+
+        chunk_id_refs, chunk_index_refs, chunk_scores, has_refs = self._parse_chunk_refs(node.chunk_refs)
+        conditions = []
+        if has_refs:
+            if chunk_id_refs:
+                conditions.append(DocumentChunk.id.in_(chunk_id_refs))
+            if chunk_index_refs:
+                conditions.append(DocumentChunk.chunk_index.in_(chunk_index_refs))
+            if not conditions:
+                return []
+
+        stmt = (
+            select(DocumentChunk, StoredFile)
+            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
+            .where(DocumentChunk.user_id == user_id)
+            .where(StoredFile.user_id == user_id)
+            .where(DocumentChunk.file_id.in_(file_ids))
+            .where(DocumentChunk.deleted_at.is_(None))
+            .where(StoredFile.deleted_at.is_(None))
+            .order_by(DocumentChunk.chunk_index.asc())
+        )
+        if conditions:
+            stmt = stmt.where(or_(*conditions))
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        if not rows:
+            return []
+
+        chunks_by_file: dict[UUID, list[DocumentChunk]] = {}
+        files_by_id: dict[UUID, StoredFile] = {}
+        for chunk, file_record in rows:
+            chunks_by_file.setdefault(file_record.id, []).append(chunk)
+            files_by_id[file_record.id] = file_record
+
+        documents: list[NodeDocumentRef] = []
+        for file_id, chunks in chunks_by_file.items():
+            if chunk_scores:
+                ranked_chunks = sorted(chunks, key=lambda chunk: chunk_scores.get(str(chunk.id), 0.0), reverse=True)
+            else:
+                ranked_chunks = sorted(chunks, key=lambda chunk: int(chunk.chunk_index or 0))
+            file_record = files_by_id[file_id]
+            documents.append(
+                NodeDocumentRef(
+                    file_id=file_id,
+                    filename=str(file_record.file_name or ""),
+                    file_type=file_record.mime_type,
+                    upload_date=file_record.created_at,
+                    chunk_count=len(chunks),
+                    preview_chunks=[self._preview_text(chunk.content) for chunk in ranked_chunks[:3]],
+                )
+            )
+
+        documents.sort(key=lambda doc: doc.upload_date or datetime.min, reverse=True)
+        return documents
+
+    async def _get_node_source_file_ids(self, *, user_id: UUID, node: KnowledgeNode) -> list[UUID]:
+        result = await self.db.execute(
+            select(KnowledgeNodeDocument.file_id)
+            .where(KnowledgeNodeDocument.user_id == user_id)
+            .where(KnowledgeNodeDocument.node_id == node.id)
+            .where(KnowledgeNodeDocument.deleted_at.is_(None))
+            .order_by(KnowledgeNodeDocument.is_primary.desc(), KnowledgeNodeDocument.created_at.desc())
+        )
+        file_ids = list(dict.fromkeys(result.scalars().all()))
+        if node.source_file_id and node.source_file_id not in file_ids:
+            file_ids.insert(0, node.source_file_id)
+        return file_ids
+
+    @staticmethod
+    def _parse_chunk_refs(chunk_refs: object) -> tuple[set[UUID], set[int], dict[str, float], bool]:
+        chunk_ids: set[UUID] = set()
+        chunk_indices: set[int] = set()
+        chunk_scores: dict[str, float] = {}
+
+        def parse_one(raw_ref: object, raw_score: object = None) -> None:
+            ref = raw_ref
+            score = raw_score
+            if isinstance(raw_ref, dict):
+                ref = raw_ref.get("chunk_id") or raw_ref.get("id") or raw_ref.get("chunk_index") or raw_ref.get("index")
+                score = raw_ref.get("score") or raw_ref.get("relevance") or raw_ref.get("weight")
+            if ref is None:
+                return
+            if isinstance(ref, int):
+                chunk_indices.add(ref)
+                return
+            ref_text = str(ref).strip()
+            if not ref_text:
+                return
+            if ref_text.isdigit():
+                chunk_indices.add(int(ref_text))
+                return
+            try:
+                chunk_id = UUID(ref_text)
+            except ValueError:
+                return
+            chunk_ids.add(chunk_id)
+            try:
+                chunk_scores[str(chunk_id)] = float(score)
+            except (TypeError, ValueError):
+                pass
+
+        if isinstance(chunk_refs, list):
+            for item in chunk_refs:
+                parse_one(item)
+        elif isinstance(chunk_refs, dict):
+            for key, value in chunk_refs.items():
+                parse_one(key, value)
+
+        return chunk_ids, chunk_indices, chunk_scores, bool(chunk_refs)
+
+    @staticmethod
+    def _preview_text(content: str | None, *, max_sentences: int = 3, max_chars: int = 480) -> str:
+        text = " ".join(str(content or "").split())
+        if not text:
+            return ""
+
+        sentence_endings = {".", "!", "?", "。", "！", "？"}
+        sentences: list[str] = []
+        start = 0
+        for index, char in enumerate(text):
+            if char in sentence_endings:
+                sentence = text[start : index + 1].strip()
+                if sentence:
+                    sentences.append(sentence)
+                start = index + 1
+                if len(sentences) >= max_sentences:
+                    break
+        if not sentences:
+            preview = text
+        else:
+            preview = " ".join(sentences)
+
+        if len(preview) > max_chars:
+            preview = preview[: max_chars - 1].rstrip() + "…"
+        return preview
+
+    def _serialize_node_source_chunk(self, *, chunk: DocumentChunk, file_record: StoredFile) -> NodeSourceChunk:
+        return NodeSourceChunk(
+            chunk_id=chunk.id,
+            file_id=file_record.id,
+            filename=str(file_record.file_name or ""),
+            file_type=file_record.mime_type,
+            chunk_index=int(chunk.chunk_index or 0),
+            content=str(chunk.content or ""),
+            preview=self._preview_text(chunk.content),
+            page_numbers=list(chunk.page_numbers or []),
+            section_title=chunk.section_title,
+            quality_score=float(chunk.quality_score) if chunk.quality_score is not None else None,
+            created_at=chunk.created_at,
+        )
+
     async def get_node_neighbors(self, node_id: UUID, limit: int = 5) -> list[KnowledgeNode]:
         """Get connected neighbor nodes (Graph RAG support)"""
         return await self.structure.get_node_neighbors(node_id, limit)
+
+    async def get_user_node_mastery_scores(
+        self,
+        user_id: UUID | str,
+        node_ids: list[UUID | str],
+    ) -> dict[UUID, float]:
+        """Return mastery scores for a user's linked knowledge nodes."""
+        user_uuid = self._coerce_uuid_or_none(user_id)
+        normalized_node_ids = [
+            node_uuid for node_id in node_ids if (node_uuid := self._coerce_uuid_or_none(node_id)) is not None
+        ]
+        if user_uuid is None or not normalized_node_ids:
+            return {}
+
+        stmt = select(UserNodeStatus.node_id, UserNodeStatus.mastery_score).where(
+            UserNodeStatus.user_id == user_uuid,
+            UserNodeStatus.node_id.in_(normalized_node_ids),
+        )
+        result = await self.db.execute(stmt)
+        return {node_id: float(mastery_score or 0.0) for node_id, mastery_score in result.all()}
+
+    async def find_relation_bridge(
+        self,
+        source_node_ids: list[UUID | str],
+        target_node_ids: list[UUID | str],
+        *,
+        relation_types: set[str] | None = None,
+    ) -> dict[str, object] | None:
+        """Find the strongest direct or one-bridge connection between two node sets."""
+        source_ids = [
+            node_uuid for node_id in source_node_ids if (node_uuid := self._coerce_uuid_or_none(node_id)) is not None
+        ]
+        target_ids = [
+            node_uuid for node_id in target_node_ids if (node_uuid := self._coerce_uuid_or_none(node_id)) is not None
+        ]
+        if not source_ids or not target_ids:
+            return None
+
+        allowed_relation_types = {str(item).strip().lower() for item in (relation_types or set()) if str(item).strip()}
+        if not allowed_relation_types:
+            allowed_relation_types = {"prerequisite", "related", "application", "composition", "evolution"}
+
+        relation_weight = {
+            "application": 1.4,
+            "prerequisite": 1.3,
+            "related": 1.0,
+            "composition": 0.9,
+            "evolution": 0.8,
+        }
+
+        source_set = set(source_ids)
+        target_set = set(target_ids)
+        seed_ids = list(source_set | target_set)
+        source_node = aliased(KnowledgeNode)
+        target_node = aliased(KnowledgeNode)
+
+        async def _load_edges(node_ids: list[UUID]) -> list[dict[str, object]]:
+            if not node_ids:
+                return []
+            stmt = (
+                select(
+                    NodeRelation.source_node_id,
+                    NodeRelation.target_node_id,
+                    NodeRelation.relation_type,
+                    NodeRelation.strength,
+                    source_node.name,
+                    target_node.name,
+                )
+                .join(source_node, source_node.id == NodeRelation.source_node_id)
+                .join(target_node, target_node.id == NodeRelation.target_node_id)
+                .where(
+                    func.lower(NodeRelation.relation_type).in_(allowed_relation_types),
+                    or_(
+                        NodeRelation.source_node_id.in_(node_ids),
+                        NodeRelation.target_node_id.in_(node_ids),
+                    ),
+                )
+            )
+            result = await self.db.execute(stmt)
+            edges: list[dict[str, object]] = []
+            for source_id, target_id, relation_type, strength, source_name, target_name in result.all():
+                normalized_type = str(relation_type or "").strip().lower() or "related"
+                edges.append(
+                    {
+                        "source_node_id": source_id,
+                        "target_node_id": target_id,
+                        "relation_type": normalized_type,
+                        "strength": float(strength or 0.0),
+                        "source_name": str(source_name or ""),
+                        "target_name": str(target_name or ""),
+                    }
+                )
+            return edges
+
+        first_hop_edges = await _load_edges(seed_ids)
+        if not first_hop_edges:
+            return None
+
+        seen_keys: set[tuple[UUID, UUID, str]] = set()
+
+        def _dedupe(edges: list[dict[str, object]]) -> list[dict[str, object]]:
+            deduped: list[dict[str, object]] = []
+            for edge in edges:
+                key = (
+                    edge["source_node_id"],
+                    edge["target_node_id"],
+                    str(edge["relation_type"]),
+                )
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                deduped.append(edge)
+            return deduped
+
+        first_hop_edges = _dedupe(first_hop_edges)
+
+        best_path: dict[str, object] | None = None
+
+        def _score(edge: dict[str, object]) -> float:
+            relation_type = str(edge.get("relation_type") or "related")
+            return float(edge.get("strength") or 0.0) * relation_weight.get(relation_type, 1.0)
+
+        def _set_best(candidate: dict[str, object]) -> None:
+            nonlocal best_path
+            if best_path is None or float(candidate.get("score") or 0.0) > float(best_path.get("score") or 0.0):
+                best_path = candidate
+
+        for edge in first_hop_edges:
+            source_id = edge["source_node_id"]
+            target_id = edge["target_node_id"]
+            if (source_id in source_set and target_id in target_set) or (source_id in target_set and target_id in source_set):
+                _set_best(
+                    {
+                        "path_type": "direct",
+                        "score": _score(edge),
+                        "path_nodes": [edge["source_name"], edge["target_name"]],
+                        "path_node_ids": [str(source_id), str(target_id)],
+                        "relation_chain": [edge["relation_type"]],
+                        "edges": [edge],
+                    }
+                )
+
+        bridge_ids = {
+            edge["target_node_id"] if edge["source_node_id"] in source_set | target_set else edge["source_node_id"]
+            for edge in first_hop_edges
+        }
+        bridge_ids = {bridge_id for bridge_id in bridge_ids if bridge_id not in source_set and bridge_id not in target_set}
+        second_hop_edges = _dedupe(await _load_edges(list(bridge_ids)))
+        all_edges = first_hop_edges + second_hop_edges
+
+        edges_by_bridge: dict[UUID, list[dict[str, object]]] = {}
+        for edge in all_edges:
+            for node_id in (edge["source_node_id"], edge["target_node_id"]):
+                if node_id in bridge_ids:
+                    edges_by_bridge.setdefault(node_id, []).append(edge)
+
+        for bridge_id, bridge_edges in edges_by_bridge.items():
+            from_source = [
+                edge
+                for edge in bridge_edges
+                if (
+                    edge["source_node_id"] in source_set and edge["target_node_id"] == bridge_id
+                ) or (
+                    edge["target_node_id"] in source_set and edge["source_node_id"] == bridge_id
+                )
+            ]
+            to_target = [
+                edge
+                for edge in bridge_edges
+                if (
+                    edge["source_node_id"] in target_set and edge["target_node_id"] == bridge_id
+                ) or (
+                    edge["target_node_id"] in target_set and edge["source_node_id"] == bridge_id
+                )
+            ]
+            if not from_source or not to_target:
+                continue
+
+            for left_edge in from_source:
+                for right_edge in to_target:
+                    bridge_name = (
+                        left_edge["source_name"]
+                        if left_edge["source_node_id"] == bridge_id
+                        else left_edge["target_name"]
+                    )
+                    path_node_ids = [
+                        str(
+                            left_edge["source_node_id"]
+                            if left_edge["source_node_id"] in source_set
+                            else left_edge["target_node_id"]
+                        ),
+                        str(bridge_id),
+                        str(
+                            right_edge["source_node_id"]
+                            if right_edge["source_node_id"] in target_set
+                            else right_edge["target_node_id"]
+                        ),
+                    ]
+                    path_nodes = [
+                        left_edge["source_name"]
+                        if left_edge["source_node_id"] in source_set
+                        else left_edge["target_name"],
+                        bridge_name,
+                        right_edge["source_name"]
+                        if right_edge["source_node_id"] in target_set
+                        else right_edge["target_name"],
+                    ]
+                    _set_best(
+                        {
+                            "path_type": "bridge",
+                            "score": _score(left_edge) + _score(right_edge),
+                            "path_nodes": path_nodes,
+                            "path_node_ids": path_node_ids,
+                            "relation_chain": [
+                                left_edge["relation_type"],
+                                right_edge["relation_type"],
+                            ],
+                            "edges": [left_edge, right_edge],
+                        }
+                    )
+
+        return best_path
 
     async def update_node_positions(self, updates: list[dict]) -> int:
         """Batch update node positions"""
@@ -1070,8 +2720,7 @@ class GalaxyService:
         """Return normalized 0-1 mastery for the requested Sprint Pack node IDs."""
         states = await self.get_sprint_mastery_states(user_id, node_ids)
         return {
-            external_id: self._mastery_ratio(state.get("mastery_score", 0.0))
-            for external_id, state in states.items()
+            external_id: self._mastery_ratio(state.get("mastery_score", 0.0)) for external_id, state in states.items()
         }
 
     async def get_sprint_mastery_states(
@@ -1090,8 +2739,7 @@ class GalaxyService:
             for external_id in unique_ids
         }
         result: dict[str, dict[str, float | int | None]] = {
-            external_id: {"mastery_score": 0.0, "revision": None}
-            for external_id in unique_ids
+            external_id: {"mastery_score": 0.0, "revision": None} for external_id in unique_ids
         }
 
         rows = (

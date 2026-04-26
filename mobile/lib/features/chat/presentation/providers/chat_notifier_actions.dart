@@ -1,6 +1,10 @@
 part of 'chat_provider.dart';
 
 extension ChatNotifierActions on ChatNotifier {
+  void setDocumentRetrievalEnabled(bool enabled) {
+    state = state.copyWith(documentRetrievalEnabled: enabled);
+  }
+
   void setTransparencyExpanded(bool expanded) {
     state = state.copyWith(
       transparencyPresentationState:
@@ -500,6 +504,41 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   void sendResponseFeedback(ChatMessageModel message, String feedbackType) {
+    _sendResponseFeedback(
+      message: message,
+      feedbackType: feedbackType,
+      successMessage:
+          feedbackType == 'up' ? '已收到你的反馈，这条回复已标记为有帮助' : '已收到你的反馈，我们会继续改进这类回复',
+    );
+  }
+
+  void sendCitationFeedback({
+    required ChatMessageModel message,
+    required ChatCitation citation,
+    required bool helpful,
+  }) {
+    _sendResponseFeedback(
+      message: message,
+      feedbackType: helpful ? 'up' : 'down',
+      extraMeta: {
+        'feedback_target': 'citation',
+        'citation_id': citation.id,
+        'citation_title': citation.title,
+        'citation_file_id': citation.fileId,
+        'citation_locator': citation.locatorLabel,
+        'citation_chunk_index': citation.chunkIndex,
+        'citation_page_number': citation.pageNumber,
+      },
+      successMessage: helpful ? '已收到这条引用的正向反馈' : '已记录这条引用的改进反馈',
+    );
+  }
+
+  void _sendResponseFeedback({
+    required ChatMessageModel message,
+    required String feedbackType,
+    required String successMessage,
+    Map<String, dynamic>? extraMeta,
+  }) {
     final responseId = message.responseId ?? '';
     if (responseId.isEmpty) {
       debugPrint('⚠️ Missing response_id for feedback');
@@ -528,13 +567,13 @@ extension ChatNotifierActions on ChatNotifier {
           'reasoning_mode': message.meta?.reasoningMode ?? '',
         if (selectedExpertsMeta != null)
           'selected_experts': selectedExpertsMeta,
+        ...?extraMeta,
       },
     );
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
     state = state.copyWith(
       lastActionStatus: 'response_feedback_sent',
-      lastActionMessage:
-          feedbackType == 'up' ? '已收到你的反馈，这条回复已标记为有帮助' : '已收到你的反馈，我们会继续改进这类回复',
+      lastActionMessage: successMessage,
     );
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -617,8 +656,7 @@ extension ChatNotifierActions on ChatNotifier {
       notificationData: {
         'id':
             'achievement-progress-${event.achievementId}-${event.milestonePercent}-${now.microsecondsSinceEpoch}',
-        'title':
-            '${event.achievementName} 进度达到 ${event.milestonePercent}%',
+        'title': '${event.achievementName} 进度达到 ${event.milestonePercent}%',
         'content': event.message,
         'type': 'achievement_progress',
         'priority': 'medium',

@@ -93,6 +93,11 @@ from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
 from app.orchestration.grounding_validator import GroundingValidator
+from app.orchestration.graph_rag import (
+    GraphRAGRetriever,
+    filter_graph_rag_result,
+    format_graph_rag_document_context,
+)
 from app.orchestration.lang_graph_planner import LangGraphPlanner
 
 # Multi-Agent Mode Support
@@ -153,8 +158,10 @@ from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter  # noqa: F401
 from app.services.chat_signal_collector import ChatSignalCollector
 from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
+from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.focus_service import focus_service  # noqa: F401
+from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service  # noqa: F401
 from app.services.memory_service import MemoryService
 from app.services.plan_progress_service import PlanProgressService  # noqa: F401
@@ -745,11 +752,15 @@ class ChatOrchestrator(
 
             planning_context = dict(request_extra_context or {})
             planning_context["profile_context"] = profile_context
-            if isinstance(user_context_payload, dict) and isinstance(user_context_payload.get("calendar_context"), dict):
+            if isinstance(user_context_payload, dict) and isinstance(
+                user_context_payload.get("calendar_context"), dict
+            ):
                 planning_context["calendar_context"] = user_context_payload["calendar_context"]
-            elif isinstance(user_context_payload, dict) and isinstance(
-                user_context_payload.get("cognitive_context"), dict
-            ) and isinstance(user_context_payload["cognitive_context"].get("calendar_context"), dict):
+            elif (
+                isinstance(user_context_payload, dict)
+                and isinstance(user_context_payload.get("cognitive_context"), dict)
+                and isinstance(user_context_payload["cognitive_context"].get("calendar_context"), dict)
+            ):
                 planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
             if fast_track_context:
                 planning_context["exam_sprint_fast_track"] = fast_track_context
@@ -1900,6 +1911,122 @@ class ChatOrchestrator(
             logger.debug("Execution suggestion detection failed: {}", exc)
             return None
 
+    async def _hydrate_document_context(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_message: str,
+        route_intent: str | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState,
+    ) -> dict[str, Any] | None:
+        """Run document RAG once and attach the prompt-ready document block."""
+        if str(state.context_data.get("document_context") or "").strip():
+            return user_context_payload
+        if state.context_data.get("use_document_context") is False:
+            logger.info("Document context hydration skipped: use_document_context=false")
+            return user_context_payload
+        if active_db is None or not str(user_message or "").strip():
+            return user_context_payload
+
+        decision = state.context_data.get("document_retrieval_decision") or state.context_data.get("retrieval_decision")
+        if not isinstance(decision, dict):
+            user_context_payload = self._attach_retrieval_decision(
+                user_context_payload=user_context_payload,
+                state=state,
+                user_message=user_message,
+                route_intent=route_intent,
+            )
+            decision = state.context_data.get("document_retrieval_decision") or state.context_data.get(
+                "retrieval_decision"
+            )
+        if not (isinstance(decision, dict) and decision.get("should_retrieve")):
+            return user_context_payload
+        if not bool(getattr(settings, "ENABLE_DOCUMENT_CONTEXT_INJECTION", True)):
+            return user_context_payload
+        try:
+            injection_mode = (await AuroraDocContextKillSwitchService().get_mode()).strip().lower()
+        except Exception:
+            injection_mode = (
+                str(getattr(settings, "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE", "live") or "live")
+                .strip()
+                .lower()
+            )
+        if injection_mode == "off":
+            return user_context_payload
+
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except (TypeError, ValueError):
+            return user_context_payload
+
+        conversation_settings = state.context_data.get("conversation_settings")
+        if not isinstance(conversation_settings, dict):
+            conversation_settings = {}
+        include_group_documents = bool(
+            state.context_data.get("include_group_documents")
+            or conversation_settings.get("include_group_documents")
+            or state.context_data.get("group_id")
+            or conversation_settings.get("group_id")
+        )
+        raw_group_ids = state.context_data.get("group_ids") or conversation_settings.get("group_ids") or []
+        group_ids: list[str] = []
+        seen_group_ids: set[str] = set()
+        for item in raw_group_ids:
+            value = str(item or "").strip()
+            if value and value not in seen_group_ids:
+                seen_group_ids.add(value)
+                group_ids.append(value)
+        primary_group_id = str(state.context_data.get("group_id") or conversation_settings.get("group_id") or "").strip()
+        if primary_group_id and primary_group_id not in seen_group_ids:
+            group_ids.append(primary_group_id)
+
+        mode = str(decision.get("retrieval_mode") or "selective")
+        try:
+            knowledge_service = KnowledgeService(active_db)
+            retriever = GraphRAGRetriever(knowledge_service)
+            rag_result = await asyncio.wait_for(
+                retriever.retrieve(
+                    str(user_message or ""),
+                    str(user_uuid),
+                    depth=2 if mode == "aggressive" else 1,
+                    route_intent=route_intent,
+                    include_group_documents=include_group_documents,
+                    group_ids=group_ids,
+                ),
+                timeout=max(6.0, float(getattr(settings, "GRAPHRAG_FASTPATH_TIMEOUT_SECONDS", 2.5) or 2.5) * 3),
+            )
+            filtered_rag = filter_graph_rag_result(rag_result)
+            document_context = format_graph_rag_document_context(rag_result, filtered_rag.chunks)
+            metadata = {
+                "source": "graphrag",
+                "mode": mode,
+                "total_retrieved": filtered_rag.total_retrieved,
+                "total_passed": filtered_rag.total_passed,
+                "fallback_triggered": filtered_rag.fallback_triggered,
+                "entities": list(rag_result.entities or []),
+                "injection_mode": injection_mode,
+            }
+        except Exception as exc:
+            logger.warning(f"GraphRAG document context hydration failed: {exc}")
+            return user_context_payload
+
+        state.context_data["document_context"] = document_context
+        state.context_data["document_context_retrieval"] = metadata
+        state.context_data["document_context_candidate"] = document_context
+        state.context_data["document_context_candidate_chunks"] = metadata["total_passed"]
+        if isinstance(user_context_payload, dict):
+            user_context_payload["document_context"] = document_context
+            user_context_payload["document_context_retrieval"] = metadata
+        logger.info(
+            "Hydrated document context via GraphRAG: mode={} passed={} retrieved={}",
+            mode,
+            metadata["total_passed"],
+            metadata["total_retrieved"],
+        )
+        return user_context_payload
+
     # -----------------------------------------------------------------------
     # process_stream — main entry point (delegates to mixin methods)
     # -----------------------------------------------------------------------
@@ -1989,6 +2116,57 @@ class ChatOrchestrator(
                         request_extra_context = MessageToDict(request.extra_context)
                     except Exception as exc:
                         logger.warning(f"Failed to parse request extra_context in process_stream: {exc}")
+                request_document_filter = list(getattr(request, "document_filter", []) or [])
+                request_use_document_context = None
+                try:
+                    if request.HasField("use_document_context"):
+                        request_use_document_context = bool(request.use_document_context)
+                        request_extra_context["use_document_context"] = request_use_document_context
+                except ValueError:
+                    request_use_document_context = request_extra_context.get("use_document_context")
+                if request_document_filter:
+                    request_extra_context["document_filter"] = request_document_filter
+                    request_extra_context["selected_document_ids"] = request_document_filter
+                raw_conversation_settings = request_extra_context.get("conversation_settings")
+                conversation_settings = dict(raw_conversation_settings) if isinstance(raw_conversation_settings, dict) else {}
+                raw_group_ids = (
+                    request_extra_context.get("group_ids")
+                    or request_extra_context.get("target_group_ids")
+                    or conversation_settings.get("group_ids")
+                    or []
+                )
+                group_ids: list[str] = []
+                seen_group_ids: set[str] = set()
+                for item in raw_group_ids:
+                    value = str(item or "").strip()
+                    if value and value not in seen_group_ids:
+                        seen_group_ids.add(value)
+                        group_ids.append(value)
+                group_id = str(
+                    request_extra_context.get("group_id")
+                    or request_extra_context.get("target_group_id")
+                    or conversation_settings.get("group_id")
+                    or ""
+                ).strip()
+                if group_id and group_id not in seen_group_ids:
+                    group_ids.append(group_id)
+                include_group_documents = bool(
+                    request_extra_context.get("include_group_documents")
+                    or conversation_settings.get("include_group_documents")
+                    or group_id
+                )
+                request_extra_context["conversation_settings"] = {
+                    "use_document_context": request_use_document_context,
+                    "document_filter": request_document_filter,
+                    "group_id": group_id or None,
+                    "group_ids": group_ids,
+                    "include_group_documents": include_group_documents,
+                }
+                if group_id:
+                    request_extra_context["group_id"] = group_id
+                if group_ids:
+                    request_extra_context["group_ids"] = group_ids
+                request_extra_context["include_group_documents"] = include_group_documents
                 resolved_active_tools = self._resolve_active_tools(request, user_message)
 
                 debrief_response = await CheckpointDebriefService(active_db, self.redis).process_turn(
@@ -2090,6 +2268,24 @@ class ChatOrchestrator(
                     conversation_context,
                     list(request.history),
                 )
+                effective_file_ids = (
+                    [] if request_use_document_context is False else (request_document_filter or list(request.file_ids))
+                )
+                if isinstance(user_context_payload, dict):
+                    user_context_payload["use_document_context"] = request_use_document_context
+                    user_context_payload["document_filter"] = request_document_filter
+                    user_context_payload["selected_document_ids"] = request_document_filter
+                    user_context_payload["conversation_settings"] = dict(request_extra_context["conversation_settings"])
+                initial_document_context_state = {
+                    "use_document_context": request_use_document_context,
+                    "document_filter": request_document_filter,
+                    "selected_document_ids": request_document_filter,
+                    "effective_file_ids": effective_file_ids,
+                    "conversation_settings": dict(request_extra_context["conversation_settings"]),
+                    "group_id": request_extra_context.get("group_id"),
+                    "group_ids": list(request_extra_context.get("group_ids") or []),
+                    "include_group_documents": bool(request_extra_context.get("include_group_documents")),
+                }
 
                 session_feedback_signal = None
                 session_adaptation_context = None
@@ -2175,6 +2371,7 @@ class ChatOrchestrator(
                         )
 
                 state = WorkflowState()
+                state.context_data.update(initial_document_context_state)
                 if user_message:
                     state.append_message("user", user_message)
                 if session_feedback_signal is not None:
@@ -2472,10 +2669,19 @@ class ChatOrchestrator(
                             plan_id=plan_id,
                             request_id=request_id,
                             user_message=user_message,
-                            file_ids=list(request.file_ids),
+                            file_ids=effective_file_ids,
+                            use_document_context=request_use_document_context,
                             user_context_payload=user_context_payload,
                             context_targets=[state.context_data],
                         )
+                    user_context_payload = await self._hydrate_document_context(
+                        active_db=active_db,
+                        user_id=user_id,
+                        user_message=user_message,
+                        route_intent=infer_route_intent_from_chat_mode(chat_mode),
+                        user_context_payload=user_context_payload,
+                        state=state,
+                    )
 
                 # Step 6: Prepare runtime context (transparency, tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
@@ -2564,7 +2770,7 @@ class ChatOrchestrator(
                     user_context_payload=user_context_payload,
                     conversation_context=conversation_context,
                     plan_context=plan_context,
-                    file_ids=list(request.file_ids),
+                    file_ids=effective_file_ids,
                     include_references=bool(request.include_references),
                     workflow_id=workflow_id,
                     prompt_version=prompt_version,
@@ -2906,10 +3112,23 @@ class ChatOrchestrator(
                         plan_id=plan_id,
                         request_id=request_id,
                         user_message=user_message,
-                        file_ids=list(request.file_ids),
+                        file_ids=effective_file_ids,
+                        use_document_context=request_use_document_context,
                         user_context_payload=user_context_payload,
                         context_targets=[state.context_data],
                     )
+                user_context_payload = await self._hydrate_document_context(
+                    active_db=active_db,
+                    user_id=user_id,
+                    user_message=user_message,
+                    route_intent=(
+                        unified_routing_result.primary_intent.value
+                        if unified_routing_result and hasattr(unified_routing_result, "primary_intent")
+                        else intent_type
+                    ),
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(

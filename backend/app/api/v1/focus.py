@@ -88,13 +88,19 @@ async def get_focus_stats(
 async def get_llm_guide(
     data: LLMGuideRequest,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     User asks for help/hint during focus mode.
+    When a task_id is provided, uploaded study materials linked to the task's
+    knowledge nodes are injected into the prompt for Socratic guidance.
     """
     response = await focus_service.get_methodological_guidance(
         data.task_context,
-        data.user_input
+        data.user_input,
+        db=db,
+        task_id=data.task_id,
+        user_id=current_user.id,
     )
     return {"content": response}
 

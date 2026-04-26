@@ -9,16 +9,18 @@ Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 
 from __future__ import annotations
 import asyncio
+import math
 from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, or_, select, update
+from sqlalchemy import and_, case, desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.cache import cache_service
+from app.core.event_bus import GroupFileDeletedEvent, event_bus
 from app.core.websocket import manager
 from app.models.community import (
     Friendship,
@@ -35,11 +37,26 @@ from app.models.community import (
     SharedResource,
     UserBlock,
 )
+from app.models.file_storage import StoredFile
+from app.models.galaxy import CollaborativeGalaxy, KnowledgeNode, KnowledgeNodeDocument, NodeRelation
 from app.models.group_files import GroupFile
+from app.models.group_files import GroupFileTrustLevel
 from app.models.plan import Plan, PlanType
 from app.models.user import User
-from app.schemas.community import CheckinRequest, GroupCreate, GroupTaskCreate, MessageEdit, MessageSend
+from app.schemas.community import (
+    CheckinRequest,
+    GroupCollaborativeGalaxyRelation,
+    GroupCollaborativeGalaxyResponse,
+    GroupCollaborativeGalaxyStats,
+    GroupCollaborativeGalaxyNode,
+    GroupCreate,
+    GroupKnowledgeBaseStats,
+    GroupTaskCreate,
+    MessageEdit,
+    MessageSend,
+)
 from app.services.community_signal_collector import CommunitySignalCollector
+from app.services.group_file_service import GroupFileService
 
 
 def _utcnow() -> datetime:
@@ -303,6 +320,27 @@ class FriendshipService:
 
         result = await db.execute(query)
         return result.all()
+
+    @staticmethod
+    async def are_friends(
+        db: AsyncSession,
+        user_id: UUID,
+        target_id: UUID,
+    ) -> bool:
+        """Return whether two users have an active accepted friendship."""
+        if user_id == target_id:
+            return True
+
+        small_id, large_id = sorted([user_id, target_id], key=lambda value: str(value))
+        result = await db.execute(
+            select(Friendship.id).where(
+                Friendship.user_id == small_id,
+                Friendship.friend_id == large_id,
+                Friendship.status == FriendshipStatus.ACCEPTED,
+                Friendship.not_deleted_filter(),
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     @staticmethod
     async def get_pending_requests(
@@ -880,6 +918,14 @@ class GroupService:
             raise ValueError("群组不存在")
 
         deleted_at = _utcnow()
+        active_group_files = (
+            await db.execute(
+                select(GroupFile.id, GroupFile.file_id, GroupFile.shared_by_id).where(
+                    GroupFile.group_id == group_id,
+                    GroupFile.not_deleted_filter(),
+                )
+            )
+        ).all()
 
         # 2. 软删除群组
         await group.delete(db, soft=True)
@@ -934,6 +980,15 @@ class GroupService:
             )
             .values(deleted_at=deleted_at)
         )
+        for group_file_id, file_id, shared_by_id in active_group_files:
+            event = GroupFileDeletedEvent(
+                group_id=str(group_id),
+                file_id=str(file_id),
+                group_file_id=str(group_file_id),
+                shared_by_user_id=str(shared_by_id),
+                triggered_at=deleted_at.replace(tzinfo=timezone.utc).isoformat(),
+            )
+            await event_bus.publish(event.event_type, event.to_dict())
 
         return True
 
@@ -1069,6 +1124,394 @@ class GroupService:
         return target
 
 
+class GroupKnowledgeService:
+    """Group knowledge-base and collaborative galaxy projection service."""
+
+    @staticmethod
+    async def _require_moderator_member(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> GroupMember:
+        member = await GroupService._require_active_member(db, group_id, user_id)
+        if member.role not in (GroupRole.ADMIN, GroupRole.OWNER):
+            raise ValueError("需要群管理员或群主权限")
+        return member
+
+    @staticmethod
+    async def _load_group_file(
+        db: AsyncSession,
+        group_id: UUID,
+        file_id: UUID,
+    ) -> GroupFile | None:
+        result = await db.execute(
+            select(GroupFile)
+            .options(
+                selectinload(GroupFile.file),
+                selectinload(GroupFile.shared_by),
+            )
+            .where(
+                GroupFile.group_id == group_id,
+                GroupFile.file_id == file_id,
+                GroupFile.not_deleted_filter(),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def _ensure_group_collaborative_galaxy(
+        db: AsyncSession,
+        group_id: UUID,
+        created_by: UUID,
+    ) -> CollaborativeGalaxy:
+        result = await db.execute(
+            select(CollaborativeGalaxy).where(
+                CollaborativeGalaxy.group_id == group_id,
+                CollaborativeGalaxy.not_deleted_filter(),
+            )
+        )
+        galaxy = result.scalar_one_or_none()
+        if galaxy:
+            return galaxy
+
+        group = await Group.get_by_id(db, group_id)
+        if not group:
+            raise ValueError("群组不存在")
+
+        galaxy = CollaborativeGalaxy(
+            name=f"{group.name} Knowledge Galaxy",
+            description=group.description,
+            created_by=created_by,
+            group_id=group_id,
+            galaxy_scope="group_knowledge",
+            visibility="shared",
+        )
+        db.add(galaxy)
+        await db.flush()
+        return galaxy
+
+    @staticmethod
+    def _knowledge_base_ordering():
+        trust_rank = case(
+            (GroupFile.trust_level == GroupFileTrustLevel.OFFICIAL, 3),
+            (GroupFile.trust_level == GroupFileTrustLevel.VERIFIED, 2),
+            else_=1,
+        )
+        rating_value = case(
+            (GroupFile.rating_count > 0, GroupFile.rating_total / GroupFile.rating_count),
+            else_=0.0,
+        )
+        return [
+            desc(trust_rank),
+            desc(GroupFile.citation_count),
+            desc(rating_value),
+            desc(GroupFile.download_count),
+            desc(GroupFile.created_at),
+        ]
+
+    @staticmethod
+    async def designate_official_document(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+        file_id: UUID,
+        category: str | None = None,
+        tags: list[str] | None = None,
+    ) -> tuple[GroupFile, CollaborativeGalaxy]:
+        await GroupKnowledgeService._require_moderator_member(db, group_id, user_id)
+
+        group_file = await GroupKnowledgeService._load_group_file(db, group_id, file_id)
+        if group_file is None:
+            stored_file = await StoredFile.get_by_id(db, file_id)
+            if stored_file is None:
+                raise ValueError("文件不存在")
+            if stored_file.user_id != user_id:
+                raise ValueError("只能将已共享到群组的文件或你自己的文件加入知识库")
+            group_file, _, _ = await GroupFileService.share_file(
+                db,
+                group_id=group_id,
+                user_id=user_id,
+                file_id=file_id,
+                category=category,
+                description=None,
+                tags=tags,
+                view_role=GroupRole.MEMBER,
+                download_role=GroupRole.MEMBER,
+                manage_role=GroupRole.ADMIN,
+                trust_level=GroupFileTrustLevel.OFFICIAL,
+                is_knowledge_base=True,
+            )
+        else:
+            if category is not None:
+                group_file.category = category
+            if tags is not None:
+                group_file.tags = tags
+            group_file.trust_level = GroupFileTrustLevel.OFFICIAL
+            group_file.is_knowledge_base = True
+            group_file.view_role = GroupRole.MEMBER
+            group_file.download_role = GroupRole.MEMBER
+            group_file.manage_role = GroupRole.ADMIN
+            db.add(group_file)
+            await db.flush()
+
+        galaxy = await GroupKnowledgeService._ensure_group_collaborative_galaxy(db, group_id, user_id)
+        loaded = await GroupKnowledgeService._load_group_file(db, group_id, file_id)
+        if loaded is None:
+            raise ValueError("知识库文档加载失败")
+        return loaded, galaxy
+
+    @staticmethod
+    async def _list_knowledge_base_documents_for_member(
+        db: AsyncSession,
+        group_id: UUID,
+        member_role: GroupRole,
+    ) -> list[GroupFile]:
+        allowed_roles = GroupFileService._allowed_roles(member_role)
+        result = await db.execute(
+            select(GroupFile)
+            .options(
+                selectinload(GroupFile.file),
+                selectinload(GroupFile.shared_by),
+            )
+            .where(
+                GroupFile.group_id == group_id,
+                GroupFile.is_knowledge_base.is_(True),
+                GroupFile.not_deleted_filter(),
+                GroupFile.view_role.in_(allowed_roles),
+            )
+            .order_by(*GroupKnowledgeService._knowledge_base_ordering())
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    def _knowledge_base_stats(documents: list[GroupFile]) -> GroupKnowledgeBaseStats:
+        total_rating = sum(float(doc.rating_total or 0.0) for doc in documents)
+        total_rating_count = sum(int(doc.rating_count or 0) for doc in documents)
+        average_rating = round(total_rating / total_rating_count, 2) if total_rating_count else None
+        return GroupKnowledgeBaseStats(
+            total_documents=len(documents),
+            official_count=sum(1 for doc in documents if doc.trust_level == GroupFileTrustLevel.OFFICIAL),
+            verified_count=sum(1 for doc in documents if doc.trust_level == GroupFileTrustLevel.VERIFIED),
+            member_count=sum(1 for doc in documents if doc.trust_level == GroupFileTrustLevel.MEMBER),
+            total_downloads=sum(int(doc.download_count or 0) for doc in documents),
+            total_citations=sum(int(doc.citation_count or 0) for doc in documents),
+            average_rating=average_rating,
+        )
+
+    @staticmethod
+    async def get_knowledge_base(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> tuple[list[GroupFile], GroupKnowledgeBaseStats, CollaborativeGalaxy | None]:
+        member = await GroupService._require_active_member(db, group_id, user_id)
+        documents = await GroupKnowledgeService._list_knowledge_base_documents_for_member(db, group_id, member.role)
+        galaxy = None
+        if documents:
+            galaxy = await GroupKnowledgeService._ensure_group_collaborative_galaxy(db, group_id, user_id)
+        return documents, GroupKnowledgeService._knowledge_base_stats(documents), galaxy
+
+    @staticmethod
+    def _document_node_id(file_id: UUID) -> str:
+        return f"doc:{file_id}"
+
+    @staticmethod
+    def _knowledge_node_id(node_id: UUID) -> str:
+        return f"kn:{node_id}"
+
+    @staticmethod
+    def _polar_position(index: int, total: int, radius: float) -> tuple[float, float]:
+        if total <= 0:
+            return 0.0, 0.0
+        angle = (2 * math.pi * index) / total
+        return round(math.cos(angle) * radius, 2), round(math.sin(angle) * radius, 2)
+
+    @staticmethod
+    async def get_group_galaxy(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> GroupCollaborativeGalaxyResponse:
+        member = await GroupService._require_active_member(db, group_id, user_id)
+        documents = await GroupKnowledgeService._list_knowledge_base_documents_for_member(db, group_id, member.role)
+        galaxy = await GroupKnowledgeService._ensure_group_collaborative_galaxy(db, group_id, user_id)
+
+        nodes: list[GroupCollaborativeGalaxyNode] = []
+        relations: list[GroupCollaborativeGalaxyRelation] = []
+
+        if not documents:
+            return GroupCollaborativeGalaxyResponse(
+                galaxy_id=galaxy.id,
+                group_id=group_id,
+                name=galaxy.name,
+                scope=galaxy.galaxy_scope,
+                nodes=[],
+                relations=[],
+                edges=[],
+                stats=GroupCollaborativeGalaxyStats(),
+            )
+
+        file_map = {doc.file_id: doc for doc in documents}
+        doc_positions: dict[UUID, tuple[float, float]] = {}
+        for index, group_file in enumerate(documents):
+            pos_x, pos_y = GroupKnowledgeService._polar_position(index, len(documents), 240.0)
+            doc_positions[group_file.file_id] = (pos_x, pos_y)
+            nodes.append(
+                GroupCollaborativeGalaxyNode(
+                    id=GroupKnowledgeService._document_node_id(group_file.file_id),
+                    label=group_file.file.file_name if group_file.file else str(group_file.file_id),
+                    node_type="document",
+                    trust_level=group_file.trust_level.value,
+                    knowledge_base=group_file.is_knowledge_base,
+                    file_id=group_file.file_id,
+                    source_document_id=group_file.file_id,
+                    category=group_file.category,
+                    tags=list(group_file.tags or []),
+                    quality_score=GroupFileService.quality_score(group_file),
+                    citation_count=int(group_file.citation_count or 0),
+                    download_count=int(group_file.download_count or 0),
+                    average_rating=GroupFileService.average_rating(group_file),
+                    position_x=pos_x,
+                    position_y=pos_y,
+                )
+            )
+
+        file_ids = list(file_map.keys())
+        node_ids_by_file: dict[UUID, set[UUID]] = {}
+        node_result = await db.execute(
+            select(KnowledgeNode)
+            .options(selectinload(KnowledgeNode.parent))
+            .where(
+                KnowledgeNode.not_deleted_filter(),
+                or_(
+                    KnowledgeNode.source_file_id.in_(file_ids),
+                    KnowledgeNode.id.in_(
+                        select(KnowledgeNodeDocument.node_id).where(
+                            KnowledgeNodeDocument.file_id.in_(file_ids),
+                            KnowledgeNodeDocument.deleted_at.is_(None),
+                        )
+                    ),
+                ),
+            )
+        )
+        knowledge_nodes = list(node_result.scalars().all())
+
+        for node in knowledge_nodes:
+            linked_file_ids: set[UUID] = set()
+            if node.source_file_id in file_map:
+                linked_file_ids.add(node.source_file_id)
+            node_ids_by_file.setdefault(node.source_file_id, set()) if node.source_file_id in file_map else None
+
+            link_rows = await db.execute(
+                select(KnowledgeNodeDocument.file_id).where(
+                    KnowledgeNodeDocument.node_id == node.id,
+                    KnowledgeNodeDocument.file_id.in_(file_ids),
+                    KnowledgeNodeDocument.deleted_at.is_(None),
+                )
+            )
+            linked_file_ids.update(link_rows.scalars().all())
+            if not linked_file_ids:
+                continue
+
+            primary_file_id = sorted(linked_file_ids, key=str)[0]
+            primary_doc = file_map[primary_file_id]
+            base_x, base_y = doc_positions[primary_file_id]
+            concept_index = len(node_ids_by_file.setdefault(primary_file_id, set()))
+            offset_x, offset_y = GroupKnowledgeService._polar_position(concept_index, max(len(linked_file_ids), 1), 90.0)
+            node_ids_by_file[primary_file_id].add(node.id)
+
+            nodes.append(
+                GroupCollaborativeGalaxyNode(
+                    id=GroupKnowledgeService._knowledge_node_id(node.id),
+                    label=node.name,
+                    node_type="knowledge_node",
+                    trust_level=primary_doc.trust_level.value,
+                    knowledge_base=True,
+                    file_id=primary_file_id,
+                    source_document_id=primary_file_id,
+                    category=primary_doc.category,
+                    tags=list(node.keywords or []),
+                    quality_score=GroupFileService.quality_score(primary_doc),
+                    citation_count=int(primary_doc.citation_count or 0),
+                    download_count=int(primary_doc.download_count or 0),
+                    average_rating=GroupFileService.average_rating(primary_doc),
+                    position_x=round(base_x * 0.55 + offset_x, 2),
+                    position_y=round(base_y * 0.55 + offset_y, 2),
+                )
+            )
+
+            for linked_file_id in sorted(linked_file_ids, key=str):
+                relations.append(
+                    GroupCollaborativeGalaxyRelation(
+                        source_id=GroupKnowledgeService._document_node_id(linked_file_id),
+                        target_id=GroupKnowledgeService._knowledge_node_id(node.id),
+                        relation_type="contains",
+                        strength=1.0,
+                    )
+                )
+
+        knowledge_node_ids = [node.id for node in knowledge_nodes]
+        if knowledge_node_ids:
+            relation_result = await db.execute(
+                select(NodeRelation).where(
+                    NodeRelation.not_deleted_filter(),
+                    NodeRelation.source_node_id.in_(knowledge_node_ids),
+                    NodeRelation.target_node_id.in_(knowledge_node_ids),
+                )
+            )
+            for relation in relation_result.scalars().all():
+                relations.append(
+                    GroupCollaborativeGalaxyRelation(
+                        source_id=GroupKnowledgeService._knowledge_node_id(relation.source_node_id),
+                        target_id=GroupKnowledgeService._knowledge_node_id(relation.target_node_id),
+                        relation_type=relation.relation_type,
+                        strength=float(relation.strength or 0.5),
+                    )
+                )
+
+        for left_index, left_doc in enumerate(documents):
+            left_tags = set(left_doc.tags or [])
+            for right_doc in documents[left_index + 1 :]:
+                shared_tags = left_tags & set(right_doc.tags or [])
+                same_category = bool(left_doc.category and left_doc.category == right_doc.category)
+                if not shared_tags and not same_category:
+                    continue
+                relations.append(
+                    GroupCollaborativeGalaxyRelation(
+                        source_id=GroupKnowledgeService._document_node_id(left_doc.file_id),
+                        target_id=GroupKnowledgeService._document_node_id(right_doc.file_id),
+                        relation_type="shared_topic" if shared_tags else "shared_category",
+                        strength=round(min(1.0, 0.35 + 0.15 * len(shared_tags) + (0.25 if same_category else 0.0)), 2),
+                    )
+                )
+
+        deduped_relations: dict[tuple[str, str, str], GroupCollaborativeGalaxyRelation] = {}
+        for relation in relations:
+            key = (relation.source_id, relation.target_id, relation.relation_type)
+            existing = deduped_relations.get(key)
+            if existing is None or relation.strength > existing.strength:
+                deduped_relations[key] = relation
+        relations = list(deduped_relations.values())
+
+        concept_nodes = sum(1 for node in nodes if node.node_type == "knowledge_node")
+        stats = GroupCollaborativeGalaxyStats(
+            total_nodes=len(nodes),
+            document_nodes=len(documents),
+            concept_nodes=concept_nodes,
+            total_relations=len(relations),
+        )
+        return GroupCollaborativeGalaxyResponse(
+            galaxy_id=galaxy.id,
+            group_id=group_id,
+            name=galaxy.name,
+            scope=galaxy.galaxy_scope,
+            nodes=nodes,
+            relations=relations,
+            edges=relations,
+            stats=stats,
+        )
+
+
 class GroupMessageService:
     """群消息服务"""
 
@@ -1108,8 +1551,9 @@ class GroupMessageService:
                     raise ValueError(f"慢速模式：请等待 {int(group.slow_mode_seconds - elapsed)} 秒后再发送")
 
         # Keyword filter enforcement
-        from app.services.community_advanced_service import CommunityAdvancedService
-        keyword_ok, matched = await CommunityAdvancedService.check_keyword_filter(db, group_id, data.content)
+        from app.services.community_advanced_service import ModerationService
+
+        keyword_ok, matched = await ModerationService.check_keyword_filter(db, group_id, data.content)
         if not keyword_ok:
             raise ValueError(f"消息包含不允许的关键词：{', '.join(matched)}")
 

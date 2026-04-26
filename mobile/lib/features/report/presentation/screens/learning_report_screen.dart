@@ -254,7 +254,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               delay: 0,
               child: MirofishStageHeader(
                 icon: Icons.insights_rounded,
-                eyebrow: '学习诊断面板',
+                eyebrow: context.l10n.reportDiagnosisPanelEyebrow,
                 title: _reportHeroTitle(
                   weakestNode: weakestNode,
                   strongestNode: strongestNode,
@@ -277,8 +277,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       : _averageMastery(previousReport),
                 ),
                 primaryLabel: weakestNode == null
-                    ? '打开知识星图'
-                    : '优先处理 ${weakestNode.nodeName}',
+                    ? context.l10n.reportOpenGalaxy
+                    : context.l10n.reportPrioritizeNode(weakestNode.nodeName),
                 onPrimaryTap: weakestNode == null
                     ? () => unawaited(_openReportDeepLink(GalaxyRoutes.home))
                     : () => unawaited(
@@ -288,19 +288,19 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                         ),
                 footer: history.length > 1
                     ? SegmentedButton<_ReportRange>(
-                        segments: const [
-                          ButtonSegment<_ReportRange>(
-                            value: _ReportRange.week,
-                            label: Text('本周'),
-                          ),
-                          ButtonSegment<_ReportRange>(
-                            value: _ReportRange.month,
-                            label: Text('本月'),
-                          ),
-                          ButtonSegment<_ReportRange>(
-                            value: _ReportRange.all,
-                            label: Text('全部'),
-                          ),
+                        segments: [
+                           ButtonSegment<_ReportRange>(
+                             value: _ReportRange.week,
+                             label: Text(context.l10n.reportRangeWeek),
+                           ),
+                           ButtonSegment<_ReportRange>(
+                             value: _ReportRange.month,
+                             label: Text(context.l10n.reportRangeMonth),
+                           ),
+                           ButtonSegment<_ReportRange>(
+                             value: _ReportRange.all,
+                             label: Text(context.l10n.reportRangeAll),
+                           ),
                         ],
                         selected: <_ReportRange>{_range},
                         onSelectionChanged: (selection) {
@@ -343,7 +343,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                         ),
                 onOpenSimulation: () => unawaited(
                   _openReportDeepLink(
-                    '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? '当前学习主题')}&scenario_key=study_group',
+                    '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? context.l10n.reportCurrentLearningTopic)}&scenario_key=study_group',
                   ),
                 ),
                 onOpenSprintHistory: () =>
@@ -360,7 +360,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '掌握度趋势',
+                      context.l10n.reportMasteryTrendTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -368,7 +368,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     const SizedBox(height: 8),
                     if ((report.trendOverview?.headline ?? '').isNotEmpty) ...[
                       if (isPartialData) ...[
-                        const _InlineStatusPill(label: '部分数据，仅供参考'),
+                        _InlineStatusPill(label: context.l10n.reportPartialDataPill),
                         const SizedBox(height: 8),
                       ],
                       Text(
@@ -403,15 +403,15 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                         const SizedBox(height: 12),
                     ],
                     if (isInsufficientData)
-                      const _ReportEmptyPanel(
-                        title: '完成更多学习后将在此展示趋势分析',
-                        message: '当前还没有足够的真实学习记录来生成趋势，请先完成学习任务、练习或复盘。',
+                      _ReportEmptyPanel(
+                        title: context.l10n.reportTrendEmptyTitle,
+                        message: context.l10n.reportTrendEmptyMessage,
                       )
                     else if ((report.trendOverview?.status ?? 'ready') ==
                         'no_data')
                       _TrendHistoryEmptyState(
                         historyCacheLoaded: _historyCacheLoaded,
-                        title: '完成更多学习后将在此展示趋势分析',
+                        title: context.l10n.reportTrendEmptyTitle,
                         message: report.trendOverview?.message,
                       )
                     else if (trendPoints.length > 1)
@@ -429,7 +429,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       ),
                     const SizedBox(height: 12),
                     Text(
-                      '拖动或点按时间点，就能把这条线和当时的学习投入一起看清楚。',
+                      context.l10n.reportTrendChartHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.textSecondary,
                             height: 1.4,
@@ -450,29 +450,29 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 collapsedShape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
-                title: const Text('掌握度雷达图'),
+                title: Text(context.l10n.reportRadarChartTitle),
                 subtitle: Text(
                   isInsufficientData
-                      ? '完成更多学习后将在此展示掌握度分析'
+                      ? context.l10n.reportRadarSubtitleInsufficient
                       : previousReport == null
-                          ? '点击任一维度查看更细的掌握情况'
-                          : '当前报告已叠加上次轮廓，可点击维度查看详情',
+                          ? context.l10n.reportRadarSubtitleNoComparison
+                          : context.l10n.reportRadarSubtitleWithComparison,
                 ),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
                   if (isInsufficientData)
-                    const _ReportEmptyPanel(
-                      title: '完成更多学习后将在此展示掌握度分析',
-                      message: '掌握度雷达图需要真实学习记录支撑，先开始一次学习并留下结果。',
+                    _ReportEmptyPanel(
+                      title: context.l10n.reportRadarSubtitleInsufficient,
+                      message: context.l10n.reportRadarEmptyMessage,
                     )
                   else ...[
                     if (isPartialData) ...[
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: _InlineStatusPill(label: '部分数据，仅供参考'),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
+                       Align(
+                         alignment: Alignment.centerLeft,
+                         child: _InlineStatusPill(label: context.l10n.reportPartialDataPill),
+                       ),
+                       const SizedBox(height: 12),
+                     ],
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0, end: 1),
                       duration: DS.durationSlow,
@@ -509,7 +509,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '关键指标',
+                      context.l10n.reportKeyMetricsTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -520,19 +520,19 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       runSpacing: 12,
                       children: [
                         _MetricCard(
-                          label: '总掌握度',
+                          label: context.l10n.reportMetricTotalMastery,
                           value: '${averageMastery.round()}%',
                         ),
                         _MetricCard(
-                          label: '知识点数',
+                          label: context.l10n.reportMetricKnowledgeCount,
                           value: '${report.mastery.length}',
                         ),
                         _MetricCard(
-                          label: '强项',
+                          label: context.l10n.reportMetricStrengths,
                           value: '$strongCount',
                         ),
                         _MetricCard(
-                          label: '薄弱点',
+                          label: context.l10n.reportMetricWeaknesses,
                           value: '$weakCount',
                         ),
                       ],
@@ -559,7 +559,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '执行画像暂时没有加载出来，不影响你先阅读本次学习报告。',
+                          context.l10n.reportExecutionProfileLoadFailed,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: DS.textSecondary,
@@ -581,7 +581,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '重点知识维度',
+                      context.l10n.reportKeyDimensionsTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -625,7 +625,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 collapsedShape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
-                title: const Text('AI 分析报告'),
+                title: Text(context.l10n.reportAiAnalysisTitle),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
                   GraphiteCardSurface(
@@ -665,14 +665,14 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       onPressed: () =>
                           unawaited(_openReportDeepLink(GalaxyRoutes.home)),
                       icon: const Icon(Icons.auto_graph_rounded),
-                      label: const Text('回到 Galaxy'),
+                      label: Text(context.l10n.reportBackToGalaxy),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => unawaited(
                         _openReportDeepLink(PlanRoutes.sprintHistory),
                       ),
                       icon: const Icon(Icons.history_rounded),
-                      label: const Text('查看 Sprint 历史'),
+                      label: Text(context.l10n.reportViewSprintHistory),
                     ),
                   ],
                 ),
@@ -703,17 +703,17 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       payload: UniversalSharePayload(
         contentType: ShareableContentType.learningReport,
         resourceId: report.reportId,
-        title: '学习报告 · 平均掌握度 $averageMastery%',
-        subtitle: weakest == null ? '本轮学习分析摘要' : '优先补强 ${weakest.nodeName}',
+        title: context.l10n.reportShareTitle(averageMastery),
+        subtitle: weakest == null ? context.l10n.reportShareSubtitleSummary : context.l10n.reportShareSubtitlePriority(weakest.nodeName),
         description: report.markdown,
         metadata: <String, dynamic>{
           'active_plans': report.sections.length,
           'unlocked_achievements': report.diagnosisCards.length,
-          'flame_brightness': '${report.mastery.length} 个维度',
+          'flame_brightness': context.l10n.reportShareMetadataDimensions(report.mastery.length),
         },
         shareMessage: weakest == null
-            ? '我刚在 Sparkle 生成了一份学习分析报告，平均掌握度 $averageMastery%。'
-            : '我刚在 Sparkle 生成了一份学习分析报告，当前优先补强的是 ${weakest.nodeName}。',
+            ? context.l10n.reportShareMessageWithMastery(averageMastery)
+            : context.l10n.reportShareMessageWithNode(weakest.nodeName),
       ),
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
@@ -751,12 +751,12 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     required double averageMastery,
   }) {
     if (weakestNode != null) {
-      return '当前最该先收口的是 ${weakestNode.nodeName}';
+      return context.l10n.reportHeroTitlePriority(weakestNode.nodeName);
     }
     if (strongestNode != null) {
-      return '你的稳定区已经开始成形';
+      return context.l10n.reportHeroTitleStable;
     }
-    return '先用真实学习记录建立分析基础';
+    return context.l10n.reportHeroTitleBuild;
   }
 
   String _reportHeroSubtitle({
@@ -770,13 +770,13 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
         : _averageDelta(averageMastery, previousAverageMastery);
     if (weakestNode != null && delta != null) {
       return delta >= 0
-          ? '整体掌握度还在抬升，但 ${weakestNode.nodeName} 依然是最容易拖慢进度的环节，优先补它最划算。'
-          : '最近节奏有一点回落，先别继续铺开范围，优先把 ${weakestNode.nodeName} 重新拉稳。';
+          ? context.l10n.reportHeroSubtitleDeltaUp(weakestNode.nodeName)
+          : context.l10n.reportHeroSubtitleDeltaDown(weakestNode.nodeName);
     }
     if (strongestNode != null) {
-      return '这份报告已经把当前强项、薄弱点和趋势放到同一个面板里，先看重点，再决定下一步。';
+      return context.l10n.reportHeroSubtitleStrong;
     }
-    return '先用这份报告确认方向，后续随着更多记录补齐，趋势会越来越清楚。';
+    return context.l10n.reportHeroSubtitleDefault;
   }
 
   List<MirofishStageMetric> _reportHeroMetrics({
@@ -787,7 +787,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   }) {
     final metrics = <MirofishStageMetric>[
       MirofishStageMetric(
-        label: '平均掌握度',
+        label: context.l10n.reportMetricAvgMastery,
         value: '${averageMastery.round()}%',
         accent: DS.info,
         icon: Icons.stacked_line_chart_rounded,
@@ -796,7 +796,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     if (weakestNode != null) {
       metrics.add(
         MirofishStageMetric(
-          label: '优先补强',
+          label: context.l10n.reportMetricPriority,
           value: '${weakestNode.nodeName} ${weakestNode.masteryScore.round()}%',
           accent: DS.warning,
           icon: Icons.flag_circle_rounded,
@@ -806,7 +806,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     if (strongestNode != null) {
       metrics.add(
         MirofishStageMetric(
-          label: '当前强项',
+          label: context.l10n.reportMetricCurrentStrength,
           value:
               '${strongestNode.nodeName} ${strongestNode.masteryScore.round()}%',
           accent: DS.success,
@@ -817,7 +817,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       final delta = _averageDelta(averageMastery, previousAverageMastery);
       metrics.add(
         MirofishStageMetric(
-          label: '变化趋势',
+          label: context.l10n.reportMetricTrendChange,
           value: '${delta >= 0 ? '+' : ''}${delta.round()}%',
           accent: delta >= 0 ? DS.success : DS.warning,
           icon: delta >= 0
@@ -842,7 +842,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   bool _isPlaceholderReport(LearningReport report) =>
       report.reportId == 'empty' &&
       report.mastery.isEmpty &&
-      report.markdown.trim() == '暂无学习报告数据。';
+      report.markdown.trim() == context.l10n.reportPlaceholderEmpty;
 
   LearningReport? _latestReportFromSystemUpdates() {
     final updates = ref.watch(systemUpdatesProvider).maybeWhen(
@@ -1020,7 +1020,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '${score.round()}% · ${_masteryLabel(score)}',
+                    '${score.round()}% · ${_masteryLabel(score, sheetContext)}',
                     style:
                         Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
                               color: masteryColor,
@@ -1030,7 +1030,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  _masteryGuidance(item),
+                  _masteryGuidance(item, sheetContext),
                   style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
                         color: DS.textSecondary,
                         height: 1.5,
@@ -1047,12 +1047,12 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                         unawaited(_openReportDeepLink(GalaxyRoutes.home));
                       },
                       icon: const Icon(Icons.auto_graph_rounded),
-                      label: const Text('打开知识星图'),
+                      label: Text(context.l10n.reportOpenGalaxy),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => Navigator.of(sheetContext).pop(),
                       icon: const Icon(Icons.check_circle_outline_rounded),
-                      label: const Text('继续阅读报告'),
+                      label: Text(context.l10n.reportContinueReading),
                     ),
                   ],
                 ),
@@ -1107,7 +1107,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 if (card.evidence.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
-                    '证据与建议',
+                    context.l10n.reportEvidenceAndAdvice,
                     style:
                         Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
@@ -1164,7 +1164,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     OutlinedButton.icon(
                       onPressed: () => Navigator.of(sheetContext).pop(),
                       icon: const Icon(Icons.check_circle_outline_rounded),
-                      label: const Text('知道了'),
+                      label: Text(context.l10n.reportGotIt),
                     ),
                   ],
                 ),
@@ -1239,25 +1239,25 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     );
   }
 
-  String _masteryLabel(double score) {
+  String _masteryLabel(double score, BuildContext context) {
     if (score >= 80) {
-      return '掌握稳定';
+      return context.l10n.reportMasteryStable;
     }
     if (score >= 60) {
-      return '仍可巩固';
+      return context.l10n.reportMasteryConsolidate;
     }
-    return '需要重点补强';
+    return context.l10n.reportMasteryNeedFocus;
   }
 
-  String _masteryGuidance(LearningMasteryDatum item) {
+  String _masteryGuidance(LearningMasteryDatum item, BuildContext context) {
     final score = item.masteryScore;
     if (score >= 80) {
-      return '这个知识点已经比较稳，可以更多地通过应用题和迁移练习来保持熟练度。';
+      return context.l10n.reportGuidanceStable;
     }
     if (score >= 60) {
-      return '这个知识点理解基本建立，但在连续推理或综合题里可能还会波动，适合再补一轮刻意练习。';
+      return context.l10n.reportGuidanceConsolidate;
     }
-    return '这个知识点当前是明显薄弱环节，建议先回到定义、例题和前置概念，再重新做相关练习。';
+    return context.l10n.reportGuidanceNeedFocus;
   }
 
   Color _masteryColor(double score, ColorScheme scheme) {
@@ -1358,7 +1358,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
     if (widget.values.length < 2) {
       return Center(
         child: Text(
-          '第一份报告已经准备好了。下次再来看，这里就会出现你的趋势变化线。',
+          context.l10n.reportChartFirstReport,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: DS.textSecondary,
               ),
@@ -1403,7 +1403,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                     ),
               ),
               Text(
-                '掌握度 $selectedMastery%',
+                context.l10n.reportChartMasteryLabel(selectedMastery),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: DS.fontWeightBold,
@@ -1411,7 +1411,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
               ),
               if (selectedMinutes != null)
                 Text(
-                  '学习时长 $selectedMinutes 分钟',
+                  context.l10n.reportChartStudyMinutes(selectedMinutes!),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.warning,
                         fontWeight: DS.fontWeightBold,
@@ -1472,7 +1472,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '$maxStudyMinutes分',
+                            context.l10n.reportChartMinutesShort(maxStudyMinutes),
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -1482,7 +1482,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                                 ),
                           ),
                           Text(
-                            '${(maxStudyMinutes / 2).round()}分',
+                            context.l10n.reportChartMinutesShort((maxStudyMinutes / 2).round()),
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -1491,7 +1491,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                                 ),
                           ),
                           Text(
-                            '0分',
+                            context.l10n.reportChartZeroMinutes,
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -1514,12 +1514,12 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
             children: [
               _TrendLegendChip(
                 color: Theme.of(context).colorScheme.primary,
-                label: '掌握度',
+                label: context.l10n.reportLegendMastery,
               ),
               const SizedBox(width: 8),
               _TrendLegendChip(
                 color: DS.warning,
-                label: '学习时长',
+                label: context.l10n.reportLegendStudyDuration,
               ),
             ],
           ),
@@ -1595,46 +1595,46 @@ class _ReportDiagnosisStrip extends StatelessWidget {
                 ),
                 tag: (item.tag ?? '').trim().isNotEmpty
                     ? item.tag
-                    : _decisionTag(item.severity),
+                    : _decisionTag(item.severity, context),
                 onTap: () => onCardTap(item),
               ),
             )
             .toList()
         : <Widget>[
             _DiagnosisCard(
-              title: '当前强项',
+              title: context.l10n.reportDiagnosisTitleStrength,
               headline: strongestNode == null
-                  ? '待生成'
+                  ? context.l10n.reportDiagnosisHeadlinePending
                   : '${strongestNode!.nodeName} ${strongestNode!.masteryScore.round()}%',
               body: strongestNode == null
-                  ? '生成更多学习记录后，这里会出现最稳的知识点。'
-                  : '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。',
+                  ? context.l10n.reportDiagnosisStrengthBodyPending
+                  : context.l10n.reportDiagnosisStrengthBodyData,
               icon: Icons.trending_up_rounded,
               accent: DS.success,
-              tag: '可继续巩固',
+              tag: context.l10n.reportTagConsolidate,
             ),
             _DiagnosisCard(
-              title: '主要短板',
+              title: context.l10n.reportDiagnosisTitleWeakness,
               headline: weakestNode == null
-                  ? '待生成'
-                  : '${weakestNode?.nodeName ?? '薄弱项'} ${weakestNode?.masteryScore.round() ?? 0}%',
+                  ? context.l10n.reportDiagnosisHeadlinePending
+                  : '${weakestNode?.nodeName ?? context.l10n.reportDiagnosisWeaknessFallback} ${weakestNode?.masteryScore.round() ?? 0}%',
               body: weakestNode == null
-                  ? '当前还没有足够数据定位短板。'
-                  : '这是最值得先补的切入口，优先回到定义、例题和前置关系。',
+                  ? context.l10n.reportDiagnosisWeaknessBodyPending
+                  : context.l10n.reportDiagnosisWeaknessBodyData,
               icon: Icons.priority_high_rounded,
               accent: Theme.of(context).colorScheme.error,
-              tag: '建议先处理',
+              tag: context.l10n.reportTagProcessFirst,
             ),
             _DiagnosisCard(
-              title: '整体趋势',
+              title: context.l10n.reportDiagnosisTitleTrend,
               headline: delta == null
-                  ? '等待历史对比'
+                  ? context.l10n.reportDiagnosisTrendWaitingComparison
                   : '${delta >= 0 ? '+' : ''}${delta.round()}%',
               body: delta == null
-                  ? '再积累一到两份报告后，这里会显示你的连续变化趋势。'
+                  ? context.l10n.reportDiagnosisTrendBodyPending
                   : delta >= 0
-                      ? '掌握度在继续抬升，接下来更适合做巩固和迁移。'
-                      : '最近有回落迹象，建议减少铺开面，先收口当前薄弱点。',
+                      ? context.l10n.reportDiagnosisTrendBodyUp
+                      : context.l10n.reportDiagnosisTrendBodyDown,
               icon: delta == null
                   ? Icons.timeline_rounded
                   : delta >= 0
@@ -1646,10 +1646,10 @@ class _ReportDiagnosisStrip extends StatelessWidget {
                       ? DS.brandPrimary
                       : DS.warning,
               tag: delta == null
-                  ? '等待更多记录'
+                  ? context.l10n.reportTagAwaitMore
                   : delta >= 0
-                      ? '保持当前节奏'
-                      : '建议尽快收口',
+                      ? context.l10n.reportTagKeepRhythm
+                      : context.l10n.reportTagCloseGap,
             ),
           ];
     return GraphiteCardSurface(
@@ -1658,14 +1658,14 @@ class _ReportDiagnosisStrip extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '诊断摘要',
+            context.l10n.reportDiagnosisSummaryTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            '先回答三个最关键的问题：你现在最稳的地方在哪里、最该补的地方在哪里、整体是在上升还是停滞。',
+            context.l10n.reportDiagnosisSummaryDesc,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,
@@ -1737,16 +1737,16 @@ class _ReportDiagnosisStrip extends StatelessWidget {
     }
   }
 
-  String _decisionTag(String severity) {
+  String _decisionTag(String severity, BuildContext context) {
     switch (severity) {
       case 'high':
-        return '建议先处理';
+        return context.l10n.reportTagProcessFirst;
       case 'medium':
-        return '建议尽快处理';
+        return context.l10n.reportTagProcessSoon;
       case 'low':
-        return '可继续巩固';
+        return context.l10n.reportTagConsolidate;
       default:
-        return '建议继续观察';
+        return context.l10n.reportTagObserve;
     }
   }
 }
@@ -2009,7 +2009,7 @@ class _ReportActionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '下一步行动',
+              context.l10n.reportActionTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -2017,8 +2017,11 @@ class _ReportActionCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               weakestNode == null
-                  ? '先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。'
-                  : '优先围绕 ${weakestNode?.nodeName ?? '薄弱项'} 收口，再用 ${strongestNode?.nodeName ?? '当前强项'} 做迁移练习，能更快把整体掌握度拉起来。',
+                  ? context.l10n.reportActionDescNoWeakness
+                  : context.l10n.reportActionDescWithWeakness(
+                      weakestNode?.nodeName ?? context.l10n.reportActionWeaknessFallback,
+                      strongestNode?.nodeName ?? context.l10n.reportActionStrengthFallback,
+                    ),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                     height: 1.5,
@@ -2046,23 +2049,23 @@ class _ReportActionCard extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: onOpenGalaxy,
                     icon: const Icon(Icons.auto_graph_rounded),
-                    label: const Text('打开知识星图'),
+                    label: Text(context.l10n.reportOpenGalaxy),
                   ),
                   if (onOpenTheater != null)
                     FilledButton.tonalIcon(
                       onPressed: onOpenTheater,
                       icon: const Icon(Icons.theater_comedy_outlined),
-                      label: Text('推演 ${weakestNode?.nodeName ?? '薄弱项'}'),
+                      label: Text(context.l10n.reportActionExploreNode(weakestNode?.nodeName ?? context.l10n.reportActionWeaknessFallback)),
                     ),
                   FilledButton.tonalIcon(
                     onPressed: onOpenSimulation,
                     icon: const Icon(Icons.groups_rounded),
-                    label: const Text('进入学习仿真'),
+                    label: Text(context.l10n.reportActionEnterSimulation),
                   ),
                   OutlinedButton.icon(
                     onPressed: onOpenSprintHistory,
                     icon: const Icon(Icons.history_rounded),
-                    label: const Text('查看 Sprint 历史'),
+                    label: Text(context.l10n.reportViewSprintHistory),
                   ),
                 ],
               ),
@@ -2249,7 +2252,7 @@ class _TrendHistoryEmptyState extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                title ?? '趋势会随着更多报告自动补全',
+                title ?? context.l10n.reportTrendAutoFillTitle,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -2260,8 +2263,8 @@ class _TrendHistoryEmptyState extends StatelessWidget {
           Text(
             message ??
                 (historyCacheLoaded
-                    ? '第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。'
-                    : '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。'),
+                    ? context.l10n.reportTrendFirstReportMessage
+                    : context.l10n.reportTrendLoadingHistory),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.5,
@@ -2544,7 +2547,7 @@ class _ExecutionStatsSection extends StatelessWidget {
               Icon(Icons.smart_toy_rounded, size: 20, color: DS.info),
               const SizedBox(width: DS.spacing8),
               Text(
-                'AI执行助手',
+                context.l10n.reportAiExecutionAssistant,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -2553,7 +2556,7 @@ class _ExecutionStatsSection extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            'Sparkle 会记住哪些任务更适合交给 AI，以及这些委派实际帮你节省了多少时间。',
+            context.l10n.reportAiExecutionDesc,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.5,
@@ -2563,25 +2566,25 @@ class _ExecutionStatsSection extends StatelessWidget {
           Row(
             children: [
               _ReportStatCard(
-                label: '总执行',
+                label: context.l10n.reportStatTotalExecutions,
                 value: '$totalExecutions',
-                unit: '次',
+                unit: context.l10n.reportStatUnitTimes,
                 color: DS.info,
               ),
               const SizedBox(width: DS.spacing8),
               _ReportStatCard(
-                label: '成功率',
+                label: context.l10n.reportStatSuccessRate,
                 value: '${(successRate * 100).round()}',
                 unit: '%',
                 color: DS.semanticSuccess,
               ),
               const SizedBox(width: DS.spacing8),
               _ReportStatCard(
-                label: '节省时间',
+                label: context.l10n.reportStatTimeSaved,
                 value: timeSaved >= 60
                     ? (timeSaved / 60).toStringAsFixed(1)
                     : '${timeSaved.round()}',
-                unit: timeSaved >= 60 ? '小时' : '分钟',
+                unit: timeSaved >= 60 ? context.l10n.reportStatUnitHours : context.l10n.reportStatUnitMinutes,
                 color: DS.primaryBase,
               ),
             ],
@@ -2607,7 +2610,7 @@ class _ExecutionStatsSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${entry.key}: $count次 · ${(success * 100).round()}%',
+                    context.l10n.reportStatByTypeFormat(entry.key, count, (success * 100).round()),
                     style: DS.bodySmall.copyWith(color: DS.textSecondary),
                   ),
                 );

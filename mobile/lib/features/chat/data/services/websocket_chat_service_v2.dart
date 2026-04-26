@@ -689,8 +689,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'nack':
         final messageId = data['message_id'] as String?;
         final errorCode = data['error_code'] as String? ?? 'unknown';
-        final errorMessage =
-            data['error_message'] as String? ?? '未知错误';
+        final errorMessage = data['error_message'] as String? ?? '未知错误';
         final retryAfterMs = data['retry_after_ms'] as int?;
         if (messageId != null) {
           return NackEvent(
@@ -1206,6 +1205,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
+    bool? useDocumentContext,
   }) {
     // ✅ Fix H1: Reset connection state for new user session
     if (_currentUserId != null && _currentUserId != userId) {
@@ -1243,6 +1243,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
       if (includeReferences) 'include_references': true,
       if (chatMode != null) 'chat_mode': chatMode,
+      if (useDocumentContext != null)
+        'use_document_context': useDocumentContext,
     };
 
     // 发送或排队

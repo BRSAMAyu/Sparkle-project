@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import struct
 from typing import Any
 
@@ -10,6 +11,7 @@ from redis.commands.search.query import Query
 
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
+from app.services.rag_indexing_service import RAG_INDEX_PREFIXES
 
 
 class RedisSearchClient:
@@ -17,15 +19,11 @@ class RedisSearchClient:
     Wrapper for Redis Search (RediSearch)
     Handles Vector Search + Hybrid Search
     """
+
     def __init__(self, redis_url: str = settings.REDIS_URL, password: str | None = settings.REDIS_PASSWORD):
         resolved_password, _ = resolve_redis_password(redis_url, password)
         # Note: Redis 7.x with ACL requires username='default' when password is set
-        self.redis = Redis.from_url(
-            redis_url,
-            username='default',
-            password=resolved_password,
-            decode_responses=True
-        )
+        self.redis = Redis.from_url(redis_url, username="default", password=resolved_password, decode_responses=True)
         self.index_name = "idx:knowledge"
 
     @staticmethod
@@ -43,6 +41,12 @@ class RedisSearchClient:
             TextField("$.content", as_name="content", weight=1.0),
             TextField("$.keywords", as_name="keywords", weight=2.0),
             TagField("$.parent_id", as_name="parent_id"),
+            TagField("$.source_type", as_name="source_type"),
+            TagField("$.user_id", as_name="user_id"),
+            TagField("$.group_id", as_name="group_id"),
+            TagField("$.shared_by_user_id", as_name="shared_by_user_id"),
+            TagField("$.trust_level", as_name="trust_level"),
+            TagField("$.document_scope", as_name="document_scope"),
             TextField("$.parent_name", as_name="parent_name"),
             NumericField("$.subject_id", as_name="subject_id"),
             NumericField("$.importance", as_name="importance"),
@@ -75,7 +79,7 @@ class RedisSearchClient:
         try:
             await self.redis.ft(self.index_name).create_index(
                 self._build_index_schema(),
-                definition=IndexDefinition(prefix=["sparkle:chunk:"], index_type=IndexType.JSON),
+                definition=IndexDefinition(prefix=RAG_INDEX_PREFIXES, index_type=IndexType.JSON),
             )
             logger.info(f"Created missing Redis search index {self.index_name}")
             return True
@@ -109,20 +113,14 @@ class RedisSearchClient:
             logger.error(f"Redis search failed: {e}")
             return None
 
-    async def hybrid_search(
-        self,
-        text_query: str,
-        vector: list[float],
-        top_k: int = 10,
-        vector_field: str = "vector"
-    ):
+    async def hybrid_search(self, text_query: str, vector: list[float], top_k: int = 10, vector_field: str = "vector"):
         """
         Perform Hybrid Search (Text Filter + Vector Similarity)
         Syntax: (<text_query>) => [KNN <k> @vector $vec_param AS vector_score]
         """
         # 1. Prepare Vector Blob
         # Convert list of floats to binary string (Little Endian Float32)
-        vector_blob = struct.pack(f'{len(vector)}f', *vector)
+        vector_blob = struct.pack(f"{len(vector)}f", *vector)
 
         # 2. Construct Query
         # If text_query is empty, use wildcard
@@ -137,7 +135,26 @@ class RedisSearchClient:
             Query(q_str)
             .sort_by("vector_score")
             .paging(0, top_k)
-            .return_fields("id", "parent_id", "content", "vector_score", "parent_name", "importance")
+            .return_fields(
+                "id",
+                "parent_id",
+                "content",
+                "vector_score",
+                "parent_name",
+                "importance",
+                "source_type",
+                "file_id",
+                "chunk_id",
+                "user_id",
+                "group_id",
+                "shared_by_user_id",
+                "trust_level",
+                "document_scope",
+                "chunk_index",
+                "page_numbers",
+                "section_title",
+                "quality_score",
+            )
             .dialect(2)
         )
 
@@ -147,6 +164,7 @@ class RedisSearchClient:
 
     async def close(self):
         await self.redis.close()
+
 
 # Global Instance
 redis_search_client = RedisSearchClient()

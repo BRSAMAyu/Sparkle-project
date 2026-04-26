@@ -140,6 +140,13 @@ class Task(BaseModel):
         lazy="dynamic",
     )
 
+    document_links = relationship(
+        "TaskDocument",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
     def __repr__(self):
         return f"<Task(title={self.title}, status={self.status})>"
 

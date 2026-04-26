@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import timezone, datetime
+
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import and_, or_, select
@@ -7,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
+from app.models.sector import SectorCode
 from app.models.subject import Subject
 from app.schemas.galaxy import GalaxyGraphResponse
 from app.services.node_sector_service import build_sector_visuals, node_belongs_to_sector, parse_sector_code
-from app.models.sector import SectorCode
 
 
 def _utcnow() -> datetime:
@@ -162,6 +163,7 @@ class GraphStructureService:
                     KnowledgeNode.position_x <= max_x,
                     KnowledgeNode.position_y >= min_y,
                     KnowledgeNode.position_y <= max_y,
+                    or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"),
                 )
             )
             .limit(limit)
@@ -198,6 +200,7 @@ class GraphStructureService:
                     KnowledgeNode.position_x <= max_x,
                     KnowledgeNode.position_y >= min_y,
                     KnowledgeNode.position_y <= max_y,
+                    or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"),
                 )
             )
             .order_by(KnowledgeNode.importance_level.desc(), KnowledgeNode.global_spark_count.desc())
@@ -235,6 +238,7 @@ class GraphStructureService:
                 UserNodeStatus, and_(UserNodeStatus.node_id == KnowledgeNode.id, UserNodeStatus.user_id == user_id)
             )
             .outerjoin(Subject, KnowledgeNode.subject_id == Subject.id)
+            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
         )
 
         # LOD Filtering

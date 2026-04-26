@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 import json
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from loguru import logger
@@ -260,12 +261,18 @@ class GalaxyStatsService:
                 func.count().filter(UserNodeStatus.mastery_score >= 80).label('mastered_count'),
                 func.sum(UserNodeStatus.total_study_minutes).label('total_minutes')
             )
+            .join(KnowledgeNode, KnowledgeNode.id == UserNodeStatus.node_id)
             .where(UserNodeStatus.user_id == user_id)
+            .where((KnowledgeNode.status.is_(None)) | (KnowledgeNode.status == "published"))
         )
         result = await self.db.execute(query)
         row = result.one()
 
-        total_query = select(func.count()).select_from(KnowledgeNode)
+        total_query = (
+            select(func.count())
+            .select_from(KnowledgeNode)
+            .where((KnowledgeNode.status.is_(None)) | (KnowledgeNode.status == "published"))
+        )
         total_result = await self.db.execute(total_query)
         total_count = total_result.scalar() or 0
 

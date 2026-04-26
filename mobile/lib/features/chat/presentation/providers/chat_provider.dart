@@ -874,6 +874,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final accumulatedWidgets = <WidgetPayload>[];
     Map<String, dynamic>? accumulatedCollaboration;
     Map<String, dynamic>? accumulatedUxEnvelope;
+    final accumulatedRawMetadata = <String, dynamic>{};
     Map<String, dynamic>? accumulatedOrchestrationTrace;
     Map<String, dynamic>? accumulatedModeSuggestion;
     Map<String, dynamic>? accumulatedRoutingPreview;
@@ -894,6 +895,53 @@ class ChatNotifier extends StateNotifier<ChatState> {
     List<Map<String, dynamic>>? snapshotAgentActivities;
     var sawTerminalEvent = false;
     var shouldResetSending = true;
+
+    void upsertSourceSummaryCitations(List<Map<String, dynamic>> citations) {
+      accumulatedRawMetadata['citations'] =
+          List<Map<String, dynamic>>.from(citations);
+      final data = {
+        'citations_available': citations.isNotEmpty,
+        'reference_scope': citations.every(
+          (citation) => (citation['file_id']?.toString() ?? '').isNotEmpty,
+        )
+            ? 'file_only'
+            : 'mixed',
+        'evidence_summary': citations.isNotEmpty
+            ? I18nService.instance.l10n.chatSourcesAvailable
+            : I18nService.instance.l10n.chatSourcesUnavailable,
+        'citations': citations,
+      };
+      final existingIndex = accumulatedWidgets.indexWhere(
+        (widget) => widget.type == 'source_summary',
+      );
+      if (existingIndex >= 0) {
+        accumulatedWidgets[existingIndex] = WidgetPayload(
+          type: 'source_summary',
+          data: data,
+        );
+      } else {
+        accumulatedWidgets.add(
+          WidgetPayload(
+            type: 'source_summary',
+            data: data,
+          ),
+        );
+      }
+    }
+
+    void captureCitationMetadata(dynamic rawCitations) {
+      if (rawCitations is! List || rawCitations.isEmpty) {
+        return;
+      }
+      final citations = rawCitations
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+      if (citations.isEmpty) {
+        return;
+      }
+      upsertSourceSummaryCitations(citations);
+    }
 
     void flushPending({bool immediate = false}) {
       void applyPending() {
@@ -1009,6 +1057,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           workflowId: workflowId,
           promptVersion: promptVersion,
           uxEnvelope: accumulatedUxEnvelope,
+          rawMetadata:
+              accumulatedRawMetadata.isNotEmpty ? accumulatedRawMetadata : null,
         );
 
         state = state.copyWith(
@@ -1050,6 +1100,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     try {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
+      final useDocumentContext = state.documentRetrievalEnabled;
       state = state.copyWith(clearAttachments: true);
 
       // Get selected plan for chat context
@@ -1066,6 +1117,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         if (selectedPlanId != null) 'plan_id': selectedPlanId,
         'reasoning_mode': reasoningMode,
         'guidance_mode': _ref.read(guidanceModeProvider).name,
+        'use_document_context': useDocumentContext,
         'seed_library_enabled': seedLibraryEnabled,
         if (seedLibraryEnabled) ...{
           'active_seed_library_ids':
@@ -1100,10 +1152,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
         nickname: nickname,
         token: token,
         fileIds: fileIds,
-        includeReferences: fileIds.isNotEmpty,
+        includeReferences: useDocumentContext || fileIds.isNotEmpty,
         extraContext: extraContext,
         chatMode: chatModeValue,
         requestId: runId,
+        useDocumentContext: useDocumentContext,
       );
 
       // Wrap with timeout check
@@ -1150,7 +1203,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
+            accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
+            captureCitationMetadata(metadata['citations']);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1341,7 +1396,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
+            accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
+            captureCitationMetadata(metadata['citations']);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1528,24 +1585,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 .add(_normalizeWidgetPayload(widgetType, widgetData));
           }
         } else if (event is CitationEvent) {
-          accumulatedWidgets.add(
-            WidgetPayload(
-              type: 'source_summary',
-              data: {
-                'citations_available': event.citations.isNotEmpty,
-                'reference_scope': event.citations.every(
-                  (citation) =>
-                      (citation['file_id']?.toString() ?? '').isNotEmpty,
-                )
-                    ? 'file_only'
-                    : 'mixed',
-                'evidence_summary': event.citations.isNotEmpty
-                    ? I18nService.instance.l10n.chatSourcesAvailable
-                    : I18nService.instance.l10n.chatSourcesUnavailable,
-                'citations': event.citations,
-              },
-            ),
-          );
+          upsertSourceSummaryCitations(event.citations);
         } else if (event is UsageEvent) {
           state = state.copyWith(
             lastPromptTokens: event.promptTokens,
@@ -1555,6 +1595,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           await _updateDailyUsage(event);
         } else if (event is MetaEvent) {
           accumulatedMeta.addAll(event.meta);
+          accumulatedRawMetadata.addAll(event.meta);
+          captureCitationMetadata(event.meta['citations']);
           flushPending();
         } else if (event is ReasoningStepEvent) {
           // 🆕 推理步骤事件 - Chain of Thought Visualization

@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: require_trailing_commas
 
 part of 'knowledge_detail_model.dart';
 
@@ -24,6 +25,15 @@ KnowledgeDetailResponse _$KnowledgeDetailResponseFromJson(
               ?.map((e) => RelatedPlan.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      sourceDocuments: (json['source_documents'] as List<dynamic>?)
+              ?.map((e) =>
+                  NodeSourceDocumentRef.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      knowledgeStats: json['knowledge_stats'] == null
+          ? const NodeKnowledgeStats()
+          : NodeKnowledgeStats.fromJson(
+              json['knowledge_stats'] as Map<String, dynamic>),
       learningPathSnapshot: json['learningPathSnapshot'] == null
           ? null
           : LearningPathSnapshot.fromJson(
@@ -37,6 +47,8 @@ Map<String, dynamic> _$KnowledgeDetailResponseToJson(
       'relations': instance.relations,
       'relatedTasks': instance.relatedTasks,
       'relatedPlans': instance.relatedPlans,
+      'source_documents': instance.sourceDocuments,
+      'knowledge_stats': instance.knowledgeStats,
       'userStats': instance.userStats,
       'learningPathSnapshot': instance.learningPathSnapshot,
     };
@@ -147,6 +159,113 @@ Map<String, dynamic> _$KnowledgeUserStatsToJson(KnowledgeUserStats instance) =>
       'last_study_at': instance.lastStudyAt?.toIso8601String(),
       'next_review_at': instance.nextReviewAt?.toIso8601String(),
       'decay_paused': instance.decayPaused,
+    };
+
+NodeSourceDocumentRef _$NodeSourceDocumentRefFromJson(
+        Map<String, dynamic> json) =>
+    NodeSourceDocumentRef(
+      fileId: json['file_id'] as String,
+      filename: json['filename'] as String,
+      fileType: json['file_type'] as String?,
+      uploadDate: json['upload_date'] == null
+          ? null
+          : DateTime.parse(json['upload_date'] as String),
+      chunkCount: (json['chunk_count'] as num?)?.toInt() ?? 0,
+      previewChunks: (json['preview_chunks'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$NodeSourceDocumentRefToJson(
+        NodeSourceDocumentRef instance) =>
+    <String, dynamic>{
+      'file_id': instance.fileId,
+      'filename': instance.filename,
+      'file_type': instance.fileType,
+      'upload_date': instance.uploadDate?.toIso8601String(),
+      'chunk_count': instance.chunkCount,
+      'preview_chunks': instance.previewChunks,
+    };
+
+NodeKnowledgeStats _$NodeKnowledgeStatsFromJson(Map<String, dynamic> json) =>
+    NodeKnowledgeStats(
+      totalDocuments: (json['total_documents'] as num?)?.toInt() ?? 0,
+      totalChunks: (json['total_chunks'] as num?)?.toInt() ?? 0,
+      hasPersonalUploads: json['has_personal_uploads'] as bool? ?? false,
+      lastMaterialAdded: json['last_material_added'] == null
+          ? null
+          : DateTime.parse(json['last_material_added'] as String),
+    );
+
+Map<String, dynamic> _$NodeKnowledgeStatsToJson(NodeKnowledgeStats instance) =>
+    <String, dynamic>{
+      'total_documents': instance.totalDocuments,
+      'total_chunks': instance.totalChunks,
+      'has_personal_uploads': instance.hasPersonalUploads,
+      'last_material_added': instance.lastMaterialAdded?.toIso8601String(),
+    };
+
+NodeSourceChunk _$NodeSourceChunkFromJson(Map<String, dynamic> json) =>
+    NodeSourceChunk(
+      chunkId: json['chunk_id'] as String,
+      fileId: json['file_id'] as String,
+      filename: json['filename'] as String,
+      chunkIndex: (json['chunk_index'] as num).toInt(),
+      content: json['content'] as String,
+      preview: json['preview'] as String,
+      fileType: json['file_type'] as String?,
+      pageNumbers: (json['page_numbers'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          const [],
+      sectionTitle: json['section_title'] as String?,
+      qualityScore: (json['quality_score'] as num?)?.toDouble(),
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
+    );
+
+Map<String, dynamic> _$NodeSourceChunkToJson(NodeSourceChunk instance) =>
+    <String, dynamic>{
+      'chunk_id': instance.chunkId,
+      'file_id': instance.fileId,
+      'filename': instance.filename,
+      'file_type': instance.fileType,
+      'chunk_index': instance.chunkIndex,
+      'content': instance.content,
+      'preview': instance.preview,
+      'page_numbers': instance.pageNumbers,
+      'section_title': instance.sectionTitle,
+      'quality_score': instance.qualityScore,
+      'created_at': instance.createdAt?.toIso8601String(),
+    };
+
+NodeChunksResponse _$NodeChunksResponseFromJson(Map<String, dynamic> json) =>
+    NodeChunksResponse(
+      nodeId: json['node_id'] as String,
+      chunks: (json['chunks'] as List<dynamic>?)
+              ?.map((e) => NodeSourceChunk.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      pageSize: (json['page_size'] as num?)?.toInt() ?? 20,
+      totalPages: (json['total_pages'] as num?)?.toInt() ?? 0,
+      hasNext: json['has_next'] as bool? ?? false,
+      hasPrev: json['has_prev'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$NodeChunksResponseToJson(NodeChunksResponse instance) =>
+    <String, dynamic>{
+      'node_id': instance.nodeId,
+      'chunks': instance.chunks,
+      'total': instance.total,
+      'page': instance.page,
+      'page_size': instance.pageSize,
+      'total_pages': instance.totalPages,
+      'has_next': instance.hasNext,
+      'has_prev': instance.hasPrev,
     };
 
 LearningPathSnapshot _$LearningPathSnapshotFromJson(

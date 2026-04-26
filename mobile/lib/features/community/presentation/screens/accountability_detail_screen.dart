@@ -252,7 +252,7 @@ class _AccountabilityDetailScreenState
         }
       } catch (e) {
         if (mounted) {
-          AppFeedback.error(context, '${context.l10n.accountabilityOperationFailed(e)}');
+          AppFeedback.error(context, '${context.l10n.accountabilityOperationFailed}: $e');
         }
       }
     }
@@ -563,7 +563,7 @@ class _DashboardHero extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            context.l10n.accountabilityDaysTogether(relationshipSummary['days_together'] ?? 0),
+                            context.l10n.accountabilityDaysTogether((relationshipSummary['days_together'] as Object?) ?? 0),
                             style:
                                 DS.bodySmall.copyWith(color: DS.textSecondary),
                             textAlign: TextAlign.center,
@@ -788,19 +788,19 @@ class _GrowthSummary extends StatelessWidget {
           runSpacing: 8,
           children: [
             _TinyMetric(
-              label: context.l10n.accountabilityMyStreakDays(relationshipSummary['my_streak_days'] ?? 0),
+              label: context.l10n.accountabilityMyStreakDays((relationshipSummary['my_streak_days'] as Object?) ?? 0),
             ),
             _TinyMetric(
-              label: context.l10n.accountabilityPartnerStreakDays(relationshipSummary['partner_streak_days'] ?? 0),
+              label: context.l10n.accountabilityPartnerStreakDays((relationshipSummary['partner_streak_days'] as Object?) ?? 0),
             ),
-            _TinyMetric(label: context.l10n.accountabilityMyAchievementsUnlocked(myAchievements)),
-            _TinyMetric(label: context.l10n.accountabilityPartnerAchievementsUnlocked(partnerAchievements)),
+            _TinyMetric(label: context.l10n.accountabilityMyAchievementsUnlocked(myAchievements as Object)),
+            _TinyMetric(label: context.l10n.accountabilityPartnerAchievementsUnlocked(partnerAchievements as Object)),
           ],
         ),
         if (streakBoard.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            context.l10n.accountabilityStreakRank(streakBoard['my_rank'] ?? '-', streakBoard['partner_rank'] ?? '-'),
+            context.l10n.accountabilityStreakRank((streakBoard['my_rank'] ?? '-') as Object, (streakBoard['partner_rank'] ?? '-') as Object),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
         ],
@@ -957,7 +957,7 @@ class _RecentReflectionsCard extends StatelessWidget {
         ? context.l10n.accountabilityNoRecentReflections
         : lastAt == null
             ? context.l10n.accountabilityReflectionsGenerated(count)
-            : context.l10n.accountabilityReflectionsLatest(_labelForCategory(lastCategory), DateFormat('M月d日 HH:mm').format(lastAt));
+            : context.l10n.accountabilityReflectionsLatest(_labelForCategory(context, lastCategory), DateFormat('M月d日 HH:mm').format(lastAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -984,7 +984,7 @@ class _RecentReflectionsCard extends StatelessWidget {
           ),
           if ((lastCategory ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing6),
-            _TinyMetric(label: _labelForCategory(lastCategory)),
+            _TinyMetric(label: _labelForCategory(context, lastCategory)),
           ],
           const SizedBox(height: DS.spacing4),
           Text(
@@ -996,7 +996,7 @@ class _RecentReflectionsCard extends StatelessWidget {
     );
   }
 
-  static String _labelForCategory(String? category) {
+  String _labelForCategory(BuildContext context, String? category) {
     switch (category) {
       case 'intervention_ineffective':
         return context.l10n.accountabilityInterventionIneffective;
@@ -1070,7 +1070,7 @@ class _ForesightHintCard extends StatelessWidget {
                   .map(
                     (item) => _TinyMetric(
                       label:
-                          '${_labelForDim(item.dim)} ${item.confidence.toStringAsFixed(2)}',
+                          '${_labelForDim(context, item.dim)} ${item.confidence.toStringAsFixed(2)}',
                     ),
                   )
                   .toList(),
@@ -1081,7 +1081,7 @@ class _ForesightHintCard extends StatelessWidget {
     );
   }
 
-  static String _labelForDim(String dim) {
+  String _labelForDim(BuildContext context, String dim) {
     switch (dim) {
       case 'study_pace':
         return context.l10n.accountabilityDimPace;
@@ -1155,7 +1155,7 @@ class _CheckinMoodVisual {
   final Color color;
 }
 
-const _checkinMoodVisuals = <_CheckinMoodVisual>[
+List<_CheckinMoodVisual> _checkinMoodVisuals(BuildContext context) => [
   _CheckinMoodVisual(
     icon: Icons.sentiment_very_dissatisfied_rounded,
     label: context.l10n.accountabilityMoodLow,
@@ -1183,8 +1183,10 @@ const _checkinMoodVisuals = <_CheckinMoodVisual>[
   ),
 ];
 
-_CheckinMoodVisual _resolveCheckinMoodVisual(int mood) =>
-    _checkinMoodVisuals[(mood - 1).clamp(0, _checkinMoodVisuals.length - 1)];
+_CheckinMoodVisual _resolveCheckinMoodVisual(BuildContext context, int mood) {
+  final visuals = _checkinMoodVisuals(context);
+  return visuals[(mood - 1).clamp(0, visuals.length - 1)];
+}
 
 class _CheckinTile extends ConsumerWidget {
   const _CheckinTile({required this.checkin, required this.isMe});
@@ -1195,7 +1197,7 @@ class _CheckinTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateStr = DateFormat('MM-dd HH:mm').format(checkin.createdAt);
-    final moodVisual = _resolveCheckinMoodVisual(checkin.mood);
+    final moodVisual = _resolveCheckinMoodVisual(context, checkin.mood);
     final authorName = checkin.author?.displayName ?? (isMe ? context.l10n.accountabilityMe : context.l10n.accountabilityPartner);
 
     return Container(
@@ -1452,7 +1454,7 @@ class _AccountabilityCheckinSheetState
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(5, (i) {
                   final selected = _mood == i + 1;
-                  final moodVisual = _checkinMoodVisuals[i];
+                  final moodVisual = _checkinMoodVisuals(context)[i];
                   return GestureDetector(
                     onTap: () => setState(() => _mood = i + 1),
                     child: AnimatedContainer(

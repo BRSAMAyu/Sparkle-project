@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
@@ -11,7 +13,9 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
+import 'package:sparkle/features/galaxy/data/models/galaxy_draft_review_models.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_accessibility_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
@@ -20,9 +24,13 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart'
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_contribution_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_document_upload_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_draft_review_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_document_upload_overlay.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_error_dialog.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_gesture_handler.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart';
@@ -72,6 +80,10 @@ class GalaxyPlaybackSnapshot {
         preRevealedNodeIds: preRevealedNodeIds ?? this.preRevealedNodeIds,
         preRevealedEdgeIds: preRevealedEdgeIds ?? this.preRevealedEdgeIds,
       );
+}
+
+enum _GalaxyEmptySpaceAction {
+  uploadDocumentHere,
 }
 
 class GalaxyScreen extends ConsumerStatefulWidget {
@@ -145,6 +157,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   String? _tapFeedbackNodeId;
   String? _pendingNavigationNodeId;
   String? _pendingPersistNodeId;
+  _DraftArrivalCelebration? _draftArrivalCelebration;
   GalaxyNodeModel? _previewNode;
   Offset? _previewScreenPosition;
   Size _viewportSize = Size.zero;
@@ -186,6 +199,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   double? _pendingExternalMasteryDelta;
   GoRouter? _router;
   String? _lastObservedRoutePath;
+  bool _isDraftReviewOpen = false;
 
   // Mastery milestone subscription
   StreamSubscription<MasteryMilestoneEvent>? _milestoneSubscription;
@@ -454,10 +468,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
-  Future<void> _handlePullToRefresh() => _loadGraph(
+  Future<void> _handlePullToRefresh() async {
+    await Future.wait<void>([
+      _loadGraph(
         forceRefresh: true,
         preserveCamera: true,
-      );
+      ),
+      ref.read(galaxyDraftReviewProvider.notifier).refresh(),
+    ]);
+  }
 
   Future<void> _loadGraph({
     bool forceRefresh = false,
@@ -1004,6 +1023,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           _clearPreviewState();
         });
         _syncProviderSelection(null);
+        unawaited(_showEmptySpaceUploadMenu(command));
         return;
       }
 
@@ -1413,6 +1433,142 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       nodeId: node.id,
       nodeLabel: node.name,
       packId: widget.initialPackId,
+      onAddMaterial: _handleNodeMaterialUploadRequested,
+    );
+  }
+
+  Future<void> _handleNodeMaterialUploadRequested(
+    String nodeId,
+    String label,
+  ) async {
+    await _promptForDocumentUpload(
+      originScreenPosition: Offset(
+        _viewportSize.width / 2,
+        _viewportSize.height - 132,
+      ),
+      target: GalaxyDocumentUploadTarget.node(
+        label: label,
+        nodeId: nodeId,
+        worldPosition: _renderPositions[nodeId],
+      ),
+    );
+  }
+
+  Future<void> _handleGalaxyCoreUploadRequested() async {
+    await _promptForDocumentUpload(
+      originScreenPosition: Offset(
+        _viewportSize.width / 2,
+        _viewportSize.height - 92,
+      ),
+      target: GalaxyDocumentUploadTarget.galaxyCore(
+        label: context.l10n.galaxyUploadTargetGalaxyCore,
+      ),
+    );
+  }
+
+  Future<void> _promptForDocumentUpload({
+    required Offset originScreenPosition,
+    required GalaxyDocumentUploadTarget target,
+  }) async {
+    if (ref.read(galaxyDocumentUploadProvider.notifier).hasActiveUpload) {
+      AppFeedback.info(
+        context,
+        context.l10n.galaxyUploadAlreadyInProgress,
+      );
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: supportedStudyMaterialExtensions,
+    );
+    final pickedFile =
+        result != null && result.files.isNotEmpty ? result.files.first : null;
+    final path = pickedFile?.path;
+    if (path == null || !mounted) {
+      return;
+    }
+
+    final started =
+        await ref.read(galaxyDocumentUploadProvider.notifier).uploadDocument(
+              File(path),
+              target: target,
+              originScreenPosition: originScreenPosition,
+            );
+    if (!started && mounted) {
+      AppFeedback.info(
+        context,
+        context.l10n.galaxyUploadAlreadyInProgress,
+      );
+    }
+  }
+
+  Future<void> _showEmptySpaceUploadMenu(LongPressCommand command) async {
+    final overlayBox =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlayBox == null) {
+      return;
+    }
+
+    final selection = await showMenu<_GalaxyEmptySpaceAction>(
+      context: context,
+      color: const Color(0xFF0C1626),
+      position: RelativeRect.fromRect(
+        Rect.fromCenter(
+          center: command.screenPosition,
+          width: 1,
+          height: 1,
+        ),
+        Offset.zero & overlayBox.size,
+      ),
+      items: [
+        PopupMenuItem<_GalaxyEmptySpaceAction>(
+          value: _GalaxyEmptySpaceAction.uploadDocumentHere,
+          child: Row(
+            children: [
+              const Icon(Icons.upload_file_rounded, size: 18),
+              const SizedBox(width: 10),
+              Text(context.l10n.galaxyUploadDocumentHere),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (!mounted || selection != _GalaxyEmptySpaceAction.uploadDocumentHere) {
+      return;
+    }
+
+    await _promptForDocumentUpload(
+      originScreenPosition: command.screenPosition,
+      target: GalaxyDocumentUploadTarget.worldPosition(
+        label: context.l10n.galaxyUploadTargetSelectedConstellation,
+        worldPosition: command.worldPosition,
+      ),
+    );
+  }
+
+  Offset _resolveUploadTargetScreenPosition(
+    GalaxyDocumentUploadSession session,
+  ) {
+    final target = session.target;
+    final worldTarget = switch (target.kind) {
+      GalaxyDocumentUploadTargetKind.galaxyCore => Offset.zero,
+      GalaxyDocumentUploadTargetKind.worldPosition =>
+        target.worldPosition ?? Offset.zero,
+      GalaxyDocumentUploadTargetKind.node =>
+        target.nodeId != null && _renderPositions[target.nodeId] != null
+            ? _renderPositions[target.nodeId]!
+            : (target.worldPosition ?? Offset.zero),
+    };
+
+    final screenPoint = _camera.worldToScreen(worldTarget);
+    if (_viewportSize == Size.zero) {
+      return screenPoint;
+    }
+    return Offset(
+      screenPoint.dx.clamp(56.0, _viewportSize.width - 56.0),
+      screenPoint.dy.clamp(88.0, _viewportSize.height - 132.0),
     );
   }
 
@@ -2518,6 +2674,68 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
+  Future<void> _openDraftReview({String? batchId}) async {
+    if (_isDraftReviewOpen) {
+      return;
+    }
+    final draftState = ref.read(galaxyDraftReviewProvider);
+    final batch = draftState.batchById(batchId) ?? draftState.promptBatch;
+    if (batch == null) {
+      await ref.read(galaxyDraftReviewProvider.notifier).refresh();
+      return;
+    }
+
+    _isDraftReviewOpen = true;
+    final result = await context.push<GalaxyDraftReviewResult>(
+      GalaxyRoutes.draftReview,
+      extra: GalaxyDraftReviewRouteArgs(batchId: batch.id),
+    );
+    _isDraftReviewOpen = false;
+
+    if (!mounted || result == null) {
+      return;
+    }
+    _playDraftArrivalCelebration(result);
+  }
+
+  void _playDraftArrivalCelebration(GalaxyDraftReviewResult result) {
+    if (result.acceptedCount <= 0) {
+      AppFeedback.info(
+        context,
+        context.l10n.galaxyDraftCompletionNothingAdded,
+      );
+      return;
+    }
+
+    final acceptedLabels = result.reviewedNodes
+        .where((node) => node.decision != GalaxyDraftDecision.reject)
+        .map((node) => node.finalName)
+        .take(5)
+        .toList(growable: false);
+    final summary = context.l10n.galaxyDraftCompletionSummary(
+      result.acceptedCount,
+      result.totalDraftCount,
+    );
+
+    setState(() {
+      _draftArrivalCelebration = _DraftArrivalCelebration(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        labels: acceptedLabels,
+        summary: summary,
+      );
+    });
+    AppFeedback.success(context, summary);
+  }
+
+  void _dismissDraftArrivalCelebration() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _draftArrivalCelebration = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -2532,9 +2750,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         overviewStats.totalNodes > 0 &&
         overviewStats.masteryAverage == 0;
     final contributionStats = ref.watch(galaxyContributionProvider);
+    final draftReviewState = ref.watch(galaxyDraftReviewProvider);
+    final draftPromptBatch = draftReviewState.promptBatch;
+    final showDraftPendingIndicator =
+        draftPromptBatch == null && draftReviewState.pendingBatchCount > 0;
     final theaterOverlay = ref.watch(theaterOverlayProvider);
     final examSprintActive =
         ref.watch(examSprintDashboardProvider).valueOrNull != null;
+    final uploadState = ref.watch(galaxyDocumentUploadProvider);
+    final uploadSession = uploadState.session;
 
     final baseTheme = Theme.of(context);
     final galaxyTheme = baseTheme.copyWith(
@@ -2576,7 +2800,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverFillRemaining(
-                hasScrollBody: true,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     _updateViewportSize(
@@ -2718,6 +2941,29 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                               ),
                             );
                           }),
+                          if (_draftArrivalCelebration != null)
+                            Positioned.fill(
+                              child: SparkleGalaxyArrivalOverlay(
+                                key: ValueKey(_draftArrivalCelebration!.id),
+                                labels: _draftArrivalCelebration!.labels,
+                                summary: _draftArrivalCelebration!.summary,
+                                onComplete: _dismissDraftArrivalCelebration,
+                              ),
+                            ),
+                          if (uploadSession != null)
+                            GalaxyDocumentUploadOverlay(
+                              session: uploadSession,
+                              targetScreenPosition:
+                                  _resolveUploadTargetScreenPosition(
+                                uploadSession,
+                              ),
+                              onRetry: () => ref
+                                  .read(galaxyDocumentUploadProvider.notifier)
+                                  .retryLastUpload(),
+                              onDismiss: () => ref
+                                  .read(galaxyDocumentUploadProvider.notifier)
+                                  .clearSession(),
+                            ),
                           if (_previewNode != null &&
                               _previewScreenPosition != null)
                             Positioned(
@@ -2781,29 +3027,83 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                   top: 56,
                                   left: 16,
                                   right: 16,
-                                  child: contributionStats.when(
-                                    data: (stats) => GalaxyContributionBanner(
-                                      isDarkMode: isDarkMode,
-                                      stats: stats,
-                                    ),
-                                    loading: () =>
-                                        const GalaxyContributionBanner.loading(
-                                      isDarkMode: isDarkMode,
-                                    ),
-                                    error: (_, __) => const SizedBox.shrink(),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      contributionStats.when(
+                                        data: (stats) =>
+                                            GalaxyContributionBanner(
+                                          isDarkMode: isDarkMode,
+                                          stats: stats,
+                                        ),
+                                        loading: () =>
+                                            const GalaxyContributionBanner
+                                                .loading(
+                                          isDarkMode: isDarkMode,
+                                        ),
+                                        error: (_, __) =>
+                                            const SizedBox.shrink(),
+                                      ),
+                                      if (showMasteryEmptyBanner) ...[
+                                        const SizedBox(height: 12),
+                                        _GalaxyMasteryEmptyBanner(
+                                          onAction: () => context.push(
+                                            TaskRoutes.taskCreate,
+                                          ),
+                                        ),
+                                      ],
+                                      if (draftPromptBatch != null) ...[
+                                        const SizedBox(height: 12),
+                                        _GalaxyDraftPromptCard(
+                                          batch: draftPromptBatch,
+                                          onReview: () => _openDraftReview(
+                                            batchId: draftPromptBatch.id,
+                                          ),
+                                          onDismiss: () => ref
+                                              .read(
+                                                galaxyDraftReviewProvider
+                                                    .notifier,
+                                              )
+                                              .dismissPrompt(
+                                                draftPromptBatch.id,
+                                              ),
+                                        ),
+                                      ],
+                                      if (showDraftPendingIndicator) ...[
+                                        const SizedBox(height: 12),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: _GalaxyDraftPendingIndicator(
+                                            batchCount: draftReviewState
+                                                .pendingBatchCount,
+                                            draftCount: draftReviewState
+                                                .pendingDraftCount,
+                                            onTap: _openDraftReview,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
-                                if (showMasteryEmptyBanner)
-                                  Positioned(
-                                    top: 132,
-                                    left: 16,
-                                    right: 16,
-                                    child: _GalaxyMasteryEmptyBanner(
-                                      onAction: () => context.push(
-                                        TaskRoutes.taskCreate,
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 18,
+                                  child: Center(
+                                    child: FloatingActionButton.extended(
+                                      heroTag: 'galaxy_add_study_material',
+                                      onPressed: uploadSession != null &&
+                                              !uploadSession.isTerminal
+                                          ? null
+                                          : _handleGalaxyCoreUploadRequested,
+                                      icon: const Icon(Icons.menu_book_rounded),
+                                      label: Text(
+                                        context.l10n.galaxyUploadFabLabel,
                                       ),
                                     ),
                                   ),
+                                ),
                                 Positioned(
                                   left: 16,
                                   bottom: 16,
@@ -2886,6 +3186,219 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ),
     );
   }
+}
+
+class _DraftArrivalCelebration {
+  const _DraftArrivalCelebration({
+    required this.id,
+    required this.labels,
+    required this.summary,
+  });
+
+  final String id;
+  final List<String> labels;
+  final String summary;
+}
+
+class _GalaxyDraftPromptCard extends StatelessWidget {
+  const _GalaxyDraftPromptCard({
+    required this.batch,
+    required this.onReview,
+    required this.onDismiss,
+  });
+
+  final GalaxyDraftBatch batch;
+  final VoidCallback onReview;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onReview,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              colors: <Color>[
+                Color(0xE6223658),
+                Color(0xE6142038),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.l10n.galaxyDraftReviewPromptTitle(
+                              batch.drafts.length,
+                              batch.documentName,
+                            ),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            context.l10n.galaxyDraftReviewPromptBody,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onDismiss,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.18),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: onDismiss,
+                        child: Text(context.l10n.galaxyDraftReviewLater),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF182238),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: onReview,
+                        icon: const Icon(Icons.swipe_rounded, size: 18),
+                        label: Text(context.l10n.galaxyDraftReviewNow),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GalaxyDraftPendingIndicator extends StatelessWidget {
+  const _GalaxyDraftPendingIndicator({
+    required this.batchCount,
+    required this.draftCount,
+    required this.onTap,
+  });
+
+  final int batchCount;
+  final int draftCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: const Color(0xD9101A2C),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: DS.warning,
+                      boxShadow: [
+                        BoxShadow(
+                          color: DS.warning.withValues(alpha: 0.5),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    context.l10n.galaxyDraftPendingIndicator(
+                      batchCount,
+                      draftCount,
+                    ),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _StatusPanel extends StatelessWidget {
@@ -3167,65 +3680,63 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
   final VoidCallback onAction;
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xE6101929),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.auto_awesome_outlined,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '还没有点亮掌握记录',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '先完成一个学习任务或复习一个知识点，星图才会开始出现真实掌握度。',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.72),
-                      fontSize: 12,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton(
-              onPressed: onAction,
-              child: const Text('去学习'),
-            ),
-          ],
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xE6101929),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
-      ),
-    );
-  }
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_outlined,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '还没有点亮掌握记录',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '先完成一个学习任务或复习一个知识点，星图才会开始出现真实掌握度。',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed: onAction,
+                child: const Text('去学习'),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 class _StatusLoader extends StatelessWidget {

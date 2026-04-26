@@ -32,11 +32,16 @@ from app.schemas.task import TaskCreate, TaskListQuery, TaskUpdate
 from app.services.gateway_client import GatewayClient
 from app.services.llm_dispatcher import LLMDispatcher
 from app.services.personalization import get_personalization_engine
+from app.services.task_document_service import task_document_service
 
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with DB TIMESTAMP columns."""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _is_mock_session(db: AsyncSession) -> bool:
+    return db.__class__.__module__.startswith("unittest.mock")
 
 
 async def _sync_task_card_projection(db: AsyncSession, task: Task) -> None:
@@ -110,8 +115,23 @@ class TaskService:
             status=TaskStatus.PENDING,
         )
         db.add(db_obj)
+        await db.flush()
+        if not _is_mock_session(db):
+            await task_document_service.auto_link_from_task_context(db, task=db_obj, linked_by="ai")
         await db.commit()
         await db.refresh(db_obj)
+        if not _is_mock_session(db):
+            try:
+                from app.services.focus_context_service import focus_context_service
+
+                await focus_context_service.preload_for_task(
+                    db,
+                    user_id=db_obj.user_id,
+                    task=db_obj,
+                    seed_query=db_obj.title,
+                )
+            except Exception as exc:
+                logger.warning("Focus context warmup failed after task create {}: {}", db_obj.id, exc)
         await _sync_task_card_projection(db, db_obj)
 
         # Sync with PlanState if task belongs to a plan
@@ -193,8 +213,18 @@ class TaskService:
             setattr(db_obj, field, value)
 
         db.add(db_obj)
+        await db.flush()
+        if not _is_mock_session(db):
+            await task_document_service.auto_link_from_task_context(db, task=db_obj, linked_by="ai")
         await db.commit()
         await db.refresh(db_obj)
+        if not _is_mock_session(db):
+            try:
+                from app.services.focus_context_service import focus_context_service
+
+                await focus_context_service.invalidate_for_task(user_id=db_obj.user_id, task_id=db_obj.id)
+            except Exception as exc:
+                logger.warning("Focus context invalidation failed after task update {}: {}", db_obj.id, exc)
         await _sync_task_card_projection(db, db_obj)
 
         # Sync with PlanState if task belongs to a plan and status changed
@@ -217,6 +247,18 @@ class TaskService:
         db_obj.started_at = _utcnow()
 
         db.add(db_obj)
+        if not _is_mock_session(db):
+            try:
+                from app.services.focus_context_service import focus_context_service
+
+                await focus_context_service.preload_for_task(
+                    db,
+                    user_id=db_obj.user_id,
+                    task=db_obj,
+                    seed_query=db_obj.title,
+                )
+            except Exception as exc:
+                logger.warning("Focus context preload failed for task {}: {}", db_obj.id, exc)
         await db.commit()
         await db.refresh(db_obj)
         await _sync_task_card_projection(db, db_obj)

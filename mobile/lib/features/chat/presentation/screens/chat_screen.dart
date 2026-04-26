@@ -38,8 +38,11 @@ import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
+import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
+import 'package:sparkle/features/documents/data/models/document_library_models.dart';
+import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/home_routes.dart';
@@ -1074,6 +1077,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           feedbackType,
                                         );
                                   },
+                                  onCitationFeedback:
+                                      (msg, citation, helpful) async {
+                                    ref
+                                        .read(chatProvider.notifier)
+                                        .sendCitationFeedback(
+                                          message: msg,
+                                          citation: citation,
+                                          helpful: helpful,
+                                        );
+                                  },
                                   onWidgetAction: (
                                     actionType,
                                     payload,
@@ -1624,6 +1637,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final showChatTransparencyCapsule =
         ref.watch(showChatTransparencyCapsuleProvider);
     final chatPureMode = ref.watch(chatPureModeProvider);
+    final documentLibraryState = ref.watch(documentLibraryProvider);
+    final readyStudyMaterialsCount =
+        (documentLibraryState.documents.valueOrNull ??
+                const <DocumentLibraryItem>[])
+            .where((doc) => doc.effectiveStatus == DocumentStatus.ready)
+            .length;
     final promptStarters = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
@@ -1759,6 +1778,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           ChatInput(
             enabled: !chatState.hasActiveRun,
+            studyMaterialsEnabled: chatState.documentRetrievalEnabled,
+            availableStudyMaterialsCount: readyStudyMaterialsCount,
+            onToggleStudyMaterials: () {
+              ref.read(chatProvider.notifier).setDocumentRetrievalEnabled(
+                    !chatState.documentRetrievalEnabled,
+                  );
+            },
+            onOpenStudyMaterials: () => _showStudyMaterialsSheet(
+              chatState.documentRetrievalEnabled,
+            ),
             onTextChanged: (text) {
               if (mounted) {
                 ref
@@ -1822,6 +1851,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _shouldDuckForReasoning(state) &&
       state.runPhase.isActive &&
       state.streamingContent.isEmpty;
+
+  void _showStudyMaterialsSheet(bool retrievalEnabled) {
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => StudyMaterialsSheet(
+          retrievalEnabled: retrievalEnabled,
+        ),
+      ),
+    );
+  }
 
   String _attachmentChipLabel(StoredFile file) {
     final statusText = _attachmentStatusText(file.status);

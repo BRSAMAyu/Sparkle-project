@@ -227,6 +227,12 @@ class ExamSprintIntakeService:
         )
         sprint_policy = self._as_dict(strategy.get("sprint_policy"))
         last_24h_mode = bool(sprint_policy.get("last_24h_mode"))
+        await self.planning_manager._refresh_study_material_context(
+            db=self.db,
+            user_id=user_id,
+            session=session,
+            strategy=strategy,
+        )
         last_24h_error_clusters = (
             await self.planning_manager._load_last_24h_error_clusters(
                 db=self.db,
@@ -287,7 +293,7 @@ class ExamSprintIntakeService:
                     obj_in=TaskCreate(
                         title=(
                             f"Day {day_spec['day']} · {self._strip(phase.get('label'))}"
-                            f" - {self._strip(day_spec.get('title_focus') or day_spec.get('task_kind') or '检索推进')}"
+                            f" - {self.planning_manager._task_title_focus(day_spec)}"
                         ),
                         type=coerce_task_type(_task_type_for_day_spec(day_spec)),
                         plan_id=plan.id,
@@ -344,11 +350,25 @@ class ExamSprintIntakeService:
                 subject=subject,
                 task_count=len(first_day_tasks) or 1,
             )
+        material_context = self._as_dict(session.collected.get("study_material_context"))
+        material_gaps = self.planning_manager._dedupe_text(
+            [
+                self._strip(self._as_dict(task.guide_json).get("material_gap"))
+                for task in created_tasks
+                if self._strip(self._as_dict(task.guide_json).get("material_gap"))
+            ],
+            limit=6,
+        )
         plan.source_metadata = {
             **self._as_dict(plan.source_metadata),
             "day_highlights": {
                 "day": 1,
                 "recommendation": recommendation,
+            },
+            "study_materials": {
+                "available_materials": list(material_context.get("available_materials") or []),
+                "documents": list(material_context.get("documents") or [])[:5],
+                "material_gaps": material_gaps,
             },
             "exam_sprint_intake": {
                 "selected_pack": selected_pack.model_dump(mode="json"),

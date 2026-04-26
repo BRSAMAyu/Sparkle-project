@@ -111,6 +111,7 @@ class SufficiencyChecker:
         user_message: str | None = None,
         use_llm_fallback: bool = False,
         tracking_key: str | None = None,
+        planning_material_context: dict[str, Any] | None = None,
     ) -> SufficiencyCheckResult:
         """
         检查是否有足够信息执行意图
@@ -179,6 +180,13 @@ class SufficiencyChecker:
                 result.status = SufficiencyStatus.NEED_CLARIFICATION
                 result.recommended_action = "ask"
                 result.clarification_text = await self._generate_clarification(intent, user_message)
+
+        if result.status == SufficiencyStatus.SUFFICIENT:
+            self._apply_planning_material_guardrail(
+                result=result,
+                intent=intent,
+                planning_material_context=planning_material_context,
+            )
 
         logger.debug(
             f"Sufficiency check: intent={intent}, status={result.status}, "
@@ -260,6 +268,48 @@ class SufficiencyChecker:
         result.recommended_action = "proceed"
         result.clarification_questions = []
         result.clarification_text = None
+
+    def _apply_planning_material_guardrail(
+        self,
+        *,
+        result: SufficiencyCheckResult,
+        intent: str,
+        planning_material_context: dict[str, Any] | None,
+    ) -> None:
+        if intent not in {"create_plan", "time_planning"}:
+            return
+        context = dict(planning_material_context or {})
+        if not context.get("enabled"):
+            return
+
+        material_gaps = [
+            str(item).strip()
+            for item in list(context.get("material_gaps") or [])
+            if str(item).strip()
+        ]
+        has_materials = bool(context.get("has_materials"))
+        subject = str(context.get("subject") or "").strip()
+
+        if not has_materials:
+            result.status = SufficiencyStatus.NEED_CLARIFICATION
+            result.recommended_action = "ask"
+            result.missing_fields.append("study_materials")
+            label = subject or "这次备考"
+            result.clarification_text = (
+                f"为了把计划锚到你已经上传的资料上，我还缺少 {label} 的学习材料。"
+                "如果你有教材、课件或讲义，可以先上传，我就能按具体章节帮你排 7 天计划。"
+            )
+            return
+
+        if material_gaps:
+            result.status = SufficiencyStatus.NEED_CLARIFICATION
+            result.recommended_action = "ask"
+            result.missing_fields.append("study_material_coverage")
+            top_gap = material_gaps[0]
+            result.clarification_text = (
+                f"我可以先继续规划，但资料覆盖还有一个明显缺口：{top_gap} "
+                "如果你有对应讲义、课件或笔记，上传后我能把计划排得更完整。"
+            )
 
     def _has_field_value(self, field: str, entities: dict[str, Any]) -> bool:
         """检查字段是否有有效值"""
