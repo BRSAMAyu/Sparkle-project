@@ -20355,6 +20355,1376 @@ abstract class AppLocalizations {
   /// **'{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务'**
   String planDetailPhaseStats(
       int progress, int completed, int occurrences, int tasks);
+
+  /// No description provided for @theaterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识推演剧场'**
+  String get theaterTitle;
+
+  /// No description provided for @theaterContinuityBanner.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。'**
+  String get theaterContinuityBanner;
+
+  /// No description provided for @theaterShareTopic.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演主题：{topic}'**
+  String theaterShareTopic(Object topic);
+
+  /// No description provided for @theaterShareMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'我刚在 Sparkle 推演了一条学习路径：{topic}\n{route}\n{suggestion}'**
+  String theaterShareMessage(Object route, Object suggestion, Object topic);
+
+  /// No description provided for @theaterShareSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'先把关键节点和风险看清楚，再决定怎么学。'**
+  String get theaterShareSuggestion;
+
+  /// No description provided for @theaterRecordActualTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录 7 天后的真实表现'**
+  String get theaterRecordActualTitle;
+
+  /// No description provided for @theaterRecordActualDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'回填真实完成率和掌握度后，剧场会给你一份预测校准反馈。'**
+  String get theaterRecordActualDesc;
+
+  /// No description provided for @theaterActualCompletionRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'真实完成率'**
+  String get theaterActualCompletionRate;
+
+  /// No description provided for @theaterActualMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'真实掌握度'**
+  String get theaterActualMastery;
+
+  /// No description provided for @theaterSubmitCalibration.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交校准'**
+  String get theaterSubmitCalibration;
+
+  /// No description provided for @theaterNodeDescriptionFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个节点是当前推演中的关键知识点。'**
+  String get theaterNodeDescriptionFallback;
+
+  /// No description provided for @theaterNodeCurrentMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前掌握度'**
+  String get theaterNodeCurrentMastery;
+
+  /// No description provided for @theaterNodePredictedMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测掌握度'**
+  String get theaterNodePredictedMastery;
+
+  /// No description provided for @theaterNodeDelta.
+  ///
+  /// In zh, this message translates to:
+  /// **'变化'**
+  String get theaterNodeDelta;
+
+  /// No description provided for @theaterNodeRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险'**
+  String get theaterNodeRisk;
+
+  /// No description provided for @theaterNodeRoleInPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'它在当前路径里的作用'**
+  String get theaterNodeRoleInPath;
+
+  /// No description provided for @theaterNodeStepLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{dayLabel} · 第 {index} 步'**
+  String theaterNodeStepLabel(Object dayLabel, Object index);
+
+  /// No description provided for @theaterNodeNextAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步动作：先用约 {minutes} 分钟处理这个节点，再进入后续步骤。'**
+  String theaterNodeNextAction(Object minutes);
+
+  /// No description provided for @theaterWhatIfStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始假设推演'**
+  String get theaterWhatIfStart;
+
+  /// No description provided for @theaterViewGalaxyRef.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看星图参考'**
+  String get theaterViewGalaxyRef;
+
+  /// No description provided for @theaterNodeNotInWhatIfPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。'**
+  String get theaterNodeNotInWhatIfPath;
+
+  /// No description provided for @theaterNodeNoGalaxyRef.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。'**
+  String get theaterNodeNoGalaxyRef;
+
+  /// No description provided for @theaterPromoteNodeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入知识星图失败，请稍后再试。'**
+  String get theaterPromoteNodeFailed;
+
+  /// No description provided for @theaterPromoteNodeCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将「{nodeName}」加入知识星图，可以继续完善节点内容。'**
+  String theaterPromoteNodeCreated(Object nodeName);
+
+  /// No description provided for @theaterPromoteNodeFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'已定位到知识星图中的「{nodeName}」，你可以继续完善节点内容。'**
+  String theaterPromoteNodeFound(Object nodeName);
+
+  /// No description provided for @theaterGoImprove.
+  ///
+  /// In zh, this message translates to:
+  /// **'去完善'**
+  String get theaterGoImprove;
+
+  /// No description provided for @theaterEdgeStrength.
+  ///
+  /// In zh, this message translates to:
+  /// **'关系强度 {strength}%'**
+  String theaterEdgeStrength(Object strength);
+
+  /// No description provided for @theaterRiskHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高风险'**
+  String get theaterRiskHigh;
+
+  /// No description provided for @theaterRiskMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中风险'**
+  String get theaterRiskMedium;
+
+  /// No description provided for @theaterRiskLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低风险'**
+  String get theaterRiskLow;
+
+  /// No description provided for @theaterRelationPrerequisite.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置依赖'**
+  String get theaterRelationPrerequisite;
+
+  /// No description provided for @theaterRelationExplains.
+  ///
+  /// In zh, this message translates to:
+  /// **'解释关系'**
+  String get theaterRelationExplains;
+
+  /// No description provided for @theaterRelationSupports.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持关系'**
+  String get theaterRelationSupports;
+
+  /// No description provided for @theaterRelationContradicts.
+  ///
+  /// In zh, this message translates to:
+  /// **'矛盾关系'**
+  String get theaterRelationContradicts;
+
+  /// No description provided for @theaterSelectedNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选节点 · {nodeName}'**
+  String theaterSelectedNode(Object nodeName);
+
+  /// No description provided for @theaterNodeTapHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击节点可查看详细推演说明。'**
+  String get theaterNodeTapHint;
+
+  /// No description provided for @theaterNodeStatCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前'**
+  String get theaterNodeStatCurrent;
+
+  /// No description provided for @theaterNodeStatPredicted.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测'**
+  String get theaterNodeStatPredicted;
+
+  /// No description provided for @theaterNodeStatLift.
+  ///
+  /// In zh, this message translates to:
+  /// **'提升'**
+  String get theaterNodeStatLift;
+
+  /// No description provided for @theaterNodeStatSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get theaterNodeStatSource;
+
+  /// No description provided for @theaterComposerEyebrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演决策面板'**
+  String get theaterComposerEyebrow;
+
+  /// No description provided for @theaterComposerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先定目标，再看清多条路径'**
+  String get theaterComposerTitle;
+
+  /// No description provided for @theaterComposerSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先确定想推进的目标，再比较切入方式、主要风险和每日投入，最后决定要不要采纳这条路径。'**
+  String get theaterComposerSubtitle;
+
+  /// No description provided for @theaterComposerCurrentTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前目标'**
+  String get theaterComposerCurrentTarget;
+
+  /// No description provided for @theaterComposerWaitingInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待输入'**
+  String get theaterComposerWaitingInput;
+
+  /// No description provided for @theaterComposerRecommendedEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐切入'**
+  String get theaterComposerRecommendedEntry;
+
+  /// No description provided for @theaterComposerInputPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入后即可开始'**
+  String get theaterComposerInputPrompt;
+
+  /// No description provided for @theaterComposerOutput.
+  ///
+  /// In zh, this message translates to:
+  /// **'输出结果'**
+  String get theaterComposerOutput;
+
+  /// No description provided for @theaterComposerOutputDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'路径 + 风险 + 检查点'**
+  String get theaterComposerOutputDesc;
+
+  /// No description provided for @theaterComposerLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演中...'**
+  String get theaterComposerLoading;
+
+  /// No description provided for @theaterComposerStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始推演'**
+  String get theaterComposerStart;
+
+  /// No description provided for @theaterComposerTrySuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试 {topic}'**
+  String theaterComposerTrySuggestion(Object topic);
+
+  /// No description provided for @theaterComposerHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：两周内掌握线性代数的特征值部分'**
+  String get theaterComposerHint;
+
+  /// No description provided for @theaterComposerGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成'**
+  String get theaterComposerGenerating;
+
+  /// No description provided for @theaterTopBarAdjustTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整目标'**
+  String get theaterTopBarAdjustTarget;
+
+  /// No description provided for @theaterTopBarShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享推演'**
+  String get theaterTopBarShare;
+
+  /// No description provided for @theaterTopBarNoGalaxyRef.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有可打开的知识星图参考节点'**
+  String get theaterTopBarNoGalaxyRef;
+
+  /// No description provided for @theaterTopBarViewGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看知识星图'**
+  String get theaterTopBarViewGalaxy;
+
+  /// No description provided for @theaterTopBarTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标 · {name}'**
+  String theaterTopBarTarget(Object name);
+
+  /// No description provided for @theaterTopBarPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'路径 · {title}'**
+  String theaterTopBarPath(Object title);
+
+  /// No description provided for @theaterTopBarMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'模式 · {mode}'**
+  String theaterTopBarMode(Object mode);
+
+  /// No description provided for @theaterTopBarRefMap.
+  ///
+  /// In zh, this message translates to:
+  /// **'参考映射 {count}'**
+  String theaterTopBarRefMap(Object count);
+
+  /// No description provided for @theaterTopBarFreeForm.
+  ///
+  /// In zh, this message translates to:
+  /// **'纯自由推演'**
+  String get theaterTopBarFreeForm;
+
+  /// No description provided for @theaterTopBarMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度 {value}%'**
+  String theaterTopBarMastery(Object value);
+
+  /// No description provided for @theaterSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整推演目标'**
+  String get theaterSettingsTitle;
+
+  /// No description provided for @theaterSettingsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里可以重新设定目标和建议起点，收起后会把舞台空间完整还给关系图谱与讨论流。'**
+  String get theaterSettingsSubtitle;
+
+  /// No description provided for @theaterSettingsContinuity.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次推演仍然承接你刚才的对话上下文。'**
+  String get theaterSettingsContinuity;
+
+  /// No description provided for @theaterSettingsCurrentTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前目标：{name}'**
+  String theaterSettingsCurrentTarget(Object name);
+
+  /// No description provided for @theaterSettingsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新设定推演目标'**
+  String get theaterSettingsLabel;
+
+  /// No description provided for @theaterSettingsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：两周内掌握线性代数的特征值部分'**
+  String get theaterSettingsHint;
+
+  /// No description provided for @theaterSettingsGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成新推演'**
+  String get theaterSettingsGenerate;
+
+  /// No description provided for @theaterSettingsSuggestions.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议起点'**
+  String get theaterSettingsSuggestions;
+
+  /// No description provided for @theaterTabGraph.
+  ///
+  /// In zh, this message translates to:
+  /// **'图谱'**
+  String get theaterTabGraph;
+
+  /// No description provided for @theaterTabPaths.
+  ///
+  /// In zh, this message translates to:
+  /// **'路径'**
+  String get theaterTabPaths;
+
+  /// No description provided for @theaterTabDiscussion.
+  ///
+  /// In zh, this message translates to:
+  /// **'讨论'**
+  String get theaterTabDiscussion;
+
+  /// No description provided for @theaterTabCalibration.
+  ///
+  /// In zh, this message translates to:
+  /// **'校准'**
+  String get theaterTabCalibration;
+
+  /// No description provided for @theaterIntroChangeTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'换个目标'**
+  String get theaterIntroChangeTarget;
+
+  /// No description provided for @theaterIntroTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选一个目标，AI 帮你看清多条路径'**
+  String get theaterIntroTitle;
+
+  /// No description provided for @theaterIntroSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'1. 选择一个目标\n2. AI 推演多条学习路径\n3. 采纳最适合你的方案并同步到 Sprint'**
+  String get theaterIntroSteps;
+
+  /// No description provided for @theaterIntroStartFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始第一次推演'**
+  String get theaterIntroStartFirst;
+
+  /// No description provided for @theaterIntroLastSnapshot.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近一次推演'**
+  String get theaterIntroLastSnapshot;
+
+  /// No description provided for @theaterIntroSuggestions.
+  ///
+  /// In zh, this message translates to:
+  /// **'从这些主题开始更顺手'**
+  String get theaterIntroSuggestions;
+
+  /// No description provided for @theaterEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次还没生成可采纳路径'**
+  String get theaterEmptyTitle;
+
+  /// No description provided for @theaterEmptyMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。'**
+  String get theaterEmptyMessage;
+
+  /// No description provided for @theaterGraphRecommended.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐路径 · {title}'**
+  String theaterGraphRecommended(Object title);
+
+  /// No description provided for @theaterGraphEstimatedMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计掌握 {value}%'**
+  String theaterGraphEstimatedMastery(Object value);
+
+  /// No description provided for @theaterGraphRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险 · {risk}'**
+  String theaterGraphRisk(Object risk);
+
+  /// No description provided for @theaterGraphMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'模式 · {mode}'**
+  String theaterGraphMode(Object mode);
+
+  /// No description provided for @theaterGraphRefCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'映射参考 {count}'**
+  String theaterGraphRefCount(Object count);
+
+  /// No description provided for @theaterGraphPendingEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'候选待入图'**
+  String get theaterGraphPendingEntry;
+
+  /// No description provided for @theaterGraphNodeCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个节点'**
+  String theaterGraphNodeCount(Object count);
+
+  /// No description provided for @theaterGraphMainStage.
+  ///
+  /// In zh, this message translates to:
+  /// **'关系图谱主舞台'**
+  String get theaterGraphMainStage;
+
+  /// No description provided for @theaterGraphWithGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'含星图参考'**
+  String get theaterGraphWithGalaxy;
+
+  /// No description provided for @theaterGraphStandalone.
+  ///
+  /// In zh, this message translates to:
+  /// **'独立自由图谱'**
+  String get theaterGraphStandalone;
+
+  /// No description provided for @theaterGraphInstructions.
+  ///
+  /// In zh, this message translates to:
+  /// **'单指拖动画布，双指缩放，双击可回正，点按节点可查看详情并加入知识星图。'**
+  String get theaterGraphInstructions;
+
+  /// No description provided for @theaterCalibrationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'校准与落地'**
+  String get theaterCalibrationTitle;
+
+  /// No description provided for @theaterCalibrationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把推演变成计划、快照和真实反馈，形成闭环。'**
+  String get theaterCalibrationSubtitle;
+
+  /// No description provided for @theaterRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get theaterRetry;
+
+  /// No description provided for @theaterGotIt.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get theaterGotIt;
+
+  /// No description provided for @theaterSemanticMatchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'自由节点与星图参考'**
+  String get theaterSemanticMatchTitle;
+
+  /// No description provided for @theaterSemanticMatchItem.
+  ///
+  /// In zh, this message translates to:
+  /// **'{freeform} 对应参考 {galaxy}'**
+  String theaterSemanticMatchItem(Object freeform, Object galaxy);
+
+  /// No description provided for @theaterLoadingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 正在搭建这场推演...'**
+  String get theaterLoadingTitle;
+
+  /// No description provided for @theaterLoadingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'图谱、路径和风险判断会按阶段依次完成，你可以先看它推进到哪一步了。'**
+  String get theaterLoadingSubtitle;
+
+  /// No description provided for @theaterStageBuildGraph.
+  ///
+  /// In zh, this message translates to:
+  /// **'构建知识图谱'**
+  String get theaterStageBuildGraph;
+
+  /// No description provided for @theaterStageAnalyzePaths.
+  ///
+  /// In zh, this message translates to:
+  /// **'分析学习路径'**
+  String get theaterStageAnalyzePaths;
+
+  /// No description provided for @theaterStageGenerateRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成风险预测'**
+  String get theaterStageGenerateRisk;
+
+  /// No description provided for @theaterStagePrepare.
+  ///
+  /// In zh, this message translates to:
+  /// **'准备推演完成'**
+  String get theaterStagePrepare;
+
+  /// No description provided for @theaterTimelineTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演时间轴'**
+  String get theaterTimelineTitle;
+
+  /// No description provided for @theaterTimelineSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。'**
+  String get theaterTimelineSubtitle;
+
+  /// No description provided for @theaterTimelinePause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停播放'**
+  String get theaterTimelinePause;
+
+  /// No description provided for @theaterTimelineAutoPlay.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动播放'**
+  String get theaterTimelineAutoPlay;
+
+  /// No description provided for @theaterTimelineReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到起点'**
+  String get theaterTimelineReset;
+
+  /// No description provided for @theaterTimelineCurrentPhase.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前阶段'**
+  String get theaterTimelineCurrentPhase;
+
+  /// No description provided for @theaterTimelineWaitingPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待路径生成'**
+  String get theaterTimelineWaitingPath;
+
+  /// No description provided for @theaterTimelineBaseline.
+  ///
+  /// In zh, this message translates to:
+  /// **'基线预测'**
+  String get theaterTimelineBaseline;
+
+  /// No description provided for @theaterTimelineDiscussionHere.
+  ///
+  /// In zh, this message translates to:
+  /// **'讲到这里'**
+  String get theaterTimelineDiscussionHere;
+
+  /// No description provided for @theaterTimelineMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前预测掌握度'**
+  String get theaterTimelineMastery;
+
+  /// No description provided for @theaterTimelineCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前预测完成率'**
+  String get theaterTimelineCompletion;
+
+  /// No description provided for @theaterTimelinePhaseWithSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前阶段：{label} · {step} · {compare}'**
+  String theaterTimelinePhaseWithSteps(
+      Object compare, Object label, Object step);
+
+  /// No description provided for @theaterTimelineWaitingDeduction.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待推演'**
+  String get theaterTimelineWaitingDeduction;
+
+  /// No description provided for @theaterRouteList.
+  ///
+  /// In zh, this message translates to:
+  /// **'列表'**
+  String get theaterRouteList;
+
+  /// No description provided for @theaterRouteCompare.
+  ///
+  /// In zh, this message translates to:
+  /// **'对比'**
+  String get theaterRouteCompare;
+
+  /// No description provided for @theaterRouteComparisonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'路径对比'**
+  String get theaterRouteComparisonTitle;
+
+  /// No description provided for @theaterRouteAdoptedPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'已创建计划：{planName}'**
+  String theaterRouteAdoptedPlan(Object planName);
+
+  /// No description provided for @theaterRouteFirstWeekTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'首周任务：{tasks}'**
+  String theaterRouteFirstWeekTasks(Object tasks);
+
+  /// No description provided for @theaterRouteRiskControllable.
+  ///
+  /// In zh, this message translates to:
+  /// **'整体可控'**
+  String get theaterRouteRiskControllable;
+
+  /// No description provided for @theaterRouteRiskPacing.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要留意节奏'**
+  String get theaterRouteRiskPacing;
+
+  /// No description provided for @theaterRouteEstimatedRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'预估 {low}-{high}%'**
+  String theaterRouteEstimatedRange(Object high, Object low);
+
+  /// No description provided for @theaterRouteDataQualityLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'参考估算'**
+  String get theaterRouteDataQualityLow;
+
+  /// No description provided for @theaterRouteDataQualityMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于有限数据'**
+  String get theaterRouteDataQualityMedium;
+
+  /// No description provided for @theaterRouteDataQualityHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据充分度 {score}%'**
+  String theaterRouteDataQualityHigh(Object score);
+
+  /// No description provided for @theaterRouteDataQualityFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据参考'**
+  String get theaterRouteDataQualityFallback;
+
+  /// No description provided for @theaterRouteDataNoteLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前缺少该主题的真实学习记录，建议把区间估算当作参考，而不是精确预测。'**
+  String get theaterRouteDataNoteLow;
+
+  /// No description provided for @theaterRouteDataNoteMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前只覆盖到部分图谱与校准数据，百分比判断仍需要继续观察。'**
+  String get theaterRouteDataNoteMedium;
+
+  /// No description provided for @theaterRouteModeAnchored.
+  ///
+  /// In zh, this message translates to:
+  /// **'图谱锚定'**
+  String get theaterRouteModeAnchored;
+
+  /// No description provided for @theaterRouteModeHybrid.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能混合'**
+  String get theaterRouteModeHybrid;
+
+  /// No description provided for @theaterRouteModeFree.
+  ///
+  /// In zh, this message translates to:
+  /// **'自由推演'**
+  String get theaterRouteModeFree;
+
+  /// No description provided for @theaterRouteModeDeducing.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演中'**
+  String get theaterRouteModeDeducing;
+
+  /// No description provided for @theaterNodeGalaxySyncing.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步中...'**
+  String get theaterNodeGalaxySyncing;
+
+  /// No description provided for @theaterNodeOpenGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开知识星图'**
+  String get theaterNodeOpenGalaxy;
+
+  /// No description provided for @theaterNodeAddToGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入知识星图'**
+  String get theaterNodeAddToGalaxy;
+
+  /// No description provided for @theaterNodeSourceExplicit.
+  ///
+  /// In zh, this message translates to:
+  /// **'星图节点'**
+  String get theaterNodeSourceExplicit;
+
+  /// No description provided for @theaterNodeSourceHybrid.
+  ///
+  /// In zh, this message translates to:
+  /// **'参考映射'**
+  String get theaterNodeSourceHybrid;
+
+  /// No description provided for @theaterNodeSourcePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'候选节点'**
+  String get theaterNodeSourcePending;
+
+  /// No description provided for @theaterNodeSourceFree.
+  ///
+  /// In zh, this message translates to:
+  /// **'自由节点'**
+  String get theaterNodeSourceFree;
+
+  /// No description provided for @theaterNodeBannerOpenGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。'**
+  String get theaterNodeBannerOpenGalaxy;
+
+  /// No description provided for @theaterNodeBannerHasMapping.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。'**
+  String get theaterNodeBannerHasMapping;
+
+  /// No description provided for @theaterNodeBannerFreeform.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。'**
+  String get theaterNodeBannerFreeform;
+
+  /// No description provided for @theaterRouteRecommended.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐'**
+  String get theaterRouteRecommended;
+
+  /// No description provided for @theaterRouteAdopting.
+  ///
+  /// In zh, this message translates to:
+  /// **'采纳中'**
+  String get theaterRouteAdopting;
+
+  /// No description provided for @theaterRouteAdopt.
+  ///
+  /// In zh, this message translates to:
+  /// **'采纳此路径'**
+  String get theaterRouteAdopt;
+
+  /// No description provided for @theaterRouteSimulate.
+  ///
+  /// In zh, this message translates to:
+  /// **'带去模拟'**
+  String get theaterRouteSimulate;
+
+  /// No description provided for @theaterRouteCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成率 {value}'**
+  String theaterRouteCompletion(Object value);
+
+  /// No description provided for @theaterRouteMasteryLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度 {value}'**
+  String theaterRouteMasteryLabel(Object value);
+
+  /// No description provided for @theaterRouteDailyMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'日均 {minutes} 分钟'**
+  String theaterRouteDailyMinutes(Object minutes);
+
+  /// No description provided for @theaterRouteRiskCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个风险点'**
+  String theaterRouteRiskCount(Object count);
+
+  /// No description provided for @theaterRouteScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'综合 {score} 分'**
+  String theaterRouteScore(Object score);
+
+  /// No description provided for @theaterRouteRangePrediction.
+  ///
+  /// In zh, this message translates to:
+  /// **'区间预测：完成率 {completionLow}%-{completionHigh}%， 掌握度 {masteryLow}%-{masteryHigh}%'**
+  String theaterRouteRangePrediction(Object completionHigh,
+      Object completionLow, Object masteryHigh, Object masteryLow);
+
+  /// No description provided for @theaterRouteRecommendedBaseline.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐基线'**
+  String get theaterRouteRecommendedBaseline;
+
+  /// No description provided for @theaterRouteCompletionRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成率'**
+  String get theaterRouteCompletionRate;
+
+  /// No description provided for @theaterRouteMasteryRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度'**
+  String get theaterRouteMasteryRate;
+
+  /// No description provided for @theaterRouteDailyTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'日均时间'**
+  String get theaterRouteDailyTime;
+
+  /// No description provided for @theaterRouteRiskLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险数'**
+  String get theaterRouteRiskLevel;
+
+  /// No description provided for @theaterRouteOverallScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'综合分'**
+  String get theaterRouteOverallScore;
+
+  /// No description provided for @theaterRouteDataNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据说明'**
+  String get theaterRouteDataNote;
+
+  /// No description provided for @theaterRouteCompletionRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成率区间 {low}%-{high}%'**
+  String theaterRouteCompletionRange(Object high, Object low);
+
+  /// No description provided for @theaterRouteMasteryRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度区间 {low}%-{high}%'**
+  String theaterRouteMasteryRange(Object high, Object low);
+
+  /// No description provided for @theaterRouteSimulateFromCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'带去模拟'**
+  String get theaterRouteSimulateFromCurrent;
+
+  /// No description provided for @theaterRouteSimulateAfterSwitch.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换后模拟'**
+  String get theaterRouteSimulateAfterSwitch;
+
+  /// No description provided for @theaterRouteSwitchToThis.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换到此路径'**
+  String get theaterRouteSwitchToThis;
+
+  /// No description provided for @theaterRouteStepMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{dayLabel} · {minutes} 分钟'**
+  String theaterRouteStepMinutes(Object dayLabel, Object minutes);
+
+  /// No description provided for @theaterDismissTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭提示'**
+  String get theaterDismissTooltip;
+
+  /// No description provided for @theaterCompactComparisonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'路径对比'**
+  String get theaterCompactComparisonTitle;
+
+  /// No description provided for @theaterCompactComparisonSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'对照路径：{summary}'**
+  String theaterCompactComparisonSummary(Object summary);
+
+  /// No description provided for @theaterCompactComparisonCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前 · {title}'**
+  String theaterCompactComparisonCurrent(Object title);
+
+  /// No description provided for @theaterCompactComparisonMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握 {value}%'**
+  String theaterCompactComparisonMastery(Object value);
+
+  /// No description provided for @theaterCompactComparisonTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间 {minutes} 分/天'**
+  String theaterCompactComparisonTime(Object minutes);
+
+  /// No description provided for @theaterCompactComparisonAlt.
+  ///
+  /// In zh, this message translates to:
+  /// **'对照 · {title}'**
+  String theaterCompactComparisonAlt(Object title);
+
+  /// No description provided for @theaterCompactOpenDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入路径页细比'**
+  String get theaterCompactOpenDetail;
+
+  /// No description provided for @theaterCompactFallbackSingle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先聚焦 {name}。'**
+  String theaterCompactFallbackSingle(Object name);
+
+  /// No description provided for @theaterCompactFallbackMulti.
+  ///
+  /// In zh, this message translates to:
+  /// **'先补 {first}，再推进 {last}。'**
+  String theaterCompactFallbackMulti(Object first, Object last);
+
+  /// No description provided for @theaterComparisonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'路径对比'**
+  String get theaterComparisonTitle;
+
+  /// No description provided for @theaterComparisonSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把当前方案和另一条代表性路径放在一起比较，更容易判断该走稳一点还是快一点。'**
+  String get theaterComparisonSubtitle;
+
+  /// No description provided for @theaterComparisonMetric.
+  ///
+  /// In zh, this message translates to:
+  /// **'指标'**
+  String get theaterComparisonMetric;
+
+  /// No description provided for @theaterComparisonEstimatedMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计掌握度'**
+  String get theaterComparisonEstimatedMastery;
+
+  /// No description provided for @theaterComparisonTimeInvestment.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间投入'**
+  String get theaterComparisonTimeInvestment;
+
+  /// No description provided for @theaterComparisonRiskLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险等级'**
+  String get theaterComparisonRiskLevel;
+
+  /// No description provided for @theaterComparisonRiskLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低'**
+  String get theaterComparisonRiskLow;
+
+  /// No description provided for @theaterComparisonRiskMediumHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'中高'**
+  String get theaterComparisonRiskMediumHigh;
+
+  /// No description provided for @theaterComparisonRiskMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中'**
+  String get theaterComparisonRiskMedium;
+
+  /// No description provided for @theaterBranchDeltaTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'假设分支对比'**
+  String get theaterBranchDeltaTitle;
+
+  /// No description provided for @theaterBranchDeltaPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'分支路径'**
+  String get theaterBranchDeltaPath;
+
+  /// No description provided for @theaterBranchDeltaWhatIf.
+  ///
+  /// In zh, this message translates to:
+  /// **'假设推演'**
+  String get theaterBranchDeltaWhatIf;
+
+  /// No description provided for @theaterWhatIfTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'What-if 沙盘'**
+  String get theaterWhatIfTitle;
+
+  /// No description provided for @theaterWhatIfSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'点选想跳过的节点，先看预计影响，再生成完整推演结果。'**
+  String get theaterWhatIfSubtitle;
+
+  /// No description provided for @theaterWhatIfPreviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计影响预览'**
+  String get theaterWhatIfPreviewTitle;
+
+  /// No description provided for @theaterWhatIfPreviewMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度'**
+  String get theaterWhatIfPreviewMastery;
+
+  /// No description provided for @theaterWhatIfPreviewCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成率'**
+  String get theaterWhatIfPreviewCompletion;
+
+  /// No description provided for @theaterWhatIfNoNodesSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有标记跳过节点，保持原始路径。'**
+  String get theaterWhatIfNoNodesSelected;
+
+  /// No description provided for @theaterWhatIfNodesSkipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'你已标记跳过 {nodes}。'**
+  String theaterWhatIfNodesSkipped(Object nodes);
+
+  /// No description provided for @theaterWhatIfSelectFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选择一个节点'**
+  String get theaterWhatIfSelectFirst;
+
+  /// No description provided for @theaterWhatIfGenerateFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成完整假设推演结果'**
+  String get theaterWhatIfGenerateFull;
+
+  /// No description provided for @theaterWhatIfOriginal.
+  ///
+  /// In zh, this message translates to:
+  /// **'原始 {original}'**
+  String theaterWhatIfOriginal(Object original);
+
+  /// No description provided for @theaterWhatIfAdjusted.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整后 {adjusted}'**
+  String theaterWhatIfAdjusted(Object adjusted);
+
+  /// No description provided for @theaterWhatIfRemainingPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'分支剩余路径：{path}'**
+  String theaterWhatIfRemainingPath(Object path);
+
+  /// No description provided for @theaterDiscussionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家圆桌'**
+  String get theaterDiscussionTitle;
+
+  /// No description provided for @theaterSnapshotSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存中'**
+  String get theaterSnapshotSaving;
+
+  /// No description provided for @theaterSnapshotSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存当前快照'**
+  String get theaterSnapshotSave;
+
+  /// No description provided for @theaterSnapshotTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存当前快照'**
+  String get theaterSnapshotTitle;
+
+  /// No description provided for @theaterSnapshotNoSnapshot.
+  ///
+  /// In zh, this message translates to:
+  /// **'把当前推演保存下来，稍后可以继续回看。'**
+  String get theaterSnapshotNoSnapshot;
+
+  /// No description provided for @theaterSnapshotSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存：{title}'**
+  String theaterSnapshotSaved(Object title);
+
+  /// No description provided for @theaterAccuracyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测校准'**
+  String get theaterAccuracyTitle;
+
+  /// No description provided for @theaterAccuracyWithinRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次真实结果落在预测区间内，当前模型区间覆盖命中。'**
+  String get theaterAccuracyWithinRange;
+
+  /// No description provided for @theaterAccuracyOutsideRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。'**
+  String get theaterAccuracyOutsideRange;
+
+  /// No description provided for @theaterAccuracyDueDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议回填日期：{date}'**
+  String theaterAccuracyDueDate(Object date);
+
+  /// No description provided for @theaterAccuracyRecordActual.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录实际表现'**
+  String get theaterAccuracyRecordActual;
+
+  /// No description provided for @theaterAccuracySampleCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'样本 {count}'**
+  String theaterAccuracySampleCount(Object count);
+
+  /// No description provided for @theaterAccuracyAvgScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'平均准确度 {score}%'**
+  String theaterAccuracyAvgScore(Object score);
+
+  /// No description provided for @theaterAccuracyConfidenceScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据充分度 {score}%'**
+  String theaterAccuracyConfidenceScore(Object score);
+
+  /// No description provided for @theaterAccuracyCoverageRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'区间命中 {rate}%'**
+  String theaterAccuracyCoverageRate(Object rate);
+
+  /// No description provided for @theaterAccuracyScoreNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据充分度反映当前预测所依据的数据量和校准次数，不是预测准确度。'**
+  String get theaterAccuracyScoreNote;
+
+  /// No description provided for @theaterAccuracyNoSamples.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有历史回填样本，当前预测会优先展示区间而不是绝对值。'**
+  String get theaterAccuracyNoSamples;
+
+  /// No description provided for @theaterAccuracyHistoryBias.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史偏差：完成率 {completionBias}%， 掌握度 {masteryBias}%。'**
+  String theaterAccuracyHistoryBias(Object completionBias, Object masteryBias);
+
+  /// No description provided for @theaterAdoptionSynced.
+  ///
+  /// In zh, this message translates to:
+  /// **'已同步到你的 Sprint'**
+  String get theaterAdoptionSynced;
+
+  /// No description provided for @theaterAdoptionFirstWeekTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'首周任务'**
+  String get theaterAdoptionFirstWeekTasks;
+
+  /// No description provided for @theaterAdoptionCheckpoints.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查点：{dates}'**
+  String theaterAdoptionCheckpoints(Object dates);
+
+  /// No description provided for @theaterAdoptionViewPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看计划'**
+  String get theaterAdoptionViewPlan;
+
+  /// No description provided for @theaterAdoptionContinueExploring.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续探索'**
+  String get theaterAdoptionContinueExploring;
 }
 
 class _AppLocalizationsDelegate

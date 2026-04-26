@@ -396,7 +396,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       appBar: AppBar(
         title: Text(
           _isEditMode
-              ? '编辑${_selectedType == PlanType.growth ? '成长计划' : '冲刺计划'}'
+              ? (_selectedType == PlanType.growth
+                  ? l10n.planCreateEditingGrowth
+                  : l10n.planCreateEditingSprint)
               : (_selectedType == PlanType.growth
                   ? l10n.createGrowthPlan
                   : l10n.createSprintPlan),
@@ -441,7 +443,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                                     ? Icons.check_rounded
                                     : Icons.arrow_forward,
                               ),
-                        label: isLast ? (_isEditMode ? '保存计划' : '创建计划') : '下一步',
+                        label: isLast ? (_isEditMode ? l10n.planCreateSavePlan : l10n.planCreateAction) : l10n.commonNext,
                         expand: true,
                       ),
                     ),
@@ -454,7 +456,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                                   () => _currentStep =
                                       (_currentStep - 1).clamp(0, 4),
                                 ),
-                        label: _currentStep == 0 ? '取消' : '上一步',
+                        label: _currentStep == 0 ? l10n.commonCancel : l10n.commonPrevious,
                         expand: true,
                       ),
                     ),
@@ -464,7 +466,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
             },
             steps: [
               Step(
-                title: const Text('计划定位'),
+                title: Text(l10n.planCreateStepPositioning),
                 isActive: _currentStep >= 0,
                 state:
                     _currentStep > 0 ? StepState.complete : StepState.indexed,
@@ -487,7 +489,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                 ),
               ),
               Step(
-                title: const Text('时间结构'),
+                title: Text(l10n.planCreateStepTimeStructure),
                 isActive: _currentStep >= 1,
                 state:
                     _currentStep > 1 ? StepState.complete : StepState.indexed,
@@ -511,7 +513,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                 ),
               ),
               Step(
-                title: const Text('任务编排'),
+                title: Text(l10n.planCreateStepTaskBlueprint),
                 isActive: _currentStep >= 2,
                 state:
                     _currentStep > 2 ? StepState.complete : StepState.indexed,
@@ -524,7 +526,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                 ),
               ),
               Step(
-                title: const Text('计划边界与指南'),
+                title: Text(l10n.planCreateStepBoundariesGuide),
                 isActive: _currentStep >= 3,
                 state:
                     _currentStep > 3 ? StepState.complete : StepState.indexed,
@@ -543,13 +545,13 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                       ClipboardData(text: _aiGuidePreview.trim()),
                     );
                     if (!context.mounted) return;
-                    AppFeedback.success(context, 'AI 版本已复制');
+                    AppFeedback.success(context, l10n.planCreateAiGuideCopied);
                   },
                   onGenerateGuide: _generateGuide,
                 ),
               ),
               Step(
-                title: const Text('确认预览'),
+                title: Text(l10n.planCreateStepReviewConfirm),
                 isActive: _currentStep >= 4,
                 content: _PlanReviewStep(
                   draft: draft,
@@ -628,21 +630,21 @@ class _PlanBasicsStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '先定义这是一张真正的计划卡，而不是普通任务。',
+            l10n.planCreateBasicsSubtitle,
             style: DS.bodyMedium.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing16),
           SegmentedButton<PlanType>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: PlanType.sprint,
-                label: Text('冲刺计划'),
-                icon: Icon(Icons.flash_on_rounded),
+                label: Text(l10n.planTypeSprint),
+                icon: const Icon(Icons.flash_on_rounded),
               ),
               ButtonSegment(
                 value: PlanType.growth,
-                label: Text('成长计划'),
-                icon: Icon(Icons.trending_up_rounded),
+                label: Text(l10n.planTypeGrowth),
+                icon: const Icon(Icons.trending_up_rounded),
               ),
             ],
             selected: {selectedType},
@@ -651,21 +653,21 @@ class _PlanBasicsStep extends StatelessWidget {
           const SizedBox(height: DS.spacing16),
           TextFormField(
             controller: nameController,
-            decoration: const InputDecoration(
-              labelText: '计划名称',
-              hintText: '例如：6 周英语口语提升 / 期中冲刺收束',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.planNameLabel,
+              hintText: l10n.planCreateNameHint,
+              border: const OutlineInputBorder(),
             ),
             validator: (value) =>
-                (value == null || value.trim().isEmpty) ? '请先填写计划名称' : null,
+                (value == null || value.trim().isEmpty) ? l10n.planNameRequired : null,
           ),
           const SizedBox(height: DS.spacing16),
           TextFormField(
             controller: subjectController,
-            decoration: const InputDecoration(
-              labelText: '主题方向',
-              hintText: '英语、Flutter、考研数学、论文阅读...',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.planCreateSubjectLabel,
+              hintText: l10n.planCreateSubjectHint,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: DS.spacing16),

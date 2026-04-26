@@ -11504,4 +11504,807 @@ class AppLocalizationsEn extends AppLocalizations {
       int progress, int completed, int occurrences, int tasks) {
     return '$progress% · $completed/$occurrences occurrences · $tasks tasks';
   }
+
+  @override
+  String get theaterTitle => '知识推演剧场';
+
+  @override
+  String get theaterContinuityBanner =>
+      '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。';
+
+  @override
+  String theaterShareTopic(Object topic) {
+    return '推演主题：$topic';
+  }
+
+  @override
+  String theaterShareMessage(Object route, Object suggestion, Object topic) {
+    return '我刚在 Sparkle 推演了一条学习路径：$topic\n$route\n$suggestion';
+  }
+
+  @override
+  String get theaterShareSuggestion => '先把关键节点和风险看清楚，再决定怎么学。';
+
+  @override
+  String get theaterRecordActualTitle => '记录 7 天后的真实表现';
+
+  @override
+  String get theaterRecordActualDesc => '回填真实完成率和掌握度后，剧场会给你一份预测校准反馈。';
+
+  @override
+  String get theaterActualCompletionRate => '真实完成率';
+
+  @override
+  String get theaterActualMastery => '真实掌握度';
+
+  @override
+  String get theaterSubmitCalibration => '提交校准';
+
+  @override
+  String get theaterNodeDescriptionFallback => '这个节点是当前推演中的关键知识点。';
+
+  @override
+  String get theaterNodeCurrentMastery => '当前掌握度';
+
+  @override
+  String get theaterNodePredictedMastery => '预测掌握度';
+
+  @override
+  String get theaterNodeDelta => '变化';
+
+  @override
+  String get theaterNodeRisk => '风险';
+
+  @override
+  String get theaterNodeRoleInPath => '它在当前路径里的作用';
+
+  @override
+  String theaterNodeStepLabel(Object dayLabel, Object index) {
+    return '$dayLabel · 第 $index 步';
+  }
+
+  @override
+  String theaterNodeNextAction(Object minutes) {
+    return '下一步动作：先用约 $minutes 分钟处理这个节点，再进入后续步骤。';
+  }
+
+  @override
+  String get theaterWhatIfStart => '开始假设推演';
+
+  @override
+  String get theaterViewGalaxyRef => '查看星图参考';
+
+  @override
+  String get theaterNodeNotInWhatIfPath => '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。';
+
+  @override
+  String get theaterNodeNoGalaxyRef => '这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。';
+
+  @override
+  String get theaterPromoteNodeFailed => '加入知识星图失败，请稍后再试。';
+
+  @override
+  String theaterPromoteNodeCreated(Object nodeName) {
+    return '已将「$nodeName」加入知识星图，可以继续完善节点内容。';
+  }
+
+  @override
+  String theaterPromoteNodeFound(Object nodeName) {
+    return '已定位到知识星图中的「$nodeName」，你可以继续完善节点内容。';
+  }
+
+  @override
+  String get theaterGoImprove => '去完善';
+
+  @override
+  String theaterEdgeStrength(Object strength) {
+    return '关系强度 $strength%';
+  }
+
+  @override
+  String get theaterRiskHigh => '高风险';
+
+  @override
+  String get theaterRiskMedium => '中风险';
+
+  @override
+  String get theaterRiskLow => '低风险';
+
+  @override
+  String get theaterRelationPrerequisite => '前置依赖';
+
+  @override
+  String get theaterRelationExplains => '解释关系';
+
+  @override
+  String get theaterRelationSupports => '支持关系';
+
+  @override
+  String get theaterRelationContradicts => '矛盾关系';
+
+  @override
+  String theaterSelectedNode(Object nodeName) {
+    return '已选节点 · $nodeName';
+  }
+
+  @override
+  String get theaterNodeTapHint => '点击节点可查看详细推演说明。';
+
+  @override
+  String get theaterNodeStatCurrent => '当前';
+
+  @override
+  String get theaterNodeStatPredicted => '预测';
+
+  @override
+  String get theaterNodeStatLift => '提升';
+
+  @override
+  String get theaterNodeStatSource => '来源';
+
+  @override
+  String get theaterComposerEyebrow => '推演决策面板';
+
+  @override
+  String get theaterComposerTitle => '先定目标，再看清多条路径';
+
+  @override
+  String get theaterComposerSubtitle =>
+      '先确定想推进的目标，再比较切入方式、主要风险和每日投入，最后决定要不要采纳这条路径。';
+
+  @override
+  String get theaterComposerCurrentTarget => '当前目标';
+
+  @override
+  String get theaterComposerWaitingInput => '等待输入';
+
+  @override
+  String get theaterComposerRecommendedEntry => '推荐切入';
+
+  @override
+  String get theaterComposerInputPrompt => '输入后即可开始';
+
+  @override
+  String get theaterComposerOutput => '输出结果';
+
+  @override
+  String get theaterComposerOutputDesc => '路径 + 风险 + 检查点';
+
+  @override
+  String get theaterComposerLoading => '推演中...';
+
+  @override
+  String get theaterComposerStart => '开始推演';
+
+  @override
+  String theaterComposerTrySuggestion(Object topic) {
+    return '试试 $topic';
+  }
+
+  @override
+  String get theaterComposerHint => '例如：两周内掌握线性代数的特征值部分';
+
+  @override
+  String get theaterComposerGenerating => '生成';
+
+  @override
+  String get theaterTopBarAdjustTarget => '调整目标';
+
+  @override
+  String get theaterTopBarShare => '分享推演';
+
+  @override
+  String get theaterTopBarNoGalaxyRef => '当前没有可打开的知识星图参考节点';
+
+  @override
+  String get theaterTopBarViewGalaxy => '查看知识星图';
+
+  @override
+  String theaterTopBarTarget(Object name) {
+    return '目标 · $name';
+  }
+
+  @override
+  String theaterTopBarPath(Object title) {
+    return '路径 · $title';
+  }
+
+  @override
+  String theaterTopBarMode(Object mode) {
+    return '模式 · $mode';
+  }
+
+  @override
+  String theaterTopBarRefMap(Object count) {
+    return '参考映射 $count';
+  }
+
+  @override
+  String get theaterTopBarFreeForm => '纯自由推演';
+
+  @override
+  String theaterTopBarMastery(Object value) {
+    return '掌握度 $value%';
+  }
+
+  @override
+  String get theaterSettingsTitle => '调整推演目标';
+
+  @override
+  String get theaterSettingsSubtitle =>
+      '这里可以重新设定目标和建议起点，收起后会把舞台空间完整还给关系图谱与讨论流。';
+
+  @override
+  String get theaterSettingsContinuity => '这次推演仍然承接你刚才的对话上下文。';
+
+  @override
+  String theaterSettingsCurrentTarget(Object name) {
+    return '当前目标：$name';
+  }
+
+  @override
+  String get theaterSettingsLabel => '重新设定推演目标';
+
+  @override
+  String get theaterSettingsHint => '例如：两周内掌握线性代数的特征值部分';
+
+  @override
+  String get theaterSettingsGenerate => '生成新推演';
+
+  @override
+  String get theaterSettingsSuggestions => '建议起点';
+
+  @override
+  String get theaterTabGraph => '图谱';
+
+  @override
+  String get theaterTabPaths => '路径';
+
+  @override
+  String get theaterTabDiscussion => '讨论';
+
+  @override
+  String get theaterTabCalibration => '校准';
+
+  @override
+  String get theaterIntroChangeTarget => '换个目标';
+
+  @override
+  String get theaterIntroTitle => '选一个目标，AI 帮你看清多条路径';
+
+  @override
+  String get theaterIntroSteps =>
+      '1. 选择一个目标\n2. AI 推演多条学习路径\n3. 采纳最适合你的方案并同步到 Sprint';
+
+  @override
+  String get theaterIntroStartFirst => '开始第一次推演';
+
+  @override
+  String get theaterIntroLastSnapshot => '最近一次推演';
+
+  @override
+  String get theaterIntroSuggestions => '从这些主题开始更顺手';
+
+  @override
+  String get theaterEmptyTitle => '这次还没生成可采纳路径';
+
+  @override
+  String get theaterEmptyMessage =>
+      '系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。';
+
+  @override
+  String theaterGraphRecommended(Object title) {
+    return '推荐路径 · $title';
+  }
+
+  @override
+  String theaterGraphEstimatedMastery(Object value) {
+    return '预计掌握 $value%';
+  }
+
+  @override
+  String theaterGraphRisk(Object risk) {
+    return '风险 · $risk';
+  }
+
+  @override
+  String theaterGraphMode(Object mode) {
+    return '模式 · $mode';
+  }
+
+  @override
+  String theaterGraphRefCount(Object count) {
+    return '映射参考 $count';
+  }
+
+  @override
+  String get theaterGraphPendingEntry => '候选待入图';
+
+  @override
+  String theaterGraphNodeCount(Object count) {
+    return '$count 个节点';
+  }
+
+  @override
+  String get theaterGraphMainStage => '关系图谱主舞台';
+
+  @override
+  String get theaterGraphWithGalaxy => '含星图参考';
+
+  @override
+  String get theaterGraphStandalone => '独立自由图谱';
+
+  @override
+  String get theaterGraphInstructions => '单指拖动画布，双指缩放，双击可回正，点按节点可查看详情并加入知识星图。';
+
+  @override
+  String get theaterCalibrationTitle => '校准与落地';
+
+  @override
+  String get theaterCalibrationSubtitle => '把推演变成计划、快照和真实反馈，形成闭环。';
+
+  @override
+  String get theaterRetry => '重试';
+
+  @override
+  String get theaterGotIt => '知道了';
+
+  @override
+  String get theaterSemanticMatchTitle => '自由节点与星图参考';
+
+  @override
+  String theaterSemanticMatchItem(Object freeform, Object galaxy) {
+    return '$freeform 对应参考 $galaxy';
+  }
+
+  @override
+  String get theaterLoadingTitle => 'AI 正在搭建这场推演...';
+
+  @override
+  String get theaterLoadingSubtitle => '图谱、路径和风险判断会按阶段依次完成，你可以先看它推进到哪一步了。';
+
+  @override
+  String get theaterStageBuildGraph => '构建知识图谱';
+
+  @override
+  String get theaterStageAnalyzePaths => '分析学习路径';
+
+  @override
+  String get theaterStageGenerateRisk => '生成风险预测';
+
+  @override
+  String get theaterStagePrepare => '准备推演完成';
+
+  @override
+  String get theaterTimelineTitle => '推演时间轴';
+
+  @override
+  String get theaterTimelineSubtitle => '现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。';
+
+  @override
+  String get theaterTimelinePause => '暂停播放';
+
+  @override
+  String get theaterTimelineAutoPlay => '自动播放';
+
+  @override
+  String get theaterTimelineReset => '回到起点';
+
+  @override
+  String get theaterTimelineCurrentPhase => '当前阶段';
+
+  @override
+  String get theaterTimelineWaitingPath => '等待路径生成';
+
+  @override
+  String get theaterTimelineBaseline => '基线预测';
+
+  @override
+  String get theaterTimelineDiscussionHere => '讲到这里';
+
+  @override
+  String get theaterTimelineMastery => '当前预测掌握度';
+
+  @override
+  String get theaterTimelineCompletion => '当前预测完成率';
+
+  @override
+  String theaterTimelinePhaseWithSteps(
+      Object compare, Object label, Object step) {
+    return '当前阶段：$label · $step · $compare';
+  }
+
+  @override
+  String get theaterTimelineWaitingDeduction => '等待推演';
+
+  @override
+  String get theaterRouteList => '列表';
+
+  @override
+  String get theaterRouteCompare => '对比';
+
+  @override
+  String get theaterRouteComparisonTitle => '路径对比';
+
+  @override
+  String theaterRouteAdoptedPlan(Object planName) {
+    return '已创建计划：$planName';
+  }
+
+  @override
+  String theaterRouteFirstWeekTasks(Object tasks) {
+    return '首周任务：$tasks';
+  }
+
+  @override
+  String get theaterRouteRiskControllable => '整体可控';
+
+  @override
+  String get theaterRouteRiskPacing => '需要留意节奏';
+
+  @override
+  String theaterRouteEstimatedRange(Object high, Object low) {
+    return '预估 $low-$high%';
+  }
+
+  @override
+  String get theaterRouteDataQualityLow => '参考估算';
+
+  @override
+  String get theaterRouteDataQualityMedium => '基于有限数据';
+
+  @override
+  String theaterRouteDataQualityHigh(Object score) {
+    return '数据充分度 $score%';
+  }
+
+  @override
+  String get theaterRouteDataQualityFallback => '数据参考';
+
+  @override
+  String get theaterRouteDataNoteLow => '当前缺少该主题的真实学习记录，建议把区间估算当作参考，而不是精确预测。';
+
+  @override
+  String get theaterRouteDataNoteMedium => '当前只覆盖到部分图谱与校准数据，百分比判断仍需要继续观察。';
+
+  @override
+  String get theaterRouteModeAnchored => '图谱锚定';
+
+  @override
+  String get theaterRouteModeHybrid => '智能混合';
+
+  @override
+  String get theaterRouteModeFree => '自由推演';
+
+  @override
+  String get theaterRouteModeDeducing => '推演中';
+
+  @override
+  String get theaterNodeGalaxySyncing => '同步中...';
+
+  @override
+  String get theaterNodeOpenGalaxy => '打开知识星图';
+
+  @override
+  String get theaterNodeAddToGalaxy => '加入知识星图';
+
+  @override
+  String get theaterNodeSourceExplicit => '星图节点';
+
+  @override
+  String get theaterNodeSourceHybrid => '参考映射';
+
+  @override
+  String get theaterNodeSourcePending => '候选节点';
+
+  @override
+  String get theaterNodeSourceFree => '自由节点';
+
+  @override
+  String get theaterNodeBannerOpenGalaxy => '这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。';
+
+  @override
+  String get theaterNodeBannerHasMapping =>
+      '这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。';
+
+  @override
+  String get theaterNodeBannerFreeform => '这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。';
+
+  @override
+  String get theaterRouteRecommended => '推荐';
+
+  @override
+  String get theaterRouteAdopting => '采纳中';
+
+  @override
+  String get theaterRouteAdopt => '采纳此路径';
+
+  @override
+  String get theaterRouteSimulate => '带去模拟';
+
+  @override
+  String theaterRouteCompletion(Object value) {
+    return '完成率 $value';
+  }
+
+  @override
+  String theaterRouteMasteryLabel(Object value) {
+    return '掌握度 $value';
+  }
+
+  @override
+  String theaterRouteDailyMinutes(Object minutes) {
+    return '日均 $minutes 分钟';
+  }
+
+  @override
+  String theaterRouteRiskCount(Object count) {
+    return '$count 个风险点';
+  }
+
+  @override
+  String theaterRouteScore(Object score) {
+    return '综合 $score 分';
+  }
+
+  @override
+  String theaterRouteRangePrediction(Object completionHigh,
+      Object completionLow, Object masteryHigh, Object masteryLow) {
+    return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
+  }
+
+  @override
+  String get theaterRouteRecommendedBaseline => '推荐基线';
+
+  @override
+  String get theaterRouteCompletionRate => '完成率';
+
+  @override
+  String get theaterRouteMasteryRate => '掌握度';
+
+  @override
+  String get theaterRouteDailyTime => '日均时间';
+
+  @override
+  String get theaterRouteRiskLevel => '风险数';
+
+  @override
+  String get theaterRouteOverallScore => '综合分';
+
+  @override
+  String get theaterRouteDataNote => '数据说明';
+
+  @override
+  String theaterRouteCompletionRange(Object high, Object low) {
+    return '完成率区间 $low%-$high%';
+  }
+
+  @override
+  String theaterRouteMasteryRange(Object high, Object low) {
+    return '掌握度区间 $low%-$high%';
+  }
+
+  @override
+  String get theaterRouteSimulateFromCurrent => '带去模拟';
+
+  @override
+  String get theaterRouteSimulateAfterSwitch => '切换后模拟';
+
+  @override
+  String get theaterRouteSwitchToThis => '切换到此路径';
+
+  @override
+  String theaterRouteStepMinutes(Object dayLabel, Object minutes) {
+    return '$dayLabel · $minutes 分钟';
+  }
+
+  @override
+  String get theaterDismissTooltip => '关闭提示';
+
+  @override
+  String get theaterCompactComparisonTitle => '路径对比';
+
+  @override
+  String theaterCompactComparisonSummary(Object summary) {
+    return '对照路径：$summary';
+  }
+
+  @override
+  String theaterCompactComparisonCurrent(Object title) {
+    return '当前 · $title';
+  }
+
+  @override
+  String theaterCompactComparisonMastery(Object value) {
+    return '掌握 $value%';
+  }
+
+  @override
+  String theaterCompactComparisonTime(Object minutes) {
+    return '时间 $minutes 分/天';
+  }
+
+  @override
+  String theaterCompactComparisonAlt(Object title) {
+    return '对照 · $title';
+  }
+
+  @override
+  String get theaterCompactOpenDetail => '进入路径页细比';
+
+  @override
+  String theaterCompactFallbackSingle(Object name) {
+    return '先聚焦 $name。';
+  }
+
+  @override
+  String theaterCompactFallbackMulti(Object first, Object last) {
+    return '先补 $first，再推进 $last。';
+  }
+
+  @override
+  String get theaterComparisonTitle => '路径对比';
+
+  @override
+  String get theaterComparisonSubtitle =>
+      '把当前方案和另一条代表性路径放在一起比较，更容易判断该走稳一点还是快一点。';
+
+  @override
+  String get theaterComparisonMetric => '指标';
+
+  @override
+  String get theaterComparisonEstimatedMastery => '预计掌握度';
+
+  @override
+  String get theaterComparisonTimeInvestment => '时间投入';
+
+  @override
+  String get theaterComparisonRiskLevel => '风险等级';
+
+  @override
+  String get theaterComparisonRiskLow => '低';
+
+  @override
+  String get theaterComparisonRiskMediumHigh => '中高';
+
+  @override
+  String get theaterComparisonRiskMedium => '中';
+
+  @override
+  String get theaterBranchDeltaTitle => '假设分支对比';
+
+  @override
+  String get theaterBranchDeltaPath => '分支路径';
+
+  @override
+  String get theaterBranchDeltaWhatIf => '假设推演';
+
+  @override
+  String get theaterWhatIfTitle => 'What-if 沙盘';
+
+  @override
+  String get theaterWhatIfSubtitle => '点选想跳过的节点，先看预计影响，再生成完整推演结果。';
+
+  @override
+  String get theaterWhatIfPreviewTitle => '预计影响预览';
+
+  @override
+  String get theaterWhatIfPreviewMastery => '掌握度';
+
+  @override
+  String get theaterWhatIfPreviewCompletion => '完成率';
+
+  @override
+  String get theaterWhatIfNoNodesSelected => '当前没有标记跳过节点，保持原始路径。';
+
+  @override
+  String theaterWhatIfNodesSkipped(Object nodes) {
+    return '你已标记跳过 $nodes。';
+  }
+
+  @override
+  String get theaterWhatIfSelectFirst => '先选择一个节点';
+
+  @override
+  String get theaterWhatIfGenerateFull => '生成完整假设推演结果';
+
+  @override
+  String theaterWhatIfOriginal(Object original) {
+    return '原始 $original';
+  }
+
+  @override
+  String theaterWhatIfAdjusted(Object adjusted) {
+    return '调整后 $adjusted';
+  }
+
+  @override
+  String theaterWhatIfRemainingPath(Object path) {
+    return '分支剩余路径：$path';
+  }
+
+  @override
+  String get theaterDiscussionTitle => '专家圆桌';
+
+  @override
+  String get theaterSnapshotSaving => '保存中';
+
+  @override
+  String get theaterSnapshotSave => '保存当前快照';
+
+  @override
+  String get theaterSnapshotTitle => '保存当前快照';
+
+  @override
+  String get theaterSnapshotNoSnapshot => '把当前推演保存下来，稍后可以继续回看。';
+
+  @override
+  String theaterSnapshotSaved(Object title) {
+    return '已保存：$title';
+  }
+
+  @override
+  String get theaterAccuracyTitle => '预测校准';
+
+  @override
+  String get theaterAccuracyWithinRange => '这次真实结果落在预测区间内，当前模型区间覆盖命中。';
+
+  @override
+  String get theaterAccuracyOutsideRange => '这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。';
+
+  @override
+  String theaterAccuracyDueDate(Object date) {
+    return '建议回填日期：$date';
+  }
+
+  @override
+  String get theaterAccuracyRecordActual => '记录实际表现';
+
+  @override
+  String theaterAccuracySampleCount(Object count) {
+    return '样本 $count';
+  }
+
+  @override
+  String theaterAccuracyAvgScore(Object score) {
+    return '平均准确度 $score%';
+  }
+
+  @override
+  String theaterAccuracyConfidenceScore(Object score) {
+    return '数据充分度 $score%';
+  }
+
+  @override
+  String theaterAccuracyCoverageRate(Object rate) {
+    return '区间命中 $rate%';
+  }
+
+  @override
+  String get theaterAccuracyScoreNote => '数据充分度反映当前预测所依据的数据量和校准次数，不是预测准确度。';
+
+  @override
+  String get theaterAccuracyNoSamples => '还没有历史回填样本，当前预测会优先展示区间而不是绝对值。';
+
+  @override
+  String theaterAccuracyHistoryBias(Object completionBias, Object masteryBias) {
+    return '历史偏差：完成率 $completionBias%， 掌握度 $masteryBias%。';
+  }
+
+  @override
+  String get theaterAdoptionSynced => '已同步到你的 Sprint';
+
+  @override
+  String get theaterAdoptionFirstWeekTasks => '首周任务';
+
+  @override
+  String theaterAdoptionCheckpoints(Object dates) {
+    return '检查点：$dates';
+  }
+
+  @override
+  String get theaterAdoptionViewPlan => '查看计划';
+
+  @override
+  String get theaterAdoptionContinueExploring => '继续探索';
 }

@@ -247,7 +247,7 @@ class _KnowledgeTheaterScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('知识推演剧场'),
+        title: Text(context.l10n.theaterTitle),
         actions: [
           IconButton(
             onPressed: prediction == null
@@ -310,8 +310,7 @@ class _KnowledgeTheaterScreenState
                             sourceChatSessionId:
                                 widget.initialSourceChatSessionId!.trim(),
                             kind: ChatContinuityKind.journey,
-                            subtitle:
-                                '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。',
+                            subtitle: context.l10n.theaterContinuityBanner,
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -372,8 +371,7 @@ class _KnowledgeTheaterScreenState
                                   sourceChatSessionId:
                                       widget.initialSourceChatSessionId!.trim(),
                                   kind: ChatContinuityKind.journey,
-                                  subtitle:
-                                      '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。',
+                                  subtitle: context.l10n.theaterContinuityBanner,
                                 ),
                                 const SizedBox(height: 12),
                               ],
@@ -584,7 +582,7 @@ class _KnowledgeTheaterScreenState
         resourceId: shareRoute?.id ?? shareNode?.id ?? prediction.predictionId,
         title: shareRoute?.title ?? shareNode?.name ?? prediction.targetName,
         subtitle: shareRoute?.summary ?? prediction.topic,
-        description: '推演主题：${prediction.topic}',
+        description: context.l10n.theaterShareTopic(prediction.topic),
         metadata: <String, dynamic>{
           'progress':
               ((shareRoute?.estimatedCompletionRate ?? 0.72) * 100).round(),
@@ -596,7 +594,7 @@ class _KnowledgeTheaterScreenState
           'connections': prediction.graphEdges.length,
         },
         shareMessage:
-            '我刚在 Sparkle 推演了一条学习路径：${prediction.topic}\n${shareRoute?.title ?? prediction.targetName}\n${shareRoute?.summary ?? '先把关键节点和风险看清楚，再决定怎么学。'}',
+            context.l10n.theaterShareMessage(prediction.topic, shareRoute?.title ?? prediction.targetName, shareRoute?.summary ?? context.l10n.theaterShareSuggestion),
       ),
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
