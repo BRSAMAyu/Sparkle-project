@@ -108,6 +108,18 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.POST("/vocabulary", h.ProxyToBackend)
 		galaxy.POST("/nodes/viewport", h.ProxyToBackend)
 		galaxy.POST("/nodes/positions", h.ProxyToBackend)
+		// Document-node integration (knowledge library)
+		galaxy.GET("/drafts", h.ProxyToBackend)
+		galaxy.GET("/documents/:file_id/suggested-nodes", h.ProxyToBackend)
+		galaxy.POST("/documents/:file_id/review-nodes", h.ProxyToBackend)
+		galaxy.POST("/documents/:file_id/approve-all", h.ProxyToBackend)
+		galaxy.POST("/nodes/:id/documents", h.ProxyToBackend)
+		galaxy.POST("/node/:id/documents", h.ProxyToBackend)
+		galaxy.DELETE("/nodes/:id/documents/:file_id", h.ProxyToBackend)
+		galaxy.DELETE("/node/:id/documents/:file_id", h.ProxyToBackend)
+		galaxy.POST("/documents/:file_id/move", h.ProxyToBackend)
+		galaxy.GET("/nodes/:id/chunks", h.ProxyToBackend)
+		galaxy.GET("/node/:id/chunks", h.ProxyToBackend)
 		if rateLimit != nil {
 			galaxy.GET("/events", rateLimit, h.ProxyToBackend) // SSE stream for real-time galaxy updates
 			galaxy.POST("/sync", rateLimit, h.ProxyToBackend)
