@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-242/242 tests passing:
+248/248 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -195,6 +195,7 @@
 - Decision Realization Metrics: 8 tests (6 standalone + 2 integration)
 - P4 Production directive consumption: 12 tests (3 prompt + 4 plan + 1 model-write + 1 retrieval + 1 retrieval-pipeline + 1 UX + 1 notification)
 - P5 Causal Audit Timeline API: 8 tests (3 timeline CRUD + 1 timeline format + 1 state packet + 1 empty state + 1 metrics + 1 directive-by-id)
+- E2E 7-Day Exam Sprint Acceptance: 6 tests (Day 0 rescue + Day 1-2 timeout + Day 3-4 error strategy + full causal trace + user correction + momentum stalled)
 
 ---
 
