@@ -448,7 +448,6 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     _setExpansion(_AuroraExpansion.collapsed);
     unawaited(showAuroraCoreSession(
       context: context,
-      ref: ref,
       bandStatus: snapshot.overallStatus,
       wakeReasons: wake.wakeReasons,
       conversationId: widget.conversationId,

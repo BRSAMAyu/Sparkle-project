@@ -30,7 +30,6 @@ final _telemetryServiceProvider = Provider<AuroraTelemetryService>((ref) {
 /// - Session exit with calibration result summary
 Future<void> showAuroraCoreSession({
   required BuildContext context,
-  required WidgetRef ref,
   required String bandStatus,
   required List<String> wakeReasons,
   String? conversationId,
