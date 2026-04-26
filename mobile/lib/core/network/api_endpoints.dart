@@ -196,6 +196,7 @@ class ApiEndpoints {
   static const String auroraCalibrationCards = '/aurora/calibration-cards';
   static String auroraCalibrationCardRespond(String id) =>
       '/aurora/calibration-cards/$id/respond';
+  static const String auroraControlSurface = '/aurora/control-surface';
   static const String auroraModelingStatus = '/aurora/modeling-status';
 
   // Galaxy

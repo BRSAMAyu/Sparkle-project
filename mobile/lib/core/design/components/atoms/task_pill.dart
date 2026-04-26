@@ -70,7 +70,8 @@ class TaskPill extends StatelessWidget {
     } else {
       // Use task type-based colors
       final taskColors = TaskColors(
-          brightness: SparkleContext(context).sparkleColors.brightness,);
+        brightness: SparkleContext(context).sparkleColors.brightness,
+      );
       background = taskColors.getTint(type);
       border = taskColors.getBorder(type);
       textColor = taskColors.getLabel(type);
@@ -94,9 +95,14 @@ class TaskPill extends StatelessWidget {
             Icon(icon, size: dense ? 14 : 16, color: iconColor),
             SizedBox(width: context.space.xs),
           ],
-          Text(
-            label,
-            style: context.typo.labelSmall.copyWith(color: textColor),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: context.typo.labelSmall.copyWith(color: textColor),
+            ),
           ),
         ],
       ),

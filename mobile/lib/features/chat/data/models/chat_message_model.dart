@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:uuid/uuid.dart';
 
@@ -582,8 +583,20 @@ List<Map<String, dynamic>>? _reasoningStepsToJson(List<ReasoningStep>? steps) {
 class WidgetPayload {
   WidgetPayload({required this.type, required this.data});
 
-  factory WidgetPayload.fromJson(Map<String, dynamic> json) =>
-      _$WidgetPayloadFromJson(json);
+  factory WidgetPayload.fromJson(Map<String, dynamic> json) => WidgetPayload(
+        type: sanitizeNullableDisplayText(json['type']) ?? 'unknown',
+        data: json['data'] is Map<String, dynamic>
+            ? sanitizeTextMap(
+                Map<String, dynamic>.from(json['data'] as Map<String, dynamic>),
+              )
+            : json['data'] is Map
+                ? sanitizeTextMap(
+                    Map<String, dynamic>.from(
+                      json['data'] as Map<Object?, Object?>,
+                    ),
+                  )
+                : const <String, dynamic>{},
+      );
   final String
       type; // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'
   final Map<String, dynamic> data;

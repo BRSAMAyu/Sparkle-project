@@ -357,11 +357,11 @@ class _RecommendationFeedbackSheetState
   Widget build(BuildContext context) {
     final subjectName = widget.user?.displayName ?? widget.group?.name ?? context.l10n.recommendationThisItem;
     final issueOptions = widget.itemType == RecommendationItemType.friend
-        ? const ['not_similar', 'not_complementary', 'not_proactive', 'too_much_pressure', 'not_familiar']
-        : const ['inaccurate_tags', 'too_quiet', 'too_crowded', 'mediocre_vibe', 'unsuitable_threshold'];
+        ? ['not_similar', 'not_complementary', 'not_proactive', 'too_much_pressure', 'not_familiar']
+        : ['inaccurate_tags', 'too_quiet', 'too_crowded', 'mediocre_vibe', 'unsuitable_threshold'];
     final strengthOptions = widget.itemType == RecommendationItemType.friend
-        ? const ['great_fit', 'complementary', 'reliable', 'clear_reason']
-        : const ['interest_match', 'great_vibe', 'active_fit', 'clear_reason'];
+        ? ['great_fit', 'complementary', 'reliable', 'clear_reason']
+        : ['interest_match', 'great_vibe', 'active_fit', 'clear_reason'];
 
     return Padding(
       padding: EdgeInsets.only(

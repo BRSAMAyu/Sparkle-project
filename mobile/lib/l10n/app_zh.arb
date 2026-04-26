@@ -3027,6 +3027,177 @@
       }
     }
   },
+  "studyMaterialsTitle": "学习资料库",
+  "studyMaterialsEntrySubtitle": "查看上传资料、处理进度，并管理知识来源",
+  "studyMaterialsHeroEyebrow": "个人知识资料馆",
+  "studyMaterialsHeroTitle": "把每一次上传都变成可调用的学习上下文",
+  "studyMaterialsHeroSubtitle": "统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。",
+  "studyMaterialsMetricDocs": "资料数",
+  "studyMaterialsMetricReady": "已就绪",
+  "studyMaterialsMetricInMotion": "处理中",
+  "studyMaterialsMetricWeeklyRefs": "周引用",
+  "studyMaterialsSearchHint": "搜索文件名、知识节点或引用片段",
+  "studyMaterialsFilterTitle": "筛选",
+  "studyMaterialsFilterAllStatus": "全部状态",
+  "studyMaterialsFilterHighlyCited": "高引用",
+  "studyMaterialsFilterAllSubjects": "全部学域",
+  "studyMaterialsFilterNode": "当前节点：{nodeName}",
+  "@studyMaterialsFilterNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsFilterClearNode": "清除节点筛选",
+  "studyMaterialsDate": "时间",
+  "studyMaterialsDateAll": "不限时间",
+  "studyMaterialsDate7d": "近 7 天",
+  "studyMaterialsDate30d": "近 30 天",
+  "studyMaterialsDate90d": "近 90 天",
+  "studyMaterialsLoadError": "暂时无法加载学习资料。",
+  "studyMaterialsRefreshCta": "重新加载",
+  "studyMaterialsUploadCta": "上传学习资料",
+  "studyMaterialsUploadCtaShort": "上传",
+  "studyMaterialsUploadSuccess": "上传已开始，我们会很快把它映射进你的知识星图。",
+  "studyMaterialsDeleteTitle": "删除这份学习资料？",
+  "studyMaterialsDeleteMessage": "要从资料库中删除 {filename} 吗？这会将它从你的个人资料中移除。",
+  "@studyMaterialsDeleteMessage": {
+    "placeholders": {
+      "filename": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsDeleteSuccess": "学习资料已删除",
+  "studyMaterialsDeleteFailure": "删除学习资料失败：{error}",
+  "@studyMaterialsDeleteFailure": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareSheetTitle": "分享到群组",
+  "studyMaterialsShareGroupSubtitle": "{count} 位成员",
+  "@studyMaterialsShareGroupSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareEmptyGroups": "请先加入或创建群组，再分享学习资料。",
+  "studyMaterialsShareLoadGroupsError": "暂时无法加载你的群组列表。",
+  "studyMaterialsShareSuccess": "已分享到 {groupName}",
+  "@studyMaterialsShareSuccess": {
+    "placeholders": {
+      "groupName": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareFailure": "分享学习资料失败：{error}",
+  "@studyMaterialsShareFailure": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsVisibilityGroup": "群组可见",
+  "studyMaterialsVisibilityPrivate": "仅自己可见",
+  "studyMaterialsAttachedNodesTitle": "挂载的知识星点",
+  "studyMaterialsNodesPending": "这份资料还在映射到你的知识星图节点中。",
+  "studyMaterialsNodesEmpty": "暂时还没有挂载到任何知识节点。",
+  "studyMaterialsTopChunksTitle": "高频引用片段",
+  "studyMaterialsTopChunksEmpty": "Aurora 还没有引用过这份资料。",
+  "studyMaterialsConversationCountLabel": "对话数",
+  "studyMaterialsReferenceCountLabel": "引用次数",
+  "studyMaterialsKnowledgeStarsLabel": "知识星点",
+  "studyMaterialsShareAction": "分享",
+  "studyMaterialsDeleteAction": "删除",
+  "studyMaterialsRefreshAction": "重新处理",
+  "studyMaterialsSubjectCosmos": "宇宙",
+  "studyMaterialsSubjectTech": "技术",
+  "studyMaterialsSubjectArt": "艺术",
+  "studyMaterialsSubjectCivilization": "文明",
+  "studyMaterialsSubjectLife": "生命",
+  "studyMaterialsSubjectWisdom": "智慧",
+  "studyMaterialsSubjectGeneral": "通用",
+  "studyMaterialsUsageWeekly": "本周已被引用 {count} 次",
+  "@studyMaterialsUsageWeekly": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUsageTotal": "累计已被引用 {count} 次",
+  "@studyMaterialsUsageTotal": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUsageEmpty": "暂未在对话中被引用",
+  "studyMaterialsUploadedDays": "{count} 天前",
+  "@studyMaterialsUploadedDays": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUploadedHours": "{count} 小时前",
+  "@studyMaterialsUploadedHours": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUploadedMinutes": "{count} 分钟前",
+  "@studyMaterialsUploadedMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusProcessingPercent": "处理中 {percent}%",
+  "@studyMaterialsStatusProcessingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusProcessing": "处理中",
+  "studyMaterialsStatusKnowledgeStars": "已映射 {count} 个星点",
+  "@studyMaterialsStatusKnowledgeStars": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusReady": "已就绪",
+  "studyMaterialsStatusFailed": "处理失败",
+  "studyMaterialsChunkHitCount": "命中 {count} 次",
+  "@studyMaterialsChunkHitCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsNoResultsTitle": "没有匹配的学习资料",
+  "studyMaterialsEmptyTitle": "你的学习宇宙正等待点亮",
+  "studyMaterialsNoResultsSubtitle": "换个搜索词，或清空筛选条件，看看更多资料。",
+  "studyMaterialsEmptySubtitle": "上传你的第一份笔记、课件或教材，Sparkle 会把它们转成可搜索的知识星图。",
+  "studyMaterialsResetFilters": "重置筛选",
   "communityMessageFallback": "消息加载中...",
   "communityMessageInputHint": "输入消息...",
   "communitySearchGroupMessages": "搜索群消息",
@@ -7421,6 +7592,34 @@
   "executionStatusTimedOut": "执行超时",
   "executionStatusHandedBack": "已交还",
   "executionStatusUnknown": "状态未知",
+  "executionTrustRaw": "原始结果",
+  "executionTrustValidated": "已校验",
+  "executionTrustTrusted": "可信结果",
+  "executionTrustUnknown": "待评估",
+  "nextActionQuickReviewTitle": "快速回顾",
+  "nextActionQuickReviewDescription": "回顾刚才的核心要点",
+  "nextActionLightExpandTitle": "拓展学习",
+  "nextActionLightExpandDescription": "了解相关知识点",
+  "nextActionPracticeApplyTitle": "实践应用",
+  "nextActionPracticeApplyDescription": "应用所学知识",
+  "nextActionRestBreakTitle": "休息一下",
+  "nextActionRestBreakDescription": "适当休息，保持状态",
+  "nextActionContinuePlanTitle": "继续计划",
+  "nextActionContinuePlanDescription": "继续按计划学习",
+  "knowledgeRelationPrerequisite": "前置知识",
+  "knowledgeRelationRelated": "相关知识",
+  "knowledgeRelationApplication": "应用",
+  "knowledgeRelationComposition": "组成部分",
+  "knowledgeRelationEvolution": "演进",
+  "knowledgeRelationDefault": "关联",
+  "knowledgeMasteryLevelLocked": "未解锁",
+  "knowledgeMasteryLevelBrilliant": "璀璨",
+  "knowledgeMasteryLevelShining": "闪耀",
+  "knowledgeMasteryLevelGlimmer": "微光",
+  "knowledgeMasteryLevelUnlit": "未点亮",
+  "interventionPhaseForethought": "规划中",
+  "interventionPhasePerformance": "执行中",
+  "interventionPhaseSelfReflection": "复盘中",
   "stuckHelpTitle": "别担心，我们来看看卡在哪里",
   "stuckHelpAskAi": "要不要让AI来看看？",
   "stuckHelpChatWithSparkle": "和Sparkle聊聊这个问题",

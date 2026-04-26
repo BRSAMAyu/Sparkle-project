@@ -152,7 +152,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         PopupMenuItem(
           value: 'favorites',
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.bookmark_outline, size: 18),
               SizedBox(width: DS.spacing10),
               Expanded(child: Text('我的收藏')),

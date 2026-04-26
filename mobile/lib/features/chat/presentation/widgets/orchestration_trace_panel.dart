@@ -6,16 +6,33 @@ class OrchestrationTracePanel extends StatefulWidget {
   const OrchestrationTracePanel({
     required this.traceData,
     super.key,
+    this.initiallyExpanded = false,
   });
 
   final Map<String, dynamic> traceData;
+  final bool initiallyExpanded;
 
   @override
-  State<OrchestrationTracePanel> createState() => _OrchestrationTracePanelState();
+  State<OrchestrationTracePanel> createState() =>
+      _OrchestrationTracePanelState();
 }
 
 class _OrchestrationTracePanelState extends State<OrchestrationTracePanel> {
-  bool _expanded = false;
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
+
+  @override
+  void didUpdateWidget(covariant OrchestrationTracePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.traceData != widget.traceData) {
+      _expanded = widget.initiallyExpanded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +54,8 @@ class _OrchestrationTracePanelState extends State<OrchestrationTracePanel> {
         key: PageStorageKey<String>('orchestration_trace_${widget.hashCode}'),
         initiallyExpanded: _expanded,
         onExpansionChanged: (value) => setState(() => _expanded = value),
-        title: Text(context.l10n.chatOrchestrationTraceTitle, style: titleStyle),
+        title:
+            Text(context.l10n.chatOrchestrationTraceTitle, style: titleStyle),
         children: [
           Padding(
             padding: const EdgeInsets.only(
@@ -105,7 +123,10 @@ class _TraceStepTile extends StatelessWidget {
           if (reason.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(reason, style: bodyStyle?.copyWith(color: DS.neutral500)),
+              child: Text(
+                reason,
+                style: bodyStyle?.copyWith(color: DS.neutral500),
+              ),
             ),
         ],
       ),

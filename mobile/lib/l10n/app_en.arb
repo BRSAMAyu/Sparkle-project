@@ -28,7 +28,7 @@
   "curiosityPreference": "Curiosity Preference",
   "settings": "Settings",
   "language": "Language",
-  "languageChinese": "简体中文",
+  "languageChinese": "Chinese (Simplified)",
   "languageEnglish": "English",
   "schedulePreferences": "Schedule Preferences",
   "notificationSettings": "Notification Settings",
@@ -3034,6 +3034,177 @@
       }
     }
   },
+  "studyMaterialsTitle": "Study Materials",
+  "studyMaterialsEntrySubtitle": "Browse uploads, track processing, and manage your knowledge sources",
+  "studyMaterialsHeroEyebrow": "Personal Knowledge Library",
+  "studyMaterialsHeroTitle": "Turn every upload into usable study context",
+  "studyMaterialsHeroSubtitle": "Manage your notes, slides, and PDFs, see where they land in your galaxy, and track how often Aurora actually uses them.",
+  "studyMaterialsMetricDocs": "documents",
+  "studyMaterialsMetricReady": "ready",
+  "studyMaterialsMetricInMotion": "processing",
+  "studyMaterialsMetricWeeklyRefs": "weekly refs",
+  "studyMaterialsSearchHint": "Search files, nodes, or cited chunks",
+  "studyMaterialsFilterTitle": "Filters",
+  "studyMaterialsFilterAllStatus": "All status",
+  "studyMaterialsFilterHighlyCited": "Highly cited",
+  "studyMaterialsFilterAllSubjects": "All subjects",
+  "studyMaterialsFilterNode": "Filtered by {nodeName}",
+  "@studyMaterialsFilterNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsFilterClearNode": "Clear node filter",
+  "studyMaterialsDate": "Date",
+  "studyMaterialsDateAll": "Any time",
+  "studyMaterialsDate7d": "Last 7 days",
+  "studyMaterialsDate30d": "Last 30 days",
+  "studyMaterialsDate90d": "Last 90 days",
+  "studyMaterialsLoadError": "We couldn't load your study materials right now.",
+  "studyMaterialsRefreshCta": "Try again",
+  "studyMaterialsUploadCta": "Upload study material",
+  "studyMaterialsUploadCtaShort": "Upload",
+  "studyMaterialsUploadSuccess": "Upload started. We'll map it into your galaxy shortly.",
+  "studyMaterialsDeleteTitle": "Delete study material?",
+  "studyMaterialsDeleteMessage": "Delete {filename} from your library? This removes it from your personal materials.",
+  "@studyMaterialsDeleteMessage": {
+    "placeholders": {
+      "filename": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsDeleteSuccess": "Study material deleted",
+  "studyMaterialsDeleteFailure": "Couldn't delete this study material: {error}",
+  "@studyMaterialsDeleteFailure": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareSheetTitle": "Share to a group",
+  "studyMaterialsShareGroupSubtitle": "{count} members",
+  "@studyMaterialsShareGroupSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareEmptyGroups": "Join or create a group first to share study materials.",
+  "studyMaterialsShareLoadGroupsError": "We couldn't load your groups right now.",
+  "studyMaterialsShareSuccess": "Shared to {groupName}",
+  "@studyMaterialsShareSuccess": {
+    "placeholders": {
+      "groupName": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsShareFailure": "Couldn't share this study material: {error}",
+  "@studyMaterialsShareFailure": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsVisibilityGroup": "Group visible",
+  "studyMaterialsVisibilityPrivate": "Private",
+  "studyMaterialsAttachedNodesTitle": "Attached knowledge stars",
+  "studyMaterialsNodesPending": "We're still mapping this material to your galaxy nodes.",
+  "studyMaterialsNodesEmpty": "No galaxy nodes attached yet.",
+  "studyMaterialsTopChunksTitle": "Most used excerpts",
+  "studyMaterialsTopChunksEmpty": "Aurora hasn't cited this material yet.",
+  "studyMaterialsConversationCountLabel": "Conversations",
+  "studyMaterialsReferenceCountLabel": "References",
+  "studyMaterialsKnowledgeStarsLabel": "Knowledge stars",
+  "studyMaterialsShareAction": "Share",
+  "studyMaterialsDeleteAction": "Delete",
+  "studyMaterialsRefreshAction": "Reprocess",
+  "studyMaterialsSubjectCosmos": "Cosmos",
+  "studyMaterialsSubjectTech": "Tech",
+  "studyMaterialsSubjectArt": "Art",
+  "studyMaterialsSubjectCivilization": "Civilization",
+  "studyMaterialsSubjectLife": "Life",
+  "studyMaterialsSubjectWisdom": "Wisdom",
+  "studyMaterialsSubjectGeneral": "General",
+  "studyMaterialsUsageWeekly": "Referenced {count} times this week",
+  "@studyMaterialsUsageWeekly": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUsageTotal": "Referenced {count} times in total",
+  "@studyMaterialsUsageTotal": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUsageEmpty": "Not cited in conversations yet",
+  "studyMaterialsUploadedDays": "{count}d ago",
+  "@studyMaterialsUploadedDays": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUploadedHours": "{count}h ago",
+  "@studyMaterialsUploadedHours": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsUploadedMinutes": "{count}m ago",
+  "@studyMaterialsUploadedMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusProcessingPercent": "Processing {percent}%",
+  "@studyMaterialsStatusProcessingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusProcessing": "Processing",
+  "studyMaterialsStatusKnowledgeStars": "{count} stars mapped",
+  "@studyMaterialsStatusKnowledgeStars": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsStatusReady": "Ready",
+  "studyMaterialsStatusFailed": "Failed",
+  "studyMaterialsChunkHitCount": "{count} hits",
+  "@studyMaterialsChunkHitCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "studyMaterialsNoResultsTitle": "No matching study materials",
+  "studyMaterialsEmptyTitle": "Your study universe awaits",
+  "studyMaterialsNoResultsSubtitle": "Try a different search or clear your filters to bring more materials back into view.",
+  "studyMaterialsEmptySubtitle": "Upload your first notes, slides, or textbook and Sparkle will turn them into a searchable knowledge galaxy.",
+  "studyMaterialsResetFilters": "Reset filters",
   "communityMessageFallback": "Community Message Fallback",
   "communityMessageInputHint": "Community Message Input Hint",
   "communitySearchGroupMessages": "Community Search Group Messages",
@@ -7428,6 +7599,34 @@
   "executionStatusTimedOut": "Timed Out",
   "executionStatusHandedBack": "Handed Back",
   "executionStatusUnknown": "Unknown",
+  "executionTrustRaw": "Raw Result",
+  "executionTrustValidated": "Validated",
+  "executionTrustTrusted": "Trusted Result",
+  "executionTrustUnknown": "Pending Review",
+  "nextActionQuickReviewTitle": "Quick Review",
+  "nextActionQuickReviewDescription": "Review the main points you just covered",
+  "nextActionLightExpandTitle": "Expand Learning",
+  "nextActionLightExpandDescription": "Explore closely related concepts",
+  "nextActionPracticeApplyTitle": "Apply in Practice",
+  "nextActionPracticeApplyDescription": "Apply what you just learned",
+  "nextActionRestBreakTitle": "Take a Break",
+  "nextActionRestBreakDescription": "Pause briefly and keep your energy steady",
+  "nextActionContinuePlanTitle": "Continue the Plan",
+  "nextActionContinuePlanDescription": "Keep learning according to your plan",
+  "knowledgeRelationPrerequisite": "Prerequisite",
+  "knowledgeRelationRelated": "Related",
+  "knowledgeRelationApplication": "Application",
+  "knowledgeRelationComposition": "Component",
+  "knowledgeRelationEvolution": "Evolution",
+  "knowledgeRelationDefault": "Relation",
+  "knowledgeMasteryLevelLocked": "Locked",
+  "knowledgeMasteryLevelBrilliant": "Brilliant",
+  "knowledgeMasteryLevelShining": "Shining",
+  "knowledgeMasteryLevelGlimmer": "Glimmer",
+  "knowledgeMasteryLevelUnlit": "Unlit",
+  "interventionPhaseForethought": "Planning",
+  "interventionPhasePerformance": "Executing",
+  "interventionPhaseSelfReflection": "Reflecting",
   "stuckHelpTitle": "Don't worry, let's see where you're stuck",
   "stuckHelpAskAi": "Want to ask AI for help?",
   "stuckHelpChatWithSparkle": "Chat with Sparkle about this",

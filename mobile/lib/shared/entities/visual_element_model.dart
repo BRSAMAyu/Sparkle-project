@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 part 'visual_element_model.g.dart';
@@ -152,31 +153,32 @@ class VisualElementModel {
   String get displaySlotLabel => localizedDisplaySlotLabel(null);
 
   String localizedDisplaySlotLabel(AppLocalizations? l10n) {
+    final labels = l10n ?? I18nService.instance.l10n;
     switch (displaySlot) {
       case 'avatar_border':
-        return l10n?.visualSlotAvatarBorder ?? '头像边框';
+        return labels.visualSlotAvatarBorder;
       case 'title_bar':
-        return l10n?.visualSlotTitleBar ?? '称号条';
+        return labels.visualSlotTitleBar;
       case 'profile_banner':
-        return l10n?.visualSlotProfileBanner ?? '主页横幅';
+        return labels.visualSlotProfileBanner;
       case 'achievement_frame':
-        return l10n?.visualSlotAchievementFrame ?? '成就主题框';
+        return labels.visualSlotAchievementFrame;
       case 'home_ambience':
-        return l10n?.visualSlotHomeAmbience ?? '首页氛围';
+        return labels.visualSlotHomeAmbience;
       case 'star_map_effect':
-        return l10n?.visualSlotStarMapEffect ?? '星图征服特效';
+        return labels.visualSlotStarMapEffect;
       case 'streak_flame':
-        return l10n?.visualSlotStreakFlame ?? '连胜火焰';
+        return labels.visualSlotStreakFlame;
       case 'display_pedestal':
-        return l10n?.visualSlotDisplayPedestal ?? '陈列台座';
+        return labels.visualSlotDisplayPedestal;
       case 'background':
-        return l10n?.visualSlotBackground ?? '背景';
+        return labels.visualSlotBackground;
       case 'particle':
-        return l10n?.visualSlotParticle ?? '粒子';
+        return labels.visualSlotParticle;
       case 'effect':
-        return l10n?.visualSlotEffect ?? '特效';
+        return labels.visualSlotEffect;
       case 'bundle':
-        return l10n?.visualSlotBundle ?? '套装';
+        return labels.visualSlotBundle;
       default:
         return displaySlot;
     }
@@ -196,17 +198,18 @@ class VisualElementModel {
   String get unlockSourceLabel => localizedUnlockSourceLabel(null);
 
   String localizedUnlockSourceLabel(AppLocalizations? l10n) {
+    final labels = l10n ?? I18nService.instance.l10n;
     switch (unlockSource) {
       case VisualElementUnlockSource.system:
-        return l10n?.visualUnlockSystem ?? '系统提供';
+        return labels.visualUnlockSystem;
       case VisualElementUnlockSource.achievement:
-        return l10n?.visualUnlockAchievement ?? '成就解锁';
+        return labels.visualUnlockAchievement;
       case VisualElementUnlockSource.shop:
-        return l10n?.visualUnlockShop ?? '商店获取';
+        return labels.visualUnlockShop;
       case VisualElementUnlockSource.event:
-        return l10n?.visualUnlockEvent ?? '活动限定';
+        return labels.visualUnlockEvent;
       case VisualElementUnlockSource.season:
-        return l10n?.visualUnlockSeason ?? '赛季奖励';
+        return labels.visualUnlockSeason;
     }
   }
 
@@ -232,39 +235,40 @@ class VisualElementModel {
 
   bool get isPrestigeHighlight => visibilityWeight >= 85;
 
-  List<String> get affectedSurfaceLabels => localizedAffectedSurfaceLabels(null);
+  List<String> get affectedSurfaceLabels =>
+      localizedAffectedSurfaceLabels(null);
 
   List<String> localizedAffectedSurfaceLabels(AppLocalizations? l10n) {
+    final labels = l10n ?? I18nService.instance.l10n;
     if (isBundle) {
       return [
-        if (bundleBackgroundId != null) l10n?.visualSlotHomeAmbience ?? '首页氛围',
-        if (bundleParticleId != null) l10n?.visualSlotParticleTrail ?? '粒子轨迹',
-        if (bundleEffectId != null) l10n?.visualSlotGloryEffect ?? '荣耀特效',
+        if (bundleBackgroundId != null) labels.visualSlotHomeAmbience,
+        if (bundleParticleId != null) labels.visualSlotParticleTrail,
+        if (bundleEffectId != null) labels.visualSlotGloryEffect,
       ];
     }
 
-    final home = l10n?.visualSlotHomeAmbience ?? '首页氛围';
-    final profile = l10n?.visualSlotProfile ?? '个人主页';
-    final empty = displaySlot;
+    final home = labels.visualSlotHomeAmbience;
+    final profile = labels.visualSlotProfile;
 
     switch (displaySlot) {
       case 'profile_banner':
-        return [profile, l10n?.visualSlotAchievementHeader ?? '成就页头图'];
+        return [profile, labels.visualSlotAchievementHeader];
       case 'home_ambience':
         return [home, profile];
       case 'achievement_frame':
-        return [l10n?.visualSlotAchievementPage ?? '成就页', l10n?.visualSlotDetailModal ?? '详情弹窗'];
+        return [labels.visualSlotAchievementPage, labels.visualSlotDetailModal];
       case 'avatar_frame':
       case 'avatar_border':
-        return [l10n?.visualSlotAvatarArea ?? '头像身份区', profile];
+        return [labels.visualSlotAvatarArea, profile];
       case 'title_bar':
-        return [l10n?.visualSlotNicknameBar ?? '昵称称号条', profile];
+        return [labels.visualSlotNicknameBar, profile];
       case 'display_pedestal':
-        return [l10n?.visualSlotDisplayArea ?? '陈列区', l10n?.visualSlotGloryShowcase ?? '荣耀柜台'];
+        return [labels.visualSlotDisplayArea, labels.visualSlotGloryShowcase];
       case 'star_map_effect':
-        return [l10n?.visualSlotStarMapPage ?? '星图页', home];
+        return [labels.visualSlotStarMapPage, home];
       case 'streak_flame':
-        return [l10n?.visualSlotStreakDisplay ?? '连胜展示', home];
+        return [labels.visualSlotStreakDisplay, home];
       case 'conquest_trail':
       case 'home_particle':
         return [home, profile];

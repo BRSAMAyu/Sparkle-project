@@ -93,7 +93,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
-  String get languageChinese => '简体中文';
+  String get languageChinese => 'Chinese (Simplified)';
 
   @override
   String get languageEnglish => 'English';
@@ -8028,6 +8028,264 @@ class AppLocalizationsEn extends AppLocalizations {
   String groupFilesCount(Object count) {
     return '$count files';
   }
+
+  @override
+  String get studyMaterialsTitle => 'Study Materials';
+
+  @override
+  String get studyMaterialsEntrySubtitle =>
+      'Browse uploads, track processing, and manage your knowledge sources';
+
+  @override
+  String get studyMaterialsHeroEyebrow => 'Personal Knowledge Library';
+
+  @override
+  String get studyMaterialsHeroTitle =>
+      'Turn every upload into usable study context';
+
+  @override
+  String get studyMaterialsHeroSubtitle =>
+      'Manage your notes, slides, and PDFs, see where they land in your galaxy, and track how often Aurora actually uses them.';
+
+  @override
+  String get studyMaterialsMetricDocs => 'documents';
+
+  @override
+  String get studyMaterialsMetricReady => 'ready';
+
+  @override
+  String get studyMaterialsMetricInMotion => 'processing';
+
+  @override
+  String get studyMaterialsMetricWeeklyRefs => 'weekly refs';
+
+  @override
+  String get studyMaterialsSearchHint => 'Search files, nodes, or cited chunks';
+
+  @override
+  String get studyMaterialsFilterTitle => 'Filters';
+
+  @override
+  String get studyMaterialsFilterAllStatus => 'All status';
+
+  @override
+  String get studyMaterialsFilterHighlyCited => 'Highly cited';
+
+  @override
+  String get studyMaterialsFilterAllSubjects => 'All subjects';
+
+  @override
+  String studyMaterialsFilterNode(Object nodeName) {
+    return 'Filtered by $nodeName';
+  }
+
+  @override
+  String get studyMaterialsFilterClearNode => 'Clear node filter';
+
+  @override
+  String get studyMaterialsDate => 'Date';
+
+  @override
+  String get studyMaterialsDateAll => 'Any time';
+
+  @override
+  String get studyMaterialsDate7d => 'Last 7 days';
+
+  @override
+  String get studyMaterialsDate30d => 'Last 30 days';
+
+  @override
+  String get studyMaterialsDate90d => 'Last 90 days';
+
+  @override
+  String get studyMaterialsLoadError =>
+      'We couldn\'t load your study materials right now.';
+
+  @override
+  String get studyMaterialsRefreshCta => 'Try again';
+
+  @override
+  String get studyMaterialsUploadCta => 'Upload study material';
+
+  @override
+  String get studyMaterialsUploadCtaShort => 'Upload';
+
+  @override
+  String get studyMaterialsUploadSuccess =>
+      'Upload started. We\'ll map it into your galaxy shortly.';
+
+  @override
+  String get studyMaterialsDeleteTitle => 'Delete study material?';
+
+  @override
+  String studyMaterialsDeleteMessage(Object filename) {
+    return 'Delete $filename from your library? This removes it from your personal materials.';
+  }
+
+  @override
+  String get studyMaterialsDeleteSuccess => 'Study material deleted';
+
+  @override
+  String studyMaterialsDeleteFailure(Object error) {
+    return 'Couldn\'t delete this study material: $error';
+  }
+
+  @override
+  String get studyMaterialsShareSheetTitle => 'Share to a group';
+
+  @override
+  String studyMaterialsShareGroupSubtitle(Object count) {
+    return '$count members';
+  }
+
+  @override
+  String get studyMaterialsShareEmptyGroups =>
+      'Join or create a group first to share study materials.';
+
+  @override
+  String get studyMaterialsShareLoadGroupsError =>
+      'We couldn\'t load your groups right now.';
+
+  @override
+  String studyMaterialsShareSuccess(Object groupName) {
+    return 'Shared to $groupName';
+  }
+
+  @override
+  String studyMaterialsShareFailure(Object error) {
+    return 'Couldn\'t share this study material: $error';
+  }
+
+  @override
+  String get studyMaterialsVisibilityGroup => 'Group visible';
+
+  @override
+  String get studyMaterialsVisibilityPrivate => 'Private';
+
+  @override
+  String get studyMaterialsAttachedNodesTitle => 'Attached knowledge stars';
+
+  @override
+  String get studyMaterialsNodesPending =>
+      'We\'re still mapping this material to your galaxy nodes.';
+
+  @override
+  String get studyMaterialsNodesEmpty => 'No galaxy nodes attached yet.';
+
+  @override
+  String get studyMaterialsTopChunksTitle => 'Most used excerpts';
+
+  @override
+  String get studyMaterialsTopChunksEmpty =>
+      'Aurora hasn\'t cited this material yet.';
+
+  @override
+  String get studyMaterialsConversationCountLabel => 'Conversations';
+
+  @override
+  String get studyMaterialsReferenceCountLabel => 'References';
+
+  @override
+  String get studyMaterialsKnowledgeStarsLabel => 'Knowledge stars';
+
+  @override
+  String get studyMaterialsShareAction => 'Share';
+
+  @override
+  String get studyMaterialsDeleteAction => 'Delete';
+
+  @override
+  String get studyMaterialsRefreshAction => 'Reprocess';
+
+  @override
+  String get studyMaterialsSubjectCosmos => 'Cosmos';
+
+  @override
+  String get studyMaterialsSubjectTech => 'Tech';
+
+  @override
+  String get studyMaterialsSubjectArt => 'Art';
+
+  @override
+  String get studyMaterialsSubjectCivilization => 'Civilization';
+
+  @override
+  String get studyMaterialsSubjectLife => 'Life';
+
+  @override
+  String get studyMaterialsSubjectWisdom => 'Wisdom';
+
+  @override
+  String get studyMaterialsSubjectGeneral => 'General';
+
+  @override
+  String studyMaterialsUsageWeekly(Object count) {
+    return 'Referenced $count times this week';
+  }
+
+  @override
+  String studyMaterialsUsageTotal(Object count) {
+    return 'Referenced $count times in total';
+  }
+
+  @override
+  String get studyMaterialsUsageEmpty => 'Not cited in conversations yet';
+
+  @override
+  String studyMaterialsUploadedDays(Object count) {
+    return '${count}d ago';
+  }
+
+  @override
+  String studyMaterialsUploadedHours(Object count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String studyMaterialsUploadedMinutes(Object count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String studyMaterialsStatusProcessingPercent(Object percent) {
+    return 'Processing $percent%';
+  }
+
+  @override
+  String get studyMaterialsStatusProcessing => 'Processing';
+
+  @override
+  String studyMaterialsStatusKnowledgeStars(Object count) {
+    return '$count stars mapped';
+  }
+
+  @override
+  String get studyMaterialsStatusReady => 'Ready';
+
+  @override
+  String get studyMaterialsStatusFailed => 'Failed';
+
+  @override
+  String studyMaterialsChunkHitCount(Object count) {
+    return '$count hits';
+  }
+
+  @override
+  String get studyMaterialsNoResultsTitle => 'No matching study materials';
+
+  @override
+  String get studyMaterialsEmptyTitle => 'Your study universe awaits';
+
+  @override
+  String get studyMaterialsNoResultsSubtitle =>
+      'Try a different search or clear your filters to bring more materials back into view.';
+
+  @override
+  String get studyMaterialsEmptySubtitle =>
+      'Upload your first notes, slides, or textbook and Sparkle will turn them into a searchable knowledge galaxy.';
+
+  @override
+  String get studyMaterialsResetFilters => 'Reset filters';
 
   @override
   String get communityMessageFallback => 'Community Message Fallback';
@@ -17174,6 +17432,95 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get executionStatusUnknown => 'Unknown';
+
+  @override
+  String get executionTrustRaw => 'Raw Result';
+
+  @override
+  String get executionTrustValidated => 'Validated';
+
+  @override
+  String get executionTrustTrusted => 'Trusted Result';
+
+  @override
+  String get executionTrustUnknown => 'Pending Review';
+
+  @override
+  String get nextActionQuickReviewTitle => 'Quick Review';
+
+  @override
+  String get nextActionQuickReviewDescription =>
+      'Review the main points you just covered';
+
+  @override
+  String get nextActionLightExpandTitle => 'Expand Learning';
+
+  @override
+  String get nextActionLightExpandDescription =>
+      'Explore closely related concepts';
+
+  @override
+  String get nextActionPracticeApplyTitle => 'Apply in Practice';
+
+  @override
+  String get nextActionPracticeApplyDescription =>
+      'Apply what you just learned';
+
+  @override
+  String get nextActionRestBreakTitle => 'Take a Break';
+
+  @override
+  String get nextActionRestBreakDescription =>
+      'Pause briefly and keep your energy steady';
+
+  @override
+  String get nextActionContinuePlanTitle => 'Continue the Plan';
+
+  @override
+  String get nextActionContinuePlanDescription =>
+      'Keep learning according to your plan';
+
+  @override
+  String get knowledgeRelationPrerequisite => 'Prerequisite';
+
+  @override
+  String get knowledgeRelationRelated => 'Related';
+
+  @override
+  String get knowledgeRelationApplication => 'Application';
+
+  @override
+  String get knowledgeRelationComposition => 'Component';
+
+  @override
+  String get knowledgeRelationEvolution => 'Evolution';
+
+  @override
+  String get knowledgeRelationDefault => 'Relation';
+
+  @override
+  String get knowledgeMasteryLevelLocked => 'Locked';
+
+  @override
+  String get knowledgeMasteryLevelBrilliant => 'Brilliant';
+
+  @override
+  String get knowledgeMasteryLevelShining => 'Shining';
+
+  @override
+  String get knowledgeMasteryLevelGlimmer => 'Glimmer';
+
+  @override
+  String get knowledgeMasteryLevelUnlit => 'Unlit';
+
+  @override
+  String get interventionPhaseForethought => 'Planning';
+
+  @override
+  String get interventionPhasePerformance => 'Executing';
+
+  @override
+  String get interventionPhaseSelfReflection => 'Reflecting';
 
   @override
   String get stuckHelpTitle => 'Don\'t worry, let\'s see where you\'re stuck';

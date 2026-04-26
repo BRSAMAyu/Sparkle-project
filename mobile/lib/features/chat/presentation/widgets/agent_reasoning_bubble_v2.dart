@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 
@@ -412,6 +413,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           step.toolOutput!,
                           style: TextStyle(
                             fontFamily: 'monospace',
+                            fontFamilyFallback: sparkleFontFallback,
                             fontSize: 11,
                             color: DS.success,
                             height: 1.4,

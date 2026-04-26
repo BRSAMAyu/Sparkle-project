@@ -14348,6 +14348,444 @@ abstract class AppLocalizations {
   /// **'{count} 个文件'**
   String groupFilesCount(Object count);
 
+  /// No description provided for @studyMaterialsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习资料库'**
+  String get studyMaterialsTitle;
+
+  /// No description provided for @studyMaterialsEntrySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看上传资料、处理进度，并管理知识来源'**
+  String get studyMaterialsEntrySubtitle;
+
+  /// No description provided for @studyMaterialsHeroEyebrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人知识资料馆'**
+  String get studyMaterialsHeroEyebrow;
+
+  /// No description provided for @studyMaterialsHeroTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把每一次上传都变成可调用的学习上下文'**
+  String get studyMaterialsHeroTitle;
+
+  /// No description provided for @studyMaterialsHeroSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。'**
+  String get studyMaterialsHeroSubtitle;
+
+  /// No description provided for @studyMaterialsMetricDocs.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料数'**
+  String get studyMaterialsMetricDocs;
+
+  /// No description provided for @studyMaterialsMetricReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'已就绪'**
+  String get studyMaterialsMetricReady;
+
+  /// No description provided for @studyMaterialsMetricInMotion.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理中'**
+  String get studyMaterialsMetricInMotion;
+
+  /// No description provided for @studyMaterialsMetricWeeklyRefs.
+  ///
+  /// In zh, this message translates to:
+  /// **'周引用'**
+  String get studyMaterialsMetricWeeklyRefs;
+
+  /// No description provided for @studyMaterialsSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索文件名、知识节点或引用片段'**
+  String get studyMaterialsSearchHint;
+
+  /// No description provided for @studyMaterialsFilterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选'**
+  String get studyMaterialsFilterTitle;
+
+  /// No description provided for @studyMaterialsFilterAllStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部状态'**
+  String get studyMaterialsFilterAllStatus;
+
+  /// No description provided for @studyMaterialsFilterHighlyCited.
+  ///
+  /// In zh, this message translates to:
+  /// **'高引用'**
+  String get studyMaterialsFilterHighlyCited;
+
+  /// No description provided for @studyMaterialsFilterAllSubjects.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部学域'**
+  String get studyMaterialsFilterAllSubjects;
+
+  /// No description provided for @studyMaterialsFilterNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前节点：{nodeName}'**
+  String studyMaterialsFilterNode(Object nodeName);
+
+  /// No description provided for @studyMaterialsFilterClearNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除节点筛选'**
+  String get studyMaterialsFilterClearNode;
+
+  /// No description provided for @studyMaterialsDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间'**
+  String get studyMaterialsDate;
+
+  /// No description provided for @studyMaterialsDateAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'不限时间'**
+  String get studyMaterialsDateAll;
+
+  /// No description provided for @studyMaterialsDate7d.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 7 天'**
+  String get studyMaterialsDate7d;
+
+  /// No description provided for @studyMaterialsDate30d.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 30 天'**
+  String get studyMaterialsDate30d;
+
+  /// No description provided for @studyMaterialsDate90d.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 90 天'**
+  String get studyMaterialsDate90d;
+
+  /// No description provided for @studyMaterialsLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法加载学习资料。'**
+  String get studyMaterialsLoadError;
+
+  /// No description provided for @studyMaterialsRefreshCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新加载'**
+  String get studyMaterialsRefreshCta;
+
+  /// No description provided for @studyMaterialsUploadCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传学习资料'**
+  String get studyMaterialsUploadCta;
+
+  /// No description provided for @studyMaterialsUploadCtaShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传'**
+  String get studyMaterialsUploadCtaShort;
+
+  /// No description provided for @studyMaterialsUploadSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传已开始，我们会很快把它映射进你的知识星图。'**
+  String get studyMaterialsUploadSuccess;
+
+  /// No description provided for @studyMaterialsDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这份学习资料？'**
+  String get studyMaterialsDeleteTitle;
+
+  /// No description provided for @studyMaterialsDeleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'要从资料库中删除 {filename} 吗？这会将它从你的个人资料中移除。'**
+  String studyMaterialsDeleteMessage(Object filename);
+
+  /// No description provided for @studyMaterialsDeleteSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习资料已删除'**
+  String get studyMaterialsDeleteSuccess;
+
+  /// No description provided for @studyMaterialsDeleteFailure.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除学习资料失败：{error}'**
+  String studyMaterialsDeleteFailure(Object error);
+
+  /// No description provided for @studyMaterialsShareSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到群组'**
+  String get studyMaterialsShareSheetTitle;
+
+  /// No description provided for @studyMaterialsShareGroupSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位成员'**
+  String studyMaterialsShareGroupSubtitle(Object count);
+
+  /// No description provided for @studyMaterialsShareEmptyGroups.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先加入或创建群组，再分享学习资料。'**
+  String get studyMaterialsShareEmptyGroups;
+
+  /// No description provided for @studyMaterialsShareLoadGroupsError.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法加载你的群组列表。'**
+  String get studyMaterialsShareLoadGroupsError;
+
+  /// No description provided for @studyMaterialsShareSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已分享到 {groupName}'**
+  String studyMaterialsShareSuccess(Object groupName);
+
+  /// No description provided for @studyMaterialsShareFailure.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享学习资料失败：{error}'**
+  String studyMaterialsShareFailure(Object error);
+
+  /// No description provided for @studyMaterialsVisibilityGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'群组可见'**
+  String get studyMaterialsVisibilityGroup;
+
+  /// No description provided for @studyMaterialsVisibilityPrivate.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅自己可见'**
+  String get studyMaterialsVisibilityPrivate;
+
+  /// No description provided for @studyMaterialsAttachedNodesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'挂载的知识星点'**
+  String get studyMaterialsAttachedNodesTitle;
+
+  /// No description provided for @studyMaterialsNodesPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份资料还在映射到你的知识星图节点中。'**
+  String get studyMaterialsNodesPending;
+
+  /// No description provided for @studyMaterialsNodesEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时还没有挂载到任何知识节点。'**
+  String get studyMaterialsNodesEmpty;
+
+  /// No description provided for @studyMaterialsTopChunksTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'高频引用片段'**
+  String get studyMaterialsTopChunksTitle;
+
+  /// No description provided for @studyMaterialsTopChunksEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 还没有引用过这份资料。'**
+  String get studyMaterialsTopChunksEmpty;
+
+  /// No description provided for @studyMaterialsConversationCountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话数'**
+  String get studyMaterialsConversationCountLabel;
+
+  /// No description provided for @studyMaterialsReferenceCountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用次数'**
+  String get studyMaterialsReferenceCountLabel;
+
+  /// No description provided for @studyMaterialsKnowledgeStarsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识星点'**
+  String get studyMaterialsKnowledgeStarsLabel;
+
+  /// No description provided for @studyMaterialsShareAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get studyMaterialsShareAction;
+
+  /// No description provided for @studyMaterialsDeleteAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get studyMaterialsDeleteAction;
+
+  /// No description provided for @studyMaterialsRefreshAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新处理'**
+  String get studyMaterialsRefreshAction;
+
+  /// No description provided for @studyMaterialsSubjectCosmos.
+  ///
+  /// In zh, this message translates to:
+  /// **'宇宙'**
+  String get studyMaterialsSubjectCosmos;
+
+  /// No description provided for @studyMaterialsSubjectTech.
+  ///
+  /// In zh, this message translates to:
+  /// **'技术'**
+  String get studyMaterialsSubjectTech;
+
+  /// No description provided for @studyMaterialsSubjectArt.
+  ///
+  /// In zh, this message translates to:
+  /// **'艺术'**
+  String get studyMaterialsSubjectArt;
+
+  /// No description provided for @studyMaterialsSubjectCivilization.
+  ///
+  /// In zh, this message translates to:
+  /// **'文明'**
+  String get studyMaterialsSubjectCivilization;
+
+  /// No description provided for @studyMaterialsSubjectLife.
+  ///
+  /// In zh, this message translates to:
+  /// **'生命'**
+  String get studyMaterialsSubjectLife;
+
+  /// No description provided for @studyMaterialsSubjectWisdom.
+  ///
+  /// In zh, this message translates to:
+  /// **'智慧'**
+  String get studyMaterialsSubjectWisdom;
+
+  /// No description provided for @studyMaterialsSubjectGeneral.
+  ///
+  /// In zh, this message translates to:
+  /// **'通用'**
+  String get studyMaterialsSubjectGeneral;
+
+  /// No description provided for @studyMaterialsUsageWeekly.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周已被引用 {count} 次'**
+  String studyMaterialsUsageWeekly(Object count);
+
+  /// No description provided for @studyMaterialsUsageTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'累计已被引用 {count} 次'**
+  String studyMaterialsUsageTotal(Object count);
+
+  /// No description provided for @studyMaterialsUsageEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未在对话中被引用'**
+  String get studyMaterialsUsageEmpty;
+
+  /// No description provided for @studyMaterialsUploadedDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天前'**
+  String studyMaterialsUploadedDays(Object count);
+
+  /// No description provided for @studyMaterialsUploadedHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 小时前'**
+  String studyMaterialsUploadedHours(Object count);
+
+  /// No description provided for @studyMaterialsUploadedMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分钟前'**
+  String studyMaterialsUploadedMinutes(Object count);
+
+  /// No description provided for @studyMaterialsStatusProcessingPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理中 {percent}%'**
+  String studyMaterialsStatusProcessingPercent(Object percent);
+
+  /// No description provided for @studyMaterialsStatusProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理中'**
+  String get studyMaterialsStatusProcessing;
+
+  /// No description provided for @studyMaterialsStatusKnowledgeStars.
+  ///
+  /// In zh, this message translates to:
+  /// **'已映射 {count} 个星点'**
+  String studyMaterialsStatusKnowledgeStars(Object count);
+
+  /// No description provided for @studyMaterialsStatusReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'已就绪'**
+  String get studyMaterialsStatusReady;
+
+  /// No description provided for @studyMaterialsStatusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理失败'**
+  String get studyMaterialsStatusFailed;
+
+  /// No description provided for @studyMaterialsChunkHitCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'命中 {count} 次'**
+  String studyMaterialsChunkHitCount(Object count);
+
+  /// No description provided for @studyMaterialsNoResultsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有匹配的学习资料'**
+  String get studyMaterialsNoResultsTitle;
+
+  /// No description provided for @studyMaterialsEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的学习宇宙正等待点亮'**
+  String get studyMaterialsEmptyTitle;
+
+  /// No description provided for @studyMaterialsNoResultsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'换个搜索词，或清空筛选条件，看看更多资料。'**
+  String get studyMaterialsNoResultsSubtitle;
+
+  /// No description provided for @studyMaterialsEmptySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传你的第一份笔记、课件或教材，Sparkle 会把它们转成可搜索的知识星图。'**
+  String get studyMaterialsEmptySubtitle;
+
+  /// No description provided for @studyMaterialsResetFilters.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置筛选'**
+  String get studyMaterialsResetFilters;
+
   /// No description provided for @communityMessageFallback.
   ///
   /// In zh, this message translates to:
@@ -29928,6 +30366,174 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'状态未知'**
   String get executionStatusUnknown;
+
+  /// No description provided for @executionTrustRaw.
+  ///
+  /// In zh, this message translates to:
+  /// **'原始结果'**
+  String get executionTrustRaw;
+
+  /// No description provided for @executionTrustValidated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已校验'**
+  String get executionTrustValidated;
+
+  /// No description provided for @executionTrustTrusted.
+  ///
+  /// In zh, this message translates to:
+  /// **'可信结果'**
+  String get executionTrustTrusted;
+
+  /// No description provided for @executionTrustUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'待评估'**
+  String get executionTrustUnknown;
+
+  /// No description provided for @nextActionQuickReviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速回顾'**
+  String get nextActionQuickReviewTitle;
+
+  /// No description provided for @nextActionQuickReviewDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'回顾刚才的核心要点'**
+  String get nextActionQuickReviewDescription;
+
+  /// No description provided for @nextActionLightExpandTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'拓展学习'**
+  String get nextActionLightExpandTitle;
+
+  /// No description provided for @nextActionLightExpandDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'了解相关知识点'**
+  String get nextActionLightExpandDescription;
+
+  /// No description provided for @nextActionPracticeApplyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'实践应用'**
+  String get nextActionPracticeApplyTitle;
+
+  /// No description provided for @nextActionPracticeApplyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用所学知识'**
+  String get nextActionPracticeApplyDescription;
+
+  /// No description provided for @nextActionRestBreakTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'休息一下'**
+  String get nextActionRestBreakTitle;
+
+  /// No description provided for @nextActionRestBreakDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'适当休息，保持状态'**
+  String get nextActionRestBreakDescription;
+
+  /// No description provided for @nextActionContinuePlanTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续计划'**
+  String get nextActionContinuePlanTitle;
+
+  /// No description provided for @nextActionContinuePlanDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续按计划学习'**
+  String get nextActionContinuePlanDescription;
+
+  /// No description provided for @knowledgeRelationPrerequisite.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置知识'**
+  String get knowledgeRelationPrerequisite;
+
+  /// No description provided for @knowledgeRelationRelated.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关知识'**
+  String get knowledgeRelationRelated;
+
+  /// No description provided for @knowledgeRelationApplication.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用'**
+  String get knowledgeRelationApplication;
+
+  /// No description provided for @knowledgeRelationComposition.
+  ///
+  /// In zh, this message translates to:
+  /// **'组成部分'**
+  String get knowledgeRelationComposition;
+
+  /// No description provided for @knowledgeRelationEvolution.
+  ///
+  /// In zh, this message translates to:
+  /// **'演进'**
+  String get knowledgeRelationEvolution;
+
+  /// No description provided for @knowledgeRelationDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'关联'**
+  String get knowledgeRelationDefault;
+
+  /// No description provided for @knowledgeMasteryLevelLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'未解锁'**
+  String get knowledgeMasteryLevelLocked;
+
+  /// No description provided for @knowledgeMasteryLevelBrilliant.
+  ///
+  /// In zh, this message translates to:
+  /// **'璀璨'**
+  String get knowledgeMasteryLevelBrilliant;
+
+  /// No description provided for @knowledgeMasteryLevelShining.
+  ///
+  /// In zh, this message translates to:
+  /// **'闪耀'**
+  String get knowledgeMasteryLevelShining;
+
+  /// No description provided for @knowledgeMasteryLevelGlimmer.
+  ///
+  /// In zh, this message translates to:
+  /// **'微光'**
+  String get knowledgeMasteryLevelGlimmer;
+
+  /// No description provided for @knowledgeMasteryLevelUnlit.
+  ///
+  /// In zh, this message translates to:
+  /// **'未点亮'**
+  String get knowledgeMasteryLevelUnlit;
+
+  /// No description provided for @interventionPhaseForethought.
+  ///
+  /// In zh, this message translates to:
+  /// **'规划中'**
+  String get interventionPhaseForethought;
+
+  /// No description provided for @interventionPhasePerformance.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行中'**
+  String get interventionPhasePerformance;
+
+  /// No description provided for @interventionPhaseSelfReflection.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘中'**
+  String get interventionPhaseSelfReflection;
 
   /// No description provided for @stuckHelpTitle.
   ///

@@ -902,7 +902,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       sessionId: chatState.conversationId,
                       onViewSource: _showWorkingMemorySource,
                     ),
-                    const StatusAwarenessBar(),
+                    StatusAwarenessBar(
+                      conversationId: chatState.conversationId,
+                      hasActiveRun: chatState.hasActiveRun,
+                    ),
                     if (_reviewNodeLabel != null)
                       _ReviewNodeBanner(
                         nodeLabel: _reviewNodeLabel!,

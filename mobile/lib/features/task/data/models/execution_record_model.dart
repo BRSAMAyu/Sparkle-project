@@ -1,3 +1,5 @@
+import 'package:sparkle/core/services/i18n_service.dart';
+
 class ExecutionRecordModel {
   const ExecutionRecordModel({
     required this.id,
@@ -40,10 +42,11 @@ class ExecutionRecordModel {
         resultPreview: json['result_preview'] is Map
             ? Map<String, dynamic>.from(json['result_preview'] as Map)
             : null,
-        qualityWarnings: (json['quality_warnings'] as List<dynamic>? ?? const [])
-            .whereType<Map<dynamic, dynamic>>()
-            .map(Map<String, dynamic>.from)
-            .toList(),
+        qualityWarnings:
+            (json['quality_warnings'] as List<dynamic>? ?? const [])
+                .whereType<Map<dynamic, dynamic>>()
+                .map(Map<String, dynamic>.from)
+                .toList(),
         replaySteps: (json['replay_steps'] as List<dynamic>? ?? const [])
             .whereType<Map<dynamic, dynamic>>()
             .map(Map<String, dynamic>.from)
@@ -79,14 +82,15 @@ class ExecutionRecordModel {
       parsedOutput != null && parsedOutput!.isNotEmpty;
 
   String get trustLabel {
+    final l10n = I18nService.instance.l10n;
     switch (trustLevel) {
       case 'trusted':
-        return '可信结果';
+        return l10n.executionTrustTrusted;
       case 'validated':
-        return '已校验';
+        return l10n.executionTrustValidated;
       case 'raw':
       default:
-        return '原始结果';
+        return l10n.executionTrustRaw;
     }
   }
 }

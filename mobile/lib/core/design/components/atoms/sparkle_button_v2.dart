@@ -194,9 +194,14 @@ class SparkleButton extends StatelessWidget {
     }
 
     children.add(
-      Text(
-        label,
-        style: _getTextStyle(theme, info),
+      Flexible(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          style: _getTextStyle(theme, info),
+        ),
       ),
     );
 

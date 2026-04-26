@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -132,19 +133,20 @@ class NodeRelation {
 
   /// Get a human-readable label for the relation type
   String get relationLabel {
+    final l10n = I18nService.instance.l10n;
     switch (relationType) {
       case 'prerequisite':
-        return '前置知识';
+        return l10n.knowledgeRelationPrerequisite;
       case 'related':
-        return '相关知识';
+        return l10n.knowledgeRelationRelated;
       case 'application':
-        return '应用';
+        return l10n.knowledgeRelationApplication;
       case 'composition':
-        return '组成部分';
+        return l10n.knowledgeRelationComposition;
       case 'evolution':
-        return '演进';
+        return l10n.knowledgeRelationEvolution;
       default:
-        return '关联';
+        return l10n.knowledgeRelationDefault;
     }
   }
 
@@ -210,12 +212,13 @@ class KnowledgeUserStats {
 
   /// Get the mastery level label
   String get masteryLabel {
-    if (!isUnlocked) return '未解锁';
-    if (masteryScore >= 95) return '精通';
-    if (masteryScore >= 80) return '璀璨';
-    if (masteryScore >= 30) return '闪耀';
-    if (masteryScore > 0) return '微光';
-    return '未点亮';
+    final l10n = I18nService.instance.l10n;
+    if (!isUnlocked) return l10n.knowledgeMasteryLevelLocked;
+    if (masteryScore >= 95) return l10n.knowledgeMasteryLevelMastered;
+    if (masteryScore >= 80) return l10n.knowledgeMasteryLevelBrilliant;
+    if (masteryScore >= 30) return l10n.knowledgeMasteryLevelShining;
+    if (masteryScore > 0) return l10n.knowledgeMasteryLevelGlimmer;
+    return l10n.knowledgeMasteryLevelUnlit;
   }
 
   /// Get mastery progress (0.0 - 1.0)

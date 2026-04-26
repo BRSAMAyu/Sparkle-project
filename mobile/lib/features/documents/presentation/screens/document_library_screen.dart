@@ -199,7 +199,7 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           ),
         ),
       ],
-      data: (_) {
+      data: (librarySnapshot) {
         final visible = state.filtered;
         if (visible.isEmpty) {
           return <Widget>[
@@ -234,37 +234,39 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
         }
 
         return <Widget>[
-          SliverList.builder(
-            itemCount: visible.length,
-            itemBuilder: (context, index) {
-              final document = visible[index];
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  DS.spacing16,
-                  0,
-                  DS.spacing16,
-                  DS.spacing12,
-                ),
-                child: _DocumentCard(
-                  document: document,
-                  expanded:
-                      state.expandedDocumentIds.contains(document.fileId),
-                  onToggleExpanded: () => ref
-                      .read(documentLibraryProvider.notifier)
-                      .toggleExpanded(document.fileId),
-                  onDelete: () => _confirmDelete(document),
-                  onShareToGroup: () => _showShareSheet(document),
-                  onRefresh: () =>
-                      ref.read(documentLibraryProvider.notifier).refresh(),
-                  onFilterByNode: (node) => ref
-                      .read(documentLibraryProvider.notifier)
-                      .setNodeFilter(
-                        nodeId: node.nodeId,
-                        nodeName: node.name,
-                      ),
-                ),
-              );
-            },
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final document = visible[index];
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DS.spacing16,
+                    0,
+                    DS.spacing16,
+                    DS.spacing12,
+                  ),
+                  child: _DocumentCard(
+                    document: document,
+                    expanded:
+                        state.expandedDocumentIds.contains(document.fileId),
+                    onToggleExpanded: () => ref
+                        .read(documentLibraryProvider.notifier)
+                        .toggleExpanded(document.fileId),
+                    onDelete: () => _confirmDelete(document),
+                    onShareToGroup: () => _showShareSheet(document),
+                    onRefresh: () =>
+                        ref.read(documentLibraryProvider.notifier).refresh(),
+                    onFilterByNode: (node) => ref
+                        .read(documentLibraryProvider.notifier)
+                        .setNodeFilter(
+                          nodeId: node.nodeId,
+                          nodeName: node.name,
+                        ),
+                  ),
+                );
+              },
+              childCount: visible.length,
+            ),
           ),
         ];
       },
@@ -277,10 +279,10 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => FilePickerWithPresignedUpload(
-        onUploaded: (_) {
+      builder: (sheetContext) => FilePickerWithPresignedUpload(
+        onUploaded: (uploadedFile) {
           if (!mounted) return;
-          Navigator.of(context).pop();
+          Navigator.of(sheetContext).pop();
           ScaffoldMessenger.of(this.context).showSnackBar(
             SnackBar(content: Text(this.context.l10n.studyMaterialsUploadSuccess)),
           );
@@ -334,11 +336,11 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.studyMaterialsDeleteSuccess)),
       );
-    } on Exception {
+    } on Exception catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.studyMaterialsDeleteFailure),
+          content: Text(l10n.studyMaterialsDeleteFailure(error)),
           backgroundColor: DS.error,
         ),
       );
@@ -399,7 +401,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
             return ListView.separated(
               shrinkWrap: true,
               itemCount: groups.length,
-              separatorBuilder: (_, _) => Divider(color: DS.borderSubtle),
+              separatorBuilder: (context, index) =>
+                  Divider(color: DS.borderSubtle),
               itemBuilder: (context, index) {
                 final group = groups[index];
                 return ListTile(
@@ -438,11 +441,11 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
                           ),
                         ),
                       );
-                    } on Exception {
+                    } on Exception catch (error) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(l10n.studyMaterialsShareFailure),
+                          content: Text(l10n.studyMaterialsShareFailure(error)),
                           backgroundColor: DS.error,
                         ),
                       );
@@ -911,7 +914,7 @@ class _FilterSection extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: notifier.clearNodeFilter,
-                  child: Text(l10n.clear),
+                  child: Text(l10n.studyMaterialsFilterClearNode),
                 ),
               ],
             ),
@@ -957,7 +960,7 @@ class _FilterChip extends StatelessWidget {
     return FilterChip(
       label: Text(label),
       selected: selected,
-      onSelected: (_) => onTap(),
+      onSelected: (selectedValue) => onTap(),
       selectedColor: DS.brandPrimary.withValues(alpha: 0.14),
       labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: selected ? DS.brandPrimary : DS.textSecondary,

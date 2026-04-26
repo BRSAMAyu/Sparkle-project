@@ -1,19 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 
-/// Status Awareness Bar (状态感知条).
-///
-/// A collapsible bar that shows the user's 4+1 Aurora modeling domain
-/// coverage.  In its default (collapsed) state it renders a thin strip of
-/// indicator dots.  Tapping expands it to reveal per-domain status rows.
 class StatusAwarenessBar extends ConsumerStatefulWidget {
-  const StatusAwarenessBar({super.key});
+  const StatusAwarenessBar({
+    this.conversationId,
+    this.hasActiveRun = false,
+    super.key,
+  });
+
+  final String? conversationId;
+  final bool hasActiveRun;
 
   @override
-  ConsumerState<StatusAwarenessBar> createState() =>
-      _StatusAwarenessBarState();
+  ConsumerState<StatusAwarenessBar> createState() => _StatusAwarenessBarState();
 }
 
 class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
@@ -35,14 +38,34 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       parent: _controller,
       curve: Curves.easeInOutCubic,
     );
-    // Kick off initial fetch
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(auroraStatusProvider.notifier).refresh();
+      ref.read(auroraStatusProvider.notifier).startPeriodicRefresh(
+            conversationId: widget.conversationId,
+          );
     });
   }
 
   @override
+  void didUpdateWidget(covariant StatusAwarenessBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldConversation = oldWidget.conversationId?.trim();
+    final nextConversation = widget.conversationId?.trim();
+    if (oldConversation != nextConversation) {
+      ref.read(auroraStatusProvider.notifier).startPeriodicRefresh(
+            conversationId: widget.conversationId,
+          );
+    } else if (oldWidget.hasActiveRun != widget.hasActiveRun) {
+      unawaited(
+        ref.read(auroraStatusProvider.notifier).refresh(
+              conversationId: widget.conversationId,
+            ),
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    ref.read(auroraStatusProvider.notifier).stopPeriodicRefresh();
     _controller.dispose();
     super.dispose();
   }
@@ -51,157 +74,195 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     setState(() {
       _expanded = !_expanded;
       if (_expanded) {
-        _controller.forward();
+        unawaited(_controller.forward());
       } else {
-        _controller.reverse();
+        unawaited(_controller.reverse());
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final status = ref.watch(auroraStatusProvider);
+    final snapshot = ref.watch(auroraStatusProvider);
 
     return AnimatedBuilder(
       animation: _expandAnimation,
       builder: (context, _) {
-        if (status == null) {
+        if (snapshot == null) {
           return _buildLoadingBar();
         }
-        if (!status.auroraActive) {
+        if (!snapshot.auroraActive) {
           return _buildInactiveBar();
         }
-        return _buildBar(status);
+        return _buildBar(snapshot);
       },
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Loading shimmer
-  // ---------------------------------------------------------------------------
-  Widget _buildLoadingBar() {
-    return _BarContainer(
-      onTap: () {},
-      child: Row(
-        children: [
-          Text(
-            'Aurora',
-            style: TextStyle(
-              color: DS.textSecondary,
-              fontSize: DS.fontSizeXs,
-              fontWeight: DS.fontWeightMedium,
+  Widget _buildLoadingBar() => _BarContainer(
+        onTap: () {},
+        child: Row(
+          children: [
+            _StatusTonePill(
+              label: 'Aurora 感知加载中',
+              color: DS.info,
             ),
-          ),
-          const SizedBox(width: DS.sm),
-          ...List.generate(
-            5,
-            (_) => Padding(
-              padding: const EdgeInsets.only(right: DS.spacing4),
-              child: _ShimmerDot(),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Row(
+                children: List.generate(
+                  4,
+                  (_) => const Padding(
+                    padding: EdgeInsets.only(right: DS.spacing6),
+                    child: _ShimmerDot(),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 
-  // ---------------------------------------------------------------------------
-  // Inactive (Aurora has never run for this user)
-  // ---------------------------------------------------------------------------
-  Widget _buildInactiveBar() {
-    return _BarContainer(
-      onTap: () {},
-      child: Row(
-        children: [
-          Icon(
-            Icons.auto_awesome_outlined,
-            size: 14,
-            color: DS.textSecondary.withValues(alpha: 0.6),
-          ),
-          const SizedBox(width: DS.spacing6),
-          Text(
-            'Aurora \u672a\u6fc0\u6d3b', // "Aurora 未激活"
-            style: TextStyle(
+  Widget _buildInactiveBar() => _BarContainer(
+        onTap: () {},
+        child: Row(
+          children: [
+            Icon(
+              Icons.auto_awesome_outlined,
+              size: 16,
               color: DS.textSecondary.withValues(alpha: 0.7),
-              fontSize: DS.fontSizeXs,
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                'Aurora 还没有形成可用的认知读数',
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: DS.fontSizeXs,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
-  // ---------------------------------------------------------------------------
-  // Main bar
-  // ---------------------------------------------------------------------------
-  Widget _buildBar(AuroraModelingStatus status) {
-    final domains = status.domains;
-    final coveredCount = domains.where((d) => d.isCovered).length;
-    final totalCount = domains.length;
+  Widget _buildBar(AuroraControlSurfaceSnapshot snapshot) {
+    final tone = _toneColor(snapshot.overallStatus);
+    final label = _overallLabel(snapshot);
+    final facets = snapshot.facets;
 
-    // Collapsed content: indicator dots
     final collapsedRow = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StatusDot(isActive: status.modelingComplete),
-        const SizedBox(width: DS.spacing4),
-        Text(
-          '$coveredCount/$totalCount',
-          style: TextStyle(
-            color: DS.textSecondary,
-            fontSize: DS.fontSizeXs,
-            fontWeight: DS.fontWeightMedium,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _StatusTonePill(label: label, color: tone),
+                  const SizedBox(width: DS.spacing8),
+                  Text(
+                    '${snapshot.readyCount}/${snapshot.totalCount}',
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing6),
+              Text(
+                snapshot.summary,
+                maxLines: _expanded ? 3 : 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: DS.fontSizeXs,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing6,
+                runSpacing: DS.spacing6,
+                children: facets
+                    .map(
+                      (facet) => _FacetChip(
+                        facet: facet,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: DS.sm),
-        ...domains.map((d) => Padding(
-              padding: const EdgeInsets.only(right: DS.spacing4),
-              child: _StatusDot(isActive: d.isCovered),
-            )),
-        const Spacer(),
+        const SizedBox(width: DS.spacing8),
         Icon(
           _expanded
               ? Icons.keyboard_arrow_up_rounded
               : Icons.keyboard_arrow_down_rounded,
-          size: 16,
+          size: 18,
           color: DS.textSecondary,
-        ),
-      ],
-    );
-
-    // Expanded content: domain rows
-    final expandedRows = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        collapsedRow,
-        SizeTransition(
-          sizeFactor: _expandAnimation,
-          axisAlignment: -1.0,
-          child: Padding(
-            padding: const EdgeInsets.only(top: DS.sm),
-            child: Column(
-              children: domains
-                  .map((d) => _DomainRow(
-                        label: d.label,
-                        isCovered: d.isCovered,
-                        hasTension: d.hasTension,
-                      ))
-                  .toList(),
-            ),
-          ),
         ),
       ],
     );
 
     return _BarContainer(
       onTap: _toggle,
-      child: expandedRows,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          collapsedRow,
+          SizeTransition(
+            sizeFactor: _expandAnimation,
+            axisAlignment: -1,
+            child: Padding(
+              padding: const EdgeInsets.only(top: DS.spacing10),
+              child: Column(
+                children: facets
+                    .map(
+                      (facet) => Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing8),
+                        child: _FacetCard(facet: facet),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
 
-// =============================================================================
-// Helper widgets
-// =============================================================================
+  Color _toneColor(String status) {
+    switch (status) {
+      case 'ready':
+        return DS.success;
+      case 'recalibrating':
+        return DS.warning;
+      case 'partial':
+        return DS.info;
+      default:
+        return DS.textSecondary;
+    }
+  }
+
+  String _overallLabel(AuroraControlSurfaceSnapshot snapshot) {
+    switch (snapshot.overallStatus) {
+      case 'ready':
+        return 'Aurora 感知已收束';
+      case 'recalibrating':
+        return 'Aurora 正在自校准';
+      case 'partial':
+        return 'Aurora 正在补全建模';
+      default:
+        return 'Aurora 感知待建立';
+    }
+  }
+}
 
 class _BarContainer extends StatelessWidget {
   const _BarContainer({required this.onTap, required this.child});
@@ -210,61 +271,236 @@ class _BarContainer extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          margin: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing4,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing10,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                DS.surfaceSecondary.withValues(alpha: 0.96),
+                DS.surfacePrimary.withValues(alpha: 0.88),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(DS.radius12),
+            border: Border.all(
+              color: DS.borderSubtle,
+              width: 0.8,
+            ),
+          ),
+          child: child,
+        ),
+      );
+}
+
+class _StatusTonePill extends StatelessWidget {
+  const _StatusTonePill({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
           vertical: DS.spacing4,
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
         decoration: BoxDecoration(
-          color: DS.surfaceSecondary.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(DS.radius12),
-          border: Border.all(
-            color: DS.borderSubtle,
-            width: 0.6,
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: DS.fontSizeXs,
+            fontWeight: DS.fontWeightSemibold,
           ),
         ),
-        child: child,
+      );
+}
+
+class _FacetChip extends StatelessWidget {
+  const _FacetChip({
+    required this.facet,
+  });
+
+  final AuroraFacetSnapshot facet;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor(facet.status);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: DS.spacing6),
+          Text(
+            facet.label,
+            style: TextStyle(
+              color: color,
+              fontSize: DS.fontSizeXs,
+              fontWeight: DS.fontWeightMedium,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.isActive});
+class _FacetCard extends StatelessWidget {
+  const _FacetCard({
+    required this.facet,
+  });
 
-  final bool isActive;
+  final AuroraFacetSnapshot facet;
 
   @override
   Widget build(BuildContext context) {
+    final color = _statusColor(facet.status);
+    final confidenceText = facet.confidence == null
+        ? null
+        : '把握度 ${(facet.confidence! * 100).round()}%';
+    final freshnessText = facet.freshnessSeconds == null
+        ? null
+        : '新鲜度 ${_freshnessLabel(facet.freshnessSeconds!)}';
+
     return Container(
-      width: 8,
-      height: 8,
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing10),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isActive ? DS.success : DS.surfaceTertiary,
-        boxShadow: isActive
-            ? [
-                BoxShadow(
-                  color: DS.success.withValues(alpha: 0.4),
-                  blurRadius: 4,
-                  spreadRadius: 0.5,
+        color: DS.surfacePrimary.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(DS.radius12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  facet.label,
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
                 ),
-              ]
-            : null,
+              ),
+              Text(
+                _statusLabel(facet.status),
+                style: TextStyle(
+                  color: color,
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            facet.summary,
+            style: TextStyle(
+              color: DS.textPrimary,
+              fontSize: DS.fontSizeXs,
+              height: 1.35,
+            ),
+          ),
+          if (confidenceText != null || freshnessText != null) ...[
+            const SizedBox(height: DS.spacing6),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing4,
+              children: [
+                if (confidenceText != null)
+                  Text(
+                    confidenceText,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: DS.fontSizeXs,
+                    ),
+                  ),
+                if (freshnessText != null)
+                  Text(
+                    freshnessText,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: DS.fontSizeXs,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          if (facet.signals.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing6,
+              runSpacing: DS.spacing6,
+              children: facet.signals
+                  .map(
+                    (signal) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        signal,
+                        style: TextStyle(
+                          color: DS.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
 class _ShimmerDot extends StatefulWidget {
+  const _ShimmerDot();
+
   @override
   State<_ShimmerDot> createState() => _ShimmerDotState();
 }
@@ -279,7 +515,8 @@ class _ShimmerDotState extends State<_ShimmerDot>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat();
+    );
+    unawaited(_controller.repeat());
   }
 
   @override
@@ -289,91 +526,54 @@ class _ShimmerDotState extends State<_ShimmerDot>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final opacity = 0.25 + 0.25 * (_controller.value * 2 - 1).abs();
-        return Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: DS.textSecondary.withValues(alpha: opacity),
-          ),
-        );
-      },
-    );
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final opacity = 0.25 + 0.25 * (_controller.value * 2 - 1).abs();
+          return Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: DS.textSecondary.withValues(alpha: opacity),
+            ),
+          );
+        },
+      );
+}
+
+Color _statusColor(String status) {
+  switch (status) {
+    case 'ready':
+      return DS.success;
+    case 'recalibrating':
+      return DS.warning;
+    case 'partial':
+      return DS.info;
+    default:
+      return DS.textSecondary;
   }
 }
 
-class _DomainRow extends StatelessWidget {
-  const _DomainRow({
-    required this.label,
-    required this.isCovered,
-    required this.hasTension,
-  });
-
-  final String label;
-  final bool isCovered;
-  final bool hasTension;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0),
-      child: Row(
-        children: [
-          Icon(
-            isCovered ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-            size: 14,
-            color: isCovered ? DS.success : DS.textSecondary,
-          ),
-          const SizedBox(width: DS.spacing6),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isCovered ? DS.textPrimary : DS.textSecondary,
-                fontSize: DS.fontSizeXs,
-                fontWeight:
-                    isCovered ? DS.fontWeightMedium : DS.fontWeightRegular,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing6,
-              vertical: 1,
-            ),
-            decoration: BoxDecoration(
-              color: isCovered
-                  ? DS.success.withValues(alpha: 0.12)
-                  : DS.surfaceTertiary.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(DS.radius6),
-            ),
-            child: Text(
-              isCovered ? '\u5df2\u5b8c\u6210' : '\u5f85\u4e86\u89e3', // "已完成" / "待了解"
-              style: TextStyle(
-                color: isCovered ? DS.success : DS.textSecondary,
-                fontSize: 10,
-                fontWeight: DS.fontWeightMedium,
-              ),
-            ),
-          ),
-          if (hasTension) ...[
-            const SizedBox(width: DS.spacing4),
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: DS.warning.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
+String _statusLabel(String status) {
+  switch (status) {
+    case 'ready':
+      return '已连通';
+    case 'recalibrating':
+      return '重校准中';
+    case 'partial':
+      return '补全中';
+    default:
+      return '未形成';
   }
+}
+
+String _freshnessLabel(int seconds) {
+  if (seconds < 60) {
+    return '${seconds}s';
+  }
+  if (seconds < 3600) {
+    return '${(seconds / 60).round()}m';
+  }
+  return '${(seconds / 3600).round()}h';
 }

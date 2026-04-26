@@ -1,3 +1,5 @@
+import 'package:sparkle/core/services/i18n_service.dart';
+
 /// Next action suggested after task completion
 class NextAction {
   const NextAction({
@@ -118,32 +120,34 @@ enum NextActionType {
 
 extension NextActionTypeExt on NextActionType {
   String get displayName {
+    final l10n = I18nService.instance.l10n;
     switch (this) {
       case NextActionType.quickReview:
-        return '快速回顾';
+        return l10n.nextActionQuickReviewTitle;
       case NextActionType.lightExpand:
-        return '拓展学习';
+        return l10n.nextActionLightExpandTitle;
       case NextActionType.practiceApply:
-        return '实践应用';
+        return l10n.nextActionPracticeApplyTitle;
       case NextActionType.restBreak:
-        return '休息一下';
+        return l10n.nextActionRestBreakTitle;
       case NextActionType.continuePlan:
-        return '继续计划';
+        return l10n.nextActionContinuePlanTitle;
     }
   }
 
   String get description {
+    final l10n = I18nService.instance.l10n;
     switch (this) {
       case NextActionType.quickReview:
-        return '回顾刚才的核心要点';
+        return l10n.nextActionQuickReviewDescription;
       case NextActionType.lightExpand:
-        return '了解相关知识点';
+        return l10n.nextActionLightExpandDescription;
       case NextActionType.practiceApply:
-        return '应用所学知识';
+        return l10n.nextActionPracticeApplyDescription;
       case NextActionType.restBreak:
-        return '适当休息，保持状态';
+        return l10n.nextActionRestBreakDescription;
       case NextActionType.continuePlan:
-        return '继续按计划学习';
+        return l10n.nextActionContinuePlanDescription;
     }
   }
 }

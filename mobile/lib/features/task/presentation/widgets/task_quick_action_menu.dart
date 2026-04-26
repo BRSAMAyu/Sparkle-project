@@ -77,7 +77,7 @@ Future<TaskQuickActionResult?> _runTaskAction({
   try {
     final result = await action();
     if (!context.mounted) return result;
-    AppFeedback.success(context, _feedbackMessage(result));
+    AppFeedback.success(context, _feedbackMessage(context, result));
     await onChanged?.call();
     return result;
   } catch (error) {
@@ -90,15 +90,16 @@ Future<TaskQuickActionResult?> _runTaskAction({
   }
 }
 
-String _feedbackMessage(TaskQuickActionResult result) {
+String _feedbackMessage(BuildContext context, TaskQuickActionResult result) {
   if (result.message.trim().isNotEmpty) {
     return result.message.trim();
   }
+  final l10n = context.l10n;
   return switch (result.action) {
-    'snooze' => context.l10n.taskQuickActionSnoozed,
-    'too_hard' => context.l10n.taskQuickActionTooHard,
-    'skip' => context.l10n.taskQuickActionSkipped,
-    _ => context.l10n.taskQuickActionAdjusted,
+    'snooze' => l10n.taskQuickActionSnoozed,
+    'too_hard' => l10n.taskQuickActionTooHard,
+    'skip' => l10n.taskQuickActionSkipped,
+    _ => l10n.taskQuickActionAdjusted,
   };
 }
 

@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/plan/data/models/plan_draft.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
@@ -321,7 +322,8 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       );
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, context.l10n.planGuideGenerationFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.planGuideGenerationFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -443,7 +445,11 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                                     ? Icons.check_rounded
                                     : Icons.arrow_forward,
                               ),
-                        label: isLast ? (_isEditMode ? l10n.planCreateSavePlan : l10n.planCreateAction) : l10n.commonNext,
+                        label: isLast
+                            ? (_isEditMode
+                                ? l10n.planCreateSavePlan
+                                : l10n.planCreateAction)
+                            : l10n.commonNext,
                         expand: true,
                       ),
                     ),
@@ -456,7 +462,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                                   () => _currentStep =
                                       (_currentStep - 1).clamp(0, 4),
                                 ),
-                        label: _currentStep == 0 ? l10n.commonCancel : l10n.commonPrevious,
+                        label: _currentStep == 0
+                            ? l10n.commonCancel
+                            : l10n.commonPrevious,
                         expand: true,
                       ),
                     ),
@@ -629,84 +637,94 @@ class _PlanBasicsStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.planCreateBasicsSubtitle,
-            style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-          ),
-          const SizedBox(height: DS.spacing16),
-          SegmentedButton<PlanType>(
-            segments: [
-              ButtonSegment(
-                value: PlanType.sprint,
-                label: Text(l10n.planTypeSprint),
-                icon: const Icon(Icons.flash_on_rounded),
-              ),
-              ButtonSegment(
-                value: PlanType.growth,
-                label: Text(l10n.planTypeGrowth),
-                icon: const Icon(Icons.trending_up_rounded),
-              ),
-            ],
-            selected: {selectedType},
-            onSelectionChanged: (values) => onTypeChanged(values.first),
-          ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: nameController,
-            decoration: InputDecoration(
-              labelText: l10n.planNameLabel,
-              hintText: l10n.planCreateNameHint,
-              border: const OutlineInputBorder(),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.planCreateBasicsSubtitle,
+          style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        SegmentedButton<PlanType>(
+          segments: [
+            ButtonSegment(
+              value: PlanType.sprint,
+              label: Text(l10n.planTypeSprint),
+              icon: const Icon(Icons.flash_on_rounded),
             ),
-            validator: (value) =>
-                (value == null || value.trim().isEmpty) ? l10n.planNameRequired : null,
-          ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: subjectController,
-            decoration: InputDecoration(
-              labelText: l10n.planCreateSubjectLabel,
-              hintText: l10n.planCreateSubjectHint,
-              border: const OutlineInputBorder(),
+            ButtonSegment(
+              value: PlanType.growth,
+              label: Text(l10n.planTypeGrowth),
+              icon: const Icon(Icons.trending_up_rounded),
             ),
+          ],
+          selected: {selectedType},
+          onSelectionChanged: (values) => onTypeChanged(values.first),
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: l10n.planNameLabel,
+            hintText: l10n.planCreateNameHint,
+            border: const OutlineInputBorder(),
           ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: goalController,
-            maxLines: 4,
-            decoration: InputDecoration(
-              labelText: selectedType == PlanType.growth ? l10n.planCreateGrowthGoalLabel : l10n.planCreateSprintGoalLabel,
-              hintText: selectedType == PlanType.growth
-                  ? l10n.planCreateGrowthGoalHint
-                  : l10n.planCreateSprintGoalHint,
-              border: const OutlineInputBorder(),
-            ),
-            validator: (value) =>
-                (value == null || value.trim().isEmpty) ? l10n.planCreateGoalRequired : null,
+          validator: (value) => (value == null || value.trim().isEmpty)
+              ? l10n.planNameRequired
+              : null,
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: subjectController,
+          decoration: InputDecoration(
+            labelText: l10n.planCreateSubjectLabel,
+            hintText: l10n.planCreateSubjectHint,
+            border: const OutlineInputBorder(),
           ),
-          const SizedBox(height: DS.spacing16),
-          DropdownButtonFormField<PlanPriority>(
-            initialValue: priority,
-            decoration: InputDecoration(
-              labelText: l10n.planPriorityLabel,
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              DropdownMenuItem(value: PlanPriority.low, child: Text(l10n.planPriorityLow)),
-              DropdownMenuItem(value: PlanPriority.normal, child: Text(l10n.planPriorityNormal)),
-              DropdownMenuItem(value: PlanPriority.high, child: Text(l10n.planPriorityHigh)),
-              DropdownMenuItem(value: PlanPriority.critical, child: Text(l10n.planPriorityCritical)),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                onPriorityChanged(value);
-              }
-            },
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: goalController,
+          maxLines: 4,
+          decoration: InputDecoration(
+            labelText: selectedType == PlanType.growth
+                ? l10n.planCreateGrowthGoalLabel
+                : l10n.planCreateSprintGoalLabel,
+            hintText: selectedType == PlanType.growth
+                ? l10n.planCreateGrowthGoalHint
+                : l10n.planCreateSprintGoalHint,
+            border: const OutlineInputBorder(),
           ),
-        ],
-      );
+          validator: (value) => (value == null || value.trim().isEmpty)
+              ? l10n.planCreateGoalRequired
+              : null,
+        ),
+        const SizedBox(height: DS.spacing16),
+        DropdownButtonFormField<PlanPriority>(
+          initialValue: priority,
+          decoration: InputDecoration(
+            labelText: l10n.planPriorityLabel,
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            DropdownMenuItem(
+                value: PlanPriority.low, child: Text(l10n.planPriorityLow)),
+            DropdownMenuItem(
+                value: PlanPriority.normal,
+                child: Text(l10n.planPriorityNormal)),
+            DropdownMenuItem(
+                value: PlanPriority.high, child: Text(l10n.planPriorityHigh)),
+            DropdownMenuItem(
+                value: PlanPriority.critical,
+                child: Text(l10n.planPriorityCritical)),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              onPriorityChanged(value);
+            }
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -774,7 +792,8 @@ class _PlanScheduleStep extends StatelessWidget {
         ),
         const SizedBox(height: DS.spacing16),
         Text(
-          l10n.planCreateTotalEstimatedHours(totalEstimatedHours.toStringAsFixed(1)),
+          l10n.planCreateTotalEstimatedHours(
+              totalEstimatedHours.toStringAsFixed(1)),
           style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
         ),
         Slider(
@@ -814,10 +833,17 @@ class _PlanScheduleStep extends StatelessWidget {
             border: OutlineInputBorder(),
           ),
           items: [
-            DropdownMenuItem(value: PlanStage.sprint, child: Text(l10n.planCreateStageSprint)),
-            DropdownMenuItem(value: PlanStage.daily, child: Text(l10n.planCreateStageDaily)),
-            DropdownMenuItem(value: PlanStage.review, child: Text(l10n.planCreateStageReview)),
-            DropdownMenuItem(value: PlanStage.paused, child: Text(l10n.planCreateStagePaused)),
+            DropdownMenuItem(
+                value: PlanStage.sprint,
+                child: Text(l10n.planCreateStageSprint)),
+            DropdownMenuItem(
+                value: PlanStage.daily, child: Text(l10n.planCreateStageDaily)),
+            DropdownMenuItem(
+                value: PlanStage.review,
+                child: Text(l10n.planCreateStageReview)),
+            DropdownMenuItem(
+                value: PlanStage.paused,
+                child: Text(l10n.planCreateStagePaused)),
           ],
           onChanged: (value) {
             if (value != null) {
@@ -922,162 +948,164 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.planCreateTasksSubtitle,
+          style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: widget.blueprintController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: l10n.planCreateTaskBlueprintLabel,
+            hintText: l10n.planCreateTaskBlueprintHint,
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: DS.spacing16),
+        if (widget.pendingTasks.isNotEmpty) ...[
           Text(
-            l10n.planCreateTasksSubtitle,
-            style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+            l10n.planCreateReferenceExistingTasks,
+            style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
           ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: widget.blueprintController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: l10n.planCreateTaskBlueprintLabel,
-              hintText: l10n.planCreateTaskBlueprintHint,
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: DS.spacing16),
-          if (widget.pendingTasks.isNotEmpty) ...[
-            Text(
-              l10n.planCreateReferenceExistingTasks,
-              style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
-            ),
-            const SizedBox(height: DS.spacing8),
-            ...widget.pendingTasks.map(
-              (task) => Card(
-                margin: const EdgeInsets.only(bottom: DS.spacing8),
-                child: ListTile(
-                  title: Text(task.title),
-                  subtitle: Text(
-                    l10n.planCreateTaskSubtitle(task.estimatedMinutes.toString(), task.difficulty.toString()),
-                  ),
-                  trailing: TextButton(
-                    onPressed: () => widget.onAddTask(
-                      PlanTaskDraft(
-                        title: task.title,
-                        estimatedMinutes: task.estimatedMinutes,
-                        difficulty: task.difficulty,
-                        dueDate: task.dueDate,
-                        generateGuide:
-                            task.guideContent?.trim().isEmpty ?? true,
-                      ),
+          const SizedBox(height: DS.spacing8),
+          ...widget.pendingTasks.map(
+            (task) => Card(
+              margin: const EdgeInsets.only(bottom: DS.spacing8),
+              child: ListTile(
+                title: Text(task.title),
+                subtitle: Text(
+                  l10n.planCreateTaskSubtitle(task.estimatedMinutes.toString(),
+                      task.difficulty.toString()),
+                ),
+                trailing: TextButton(
+                  onPressed: () => widget.onAddTask(
+                    PlanTaskDraft(
+                      title: task.title,
+                      estimatedMinutes: task.estimatedMinutes,
+                      difficulty: task.difficulty,
+                      dueDate: task.dueDate,
+                      generateGuide: task.guideContent?.trim().isEmpty ?? true,
                     ),
-                    child: Text(l10n.planCreateCopyToPlan),
                   ),
+                  child: Text(l10n.planCreateCopyToPlan),
                 ),
               ),
             ),
-            const SizedBox(height: DS.spacing12),
-          ],
-          Container(
-            padding: const EdgeInsets.all(DS.spacing12),
-            decoration: BoxDecoration(
-              color: DS.surfacePanel,
-              borderRadius: DS.borderRadius16,
-              border: Border.all(color: DS.borderSubtle),
-            ),
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  decoration: InputDecoration(
-                    labelText: l10n.planCreateNewTaskLabel,
-                    hintText: l10n.planCreateNewTaskHint,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: DS.spacing12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _minutes,
-                        decoration: InputDecoration(
-                          labelText: l10n.planCreateDurationLabel,
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [20, 30, 45, 60, 90]
-                            .map(
-                              (value) => DropdownMenuItem(
-                                value: value,
-                                child: Text(l10n.planCreateMinutes(value.toString())),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _minutes = value);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: DS.spacing12),
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _difficulty,
-                        decoration: InputDecoration(
-                          labelText: l10n.planCreateDifficultyLabel,
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [1, 2, 3, 4, 5]
-                            .map(
-                              (value) => DropdownMenuItem(
-                                value: value,
-                                child: Text('$value'),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _difficulty = value);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: DS.spacing12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SparkleButton.ghost(
-                    onPressed: _appendManualTask,
-                    label: l10n.planCreateAddTaskToPlan,
-                  ),
-                ),
-              ],
-            ),
           ),
-          const SizedBox(height: DS.spacing16),
-          if (widget.draftTasks.isEmpty)
-            Text(
-              l10n.planCreateNoTasks,
-              style: DS.bodySmall.copyWith(color: DS.textSecondary),
-            )
-          else
-            ...widget.draftTasks.asMap().entries.map(
-                  (entry) => Card(
-                    margin: const EdgeInsets.only(bottom: DS.spacing8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            DS.brandPrimary.withValues(alpha: 0.12),
-                        child: Text('${entry.key + 1}'),
+          const SizedBox(height: DS.spacing12),
+        ],
+        Container(
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: DS.surfacePanel,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: l10n.planCreateNewTaskLabel,
+                  hintText: l10n.planCreateNewTaskHint,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _minutes,
+                      decoration: InputDecoration(
+                        labelText: l10n.planCreateDurationLabel,
+                        border: OutlineInputBorder(),
                       ),
-                      title: Text(entry.value.title),
-                      subtitle: Text(
-                        l10n.planCreateTaskSubtitle(entry.value.estimatedMinutes.toString(), entry.value.difficulty.toString()),
+                      items: const [20, 30, 45, 60, 90]
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(
+                                  l10n.planCreateMinutes(value.toString())),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _minutes = value);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _difficulty,
+                      decoration: InputDecoration(
+                        labelText: l10n.planCreateDifficultyLabel,
+                        border: OutlineInputBorder(),
                       ),
-                      trailing: IconButton(
-                        onPressed: () => widget.onRemoveTask(entry.key),
-                        icon: const Icon(Icons.delete_outline_rounded),
-                      ),
+                      items: const [1, 2, 3, 4, 5]
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text('$value'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _difficulty = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: SparkleButton.ghost(
+                  onPressed: _appendManualTask,
+                  label: l10n.planCreateAddTaskToPlan,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: DS.spacing16),
+        if (widget.draftTasks.isEmpty)
+          Text(
+            l10n.planCreateNoTasks,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          )
+        else
+          ...widget.draftTasks.asMap().entries.map(
+                (entry) => Card(
+                  margin: const EdgeInsets.only(bottom: DS.spacing8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: DS.brandPrimary.withValues(alpha: 0.12),
+                      child: Text('${entry.key + 1}'),
+                    ),
+                    title: Text(entry.value.title),
+                    subtitle: Text(
+                      l10n.planCreateTaskSubtitle(
+                          entry.value.estimatedMinutes.toString(),
+                          entry.value.difficulty.toString()),
+                    ),
+                    trailing: IconButton(
+                      onPressed: () => widget.onRemoveTask(entry.key),
+                      icon: const Icon(Icons.delete_outline_rounded),
                     ),
                   ),
                 ),
-        ],
-        );
+              ),
+      ],
+    );
   }
 }
 
@@ -1169,7 +1197,9 @@ class _PlanGuideStep extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                isHuman || !enableStage4Experience ? l10n.planCreateGuideHumanTitle : l10n.planCreateGuideAiTitle,
+                isHuman || !enableStage4Experience
+                    ? l10n.planCreateGuideHumanTitle
+                    : l10n.planCreateGuideAiTitle,
                 style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
               ),
             ),
@@ -1190,7 +1220,9 @@ class _PlanGuideStep extends StatelessWidget {
                     ),
               label: isGenerating
                   ? l10n.generating
-                  : (isHuman || !enableStage4Experience ? l10n.planCreateGenerateHumanGuide : l10n.planCreateGenerateAiGuide),
+                  : (isHuman || !enableStage4Experience
+                      ? l10n.planCreateGenerateHumanGuide
+                      : l10n.planCreateGenerateAiGuide),
             ),
           ],
         ),
@@ -1224,6 +1256,7 @@ class _PlanGuideStep extends StatelessWidget {
                     color: DS.textPrimary,
                     fontFamily:
                         aiGuidePreview.trim().isEmpty ? null : 'monospace',
+                    fontFamilyFallback: sparkleFontFallback,
                     height: 1.55,
                   ),
                 ),
@@ -1258,66 +1291,68 @@ class _PlanReviewStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: DS.brandPrimary.withValues(alpha: 0.08),
-              borderRadius: DS.borderRadius16,
-              border:
-                  Border.all(color: DS.brandPrimary.withValues(alpha: 0.14)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  draft.name,
-                  style: Theme.of(context).textTheme.titleLarge,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.08),
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.14)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                draft.name,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                l10n.planCreateReviewSummary(
+                  draft.type == PlanType.growth
+                      ? l10n.planTypeGrowth
+                      : l10n.planTypeSprint,
+                  draft.dailyMinutes.toString(),
+                  draft.totalEstimatedHours.toStringAsFixed(1),
                 ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  l10n.planCreateReviewSummary(
-                    draft.type == PlanType.growth ? l10n.planTypeGrowth : l10n.planTypeSprint,
-                    draft.dailyMinutes.toString(),
-                    draft.totalEstimatedHours.toStringAsFixed(1),
-                  ),
-                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-                ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  draft.goal,
-                  style: DS.bodyMedium.copyWith(height: 1.5),
-                ),
-              ],
-            ),
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                draft.goal,
+                style: DS.bodyMedium.copyWith(height: 1.5),
+              ),
+            ],
           ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            isEditMode
-                ? l10n.planCreateReviewEditDescription
-                : l10n.planCreateReviewCreateDescription,
-            style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        Text(
+          isEditMode
+              ? l10n.planCreateReviewEditDescription
+              : l10n.planCreateReviewCreateDescription,
+          style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        Text(
+          l10n.planCreateFinalDescription,
+          style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: DS.surfacePanel,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.borderSubtle),
           ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            l10n.planCreateFinalDescription,
-            style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
+          child: SelectableText(
+            previewDescription,
+            style: DS.bodySmall.copyWith(height: 1.6),
           ),
-          const SizedBox(height: DS.spacing8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: DS.surfacePanel,
-              borderRadius: DS.borderRadius16,
-              border: Border.all(color: DS.borderSubtle),
-            ),
-            child: SelectableText(
-              previewDescription,
-              style: DS.bodySmall.copyWith(height: 1.6),
-            ),
-          ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 }

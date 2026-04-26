@@ -219,7 +219,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   List<Map<String, dynamic>> _parseLinkedNodes(Map<String, dynamic>? payload) {
     final raw = payload?['linked_knowledge_nodes'];
     if (raw is! List) {
-      return const [];
+      return [];
     }
     return raw
         .whereType<Map<dynamic, dynamic>>()

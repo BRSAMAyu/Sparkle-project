@@ -8,13 +8,14 @@ Aurora status endpoint -- modeling domain coverage for status awareness bar.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.aurora.runtime_v1.state import CORE_MODELING_DOMAINS
 from app.core.cache import cache_service
 from app.models.user import User
+from app.services.aurora_control_surface_service import AuroraControlSurfaceService
 
 router = APIRouter(prefix="/aurora", tags=["aurora"])
 
@@ -26,6 +27,19 @@ _DOMAIN_LABELS: dict[str, str] = {
     "time": "\u65f6\u95f4\u5efa\u6a21",
     "motivation": "\u52a8\u673a\u5efa\u6a21",
 }
+
+
+@router.get("/control-surface")
+async def get_control_surface(
+    conversation_id: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return Aurora's four-facet cognitive control surface for product UI."""
+    return await AuroraControlSurfaceService(db, cache_service.redis).build_snapshot(
+        user_id=current_user.id,
+        conversation_id=conversation_id,
+    )
 
 
 @router.get("/modeling-status")

@@ -18,6 +18,7 @@ import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
+import 'package:sparkle/features/documents/documents_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
@@ -603,6 +604,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   subtitle: Text(l10n.visualElementsEntrySubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(VisualElementsRoutes.basePath),
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              GraphiteCardSurface(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.auto_stories_outlined),
+                  title: Text(l10n.studyMaterialsTitle),
+                  subtitle: Text(l10n.studyMaterialsEntrySubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(DocumentLibraryRoutes.library),
                 ),
               ),
               const SizedBox(height: DS.spacing16),

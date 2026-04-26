@@ -5,23 +5,11 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Font fallback list for CJK and emoji rendering.
-/// Public so callers can use the same fallback stack for custom text widgets.
-const sparkleFontFallback = <String>[
-  'PingFang SC',
-  'Hiragino Sans GB',
-  'Heiti SC',
-  'Noto Sans SC',
-  'Noto Sans CJK SC',
-  'Source Han Sans SC',
-  'Microsoft YaHei',
-  'Arial Unicode MS',
-  'Apple Color Emoji',
-  'Noto Color Emoji',
-  'Segoe UI Emoji',
-];
+export 'package:sparkle/core/utils/text_rendering.dart'
+    show sparkleFontFallback;
 
 enum SparkleMarkdownRole {
   standard,
@@ -597,57 +585,7 @@ String _prepareContent(String raw, {required bool isStreaming}) {
 /// - Missing spaces after markdown markers (`#`, `-`, `>`, `1.`)
 /// - Chinese punctuation numbered lists (`1、` → `1.`)
 String _normalize(String raw) {
-  var s = raw.replaceAll('\r\n', '\n');
-  // Remove invisible / non-renderable Unicode characters that cause ❓ glyphs.
-  // Strategy: strip everything that isn't visible content, keeping only:
-  //   - U+200D (ZWJ) — compound emoji (👨‍💻, 👩‍🎓, flags)
-  //   - U+FE0F (Variation Selector-16) — color emoji presentation
-  //   - Normal whitespace (\n, \t, space, ideographic space U+3000)
-  final buf = StringBuffer();
-  for (var i = 0; i < s.length; i++) {
-    final c = s.codeUnitAt(i);
-    // Fast path: printable ASCII
-    if (c >= 0x20 && c <= 0x7E) {
-      buf.writeCharCode(c);
-      continue;
-    }
-    // Whitespace: LF, CR, TAB
-    if (c == 0x0A || c == 0x0D || c == 0x09) {
-      buf.writeCharCode(c);
-      continue;
-    }
-    // ZWJ (compound emoji joiner) — always keep
-    if (c == 0x200D) {
-      buf.writeCharCode(c);
-      continue;
-    }
-    // Variation Selector-16 (color emoji) — always keep
-    if (c == 0xFE0F) {
-      buf.writeCharCode(c);
-      continue;
-    }
-    // CJK / general multilingual — keep everything above 0x00A0
-    // except known-invisible ranges
-    if (c >= 0x00A0) {
-      // Skip invisible formatting characters
-      if (c == 0x00AD) continue; // Soft hyphen
-      if (c >= 0x200B && c <= 0x200C) continue; // ZWSP, ZWNJ
-      if (c >= 0x200E && c <= 0x200F) continue; // Directional marks
-      if (c >= 0x2028 && c <= 0x2029) continue; // Line/paragraph separator
-      if (c >= 0x2060 && c <= 0x2064) continue; // Invisible operators
-      if (c == 0x2066 || c == 0x2067 || c == 0x2068 || c == 0x2069)
-        continue; // Bidi isolates
-      if (c == 0xFEFF) continue; // BOM
-      if (c == 0xFFFD) continue; // Replacement character
-      if (c >= 0xFFF0 && c <= 0xFFFC) continue; // Specials
-      if (c == 0xFE0E)
-        continue; // Variation Selector-15 (text presentation — causes ❓)
-      buf.writeCharCode(c);
-      continue;
-    }
-    // Control characters below 0x20 (except whitespace above) — skip
-  }
-  s = buf.toString();
+  var s = sanitizeDisplayText(raw);
 
   // Process line by line for bullet normalization
   final lines = s.split('\n');

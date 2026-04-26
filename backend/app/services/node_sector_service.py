@@ -499,10 +499,19 @@ class NodeSectorService:
         accepted = await self.mark_nodes_pending(node_ids)
         if not accepted:
             return False
-        glm_batch_service.enqueue_node_sector_backfill(
-            user_id=user_id,
-            node_ids=accepted,
-        )
+        try:
+            glm_batch_service.enqueue_node_sector_backfill(
+                user_id=user_id,
+                node_ids=accepted,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Node sector backfill enqueue failed for user {} with {} nodes: {}",
+                user_id,
+                len(accepted),
+                exc,
+            )
+            return False
         return True
 
     async def ensure_backfill_for_user(

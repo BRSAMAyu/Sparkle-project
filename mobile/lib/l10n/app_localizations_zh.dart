@@ -7731,6 +7731,255 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get studyMaterialsTitle => '学习资料库';
+
+  @override
+  String get studyMaterialsEntrySubtitle => '查看上传资料、处理进度，并管理知识来源';
+
+  @override
+  String get studyMaterialsHeroEyebrow => '个人知识资料馆';
+
+  @override
+  String get studyMaterialsHeroTitle => '把每一次上传都变成可调用的学习上下文';
+
+  @override
+  String get studyMaterialsHeroSubtitle =>
+      '统一管理你的笔记、课件和 PDF，查看它们落到哪些知识星点，并追踪 Aurora 实际引用了多少次。';
+
+  @override
+  String get studyMaterialsMetricDocs => '资料数';
+
+  @override
+  String get studyMaterialsMetricReady => '已就绪';
+
+  @override
+  String get studyMaterialsMetricInMotion => '处理中';
+
+  @override
+  String get studyMaterialsMetricWeeklyRefs => '周引用';
+
+  @override
+  String get studyMaterialsSearchHint => '搜索文件名、知识节点或引用片段';
+
+  @override
+  String get studyMaterialsFilterTitle => '筛选';
+
+  @override
+  String get studyMaterialsFilterAllStatus => '全部状态';
+
+  @override
+  String get studyMaterialsFilterHighlyCited => '高引用';
+
+  @override
+  String get studyMaterialsFilterAllSubjects => '全部学域';
+
+  @override
+  String studyMaterialsFilterNode(Object nodeName) {
+    return '当前节点：$nodeName';
+  }
+
+  @override
+  String get studyMaterialsFilterClearNode => '清除节点筛选';
+
+  @override
+  String get studyMaterialsDate => '时间';
+
+  @override
+  String get studyMaterialsDateAll => '不限时间';
+
+  @override
+  String get studyMaterialsDate7d => '近 7 天';
+
+  @override
+  String get studyMaterialsDate30d => '近 30 天';
+
+  @override
+  String get studyMaterialsDate90d => '近 90 天';
+
+  @override
+  String get studyMaterialsLoadError => '暂时无法加载学习资料。';
+
+  @override
+  String get studyMaterialsRefreshCta => '重新加载';
+
+  @override
+  String get studyMaterialsUploadCta => '上传学习资料';
+
+  @override
+  String get studyMaterialsUploadCtaShort => '上传';
+
+  @override
+  String get studyMaterialsUploadSuccess => '上传已开始，我们会很快把它映射进你的知识星图。';
+
+  @override
+  String get studyMaterialsDeleteTitle => '删除这份学习资料？';
+
+  @override
+  String studyMaterialsDeleteMessage(Object filename) {
+    return '要从资料库中删除 $filename 吗？这会将它从你的个人资料中移除。';
+  }
+
+  @override
+  String get studyMaterialsDeleteSuccess => '学习资料已删除';
+
+  @override
+  String studyMaterialsDeleteFailure(Object error) {
+    return '删除学习资料失败：$error';
+  }
+
+  @override
+  String get studyMaterialsShareSheetTitle => '分享到群组';
+
+  @override
+  String studyMaterialsShareGroupSubtitle(Object count) {
+    return '$count 位成员';
+  }
+
+  @override
+  String get studyMaterialsShareEmptyGroups => '请先加入或创建群组，再分享学习资料。';
+
+  @override
+  String get studyMaterialsShareLoadGroupsError => '暂时无法加载你的群组列表。';
+
+  @override
+  String studyMaterialsShareSuccess(Object groupName) {
+    return '已分享到 $groupName';
+  }
+
+  @override
+  String studyMaterialsShareFailure(Object error) {
+    return '分享学习资料失败：$error';
+  }
+
+  @override
+  String get studyMaterialsVisibilityGroup => '群组可见';
+
+  @override
+  String get studyMaterialsVisibilityPrivate => '仅自己可见';
+
+  @override
+  String get studyMaterialsAttachedNodesTitle => '挂载的知识星点';
+
+  @override
+  String get studyMaterialsNodesPending => '这份资料还在映射到你的知识星图节点中。';
+
+  @override
+  String get studyMaterialsNodesEmpty => '暂时还没有挂载到任何知识节点。';
+
+  @override
+  String get studyMaterialsTopChunksTitle => '高频引用片段';
+
+  @override
+  String get studyMaterialsTopChunksEmpty => 'Aurora 还没有引用过这份资料。';
+
+  @override
+  String get studyMaterialsConversationCountLabel => '对话数';
+
+  @override
+  String get studyMaterialsReferenceCountLabel => '引用次数';
+
+  @override
+  String get studyMaterialsKnowledgeStarsLabel => '知识星点';
+
+  @override
+  String get studyMaterialsShareAction => '分享';
+
+  @override
+  String get studyMaterialsDeleteAction => '删除';
+
+  @override
+  String get studyMaterialsRefreshAction => '重新处理';
+
+  @override
+  String get studyMaterialsSubjectCosmos => '宇宙';
+
+  @override
+  String get studyMaterialsSubjectTech => '技术';
+
+  @override
+  String get studyMaterialsSubjectArt => '艺术';
+
+  @override
+  String get studyMaterialsSubjectCivilization => '文明';
+
+  @override
+  String get studyMaterialsSubjectLife => '生命';
+
+  @override
+  String get studyMaterialsSubjectWisdom => '智慧';
+
+  @override
+  String get studyMaterialsSubjectGeneral => '通用';
+
+  @override
+  String studyMaterialsUsageWeekly(Object count) {
+    return '本周已被引用 $count 次';
+  }
+
+  @override
+  String studyMaterialsUsageTotal(Object count) {
+    return '累计已被引用 $count 次';
+  }
+
+  @override
+  String get studyMaterialsUsageEmpty => '暂未在对话中被引用';
+
+  @override
+  String studyMaterialsUploadedDays(Object count) {
+    return '$count 天前';
+  }
+
+  @override
+  String studyMaterialsUploadedHours(Object count) {
+    return '$count 小时前';
+  }
+
+  @override
+  String studyMaterialsUploadedMinutes(Object count) {
+    return '$count 分钟前';
+  }
+
+  @override
+  String studyMaterialsStatusProcessingPercent(Object percent) {
+    return '处理中 $percent%';
+  }
+
+  @override
+  String get studyMaterialsStatusProcessing => '处理中';
+
+  @override
+  String studyMaterialsStatusKnowledgeStars(Object count) {
+    return '已映射 $count 个星点';
+  }
+
+  @override
+  String get studyMaterialsStatusReady => '已就绪';
+
+  @override
+  String get studyMaterialsStatusFailed => '处理失败';
+
+  @override
+  String studyMaterialsChunkHitCount(Object count) {
+    return '命中 $count 次';
+  }
+
+  @override
+  String get studyMaterialsNoResultsTitle => '没有匹配的学习资料';
+
+  @override
+  String get studyMaterialsEmptyTitle => '你的学习宇宙正等待点亮';
+
+  @override
+  String get studyMaterialsNoResultsSubtitle => '换个搜索词，或清空筛选条件，看看更多资料。';
+
+  @override
+  String get studyMaterialsEmptySubtitle =>
+      '上传你的第一份笔记、课件或教材，Sparkle 会把它们转成可搜索的知识星图。';
+
+  @override
+  String get studyMaterialsResetFilters => '重置筛选';
+
+  @override
   String get communityMessageFallback => '消息加载中...';
 
   @override
@@ -16437,6 +16686,90 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get executionStatusUnknown => '状态未知';
+
+  @override
+  String get executionTrustRaw => '原始结果';
+
+  @override
+  String get executionTrustValidated => '已校验';
+
+  @override
+  String get executionTrustTrusted => '可信结果';
+
+  @override
+  String get executionTrustUnknown => '待评估';
+
+  @override
+  String get nextActionQuickReviewTitle => '快速回顾';
+
+  @override
+  String get nextActionQuickReviewDescription => '回顾刚才的核心要点';
+
+  @override
+  String get nextActionLightExpandTitle => '拓展学习';
+
+  @override
+  String get nextActionLightExpandDescription => '了解相关知识点';
+
+  @override
+  String get nextActionPracticeApplyTitle => '实践应用';
+
+  @override
+  String get nextActionPracticeApplyDescription => '应用所学知识';
+
+  @override
+  String get nextActionRestBreakTitle => '休息一下';
+
+  @override
+  String get nextActionRestBreakDescription => '适当休息，保持状态';
+
+  @override
+  String get nextActionContinuePlanTitle => '继续计划';
+
+  @override
+  String get nextActionContinuePlanDescription => '继续按计划学习';
+
+  @override
+  String get knowledgeRelationPrerequisite => '前置知识';
+
+  @override
+  String get knowledgeRelationRelated => '相关知识';
+
+  @override
+  String get knowledgeRelationApplication => '应用';
+
+  @override
+  String get knowledgeRelationComposition => '组成部分';
+
+  @override
+  String get knowledgeRelationEvolution => '演进';
+
+  @override
+  String get knowledgeRelationDefault => '关联';
+
+  @override
+  String get knowledgeMasteryLevelLocked => '未解锁';
+
+  @override
+  String get knowledgeMasteryLevelBrilliant => '璀璨';
+
+  @override
+  String get knowledgeMasteryLevelShining => '闪耀';
+
+  @override
+  String get knowledgeMasteryLevelGlimmer => '微光';
+
+  @override
+  String get knowledgeMasteryLevelUnlit => '未点亮';
+
+  @override
+  String get interventionPhaseForethought => '规划中';
+
+  @override
+  String get interventionPhasePerformance => '执行中';
+
+  @override
+  String get interventionPhaseSelfReflection => '复盘中';
 
   @override
   String get stuckHelpTitle => '别担心，我们来看看卡在哪里';
