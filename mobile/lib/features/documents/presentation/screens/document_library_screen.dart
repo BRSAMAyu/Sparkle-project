@@ -1033,6 +1033,11 @@ class _DocumentCard extends StatelessWidget {
                           icon: Icons.auto_awesome_motion_rounded,
                         ),
                         _StatusBadge(document: document),
+                        if (document.processingStatus?.hasDraftsPending == true)
+                          _DraftsPendingPill(
+                            count: document.processingStatus!.draftsPending!,
+                            onTap: () => context.push(GalaxyRoutes.draftReview),
+                          ),
                         _PillLabel(
                           label: document.visibility == 'group'
                               ? context.l10n.studyMaterialsVisibilityGroup
@@ -1458,6 +1463,44 @@ class _StatusBadge extends StatelessWidget {
                 ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DraftsPendingPill extends StatelessWidget {
+  const _DraftsPendingPill({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary20,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.rate_review_rounded, size: 14, color: DS.brandPrimary),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              '$count draft${count != 1 ? 's' : ''} to review',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.brandPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }

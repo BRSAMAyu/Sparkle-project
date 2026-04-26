@@ -44,6 +44,7 @@ class DocumentProcessingStatus {
     required this.progressPercent,
     required this.stage,
     this.nodesFound,
+    this.draftsPending,
     this.error,
   });
 
@@ -56,6 +57,7 @@ class DocumentProcessingStatus {
       progressPercent: progress.clamp(0, 100),
       stage: json['stage']?.toString() ?? '',
       nodesFound: (json['nodes_found'] as num?)?.toInt(),
+      draftsPending: (json['drafts_pending'] as num?)?.toInt(),
       error: json['error']?.toString(),
     );
   }
@@ -64,11 +66,13 @@ class DocumentProcessingStatus {
   final int progressPercent;
   final String stage;
   final int? nodesFound;
+  final int? draftsPending;
   final String? error;
 
   bool get isProcessing => status == DocumentStatus.processing;
   bool get isReady => status == DocumentStatus.ready;
   bool get isFailed => status == DocumentStatus.failed;
+  bool get hasDraftsPending => (draftsPending ?? 0) > 0;
 }
 
 class DocumentGalaxyNode {
