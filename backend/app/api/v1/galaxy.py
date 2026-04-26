@@ -554,6 +554,7 @@ async def get_node_detail(
         "subject_id": node.subject_id,
         "subject_name": node.subject.name if node.subject else None,
         "created_at": node.created_at.isoformat() if node.created_at else None,
+        "community_signal": node.community_signal,
     }
 
     # 构建 relations list (matching Flutter NodeRelation)
@@ -1131,3 +1132,15 @@ async def get_heatmap(
     Phase 4.2 Insight.
     """
     return await galaxy_service.get_heatmap_data(UUID(user_id))
+
+
+@router.post("/community/aggregate-errors", summary="Aggregate community error patterns for nodes with recent errors")
+async def aggregate_community_errors(
+    _user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.community_error_aggregation_service import CommunityErrorAggregationService
+
+    service = CommunityErrorAggregationService(db)
+    updated = await service.aggregate_for_nodes_with_recent_errors()
+    return {"status": "ok", "nodes_updated": updated}

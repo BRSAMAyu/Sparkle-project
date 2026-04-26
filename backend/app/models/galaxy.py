@@ -160,6 +160,7 @@ class KnowledgeNode(BaseModel):
 
     # Collaborative Data
     global_spark_count = Column(Integer, default=0, nullable=False)
+    community_signal = Column(JSONBCompat, nullable=True)
 
     # 关系
     subject = relationship("Subject", backref="knowledge_nodes")
