@@ -214,29 +214,29 @@ Community Resource Pool → 质量评分 → Aurora 推荐是否加入个人库 
 
 ## 9. 实施计划
 
-### Phase 1: 闭环连通（P0）
-- [ ] Upload → 处理进度通知 → 节点发现 → 通知 → Draft Review 路由打通
-- [ ] Context Receipt MVP — 回答底部显示"基于：X / 未使用：Y"
-- [ ] retrieval_intent.py 升级为 ContextPlan 结构
-- [ ] 知识节点详情页显示挂载资料
+### Phase 1: 闭环连通（P0） ✅ COMPLETE
+- [x] Upload → 处理进度通知 → 节点发现 → 通知 → Draft Review 路由打通
+- [x] Context Receipt MVP — 回答底部显示"基于：X / 未使用：Y"
+- [x] retrieval_intent.py 升级为 ContextPlan 结构
+- [x] 知识节点详情页显示挂载资料
 - **进度文档**: [phase1_progress.md](./SPARKLE_KNOWLEDGE_LOOP_PHASE1_PROGRESS.md)
 
-### Phase 2: Aurora Context Engineering（P1）
-- [ ] ContextPlan 写入 routing_decision_log
-- [ ] Aurora 状态带显示上下文决策
-- [ ] Source Tray 升级（目标感知资料托盘）
-- [ ] 资料选择作用域（本次/任务/目标）
-- [ ] LLM-powered 节点建议
-- [ ] 资料质量反馈影响检索排序
+### Phase 2: Aurora Context Engineering（P1） ✅ COMPLETE
+- [x] ContextPlan 写入 routing_decision_log
+- [x] Aurora 状态带显示上下文决策
+- [x] Source Tray 升级（目标感知资料托盘）— 5 模式: auto/userSelected/taskScope/goalScope/off
+- [x] 资料选择作用域（本次/任务/目标）— document_context_scope 端到端传递
+- [x] LLM-powered 节点建议 — exam_weight + recommended_action
+- [x] 资料质量反馈影响检索排序 — 已有完整闭环
 - **进度文档**: [phase2_progress.md](./SPARKLE_KNOWLEDGE_LOOP_PHASE2_PROGRESS.md)
 
-### Phase 3: 护城河闭环（P2）
-- [ ] 社群共性错因 → 知识节点标注
-- [ ] 共享资料推荐流程
-- [ ] 混合时间轴记录 ContextPlan 因果轨迹
-- [ ] Aurora 自我校准
-- [ ] 资料卡显示覆盖/用途/有效性
-- [ ] 知识星图节点五 tab
+### Phase 3: 护城河闭环（P2） ✅ COMPLETE
+- [x] 社群共性错因 → 知识节点标注 — Celery 定时 + API 按需
+- [x] 共享资料推荐流程 — GET /community/recommended-resources
+- [x] 混合时间轴记录 ContextPlan 因果轨迹 — GET /galaxy/context-plan/timeline
+- [x] Aurora 自我校准 — 连续错题检测 + 校准问题注入 ContextPlan
+- [x] 资料卡显示覆盖/用途/有效性 — 质量指示 + drafts pending
+- [x] 知识星图节点五 tab — 概览/资料/错因/任务/社群洞察
 - **进度文档**: [phase3_progress.md](./SPARKLE_KNOWLEDGE_LOOP_PHASE3_PROGRESS.md)
 
 ---
@@ -248,12 +248,12 @@ Community Resource Pool → 质量评分 → Aurora 推荐是否加入个人库 
 | 资料上传 | `backend/app/api/v1/documents.py` | ✅ | presigned upload + confirm + status |
 | 文档解析 | `backend/app/core/ingestion/ingestion_service.py` | ✅ | PDF/DOCX/PPTX/MD/TXT/Image+OCR |
 | RAG 检索 | `backend/app/orchestration/graph_rag.py` | ✅ | HyDE + BM25+RRF + CRAG + mastery rerank |
-| 检索意图 | `backend/app/orchestration/retrieval_intent.py` | ⚠️ | 只有 aggressive/selective/skip 三档 |
+| 检索意图 | `backend/app/orchestration/retrieval_intent.py` | ✅ | 8-level ContextPlan + 5-scope source_scope |
 | Aurora Kill Switch | `backend/app/services/aurora_doc_context_kill_switch_service.py` | ✅ | off/shadow/live |
 | 节点挂载 | `backend/app/models/galaxy.py` KnowledgeNodeDocument | ✅ | join table exists |
 | Galaxy API | `backend/app/api/v1/galaxy.py` | ✅ | drafts/review/attach/detach |
 | 节点资料 Provider | `mobile/.../node_source_materials_provider.dart` | ✅ | 数据层完成 |
-| Citation Strip | `mobile/.../assistant_citation_strip.dart` | ⚠️ | 基础版，无 Context Receipt |
+| Citation Strip | `mobile/.../assistant_citation_strip.dart` | ✅ | Context Receipt bar integrated in chat_bubble |
 | 群组知识库 | `mobile/.../group_knowledge_base_view.dart` | ✅ | UI 完成 |
 | Gateway 路由 | `backend/gateway/internal/handler/galaxy_handler.go` | ✅ | 所有端点已注册 |
 
