@@ -7,7 +7,7 @@ from uuid import UUID
 from app.aurora.runtime_v1.control_surface import ControlSurfaceService
 from app.aurora.runtime_v1.persistence import AuroraPersistenceStore
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
-from app.aurora.runtime_v1.state import AuroraCognitiveSnapshot, AuroraRuntimeStore, AuroraState
+from app.aurora.runtime_v1.state import AuroraCognitiveSnapshot, AuroraEnergyStore, AuroraRuntimeStore, AuroraState
 from app.core.profile_context import ProfileContext
 from app.core.user_insight_state import UserInsightState
 from app.services.profile_context_service import ProfileContextService
@@ -116,19 +116,36 @@ class AuroraControlSurfaceService:
         ready_count = sum(1 for item in facets if item["status"] == "ready")
         recalibrating = any(item["status"] == "recalibrating" for item in facets)
         active_count = sum(1 for item in facets if item["status"] != "missing")
+        aurora_active = bool(profile_context.user_insight_state or runtime_state or persisted_snapshot)
 
-        if recalibrating:
-            overall_status = "recalibrating"
-            summary = "Aurora 正在做自校准，当前判断会更保守。"
-        elif ready_count == len(facets):
-            overall_status = "ready"
-            summary = "Aurora 的四层感知已形成闭环，可以直接支撑主动建模和后续动作。"
-        elif active_count > 0:
-            overall_status = "partial"
-            summary = "Aurora 已建立部分感知轮廓，仍在补齐剩余建模面。"
-        else:
-            overall_status = "missing"
-            summary = "Aurora 还没有形成足够的感知读数。"
+        # Resolve energy level and wake eligibility
+        energy_store = AuroraEnergyStore(self.redis)
+        has_risk = recalibrating or any(
+            item.get("meta", {}).get("needs_recalibration") for item in facets if item["key"] == "self_model"
+        )
+        energy = await energy_store.resolve_energy_level(
+            user_id,
+            aurora_active=aurora_active,
+            overall_status="recalibrating" if recalibrating else ("ready" if ready_count == len(facets) else "partial"),
+            ready_count=ready_count,
+            total_count=len(facets),
+            has_risk=has_risk,
+        )
+        wake_eligibility = energy_store.compute_wake_eligibility(
+            energy,
+            wake_reasons=self._collect_wake_reasons(facets, recalibrating),
+        )
+
+        # 6-state model: sensing | calibrated | risk_found | needs_confirm | calibration_available | cooling_down
+        band_status = self._resolve_band_status(
+            energy=energy,
+            aurora_active=aurora_active,
+            ready_count=ready_count,
+            total_count=len(facets),
+            recalibrating=recalibrating,
+            active_count=active_count,
+        )
+        summary = self._band_status_summary(band_status, facets)
 
         matched_conversation_id = _strip(getattr(runtime_state, "conversation_id", None))
         normalized_requested = _strip(conversation_id)
@@ -141,15 +158,18 @@ class AuroraControlSurfaceService:
             )
 
         return {
-            "aurora_active": bool(profile_context.user_insight_state or runtime_state or persisted_snapshot),
+            "aurora_active": aurora_active,
             "runtime_enabled": bool(control_surface.runtime_enabled),
-            "overall_status": overall_status,
+            "overall_status": band_status,
+            "legacy_status": "recalibrating" if recalibrating else ("ready" if ready_count == len(facets) else "partial"),
+            "energy_level": energy.current_level,
             "summary": summary,
             "progress": {
                 "ready_count": ready_count,
                 "active_count": active_count,
                 "total": len(facets),
             },
+            "wake_eligibility": wake_eligibility.model_dump(),
             "conversation_id": matched_conversation_id or normalized_requested or None,
             "requested_conversation_id": normalized_requested or None,
             "scene_alignment": scene_alignment,
@@ -556,3 +576,55 @@ class AuroraControlSurfaceService:
                 if freshness is not None:
                     results.append(freshness)
         return results
+
+    def _resolve_band_status(
+        self,
+        *,
+        energy,
+        aurora_active: bool,
+        ready_count: int,
+        total_count: int,
+        recalibrating: bool,
+        active_count: int,
+    ) -> str:
+        from app.aurora.runtime_v1.state import AuroraEnergyState
+
+        if not isinstance(energy, AuroraEnergyState):
+            return "sensing"
+        if energy.is_cooling_down:
+            return "cooling_down"
+        if not aurora_active:
+            return "sensing"
+        if recalibrating:
+            return "risk_found"
+        # Check if any facet has a judgment needing confirmation
+        if ready_count >= 3 and energy.can_user_wake:
+            return "calibration_available"
+        if ready_count == total_count:
+            return "calibrated"
+        if active_count >= 2:
+            return "needs_confirm"
+        return "sensing"
+
+    def _band_status_summary(self, band_status: str, facets: list[dict]) -> str:
+        summaries = {
+            "sensing": "Aurora 正在轻量感知，参考当前上下文优化回复。",
+            "calibrated": "Aurora 的四层感知已对齐，当前策略可以直接执行。",
+            "risk_found": "Aurora 发现策略风险，建议确认或调整当前方向。",
+            "needs_confirm": "Aurora 有一个判断需要你确认。",
+            "calibration_available": "Aurora 深度校准可用，适合在关键时刻重新校准理解。",
+            "cooling_down": "Aurora 深度校准刚完成，正在冷却中。可以先做快速校准。",
+        }
+        return summaries.get(band_status, summaries["sensing"])
+
+    def _collect_wake_reasons(self, facets: list[dict], recalibrating: bool) -> list[str]:
+        reasons: list[str] = []
+        if recalibrating:
+            reasons.append("self_model_recalibrating")
+        for facet in facets:
+            meta = _as_dict(facet.get("meta"))
+            if meta.get("needs_recalibration"):
+                reasons.append("strategy_confidence_drop")
+            if facet.get("status") == "recalibrating":
+                reasons.append(f"{facet.get('key')}_recalibrating")
+        return reasons[:5]

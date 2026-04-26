@@ -18281,4 +18281,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auroraInputHint => '告诉 Sparkle 任何想法...';
+
+  @override
+  String get auroraBandSensing => 'Aurora 轻量感知中';
+
+  @override
+  String get auroraBandCalibrated => 'Aurora 已校准';
+
+  @override
+  String get auroraBandRiskFound => 'Aurora 发现策略风险';
+
+  @override
+  String get auroraBandNeedsConfirm => 'Aurora 需要确认一个判断';
+
+  @override
+  String get auroraBandCalibrationAvailable => '深度校准可用';
+
+  @override
+  String get auroraBandCoolingDown => 'Aurora 校准冷却中';
+
+  @override
+  String auroraWakeAvailable(Object count) {
+    return '深度校准可用（今日还剩 $count 次）';
+  }
+
+  @override
+  String auroraWakeCooling(Object minutes) {
+    return '校准冷却中 · 还需 $minutes 分钟';
+  }
+
+  @override
+  String get auroraWakeQuickFallback => '快速校准';
+
+  @override
+  String get auroraWakeViewUpdates => '查看刚才更新了什么';
 }

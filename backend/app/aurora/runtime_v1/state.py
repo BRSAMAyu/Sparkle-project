@@ -49,6 +49,17 @@ DEFAULT_ACTIVITY_EXPRESSION: dict[ExpressionDimension, float] = {
 }
 CORE_MODELING_DOMAINS: tuple[str, ...] = ("goal", "scope", "baseline", "time", "motivation")
 
+# Aurora energy levels — L0 silent through L3 full core session
+AuroraEnergyLevel = Literal["L0", "L1", "L2", "L3"]
+AuroraBandStatus = Literal[
+    "sensing",             # L0-L1: Aurora observing / light context
+    "calibrated",          # All facets ready, no action needed
+    "risk_found",          # Strategy or model conflict detected
+    "needs_confirm",       # Aurora has a judgment needing user validation
+    "calibration_available",  # User can trigger L3 deep calibration
+    "cooling_down",        # L3 session recently completed, cooldown active
+]
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
@@ -338,6 +349,45 @@ class AuroraCognitiveSnapshot(AuroraSchemaBase):
         return _normalize_user_id(value)
 
 
+class AuroraEnergyState(AuroraSchemaBase):
+    """Tracks Aurora's current energy level and wake eligibility."""
+    user_id: str
+    current_level: AuroraEnergyLevel = "L0"
+    wake_score: float = 0.0
+    last_l3_session_at: datetime | None = None
+    l3_session_count_today: int = 0
+    cooldown_until: datetime | None = None
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+    @field_validator("wake_score")
+    @classmethod
+    def _validate_wake_score(cls, value: float) -> float:
+        return max(0.0, min(1.0, float(value)))
+
+    @property
+    def is_cooling_down(self) -> bool:
+        if self.cooldown_until is None:
+            return False
+        return _utcnow() < self.cooldown_until.replace(tzinfo=None)
+
+    @property
+    def can_user_wake(self) -> bool:
+        return not self.is_cooling_down and self.l3_session_count_today < 3
+
+
+class AuroraWakeEligibility(AuroraSchemaBase):
+    """Determines if and how Aurora can be woken for a deep calibration."""
+    can_user_wake: bool = False
+    user_quota_remaining: int = 0
+    cooldown_status: str = "available"  # available | cooling_down | exhausted
+    cooldown_remaining_min: int = 0
+    recommended_session_type: str = "strategy_recalibration"
+    estimated_duration_sec: int = 240
+    wake_reasons: list[str] = Field(default_factory=list)
+    suggested_scope: str = ""
+    fallback_if_unavailable: str = "quick_calibration"
+
+
 def build_aurora_runtime_metadata(
     *,
     surface: str,
@@ -590,3 +640,151 @@ class AuroraRuntimeStore:
             )
         coerced["self_scheduled_wakes"] = wakes
         return coerced
+
+
+class AuroraEnergyStore:
+    """Redis-backed store for Aurora energy levels, cooldowns, and wake eligibility."""
+
+    ENERGY_KEY = "aurora:energy:{user_id}"
+    COOLDOWN_TEMPLATES: dict[str, int] = {
+        "default": 360,        # 6 hours in minutes
+        "sprint_14d": 240,     # 4 hours
+        "sprint_7d": 120,      # 2 hours
+        "sprint_48h": 90,      # 90 minutes
+        "sprint_24h": 60,      # 60 minutes
+    }
+    DAILY_QUOTA: dict[str, int] = {
+        "default": 1,
+        "sprint_14d": 2,
+        "sprint_7d": 2,
+        "sprint_48h": 3,
+        "sprint_24h": 3,
+    }
+
+    def __init__(self, redis, *, enabled: bool | None = None) -> None:
+        self.redis = redis
+        self._enabled = enabled
+
+    @property
+    def enabled(self) -> bool:
+        return settings.ENABLE_AURORA_RUNTIME_V1 if self._enabled is None else bool(self._enabled)
+
+    async def load_energy(self, user_id: UUID | str) -> AuroraEnergyState:
+        uid = _normalize_user_id(user_id)
+        if not self.enabled or self.redis is None:
+            return AuroraEnergyState(user_id=uid)
+
+        raw = await self._redis_call("get", self.ENERGY_KEY.format(user_id=uid))
+        if not raw:
+            return AuroraEnergyState(user_id=uid)
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        try:
+            return AuroraEnergyState.model_validate_json(raw)
+        except Exception:
+            return AuroraEnergyState(user_id=uid)
+
+    async def save_energy(self, state: AuroraEnergyState) -> bool:
+        if not self.enabled or self.redis is None:
+            return False
+        key = self.ENERGY_KEY.format(user_id=state.user_id)
+        ttl = 48 * 60 * 60  # 48 hours
+        await self._redis_call("setex", key, ttl, state.model_dump_json())
+        return True
+
+    async def record_l3_session(self, user_id: UUID | str, *, sprint_mode: str = "default") -> AuroraEnergyState:
+        energy = await self.load_energy(user_id)
+        now = _utcnow()
+        energy.current_level = "L3"
+        energy.last_l3_session_at = now
+        energy.l3_session_count_today += 1
+
+        cooldown_min = self.COOLDOWN_TEMPLATES.get(sprint_mode, 360)
+        from datetime import timedelta
+
+        energy.cooldown_until = now + timedelta(minutes=cooldown_min)
+        energy.updated_at = now
+        await self.save_energy(energy)
+        return energy
+
+    async def resolve_energy_level(
+        self,
+        user_id: UUID | str,
+        *,
+        aurora_active: bool = False,
+        overall_status: str = "missing",
+        ready_count: int = 0,
+        total_count: int = 4,
+        has_risk: bool = False,
+    ) -> AuroraEnergyState:
+        energy = await self.load_energy(user_id)
+
+        if energy.is_cooling_down:
+            energy.current_level = "L0"
+        elif not aurora_active:
+            energy.current_level = "L0"
+            energy.wake_score = 0.0
+        elif has_risk or overall_status == "recalibrating":
+            energy.current_level = "L2"
+            energy.wake_score = min(1.0, 0.5 + ready_count * 0.1)
+        elif overall_status == "ready" and ready_count == total_count:
+            energy.current_level = "L1"
+            energy.wake_score = min(1.0, 0.7 + ready_count * 0.05)
+        elif overall_status in ("partial", "missing"):
+            energy.current_level = "L1"
+            energy.wake_score = min(1.0, 0.3 + ready_count * 0.1)
+        else:
+            energy.current_level = "L1"
+            energy.wake_score = 0.5
+
+        energy.updated_at = _utcnow()
+        await self.save_energy(energy)
+        return energy
+
+    def compute_wake_eligibility(
+        self,
+        energy: AuroraEnergyState,
+        *,
+        sprint_mode: str = "default",
+        wake_reasons: list[str] | None = None,
+    ) -> AuroraWakeEligibility:
+        if energy.is_cooling_down:
+            remaining = int((energy.cooldown_until.replace(tzinfo=None) - _utcnow()).total_seconds() / 60)
+            return AuroraWakeEligibility(
+                can_user_wake=False,
+                user_quota_remaining=max(0, self.DAILY_QUOTA.get(sprint_mode, 1) - energy.l3_session_count_today),
+                cooldown_status="cooling_down",
+                cooldown_remaining_min=max(0, remaining),
+                wake_reasons=wake_reasons or [],
+                suggested_scope="",
+                fallback_if_unavailable="quick_calibration",
+            )
+
+        quota = self.DAILY_QUOTA.get(sprint_mode, 1)
+        remaining = max(0, quota - energy.l3_session_count_today)
+        if remaining <= 0:
+            return AuroraWakeEligibility(
+                can_user_wake=False,
+                user_quota_remaining=0,
+                cooldown_status="exhausted",
+                fallback_if_unavailable="quick_calibration",
+                wake_reasons=wake_reasons or [],
+            )
+
+        return AuroraWakeEligibility(
+            can_user_wake=True,
+            user_quota_remaining=remaining,
+            cooldown_status="available",
+            wake_reasons=wake_reasons or [],
+            recommended_session_type="strategy_recalibration",
+            estimated_duration_sec=240,
+        )
+
+    async def _redis_call(self, method_name: str, *args, **kwargs):
+        method = getattr(self.redis, method_name, None)
+        if method is None:
+            return None
+        result = method(*args, **kwargs)
+        if inspect.isawaitable(result):
+            return await result
+        return result

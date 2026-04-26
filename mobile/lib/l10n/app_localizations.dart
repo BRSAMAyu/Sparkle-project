@@ -33342,6 +33342,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'告诉 Sparkle 任何想法...'**
   String get auroraInputHint;
+
+  /// No description provided for @auroraBandSensing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 轻量感知中'**
+  String get auroraBandSensing;
+
+  /// No description provided for @auroraBandCalibrated.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 已校准'**
+  String get auroraBandCalibrated;
+
+  /// No description provided for @auroraBandRiskFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 发现策略风险'**
+  String get auroraBandRiskFound;
+
+  /// No description provided for @auroraBandNeedsConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 需要确认一个判断'**
+  String get auroraBandNeedsConfirm;
+
+  /// No description provided for @auroraBandCalibrationAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度校准可用'**
+  String get auroraBandCalibrationAvailable;
+
+  /// No description provided for @auroraBandCoolingDown.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 校准冷却中'**
+  String get auroraBandCoolingDown;
+
+  /// No description provided for @auroraWakeAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度校准可用（今日还剩 {count} 次）'**
+  String auroraWakeAvailable(Object count);
+
+  /// No description provided for @auroraWakeCooling.
+  ///
+  /// In zh, this message translates to:
+  /// **'校准冷却中 · 还需 {minutes} 分钟'**
+  String auroraWakeCooling(Object minutes);
+
+  /// No description provided for @auroraWakeQuickFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速校准'**
+  String get auroraWakeQuickFallback;
+
+  /// No description provided for @auroraWakeViewUpdates.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看刚才更新了什么'**
+  String get auroraWakeViewUpdates;
 }
 
 class _AppLocalizationsDelegate

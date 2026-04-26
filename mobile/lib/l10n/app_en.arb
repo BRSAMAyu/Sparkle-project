@@ -8426,5 +8426,15 @@
   "auroraPhaseStrategy": "Strategy",
   "auroraPhaseExecution": "Execution",
   "auroraPhaseCheckpoint": "Checkpoint",
-  "auroraInputHint": "Tell Sparkle anything..."
+  "auroraInputHint": "Tell Sparkle anything...",
+  "auroraBandSensing": "Aurora sensing",
+  "auroraBandCalibrated": "Aurora calibrated",
+  "auroraBandRiskFound": "Aurora risk detected",
+  "auroraBandNeedsConfirm": "Aurora needs confirmation",
+  "auroraBandCalibrationAvailable": "Deep calibration available",
+  "auroraBandCoolingDown": "Aurora cooling down",
+  "auroraWakeAvailable": "Deep calibration available ({count} remaining today)",
+  "auroraWakeCooling": "Calibration cooling down · {minutes} min remaining",
+  "auroraWakeQuickFallback": "Quick calibration",
+  "auroraWakeViewUpdates": "View recent updates"
 }

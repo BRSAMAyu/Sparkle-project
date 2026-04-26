@@ -60,6 +60,7 @@ class AuroraControlSurfaceSnapshot {
     required this.auroraActive,
     required this.runtimeEnabled,
     required this.overallStatus,
+    required this.energyLevel,
     required this.summary,
     required this.readyCount,
     required this.activeCount,
@@ -70,6 +71,7 @@ class AuroraControlSurfaceSnapshot {
     required this.surface,
     required this.updatedAt,
     required this.facets,
+    required this.wakeEligibility,
     required this.fetchedAt,
   });
 
@@ -80,10 +82,16 @@ class AuroraControlSurfaceSnapshot {
             ? Map<String, dynamic>.from(json['progress'] as Map)
             : const <String, dynamic>{};
     final rawFacets = json['facets'] as List<dynamic>? ?? const [];
+    final rawWake = json['wake_eligibility'] is Map<String, dynamic>
+        ? json['wake_eligibility'] as Map<String, dynamic>
+        : json['wake_eligibility'] is Map
+            ? Map<String, dynamic>.from(json['wake_eligibility'] as Map)
+            : const <String, dynamic>{};
     return AuroraControlSurfaceSnapshot(
       auroraActive: json['aurora_active'] as bool? ?? false,
       runtimeEnabled: json['runtime_enabled'] as bool? ?? false,
-      overallStatus: json['overall_status'] as String? ?? 'missing',
+      overallStatus: json['overall_status'] as String? ?? 'sensing',
+      energyLevel: json['energy_level'] as String? ?? 'L0',
       summary: json['summary'] as String? ?? '',
       readyCount: (progress['ready_count'] as num?)?.toInt() ?? 0,
       activeCount: (progress['active_count'] as num?)?.toInt() ?? 0,
@@ -97,13 +105,15 @@ class AuroraControlSurfaceSnapshot {
           .whereType<Map<String, dynamic>>()
           .map(AuroraFacetSnapshot.fromJson)
           .toList(),
+      wakeEligibility: AuroraWakeEligibility.fromJson(rawWake),
       fetchedAt: DateTime.now(),
     );
   }
 
   final bool auroraActive;
   final bool runtimeEnabled;
-  final String overallStatus;
+  final String overallStatus; // 6-state: sensing/calibrated/risk_found/needs_confirm/calibration_available/cooling_down
+  final String energyLevel;   // L0-L3
   final String summary;
   final int readyCount;
   final int activeCount;
@@ -114,10 +124,52 @@ class AuroraControlSurfaceSnapshot {
   final String? surface;
   final DateTime? updatedAt;
   final List<AuroraFacetSnapshot> facets;
+  final AuroraWakeEligibility wakeEligibility;
   final DateTime fetchedAt;
 
-  bool get isRecalibrating => overallStatus == 'recalibrating';
-  bool get isReady => overallStatus == 'ready';
+  bool get isRecalibrating => overallStatus == 'risk_found';
+  bool get isReady => overallStatus == 'calibrated';
+  bool get isCoolingDown => overallStatus == 'cooling_down';
+  bool get needsConfirm => overallStatus == 'needs_confirm';
+  bool get canCalibrate => overallStatus == 'calibration_available';
+}
+
+class AuroraWakeEligibility {
+  const AuroraWakeEligibility({
+    required this.canUserWake,
+    required this.userQuotaRemaining,
+    required this.cooldownStatus,
+    required this.cooldownRemainingMin,
+    required this.wakeReasons,
+    required this.recommendedSessionType,
+    required this.estimatedDurationSec,
+    required this.suggestedScope,
+    required this.fallbackIfUnavailable,
+  });
+
+  factory AuroraWakeEligibility.fromJson(Map<String, dynamic> json) {
+    return AuroraWakeEligibility(
+      canUserWake: json['can_user_wake'] as bool? ?? false,
+      userQuotaRemaining: (json['user_quota_remaining'] as num?)?.toInt() ?? 0,
+      cooldownStatus: json['cooldown_status'] as String? ?? 'available',
+      cooldownRemainingMin: (json['cooldown_remaining_min'] as num?)?.toInt() ?? 0,
+      wakeReasons: (json['wake_reasons'] as List<dynamic>? ?? const []).map((e) => '$e').toList(),
+      recommendedSessionType: json['recommended_session_type'] as String? ?? 'strategy_recalibration',
+      estimatedDurationSec: (json['estimated_duration_sec'] as num?)?.toInt() ?? 240,
+      suggestedScope: json['suggested_scope'] as String? ?? '',
+      fallbackIfUnavailable: json['fallback_if_unavailable'] as String? ?? 'quick_calibration',
+    );
+  }
+
+  final bool canUserWake;
+  final int userQuotaRemaining;
+  final String cooldownStatus; // available | cooling_down | exhausted
+  final int cooldownRemainingMin;
+  final List<String> wakeReasons;
+  final String recommendedSessionType;
+  final int estimatedDurationSec;
+  final String suggestedScope;
+  final String fallbackIfUnavailable;
 }
 
 DateTime? _tryParseDateTime(dynamic raw) {

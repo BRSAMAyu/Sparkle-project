@@ -19086,4 +19086,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraInputHint => 'Tell Sparkle anything...';
+
+  @override
+  String get auroraBandSensing => 'Aurora sensing';
+
+  @override
+  String get auroraBandCalibrated => 'Aurora calibrated';
+
+  @override
+  String get auroraBandRiskFound => 'Aurora risk detected';
+
+  @override
+  String get auroraBandNeedsConfirm => 'Aurora needs confirmation';
+
+  @override
+  String get auroraBandCalibrationAvailable => 'Deep calibration available';
+
+  @override
+  String get auroraBandCoolingDown => 'Aurora cooling down';
+
+  @override
+  String auroraWakeAvailable(Object count) {
+    return 'Deep calibration available ($count remaining today)';
+  }
+
+  @override
+  String auroraWakeCooling(Object minutes) {
+    return 'Calibration cooling down · $minutes min remaining';
+  }
+
+  @override
+  String get auroraWakeQuickFallback => 'Quick calibration';
+
+  @override
+  String get auroraWakeViewUpdates => 'View recent updates';
 }
