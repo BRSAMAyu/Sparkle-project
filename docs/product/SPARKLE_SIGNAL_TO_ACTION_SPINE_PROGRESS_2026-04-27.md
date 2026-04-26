@@ -153,13 +153,64 @@
 
 ## 当前测试覆盖
 
-48/48 tests passing:
+65/65 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
 - P0-1 FirstMinuteSnapshot: 14 tests
 - P0-2 StaleStateGuard: 6 tests
 - P0-3 ActionableStatePacket: 7 tests
+- P1-3 PredictedReplyOption: 8 tests
+- P1-5 SparkleSelfModel: 9 tests
+
+---
+
+## P1-3: PredictedReplyOption Engine
+
+**目标**: 为确认问题生成语义快捷回答
+
+### Steps
+
+| Step | 描述 | 状态 |
+|------|------|------|
+| 1 | PredictedReplyOption + PredictedReplyQuestion 数据模型 | ✅ DONE |
+| 2 | 4 类问题模板（事实确认/假设确认/策略选择/关系边界） | ✅ DONE |
+| 3 | 每组选项强制含"都不对，我解释一下" | ✅ DONE |
+| 4 | 用户选择 → 状态补丁处理 | ✅ DONE |
+| 5 | Opus 审查：重命名 SpineReplyOptionEngine，修复 state_patch 类型 | ✅ DONE |
+
+### 验收标准
+
+- [x] 每组选项都含自由输入选项
+- [x] 至少一个反驳选项
+- [x] process_user_selection 返回状态补丁
+- [x] 无模板的 state_key 返回 None
+
+---
+
+## P1-5: SparkleSelfModel
+
+**目标**: 系统建模自己的策略效果
+
+### Steps
+
+| Step | 描述 | 状态 |
+|------|------|------|
+| 1 | SelfModelClaim 数据模型 | ✅ DONE |
+| 2 | StrategyOutcome 数据模型 | ✅ DONE |
+| 3 | SparkleSelfModelService（Redis 持久化） | ✅ DONE |
+| 4 | 归因分析 (_attribute) | ✅ DONE |
+| 5 | 置信度调整 + 反证记录 | ✅ DONE |
+| 6 | 用户纠正记录 | ✅ DONE |
+
+### 验收标准
+
+- [x] 记录策略假设（claim）
+- [x] 记录策略结果（outcome）
+- [x] 归因分析：effective / completed_but_resented / insufficient / inconclusive
+- [x] 置信度随结果调整
+- [x] 用户纠正记录为高置信度 claim
+- [x] Claims 列表有上限（50）
 
 ---
 
