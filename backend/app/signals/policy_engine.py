@@ -61,6 +61,24 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "你上传的课件最近几轮没被用到，我来按课件内容回答。",
         },
     },
+    "goal_mode": {
+        "exam_rescue_detected": {
+            "primary_strategy": "exam_rescue_sprint",
+            "secondary_strategy": "minimum_pass_path",
+            "hard_constraints": {
+                "sprint_policy": "seven_day_survival",
+                "defer_low_roi_topics": True,
+                "max_task_duration_min": 30,
+            },
+            "soft_biases": {
+                "tone": "calm_urgent",
+                "skip_full_form": True,
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": True,
+            "reasoning_template": "检测到考试紧急情况，进入抢救模式。",
+        },
+    },
     "knowledge_transfer": {
         "transfer_failure": {
             "primary_strategy": "repair_knowledge_bottleneck",

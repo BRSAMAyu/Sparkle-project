@@ -513,3 +513,118 @@ async def test_mistake_policy_generates_avoid_new_chapter():
     assert decision.primary_strategy == "repair_knowledge_bottleneck"
     assert directive.hard_constraints["avoid_new_chapter"] is True
     assert directive.hard_constraints["required_task_type"] == "worked_example_then_drill"
+
+
+# ── P0-1: FirstMinuteSnapshot / ExamRescueDetector Tests ─────────────
+
+from app.signals.exam_rescue_detector import ExamRescueDetector, FirstMinuteSnapshot
+
+
+def test_exam_rescue_detects_7_day_urgent():
+    """E4: '我 7 天后计网考试，零基础，想先别挂' → exam_rescue."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我 7 天后计网考试，零基础，想先别挂")
+
+    assert snapshot is not None
+    assert snapshot.detected_mode == "exam_rescue"
+    assert snapshot.path_mode == "minimum_pass"
+    assert snapshot.deadline_days == 7
+    assert snapshot.baseline == "near_zero"
+    assert snapshot.subject == "computer_networks"
+    assert snapshot.confidence >= 0.6
+    assert "抢救" in snapshot.first_user_visible_hypothesis
+
+
+def test_exam_rescue_detects_english_exam():
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我后天英语四六级考试，基本不会")
+
+    assert snapshot is not None
+    assert snapshot.detected_mode == "exam_rescue"
+    assert snapshot.subject == "english_cet"
+    assert snapshot.baseline == "near_zero"
+
+
+def test_exam_rescue_high_score_target():
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我 14 天后高数考试，零基础，想冲高分")
+
+    assert snapshot is not None
+    assert snapshot.path_mode == "high_score"
+
+
+def test_exam_rescue_no_signal_for_normal_chat():
+    """Normal chat should not trigger exam rescue."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("你好，我想了解一下这个产品")
+
+    assert snapshot is None
+
+
+def test_exam_rescue_no_signal_for_empty():
+    detector = ExamRescueDetector()
+    assert detector.analyze_first_message("") is None
+
+
+def test_exam_rescue_to_actionable_signal():
+    """Snapshot → ActionableSignal conversion."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我 7 天后计网考试，零基础，想先别挂")
+
+    signal = detector.to_actionable_signal(snapshot, user_id="u1", message_id="msg_001")
+    assert signal is not None
+    assert signal.state_key == "goal_mode"
+    assert signal.claim == "exam_rescue_detected"
+    assert signal.confidence >= 0.5
+    assert signal.priority == "high"
+    assert snapshot.signal_id == signal.signal_id
+
+
+def test_exam_rescue_no_signal_for_build_mode():
+    """exam_build mode should not generate ActionableSignal."""
+    detector = ExamRescueDetector()
+    snapshot = FirstMinuteSnapshot(
+        detected_mode="exam_build",
+        path_mode="solid_pass",
+        deadline_days=30,
+        baseline="unknown",
+        subject=None,
+        next_best_action="standard_onboarding",
+        first_user_visible_hypothesis="test",
+        confidence=0.5,
+    )
+    signal = detector.to_actionable_signal(snapshot, user_id="u1")
+    assert signal is None
+
+
+@pytest.mark.asyncio
+async def test_exam_rescue_policy_rule():
+    """PolicyEngine has exam_rescue rule."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=["msg_001"],
+        source_system="first_minute",
+        state_key="goal_mode",
+        claim="exam_rescue_detected",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=168,
+        evidence_summary="新用户首次消息检测到 7 天计网考试抢救",
+        possible_effects=["exam_rescue_mode"],
+        priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+    assert decision.primary_strategy == "exam_rescue_sprint"
+    assert directive.hard_constraints["sprint_policy"] == "seven_day_survival"
+    assert directive.hard_constraints["defer_low_roi_topics"] is True
+
+
+def test_exam_rescue_deadline_extraction():
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我还有3天就考线代了什么都不会")
+    assert snapshot is not None
+    assert snapshot.deadline_days == 3
+    assert snapshot.subject == "linear_algebra"
