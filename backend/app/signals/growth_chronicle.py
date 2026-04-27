@@ -222,6 +222,8 @@ class GrowthChronicleService:
         entries = await self._load_entries(user_id)
         for entry in entries:
             if entry.entry_id == entry_id:
+                if entry.user_status not in _VALID_USER_STATUSES:
+                    entry.user_status = "pending"
                 entry.user_status = "confirmed"
                 await self._save_entries(user_id, entries)
                 logger.info("GrowthChronicle entry confirmed: user={} entry={}", user_id, entry_id)

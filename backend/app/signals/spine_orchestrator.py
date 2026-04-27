@@ -2120,16 +2120,16 @@ class SpineOrchestrator:
                     possible_effects=["directive_update"],
                     priority="high",
                 )
-                decision = await self.policy_engine.evaluate(synthetic_signal)
-                if decision:
+                result = await self.policy_engine.evaluate(synthetic_signal)
+                if result:
+                    decision, _directive = result
                     regenerated.append({
                         "state_key": state_key,
-                        "strategy": decision.strategy,
-                        "directive_count": len(decision.directives) if hasattr(decision, "directives") else 1,
+                        "strategy": decision.primary_strategy,
                     })
                     logger.info(
                         "AuroraRegen: state={} → strategy={}",
-                        state_key, decision.strategy,
+                        state_key, decision.primary_strategy,
                     )
 
         session["regenerated_directives"] = regenerated
