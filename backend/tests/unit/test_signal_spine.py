@@ -11529,6 +11529,247 @@ def test_aurora_agenda_session_flow():
     assert all(i.status == "done" for i in restored.agenda_items)
 
 
+# ── P2-1: Cognitive Load + Affective Pressure ──────────────────────
+
+@pytest.mark.asyncio
+async def test_cognitive_load_many_new_topics():
+    """High cognitive load detected when many new topics in short time."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_cognitive_load(
+        user_id="u1", recent_tasks_count=5, new_topics_count=4,
+        avg_accuracy=0.6, session_duration_min=60,
+    )
+    assert signal is not None
+    assert signal.state_key == "cognitive_load"
+    assert signal.claim == "high_load_detected"
+    assert signal.confidence >= 0.5
+    assert signal.scope == "session"
+
+
+@pytest.mark.asyncio
+async def test_cognitive_load_low_accuracy():
+    """High cognitive load from low accuracy + many tasks."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_cognitive_load(
+        user_id="u1", recent_tasks_count=4, new_topics_count=1,
+        avg_accuracy=0.35, session_duration_min=30,
+    )
+    assert signal is not None
+    assert "low_accuracy" in signal.evidence_summary
+
+
+@pytest.mark.asyncio
+async def test_cognitive_load_extended_session():
+    """Extended session triggers cognitive load."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_cognitive_load(
+        user_id="u1", recent_tasks_count=1, new_topics_count=0,
+        session_duration_min=120,
+    )
+    assert signal is not None
+    assert "extended_session" in signal.evidence_summary
+
+
+@pytest.mark.asyncio
+async def test_cognitive_load_no_trigger():
+    """Normal workload does not trigger cognitive load."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_cognitive_load(
+        user_id="u1", recent_tasks_count=2, new_topics_count=1,
+        avg_accuracy=0.8, session_duration_min=30,
+    )
+    assert signal is None
+
+
+@pytest.mark.asyncio
+async def test_cognitive_load_policy_rule():
+    """Cognitive load signal produces correct policy decision."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="spine",
+        state_key="cognitive_load", claim="high_load_detected",
+        confidence=0.8, scope="session", ttl_hours=6,
+        evidence_summary="认知负荷过高", possible_effects=["simplify"],
+        priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    policy, _directive = result
+    assert policy.primary_strategy == "reduce_cognitive_pressure"
+    assert policy.risk_level == "medium"
+    assert policy.which_directives.get("response") is True
+
+
+@pytest.mark.asyncio
+async def test_affective_pressure_consecutive_abandon():
+    """Stress detected from consecutive task abandonment."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_affective_pressure(
+        user_id="u1", consecutive_abandons=2, error_density=0.3,
+    )
+    assert signal is not None
+    assert signal.state_key == "affective_pressure"
+    assert signal.claim == "stress_detected"
+    assert signal.priority == "medium"
+
+
+@pytest.mark.asyncio
+async def test_affective_pressure_burnout_risk():
+    """Burnout risk from 3+ consecutive abandons."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_affective_pressure(
+        user_id="u1", consecutive_abandons=3, error_density=0.7,
+        is_late_night=True, days_to_deadline=2,
+    )
+    assert signal is not None
+    assert signal.claim == "burnout_risk"
+    assert signal.priority == "high"
+
+
+@pytest.mark.asyncio
+async def test_affective_pressure_streak_broken():
+    """Streak broken contributes to stress signal."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_affective_pressure(
+        user_id="u1", consecutive_abandons=0, streak_broken=True,
+        error_density=0.7,
+    )
+    assert signal is not None
+    assert "streak_broken" in signal.evidence_summary
+
+
+@pytest.mark.asyncio
+async def test_affective_pressure_no_trigger():
+    """Normal behavior does not trigger affective pressure."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = await spine.detect_affective_pressure(
+        user_id="u1", consecutive_abandons=0, error_density=0.2,
+    )
+    assert signal is None
+
+
+@pytest.mark.asyncio
+async def test_affective_pressure_stress_policy():
+    """Stress signal produces correct policy decision."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="spine",
+        state_key="affective_pressure", claim="stress_detected",
+        confidence=0.75, scope="session", ttl_hours=12,
+        evidence_summary="情绪压力", possible_effects=["reduce_pressure"],
+        priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    policy, _directive = result
+    assert policy.primary_strategy == "reduce_affective_pressure"
+    assert policy.risk_level == "high"
+
+
+@pytest.mark.asyncio
+async def test_affective_pressure_burnout_policy():
+    """Burnout risk produces more aggressive policy."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="spine",
+        state_key="affective_pressure", claim="burnout_risk",
+        confidence=0.85, scope="session", ttl_hours=12,
+        evidence_summary="倦怠风险", possible_effects=["suggest_break"],
+        priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    policy, _directive = result
+    assert policy.primary_strategy == "prevent_burnout"
+    assert policy.hard_constraints.get("suggest_break") is True
+    assert policy.risk_level == "high"
+
+
+@pytest.mark.asyncio
+async def test_cognitive_load_confidence_scales():
+    """More triggers produce higher confidence."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal_low = await spine.detect_cognitive_load(
+        user_id="u1", recent_tasks_count=5, new_topics_count=4,
+        avg_accuracy=0.6, session_duration_min=60,
+    )
+    signal_high = await spine.detect_cognitive_load(
+        user_id="u1", recent_tasks_count=5, new_topics_count=4,
+        avg_accuracy=0.35, session_duration_min=120,
+    )
+    assert signal_high.confidence > signal_low.confidence
+
+
+# ── P2-2: ModelWriteDirective full write roundtrip ──────────────────
+
+@pytest.mark.asyncio
+async def test_model_write_directive_applies_claims():
+    """ModelWriteDirective writes claims to Redis and they can be read back."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+    from app.signals.types import ModelWriteDirective, ModelWriteEntry
+
+    mwd = ModelWriteDirective(
+        directive_id="mwd_001",
+        policy_decision_id="pd_001",
+        writes=[
+            ModelWriteEntry(
+                target_model="user_state",
+                claim="task_granularity_may_be_too_large",
+                scope="current_sprint",
+                confidence=0.8,
+                needs_user_confirmation=False,
+                ttl="72h",
+            ),
+            ModelWriteEntry(
+                target_model="sparkle_self_model",
+                claim="long_task_strategy_may_not_fit",
+                scope="strategy",
+                confidence=0.5,
+                needs_user_confirmation=False,
+                ttl="72h",
+            ),
+        ],
+    )
+    await spine._apply_model_writes("u_test", mwd)
+
+    # High-confidence claim should be written
+    claims = await spine.get_model_claims("u_test", target_model="user_state", scope="current_sprint")
+    assert len(claims) == 1
+    assert claims[0]["claim"] == "task_granularity_may_be_too_large"
+    assert claims[0]["confidence"] == 0.8
+    assert claims[0]["source"] == "spine_auto"
+
+    # Low-confidence claim should NOT be written (< 0.7 threshold)
+    claims_low = await spine.get_model_claims("u_test", target_model="sparkle_self_model", scope="strategy")
+    assert len(claims_low) == 0
+
+
+@pytest.mark.asyncio
+async def test_model_write_needs_confirmation_skipped():
+    """Claims requiring user confirmation are not auto-applied."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+    from app.signals.types import ModelWriteDirective, ModelWriteEntry
+
+    mwd = ModelWriteDirective(
+        directive_id="mwd_002",
+        policy_decision_id="pd_002",
+        writes=[
+            ModelWriteEntry(
+                target_model="user_state",
+                claim="high_impact_change",
+                scope="long_term",
+                confidence=0.9,
+                needs_user_confirmation=True,
+            ),
+        ],
+    )
+    await spine._apply_model_writes("u_confirm", mwd)
+    claims = await spine.get_model_claims("u_confirm", target_model="user_state", scope="long_term")
+    assert len(claims) == 0
+
+
 # ── v2.10: Full Directive Coverage Production Wiring ───────────────────
 
 

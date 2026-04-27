@@ -1320,6 +1320,20 @@ class SpineOrchestrator:
             logger.debug("get_model_write_directive degraded: Redis unavailable for user={}", user_id)
             return None
 
+    async def get_model_claims(
+        self, user_id: str, target_model: str | None = None, scope: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Retrieve applied model claims. Optionally filter by target_model and scope."""
+        import json
+        try:
+            if target_model and scope:
+                key = f"spine:model_claim:{user_id}:{target_model}:{scope}"
+                raw = await self.redis.get(key)
+                return [json.loads(raw)] if raw else []
+            return []
+        except Exception:
+            return []
+
     async def _apply_model_writes(self, user_id: str, mwd: ModelWriteDirective) -> None:
         """Apply model write claims to user state (confidence-gated, auto-apply only)."""
         import json
@@ -2221,6 +2235,86 @@ class SpineOrchestrator:
                 "focus_high_yield_only": True,
             },
         }
+
+    # ── P2: Cognitive Load & Affective Pressure Detectors ────────────────
+
+    async def detect_cognitive_load(
+        self,
+        *,
+        user_id: str,
+        recent_tasks_count: int = 0,
+        new_topics_count: int = 0,
+        avg_accuracy: float | None = None,
+        session_duration_min: float = 0.0,
+    ) -> ActionableSignal | None:
+        """Detect high cognitive load from task density + accuracy patterns."""
+        triggers = []
+        if new_topics_count >= 3 and recent_tasks_count >= 4:
+            triggers.append("many_new_topics_in_short_time")
+        if avg_accuracy is not None and avg_accuracy < 0.5 and recent_tasks_count >= 3:
+            triggers.append("low_accuracy_with_many_tasks")
+        if session_duration_min > 90:
+            triggers.append("extended_session")
+
+        if not triggers:
+            return None
+
+        return ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[f"cognitive_load_{user_id}"],
+            source_system="spine_orchestrator",
+            state_key="cognitive_load",
+            claim="high_load_detected",
+            confidence=min(0.9, 0.5 + 0.15 * len(triggers)),
+            scope="session",
+            ttl_hours=6,
+            evidence_summary=f"认知负荷触发: {', '.join(triggers)}",
+            possible_effects=["reduce_explanation_length", "prefer_review", "simplify_context"],
+            priority="medium",
+        )
+
+    async def detect_affective_pressure(
+        self,
+        *,
+        user_id: str,
+        consecutive_abandons: int = 0,
+        error_density: float = 0.0,
+        is_late_night: bool = False,
+        days_to_deadline: int | None = None,
+        streak_broken: bool = False,
+    ) -> ActionableSignal | None:
+        """Detect emotional/affective pressure from behavioral signals."""
+        triggers = []
+        claim = "stress_detected"
+
+        if consecutive_abandons >= 2:
+            triggers.append("consecutive_abandonment")
+        if error_density > 0.6:
+            triggers.append("high_error_density")
+        if is_late_night:
+            triggers.append("late_night_study")
+        if streak_broken:
+            triggers.append("streak_broken")
+
+        if not triggers:
+            return None
+
+        if consecutive_abandons >= 3 or (days_to_deadline is not None and days_to_deadline <= 2 and len(triggers) >= 2):
+            claim = "burnout_risk"
+
+        return ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[f"affective_{user_id}"],
+            source_system="spine_orchestrator",
+            state_key="affective_pressure",
+            claim=claim,
+            confidence=min(0.9, 0.5 + 0.12 * len(triggers)),
+            scope="session",
+            ttl_hours=12,
+            evidence_summary=f"情绪压力触发: {', '.join(triggers)}",
+            possible_effects=["reduce_pressure", "suggest_break", "easy_win_task"],
+            priority="high" if claim == "burnout_risk" else "medium",
+        )
 
     # ── P2: State Snapshot & Recovery ────────────────────────────────
 

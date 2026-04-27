@@ -75,6 +75,7 @@ _DIMENSION_WEIGHTS = {
 _HIGH_VISIBILITY_KEYS = {
     "exam_rescue", "deadline_pressure", "task_granularity_fit",
     "knowledge_transfer", "safety_boundary", "user_correction",
+    "affective_pressure",
 }
 
 # state_keys with community/external data — higher privacy sensitivity

@@ -284,6 +284,59 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "你的学习伙伴观察到你可能有点低落，这一轮先给你一个低压力的推进方式。",
         },
     },
+    "cognitive_load": {
+        "high_load_detected": {
+            "primary_strategy": "reduce_cognitive_pressure",
+            "secondary_strategy": "simplify_context",
+            "hard_constraints": {
+                "max_explanation_length": "short",
+                "prefer_review_over_new": True,
+                "max_task_duration_min": 20,
+            },
+            "soft_biases": {
+                "tone": "calm_direct",
+                "difficulty": "low",
+                "explanation_depth": "minimal",
+            },
+            "visibility": "inline_hint",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你最近接触了比较多新内容，这轮先巩固不推进新知识点。",
+        },
+    },
+    "affective_pressure": {
+        "stress_detected": {
+            "primary_strategy": "reduce_affective_pressure",
+            "secondary_strategy": "insert_reassurance",
+            "hard_constraints": {
+                "avoid_new_chapter": True,
+                "prefer_easy_wins": True,
+                "max_task_duration_min": 20,
+            },
+            "soft_biases": {
+                "tone": "encouraging_low_pressure",
+                "nudge_style": "minimal",
+            },
+            "visibility": "status_band",
+            "requires_user_confirmation": False,
+            "reasoning_template": "看起来压力有点大，这轮我给你一个轻松一点的节奏。",
+        },
+        "burnout_risk": {
+            "primary_strategy": "prevent_burnout",
+            "secondary_strategy": "suggest_break",
+            "hard_constraints": {
+                "suggest_break": True,
+                "max_task_duration_min": 15,
+                "avoid_new_chapter": True,
+            },
+            "soft_biases": {
+                "tone": "calm_caring",
+                "nudge_style": "off",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": True,
+            "reasoning_template": "你最近学得很拼，但节奏可能太快了。先休息一下，或者做一个最轻松的回顾？",
+        },
+    },
 }
 
 _DIRECTIVE_TARGET_MODULE = "task_generator"
@@ -306,6 +359,8 @@ _RISK_LEVEL_MAP: dict[str, str] = {
     "community_cohort_pattern": "low",
     "community_resource_recommendation": "low",
     "community_partner_feedback": "medium",
+    "cognitive_load": "medium",
+    "affective_pressure": "high",
 }
 
 # ── Directive Activation Map ────────────────────────────────────────
@@ -337,6 +392,12 @@ _WHICH_DIRECTIVES: dict[str, dict[str, bool]] = {
     },
     "community_partner_feedback": {
         "response": True, "execution": True, "ux": True, "model_write": True,
+    },
+    "cognitive_load": {
+        "response": True, "execution": True, "retrieval": True, "ux": True,
+    },
+    "affective_pressure": {
+        "response": True, "execution": True, "ux": True, "notification": True,
     },
 }
 
