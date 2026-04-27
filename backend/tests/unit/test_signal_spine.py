@@ -8323,3 +8323,609 @@ async def test_celery_recall_task_import():
     from app.core.celery_tasks import recall_notification_task, scan_recall_notifications
     assert recall_notification_task.name == "app.core.celery_tasks.recall_notification_task"
     assert scan_recall_notifications.name == "app.core.celery_tasks.scan_recall_notifications"
+
+
+# ══════════════════════════════════════════════════════════════════════
+# P2-2: Policy Experiments — shadow A/B framework
+# ══════════════════════════════════════════════════════════════════════
+
+
+def test_policy_experiment_create():
+    from app.signals.policy_experiments import PolicyExperiment
+    exp = PolicyExperiment(
+        experiment_id="exp_1",
+        user_id="u1",
+        signal_state_key="task_granularity_fit",
+        signal_claim="recent_task_too_large",
+        primary_strategy="recover_execution_rhythm",
+        shadow_strategy="recover_execution_rhythm_gentle",
+    )
+    assert exp.status == "running"
+    d = exp.to_dict()
+    restored = PolicyExperiment.from_dict(d)
+    assert restored.primary_strategy == "recover_execution_rhythm"
+
+
+def test_policy_experiment_record_trial():
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = MagicMock()
+    redis.set = AsyncMock()
+    redis.lrem = AsyncMock()
+    redis.lpush = AsyncMock()
+    redis.ltrim = AsyncMock()
+    redis.expire = AsyncMock()
+    redis.lrange = AsyncMock(return_value=[])
+
+    mgr = PolicyExperimentManager(redis)
+    exp = asyncio.get_event_loop().run_until_complete(
+        mgr.create_experiment(
+            user_id="u1",
+            signal_state_key="task_granularity_fit",
+            signal_claim="recent_task_too_large",
+            primary_strategy="recover_execution_rhythm",
+        )
+    )
+    assert exp is not None
+    assert exp.shadow_strategy == "recover_execution_rhythm_gentle"
+
+    # Simulate recording a trial
+    import json
+    redis.get = AsyncMock(return_value=json.dumps(exp.to_dict()))
+    updated = asyncio.get_event_loop().run_until_complete(
+        mgr.record_trial(exp.experiment_id, primary_outcome="effective", shadow_hypothesis="effective")
+    )
+    assert updated is not None
+    assert updated.total_trials == 1
+    assert updated.primary_wins == 1
+
+
+def test_policy_experiment_no_alternative():
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = MagicMock()
+    mgr = PolicyExperimentManager(redis)
+    exp = asyncio.get_event_loop().run_until_complete(
+        mgr.create_experiment(
+            user_id="u1",
+            signal_state_key="unknown",
+            signal_claim="unknown",
+            primary_strategy="nonexistent_strategy",
+        )
+    )
+    assert exp is None
+
+
+def test_policy_experiment_evaluate_shadow():
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = MagicMock()
+    mgr = PolicyExperimentManager(redis)
+
+    # Primary effective, shadow likely same
+    result = mgr.evaluate_shadow_outcome("effective", "recover_execution_rhythm", {})
+    assert result == "effective"
+
+    # Primary insufficient with pressure issue — shadow "gentle" better suited
+    result = mgr.evaluate_shadow_outcome(
+        "insufficient", "recover_execution_rhythm",
+        {"new_hypothesis": "user feeling overwhelmed by pressure"},
+    )
+    assert result == "effective"  # gentle approach better for pressure
+
+    # Primary insufficient with no matching reason — shadow also insufficient
+    result = mgr.evaluate_shadow_outcome(
+        "insufficient", "recover_execution_rhythm",
+        {"new_hypothesis": "unrelated issue"},
+    )
+    assert result == "insufficient"
+
+
+def test_policy_experiment_suggest_promotions():
+    from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
+    redis = MagicMock()
+    mgr = PolicyExperimentManager(redis)
+
+    exp = PolicyExperiment(
+        experiment_id="exp_promo",
+        user_id="u1",
+        signal_state_key="task_granularity_fit",
+        signal_claim="recent_task_too_large",
+        primary_strategy="recover_execution_rhythm",
+        shadow_strategy="recover_execution_rhythm_gentle",
+        status="concluded",
+        primary_wins=2,
+        shadow_wins=8,
+        total_trials=10,
+    )
+    suggestions = mgr.suggest_promotions([exp])
+    assert len(suggestions) == 1
+    assert suggestions[0]["action"] == "promote_shadow_to_primary"
+
+
+def test_policy_experiment_suggest_no_promotion():
+    from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
+    redis = MagicMock()
+    mgr = PolicyExperimentManager(redis)
+
+    exp = PolicyExperiment(
+        experiment_id="exp_no_promo",
+        user_id="u1",
+        signal_state_key="task_granularity_fit",
+        signal_claim="recent_task_too_large",
+        primary_strategy="recover_execution_rhythm",
+        shadow_strategy="recover_execution_rhythm_gentle",
+        status="concluded",
+        primary_wins=8,
+        shadow_wins=2,
+        total_trials=10,
+    )
+    suggestions = mgr.suggest_promotions([exp])
+    assert len(suggestions) == 0
+
+
+def test_policy_experiment_conclude():
+    from app.signals.policy_experiments import PolicyExperiment
+    exp = PolicyExperiment(
+        experiment_id="exp_conc",
+        user_id="u1",
+        signal_state_key="test",
+        signal_claim="test",
+        primary_strategy="a",
+        shadow_strategy="b",
+        primary_wins=2,
+        shadow_wins=8,
+        total_trials=10,
+    )
+    from app.signals.policy_experiments import PolicyExperimentManager
+    PolicyExperimentManager._conclude(exp)
+    assert exp.status == "concluded"
+    assert exp.conclusion == "shadow_outperforms"
+
+
+# ══════════════════════════════════════════════════════════════════════
+# P2-4: Learning Base — Bayesian + rule hybrid
+# ══════════════════════════════════════════════════════════════════════
+
+
+def test_strategy_belief_update():
+    from app.signals.learning_base import LearningBase, StrategyBelief
+    lb = LearningBase()
+    belief = StrategyBelief(strategy_key="test_strategy")
+    assert belief.expected_effectiveness == 0.5  # 1.0 / 2.0
+
+    lb.update_belief(belief, "effective")
+    assert belief.alpha == 2.0
+    assert belief.evidence_count == 1
+
+    lb.update_belief(belief, "insufficient")
+    assert belief.beta == 2.0
+    assert belief.evidence_count == 2
+
+
+def test_strategy_belief_effectiveness():
+    from app.signals.learning_base import StrategyBelief
+    # 10 effective, 2 insufficient → high effectiveness
+    belief = StrategyBelief(strategy_key="good", alpha=11.0, beta=3.0, evidence_count=12)
+    assert belief.expected_effectiveness > 0.7
+
+
+def test_learning_base_batch_update():
+    from app.signals.learning_base import LearningBase, StrategyBelief
+    lb = LearningBase()
+    beliefs = [StrategyBelief(strategy_key="s1"), StrategyBelief(strategy_key="s2")]
+    outcomes = [
+        {"strategy_key": "s1", "attribution": "effective"},
+        {"strategy_key": "s1", "attribution": "effective"},
+        {"strategy_key": "s2", "attribution": "insufficient"},
+    ]
+    updated = lb.batch_update(beliefs, outcomes)
+    bmap = {b.strategy_key: b for b in updated}
+    assert bmap["s1"].alpha == 3.0  # 1 + 2 effective
+    assert bmap["s2"].beta == 2.0  # 1 + 1 insufficient
+
+
+def test_learning_base_select_strategy():
+    from app.signals.learning_base import LearningBase, StrategyBelief
+    lb = LearningBase()
+    beliefs = [
+        StrategyBelief(strategy_key="good", alpha=10.0, beta=2.0, evidence_count=12),
+        StrategyBelief(strategy_key="bad", alpha=2.0, beta=10.0, evidence_count=12),
+    ]
+    result = lb.select_strategy(beliefs, ["good", "bad"])
+    assert result["strategy"] == "good"
+    assert result["source"] == "bayesian"
+
+
+def test_learning_base_select_cold_start():
+    from app.signals.learning_base import LearningBase, StrategyBelief
+    lb = LearningBase()
+    beliefs = [
+        StrategyBelief(strategy_key="a", alpha=1.0, beta=1.0, evidence_count=0),
+        StrategyBelief(strategy_key="b", alpha=1.0, beta=1.0, evidence_count=0),
+    ]
+    result = lb.select_strategy(
+        beliefs, ["a", "b"],
+        prefer_rules=True,
+        rule_ranking=["b", "a"],
+    )
+    assert result["strategy"] == "b"
+    assert result["source"] == "rule_fallback"
+
+
+def test_learning_base_ranking():
+    from app.signals.learning_base import LearningBase, StrategyBelief
+    lb = LearningBase()
+    beliefs = [
+        StrategyBelief(strategy_key="s1", alpha=8.0, beta=2.0, evidence_count=10),
+        StrategyBelief(strategy_key="s2", alpha=5.0, beta=5.0, evidence_count=10),
+        StrategyBelief(strategy_key="s3", alpha=2.0, beta=8.0, evidence_count=10),
+    ]
+    ranking = lb.compute_strategy_ranking(beliefs)
+    assert ranking[0]["strategy_key"] == "s1"
+    assert ranking[-1]["strategy_key"] == "s3"
+
+
+def test_learning_base_snapshot():
+    from app.signals.learning_base import LearningBase, StrategyBelief
+    lb = LearningBase()
+    beliefs = [
+        StrategyBelief(strategy_key="warm", alpha=5.0, beta=3.0, evidence_count=8),
+        StrategyBelief(strategy_key="cold", alpha=1.0, beta=1.0, evidence_count=0),
+    ]
+    snapshot = lb.build_snapshot("u1", beliefs)
+    assert "cold" in snapshot.cold_start_strategies
+    assert "warm" not in snapshot.cold_start_strategies
+
+
+def test_learning_base_serialization():
+    from app.signals.learning_base import StrategyBelief
+    belief = StrategyBelief(strategy_key="test", alpha=5.0, beta=3.0, evidence_count=8)
+    d = belief.to_dict()
+    restored = StrategyBelief.from_dict(d)
+    assert restored.strategy_key == "test"
+    assert restored.alpha == 5.0
+
+
+# ══════════════════════════════════════════════════════════════════════
+# P3-3: External Integrations — Calendar + tools
+# ══════════════════════════════════════════════════════════════════════
+
+
+def test_calendar_deadline_pressure():
+    from app.signals.external_integration import CalendarEvent, CalendarSignalBridge
+    from datetime import UTC, datetime, timedelta
+
+    bridge = CalendarSignalBridge()
+    now = datetime.now(UTC)
+    event = CalendarEvent(
+        event_id="evt_1",
+        title="计网期末考试",
+        start_time=(now + timedelta(hours=48)).isoformat(),
+        end_time=(now + timedelta(hours=50)).isoformat(),
+        event_type="exam",
+        subject="计算机网络",
+    )
+    signal = bridge.detect_deadline_pressure([event], now=now.isoformat())
+    assert signal is not None
+    assert signal.state_key == "deadline_pressure"
+    assert signal.claim == "upcoming_deadline"
+    assert signal.priority == "medium"  # >24h away
+
+
+def test_calendar_deadline_pressure_urgent():
+    from app.signals.external_integration import CalendarEvent, CalendarSignalBridge
+    from datetime import UTC, datetime, timedelta
+
+    bridge = CalendarSignalBridge()
+    now = datetime.now(UTC)
+    event = CalendarEvent(
+        event_id="evt_urgent",
+        title="明天考试",
+        start_time=(now + timedelta(hours=12)).isoformat(),
+        end_time=(now + timedelta(hours=14)).isoformat(),
+        event_type="exam",
+    )
+    signal = bridge.detect_deadline_pressure([event], now=now.isoformat())
+    assert signal is not None
+    assert signal.priority == "high"
+
+
+def test_calendar_no_deadline():
+    from app.signals.external_integration import CalendarEvent, CalendarSignalBridge
+    from datetime import UTC, datetime, timedelta
+
+    bridge = CalendarSignalBridge()
+    now = datetime.now(UTC)
+    event = CalendarEvent(
+        event_id="evt_class",
+        title="日常课程",
+        start_time=(now + timedelta(hours=24)).isoformat(),
+        end_time=(now + timedelta(hours=26)).isoformat(),
+        event_type="class",
+    )
+    signal = bridge.detect_deadline_pressure([event], now=now.isoformat())
+    assert signal is None  # "class" events don't trigger
+
+
+def test_calendar_time_context():
+    from app.signals.external_integration import CalendarEvent, CalendarSignalBridge
+    from datetime import UTC, datetime, timedelta
+
+    bridge = CalendarSignalBridge()
+    now = datetime.now(UTC)
+    events = [
+        CalendarEvent(
+            event_id="e1", title="考试",
+            start_time=(now + timedelta(hours=48)).isoformat(),
+            end_time=(now + timedelta(hours=50)).isoformat(),
+            event_type="exam",
+        ),
+        CalendarEvent(
+            event_id="e2", title="开会",
+            start_time=(now + timedelta(hours=6)).isoformat(),
+            end_time=(now + timedelta(hours=7)).isoformat(),
+            event_type="meeting",
+        ),
+    ]
+    ctx = bridge.build_time_context(events, now=now.isoformat())
+    assert ctx["upcoming_24h_count"] == 1
+    assert ctx["upcoming_7d_count"] == 2
+    assert ctx["nearest_deadline"] is not None
+    assert ctx["has_time_pressure"] is True
+
+
+def test_calendar_serialization():
+    from app.signals.external_integration import CalendarEvent
+    event = CalendarEvent(
+        event_id="e1", title="Test", start_time="2026-01-01T10:00:00Z",
+        end_time="2026-01-01T12:00:00Z", event_type="exam",
+    )
+    d = event.to_dict()
+    restored = CalendarEvent.from_dict(d)
+    assert restored.title == "Test"
+
+
+def test_external_tool_study_session():
+    from app.signals.external_integration import ExternalToolBridge, ExternalToolSignal
+    bridge = ExternalToolBridge()
+    signals = [
+        ExternalToolSignal(tool_id="ide", tool_type="ide", activity_type="active", timestamp="2026-01-01T10:00:00Z"),
+        ExternalToolSignal(tool_id="lms", tool_type="lms", activity_type="active", timestamp="2026-01-01T10:01:00Z"),
+    ]
+    result = bridge.detect_study_session(signals)
+    assert result is not None
+    assert result["session_active"] is True
+    assert result["study_confidence"] >= 0.7
+
+
+def test_external_tool_no_study():
+    from app.signals.external_integration import ExternalToolBridge, ExternalToolSignal
+    bridge = ExternalToolBridge()
+    signals = [
+        ExternalToolSignal(tool_id="browser", tool_type="browser", activity_type="idle", timestamp="2026-01-01T10:00:00Z"),
+    ]
+    result = bridge.detect_study_session(signals)
+    assert result is None
+
+
+def test_external_tool_context():
+    from app.signals.external_integration import ExternalToolBridge, ExternalToolSignal
+    bridge = ExternalToolBridge()
+    signals = [
+        ExternalToolSignal(tool_id="ide", tool_type="ide", activity_type="active", timestamp="2026-01-01T10:00:00Z"),
+    ]
+    ctx = bridge.build_tool_context(signals)
+    assert ctx["recent_activity"] is True
+    assert "ide" in ctx["tool_usage"]
+
+
+# ══════════════════════════════════════════════════════════════════════
+# P4: Research-Grade — Counterfactual + Simulator + Marketplace
+# ══════════════════════════════════════════════════════════════════════
+
+
+def test_counterfactual_baseline_method():
+    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.types import OutcomeRecord
+    engine = CounterfactualEngine()
+    outcome = OutcomeRecord(
+        outcome_id="o1",
+        causal_trace_id="ct1",
+        intervention="max_task_duration_25min",
+        reason="task_overrun",
+        expected_outcome="task_completed",
+        actual_outcome={"completed": True},
+        attribution="effective",
+    )
+    # Low baseline → counterfactual likely insufficient
+    result = engine.evaluate(outcome, user_baseline_rate=0.2)
+    assert result.counterfactual_outcome == "insufficient"
+    assert result.intervention_impact == 1.0  # intervention helped
+    assert result.method == "baseline_comparison"
+
+
+def test_counterfactual_high_baseline():
+    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.types import OutcomeRecord
+    engine = CounterfactualEngine()
+    outcome = OutcomeRecord(
+        outcome_id="o2", causal_trace_id="ct2",
+        intervention="strategy", reason="test",
+        expected_outcome="done", actual_outcome={},
+        attribution="effective",
+    )
+    # High baseline → counterfactual also effective
+    result = engine.evaluate(outcome, user_baseline_rate=0.8)
+    assert result.counterfactual_outcome == "effective"
+    assert result.intervention_impact == 0.0  # no difference
+
+
+def test_counterfactual_rule_based():
+    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.types import OutcomeRecord
+    engine = CounterfactualEngine()
+    outcome = OutcomeRecord(
+        outcome_id="o3", causal_trace_id="ct3",
+        intervention="strategy", reason="test",
+        expected_outcome="done", actual_outcome={},
+        attribution="effective",
+    )
+    similar = [
+        {"had_intervention": False, "outcome": "insufficient"},
+        {"had_intervention": False, "outcome": "insufficient"},
+        {"had_intervention": False, "outcome": "effective"},
+    ]
+    result = engine.evaluate(outcome, similar_interventions=similar)
+    assert result.method == "rule_based"
+    assert result.counterfactual_outcome == "insufficient"  # 2/3 insufficient
+
+
+def test_counterfactual_aggregate():
+    from app.signals.research_grade import CounterfactualEngine, CounterfactualResult
+    engine = CounterfactualEngine()
+    results = [
+        CounterfactualResult("r1", "ct1", "effective", "insufficient", 1.0, 0.8, "", "baseline"),
+        CounterfactualResult("r2", "ct2", "effective", "effective", 0.0, 0.5, "", "baseline"),
+        CounterfactualResult("r3", "ct3", "insufficient", "effective", -1.0, 0.7, "", "baseline"),
+    ]
+    agg = engine.aggregate_impact(results)
+    assert agg["total"] == 3
+    assert agg["positive_interventions"] == 1
+    assert agg["negative_interventions"] == 1
+    assert agg["neutral_interventions"] == 1
+
+
+def test_user_simulator_basic():
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    sim = UserSimulator()
+    profile = SimulatedUserProfile(
+        profile_id="sim_1",
+        baseline_ability=0.6,
+        consistency=0.8,
+        responsiveness=0.5,
+        fatigue_rate=0.1,
+    )
+    result = sim.simulate_outcome(profile, "worked_example_then_drill")
+    assert result["outcome"] in ("effective", "insufficient")
+    assert "factors" in result
+
+
+def test_user_simulator_sequence():
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    sim = UserSimulator()
+    profile = SimulatedUserProfile(
+        profile_id="sim_2",
+        baseline_ability=0.5,
+        consistency=0.7,
+        responsiveness=0.4,
+        fatigue_rate=0.2,
+    )
+    results = sim.simulate_intervention_sequence(
+        profile,
+        ["drill", "worked_example", "practice", "review"],
+    )
+    assert len(results) == 4
+    assert all("task_number" in r for r in results)
+    assert results[0]["task_number"] == 1
+
+
+def test_user_simulator_compare():
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    sim = UserSimulator()
+    profile = SimulatedUserProfile(
+        profile_id="sim_3",
+        baseline_ability=0.5,
+        consistency=0.9,
+        responsiveness=0.7,
+        fatigue_rate=0.1,
+    )
+    result = sim.compare_strategies(
+        profile,
+        ["worked_example_then_drill"] * 5,
+        ["concept_compression"] * 5,
+        trials=50,
+    )
+    assert result["trials"] == 50
+    assert result["winner"] in ("a", "b", "tie")
+
+
+def test_domain_pack_validate():
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    redis = MagicMock()
+    marketplace = DomainPackMarketplace(redis)
+
+    good_pack = DomainPack(
+        pack_id="pack_1",
+        name="TCP策略包",
+        description="计算机网络TCP协议学习策略集合",
+        goal_type="exam",
+        domain="computer_science",
+        author_id="author_1",
+        strategy_templates=[
+            {"strategy_key": "worked_example", "applicable_when": {"mastery": "<0.3"}},
+        ],
+        rating=4.5,
+    )
+    result = DomainPackMarketplace.validate_pack(good_pack)
+    assert result["valid"] is True
+
+    bad_pack = DomainPack(
+        pack_id="pack_bad",
+        name="AB",
+        description="short",
+        goal_type="exam",
+        domain="test",
+        author_id="",
+        strategy_templates=[],
+    )
+    result = DomainPackMarketplace.validate_pack(bad_pack)
+    assert result["valid"] is False
+    assert "name_too_short" in result["issues"]
+
+
+def test_domain_pack_score():
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    redis = MagicMock()
+    marketplace = DomainPackMarketplace(redis)
+
+    popular = DomainPack(
+        pack_id="p1", name="Popular", description="d", goal_type="exam",
+        domain="cs", author_id="a1", strategy_templates=[{}],
+        rating=4.8, download_count=200, review_count=30,
+    )
+    new_pack = DomainPack(
+        pack_id="p2", name="New", description="d", goal_type="exam",
+        domain="cs", author_id="a2", strategy_templates=[{}],
+        rating=4.0, download_count=5, review_count=1,
+    )
+    ranked = marketplace.rank_packs([new_pack, popular], goal_type="exam")
+    assert ranked[0]["pack_id"] == "p1"  # popular first
+
+
+def test_domain_pack_filter():
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    redis = MagicMock()
+    marketplace = DomainPackMarketplace(redis)
+
+    exam_pack = DomainPack(
+        pack_id="p1", name="Exam", description="d", goal_type="exam",
+        domain="cs", author_id="a1", strategy_templates=[{}],
+    )
+    project_pack = DomainPack(
+        pack_id="p2", name="Project", description="d", goal_type="project",
+        domain="cs", author_id="a2", strategy_templates=[{}],
+    )
+    ranked = marketplace.rank_packs([exam_pack, project_pack], goal_type="project")
+    assert len(ranked) == 1
+    assert ranked[0]["pack_id"] == "p2"
+
+
+def test_domain_pack_serialization():
+    from app.signals.research_grade import DomainPack
+    pack = DomainPack(
+        pack_id="p_ser", name="Test", description="Test pack", goal_type="exam",
+        domain="cs", author_id="a1", strategy_templates=[{"key": "val"}],
+        rating=4.5,
+    )
+    d = pack.to_dict()
+    restored = DomainPack.from_dict(d)
+    assert restored.name == "Test"
+    assert restored.strategy_templates == [{"key": "val"}]
