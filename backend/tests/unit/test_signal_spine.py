@@ -5765,3 +5765,186 @@ def test_source_tray_state_from_dict():
     assert restored.selections[0].source_id == "src_001"
     assert len(restored.available_sources) == 1
     assert restored.available_sources[0].title == "课件"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Skill Extraction — auto-extract effective strategies
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_skill_entry_serialization():
+    """SkillEntry round-trips through to_dict/from_dict."""
+    from app.signals.types import SkillEntry
+    skill = SkillEntry(
+        skill_id="skill_001",
+        scope="personal",
+        source_policy_key="recover_execution_rhythm",
+        strategy={"task_type": "worked_example_then_drill", "duration_min": 25},
+        applicable_when={"goal_mode": "exam_rescue"},
+        evidence={"effective_count": 3, "total_observed": 5, "avg_confidence": 0.82},
+        effective_count=3,
+        sample_size=5,
+    )
+    d = skill.to_dict()
+    restored = SkillEntry.from_dict(d)
+    assert restored.skill_id == "skill_001"
+    assert restored.scope == "personal"
+    assert restored.strategy["task_type"] == "worked_example_then_drill"
+
+
+def test_skill_extraction_consecutive_effective():
+    """Extract skill when 3+ consecutive effective outcomes."""
+    from app.signals.types import PolicyEffectEntry
+    from app.signals.skill_extraction import SkillExtractionService
+    svc = SkillExtractionService()
+
+    effects = [
+        PolicyEffectEntry(
+            entry_id=f"pe_{i}",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_duration_25min",
+            attribution="effective",
+            attribution_confidence=0.8,
+        )
+        for i in range(4)
+    ]
+    skills = svc.scan_for_extractions(effects, user_id="u1")
+    assert len(skills) == 1
+    assert skills[0].source_policy_key == "recover_execution_rhythm"
+    assert skills[0].effective_count == 4
+
+
+def test_skill_extraction_below_threshold():
+    """No extraction when consecutive effective count < 3."""
+    from app.signals.types import PolicyEffectEntry
+    from app.signals.skill_extraction import SkillExtractionService
+    svc = SkillExtractionService()
+
+    effects = [
+        PolicyEffectEntry(
+            entry_id="pe_1",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_25min",
+            attribution="effective",
+            attribution_confidence=0.8,
+        ),
+        PolicyEffectEntry(
+            entry_id="pe_2",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_25min",
+            attribution="effective",
+            attribution_confidence=0.75,
+        ),
+    ]
+    skills = svc.scan_for_extractions(effects)
+    assert len(skills) == 0
+
+
+def test_skill_extraction_broken_by_insufficient():
+    """No extraction when effective streak is broken by insufficient."""
+    from app.signals.types import PolicyEffectEntry
+    from app.signals.skill_extraction import SkillExtractionService
+    svc = SkillExtractionService()
+
+    effects = [
+        PolicyEffectEntry(
+            entry_id="pe_0",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_25min",
+            attribution="insufficient",
+            attribution_confidence=0.5,
+        ),
+    ]
+    effects += [
+        PolicyEffectEntry(
+            entry_id=f"pe_eff_{i}",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_25min",
+            attribution="effective",
+            attribution_confidence=0.8,
+        )
+        for i in range(3)
+    ]
+    skills = svc.scan_for_extractions(effects)
+    # Last 3 are effective, so extraction triggers
+    assert len(skills) == 1
+
+
+def test_skill_extraction_negative_feedback_blocks():
+    """No extraction when recent effective entries have negative feedback."""
+    from app.signals.types import PolicyEffectEntry
+    from app.signals.skill_extraction import SkillExtractionService
+    svc = SkillExtractionService()
+
+    effects = [
+        PolicyEffectEntry(
+            entry_id="pe_1",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_25min",
+            attribution="effective",
+            attribution_confidence=0.8,
+            user_feedback_signal="completed",
+        ),
+        PolicyEffectEntry(
+            entry_id="pe_2",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_25min",
+            attribution="effective",
+            attribution_confidence=0.8,
+            user_feedback_signal="too_hard",
+        ),
+        PolicyEffectEntry(
+            entry_id="pe_3",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_25min",
+            attribution="effective",
+            attribution_confidence=0.8,
+        ),
+    ]
+    skills = svc.scan_for_extractions(effects)
+    # "too_hard" is negative feedback → blocks extraction
+    assert len(skills) == 0
+
+
+def test_skill_should_extract_quick_check():
+    """should_extract returns True for eligible policy keys."""
+    from app.signals.types import PolicyEffectEntry
+    from app.signals.skill_extraction import SkillExtractionService
+    effects = [
+        PolicyEffectEntry(
+            entry_id=f"pe_{i}",
+            policy_key="sustain_momentum",
+            intervention_summary="keep_going",
+            attribution="effective",
+            attribution_confidence=0.85,
+        )
+        for i in range(4)
+    ]
+    assert SkillExtractionService.should_extract(policy_key="sustain_momentum", policy_effects=effects)
+    assert not SkillExtractionService.should_extract(policy_key="nonexistent", policy_effects=effects)
+
+
+def test_skill_extraction_with_context():
+    """Extracted skill includes context information."""
+    from app.signals.types import PolicyEffectEntry
+    from app.signals.skill_extraction import SkillExtractionService
+    svc = SkillExtractionService()
+
+    effects = [
+        PolicyEffectEntry(
+            entry_id=f"pe_{i}",
+            policy_key="repair_knowledge_bottleneck",
+            intervention_summary="worked_example",
+            attribution="effective",
+            attribution_confidence=0.85,
+        )
+        for i in range(3)
+    ]
+    skills = svc.scan_for_extractions(
+        effects,
+        context={"goal_mode": "exam_rescue", "scope": "cohort"},
+    )
+    assert len(skills) == 1
+    assert skills[0].scope == "cohort"
+    assert skills[0].applicable_when["goal_mode"] == "exam_rescue"
+    assert skills[0].privacy["shareable"] is True

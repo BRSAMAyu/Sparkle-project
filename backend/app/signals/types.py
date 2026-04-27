@@ -786,3 +786,39 @@ class SourceTrayState:
     def get_excluded_source_ids(self) -> list[str]:
         """Get source IDs that are explicitly excluded."""
         return [s.source_id for s in (self.selections or []) if s.action == "exclude"]
+
+
+# ── 11. SkillEntry — extracted strategy asset ──────────────────────────
+# Created when a policy strategy proves effective repeatedly.
+
+@dataclass
+class SkillEntry:
+    """A strategy that has been proven effective and extracted for reuse."""
+    skill_id: str
+    scope: str                           # personal / cohort / system
+    source_policy_key: str               # The policy that was proven effective
+    strategy: dict[str, Any]             # The effective strategy parameters
+    applicable_when: dict[str, Any]      # Conditions under which this skill applies
+    evidence: dict[str, Any]             # Effectiveness metrics
+    privacy: dict[str, bool] | None = None  # contains_personal_data / shareable
+    effective_count: int = 0
+    sample_size: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "skill_id": self.skill_id,
+            "scope": self.scope,
+            "source_policy_key": self.source_policy_key,
+            "strategy": self.strategy,
+            "applicable_when": self.applicable_when,
+            "evidence": self.evidence,
+            "effective_count": self.effective_count,
+            "sample_size": self.sample_size,
+        }
+        if self.privacy is not None:
+            d["privacy"] = self.privacy
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> SkillEntry:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
