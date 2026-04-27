@@ -1134,6 +1134,7 @@ v2.9 AuroraControlSignal: unified envelope + AuroraAgendaItem for structured Aur
 v3.0 Pipeline: which_directives gate + Aurora wake + all P1 tasks COMPLETE
 v3.1 AuroraControlSignal + AuroraAgenda: 15 dedicated tests (5 envelope + 10 session), 615/615 total
 v3.2 P0-3 complete: ActionableStatePacket 7/7 fields (time_context, execution_pattern, context_recommendation added), 8 new tests, 623/623 total
+v4.0 P2 Batch 1 COMPLETE: state vocabulary (cognitive_load/affective_pressure) + model write roundtrip + learning persistence + retract_if, 656/656 total
 ```
 
 ### P1 Status — ALL COMPLETE
