@@ -4889,3 +4889,179 @@ async def test_self_correction_receipt():
     )
     assert record.attribution == "insufficient"
     assert record.new_hypothesis is not None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-3: Task Card 8-Field Protocol
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_build_why_this_task_with_nodes():
+    """why_this_task includes node labels when present."""
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    result = wf._build_why_this_task(
+        node_labels=["TCP", "UDP", "HTTP"],
+        error_clusters=[{"label": "三次握手混淆", "count": 3}],
+        pack_why_now="D-3 阶段必须覆盖",
+        sprint_mode="seven_day_survival",
+        focus="传输层",
+        subject="计网",
+    )
+    assert "TCP" in result
+    assert "三次握手混淆" in result
+    assert "D-3" in result
+    assert "七天冲刺" in result
+
+
+def test_build_why_this_task_minimal():
+    """why_this_task falls back to focus/subject when no rich context."""
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    result = wf._build_why_this_task(
+        node_labels=[],
+        error_clusters=[],
+        pack_why_now=None,
+        sprint_mode="standard",
+        focus=None,
+        subject="数学",
+    )
+    assert "数学" in result
+
+
+def test_build_materials_protocol_with_primary():
+    """materials_protocol includes primary material and anchors."""
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    result = wf._build_materials_protocol(
+        primary_material={"file_name": "chap3.pdf", "page": 12},
+        material_label="chap3.pdf（约 30 分钟）",
+        material_anchors=[{"file_name": "chap3.pdf", "page": 12}],
+        materials=["chap3.pdf"],
+        material_gap_note=None,
+    )
+    assert "primary" in result
+    assert result["primary"]["label"] == "chap3.pdf（约 30 分钟）"
+    assert "anchors" in result
+
+
+def test_build_materials_protocol_empty():
+    """materials_protocol returns empty dict when no materials."""
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    result = wf._build_materials_protocol(
+        primary_material={},
+        material_label="",
+        material_anchors=[],
+        materials=[],
+        material_gap_note=None,
+    )
+    assert result == {}
+
+
+def test_build_materials_protocol_with_gap():
+    """materials_protocol includes gap_note when materials are missing."""
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    result = wf._build_materials_protocol(
+        primary_material={},
+        material_label="",
+        material_anchors=[],
+        materials=[],
+        material_gap_note="缺少可靠传输章节资料",
+    )
+    assert result["gap_note"] == "缺少可靠传输章节资料"
+
+
+def test_build_updates_after_completion():
+    """updates_after_completion includes sprint and node context."""
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    result = wf._build_updates_after_completion(
+        sprint_mode="seven_day_survival",
+        node_labels=["TCP", "UDP"],
+    )
+    assert "knowledge_node_mastery" in result
+    assert "sprint_pack_progress" in result
+    assert "node_mastery_scores" in result
+
+
+def test_build_updates_after_completion_standard():
+    """updates_after_completion omits sprint_pack for standard mode."""
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    result = wf._build_updates_after_completion(
+        sprint_mode="standard",
+        node_labels=[],
+    )
+    assert "sprint_pack_progress" not in result
+    assert "node_mastery_scores" not in result
+    assert "knowledge_node_mastery" in result
+
+
+def test_stuck_protocol_in_guide_json():
+    """_build_task_guide_json includes stuck_protocol with 5 stuck points."""
+    from unittest.mock import MagicMock
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    session = MagicMock()
+    session.collected = {"subject": "计网"}
+    session.bottlenecks = []
+
+    phase = {"focus": "传输层", "sprint_policy": {}, "retrieval_policy": {}}
+    guide = wf._build_task_guide_json(
+        session=session,
+        phase=phase,
+        phase_index=0,
+        default_daily_hours=2,
+        day_number=1,
+    )
+    assert "stuck_protocol" in guide
+    sp = guide["stuck_protocol"]
+    assert "cant_understand_rules" in sp
+    assert "knows_rules_cant_solve" in sp
+    assert "cant_follow_steps" in sp
+    assert "not_enough_time" in sp
+    assert "low_state" in sp
+    assert sp["cant_understand_rules"]["action"] == "graph_only"
+    assert sp["knows_rules_cant_solve"]["retrieval"] == "mistake_cluster"
+
+
+def test_why_this_task_and_materials_in_guide_json():
+    """_build_task_guide_json includes why_this_task and materials_protocol."""
+    from unittest.mock import MagicMock
+    from app.orchestration.planning_workflow import PlanningWorkflowManager
+
+    wf = PlanningWorkflowManager.__new__(PlanningWorkflowManager)
+    session = MagicMock()
+    session.collected = {
+        "subject": "计网",
+        "seed_library_nodes": [],
+    }
+    session.bottlenecks = []
+
+    day_spec = {
+        "subject_strategy": {
+            "node_labels": ["TCP", "可靠传输"],
+            "node_ids": ["n1", "n2"],
+            "error_clusters": [{"label": "握手混淆", "count": 3}],
+        },
+    }
+    phase = {
+        "focus": "TCP 三次握手",
+        "sprint_policy": {"sprint_mode": "seven_day_survival"},
+        "retrieval_policy": {},
+    }
+    guide = wf._build_task_guide_json(
+        session=session,
+        phase=phase,
+        phase_index=0,
+        default_daily_hours=2,
+        day_number=3,
+        day_spec=day_spec,
+    )
+    assert "why_this_task" in guide
+    assert "TCP" in guide["why_this_task"]
+    assert "updates_after_completion" in guide
+    assert isinstance(guide["updates_after_completion"], list)

@@ -462,6 +462,7 @@ class SpineOrchestrator:
 
         result = await self.policy_engine.evaluate(
             signal,
+            context={"source": "pipeline"},
             recent_policy_effects=recent_effects,
         )
         await self.metrics.record_policy_evaluated(matched=result is not None)

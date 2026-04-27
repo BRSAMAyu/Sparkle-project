@@ -255,7 +255,6 @@ class OutcomeRecorder:
 
         # Get user's recent traces
         entries: list[PolicyEffectEntry] = []
-        trace_key_pattern = "spine:user_traces:{user_id}"
 
         # Scan recent traces for policy effects
         user_traces_key = f"spine:user_traces:{user_id}"

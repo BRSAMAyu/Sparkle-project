@@ -281,7 +281,7 @@ class PolicyEngine:
                 "(insufficient_count={}, has_understanding_issue={})",
                 strategy, insufficient_count, has_understanding_issue,
             )
-        elif insufficient_count >= 2:
+        else:
             # Repeated failure without specific feedback — try softer approach
             adjusted_rule["soft_biases"] = dict(rule.get("soft_biases", {}))
             adjusted_rule["soft_biases"]["tone"] = "warm_direct"
