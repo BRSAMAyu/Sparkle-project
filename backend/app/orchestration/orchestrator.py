@@ -1454,6 +1454,19 @@ class ChatOrchestrator(
                 modeling_snapshot=modeling_snapshot,
             )
 
+        # Feed Aurora decision back to Spine for attribution tracking
+        try:
+            from app.signals.spine_aurora_bridge import SpineAuroraBridge
+            _bridge = SpineAuroraBridge(self.redis)
+            await _bridge.feed_aurora_decision(
+                user_id=user_id,
+                action=plan.action or "emit_message",
+                surface=surface or "",
+                chat_directive=plan.chat_directive if hasattr(plan, "chat_directive") else None,
+            )
+        except Exception:
+            pass
+
     async def _emit_early_ack_progress(
         self,
         *,
@@ -2336,11 +2349,14 @@ class ChatOrchestrator(
                     ),
                 )
 
-                # P3: Signal-to-Action Spine — exam rescue & stale state
+                # P3: Signal-to-Action Spine — exam rescue & stale state + Aurora bridge
+                _spine_context: dict[str, Any] = {}
                 if not request.HasField("tool_result") and user_message:
                     try:
                         from app.signals.spine_orchestrator import SpineOrchestrator
+                        from app.signals.spine_aurora_bridge import SpineAuroraBridge
                         _spine = SpineOrchestrator(self.redis)
+                        _spine_bridge = SpineAuroraBridge(self.redis)
 
                         # First-message exam rescue detection
                         _conv_msgs = (conversation_context or {}).get("messages") or []
@@ -2369,6 +2385,14 @@ class ChatOrchestrator(
                                             "active_task_id": None,
                                         },
                                     )
+
+                        # Aurora ↔ Spine bridge: fetch Spine context for Aurora
+                        _spine_context = await _spine_bridge.get_context_for_aurora(user_id)
+                        if _spine_context:
+                            if isinstance(request_extra_context, dict):
+                                request_extra_context["spine_signals"] = _spine_context
+                            else:
+                                request_extra_context = {"spine_signals": _spine_context}
                     except Exception as _spine_err:
                         logger.debug(f"Spine signal check skipped: {_spine_err}")
 

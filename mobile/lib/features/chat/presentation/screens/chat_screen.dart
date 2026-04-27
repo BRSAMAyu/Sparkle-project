@@ -41,6 +41,7 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
@@ -1257,6 +1258,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               ),
                       ),
                     ),
+                    // Spine: Time-Aware Recovery Card (divine moment #4 记得时间)
+                    if (chatState.pendingStaleCard != null)
+                      StaleRecoveryCard(
+                        elapsedMinutes:
+                            chatState.pendingStaleCard!.elapsedMinutes,
+                        pendingTaskStatus:
+                            chatState.pendingStaleCard!.pendingTaskStatus,
+                        resumeOptions:
+                            chatState.pendingStaleCard!.resumeOptions,
+                        onOptionSelected: (option) {
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissStaleCard();
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage(option);
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissStaleCard(),
+                      ),
                     SparkleExitTransition(
                       visible: chatState.pendingPlanReview != null,
                       maintainSize: false,

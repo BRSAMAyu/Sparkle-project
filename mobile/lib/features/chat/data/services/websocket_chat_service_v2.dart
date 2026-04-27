@@ -407,6 +407,34 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           );
         }
 
+        // Spine: StaleStateGuard recovery card
+        if (metadata != null && metadata['spine_stale_card'] != null) {
+          final staleData = _decodeMapOrString(metadata['spine_stale_card']);
+          if (staleData != null) {
+            return StaleRecoveryEvent(
+              staleData: staleData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: UserVisibleReceipt card
+        if (metadata != null && metadata['spine_receipt'] != null) {
+          final receiptData = _decodeMapOrString(metadata['spine_receipt']);
+          if (receiptData != null) {
+            return SpineReceiptEvent(
+              receiptData: receiptData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         return TextEvent(
           content: deltaContent,
           responseId: responseId,

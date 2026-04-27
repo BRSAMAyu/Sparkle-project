@@ -1735,6 +1735,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
           flushPending();
+        } else if (event is StaleRecoveryEvent) {
+          // Spine: StaleStateGuard recovery card
+          state = state.copyWith(pendingStaleCard: event);
+          flushPending();
+        } else if (event is SpineReceiptEvent) {
+          // Spine: UserVisibleReceipt card
+          state = state.copyWith(pendingSpineReceipt: event);
+          flushPending();
         } else if (event is NotificationEvent) {
           // Notification Event - 实时通知推送
           _handleNotificationEvent(event);

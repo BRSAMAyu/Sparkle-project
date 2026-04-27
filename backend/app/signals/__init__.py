@@ -63,6 +63,7 @@ from app.signals.research_grade import (
     UserSimulator,
 )
 from app.signals.skill_lifecycle import SkillLifecycleManager
+from app.signals.spine_aurora_bridge import SpineAuroraBridge
 
 __all__ = [
     "ActionableSignal",
@@ -111,4 +112,5 @@ __all__ = [
     "UserVisibleReceipt",
     "UXDirective",
     "GrowthChronicleService",
+    "SpineAuroraBridge",
 ]

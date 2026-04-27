@@ -8929,3 +8929,391 @@ def test_domain_pack_serialization():
     restored = DomainPack.from_dict(d)
     assert restored.name == "Test"
     assert restored.strategy_templates == [{"key": "val"}]
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-1: Aurora ↔ Spine Bridge Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_spine_aurora_bridge_get_context():
+    """SpineAuroraBridge fetches Spine context for Aurora."""
+    from app.signals.spine_aurora_bridge import SpineAuroraBridge
+    redis = AsyncMock()
+    redis.get = AsyncMock(return_value=None)
+    redis.smembers = AsyncMock(return_value=set())
+    redis.lrange = AsyncMock(return_value=[])
+
+    bridge = SpineAuroraBridge(redis)
+    ctx = await bridge.get_context_for_aurora("u1")
+    assert ctx["active_directive"] is None
+    assert ctx["risk_flags"] == []
+    assert ctx["recent_outcomes_summary"] is None
+
+
+@pytest.mark.asyncio
+async def test_spine_aurora_bridge_get_context_with_directive():
+    """SpineAuroraBridge returns active directive when present."""
+    import json
+    from app.signals.spine_aurora_bridge import SpineAuroraBridge
+    redis = AsyncMock()
+    directive = {"directive_type": "execution", "strategy_key": "repair_transfer", "user_visible_reason": "test"}
+    redis.get = AsyncMock(return_value=json.dumps(directive).encode())
+    redis.smembers = AsyncMock(return_value=set())
+    redis.lrange = AsyncMock(return_value=[])
+
+    bridge = SpineAuroraBridge(redis)
+    ctx = await bridge.get_context_for_aurora("u1")
+    assert ctx["active_directive"] is not None
+    assert ctx["active_directive"]["strategy"] == "repair_transfer"
+
+
+@pytest.mark.asyncio
+async def test_spine_aurora_bridge_feed_decision():
+    """SpineAuroraBridge feeds Aurora decision back to Spine."""
+    import json
+    from app.signals.spine_aurora_bridge import SpineAuroraBridge
+    redis = AsyncMock()
+    redis.rpush = AsyncMock(return_value=1)
+    redis.ltrim = AsyncMock(return_value=True)
+    redis.expire = AsyncMock(return_value=True)
+
+    bridge = SpineAuroraBridge(redis)
+    await bridge.feed_aurora_decision(
+        user_id="u1",
+        action="emit_message",
+        surface="aurora_modeling",
+        chat_directive={"intent": "explore", "target_domain": "goal"},
+    )
+    redis.rpush.assert_called_once()
+    call_args = redis.rpush.call_args
+    assert "spine:aurora_decisions:u1" in call_args[0][0]
+    event = json.loads(call_args[0][1])
+    assert event["action"] == "emit_message"
+
+
+@pytest.mark.asyncio
+async def test_spine_aurora_bridge_handles_redis_failure():
+    """Bridge gracefully handles Redis failures."""
+    from app.signals.spine_aurora_bridge import SpineAuroraBridge
+    redis = AsyncMock()
+    redis.get = AsyncMock(side_effect=Exception("Redis down"))
+
+    bridge = SpineAuroraBridge(redis)
+    ctx = await bridge.get_context_for_aurora("u1")
+    assert ctx["active_directive"] is None
+
+
+def test_dashboard_readout_has_spine_signals_field():
+    """DashboardReadout includes spine_signals field."""
+    from app.aurora.runtime_v1.dashboard import DashboardReadout
+    from app.aurora.runtime_v1.control_surface import AuroraHardBounds
+    readout = DashboardReadout(
+        surface="aurora_modeling",
+        user_id="u1",
+        conversation_id="c1",
+        request_id="r1",
+        user_message="test",
+        activity_profile={},
+        hard_bounds=AuroraHardBounds(),
+        spine_signals={"active_directive": {"strategy": "test"}},
+    )
+    assert readout.spine_signals["active_directive"]["strategy"] == "test"
+
+
+def test_dashboard_readout_spine_signals_in_payload():
+    """spine_signals appears in to_llm_payload for emit_message action."""
+    from app.aurora.runtime_v1.dashboard import DashboardReadout
+    from app.aurora.runtime_v1.control_surface import AuroraHardBounds
+    readout = DashboardReadout(
+        surface="aurora_modeling",
+        user_id="u1",
+        conversation_id="c1",
+        request_id="r1",
+        user_message="test",
+        activity_profile={},
+        hard_bounds=AuroraHardBounds(),
+        spine_signals={"risk_flags": ["burnout_risk"]},
+    )
+    payload = readout.to_llm_payload(action="emit_message")
+    assert "spine_signals" in payload
+    assert payload["spine_signals"]["risk_flags"] == ["burnout_risk"]
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-2: Orphan Module Wiring Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_spine_orchestrator_instantiates_orphan_modules():
+    """SpineOrchestrator now instantiates previously orphaned modules."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = MagicMock()
+    spine = SpineOrchestrator(redis)
+    assert hasattr(spine, "policy_analytics")
+    assert hasattr(spine, "policy_experiments")
+    assert hasattr(spine, "learning_base")
+    assert hasattr(spine, "growth_chronicle")
+    assert hasattr(spine, "relationship_model")
+    assert hasattr(spine, "skill_extraction")
+    assert hasattr(spine, "goal_type_adapter")
+    assert hasattr(spine, "material_signal_detector")
+    assert hasattr(spine, "timeline_renderer")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P1: Divine Moment Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_divine_moment_see_persistence():
+    """神性时刻1: 看见坚持 — achievement → growth chronicle entry."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    redis.set = AsyncMock(return_value=True)
+    redis.get = AsyncMock(return_value=None)
+    spine = SpineOrchestrator(redis)
+
+    # Mock growth_chronicle.add_entry to not fail
+    spine.growth_chronicle.add_entry = AsyncMock()
+    result = await spine.on_achievement_unlocked(
+        user_id="u1",
+        achievement_type="streak_7",
+        streak_count=7,
+    )
+    assert result is not None
+    assert result["streak_count"] == 7
+
+
+@pytest.mark.asyncio
+async def test_divine_moment_admit_mistake():
+    """神性时刻2: 承认误判 — user correction → state patch."""
+    import json
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    redis.set = AsyncMock(return_value=True)
+    redis.get = AsyncMock(return_value=None)
+    spine = SpineOrchestrator(redis)
+
+    # Mock methods
+    spine.relationship_model.update_from_interaction = AsyncMock()
+    spine.growth_chronicle.add_entry = AsyncMock()
+
+    result = await spine.on_user_correction(
+        user_id="u1",
+        correction_type="strategy_misattribution",
+        original_claim="task_too_large",
+        corrected_understanding="knowledge_transfer_failure",
+    )
+    assert result is not None
+    assert result["original_claim"] == "task_too_large"
+    assert result["corrected_understanding"] == "knowledge_transfer_failure"
+
+
+@pytest.mark.asyncio
+async def test_divine_moment_remember_time():
+    """神性时刻4: 记得时间 — recovery card for returning user."""
+    import json
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    redis.set = AsyncMock(return_value=True)
+    spine = SpineOrchestrator(redis)
+
+    card = await spine.build_recovery_card(
+        user_id="u1",
+        elapsed_minutes=120,
+        last_task_id="task_1",
+        last_task_status="in_progress",
+    )
+    assert card is not None
+    assert card["type"] == "recovery_card"
+    assert card["urgency"] == "high"
+    assert len(card["options"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_divine_moment_context_receipt():
+    """神性时刻3: 知道不用资料 — context receipt."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    redis.set = AsyncMock(return_value=True)
+    spine = SpineOrchestrator(redis)
+
+    receipt = await spine.build_context_receipt(
+        user_id="u1",
+        used_sources=["task_card", "TCP错因"],
+        excluded_sources=["完整传输层课件"],
+        reason="范围太大，会污染解释。",
+        retrieval_mode="task_bound_rag",
+    )
+    assert receipt["type"] == "context_receipt"
+    assert "完整传输层课件" in receipt["excluded"]
+    assert len(receipt["user_actions"]) == 3
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P2: ExperienceEnvelope Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_experience_envelope_basic():
+    """ExperienceEnvelope aggregates cards, receipts, and status."""
+    import json
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    redis.get = AsyncMock(return_value=None)
+    redis.lrange = AsyncMock(return_value=[])
+    spine = SpineOrchestrator(redis)
+
+    envelope = await spine.build_experience_envelope(
+        user_id="u1",
+        primary_message="测试消息",
+        trace_id="ct_001",
+    )
+    assert envelope["turn_id"].startswith("turn_")
+    assert envelope["primary_message"]["text"] == "测试消息"
+    assert envelope["debug_trace_id"] == "ct_001"
+
+
+@pytest.mark.asyncio
+async def test_experience_envelope_with_recovery_card():
+    """ExperienceEnvelope includes recovery card when present."""
+    import json
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+
+    recovery_card = {"type": "recovery_card", "urgency": "high", "options": []}
+
+    async def mock_get(key):
+        if "recovery" in key:
+            return json.dumps(recovery_card).encode()
+        return None
+
+    redis.get = AsyncMock(side_effect=mock_get)
+    redis.lrange = AsyncMock(return_value=[])
+    spine = SpineOrchestrator(redis)
+
+    envelope = await spine.build_experience_envelope(user_id="u1")
+    assert len(envelope["cards"]) == 1
+    assert envelope["cards"][0]["type"] == "recovery_card"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P3: Fatigue Guard Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_fatigue_guard_low():
+    """Fatigue guard returns low for normal usage."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.check_fatigue(
+        user_id="u1",
+        interactions_last_24h=5,
+        consecutive_hours=1.0,
+    )
+    assert result["fatigue_level"] == "low"
+    assert result["recommended_policy"] == "normal"
+
+
+@pytest.mark.asyncio
+async def test_fatigue_guard_critical():
+    """Fatigue guard detects critical fatigue."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.check_fatigue(
+        user_id="u1",
+        interactions_last_24h=40,
+        consecutive_hours=6.0,
+        accuracy_trend=[0.8, 0.6, 0.4],
+        is_late_night=True,
+    )
+    assert result["fatigue_level"] == "critical"
+    assert result["hard_constraints"]["suggest_break"] is True
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P3: Crisis Mode Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_crisis_mode_detection():
+    """Crisis mode detected for zero-base + short deadline."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.detect_crisis_mode(
+        user_id="u1",
+        days_to_deadline=3,
+        baseline_mastery=15,
+        goal_type="exam",
+    )
+    assert result is not None
+    assert result["mode"] == "exam_crisis_zero_base"
+    assert result["task_constraints"]["max_task_duration_min"] == 25
+
+
+@pytest.mark.asyncio
+async def test_crisis_mode_not_triggered_for_high_mastery():
+    """Crisis mode not triggered when mastery is sufficient."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.detect_crisis_mode(
+        user_id="u1",
+        days_to_deadline=3,
+        baseline_mastery=50,
+        goal_type="exam",
+    )
+    assert result is None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P2: State Snapshot & Recovery Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_save_spine_snapshot():
+    """Spine snapshot saves state summary."""
+    import json
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = AsyncMock()
+    redis.set = AsyncMock(return_value=True)
+    redis.get = AsyncMock(return_value=None)
+    redis.smembers = AsyncMock(return_value=set())
+    redis.lrange = AsyncMock(return_value=[])
+    spine = SpineOrchestrator(redis)
+
+    # Mock state register
+    spine.state_register.get_active_states = AsyncMock(return_value=[])
+    spine.relationship_model.get_or_create = AsyncMock(return_value=MagicMock(to_dict=lambda: {"trust_level": 0.6}))
+    spine.outcome_recorder.get_recent_policy_effects = AsyncMock(return_value=[])
+    spine.skill_lifecycle_manager.get_user_skills = AsyncMock(return_value=[])
+
+    snapshot = await spine.save_spine_snapshot(user_id="u1", goal_id="g1")
+    assert snapshot["snapshot_id"].startswith("snap_")
+    assert snapshot["goal_id"] == "g1"
+
+
+@pytest.mark.asyncio
+async def test_goal_scoped_key():
+    """Goal-scoped key prevents cross-goal pollution."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    key = SpineOrchestrator.goal_scoped_key("u1", "task_granularity", "exam_goal")
+    assert key == "goal:exam_goal:task_granularity"
+
+    key_no_goal = SpineOrchestrator.goal_scoped_key("u1", "global_state")
+    assert key_no_goal == "global_state"

@@ -695,6 +695,14 @@ extension ChatNotifierActions on ChatNotifier {
     });
   }
 
+  void dismissStaleCard() {
+    state = state.copyWith(clearStaleCard: true);
+  }
+
+  void dismissSpineReceipt() {
+    state = state.copyWith(clearSpineReceipt: true);
+  }
+
   void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
     debugPrint('🔄 Sprint mode switch event received');
 

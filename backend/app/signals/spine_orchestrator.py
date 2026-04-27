@@ -34,6 +34,15 @@ from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.spine_metrics import SpineMetricsCollector
 from app.signals.exam_sprint_policy import ExamSprintPolicyService
 from app.signals.skill_lifecycle import SkillLifecycleManager
+from app.signals.policy_analytics import PolicyAnalytics
+from app.signals.policy_experiments import PolicyExperimentManager
+from app.signals.learning_base import LearningBase
+from app.signals.growth_chronicle import GrowthChronicleService
+from app.signals.relationship_model import RelationshipModelService
+from app.signals.skill_extraction import SkillExtractionService
+from app.signals.goal_type_adapter import GoalTypeAdapter
+from app.signals.material_signal import MaterialSignalDetector
+from app.signals.timeline_card_renderer import TimelineCardRenderer
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -90,6 +99,16 @@ class SpineOrchestrator:
         self.exam_sprint_policy = ExamSprintPolicyService()
         self.core_session_manager = CoreSessionManager(redis_client)
         self.skill_lifecycle_manager = SkillLifecycleManager(redis_client)
+        # P0-2: Previously orphaned modules — now wired into the pipeline
+        self.policy_analytics = PolicyAnalytics(redis_client)
+        self.policy_experiments = PolicyExperimentManager(redis_client)
+        self.learning_base = LearningBase()
+        self.growth_chronicle = GrowthChronicleService(redis_client)
+        self.relationship_model = RelationshipModelService(redis_client)
+        self.skill_extraction = SkillExtractionService()
+        self.goal_type_adapter = GoalTypeAdapter()
+        self.material_signal_detector = MaterialSignalDetector(redis_client)
+        self.timeline_renderer = TimelineCardRenderer()
 
     async def on_task_completed(
         self,
@@ -157,6 +176,9 @@ class SpineOrchestrator:
         # Step 3b: 链接到 trace
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
+
+        # Step 3c: Overlay ExamSprintPolicy constraints if user is in exam_rescue mode
+        directive = await self._apply_exam_sprint_overlay(user_id, directive)
 
         # Step 4: 存储 active directive 供 task_generator 消费
         await self.trace_store.set_active_directive(user_id, directive)
@@ -545,6 +567,8 @@ class SpineOrchestrator:
         decision, directive = result
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
+        # Overlay ExamSprintPolicy constraints if user is in exam_rescue mode
+        directive = await self._apply_exam_sprint_overlay(user_id, directive)
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
         trace.policy_decision_id = decision.policy_decision_id  # Keep local in sync
@@ -625,6 +649,14 @@ class SpineOrchestrator:
         ]
         await self.trace_store._save_trace(trace)
 
+        # P0-2: Post-policy enrichment from previously orphaned modules
+        await self._enrich_pipeline_post_policy(
+            user_id=user_id,
+            signal=signal,
+            decision=decision,
+            directive=directive,
+        )
+
         logger.info(
             "Spine P1 pipeline: trace={} signal={} policy={}",
             trace.trace_id, signal.signal_id,
@@ -644,6 +676,23 @@ class SpineOrchestrator:
         snapshot = self.exam_rescue.analyze_first_message(message)
         if snapshot is None:
             return None
+
+        # Persist deadline context so ExamSprintPolicy can activate on every turn
+        if snapshot.deadline_days is not None and snapshot.detected_mode == "exam_rescue":
+            await self.redis.set(
+                f"spine:exam_sprint:{user_id}:deadline_days",
+                str(snapshot.deadline_days),
+                ex=7 * 24 * 3600,
+            )
+            await self.redis.set(
+                f"spine:exam_sprint:{user_id}:goal_mode",
+                snapshot.detected_mode,
+                ex=7 * 24 * 3600,
+            )
+            logger.info(
+                "ExamSprintContext stored: user={} deadline_days={} mode={}",
+                user_id, snapshot.deadline_days, snapshot.detected_mode,
+            )
 
         signal = self.exam_rescue.to_actionable_signal(snapshot, user_id=user_id)
         if signal is None:
@@ -1069,6 +1118,73 @@ class SpineOrchestrator:
             return None
         return self.exam_sprint_policy.compute(days_to_deadline=days_to_deadline)
 
+    async def _get_exam_sprint_context(self, user_id: str) -> tuple[str, int | None]:
+        """Return (goal_mode, days_to_deadline) from stored exam sprint context."""
+        raw_mode = await self.redis.get(f"spine:exam_sprint:{user_id}:goal_mode")
+        raw_days = await self.redis.get(f"spine:exam_sprint:{user_id}:deadline_days")
+        if not raw_mode or not raw_days:
+            return "standard", None
+        goal_mode = raw_mode.decode() if isinstance(raw_mode, bytes) else raw_mode
+        try:
+            days = int(raw_days.decode() if isinstance(raw_days, bytes) else raw_days)
+        except (ValueError, AttributeError):
+            return goal_mode, None
+        return goal_mode, days
+
+    async def _apply_exam_sprint_overlay(
+        self,
+        user_id: str,
+        directive: ExecutionDirective,
+    ) -> ExecutionDirective:
+        """Overlay ExamSprintPhase constraints onto an ExecutionDirective if in exam_rescue mode.
+
+        Takes the stricter value for duration caps and adds phase-specific biases.
+        No-ops if user is not in exam_rescue mode or deadline > 7 days.
+        """
+        goal_mode, days = await self._get_exam_sprint_context(user_id)
+        if not ExamSprintPolicyService.should_activate(goal_mode=goal_mode, days_to_deadline=days):
+            return directive
+
+        assert days is not None  # guaranteed by should_activate
+        esp = self.exam_sprint_policy.compute(days_to_deadline=days)
+        phase = esp.phase
+
+        hc = dict(directive.hard_constraints or {})
+        # Duration cap: take the stricter (smaller) limit
+        existing_max = hc.get("max_task_duration_min", 999)
+        hc["max_task_duration_min"] = min(existing_max, phase.max_task_duration_min)
+        # Chapter guard: once exam sprint says no new chapters, it cannot be relaxed
+        if not phase.allow_new_chapters:
+            hc["avoid_new_chapter"] = True
+        if phase.prefer_high_yield_review:
+            hc["prefer_high_yield"] = True
+        hc["exam_sprint_task_type_bias"] = phase.task_type_bias
+        hc["exam_sprint_difficulty_cap"] = phase.difficulty_cap
+        hc["exam_sprint_retrieval_mode"] = phase.retrieval_mode
+        hc["exam_sprint_phase_id"] = phase.phase_id
+        directive.hard_constraints = hc
+
+        # Append phase context to the user-visible reason
+        prefix = f"[D-{days} · {phase.phase_id}]"
+        existing = directive.user_visible_reason or ""
+        if prefix not in existing:
+            directive.user_visible_reason = f"{prefix} {existing}".strip()
+
+        logger.info(
+            "ExamSprintPolicy overlay applied: user={} days={} phase={} max_dur={}",
+            user_id, days, phase.phase_id, hc["max_task_duration_min"],
+        )
+        return directive
+
+    async def update_exam_sprint_deadline(self, user_id: str, days_to_deadline: int) -> None:
+        """Update the stored deadline days (e.g., called each new day or goal update)."""
+        await self.redis.set(
+            f"spine:exam_sprint:{user_id}:deadline_days",
+            str(days_to_deadline),
+            ex=7 * 24 * 3600,
+        )
+        logger.info("ExamSprint deadline updated: user={} days={}", user_id, days_to_deadline)
+
     # ── Layer 6: CommunityDirective ──────────────────────────────────────
 
     async def _store_community_loop_artifact(self, user_id: str, artifact_type: str, artifact: dict[str, Any]) -> None:
@@ -1181,4 +1297,626 @@ class SpineOrchestrator:
 
     async def get_metrics_snapshot(self) -> dict[str, Any]:
         """获取 Decision Realization Score 指标快照。"""
+        return await self.metrics.snapshot()
+
+    # ── P0-2: Post-policy enrichment from previously orphaned modules ──
+
+    async def _enrich_pipeline_post_policy(
+        self,
+        *,
+        user_id: str,
+        signal: ActionableSignal,
+        decision: PolicyDecision,
+        directive,
+    ) -> None:
+        """Wire orphaned modules into the pipeline as capability hooks."""
+        import json
+
+        # 1. policy_experiments: shadow A/B evaluation
+        try:
+            strategy_key = getattr(directive, "strategy_key", None) or decision.primary_strategy
+            experiments = await self.policy_experiments.get_user_experiments(user_id)
+            if not experiments:
+                await self.policy_experiments.create_experiment(
+                    user_id=user_id,
+                    signal_state_key=signal.state_key,
+                    primary_strategy=strategy_key,
+                )
+            else:
+                await self.policy_experiments.record_trial(
+                    user_id=user_id,
+                    signal_state_key=signal.state_key,
+                    primary_strategy=strategy_key,
+                    primary_outcome="pending",
+                    context={"claim": signal.claim},
+                )
+        except Exception:
+            pass
+
+        # 2. relationship_model: update from interaction
+        try:
+            await self.relationship_model.update_from_interaction(
+                user_id=user_id,
+                interaction_type="system_proactive",
+            )
+        except Exception:
+            pass
+
+        # 3. growth_chronicle: record if this is a significant event
+        try:
+            if signal.priority == "high" and signal.confidence >= 0.7:
+                entry = self.growth_chronicle.build_milestone_from_outcome({
+                    "attribution": "effective",
+                    "attribution_confidence": signal.confidence,
+                    "intervention": f"检测到 {signal.state_key}",
+                    "user_id": user_id,
+                    "actual_outcome": {"type": "signal_detected"},
+                })
+                if entry:
+                    await self.growth_chronicle.add_entry(user_id=user_id, entry=entry)
+        except Exception:
+            pass
+
+        # 4. policy_analytics: record for analytics (async)
+        try:
+            recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=20)
+            if recent_effects:
+                degrading = self.policy_analytics.detect_degrading_strategies(recent_effects)
+                if degrading:
+                    await self.redis.set(
+                        f"spine:analytics:degrading:{user_id}",
+                        json.dumps(degrading),
+                        ex=24 * 3600,
+                    )
+        except Exception:
+            pass
+
+        # 5. learning_base: update strategy belief
+        try:
+            recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+            if recent_effects:
+                for effect in recent_effects:
+                    strategy = getattr(effect, "strategy_key", None) or effect.get("strategy_key")
+                    outcome = getattr(effect, "effectiveness", None) or effect.get("effectiveness")
+                    if strategy and outcome:
+                        self.learning_base.update_belief(
+                            strategy_key=strategy,
+                            outcome=outcome,
+                            context={"signal_state_key": signal.state_key},
+                        )
+        except Exception:
+            pass
+
+    # ── P1: Divine Moment Enrichers ──────────────────────────────────
+
+    async def on_achievement_unlocked(
+        self,
+        *,
+        user_id: str,
+        achievement_type: str,
+        streak_count: int = 0,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        """神性时刻1: 看见坚持 — achievement → growth chronicle + strategy bias."""
+        try:
+            # Record to growth chronicle
+            if streak_count >= 3:
+                entry = self.growth_chronicle.build_milestone_from_outcome({
+                    "attribution": "effective",
+                    "attribution_confidence": 0.8,
+                    "intervention": f"连续 {streak_count} 天完成任务",
+                    "user_id": user_id,
+                    "actual_outcome": {
+                        "type": achievement_type,
+                        "strategy": "consistency_streak",
+                        "count": streak_count,
+                    },
+                })
+                if entry:
+                    await self.growth_chronicle.add_entry(user_id=user_id, entry=entry)
+
+            # Generate timeline card
+            card = self.timeline_renderer.render_card(
+                trace_id=_uid("tc"),
+                signal_data={
+                    "state_key": "achievement_streak",
+                    "claim": f"连续 {streak_count} 天完成任务",
+                },
+                policy_data={"primary_strategy": "reinforce_without_overpressure"},
+                mode="compact",
+            )
+            card_dict = card.to_dict() if card and hasattr(card, "to_dict") else None
+            if card_dict:
+                import json
+                await self.redis.set(
+                    f"spine:card:growth:{user_id}:latest",
+                    json.dumps(card_dict),
+                    ex=7 * 24 * 3600,
+                )
+
+            return {"achievement_recorded": True, "streak_count": streak_count}
+        except Exception:
+            return None
+
+    async def on_user_correction(
+        self,
+        *,
+        user_id: str,
+        correction_type: str,
+        original_claim: str,
+        corrected_understanding: str,
+        trace_id: str | None = None,
+    ) -> dict[str, Any] | None:
+        """神性时刻2: 承认误判 — user correction → state patch + strategy bias."""
+        import json
+        try:
+            # Update relationship model
+            await self.relationship_model.update_from_interaction(
+                user_id=user_id,
+                interaction_type="corrected",
+            )
+
+            # Record to growth chronicle as turning point
+            entry = self.growth_chronicle.build_turning_point_from_correction({
+                "topic": original_claim,
+                "lesson": corrected_understanding,
+                "user_id": user_id,
+                "trace_id": trace_id,
+            })
+            if entry:
+                await self.growth_chronicle.add_entry(user_id=user_id, entry=entry)
+
+            # Store correction event for Aurora
+            correction_event = {
+                "type": "user_correction",
+                "original_claim": original_claim,
+                "corrected_understanding": corrected_understanding,
+                "correction_type": correction_type,
+                "trace_id": trace_id,
+            }
+            await self.redis.set(
+                f"spine:correction:{user_id}:latest",
+                json.dumps(correction_event),
+                ex=72 * 3600,
+            )
+
+            return correction_event
+        except Exception:
+            return None
+
+    async def build_recovery_card(
+        self,
+        *,
+        user_id: str,
+        elapsed_minutes: float,
+        last_task_id: str | None = None,
+        last_task_status: str | None = None,
+    ) -> dict[str, Any] | None:
+        """神性时刻4: 记得时间 — build recovery card for returning user."""
+        import json
+        try:
+            recovery_card = {
+                "type": "recovery_card",
+                "user_id": user_id,
+                "elapsed_minutes": elapsed_minutes,
+                "last_task_id": last_task_id,
+                "last_task_status": last_task_status,
+                "options": [
+                    {"label": "做完了，补记录", "value": "completed"},
+                    {"label": "做了一半，卡住了", "value": "stuck"},
+                    {"label": "没开始", "value": "not_started"},
+                    {"label": "换个小任务", "value": "switch_task"},
+                ],
+            }
+
+            if elapsed_minutes >= 120:
+                recovery_card["urgency"] = "high"
+                recovery_card["message"] = f"你离开了大约 {int(elapsed_minutes / 60)} 小时。"
+            elif elapsed_minutes >= 60:
+                recovery_card["urgency"] = "medium"
+                recovery_card["message"] = f"你离开了大约 {int(elapsed_minutes)} 分钟。"
+            else:
+                recovery_card["urgency"] = "low"
+                recovery_card["message"] = f"你离开了 {int(elapsed_minutes)} 分钟。"
+
+            if last_task_id:
+                recovery_card["message"] += f" 上一张任务卡预计完成，但还没收到反馈。"
+
+            await self.redis.set(
+                f"spine:card:recovery:{user_id}:latest",
+                json.dumps(recovery_card),
+                ex=24 * 3600,
+            )
+
+            return recovery_card
+        except Exception:
+            return None
+
+    async def build_context_receipt(
+        self,
+        *,
+        user_id: str,
+        used_sources: list[str] | None = None,
+        excluded_sources: list[str] | None = None,
+        reason: str = "",
+        retrieval_mode: str = "auto",
+    ) -> dict[str, Any]:
+        """神性时刻3: 知道不用资料 — build context receipt for current turn."""
+        import json
+        receipt = {
+            "type": "context_receipt",
+            "used": used_sources or [],
+            "excluded": excluded_sources or [],
+            "reason": reason,
+            "retrieval_mode": retrieval_mode,
+            "user_actions": [
+                {"label": "按完整资料重讲", "value": "force_full_source"},
+                {"label": "不要用这份资料", "value": "exclude_source"},
+                {"label": "查看为什么", "value": "explain_decision"},
+            ],
+        }
+        try:
+            await self.redis.set(
+                f"spine:card:context_receipt:{user_id}:latest",
+                json.dumps(receipt),
+                ex=2 * 3600,
+            )
+        except Exception:
+            pass
+        return receipt
+
+    async def on_community_hint(
+        self,
+        *,
+        user_id: str,
+        knowledge_node: str,
+        common_mistake: str,
+        cohort_size: int,
+    ) -> dict[str, Any] | None:
+        """神性时刻6: 社群经验转策略 — cohort hint → directive bias."""
+        import json
+        try:
+            hint = self.community_loops.build_cohort_mistake_hint({
+                "knowledge_node_id": knowledge_node,
+                "common_misconception": common_mistake,
+                "cohort_size": cohort_size,
+            })
+            if hint is None:
+                return None
+
+            card = {
+                "type": "community_hint",
+                "knowledge_node": knowledge_node,
+                "common_mistake": common_mistake,
+                "cohort_size": cohort_size,
+                "message": hint.get("hint_text", ""),
+            }
+
+            await self.redis.set(
+                f"spine:card:community_hint:{user_id}:latest",
+                json.dumps(card),
+                ex=48 * 3600,
+            )
+            return card
+        except Exception:
+            return None
+
+    # ── P2: ExperienceEnvelope Builder ────────────────────────────────
+
+    async def build_experience_envelope(
+        self,
+        *,
+        user_id: str,
+        primary_message: str = "",
+        trace_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Build unified ExperienceEnvelope for the current turn."""
+        import json
+        envelope: dict[str, Any] = {
+            "turn_id": _uid("turn"),
+            "primary_message": {"text": primary_message},
+            "status_band": None,
+            "receipts": [],
+            "context_receipt": None,
+            "cards": [],
+            "predicted_reply_options": [],
+            "timeline_updates": [],
+            "task_card_updates": [],
+            "debug_trace_id": trace_id,
+        }
+
+        try:
+            # Status band from active directive
+            directive_raw = await self.redis.get(f"spine:directive:active:{user_id}")
+            if directive_raw:
+                d = json.loads(directive_raw if isinstance(directive_raw, str) else directive_raw.decode())
+                envelope["status_band"] = {
+                    "state": d.get("strategy_key", "active"),
+                    "label": d.get("user_visible_reason", ""),
+                    "expandable": True,
+                }
+
+            # Latest receipt
+            receipt_raw = await self.redis.get(f"spine:receipt:{user_id}:latest")
+            if receipt_raw:
+                receipt = json.loads(receipt_raw if isinstance(receipt_raw, str) else receipt_raw.decode())
+                envelope["receipts"].append(receipt)
+
+            # Context receipt
+            ctx_raw = await self.redis.get(f"spine:card:context_receipt:{user_id}:latest")
+            if ctx_raw:
+                envelope["context_receipt"] = json.loads(ctx_raw if isinstance(ctx_raw, str) else ctx_raw.decode())
+
+            # Recovery card
+            recovery_raw = await self.redis.get(f"spine:card:recovery:{user_id}:latest")
+            if recovery_raw:
+                envelope["cards"].append(json.loads(recovery_raw if isinstance(recovery_raw, str) else recovery_raw.decode()))
+
+            # Growth card
+            growth_raw = await self.redis.get(f"spine:card:growth:{user_id}:latest")
+            if growth_raw:
+                envelope["cards"].append(json.loads(growth_raw if isinstance(growth_raw, str) else growth_raw.decode()))
+
+            # Community hint card
+            comm_raw = await self.redis.get(f"spine:card:community_hint:{user_id}:latest")
+            if comm_raw:
+                envelope["cards"].append(json.loads(comm_raw if isinstance(comm_raw, str) else comm_raw.decode()))
+
+            # Timeline updates from recent traces
+            recent_trace_ids = await self.redis.lrange(f"spine:user_traces:{user_id}", 0, 2)
+            for tid in recent_trace_ids:
+                tid_str = tid if isinstance(tid, str) else tid.decode()
+                envelope["timeline_updates"].append({"trace_id": tid_str})
+
+            # Predicted reply options from active receipt
+            if envelope["receipts"]:
+                latest_receipt = envelope["receipts"][0]
+                actions = latest_receipt.get("actions", [])
+                envelope["predicted_reply_options"] = [
+                    {"label": a, "value": a} for a in actions
+                ]
+
+        except Exception:
+            pass
+
+        return envelope
+
+    # ── P3: Fatigue Guard ────────────────────────────────────────────
+
+    async def check_fatigue(
+        self,
+        *,
+        user_id: str,
+        interactions_last_24h: int = 0,
+        consecutive_hours: float = 0.0,
+        accuracy_trend: list[float] | None = None,
+        is_late_night: bool = False,
+    ) -> dict[str, Any]:
+        """Detect user fatigue from interaction patterns."""
+        level = "low"
+        evidence: list[str] = []
+
+        if interactions_last_24h > 30:
+            level = "high"
+            evidence.append(f"24小时内交互 {interactions_last_24h} 次")
+        elif interactions_last_24h > 15:
+            level = "medium"
+            evidence.append(f"24小时内交互 {interactions_last_24h} 次")
+
+        if consecutive_hours > 4:
+            level = "critical" if level == "high" else "high"
+            evidence.append(f"连续在线 {consecutive_hours:.1f} 小时")
+
+        if accuracy_trend and len(accuracy_trend) >= 3:
+            recent = accuracy_trend[-3:]
+            if all(recent[i] < recent[i - 1] for i in range(1, len(recent))):
+                if level == "low":
+                    level = "medium"
+                evidence.append("最近 3 次正确率持续下降")
+
+        if is_late_night:
+            if level == "low":
+                level = "medium"
+            evidence.append("深夜使用")
+
+        policy_map = {
+            "low": "normal",
+            "medium": "reduce_pace",
+            "high": "low_load_review",
+            "critical": "forced_break_suggestion",
+        }
+
+        constraints = {}
+        if level in ("high", "critical"):
+            constraints["avoid_new_chapter"] = True
+            constraints["max_task_duration_min"] = 15 if level == "critical" else 25
+        if level == "critical":
+            constraints["suggest_break"] = True
+
+        return {
+            "fatigue_level": level,
+            "evidence": evidence,
+            "recommended_policy": policy_map[level],
+            "hard_constraints": constraints,
+        }
+
+    # ── P3: Crisis Mode (zero-base + short deadline) ──────────────────
+
+    async def detect_crisis_mode(
+        self,
+        *,
+        user_id: str,
+        days_to_deadline: int,
+        baseline_mastery: float,
+        goal_type: str = "exam",
+    ) -> dict[str, Any] | None:
+        """Detect if user is in crisis mode: zero-base + very short deadline."""
+        if goal_type != "exam" or days_to_deadline > 5:
+            return None
+        if baseline_mastery >= 30:
+            return None
+
+        return {
+            "mode": "exam_crisis_zero_base",
+            "days_to_deadline": days_to_deadline,
+            "baseline_mastery": baseline_mastery,
+            "strategy_principles": [
+                "不追求体系完整",
+                "只追求最低可得分路径",
+                "必须显式放弃部分内容",
+                "每次任务 15-25 分钟",
+                "每个任务只解决一个题型",
+                "强制不平均复习",
+            ],
+            "task_constraints": {
+                "max_task_duration_min": 25,
+                "min_task_duration_min": 15,
+                "avoid_new_chapter": days_to_deadline <= 2,
+                "focus_high_yield_only": True,
+            },
+        }
+
+    # ── P2: State Snapshot & Recovery ────────────────────────────────
+
+    async def save_spine_snapshot(
+        self,
+        *,
+        user_id: str,
+        goal_id: str | None = None,
+        snapshot_type: str = "daily",
+    ) -> dict[str, Any]:
+        """Save a snapshot of Spine state for recovery after TTL expiry."""
+        import json
+        snapshot = {
+            "snapshot_id": _uid("snap"),
+            "user_id": user_id,
+            "goal_id": goal_id,
+            "snapshot_type": snapshot_type,
+            "state_summary": {
+                "top_states": [],
+                "relationship_summary": None,
+                "growth_summary": None,
+                "policy_effect_summary": None,
+                "recent_skills": [],
+            },
+        }
+
+        try:
+            # Collect state summary
+            states = await self.state_register.get_active_states(user_id)
+            snapshot["state_summary"]["top_states"] = [
+                s.to_dict() if hasattr(s, "to_dict") else s for s in states[:10]
+            ]
+
+            # Relationship summary
+            rel = await self.relationship_model.get_or_create(user_id)
+            if hasattr(rel, "to_dict"):
+                snapshot["state_summary"]["relationship_summary"] = rel.to_dict()
+            elif isinstance(rel, dict):
+                snapshot["state_summary"]["relationship_summary"] = rel
+
+            # Growth chronicle summary
+            try:
+                weekly = await self.growth_chronicle.generate_weekly_summary(user_id)
+                if weekly:
+                    snapshot["state_summary"]["growth_summary"] = weekly
+            except Exception:
+                pass
+
+            # Recent policy effects
+            effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+            if effects:
+                snapshot["state_summary"]["policy_effect_summary"] = [
+                    e.to_dict() if hasattr(e, "to_dict") else e for e in effects[:5]
+                ]
+
+            # Recent skills
+            skills = await self.skill_lifecycle_manager.get_user_skills(user_id)
+            if skills:
+                snapshot["state_summary"]["recent_skills"] = [
+                    s.to_dict() if hasattr(s, "to_dict") else s for s in skills[:5]
+                ]
+
+            # Save to Redis with 90-day TTL
+            await self.redis.set(
+                f"spine:snapshot:{user_id}:latest",
+                json.dumps(snapshot),
+                ex=90 * 24 * 3600,
+            )
+
+        except Exception:
+            pass
+
+        return snapshot
+
+    async def recover_from_snapshot(
+        self,
+        *,
+        user_id: str,
+    ) -> dict[str, Any] | None:
+        """Recover Spine state from latest snapshot after TTL expiry."""
+        import json
+        try:
+            raw = await self.redis.get(f"spine:snapshot:{user_id}:latest")
+            if not raw:
+                return None
+            snapshot = json.loads(raw if isinstance(raw, str) else raw.decode())
+
+            # Rebuild state from snapshot
+            states = snapshot.get("state_summary", {}).get("top_states", [])
+            for state_data in states:
+                state_key = state_data.get("state_key")
+                if state_key:
+                    from app.signals.types import StateEntry
+                    entry = StateEntry(
+                        state_key=state_key,
+                        value=state_data.get("value", ""),
+                        confidence=state_data.get("confidence", 0.5) * 0.8,
+                        scope=state_data.get("scope", "current_sprint"),
+                        ttl_hours=72,
+                    )
+                    await self.state_register._save_state(user_id, entry)
+
+            return snapshot
+        except Exception:
+            return None
+
+    # ── P2: Multi-Goal Namespace ─────────────────────────────────────
+
+    @staticmethod
+    def goal_scoped_key(user_id: str, state_key: str, goal_id: str | None = None) -> str:
+        """Generate goal-scoped state key to prevent cross-goal pollution."""
+        if goal_id:
+            return f"goal:{goal_id}:{state_key}"
+        return state_key
+
+    async def get_goal_scoped_states(
+        self,
+        user_id: str,
+        goal_id: str | None = None,
+    ) -> list:
+        """Get states filtered by goal scope."""
+        all_states = await self.state_register.get_active_states(user_id)
+        if not goal_id:
+            return all_states
+        prefix = f"goal:{goal_id}:"
+        return [
+            s for s in all_states
+            if hasattr(s, "state_key") and (
+                s.state_key.startswith(prefix) or
+                not s.state_key.startswith("goal:")
+            )
+        ]
+
+    # ── P2: Rolling Metrics ──────────────────────────────────────────
+
+    async def get_rolling_metrics(self, user_id: str) -> dict[str, Any]:
+        """Get rolling-window metrics instead of raw counters."""
+        import json
+        try:
+            raw = await self.redis.get(f"spine:metrics:rolling:{user_id}")
+            if raw:
+                return json.loads(raw if isinstance(raw, str) else raw.decode())
+        except Exception:
+            pass
         return await self.metrics.snapshot()

@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-450/450 tests passing:
+503/503 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -858,9 +858,26 @@
 
 ---
 
-## 当前状态: v2.0 P1-P4 ALL COMPLETE
+## 当前状态: v2.1 Aurora↔Spine Bridge + Module Activation IN PROGRESS
 
-**484/484 tests passing** | **9/9 directive types active** | **46 public API exports** | **28 signal modules**
+**503/503 tests passing** | **9/9 directive types active** | **47 public API exports** | **38 signal modules**
+
+### v2.1 Progress (Deep Audit Remediation)
+- [x] Deep audit conducted — identified 12 orphaned modules, 4 stub divine moments, Aurora↔Spine split
+- [x] SpineAuroraBridge — bidirectional bridge (Spine→Aurora context, Aurora→Spine attribution)
+- [x] Aurora decision_loop now consumes Spine directives, risk flags, outcomes, trust level
+- [x] 12 orphaned modules registered in SpineOrchestrator.__init__
+- [x] ExamSprintPolicy overlay wired into pipeline (deadline context persisted across turns)
+- [x] `_enrich_pipeline_post_policy` — post-policy enrichment from all modules
+- [x] orchestrator_production.py — ExamSprint phase injection + receipt metadata + stale card
+- [x] notification_service.py — `consume_spine_notification_directive` method
+- [x] StaleRecoveryCard — Flutter widget with animation (divine moment #4)
+- [x] chat_stream_events.dart — WebSocket event types for spine events
+- [ ] build_experience_envelope — unified experience output (needs E2E validation)
+- [ ] FatigueGuard — user fatigue detection (method exists, needs production trigger)
+- [ ] CrisisMode — zero-base + 3-day emergency (method exists, needs testing)
+- [ ] SpineSnapshot + recovery — long-term stability (methods exist, needs testing)
+- [ ] MultiGoal namespace — goal_scoped_key exists, needs integration
 
 ### P1: Living Experience Layer (ALL COMPLETE)
 - [x] P1-1: Causal Timeline UI — TimelineCardRenderer (compact/expanded + user correction)
@@ -992,14 +1009,14 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-484/484 tests passing
+503/503 tests passing
 37 signal modules (excluding __init__.py)
-46 public API exports
+47 public API exports (incl. SpineAuroraBridge)
 9/9 directive types active
 10/10 Iron Laws tested
 6/6 Divine Moments implemented
 8-layer architecture complete
-28 production wiring points
+33+ production wiring points (incl. Aurora bridge + notification consumption)
 ```
 
 ---

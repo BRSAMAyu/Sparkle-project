@@ -313,4 +313,106 @@ class NotificationService:
         return result.scalar() or 0
 
 
+    # ── Spine NotificationDirective Consumer ────────────────────────────
+
+    @classmethod
+    async def consume_spine_notification_directive(
+        cls,
+        db: AsyncSession,
+        user_id: UUID,
+        *,
+        redis_client,
+        title: str,
+        content: str,
+        notification_type: str = "intervention",
+    ) -> Notification | None:
+        """
+        Consume a NotificationDirective from the Spine and send the notification
+        if the directive permits it.
+
+        This is the integration point between SpineOrchestrator's NotificationDirective
+        and the actual notification delivery pipeline. Call this instead of create()
+        when the notification originates from a Spine-generated directive.
+
+        Returns the created Notification or None if suppressed by the directive.
+        """
+        from app.signals.spine_orchestrator import SpineOrchestrator
+
+        spine = SpineOrchestrator(redis_client)
+        directive = await spine.get_notification_directive(str(user_id))
+
+        if directive is None:
+            # No active directive — fall back to standard notification creation
+            return await cls.create(
+                db,
+                user_id,
+                NotificationCreate(title=title, content=content, type=notification_type),
+            )
+
+        if not directive.allowed:
+            logger.info(
+                "NotificationDirective suppressed notification for user {}: allowed=False",
+                user_id,
+            )
+            return None
+
+        # Respect quiet hours if directive demands it
+        if directive.respect_quiet_hours:
+            should_push, reason = await cls._should_push_notification(
+                db,
+                user_id=user_id,
+                notification_type=notification_type,
+            )
+            if not should_push:
+                logger.info(
+                    "NotificationDirective: quiet hours suppressed for user {}: {}",
+                    user_id, reason,
+                )
+                return None
+
+        # Frequency throttle — directive max_frequency maps to a per-day cap
+        freq_cap = {
+            "1_per_day": 1,
+            "2_per_day": 2,
+            "1_per_sprint": 1,
+        }.get(directive.max_frequency, 1)
+        freq_key = f"spine:notif_freq:{user_id}:{directive.trigger}"
+        sent_today = await redis_client.incr(freq_key)
+        if sent_today == 1:
+            await redis_client.expire(freq_key, 86400)  # reset each 24 h
+        if sent_today > freq_cap:
+            logger.info(
+                "NotificationDirective: frequency cap ({}) reached for user {} trigger={}",
+                freq_cap, user_id, directive.trigger,
+            )
+            return None
+
+        # Choose push channel
+        push_via_ws = directive.channel in ("push", "in_app")
+        notification = await cls.create(
+            db,
+            user_id,
+            NotificationCreate(
+                title=title,
+                content=content,
+                type=notification_type,
+                data={
+                    "spine_directive_id": directive.directive_id,
+                    "trigger": directive.trigger,
+                    "message_strategy": directive.message_strategy,
+                    "channel": directive.channel,
+                },
+            ),
+            push_via_websocket=push_via_ws,
+        )
+
+        # Clear the directive after consumption (one-shot)
+        await redis_client.delete(f"spine:notification_directive:{user_id}:latest")
+        logger.info(
+            "NotificationDirective consumed for user {}: trigger={} channel={}",
+            user_id, directive.trigger, directive.channel,
+        )
+        return notification
+
+
 notification_service = NotificationService()

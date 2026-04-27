@@ -153,6 +153,8 @@ class ChatState {
     this.activeRunSummary,
     this.transparencyPresentationState = const TransparencyPresentationState(),
     this.dualCoreMode,
+    this.pendingStaleCard,
+    this.pendingSpineReceipt,
   });
 
   static const int maxRetainedMessages = 500;
@@ -208,6 +210,12 @@ class ChatState {
   /// Current dual-core routing mode: "execution" | "cognitive" | "balanced"
   /// Set from backend ux_turn.dual_core_mode on each AgentTurnEvent.
   final String? dualCoreMode;
+
+  /// Spine: pending Time-Aware Recovery Card from StaleStateGuard.
+  final StaleRecoveryEvent? pendingStaleCard;
+
+  /// Spine: pending UserVisibleReceipt card from orchestrator.
+  final SpineReceiptEvent? pendingSpineReceipt;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -295,6 +303,10 @@ class ChatState {
     bool clearRoundtable = false,
     String? dualCoreMode,
     bool clearDualCoreMode = false,
+    StaleRecoveryEvent? pendingStaleCard,
+    bool clearStaleCard = false,
+    SpineReceiptEvent? pendingSpineReceipt,
+    bool clearSpineReceipt = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -382,5 +394,10 @@ class ChatState {
             transparencyPresentationState ?? this.transparencyPresentationState,
         dualCoreMode:
             clearDualCoreMode ? null : dualCoreMode ?? this.dualCoreMode,
+        pendingStaleCard:
+            clearStaleCard ? null : pendingStaleCard ?? this.pendingStaleCard,
+        pendingSpineReceipt: clearSpineReceipt
+            ? null
+            : pendingSpineReceipt ?? this.pendingSpineReceipt,
       );
 }

@@ -1655,3 +1655,66 @@ class TimelineStep {
     return '${(durationMs! / 1000).toStringAsFixed(1)}s';
   }
 }
+
+// ============================================
+// Spine Directive UI Events
+// ============================================
+
+/// Time-Aware Recovery Card Event
+/// Emitted when StaleStateGuard detects user return after >60 min absence.
+/// Backend key: response_metadata['spine_stale_card']
+class StaleRecoveryEvent extends ChatStreamEvent {
+  StaleRecoveryEvent({
+    required this.staleData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> staleData;
+
+  int get elapsedMinutes =>
+      staleData['elapsed_since_last_seen_min'] as int? ?? 0;
+
+  String get pendingTaskStatus =>
+      staleData['pending_task_status'] as String? ?? 'unknown';
+
+  List<String> get resumeOptions {
+    final raw = staleData['resume_options'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return ['已完成', '卡住了', '没开始', '换小任务'];
+  }
+
+  String get formattedElapsed {
+    if (elapsedMinutes < 60) return '$elapsedMinutes 分钟';
+    final hours = elapsedMinutes ~/ 60;
+    final mins = elapsedMinutes % 60;
+    return mins > 0 ? '$hours 小时 $mins 分钟' : '$hours 小时';
+  }
+}
+
+/// Spine Receipt Event
+/// Emitted when orchestrator returns a UserVisibleReceipt in metadata.
+/// Backend key: response_metadata['spine_receipt']
+class SpineReceiptEvent extends ChatStreamEvent {
+  SpineReceiptEvent({
+    required this.receiptData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> receiptData;
+
+  String get receiptId => receiptData['receipt_id'] as String? ?? '';
+  String get trigger => receiptData['trigger'] as String? ?? '';
+  String get summary => receiptData['summary'] as String? ?? '';
+  bool get correctable => receiptData['correctable'] as bool? ?? false;
+  List<String> get correctionOptions {
+    final raw = receiptData['correction_options'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}
