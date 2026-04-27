@@ -13919,3 +13919,138 @@ async def test_v217_arbitrate_single_goal_no_trace():
     traces = await orch.trace_store.get_user_traces("u2", limit=5)
     arbitration_traces = [t for t in traces if "multi_goal_arbitration" in t.signal_ids]
     assert len(arbitration_traces) == 0
+
+
+# ── P3-4: Long-term Growth Chronicle Tests ────────────────────────────
+
+@pytest.mark.asyncio
+async def test_v218_chronicle_entry_has_p34_fields():
+    """P3-4: ChronicleEntry has claim, scope, confidence, user_status."""
+    from app.signals.growth_chronicle import ChronicleEntry
+    entry = ChronicleEntry(
+        entry_id="ce_1",
+        user_id="u1",
+        entry_type="pattern_discovered",
+        timestamp="2026-04-27T00:00:00Z",
+        title="短任务更适合高压",
+        narrative="在deadline高压下，25-40分钟任务更容易启动",
+        evidence_refs=["tcp_sprint_short_high_rate", "long_task_timeout_2x"],
+        user_editable=True,
+        claim="在 deadline 高压下，25-40 分钟任务比 90 分钟任务更容易启动",
+        scope="exam_sprint_context",
+        confidence=0.72,
+        user_status="pending",
+        recommended_future_use=["deadline_sprint_planning", "task_granularity"],
+        retract_if=["short_task_completion_rate_drops_below_50percent"],
+    )
+    assert entry.claim != ""
+    assert entry.scope == "exam_sprint_context"
+    assert entry.user_status == "pending"
+    assert not entry.is_confirmed
+
+
+@pytest.mark.asyncio
+async def test_v218_chronicle_confirm_entry():
+    """P3-4: User can confirm a chronicle entry."""
+    from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+    redis = FakeRedis()
+    svc = GrowthChronicleService(redis)
+
+    entry = ChronicleEntry(
+        entry_id="ce_confirm",
+        user_id="u2",
+        entry_type="pattern_discovered",
+        timestamp="2026-04-27T00:00:00Z",
+        title="测试确认",
+        narrative="test",
+        evidence_refs=[],
+        user_editable=True,
+        claim="test claim",
+        scope="general",
+        confidence=0.6,
+        user_status="pending",
+    )
+    await svc.add_entry("u2", entry)
+
+    result = await svc.confirm_entry("u2", "ce_confirm")
+    assert result is True
+
+    entries = await svc.get_chronicle("u2")
+    assert entries[0].user_status == "confirmed"
+    assert entries[0].is_confirmed is True
+
+
+@pytest.mark.asyncio
+async def test_v218_chronicle_reject_entry():
+    """P3-4: User can reject a chronicle entry (hidden)."""
+    from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+    redis = FakeRedis()
+    svc = GrowthChronicleService(redis)
+
+    entry = ChronicleEntry(
+        entry_id="ce_reject",
+        user_id="u3",
+        entry_type="pattern_discovered",
+        timestamp="2026-04-27T00:00:00Z",
+        title="测试拒绝",
+        narrative="test",
+        evidence_refs=[],
+        user_editable=True,
+        user_status="pending",
+    )
+    await svc.add_entry("u3", entry)
+
+    result = await svc.reject_entry("u3", "ce_reject")
+    assert result is True
+
+    # Rejected entries are hidden, so won't appear in get_chronicle
+    entries = await svc.get_chronicle("u3")
+    assert len(entries) == 0
+
+
+@pytest.mark.asyncio
+async def test_v218_chronicle_get_confirmed_only():
+    """P3-4: get_confirmed_entries returns only confirmed entries."""
+    from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+    redis = FakeRedis()
+    svc = GrowthChronicleService(redis)
+
+    confirmed = ChronicleEntry(
+        entry_id="ce_c1", user_id="u4", entry_type="milestone",
+        timestamp="2026-04-27T00:00:00Z", title="C1", narrative="c1",
+        evidence_refs=[], user_editable=True, user_status="confirmed",
+    )
+    pending = ChronicleEntry(
+        entry_id="ce_p1", user_id="u4", entry_type="pattern_discovered",
+        timestamp="2026-04-27T00:00:00Z", title="P1", narrative="p1",
+        evidence_refs=[], user_editable=True, user_status="pending",
+    )
+    await svc.add_entry("u4", confirmed)
+    await svc.add_entry("u4", pending)
+
+    confirmed_entries = await svc.get_confirmed_entries("u4")
+    assert len(confirmed_entries) == 1
+    assert confirmed_entries[0].entry_id == "ce_c1"
+
+
+@pytest.mark.asyncio
+async def test_v218_chronicle_build_return_case_file():
+    """P3-4: build_return_case_file generates summary for returning users."""
+    from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+    redis = FakeRedis()
+    svc = GrowthChronicleService(redis)
+
+    entry = ChronicleEntry(
+        entry_id="ce_rcf", user_id="u5", entry_type="pattern_discovered",
+        timestamp="2026-04-27T00:00:00Z", title="短任务更适合", narrative="test",
+        evidence_refs=["e1"], user_editable=True,
+        claim="短任务更适合高压", scope="exam_sprint", confidence=0.7,
+        user_status="confirmed", recommended_future_use=["task_granularity"],
+    )
+    await svc.add_entry("u5", entry)
+
+    case_file = await svc.build_return_case_file("u5")
+    assert case_file["user_id"] == "u5"
+    assert case_file["chronicle_summary"]["confirmed_count"] == 1
+    assert len(case_file["confirmed_insights"]) == 1
+    assert case_file["confirmed_insights"][0]["claim"] == "短任务更适合高压"

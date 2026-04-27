@@ -13,7 +13,7 @@ entries are user-visible, user-editable, and can be hidden without deletion.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -25,6 +25,7 @@ _CHRONICLE_KEY = "spine:chronicle:{user_id}"
 _CHRONICLE_TTL_SECONDS = 90 * 24 * 3600
 _MAX_STORED_ENTRIES = 100
 _VALID_ENTRY_TYPES = {"milestone", "turning_point", "pattern_discovered", "user_reflection"}
+_VALID_USER_STATUSES = {"pending", "confirmed", "edited", "rejected", "hidden"}
 
 
 def _utcnow() -> str:
@@ -56,7 +57,11 @@ def _parse_time(value: str) -> datetime | None:
 
 @dataclass
 class ChronicleEntry:
-    """A user-visible, user-editable growth narrative entry."""
+    """A user-visible, user-editable growth narrative entry.
+
+    P3-4 ruling: Long-term insights must be user-visible, user-confirmable.
+    Unconfirmed insights cannot be used as hard constraints.
+    """
 
     entry_id: str
     user_id: str
@@ -67,6 +72,17 @@ class ChronicleEntry:
     evidence_refs: list[str]
     user_editable: bool
     user_hidden: bool = False
+    # P3-4 fields
+    claim: str = ""
+    scope: str = "general"  # e.g. "exam_sprint_context"
+    confidence: float = 0.5
+    user_status: str = "pending"  # pending / confirmed / edited / rejected / hidden
+    recommended_future_use: list[str] = field(default_factory=list)
+    retract_if: list[str] = field(default_factory=list)
+
+    @property
+    def is_confirmed(self) -> bool:
+        return self.user_status == "confirmed"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -79,6 +95,12 @@ class ChronicleEntry:
             "evidence_refs": self.evidence_refs,
             "user_editable": self.user_editable,
             "user_hidden": self.user_hidden,
+            "claim": self.claim,
+            "scope": self.scope,
+            "confidence": self.confidence,
+            "user_status": self.user_status,
+            "recommended_future_use": self.recommended_future_use,
+            "retract_if": self.retract_if,
         }
 
     @classmethod
@@ -174,6 +196,7 @@ class GrowthChronicleService:
             if not entry.user_editable:
                 raise ValueError(f"chronicle entry is not editable: {entry_id}")
             entry.narrative = new_narrative
+            entry.user_status = "edited"
             payload = json.dumps([e.to_dict() for e in entries], ensure_ascii=False)
             try:
                 await self.redis.watch(key)
@@ -193,6 +216,60 @@ class GrowthChronicleService:
                     pass
             logger.info("GrowthChronicle entry edited: user={} entry={}", user_id, entry_id)
             return
+
+    async def confirm_entry(self, user_id: str, entry_id: str) -> bool:
+        """P3-4: User confirms a chronicle entry. Only confirmed entries become hard constraints."""
+        entries = await self._load_entries(user_id)
+        for entry in entries:
+            if entry.entry_id == entry_id:
+                entry.user_status = "confirmed"
+                await self._save_entries(user_id, entries)
+                logger.info("GrowthChronicle entry confirmed: user={} entry={}", user_id, entry_id)
+                return True
+        return False
+
+    async def reject_entry(self, user_id: str, entry_id: str) -> bool:
+        """P3-4: User rejects a chronicle entry. Rejected entries are hidden."""
+        entries = await self._load_entries(user_id)
+        for entry in entries:
+            if entry.entry_id == entry_id:
+                entry.user_status = "rejected"
+                entry.user_hidden = True
+                await self._save_entries(user_id, entries)
+                logger.info("GrowthChronicle entry rejected: user={} entry={}", user_id, entry_id)
+                return True
+        return False
+
+    async def get_confirmed_entries(self, user_id: str) -> list[ChronicleEntry]:
+        """P3-4: Get only confirmed entries (eligible for hard constraints)."""
+        entries = await self._load_entries(user_id)
+        return [e for e in entries if e.is_confirmed and not e.user_hidden]
+
+    async def build_return_case_file(self, user_id: str) -> dict[str, Any]:
+        """P3-4: Generate a ReturnCaseFile from chronicle for returning users."""
+        entries = await self.get_chronicle(user_id, limit=20)
+        confirmed = [e for e in entries if e.is_confirmed]
+        pending = [e for e in entries if e.user_status == "pending"]
+
+        return {
+            "user_id": user_id,
+            "chronicle_summary": {
+                "total_entries": len(entries),
+                "confirmed_count": len(confirmed),
+                "pending_count": len(pending),
+            },
+            "confirmed_insights": [
+                {
+                    "claim": e.claim,
+                    "scope": e.scope,
+                    "confidence": e.confidence,
+                    "recommended_future_use": e.recommended_future_use,
+                }
+                for e in confirmed[:10]
+            ],
+            "pending_review": [e.entry_id for e in pending],
+            "generated_at": _utcnow(),
+        }
 
     def build_milestone_from_outcome(self, outcome: dict[str, Any]) -> ChronicleEntry | None:
         """
