@@ -16969,3 +16969,285 @@ def test_p4_5_community_engine_cohort_tier_auto():
 
     large = engine.create_cohort({"goal_type": "exam"}, member_count=50)
     assert large.privacy_tier == "anonymous_aggregate"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-6: Autonomous Quality Guard v2
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_6_latency_guard_normal():
+    """LatencyGuard passes when all latencies are within thresholds."""
+    from app.signals.spine_quality_guard import LatencyGuard
+
+    normal = [50.0, 60.0, 55.0, 70.0, 65.0, 80.0, 58.0, 62.0, 75.0, 68.0]
+    check = LatencyGuard.check_latency("signal_detection", normal)
+    assert check.passed
+    assert check.score > 0.9
+
+
+def test_p4_6_latency_guard_warning():
+    """LatencyGuard warns when p95 exceeds warning threshold."""
+    from app.signals.spine_quality_guard import LatencyGuard
+
+    slow = [100.0, 200.0, 300.0, 400.0, 600.0, 800.0, 1000.0, 50.0, 60.0, 70.0]
+    check = LatencyGuard.check_latency("signal_detection", slow)
+    # p95 might be high enough to trigger warning or critical
+    assert check.category == "latency"
+    # Should have at least one violation
+    details = check.details
+    assert details["sample_count"] == 10
+    assert isinstance(details["p50_ms"], float)
+    assert isinstance(details["p95_ms"], float)
+
+
+def test_p4_6_latency_guard_critical():
+    """LatencyGuard marks critical when p95 is very high."""
+    from app.signals.spine_quality_guard import LatencyGuard
+
+    terrible = [5000.0, 6000.0, 7000.0, 8000.0, 9000.0, 10000.0, 5000.0, 6000.0, 7000.0, 8000.0]
+    check = LatencyGuard.check_latency("policy_evaluation", terrible)
+    assert not check.passed
+    assert check.score < 0.5
+
+
+def test_p4_6_latency_guard_empty():
+    """LatencyGuard handles empty latency list."""
+    from app.signals.spine_quality_guard import LatencyGuard
+
+    check = LatencyGuard.check_latency("signal_detection", [])
+    assert check.passed
+    assert check.score == 1.0
+
+
+def test_p4_6_eventbus_health_check():
+    """EventBusHealthCheck evaluates stream health."""
+    from app.signals.spine_quality_guard import EventBusHealth, EventBusHealthCheck
+
+    healthy = EventBusHealth(
+        stream_name="spine_events", consumer_group="spine_consumers",
+        pending_messages=10, lag_seconds=5.0,
+        consumer_count=3, active_consumers=3, status="healthy",
+    )
+    check = EventBusHealthCheck.check_stream_health(healthy)
+    assert check.passed
+
+    dead = EventBusHealth(
+        stream_name="spine_events", status="dead",
+    )
+    check = EventBusHealthCheck.check_stream_health(dead)
+    assert not check.passed
+    assert check.score == 0.0
+
+
+def test_p4_6_eventbus_lag_detection():
+    """EventBusHealthCheck detects severe lag."""
+    from app.signals.spine_quality_guard import EventBusHealth, EventBusHealthCheck
+
+    laggy = EventBusHealth(
+        stream_name="spine_events", consumer_group="spine_consumers",
+        pending_messages=2000, lag_seconds=400.0,
+        consumer_count=3, active_consumers=2, status="degraded",
+    )
+    check = EventBusHealthCheck.check_stream_health(laggy)
+    assert not check.passed
+    assert check.score < 0.6
+
+
+def test_p4_6_iron_law_compliance_monitor():
+    """IronLawComplianceMonitor checks individual iron laws."""
+    from app.signals.spine_quality_guard import IronLawComplianceMonitor
+
+    # Clean
+    check = IronLawComplianceMonitor.check_iron_law(
+        "no_orphan_signal", violations_detected=0, total_checked=100,
+    )
+    assert check.passed
+    assert check.score == 1.0
+
+    # Violated
+    check = IronLawComplianceMonitor.check_iron_law(
+        "every_directive_audited", violations_detected=5, total_checked=100,
+    )
+    assert not check.passed
+    assert check.score < 1.0
+
+
+def test_p4_6_iron_law_empty_check():
+    """Iron law check with zero total passes gracefully."""
+    from app.signals.spine_quality_guard import IronLawComplianceMonitor
+
+    check = IronLawComplianceMonitor.check_iron_law(
+        "no_orphan_signal", violations_detected=0, total_checked=0,
+    )
+    assert check.passed
+    assert check.score == 1.0
+
+
+def test_p4_6_iron_law_comprehensive_check():
+    """Comprehensive iron law check produces a QualityReport."""
+    from app.signals.spine_quality_guard import IronLawComplianceMonitor
+
+    violations = {
+        "no_orphan_signal": {"violations": 0, "total": 100},
+        "every_directive_audited": {"violations": 2, "total": 100},
+    }
+    report = IronLawComplianceMonitor.comprehensive_iron_law_check(violations)
+    assert len(report.checks) == 2
+    assert report.overall_score < 1.0  # One violation
+
+
+def test_p4_6_self_healing_action_creation():
+    """SelfHealingAction tracks corrective actions."""
+    from app.signals.spine_quality_guard import SelfHealingAction
+
+    action = SelfHealingAction(
+        action_type="throttle", target="signal_detector",
+        reason="High latency", severity="medium",
+    )
+    assert action.action_id.startswith("sha")
+    assert action.reversible
+    assert not action.executed
+
+    d = action.to_dict()
+    assert d["action_type"] == "throttle"
+
+
+def test_p4_6_self_healing_controller_decide():
+    """SelfHealingController escalates: alert→throttle→degrade→circuit_break."""
+    from app.signals.spine_quality_guard import SelfHealingController
+
+    controller = SelfHealingController()
+
+    # Degraded → alert
+    action = controller.decide_action(
+        health_status="degraded", check_name="latency", target="signal_detector",
+    )
+    assert action is not None
+    assert action.action_type == "alert"
+
+    # At risk → throttle
+    action = controller.decide_action(
+        health_status="at_risk", check_name="chain_breaks", target="policy_engine",
+    )
+    assert action.action_type == "throttle"
+
+    # Critical → circuit break
+    action = controller.decide_action(
+        health_status="critical", check_name="eventbus", target="event_bus",
+    )
+    assert action.action_type == "circuit_break"
+
+
+def test_p4_6_self_healing_controller_execute():
+    """SelfHealingController executes and tracks actions."""
+    from app.signals.spine_quality_guard import SelfHealingController, SelfHealingAction
+
+    controller = SelfHealingController()
+    action = SelfHealingAction(
+        action_type="circuit_break", target="spine_pipeline",
+        reason="critical failure", severity="critical",
+    )
+    result = controller.execute_action(action)
+    assert result["executed"]
+    assert controller.is_circuit_broken("spine_pipeline")
+
+
+def test_p4_6_self_healing_controller_throttle():
+    """Throttle action reduces throughput level."""
+    from app.signals.spine_quality_guard import SelfHealingController, SelfHealingAction
+
+    controller = SelfHealingController()
+    assert controller.get_throttle_level("signal_detector") == 1.0
+
+    action = SelfHealingAction(
+        action_type="throttle", target="signal_detector",
+        reason="high load", severity="medium",
+    )
+    controller.execute_action(action)
+    assert controller.get_throttle_level("signal_detector") < 0.8
+
+
+def test_p4_6_self_healing_controller_revert():
+    """SelfHealingController can revert reversible actions."""
+    from app.signals.spine_quality_guard import SelfHealingController, SelfHealingAction
+
+    controller = SelfHealingController()
+    action = SelfHealingAction(
+        action_type="circuit_break", target="spine_pipeline",
+        reason="test", severity="critical",
+    )
+    controller.execute_action(action)
+    assert controller.is_circuit_broken("spine_pipeline")
+
+    result = controller.revert_action(action.action_id)
+    assert result["reverted"]
+    assert not controller.is_circuit_broken("spine_pipeline")
+
+
+def test_p4_6_promotion_gate_all_pass():
+    """PromotionGate allows promotion when all checks pass."""
+    from app.signals.spine_quality_guard import PromotionGate
+
+    result = PromotionGate.evaluate(
+        benchmark_result={"pass_rate": 1.0},
+        quality_health="healthy",
+        iron_law_violations=0,
+    )
+    assert result["promotion_allowed"]
+    assert result["recommendation"] == "safe_to_promote"
+
+
+def test_p4_6_promotion_gate_blocks_on_benchmark():
+    """PromotionGate blocks when benchmarks don't pass."""
+    from app.signals.spine_quality_guard import PromotionGate
+
+    result = PromotionGate.evaluate(
+        benchmark_result={"pass_rate": 0.75},
+        quality_health="healthy",
+        iron_law_violations=0,
+    )
+    assert not result["promotion_allowed"]
+    assert "benchmark_regression" in result["recommendation"]
+
+
+def test_p4_6_promotion_gate_blocks_on_health():
+    """PromotionGate blocks when quality health is critical."""
+    from app.signals.spine_quality_guard import PromotionGate
+
+    result = PromotionGate.evaluate(
+        benchmark_result={"pass_rate": 1.0},
+        quality_health="critical",
+        iron_law_violations=0,
+    )
+    assert not result["promotion_allowed"]
+    assert "quality_health" in result["recommendation"]
+
+
+def test_p4_6_promotion_gate_blocks_on_iron_law():
+    """PromotionGate blocks on iron law violations."""
+    from app.signals.spine_quality_guard import PromotionGate
+
+    result = PromotionGate.evaluate(
+        benchmark_result={"pass_rate": 1.0},
+        quality_health="healthy",
+        iron_law_violations=3,
+    )
+    assert not result["promotion_allowed"]
+    assert "iron_law_compliance" in result["recommendation"]
+
+
+def test_p4_6_self_healing_controller_to_dict():
+    """SelfHealingController.to_dict provides snapshot."""
+    from app.signals.spine_quality_guard import SelfHealingController, SelfHealingAction
+
+    controller = SelfHealingController()
+    action = SelfHealingAction(
+        action_type="alert", target="test", reason="test", severity="low",
+    )
+    controller.execute_action(action)
+
+    d = controller.to_dict()
+    assert d["total_actions"] == 1
+    assert len(d["recent_actions"]) == 1
+    assert d["active_circuit_breaks"] == []

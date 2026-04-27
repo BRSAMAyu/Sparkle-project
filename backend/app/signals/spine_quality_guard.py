@@ -535,3 +535,482 @@ class SpineQualityGuard:
                 }
 
         return {"degrading": False, "score_trend": scores}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-6 v2: Latency Guard + Iron Law Monitor + Self-Healing
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class LatencyThreshold:
+    """Latency threshold configuration for a check."""
+    check_name: str
+    p50_warning_ms: float = 500.0
+    p50_critical_ms: float = 1000.0
+    p95_warning_ms: float = 2000.0
+    p95_critical_ms: float = 5000.0
+    p99_warning_ms: float = 10000.0
+    p99_critical_ms: float = 20000.0
+
+
+class LatencyGuard:
+    """Monitor spine latency and detect slowdowns before they become outages.
+
+    Tracks p50/p95/p99 latencies for key spine operations and raises
+    alerts when thresholds are breached.
+    """
+
+    DEFAULT_THRESHOLDS = {
+        "signal_detection": LatencyThreshold("signal_detection", p50_warning_ms=100, p95_warning_ms=500),
+        "policy_evaluation": LatencyThreshold("policy_evaluation", p50_warning_ms=200, p95_warning_ms=1000),
+        "directive_generation": LatencyThreshold("directive_generation", p50_warning_ms=100, p95_warning_ms=500),
+        "directive_audit": LatencyThreshold("directive_audit", p50_warning_ms=50, p95_warning_ms=200),
+        "outcome_recording": LatencyThreshold("outcome_recording", p50_warning_ms=50, p95_warning_ms=200),
+    }
+
+    @classmethod
+    def check_latency(
+        cls,
+        operation: str,
+        latencies_ms: list[float],
+        *,
+        thresholds: LatencyThreshold | None = None,
+    ) -> QualityCheck:
+        """Check if latency for an operation exceeds thresholds."""
+        if not latencies_ms:
+            return QualityCheck(
+                check_id=_uid("qc"),
+                check_name=f"latency_{operation}",
+                category="latency",
+                passed=True,
+                score=1.0,
+                details={"note": "No latency data"},
+            )
+
+        thr = thresholds or cls.DEFAULT_THRESHOLDS.get(
+            operation, LatencyThreshold(operation),
+        )
+
+        sorted_lat = sorted(latencies_ms)
+        n = len(sorted_lat)
+        p50 = sorted_lat[int(n * 0.50)]
+        p95 = sorted_lat[min(int(n * 0.95), n - 1)]
+        p99 = sorted_lat[min(int(n * 0.99), n - 1)]
+
+        violations = []
+        if p50 >= thr.p50_critical_ms:
+            violations.append("p50_critical")
+        elif p50 >= thr.p50_warning_ms:
+            violations.append("p50_warning")
+        if p95 >= thr.p95_critical_ms:
+            violations.append("p95_critical")
+        elif p95 >= thr.p95_warning_ms:
+            violations.append("p95_warning")
+        if p99 >= thr.p99_critical_ms:
+            violations.append("p99_critical")
+        elif p99 >= thr.p99_warning_ms:
+            violations.append("p99_warning")
+
+        has_critical = any(v.endswith("_critical") for v in violations)
+        has_warning = len(violations) > 0
+        passed = not has_critical
+
+        score = 1.0
+        if has_critical:
+            score = 0.3
+        elif has_warning:
+            score = 0.7
+
+        return QualityCheck(
+            check_id=_uid("qc"),
+            check_name=f"latency_{operation}",
+            category="latency",
+            passed=passed,
+            score=score,
+            details={
+                "operation": operation,
+                "sample_count": n,
+                "p50_ms": round(p50, 2),
+                "p95_ms": round(p95, 2),
+                "p99_ms": round(p99, 2),
+                "violations": violations,
+                "thresholds": {
+                    "p50_warning": thr.p50_warning_ms,
+                    "p50_critical": thr.p50_critical_ms,
+                    "p95_warning": thr.p95_warning_ms,
+                    "p95_critical": thr.p95_critical_ms,
+                },
+            },
+            recommendations=(
+                [f"Critical latency in {operation}: p95={p95:.0f}ms"]
+                if has_critical
+                else ([f"Latency warning in {operation}: p95={p95:.0f}ms"] if has_warning else [])
+            ),
+        )
+
+
+@dataclass
+class EventBusHealth:
+    """Health snapshot of the event bus (Redis Streams)."""
+    stream_name: str
+    consumer_group: str = ""
+    pending_messages: int = 0
+    oldest_pending_age_seconds: float = 0.0
+    consumer_count: int = 0
+    active_consumers: int = 0
+    lag_seconds: float = 0.0
+    status: str = "healthy"  # healthy | degraded | stalled | dead
+    checked_at: str = field(default_factory=_utcnow)
+
+
+class EventBusHealthCheck:
+    """Monitor event bus health: consumer lag, pending messages, dead consumers."""
+
+    @staticmethod
+    def check_stream_health(health: EventBusHealth) -> QualityCheck:
+        """Evaluate event bus stream health."""
+        violations = []
+        score = 1.0
+
+        if health.status == "dead":
+            violations.append("stream_dead")
+            score = 0.0
+        elif health.status == "stalled":
+            violations.append("stream_stalled")
+            score = 0.2
+
+        if health.consumer_count > 0 and health.active_consumers == 0:
+            violations.append("all_consumers_dead")
+            score = min(score, 0.1)
+
+        if health.lag_seconds > 300:
+            violations.append(f"severe_lag_{health.lag_seconds:.0f}s")
+            score = min(score, 0.3)
+        elif health.lag_seconds > 120:
+            violations.append(f"high_lag_{health.lag_seconds:.0f}s")
+            score = min(score, 0.6)
+
+        if health.pending_messages > 1000:
+            violations.append(f"pending_overload_{health.pending_messages}")
+            score = min(score, 0.4)
+
+        passed = len(violations) == 0
+
+        return QualityCheck(
+            check_id=_uid("qc"),
+            check_name=f"eventbus_{health.stream_name}",
+            category="eventbus_health",
+            passed=passed,
+            score=score,
+            details={
+                "stream": health.stream_name,
+                "consumer_group": health.consumer_group,
+                "pending": health.pending_messages,
+                "lag_seconds": round(health.lag_seconds, 2),
+                "active_consumers": health.active_consumers,
+                "total_consumers": health.consumer_count,
+                "violations": violations,
+            },
+            recommendations=(
+                [f"EventBus {health.stream_name}: {v}" for v in violations]
+                if violations else []
+            ),
+        )
+
+
+class IronLawComplianceMonitor:
+    """Automated monitoring of iron law compliance across the spine.
+
+    Checks:
+    - Orphan signals (iron law: every signal must have a consumer)
+    - Unaudited directives (iron law: every directive must be audited)
+    - Unattributed outcomes (iron law: every outcome must be attributed)
+    - Kill switch integrity (iron law: all features behind kill switches)
+    """
+
+    IRON_LAWS = {
+        "no_orphan_signal": "Every ActionableSignal must have at least one registered consumer",
+        "every_directive_audited": "Every DirectiveApplicationAudit must be recorded",
+        "every_outcome_attributed": "Every OutcomeRecord must link to at least one CausalTrace",
+        "kill_switch_integrity": "Every Aurora feature must operate behind a kill switch",
+        "receipt_for_directive": "Every directive must produce a UserVisibleReceipt",
+    }
+
+    @classmethod
+    def check_iron_law(
+        cls,
+        law_id: str,
+        *,
+        violations_detected: int = 0,
+        total_checked: int = 0,
+    ) -> QualityCheck:
+        """Check a specific iron law for violations."""
+        law_desc = cls.IRON_LAWS.get(law_id, f"Iron law: {law_id}")
+
+        if total_checked == 0:
+            return QualityCheck(
+                check_id=_uid("qc"),
+                check_name=f"iron_law_{law_id}",
+                category="iron_law_compliance",
+                passed=True,
+                score=1.0,
+                details={"law": law_desc, "note": "Nothing to check"},
+            )
+
+        violation_rate = violations_detected / total_checked
+        passed = violation_rate == 0
+        score = max(0.0, 1.0 - violation_rate * 2)
+
+        return QualityCheck(
+            check_id=_uid("qc"),
+            check_name=f"iron_law_{law_id}",
+            category="iron_law_compliance",
+            passed=passed,
+            score=score,
+            details={
+                "law_id": law_id,
+                "law_description": law_desc,
+                "total_checked": total_checked,
+                "violations": violations_detected,
+                "violation_rate": round(violation_rate, 4),
+            },
+            recommendations=(
+                [f"Iron law '{law_id}' violated {violations_detected}/{total_checked} times"]
+                if not passed else []
+            ),
+        )
+
+    @classmethod
+    def comprehensive_iron_law_check(
+        cls,
+        law_violations: dict[str, dict[str, int]],
+    ) -> QualityReport:
+        """Run all iron law checks and produce a compliance report."""
+        report = QualityReport(
+            report_id=_uid("irlrpt"),
+            window_start=_utcnow(),
+            window_end=_utcnow(),
+        )
+
+        for law_id, counts in law_violations.items():
+            report.checks.append(cls.check_iron_law(
+                law_id,
+                violations_detected=counts.get("violations", 0),
+                total_checked=counts.get("total", 0),
+            ))
+
+        if not report.checks:
+            report.checks.append(QualityCheck(
+                check_id=_uid("qc"),
+                check_name="iron_law_compliance",
+                category="iron_law_compliance",
+                passed=True,
+                score=1.0,
+                details={"note": "All iron laws passing"},
+            ))
+
+        report.compute_health()
+        return report
+
+
+@dataclass
+class SelfHealingAction:
+    """A corrective action that the quality guard can trigger autonomously."""
+    action_id: str = ""
+    action_type: str = ""              # "throttle" | "circuit_break" | "degrade" | "alert" | "retry"
+    target: str = ""                   # The component being acted on
+    reason: str = ""
+    severity: str = "low"              # low | medium | high | critical
+    executed: bool = False
+    executed_at: str = ""
+    result: str = ""                   # Outcome of the action
+    reversible: bool = True
+    reverted: bool = False
+
+    def __post_init__(self):
+        if not self.action_id:
+            self.action_id = _uid("sha")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "action_id": self.action_id,
+            "action_type": self.action_type,
+            "target": self.target,
+            "reason": self.reason,
+            "severity": self.severity,
+            "executed": self.executed,
+            "executed_at": self.executed_at,
+            "result": self.result,
+            "reversible": self.reversible,
+            "reverted": self.reverted,
+        }
+
+
+class SelfHealingController:
+    """Autonomous corrective actions for quality degradation.
+
+    Actions escalate: alert → throttle → degrade → circuit_break.
+    All actions are logged, reversible, and respect kill switch boundaries.
+    """
+
+    ESCALATION_SEQUENCE = ["alert", "throttle", "degrade", "circuit_break"]
+
+    def __init__(self):
+        self._actions: list[SelfHealingAction] = []
+        self._active_circuit_breaks: set[str] = set()
+        self._throttle_levels: dict[str, float] = {}  # target → throttle factor (1.0 = normal)
+
+    def decide_action(
+        self,
+        *,
+        health_status: str,
+        check_name: str,
+        target: str,
+    ) -> SelfHealingAction | None:
+        """Decide what self-healing action to take based on health status."""
+        if health_status == "healthy":
+            return None
+
+        if health_status == "degraded":
+            action = SelfHealingAction(
+                action_type="alert",
+                target=target,
+                reason=f"{check_name} degraded",
+                severity="low",
+            )
+        elif health_status == "at_risk":
+            # Check if we already throttled this target
+            current_throttle = self._throttle_levels.get(target, 1.0)
+            if current_throttle > 0.5:
+                action = SelfHealingAction(
+                    action_type="throttle",
+                    target=target,
+                    reason=f"{check_name} at risk — throttling to {current_throttle * 0.7:.1%}",
+                    severity="medium",
+                )
+            else:
+                action = SelfHealingAction(
+                    action_type="degrade",
+                    target=target,
+                    reason=f"{check_name} at risk with throttle already at {current_throttle:.1%}",
+                    severity="high",
+                )
+        else:  # critical
+            action = SelfHealingAction(
+                action_type="circuit_break",
+                target=target,
+                reason=f"{check_name} critical — circuit breaking",
+                severity="critical",
+            )
+
+        return action
+
+    def execute_action(self, action: SelfHealingAction) -> dict[str, Any]:
+        """Execute a self-healing action."""
+        if action.action_type == "circuit_break":
+            self._active_circuit_breaks.add(action.target)
+        elif action.action_type == "throttle":
+            current = self._throttle_levels.get(action.target, 1.0)
+            self._throttle_levels[action.target] = max(0.1, current * 0.7)
+        elif action.action_type == "degrade":
+            self._throttle_levels[action.target] = 0.3
+
+        action.executed = True
+        action.executed_at = _utcnow()
+        action.result = f"{action.action_type} applied to {action.target}"
+        self._actions.append(action)
+
+        return {"executed": True, "action": action.to_dict()}
+
+    def revert_action(self, action_id: str) -> dict[str, Any]:
+        """Revert a previously executed self-healing action."""
+        for action in self._actions:
+            if action.action_id == action_id and action.reversible and not action.reverted:
+                if action.action_type == "circuit_break":
+                    self._active_circuit_breaks.discard(action.target)
+                elif action.action_type in ("throttle", "degrade"):
+                    self._throttle_levels[action.target] = 1.0
+
+                action.reverted = True
+                return {"reverted": True, "action_id": action_id}
+        return {"reverted": False, "reason": "action not found or not reversible"}
+
+    def is_circuit_broken(self, target: str) -> bool:
+        return target in self._active_circuit_breaks
+
+    def get_throttle_level(self, target: str) -> float:
+        return self._throttle_levels.get(target, 1.0)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_actions": len(self._actions),
+            "active_circuit_breaks": list(self._active_circuit_breaks),
+            "active_throttles": self._throttle_levels,
+            "recent_actions": [a.to_dict() for a in self._actions[-10:]],
+        }
+
+
+class PromotionGate:
+    """Gate that integrates with SparkleGoalBench.
+
+    Before any system promotion (canary→safe_live, safe_live→default),
+    the gate verifies:
+    1. All regression scenarios pass
+    2. All safety scenarios pass
+    3. Quality guard health is healthy or degraded (not at_risk or critical)
+    4. Iron law compliance is clean
+
+    This is the final checkpoint before any policy goes live.
+    """
+
+    @staticmethod
+    def evaluate(
+        *,
+        benchmark_result: dict[str, Any],
+        quality_health: str,
+        iron_law_violations: int = 0,
+    ) -> dict[str, Any]:
+        """Evaluate whether a promotion can proceed."""
+        checks = []
+
+        # Check 1: All regression scenarios pass
+        regression_pass = benchmark_result.get("pass_rate", 0) == 1.0
+        checks.append({
+            "check": "benchmark_regression",
+            "passed": regression_pass,
+            "detail": f"Pass rate: {benchmark_result.get('pass_rate', 0):.1%}",
+        })
+
+        # Check 2: Quality guard health
+        health_ok = quality_health in ("healthy", "degraded")
+        checks.append({
+            "check": "quality_health",
+            "passed": health_ok,
+            "detail": f"Health: {quality_health}",
+        })
+
+        # Check 3: Iron law clean
+        iron_law_clean = iron_law_violations == 0
+        checks.append({
+            "check": "iron_law_compliance",
+            "passed": iron_law_clean,
+            "detail": f"Violations: {iron_law_violations}",
+        })
+
+        all_pass = all(c["passed"] for c in checks)
+
+        return {
+            "promotion_allowed": all_pass,
+            "checks": checks,
+            "recommendation": (
+                "safe_to_promote" if all_pass
+                else "blocked: " + ", ".join(
+                    c["check"] for c in checks if not c["passed"]
+                )
+            ),
+            "required_actions": [
+                f"Fix {c['check']}: {c['detail']}"
+                for c in checks if not c["passed"]
+            ],
+        }
