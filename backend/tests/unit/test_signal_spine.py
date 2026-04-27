@@ -14895,3 +14895,408 @@ async def test_p9_get_file_node_mapping_returns_stored_data():
     assert isinstance(mapping["mapped_nodes"], list)
     # In test env, Galaxy is not available → no nodes mapped, but structure is correct
     assert "mapped_at" in mapping
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-0: Evaluation-Grade Logging — InterventionEpisode + OutcomeVector
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_0_context_signature_distance_identical():
+    """ContextSignature distance is 0 for identical signatures."""
+    from app.signals.intervention_episode import ContextSignature
+
+    cs1 = ContextSignature(
+        goal_mode="exam_rescue", deadline_phase="D-3",
+        deadline_pressure="high", failure_type="transfer_failure",
+        cognitive_load="high", affective_pressure="tense",
+        relationship_stance="trusted", source_availability="past_exam",
+    )
+    cs2 = ContextSignature(
+        goal_mode="exam_rescue", deadline_phase="D-3",
+        deadline_pressure="high", failure_type="transfer_failure",
+        cognitive_load="high", affective_pressure="tense",
+        relationship_stance="trusted", source_availability="past_exam",
+    )
+    assert cs1.distance_to(cs2) == 0.0
+
+
+def test_p4_0_context_signature_distance_different():
+    """ContextSignature distance is 1.0 for fully different signatures."""
+    from app.signals.intervention_episode import ContextSignature
+
+    cs1 = ContextSignature(
+        goal_mode="exam_rescue", deadline_phase="D-3",
+        deadline_pressure="high", failure_type="transfer_failure",
+        cognitive_load="high", affective_pressure="tense",
+        relationship_stance="trusted", source_availability="past_exam",
+    )
+    cs2 = ContextSignature(
+        goal_mode="standard_learning", deadline_phase="D-7",
+        deadline_pressure="low", failure_type="knowledge_gap",
+        cognitive_load="low", affective_pressure="calm",
+        relationship_stance="new", source_availability="textbook",
+    )
+    assert cs1.distance_to(cs2) == 1.0
+
+
+def test_p4_0_context_signature_partial_match():
+    """ContextSignature distance is proportional for partial matches."""
+    from app.signals.intervention_episode import ContextSignature
+
+    cs1 = ContextSignature(
+        goal_mode="exam_rescue", deadline_phase="D-3",
+        deadline_pressure="high", failure_type="transfer_failure",
+        cognitive_load="high", affective_pressure="tense",
+        relationship_stance="trusted", source_availability="past_exam",
+    )
+    cs2 = ContextSignature(
+        goal_mode="exam_rescue", deadline_phase="D-3",
+        deadline_pressure="high", failure_type="transfer_failure",
+        cognitive_load="low", affective_pressure="calm",
+        relationship_stance="new", source_availability="textbook",
+    )
+    dist = cs1.distance_to(cs2)
+    assert 0.4 < dist < 0.6, f"Expected ~0.5 for 4/8 match, got {dist}"
+
+
+def test_p4_0_outcome_vector_guardrail_violation_detection():
+    """OutcomeVector detects guardrail violations: negative feedback, fatigue, agency loss, trust drop."""
+    from app.signals.intervention_episode import OutcomeVector
+
+    ov = OutcomeVector()
+    assert ov.has_guardrail_violation() == (False, [])
+
+    ov.trust.explicit_negative_feedback = True
+    has, violations = ov.has_guardrail_violation()
+    assert has
+    assert "negative_feedback" in violations
+
+    ov.load.cognitive_load_after = "high"
+    _, violations = ov.has_guardrail_violation()
+    assert "fatigue_increased" in violations
+
+
+def test_p4_0_outcome_vector_primary_reward():
+    """OutcomeVector compute_primary_reward produces weighted multi-objective score."""
+    from app.signals.intervention_episode import (
+        ExecutionOutcome, GoalProgressOutcome, LearningOutcome, OutcomeVector,
+    )
+
+    ov = OutcomeVector(
+        execution=ExecutionOutcome(completed=True),
+        learning=LearningOutcome(accuracy_delta_from_baseline=0.18),
+        goal_progress=GoalProgressOutcome(node_mastery_delta=0.09, exam_readiness_delta=0.04),
+    )
+    reward = ov.compute_primary_reward()
+    assert reward > 0.0
+    assert reward < 1.0
+
+
+def test_p4_0_evidence_quality_grading():
+    """EvidenceQuality auto-grades based on what data is available."""
+    from app.signals.intervention_episode import EvidenceQuality
+
+    eq = EvidenceQuality()
+    assert eq.grade == 0  # Nothing logged
+
+    eq.outcome_complete = True
+    assert eq.grade == 1
+
+    eq.user_feedback_present = True
+    assert eq.grade == 2
+
+    eq.propensity_logged = True
+    assert eq.grade == 3
+
+    eq.counterfactual_candidates_logged = True
+    assert eq.grade == 4
+
+
+def test_p4_0_intervention_episode_creation():
+    """InterventionEpisode is created with full context + candidate policies."""
+    from app.signals.intervention_episode import ContextSignature, InterventionEpisode
+
+    cs = ContextSignature(
+        goal_mode="exam_rescue", deadline_phase="D-2",
+        deadline_pressure="high", failure_type="transfer_failure",
+    )
+    episode = InterventionEpisode(
+        episode_id="",
+        user_id="u1", goal_id="g1", domain="exam_sprint",
+        context_signature=cs,
+        candidate_policies=["shrink_task", "worked_example"],
+        selected_policy="worked_example",
+        selection_reason="用户反馈需要看例题",
+        selection_mode="rule_based",
+        selection_confidence=0.74,
+        selection_probability=0.82,
+        risk_level="medium",
+    )
+    assert episode.episode_id.startswith("ep")
+    assert len(episode.candidate_policies) == 2
+    assert episode.selected_policy == "worked_example"
+    assert episode.selection_mode == "rule_based"
+    assert episode.selection_probability == 0.82
+    assert episode.risk_level == "medium"
+
+
+def test_p4_0_intervention_episode_to_from_dict():
+    """InterventionEpisode round-trips through to_dict/from_dict."""
+    from app.signals.intervention_episode import (
+        AgencyOutcome, ContextSignature, EvidenceQuality,
+        ExecutionOutcome, InterventionEpisode, LearningOutcome, OutcomeVector,
+    )
+
+    cs = ContextSignature(
+        goal_mode="exam_rescue", deadline_pressure="high",
+        failure_type="transfer_failure",
+    )
+    episode = InterventionEpisode(
+        episode_id="ep_test001",
+        user_id="u1", goal_id="g1", domain="exam_sprint",
+        context_signature=cs,
+        candidate_policies=["a", "b"],
+        selected_policy="a",
+        selection_probability=0.7,
+        selection_mode="bandit",
+        risk_level="medium",
+    )
+    ov = OutcomeVector(
+        execution=ExecutionOutcome(started=True, completed=True, actual_duration_min=25, expected_duration_min=20),
+        learning=LearningOutcome(quiz_accuracy=0.8, accuracy_delta_from_baseline=0.15),
+        agency=AgencyOutcome(user_accepted_strategy=True),
+    )
+    episode.outcome_vector = ov
+    episode.evidence_quality = EvidenceQuality(
+        propensity_logged=True, counterfactual_candidates_logged=True,
+        outcome_complete=True, user_feedback_present=False,
+    )
+
+    d = episode.to_dict()
+    restored = InterventionEpisode.from_dict(d)
+    assert restored.episode_id == "ep_test001"
+    assert restored.selected_policy == "a"
+    assert restored.selection_mode == "bandit"
+    assert restored.outcome_vector.execution.completed is True
+    assert restored.outcome_vector.execution.actual_duration_min == 25
+    assert restored.outcome_vector.learning.accuracy_delta_from_baseline == 0.15
+    assert restored.evidence_quality.grade == 3
+
+
+def test_p4_0_ledger_create_and_record_outcome():
+    """InterventionEpisodeLedger creates episodes and records outcomes."""
+    from app.signals.intervention_episode import (
+        ContextSignature, ExecutionOutcome, InterventionEpisodeLedger,
+        OutcomeVector, TrustOutcome,
+    )
+
+    cs = ContextSignature(
+        goal_mode="exam_rescue", deadline_phase="D-1",
+        deadline_pressure="critical", failure_type="timeout",
+    )
+    episode = InterventionEpisodeLedger.create_episode(
+        user_id="u1", goal_id="g1", domain="exam_sprint",
+        context_signature=cs,
+        candidate_policies=["shrink_task", "ask_user"],
+        selected_policy="shrink_task",
+        selection_mode="rule_based",
+        selection_confidence=0.6,
+        selection_probability=0.6,
+        risk_level="high",
+    )
+    assert episode.selection_probability == 0.6
+    assert episode.risk_level == "high"
+
+    ov = OutcomeVector(
+        execution=ExecutionOutcome(started=True, completed=False, actual_duration_min=15, expected_duration_min=20),
+        trust=TrustOutcome(explicit_negative_feedback=True),
+    )
+    updated = InterventionEpisodeLedger.record_outcome(episode, ov)
+    assert updated.evidence_quality.grade >= 1
+    assert updated.evidence_quality.outcome_complete is True
+    assert updated.evidence_quality.user_feedback_present is True
+
+
+def test_p4_0_ledger_find_similar_episodes():
+    """Ledger finds episodes with similar context signatures."""
+    from app.signals.intervention_episode import (
+        ContextSignature, InterventionEpisode, InterventionEpisodeLedger,
+    )
+
+    cs_target = ContextSignature(
+        goal_mode="exam_rescue", deadline_pressure="high",
+        failure_type="transfer_failure",
+    )
+    target = InterventionEpisode(
+        user_id="u1", goal_id="g1", domain="exam_sprint",
+        context_signature=cs_target,
+        candidate_policies=["a"], selected_policy="a",
+    )
+
+    cs_similar = ContextSignature(
+        goal_mode="exam_rescue", deadline_pressure="high",
+        failure_type="transfer_failure",
+    )
+    similar_ep = InterventionEpisode(
+        user_id="u2", goal_id="g2", domain="exam_sprint",
+        context_signature=cs_similar,
+        candidate_policies=["b"], selected_policy="b",
+    )
+
+    cs_different = ContextSignature(
+        goal_mode="standard_learning", deadline_pressure="low",
+        failure_type="knowledge_gap", relationship_stance="new",
+        source_availability="textbook",
+    )
+    diff_ep = InterventionEpisode(
+        user_id="u3", goal_id="g3", domain="exam_sprint",
+        context_signature=cs_different,
+        candidate_policies=["c"], selected_policy="c",
+    )
+
+    matches = InterventionEpisodeLedger.find_similar_episodes(
+        target, [similar_ep, diff_ep], max_distance=0.3,
+    )
+    assert len(matches) == 1
+    assert matches[0].user_id == "u2"
+
+
+def test_p4_0_ledger_group_by_policy():
+    """Ledger groups episodes by selected policy."""
+    from app.signals.intervention_episode import (
+        ContextSignature, InterventionEpisode, InterventionEpisodeLedger,
+    )
+
+    cs = ContextSignature(goal_mode="exam_rescue")
+    eps = [
+        InterventionEpisode(user_id="u1", goal_id="g1", domain="exam_sprint",
+                           context_signature=cs, selected_policy="policy_a"),
+        InterventionEpisode(user_id="u2", goal_id="g1", domain="exam_sprint",
+                           context_signature=cs, selected_policy="policy_b"),
+        InterventionEpisode(user_id="u3", goal_id="g1", domain="exam_sprint",
+                           context_signature=cs, selected_policy="policy_a"),
+    ]
+    groups = InterventionEpisodeLedger.group_by_policy(eps)
+    assert len(groups["policy_a"]) == 2
+    assert len(groups["policy_b"]) == 1
+
+
+def test_p4_0_ledger_compute_effect_size():
+    """Ledger computes effect size between two policies."""
+    from app.signals.intervention_episode import (
+        ContextSignature, ExecutionOutcome, InterventionEpisode,
+        InterventionEpisodeLedger, OutcomeVector,
+    )
+
+    cs = ContextSignature(goal_mode="exam_rescue")
+
+    def make_eps(prefix, policy, n, completed):
+        eps = []
+        for i in range(n):
+            ep = InterventionEpisode(
+                user_id=f"{prefix}_{i}", goal_id="g1", domain="exam_sprint",
+                context_signature=cs, selected_policy=policy,
+            )
+            ep.outcome_vector = OutcomeVector(
+                execution=ExecutionOutcome(completed=(i < completed)),
+            )
+            eps.append(ep)
+        return eps
+
+    policy_a_eps = make_eps("a", "policy_a", 20, 20)
+    policy_b_eps = make_eps("b", "policy_b", 20, 10)
+
+    result = InterventionEpisodeLedger.compute_effect_size(
+        policy_a_eps, policy_b_eps, metric="completion_rate",
+    )
+    assert result["direction"] == "a_better"
+    assert result["effect_size"] > 0.4
+
+
+def test_p4_0_ledger_filter_grade():
+    """Ledger filters episodes by minimum evidence grade."""
+    from app.signals.intervention_episode import (
+        ContextSignature, EvidenceQuality, InterventionEpisode,
+        InterventionEpisodeLedger,
+    )
+
+    cs = ContextSignature(goal_mode="exam_rescue")
+    high = InterventionEpisode(
+        user_id="u1", goal_id="g1", domain="exam_sprint",
+        context_signature=cs, selected_policy="a",
+    )
+    high.evidence_quality = EvidenceQuality(
+        propensity_logged=True, counterfactual_candidates_logged=True,
+        outcome_complete=True, user_feedback_present=True,
+    )
+
+    low = InterventionEpisode(
+        user_id="u2", goal_id="g1", domain="exam_sprint",
+        context_signature=cs, selected_policy="b",
+    )
+    low.evidence_quality = EvidenceQuality(outcome_complete=True)
+
+    filtered = InterventionEpisodeLedger.filter_grade([high, low], min_grade=3)
+    assert len(filtered) == 1
+    assert filtered[0].user_id == "u1"
+
+
+def test_p4_0_ledger_estimate_required_samples():
+    """Ledger estimates samples needed for conclusive evaluation."""
+    from app.signals.intervention_episode import (
+        ContextSignature, ExecutionOutcome, InterventionEpisode,
+        InterventionEpisodeLedger, OutcomeVector,
+    )
+
+    cs = ContextSignature(goal_mode="exam_rescue")
+    eps = [
+        InterventionEpisode(
+            user_id=f"u{i}", goal_id="g1", domain="exam_sprint",
+            context_signature=cs, selected_policy="policy_a",
+            outcome_vector=OutcomeVector(
+                execution=ExecutionOutcome(completed=(i % 2 == 0)),
+            ),
+        )
+        for i in range(10)
+    ]
+    result = InterventionEpisodeLedger.estimate_required_samples(eps, min_effect_size=0.2)
+    assert result["current_episodes"] == 10
+    assert not result["sufficient"]
+
+
+def test_p4_0_ledger_stratified_stats():
+    """Ledger computes stats stratified by context dimension."""
+    from app.signals.intervention_episode import (
+        ContextSignature, ExecutionOutcome, InterventionEpisode,
+        InterventionEpisodeLedger, OutcomeVector,
+    )
+
+    cs_transfer = ContextSignature(goal_mode="exam_rescue", failure_type="transfer_failure")
+    cs_gap = ContextSignature(goal_mode="exam_rescue", failure_type="knowledge_gap")
+
+    eps = [
+        InterventionEpisode(
+            user_id="u1", goal_id="g1", domain="exam_sprint",
+            context_signature=cs_transfer, selected_policy="a",
+            outcome_vector=OutcomeVector(execution=ExecutionOutcome(completed=True)),
+        ),
+        InterventionEpisode(
+            user_id="u2", goal_id="g1", domain="exam_sprint",
+            context_signature=cs_transfer, selected_policy="a",
+            outcome_vector=OutcomeVector(execution=ExecutionOutcome(completed=False)),
+        ),
+        InterventionEpisode(
+            user_id="u3", goal_id="g1", domain="exam_sprint",
+            context_signature=cs_gap, selected_policy="b",
+            outcome_vector=OutcomeVector(execution=ExecutionOutcome(completed=True)),
+        ),
+    ]
+    stratified = InterventionEpisodeLedger.compute_stratified_stats(
+        eps, stratify_by="failure_type",
+    )
+    assert "transfer_failure" in stratified
+    assert "knowledge_gap" in stratified
+    assert stratified["transfer_failure"]["episode_count"] == 2
+    assert stratified["knowledge_gap"]["episode_count"] == 1
+    assert stratified["transfer_failure"]["completion_rate"] == 0.5
