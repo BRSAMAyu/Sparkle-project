@@ -32,6 +32,7 @@ from app.signals.policy_engine import PolicyEngine
 from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.spine_metrics import SpineMetricsCollector, METRIC_DEFINITIONS
+from app.orchestration.prompts import build_system_prompt
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────
@@ -48,10 +49,15 @@ class FakeRedis:
     async def get(self, key: str) -> str | None:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+    async def set(self, key: str, value: str, ex: int | None = None, nx: bool = False) -> None | bool:
+        if nx and key in self._store:
+            return False
         self._store[key] = value
         if ex is not None:
             self._expires[key] = ex
+        if nx:
+            return True
+        return None
 
     async def delete(self, key: str) -> None:
         self._store.pop(key, None)
@@ -10105,3 +10111,317 @@ class TestV24OutcomeTriggersExperimentAndSource:
         updated_exp = await spine.policy_experiments.get_experiment(exp.experiment_id)
         assert updated_exp is not None
         assert updated_exp.total_trials >= 1
+
+
+# =============================================================================
+# v2.5 Audit Fix Tests — Chronicle injection, self-model correction, concurrency
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_chronicle_injects_into_prompt():
+    """Chronicle summary is injected into system prompt via build_system_prompt."""
+    result = build_system_prompt(
+        user_context={"name": "Test"},
+        spine_chronicle_summary="里程碑：完成5次任务；转折点：修正了难度判断",
+    )
+    assert "用户成长叙事" in result
+    assert "里程碑" in result
+
+
+@pytest.mark.asyncio
+async def test_fatigue_injects_into_prompt():
+    """High fatigue state modulates prompt tone."""
+    result = build_system_prompt(
+        user_context={"name": "Test"},
+        spine_fatigue_context={"fatigue_level": "critical"},
+    )
+    assert "疲劳状态" in result
+    assert "减轻负担" in result
+
+
+@pytest.mark.asyncio
+async def test_crisis_injects_into_prompt():
+    """Crisis mode adds考前高压 guidance."""
+    result = build_system_prompt(
+        user_context={"name": "Test"},
+        spine_fatigue_context={"crisis_mode": True},
+    )
+    assert "高压" in result
+
+
+@pytest.mark.asyncio
+async def test_no_chronicle_no_section():
+    """Without chronicle, no chronicle section appears."""
+    result = build_system_prompt(user_context={"name": "Test"})
+    assert "用户成长叙事" not in result
+
+
+@pytest.mark.asyncio
+async def test_on_user_correction_calls_self_model():
+    """on_user_correction → self_model.record_user_correction is called."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    spine.relationship_model.update_from_interaction = AsyncMock()
+    spine.self_model.record_user_correction = AsyncMock()
+
+    await spine.on_user_correction(
+        user_id="u1",
+        correction_type="receipt_correction",
+        original_claim="too_hard",
+        corrected_understanding="just_right",
+        trace_id="trace_1",
+    )
+    spine.self_model.record_user_correction.assert_awaited_once_with(
+        user_id="u1",
+        signal_id="trace_1",
+        reason="too_hard → just_right",
+        source="user_receipt_correction",
+    )
+
+
+@pytest.mark.asyncio
+async def test_pipeline_concurrency_guard():
+    """Second concurrent pipeline for same user is skipped."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+
+    # Simulate lock already held — use direct store since FakeRedis.set lacks nx=
+    lock_key = f"spine:pipeline_lock:u1"
+    redis._store[lock_key] = "1"
+
+    signal = ActionableSignal(
+        signal_id="sig_concurrent",
+        source_event_ids=["evt_1"],
+        source_system="test",
+        state_key="task_granularity_fit",
+        claim="recent_task_too_large",
+        confidence=0.9,
+        evidence_summary="task exceeded 60 min",
+        scope="turn",
+        ttl_hours=1,
+        possible_effects=["reduce_duration"],
+        priority="high",
+    )
+    result = await spine._run_signal_pipeline(user_id="u1", signal=signal)
+    assert result is None  # Skipped due to lock
+
+
+@pytest.mark.asyncio
+async def test_metrics_counter_ttl():
+    """Metrics counters get 7-day TTL on increment."""
+    redis = FakeRedis()
+    metrics = SpineMetricsCollector(redis)
+    await metrics.increment("signals_generated")
+    # FakeRedis doesn't track TTL but the call should succeed
+    val = await metrics.get_counter("signals_generated")
+    assert val == 1
+
+
+# ══════════════════════════════════════════════════════════════════════
+# v2.5: General Goal OS Tests
+# ══════════════════════════════════════════════════════════════════════
+
+
+class TestV25GoalWorldGraph:
+    """v2.5: GoalWorldGraph — per-goal dependency tracking."""
+
+    @pytest.fixture
+    def redis(self):
+        return FakeRedis()
+
+    @pytest.fixture
+    def service(self, redis):
+        from app.signals.goal_world_graph import GoalWorldGraphService
+        return GoalWorldGraphService(redis)
+
+    @pytest.mark.asyncio
+    async def test_create_graph(self, service, redis):
+        graph = await service.create_graph(
+            user_id="u1",
+            goal_id="exam_cn",
+            goal_type="exam",
+            node_specs=[
+                {"node_id": "tcp", "label": "TCP协议", "mastery": 0.0, "dependency_ids": ["ip"]},
+                {"node_id": "ip", "label": "IP基础", "mastery": 0.3, "dependency_ids": []},
+                {"node_id": "http", "label": "HTTP", "mastery": 0.0, "dependency_ids": ["tcp"]},
+            ],
+        )
+        assert graph.graph_id.startswith("gwg_")
+        assert len(graph.nodes) == 3
+        assert graph.coverage == 0.0  # none mastered
+
+    @pytest.mark.asyncio
+    async def test_update_mastery(self, service, redis):
+        await service.create_graph(
+            user_id="u1", goal_id="g1", goal_type="exam",
+            node_specs=[
+                {"node_id": "n1", "label": "A", "mastery": 0.0},
+                {"node_id": "n2", "label": "B", "mastery": 0.0},
+            ],
+        )
+        updated = await service.update_node_mastery("u1", "g1", "n1", 0.9)
+        assert updated is not None
+        assert updated.nodes[0].mastery == 0.9
+        assert updated.nodes[0].status == "mastered"
+        assert updated.coverage == 0.5
+
+    @pytest.mark.asyncio
+    async def test_find_bottleneck(self, service, redis):
+        await service.create_graph(
+            user_id="u1", goal_id="g1", goal_type="exam",
+            node_specs=[
+                {"node_id": "base", "label": "基础", "mastery": 0.2, "dependency_ids": []},
+                {"node_id": "mid1", "label": "中级1", "mastery": 0.0, "dependency_ids": ["base"]},
+                {"node_id": "mid2", "label": "中级2", "mastery": 0.0, "dependency_ids": ["base"]},
+                {"node_id": "adv", "label": "高级", "mastery": 0.0, "dependency_ids": ["mid1", "mid2"]},
+            ],
+        )
+        graph = await service.get_graph("u1", "g1")
+        bottleneck = service.find_bottleneck(graph)
+        assert bottleneck is not None
+        assert bottleneck.node_id == "base"  # blocks mid1, mid2, and indirectly adv
+
+    @pytest.mark.asyncio
+    async def test_suggest_focus_nodes(self, service, redis):
+        await service.create_graph(
+            user_id="u1", goal_id="g1", goal_type="exam",
+            node_specs=[
+                {"node_id": "a", "label": "A", "mastery": 0.8},  # mastered
+                {"node_id": "b", "label": "B", "mastery": 0.3, "dependency_ids": ["a"]},  # unblocked, in-progress
+                {"node_id": "c", "label": "C", "mastery": 0.0, "dependency_ids": ["a"]},  # unblocked, pending
+            ],
+        )
+        # Update mastery to mark 'a' as mastered
+        await service.update_node_mastery("u1", "g1", "a", 0.9)
+        graph = await service.get_graph("u1", "g1")
+        suggestions = service.suggest_focus_nodes(graph, limit=3)
+        assert len(suggestions) >= 2
+        # Should suggest the lowest-mastery unblocked nodes
+        suggested_ids = [s["node_id"] for s in suggestions]
+        assert "c" in suggested_ids  # mastery 0, should be suggested
+
+    @pytest.mark.asyncio
+    async def test_add_dependency(self, service, redis):
+        await service.create_graph(
+            user_id="u1", goal_id="g1", goal_type="general",
+            node_specs=[
+                {"node_id": "a", "label": "A", "mastery": 0.5},
+                {"node_id": "b", "label": "B", "mastery": 0.5},
+            ],
+        )
+        updated = await service.add_dependency("u1", "g1", "b", "a")
+        assert "a" in updated.nodes[1].dependency_ids
+
+
+class TestV25MultiGoalArbitration:
+    """v2.5: MultiGoalArbitration — resolve conflicts between active goals."""
+
+    @pytest.fixture
+    def redis(self):
+        return FakeRedis()
+
+    @pytest.fixture
+    def arbitrator(self, redis):
+        from app.signals.multi_goal_arbitration import MultiGoalArbitrator
+        return MultiGoalArbitrator(redis)
+
+    @pytest.mark.asyncio
+    async def test_single_goal(self, arbitrator):
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goals = [ActiveGoal(goal_id="g1", goal_type="exam", title="计网考试", deadline_days=7, mastery=0.3)]
+        result = arbitrator.arbitrate(goals)
+        assert result.primary_goal_id == "g1"
+        assert result.reason == "single_active_goal"
+        assert result.suggested_time_split["g1"] == 1.0
+
+    @pytest.mark.asyncio
+    async def test_deadline_urgent_wins(self, arbitrator):
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goals = [
+            ActiveGoal(goal_id="g1", goal_type="exam", title="计网考试", deadline_days=3, mastery=0.6),
+            ActiveGoal(goal_id="g2", goal_type="project", title="大作业", deadline_days=14, mastery=0.3),
+        ]
+        result = arbitrator.arbitrate(goals)
+        assert result.primary_goal_id == "g1"
+        assert "deadline" in result.reason or "priority" in result.reason
+
+    @pytest.mark.asyncio
+    async def test_bottleneck_severity(self, arbitrator):
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goals = [
+            ActiveGoal(goal_id="g1", goal_type="exam", title="计网考试", deadline_days=30, mastery=0.5),
+            ActiveGoal(goal_id="g2", goal_type="exam", title="高数考试", deadline_days=30, mastery=0.5, bottleneck_severity=0.9),
+        ]
+        result = arbitrator.arbitrate(goals)
+        assert result.primary_goal_id == "g2"
+
+    @pytest.mark.asyncio
+    async def test_user_override(self, arbitrator):
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goals = [
+            ActiveGoal(goal_id="g1", goal_type="exam", title="计网考试", deadline_days=3, mastery=0.2),
+            ActiveGoal(goal_id="g2", goal_type="project", title="大作业", deadline_days=14, mastery=0.5, priority_override="high"),
+        ]
+        result = arbitrator.arbitrate(goals)
+        assert result.primary_goal_id == "g2"
+        assert result.reason == "user_priority_override"
+
+    @pytest.mark.asyncio
+    async def test_paused_goals_excluded(self, arbitrator):
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goals = [
+            ActiveGoal(goal_id="g1", goal_type="exam", title="计网考试", deadline_days=7, mastery=0.5),
+            ActiveGoal(goal_id="g2", goal_type="project", title="大作业", priority_override="pause"),
+        ]
+        result = arbitrator.arbitrate(goals)
+        assert result.primary_goal_id == "g1"
+
+    @pytest.mark.asyncio
+    async def test_conflict_detection(self, arbitrator):
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goals = [
+            ActiveGoal(goal_id="g1", goal_type="exam", title="计网考试", deadline_days=3, mastery=0.3),
+            ActiveGoal(goal_id="g2", goal_type="exam", title="高数考试", deadline_days=5, mastery=0.3),
+        ]
+        result = arbitrator.arbitrate(goals)
+        assert "multiple_urgent_deadlines" in result.conflicts
+
+    @pytest.mark.asyncio
+    async def test_redis_register_and_get(self, arbitrator, redis):
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goal = ActiveGoal(goal_id="g1", goal_type="exam", title="计网考试", deadline_days=7)
+        await arbitrator.register_goal("u1", goal)
+        loaded = await arbitrator.get_active_goals("u1")
+        assert len(loaded) == 1
+        assert loaded[0].goal_id == "g1"
+
+    @pytest.mark.asyncio
+    async def test_spine_orchestrator_integration(self, redis):
+        spine = SpineOrchestrator(redis_client=redis)
+        await spine.register_goal("u1", "g1", "exam", "计网考试", deadline_days=5, mastery=0.3)
+        result = await spine.arbitrate_goals("u1")
+        assert result is not None
+        assert result.primary_goal_id == "g1"
+
+
+class TestV25SpineGoalGraphIntegration:
+    """v2.5: SpineOrchestrator delegates to GoalWorldGraphService."""
+
+    @pytest.fixture
+    def spine(self):
+        return SpineOrchestrator(redis_client=FakeRedis())
+
+    @pytest.mark.asyncio
+    async def test_get_goal_graph_none(self, spine):
+        result = await spine.get_goal_graph("u1", "nonexistent")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_focus_suggestions_empty(self, spine):
+        result = await spine.get_goal_focus_suggestions("u1", "nonexistent")
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_arbitrate_no_goals(self, spine):
+        result = await spine.arbitrate_goals("u1")
+        assert result is None

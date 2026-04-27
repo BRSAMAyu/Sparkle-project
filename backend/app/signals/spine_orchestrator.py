@@ -44,6 +44,8 @@ from app.signals.goal_type_adapter import GoalTypeAdapter
 from app.signals.material_signal import MaterialSignalDetector
 from app.signals.timeline_card_renderer import TimelineCardRenderer
 from app.signals.source_tray_integration import SourceEffectivenessTracker
+from app.signals.goal_world_graph import GoalWorldGraphService
+from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -111,6 +113,8 @@ class SpineOrchestrator:
         self.material_signal_detector = MaterialSignalDetector(redis_client)
         self.timeline_renderer = TimelineCardRenderer()
         self.source_effectiveness = SourceEffectivenessTracker(redis_client)
+        self.goal_graph = GoalWorldGraphService(redis_client)
+        self.goal_arbitrator = MultiGoalArbitrator(redis_client)
 
     async def on_task_completed(
         self,
@@ -551,9 +555,19 @@ class SpineOrchestrator:
         signal: ActionableSignal,
         event_ids: list[str] | None = None,
     ) -> CausalTrace | None:
-        """通用 Signal → PolicyEngine → Directive → Trace 链路。Wrapped with circuit breaker."""
+        """通用 Signal → PolicyEngine → Directive → Trace 链路。Wrapped with circuit breaker + concurrency guard."""
         import json
         from app.signals.redis_resilience import resilient_redis_call
+
+        # Concurrency guard: skip if a pipeline is already running for this user
+        lock_key = f"spine:pipeline_lock:{user_id}"
+        try:
+            locked = await self.redis.set(lock_key, "1", nx=True, ex=30)
+            if not locked:
+                logger.debug("Pipeline skipped: concurrent run for user={}", user_id)
+                return None
+        except Exception:
+            pass
 
         trace = await resilient_redis_call(
             "spine_pipeline", self.trace_store.create_trace(),
@@ -561,6 +575,10 @@ class SpineOrchestrator:
         )
         if trace is None:
             logger.warning("Spine pipeline skipped: trace creation failed for user={}", user_id)
+            try:
+                await self.redis.delete(lock_key)
+            except Exception:
+                pass
             return None
 
         if event_ids:
@@ -615,6 +633,10 @@ class SpineOrchestrator:
         if result is None:
             trace.outcome_to_measure = ["signal_no_rule_match"]
             await self.trace_store._save_trace(trace)
+            try:
+                await self.redis.delete(f"spine:pipeline_lock:{user_id}")
+            except Exception:
+                pass
             return trace
 
         decision, directive = result
@@ -726,6 +748,12 @@ class SpineOrchestrator:
             trace.trace_id, signal.signal_id,
             decision.policy_decision_id,
         )
+
+        # Release pipeline lock
+        try:
+            await self.redis.delete(f"spine:pipeline_lock:{user_id}")
+        except Exception:
+            pass
         return trace
 
     # ── P0-1 Integration: FirstMinuteSnapshot / ExamRescue ─────────────
@@ -1766,6 +1794,14 @@ class SpineOrchestrator:
             if entry:
                 await self.growth_chronicle.add_entry(user_id=user_id, entry=entry)
 
+            # Record to self-model so strategy learning incorporates corrections
+            await self.self_model.record_user_correction(
+                user_id=user_id,
+                signal_id=trace_id or "",
+                reason=f"{original_claim} → {corrected_understanding}",
+                source="user_receipt_correction",
+            )
+
             # Store correction event for Aurora
             correction_event = {
                 "type": "user_correction",
@@ -2274,3 +2310,40 @@ class SpineOrchestrator:
             )
         except Exception:
             return None
+
+    # ── v2.5: General Goal OS ───────────────────────────────────────────
+
+    async def get_goal_graph(self, user_id: str, goal_id: str):
+        """v2.5: Get goal world graph."""
+        return await self.goal_graph.get_graph(user_id, goal_id)
+
+    async def get_goal_focus_suggestions(
+        self, user_id: str, goal_id: str, limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        """v2.5: Get focus suggestions from goal graph."""
+        graph = await self.goal_graph.get_graph(user_id, goal_id)
+        if not graph:
+            return []
+        return self.goal_graph.suggest_focus_nodes(graph, limit=limit)
+
+    async def arbitrate_goals(self, user_id: str):
+        """v2.5: Arbitrate between multiple active goals."""
+        goals = await self.goal_arbitrator.get_active_goals(user_id)
+        if not goals:
+            return None
+        return self.goal_arbitrator.arbitrate(goals)
+
+    async def register_goal(
+        self, user_id: str, goal_id: str, goal_type: str, title: str,
+        deadline_days: int | None = None, mastery: float = 0.0,
+    ) -> None:
+        """v2.5: Register a new active goal."""
+        from app.signals.multi_goal_arbitration import ActiveGoal
+        goal = ActiveGoal(
+            goal_id=goal_id,
+            goal_type=goal_type,
+            title=title,
+            deadline_days=deadline_days,
+            mastery=mastery,
+        )
+        await self.goal_arbitrator.register_goal(user_id, goal)

@@ -64,6 +64,8 @@ from app.signals.research_grade import (
 )
 from app.signals.skill_lifecycle import SkillLifecycleManager
 from app.signals.source_tray_integration import SourceEffectivenessTracker
+from app.signals.goal_world_graph import GoalWorldGraph, GoalWorldGraphService, GraphNode
+from app.signals.multi_goal_arbitration import ActiveGoal, GoalArbitrationResult, MultiGoalArbitrator
 from app.signals.spine_aurora_bridge import SpineAuroraBridge
 
 __all__ = [
@@ -114,5 +116,11 @@ __all__ = [
     "UserVisibleReceipt",
     "UXDirective",
     "GrowthChronicleService",
+    "GoalWorldGraph",
+    "GoalWorldGraphService",
+    "GraphNode",
+    "ActiveGoal",
+    "GoalArbitrationResult",
+    "MultiGoalArbitrator",
     "SpineAuroraBridge",
 ]
