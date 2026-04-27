@@ -1140,6 +1140,8 @@ v5.0 P3 COMPLETE: core session lifecycle + agenda queue + L4 async deep learning
 v5.1 Ruling alignment: P2-5 Aurora Core Session v1 (AuroraCaseFile + Agenda lifecycle + SessionClosure) + D4 Relationship hybrid FSM (6-stance + 5 dimensions), 713/713 total
 v5.2 D10 per-scenario quota (normal=1/sprint=2/crisis=3 per day + quick_calibration unlimited + technical failure no consume) + L4 6 async deep learning jobs (DailyGoalReflection, PolicyEffectCompaction, SkillCandidate, SourceEffectiveness, CommunityAggregation, StateDecayAndRetraction), 728/728 total
 v5.3 D3 three-layer ModelWrite (Hot=Redis for turn/session/task/day, Warm=PG for sprint/goal/domain/relationship, Cold=GrowthChronicle for long_term candidates requiring user confirmation), 734/734 total
+v5.4 P2-C Aurora Core policy/directive regeneration after session closure — state patches → synthetic signal → PolicyEngine re-evaluate → regenerated directives, 736/736 total
+v5.5 P2 RULING COMPLETE: All D1-D12 rulings addressed, P2-1 through P2-9 tasks implemented, P2-A through P2-D phases done. 736/736 tests passing.
 ```
 
 ### P1 Status — ALL COMPLETE
