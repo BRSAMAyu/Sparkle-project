@@ -334,26 +334,87 @@ class PlanDirective:
 
 
 # ── 4e. ModelWriteDirective ──────────────────────────────────────────────
-# 控制写入哪个模型、写入多深。
-# 用户可见变化：系统状态更新有审计记录，高影响写入需用户确认。
+# D3 Ruling: 三层写入。不能只写 Redis。
+#   Hot  = Redis / StateRegister — turn/session/task/day 短期状态
+#   Warm = PostgreSQL — goal/sprint/strategy/source/skill/policy effect
+#   Cold = GrowthChronicle / LearningBase — 用户确认过的长期洞察
+#
+# 写入规则：
+#   turn/session/task/day → Redis with TTL
+#   goal/sprint → Postgres + valid_until
+#   relationship → Postgres + decay
+#   long_term → 必须是 candidate，用户确认后才正式进入
+#   community_signal → aggregate-only，不写个人长期模型
+
+_VALID_WRITE_TARGETS = frozenset({
+    "state_register", "goal_state", "sparkle_self_model",
+    "learning_base", "growth_chronicle_candidate",
+})
+
+_VALID_WRITE_SCOPES = frozenset({
+    "turn", "session", "task", "day", "sprint",
+    "goal", "domain", "relationship", "long_term",
+})
+
+# Map scope → write layer
+_SCOPE_TO_LAYER = {
+    "turn": "hot",
+    "session": "hot",
+    "task": "hot",
+    "day": "hot",
+    "sprint": "warm",
+    "goal": "warm",
+    "domain": "warm",
+    "relationship": "warm",
+    "long_term": "cold",
+}
+
 
 @dataclass
 class ModelWriteEntry:
-    target_model: str              # user_state / sparkle_self_model / cognitive_profile
-    claim: str
-    scope: str                     # turn / current_sprint / strategy / long_term
-    confidence: float
+    target: str = ""               # state_register / goal_state / sparkle_self_model / learning_base / growth_chronicle_candidate
+    scope: str = "session"         # turn / session / task / day / sprint / goal / domain / relationship / long_term
+    claim: str = ""
+    confidence: float = 0.5
+    evidence: list[str] = field(default_factory=list)
+    counter_evidence: list[str] = field(default_factory=list)
+    requires_user_confirmation: bool = False
+    retract_if: list[str] = field(default_factory=list)
+    ttl: str = "72h"               # e.g. "24h", "7d", "30d"
+
+    # Backwards compat — old callers pass target_model instead of target
+    target_model: str = ""
     needs_user_confirmation: bool = False
-    ttl: str = "72h"
+
+    def __post_init__(self):
+        # Backwards compat: if target_model is set but target is not, derive
+        if self.target_model and not self.target:
+            self.target = self.target_model
+        if not self.target_model and self.target:
+            self.target_model = self.target
+        if self.needs_user_confirmation and not self.requires_user_confirmation:
+            self.requires_user_confirmation = self.needs_user_confirmation
+
+    @property
+    def write_layer(self) -> str:
+        """D3: Determine write layer (hot/warm/cold) from scope."""
+        return _SCOPE_TO_LAYER.get(self.scope, "warm")
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "target_model": self.target_model,
-            "claim": self.claim,
+            "target": self.target,
             "scope": self.scope,
+            "claim": self.claim,
             "confidence": self.confidence,
-            "needs_user_confirmation": self.needs_user_confirmation,
+            "evidence": self.evidence,
+            "counter_evidence": self.counter_evidence,
+            "requires_user_confirmation": self.requires_user_confirmation,
+            "retract_if": self.retract_if,
             "ttl": self.ttl,
+            "write_layer": self.write_layer,
+            # Backwards compat
+            "target_model": self.target_model or self.target,
+            "needs_user_confirmation": self.requires_user_confirmation,
         }
 
     @classmethod

@@ -13372,3 +13372,110 @@ async def test_v212_l4_empty_input_returns_zero_confidence():
     candidate = await learner.run_policy_effect_compaction("u_empty", [])
     assert candidate["confidence"] == 0.0
     assert candidate["evidence"]["note"] == "insufficient_data"
+
+
+# ── D3: Three-Layer ModelWrite Tests ──────────────────────────────────
+
+def test_v213_model_write_entry_write_layer_hot():
+    """D3: Scope turn/session/task/day maps to 'hot' (Redis)."""
+    from app.signals.types import ModelWriteEntry
+    for scope in ("turn", "session", "task", "day"):
+        entry = ModelWriteEntry(
+            target="state_register",
+            scope=scope,
+            claim="test",
+            confidence=0.8,
+        )
+        assert entry.write_layer == "hot"
+
+
+def test_v213_model_write_entry_write_layer_warm():
+    """D3: Scope sprint/goal/domain/relationship maps to 'warm' (Postgres)."""
+    from app.signals.types import ModelWriteEntry
+    for scope in ("sprint", "goal", "domain", "relationship"):
+        entry = ModelWriteEntry(
+            target="goal_state",
+            scope=scope,
+            claim="test",
+            confidence=0.7,
+        )
+        assert entry.write_layer == "warm"
+
+
+def test_v213_model_write_entry_write_layer_cold():
+    """D3: Scope long_term maps to 'cold' (GrowthChronicle)."""
+    from app.signals.types import ModelWriteEntry
+    entry = ModelWriteEntry(
+        target="growth_chronicle_candidate",
+        scope="long_term",
+        claim="user shows consistent pattern",
+        confidence=0.6,
+        evidence=["30-day streak", "consistent correction pattern"],
+        counter_evidence=["one week of inactivity"],
+        requires_user_confirmation=True,
+        retract_if=["no_activity_14_days"],
+    )
+    assert entry.write_layer == "cold"
+    assert entry.requires_user_confirmation is True
+
+
+def test_v213_model_write_entry_serialization():
+    """D3: ModelWriteEntry serializes with write_layer and D3 fields."""
+    from app.signals.types import ModelWriteEntry
+    entry = ModelWriteEntry(
+        target="sparkle_self_model",
+        scope="relationship",
+        claim="trust improved after 5 consecutive completions",
+        confidence=0.75,
+        evidence=["5 task completions", "2 streak maintained"],
+        counter_evidence=["1 correction last week"],
+        requires_user_confirmation=False,
+        retract_if=["correction_frequency_above_3"],
+        ttl="30d",
+    )
+    d = entry.to_dict()
+    assert d["write_layer"] == "warm"
+    assert d["target"] == "sparkle_self_model"
+    assert len(d["evidence"]) == 2
+    assert len(d["counter_evidence"]) == 1
+    assert d["retract_if"] == ["correction_frequency_above_3"]
+
+
+def test_v213_model_write_entry_backwards_compat():
+    """D3: Old target_model field still works via backwards compat."""
+    from app.signals.types import ModelWriteEntry
+    entry = ModelWriteEntry(
+        target_model="user_state",
+        claim="test claim",
+        scope="turn",
+        confidence=0.5,
+        needs_user_confirmation=True,
+    )
+    assert entry.target == "user_state"
+    assert entry.requires_user_confirmation is True
+    d = entry.to_dict()
+    assert d["target_model"] == "user_state"
+    assert d["write_layer"] == "hot"
+
+
+def test_v213_model_write_entry_roundtrip():
+    """D3: ModelWriteEntry round-trips through dict serialization."""
+    from app.signals.types import ModelWriteEntry
+    original = ModelWriteEntry(
+        target="learning_base",
+        scope="domain",
+        claim="calculus mastery improving",
+        confidence=0.65,
+        evidence=["3 consecutive good scores"],
+        counter_evidence=[],
+        requires_user_confirmation=False,
+        retract_if=["score_below_50"],
+        ttl="14d",
+    )
+    d = original.to_dict()
+    restored = ModelWriteEntry.from_dict(d)
+    assert restored.target == original.target
+    assert restored.scope == original.scope
+    assert restored.claim == original.claim
+    assert restored.confidence == original.confidence
+    assert restored.write_layer == "warm"
