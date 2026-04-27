@@ -116,6 +116,14 @@ from app.signals.simulation_lab import (
     TestScenario,
     TraceReplaySimulator,
 )
+from app.signals.marketplace import (
+    AdoptionRecord,
+    DomainPackReview,
+    IronLawViolation,
+    MarketplaceIronLaws,
+    MarketplaceRegistry,
+    SkillCard,
+)
 from app.signals.skill_lifecycle import SkillLifecycleManager
 from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.spine_quality_guard import (
@@ -158,6 +166,7 @@ __all__ = [
     "ActiveGoal",
     "AgencyOutcome",
     "AnonymizedCohortStat",
+    "AdoptionRecord",
     "AuroraAgendaItem",
     "AuroraControlSignal",
     "BanditActionStats",
@@ -177,6 +186,7 @@ __all__ = [
     "DirectiveApplicationAudit",
     "DomainPack",
     "DomainPackMarketplace",
+    "DomainPackReview",
     "EmailDeadlineExtractor",
     "EmailDeadlineHint",
     "EvidenceGrade",
@@ -205,10 +215,13 @@ __all__ = [
     "GrowthChronicleService",
     "InterventionEpisode",
     "InterventionEpisodeLedger",
+    "IronLawViolation",
     "LearningBase",
     "LearningOutcome",
     "LoadOutcome",
     "MatchedContextEvaluator",
+    "MarketplaceIronLaws",
+    "MarketplaceRegistry",
     "MaterialsProtocol",
     "MetricEffect",
     "ModelWriteDirective",
@@ -248,6 +261,7 @@ __all__ = [
     "SimulatedUserProfile",
     "SparkleGoalBench",
     "SyntheticPersonaSimulator",
+    "SkillCard",
     "SkillDirective",
     "SkillEntry",
     "SkillLifecycleManager",

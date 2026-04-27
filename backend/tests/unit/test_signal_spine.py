@@ -16246,3 +16246,457 @@ def test_p4_3_sparkle_goal_bench_every_suite_has_safety():
     for bench_name, scenarios in suite.items():
         non_regression = [s for s in scenarios if s.category != "regression"]
         assert len(non_regression) >= 0, f"{bench_name} has no boundary/safety scenarios"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-4: Skill & DomainPack Marketplace
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_4_skill_card_creation():
+    """SkillCard v2 holds evidence grade, effectiveness, prerequisites."""
+    from app.signals.marketplace import SkillCard
+
+    card = SkillCard(
+        name="Exam Sprint Survival Mode",
+        description="Activate emergency survival path for last-3-day exam prep",
+        goal_type="exam",
+        domain="exam_sprint",
+        author_id="user_1",
+        trigger_condition="deadline_days <= 3 AND baseline == near_zero",
+        action_template="Build minimal pass path with top-3 most tested topics",
+        expected_outcome="User passes exam focusing only on high-yield content",
+        evidence_grade=3,
+        evidence_summary="Effective in 85% of 40 zero-baseline episodes",
+        episode_count=40,
+        success_rate=0.85,
+        status="active",
+        prerequisites=[],
+    )
+    assert card.card_id.startswith("sk")
+    assert card.evidence_grade == 3
+    assert card.version == 1
+    assert card.effectiveness_decay == 1.0
+
+    d = card.to_dict()
+    assert d["name"] == "Exam Sprint Survival Mode"
+    assert d["evidence_grade"] == 3
+    assert d["status"] == "active"
+
+    restored = SkillCard.from_dict(d)
+    assert restored.evidence_grade == 3
+
+
+def test_p4_4_marketplace_iron_law_evidence_floor():
+    """ML-1: Cards with evidence grade < 2 are blocked from listing."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="Weak Skill", author_id="u1",
+        evidence_grade=1, status="active",
+    )
+    violations = MarketplaceIronLaws.validate_listing(card)
+    blocking = [v for v in violations if v.severity == "blocking"]
+    assert any(v.law_id == "ML-1" for v in blocking)
+
+    check = MarketplaceIronLaws.is_listable(card)
+    assert not check["listable"]
+
+
+def test_p4_4_marketplace_iron_law_adoption_floor():
+    """ML-2: Cards with < 5 adoptions get warning (not blocking)."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="New Skill", author_id="u1",
+        evidence_grade=3, adoption_count=2, status="active",
+    )
+    check = MarketplaceIronLaws.is_listable(card)
+    assert check["listable"]  # Warning, not blocking
+    assert any(w["law_id"] == "ML-2" for w in check["warnings"])
+
+
+def test_p4_4_marketplace_iron_law_deprecated_blocked():
+    """ML-4: Deprecated/retired cards are blocked."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="Old Skill", author_id="u1",
+        evidence_grade=3, adoption_count=10, status="deprecated",
+    )
+    check = MarketplaceIronLaws.is_listable(card)
+    assert not check["listable"]
+    assert any(v["law_id"] == "ML-4" for v in check["blocking_violations"])
+
+
+def test_p4_4_marketplace_iron_law_provenance():
+    """ML-5: Cards without author_id are blocked."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="Anonymous Skill",
+        evidence_grade=3, adoption_count=10, status="active",
+    )
+    check = MarketplaceIronLaws.is_listable(card)
+    assert not check["listable"]
+    assert any(v["law_id"] == "ML-5" for v in check["blocking_violations"])
+
+
+def test_p4_4_marketplace_iron_law_evidence_backed_claims():
+    """ML-6: Unsubstantiated claim words blocked."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="Revolutionary Method",
+        description="A revolutionary approach to guaranteed success",
+        author_id="u1",
+        evidence_grade=2, adoption_count=10, status="active",
+    )
+    violations = MarketplaceIronLaws.validate_listing(card)
+    assert any(v.law_id == "ML-6" for v in violations)
+
+
+def test_p4_4_marketplace_iron_law_rating_integrity():
+    """ML-7: Rating without enough reviews gets warning."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="Suspiciously Rated", author_id="u1",
+        evidence_grade=3, adoption_count=10, status="active",
+        rating=5.0, review_count=1,  # Only 1 review
+    )
+    violations = MarketplaceIronLaws.validate_listing(card)
+    assert any(v.law_id == "ML-7" for v in violations)
+
+
+def test_p4_4_marketplace_iron_law_high_risk_domain():
+    """ML-10: High-risk domains require safety review."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="Mental Health Coach", author_id="u1",
+        domain="mental_health",
+        evidence_grade=3, adoption_count=10, status="active",
+    )
+    violations = MarketplaceIronLaws.validate_listing(card)
+    blocking = [v for v in violations if v.severity == "blocking"]
+    assert any(v.law_id == "ML-10" for v in blocking)
+
+
+def test_p4_4_marketplace_iron_law_prerequisites():
+    """ML-8: Prerequisite skills must exist and be active."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    card = SkillCard(
+        name="Advanced Skill", author_id="u1",
+        evidence_grade=3, status="active",
+        prerequisites=["sk_basic_1", "sk_missing"],
+    )
+
+    # Only basic_1 exists and is active
+    basic = SkillCard(
+        card_id="sk_basic_1", name="Basic", author_id="u1",
+        evidence_grade=3, status="active",
+    )
+    active_cards = {"sk_basic_1": basic}
+
+    violations = MarketplaceIronLaws.validate_prerequisites(card, active_cards)
+    assert len(violations) == 1
+    assert violations[0].asset_id == card.card_id
+    assert "sk_missing" in violations[0].description
+
+
+def test_p4_4_marketplace_iron_law_staleness():
+    """ML-3: Cards not validated in 90+ days get warning."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+    from datetime import datetime, timezone, timedelta
+
+    stale_date = (datetime.now(timezone.utc) - timedelta(days=100)).isoformat()
+    card = SkillCard(
+        name="Stale Skill", author_id="u1",
+        evidence_grade=3, adoption_count=10, status="active",
+        last_validated_at=stale_date,
+    )
+    violations = MarketplaceIronLaws.validate_listing(card)
+    assert any(v.law_id == "ML-3" for v in violations)
+
+
+def test_p4_4_domain_pack_review():
+    """DomainPackReview holds user review with production usage flag."""
+    from app.signals.marketplace import DomainPackReview
+
+    review = DomainPackReview(
+        asset_id="sk_test",
+        user_id="u1",
+        rating=4.0,
+        title="Good but needs refinement",
+        body="Worked well for my exam prep but needed adjustment for CS topics.",
+        used_in_production=True,
+        outcome_summary="Passed exam with 78%",
+    )
+    assert review.review_id.startswith("rev")
+    assert review.rating == 4.0
+    assert review.used_in_production
+
+    d = review.to_dict()
+    assert d["title"] == "Good but needs refinement"
+
+
+def test_p4_4_registry_register_and_list():
+    """MarketplaceRegistry registers cards and lists by filters."""
+    from app.signals.marketplace import MarketplaceRegistry, SkillCard
+
+    registry = MarketplaceRegistry()
+
+    card1 = SkillCard(
+        name="Exam Sprint", author_id="u1", goal_type="exam",
+        domain="exam_sprint", evidence_grade=3, adoption_count=10,
+        status="active", episode_count=50, success_rate=0.8,
+    )
+    card2 = SkillCard(
+        name="Project Planner", author_id="u1", goal_type="project",
+        domain="project_delivery", evidence_grade=2, adoption_count=5,
+        status="active", episode_count=20, success_rate=0.6,
+    )
+    card3 = SkillCard(
+        name="Draft Skill", author_id="u1", goal_type="exam",
+        evidence_grade=3, adoption_count=10, status="draft",
+    )
+
+    r1 = registry.register_card(card1)
+    assert r1["registered"]
+
+    r2 = registry.register_card(card2)
+    assert r2["registered"]
+
+    registry.register_card(card3)
+
+    # List active only
+    active = registry.list_cards()
+    assert len(active) == 2
+
+    # Filter by goal_type
+    exam = registry.list_cards(goal_type="exam")
+    assert len(exam) == 1
+
+    # Include drafts
+    all_cards = registry.list_cards(include_drafts=True)
+    assert len(all_cards) == 3
+
+    # Filter by evidence grade
+    high_grade = registry.list_cards(min_evidence_grade=3)
+    assert len(high_grade) == 1
+
+
+def test_p4_4_registry_recommendable():
+    """list_recommendable ranks by iron law compliance, evidence, success, rating."""
+    from app.signals.marketplace import MarketplaceRegistry, SkillCard
+
+    registry = MarketplaceRegistry()
+
+    best = SkillCard(
+        name="Best Skill", author_id="u1", goal_type="exam",
+        evidence_grade=4, adoption_count=20, status="active",
+        success_rate=0.9, rating=4.5, review_count=10,
+    )
+    ok = SkillCard(
+        name="OK Skill", author_id="u1", goal_type="exam",
+        evidence_grade=3, adoption_count=6, status="active",
+        success_rate=0.7, rating=3.5, review_count=5,
+    )
+
+    registry.register_card(best)
+    registry.register_card(ok)
+
+    results = registry.list_recommendable(goal_type="exam")
+    assert len(results) == 2
+    assert results[0]["recommendable"]
+    assert results[0]["card"]["name"] == "Best Skill"
+
+
+def test_p4_4_registry_reviews():
+    """MarketplaceRegistry aggregates reviews and recalculates ratings."""
+    from app.signals.marketplace import MarketplaceRegistry, SkillCard, DomainPackReview
+
+    registry = MarketplaceRegistry()
+    card = SkillCard(
+        name="Reviewable Skill", author_id="u1",
+        evidence_grade=3, adoption_count=10, status="active",
+    )
+    registry.register_card(card)
+
+    r1 = registry.add_review(DomainPackReview(
+        asset_id=card.card_id, user_id="u1", rating=4.0, title="Good",
+        body="Works well", used_in_production=True,
+    ))
+    assert r1["added"]
+
+    r2 = registry.add_review(DomainPackReview(
+        asset_id=card.card_id, user_id="u2", rating=5.0, title="Great",
+        body="Excellent", used_in_production=True,
+    ))
+    assert r2["added"]
+
+    # Duplicate user blocked
+    r3 = registry.add_review(DomainPackReview(
+        asset_id=card.card_id, user_id="u1", rating=3.0, title="Again",
+        body="Testing",
+    ))
+    assert not r3["added"]
+    assert r3["reason"] == "duplicate_user"
+
+    # Rating recalculated
+    updated_card = registry.get_card(card.card_id)
+    assert updated_card.review_count == 2
+    assert updated_card.rating == 4.5  # (4+5)/2
+
+    summary = registry.get_review_summary(card.card_id)
+    assert summary["review_count"] == 2
+    assert summary["production_review_count"] == 2
+    assert not summary["rating_display_allowed"]  # 2 < 3 min
+
+
+def test_p4_4_registry_adoption_tracking():
+    """MarketplaceRegistry tracks adoptions and outcomes."""
+    from app.signals.marketplace import MarketplaceRegistry, SkillCard
+
+    registry = MarketplaceRegistry()
+    card = SkillCard(
+        name="Adopted Skill", author_id="u1",
+        evidence_grade=3, status="active",
+    )
+    registry.register_card(card)
+
+    rec1 = registry.record_adoption("u1", card.card_id, "skill_card")
+    assert rec1.record_id.startswith("adopt")
+
+    rec2 = registry.record_adoption("u2", card.card_id, "skill_card")
+    rec3 = registry.record_adoption("u3", card.card_id, "skill_card")
+
+    reg = registry.record_adoption_outcome(rec1.record_id, "success", "Great")
+    assert reg["updated"]
+
+    registry.record_adoption_outcome(rec2.record_id, "failure", "Not suitable")
+    registry.record_adoption_outcome(rec3.record_id, "success", "Perfect")
+
+    stats = registry.get_adoption_stats(card.card_id)
+    assert stats["total_adoptions"] == 3
+    assert stats["successful"] == 2
+    assert stats["failed"] == 1
+    assert stats["success_rate"] == pytest.approx(0.667, abs=0.01)
+
+    updated_card = registry.get_card(card.card_id)
+    assert updated_card.adoption_count == 3
+
+
+def test_p4_4_registry_update_effectiveness():
+    """update_effectiveness tracks decay, triggers review if success drops."""
+    from app.signals.marketplace import MarketplaceRegistry, SkillCard
+
+    registry = MarketplaceRegistry()
+    card = SkillCard(
+        name="Decaying Skill", author_id="u1",
+        evidence_grade=3, adoption_count=10, status="active",
+        success_rate=0.9, effectiveness_decay=1.0,
+    )
+    registry.register_card(card)
+
+    # Mild drop — OK
+    result = registry.update_effectiveness(card.card_id, 0.85)
+    assert result["updated"]
+    assert result["effectiveness_decay"] == 1.0  # No decay trigger
+
+    # Severe drop (>20%) → decay triggered
+    result = registry.update_effectiveness(card.card_id, 0.60)
+    assert result["effectiveness_decay"] == 0.8  # -0.2
+    assert result["status"] == "active"  # Still above 0.5
+
+    # Repeated severe drops → under review
+    result = registry.update_effectiveness(card.card_id, 0.40)
+    assert result["effectiveness_decay"] == pytest.approx(0.6, abs=0.01)
+    result = registry.update_effectiveness(card.card_id, 0.20)
+    assert result["effectiveness_decay"] == pytest.approx(0.4, abs=0.01)
+    assert result["status"] == "under_review"
+
+
+def test_p4_4_registry_block_invalid_card():
+    """MarketplaceRegistry rejects cards that fail iron laws."""
+    from app.signals.marketplace import MarketplaceRegistry, SkillCard
+
+    registry = MarketplaceRegistry()
+    bad_card = SkillCard(
+        name="Unproven", evidence_grade=1, status="active",
+    )
+    result = registry.register_card(bad_card)
+    assert not result["registered"]
+    assert "blocking_violations" in result
+
+
+def test_p4_4_adoption_record():
+    """AdoptionRecord captures user→asset adoption with context."""
+    from app.signals.marketplace import AdoptionRecord
+
+    rec = AdoptionRecord(
+        user_id="u1", asset_id="sk_test", asset_type="skill_card",
+        context_signature={"deadline_days": 5},
+    )
+    assert rec.record_id.startswith("adopt")
+    assert rec.outcome == "pending"
+
+    rec2 = AdoptionRecord(
+        user_id="u2", asset_id="sk_test", asset_type="skill_card",
+        outcome="success", outcome_detail="Achieved goal",
+    )
+    assert rec2.outcome == "success"
+
+
+def test_p4_4_registry_empty_review_summary():
+    """get_review_summary handles assets with no reviews."""
+    from app.signals.marketplace import MarketplaceRegistry
+
+    registry = MarketplaceRegistry()
+    summary = registry.get_review_summary("nonexistent")
+    assert summary["review_count"] == 0
+    assert summary["rating"] is None
+
+
+def test_p4_4_iron_law_all_nine_blocking_reasons():
+    """Comprehensive: card with multiple violations aggregated correctly."""
+    from app.signals.marketplace import SkillCard, MarketplaceIronLaws
+
+    # A card violating as many laws as possible
+    card = SkillCard(
+        name="Terrible Card", description="guaranteed magic results",
+        evidence_grade=0, adoption_count=0, status="deprecated",
+        domain="medical", rating=5.0, review_count=1,
+        # No author_id = provenance violation
+    )
+    violations = MarketplaceIronLaws.validate_listing(card)
+    law_ids = {v.law_id for v in violations}
+    # Should hit: ML-1 (evidence), ML-4 (deprecated), ML-5 (no author),
+    # ML-6 (banned words), ML-10 (high-risk domain)
+    assert "ML-1" in law_ids
+    assert "ML-4" in law_ids
+    assert "ML-5" in law_ids
+    assert "ML-6" in law_ids
+    assert "ML-10" in law_ids
+
+
+def test_p4_4_registry_to_dict():
+    """MarketplaceRegistry.to_dict provides aggregate stats."""
+    from app.signals.marketplace import MarketplaceRegistry, SkillCard
+
+    registry = MarketplaceRegistry()
+    registry.register_card(SkillCard(
+        name="Skill A", author_id="u1", evidence_grade=3,
+        adoption_count=10, status="active",
+    ))
+    registry.register_card(SkillCard(
+        name="Skill B", author_id="u2", evidence_grade=3,
+        adoption_count=5, status="active",
+    ))
+
+    d = registry.to_dict()
+    assert d["total_cards"] == 2
+    assert d["active_cards"] == 2
+    assert len(d["cards"]) == 2
