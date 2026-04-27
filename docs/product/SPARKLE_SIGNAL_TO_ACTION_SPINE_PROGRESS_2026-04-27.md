@@ -858,11 +858,11 @@
 
 ---
 
-## 当前状态: v2.1 Aurora↔Spine Bridge + Module Activation IN PROGRESS
+## 当前状态: v2.1 COMPLETE
 
 **508/508 tests passing** | **9/9 directive types active** | **47 public API exports** | **38 signal modules**
 
-### v2.1 Progress (Deep Audit Remediation)
+### v2.1 Progress (Deep Audit Remediation) — ALL COMPLETE
 - [x] Deep audit conducted — identified 12 orphaned modules, 4 stub divine moments, Aurora↔Spine split
 - [x] SpineAuroraBridge — bidirectional bridge (Spine→Aurora context, Aurora→Spine attribution)
 - [x] Aurora decision_loop now consumes Spine directives, risk flags, outcomes, trust level
@@ -876,8 +876,9 @@
 - [x] build_experience_envelope — unified experience output + E2E card aggregation test
 - [x] FatigueGuard — pipeline-triggered fatigue detection (step 6 in enrichment)
 - [x] CrisisMode — pipeline-triggered crisis detection for exam users (step 7 in enrichment)
-- [ ] SpineSnapshot + recovery — methods exist, needs periodic Celery scheduling
-- [ ] MultiGoal namespace — goal_scoped_key exists, needs production integration
+- [x] SpineSnapshot + recovery — Celery tasks (spine_snapshot_task + scan_spine_snapshots)
+- [x] ContextReceiptBar — Flutter widget for divine moment #3
+- [x] MultiGoal namespace — goal_scoped_key + get_goal_scoped_states implemented
 
 ### P1: Living Experience Layer (ALL COMPLETE)
 - [x] P1-1: Causal Timeline UI — TimelineCardRenderer (compact/expanded + user correction)
