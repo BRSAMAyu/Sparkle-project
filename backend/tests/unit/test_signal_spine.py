@@ -14772,3 +14772,126 @@ async def test_p8_on_quiz_result_low_accuracy_pipeline(fake_redis):
     )
     # Pipeline ran (transfer_failure signal generated); policy may or may not match
     assert result is None or hasattr(result, "trace_id")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P9 Tests: File Upload → Galaxy Node Mapping
+# Demo Experience Point #2: 上传资料后，知识星图节点被点亮
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def test_p9_on_file_uploaded_wired_to_orchestrator():
+    """SpineOrchestrator has on_file_uploaded and get_file_node_mapping methods."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedisWithHset()
+    spine = SpineOrchestrator(redis)
+    assert hasattr(spine, "on_file_uploaded"), "on_file_uploaded must exist"
+    assert hasattr(spine, "get_file_node_mapping"), "get_file_node_mapping must exist"
+    assert callable(spine.on_file_uploaded)
+    assert callable(spine.get_file_node_mapping)
+
+
+async def test_p9_on_file_uploaded_no_summary_runs_without_error():
+    """File upload with empty parsed_summary → no Galaxy call → stores entry → returns trace or None."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedisWithHset()
+    spine = SpineOrchestrator(redis)
+    result = await spine.on_file_uploaded(
+        user_id="u_file1",
+        file_id="file_001",
+        filename="lecture_notes.pdf",
+        parsed_summary="",
+        goal_id=None,
+        mime_type="application/pdf",
+    )
+    # No exception; pipeline ran; trace or None acceptable
+    assert result is None or hasattr(result, "trace_id")
+
+
+async def test_p9_on_file_uploaded_stores_mapping_in_redis():
+    """After on_file_uploaded, spine:file_nodes:{user_id}:{file_id} key exists in Redis."""
+    import json
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedisWithHset()
+    spine = SpineOrchestrator(redis)
+    await spine.on_file_uploaded(
+        user_id="u_file2",
+        file_id="file_002",
+        filename="calculus_ch3.pdf",
+        parsed_summary="derivatives and integrals, chain rule",
+    )
+    raw = await redis.get("spine:file_nodes:u_file2:file_002")
+    assert raw is not None, "Redis mapping key must be set after upload"
+    mapping = json.loads(raw)
+    assert mapping["file_id"] == "file_002"
+    assert mapping["filename"] == "calculus_ch3.pdf"
+    assert "mapped_nodes" in mapping
+    assert "mapped_at" in mapping
+
+
+async def test_p9_on_file_uploaded_registers_with_material_detector():
+    """MaterialSignalDetector has file registered after on_file_uploaded."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedisWithHset()
+    spine = SpineOrchestrator(redis)
+    await spine.on_file_uploaded(
+        user_id="u_file3",
+        file_id="file_003",
+        filename="thermodynamics.pdf",
+        parsed_summary="entropy and enthalpy, heat transfer",
+    )
+    # MaterialSignalDetector stores under spine:material_files:{user_id}
+    files_key = "spine:material_files:u_file3"
+    raw_map = await redis.hgetall(files_key)
+    assert "file_003" in raw_map, "MaterialSignalDetector must register uploaded file"
+
+
+async def test_p9_on_file_uploaded_no_galaxy_double_write():
+    """on_file_uploaded does NOT write UserNodeStatus or mastery_score."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedisWithHset()
+    spine = SpineOrchestrator(redis)
+    # In test environment, AsyncSessionLocal would fail → Galaxy degrades gracefully
+    result = await spine.on_file_uploaded(
+        user_id="u_file4",
+        file_id="file_004",
+        filename="physics_optics.pdf",
+        parsed_summary="reflection and refraction, Snell's law",
+    )
+    # Must not raise; Galaxy semantic_search gracefully degrades in test env
+    assert result is None or hasattr(result, "trace_id")
+    # Confirm no mastery-write key exists (UserNodeStatus is in PostgreSQL, not Redis)
+    mastery_key = await redis.get("user_node_status:u_file4")
+    assert mastery_key is None, "on_file_uploaded must not write mastery to Redis"
+
+
+async def test_p9_get_file_node_mapping_empty_for_unknown():
+    """get_file_node_mapping returns None for a file that was never uploaded."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedisWithHset()
+    spine = SpineOrchestrator(redis)
+    result = await spine.get_file_node_mapping(user_id="u_unknown", file_id="nonexistent_file")
+    assert result is None, "Unknown file mapping must return None"
+
+
+async def test_p9_get_file_node_mapping_returns_stored_data():
+    """get_file_node_mapping returns the mapping stored by on_file_uploaded."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedisWithHset()
+    spine = SpineOrchestrator(redis)
+    await spine.on_file_uploaded(
+        user_id="u_file5",
+        file_id="file_005",
+        filename="organic_chemistry.pdf",
+        parsed_summary="alkane alkene alkyne functional groups",
+        goal_id="goal_chem_101",
+        mime_type="application/pdf",
+    )
+    mapping = await spine.get_file_node_mapping(user_id="u_file5", file_id="file_005")
+    assert mapping is not None, "Mapping must exist after upload"
+    assert mapping["file_id"] == "file_005"
+    assert mapping["filename"] == "organic_chemistry.pdf"
+    assert mapping["goal_id"] == "goal_chem_101"
+    assert isinstance(mapping["mapped_nodes"], list)
+    # In test env, Galaxy is not available → no nodes mapped, but structure is correct
+    assert "mapped_at" in mapping

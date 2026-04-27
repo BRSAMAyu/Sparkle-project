@@ -872,9 +872,19 @@
 
 ---
 
-## 当前状态: v7.1 COMPLETE — GoalArbitrationCard Flutter UI
+## 当前状态: v7.2 COMPLETE — FileIntegration → GalaxyService Node Mapping
 
-**802/802 tests passing** | **9/9 directive types active** | **70+ public API exports** | **47 signal modules**
+**809/809 tests passing** | **9/9 directive types active** | **70+ public API exports** | **47 signal modules**
+
+### v7.2 (P9 FileIntegration → Galaxy Node Mapping) — ALL COMPLETE
+- [x] P9: `SpineOrchestrator.on_file_uploaded()` — file upload → GalaxyService.semantic_search_nodes() (read-only) → node IDs stored in Redis `spine:file_nodes:{user}:{file}` → `source_material:material_received` signal → pipeline
+- [x] P9: `SpineOrchestrator.get_file_node_mapping()` — reads stored mapping for Flutter galaxy node highlight consumption
+- [x] P9: `MaterialSignalDetector.register_uploaded_file()` called with mapped node_ids for future underutilization detection
+- [x] P9: Iron Rule preserved — no UserNodeStatus writes, no mastery_score mutations; GalaxyService call is read-only
+- [x] P9: GalaxyService gracefully degrades (try/except) when DB unavailable in test environment
+- [x] P9: Demo Experience Point #2 closed: "上传资料后，知识星图节点被点亮"
+- [x] 7 new tests: method wiring, empty summary, Redis storage, material detector registration, no-double-write, empty mapping, stored mapping roundtrip
+- [x] **809/809 tests passing (was 802)**
 
 ### v7.1 (P9 GoalArbitrationCard + REST API surface) — ALL COMPLETE
 - [x] P9: `GoalArbitrationCard` Flutter widget — animated card with time-split bars, conflict pills, Focus/Continue actions
@@ -1211,6 +1221,7 @@ v6.6 P4-4 Research Experiment Platform: MultivariateExperimentEngine (design/rec
 v6.7 P4-5 Privacy Community Intelligence: PrivacyPreservingCommunityEngine + differential privacy (Laplace noise) + 3-tier cohort privacy (suppressed/trend_only/anonymous_aggregate) + privacy budget management, 783/783 tests
 v6.8 P4-6 Spine Quality Guard: SpineQualityGuard (signal quality/causal chain/directive compliance/outcome quality) + QualityReport auto-generation + degradation detection, 789/789 tests
 v6.9 P3-6 External Events + SpineOrchestrator wiring: on_external_event() method + ExternalIntegrationGateway→Spine routing, 795/795 tests
+v7.2 P9 FileIntegration→Galaxy Node Mapping: on_file_uploaded() (read-only semantic_search_nodes → Redis spine:file_nodes) + get_file_node_mapping() + MaterialSignalDetector registration, Iron Rule: no mastery writes, Demo Point #2 closed, 809/809 tests
 v7.1 P9 GoalArbitrationCard: GoalArbitrationCard Flutter widget (time-split bars + conflict pills + Focus/Continue), spine REST endpoints (goals/goal-graph/external-event), Flutter API constants, 802/802 tests
 v7.0 P8 Mistake Event Integration: MistakeSignalDetector wired to SpineOrchestrator, on_mistake_event() + on_quiz_result() production methods, galaxy_event_consumer bridge, GoalArbitrationEvent Flutter type, 802/802 tests
 ```

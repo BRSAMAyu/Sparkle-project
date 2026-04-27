@@ -615,6 +615,132 @@ class SpineOrchestrator:
             event_ids=[f"quiz_{task_id}"],
         )
 
+    # ── P9: File Upload → Galaxy Node Mapping ──────────────────────────
+
+    async def on_file_uploaded(
+        self,
+        *,
+        user_id: str,
+        file_id: str,
+        filename: str,
+        parsed_summary: str = "",
+        goal_id: str | None = None,
+        mime_type: str = "application/octet-stream",
+    ) -> CausalTrace | None:
+        """
+        文件上传事件 → 知识星图节点语义映射 → source_material signal → pipeline。
+
+        Iron Rule: 本方法不写 UserNodeStatus，不修改 mastery_score。
+        GalaxyService 仅做只读语义检索（semantic_search_nodes）。
+        映射结果存入 Redis 供 Flutter 星图节点高亮消费。
+
+        Demo Experience Point #2: 上传资料后，知识星图节点被点亮。
+        """
+        import json
+        from datetime import datetime, timezone
+
+        # Step 1: 语义检索匹配知识节点（只读，不修改任何 mastery）
+        matched_nodes: list[dict[str, Any]] = []
+        if parsed_summary.strip():
+            try:
+                from app.db.session import AsyncSessionLocal
+                from app.services.galaxy_service import GalaxyService
+                async with AsyncSessionLocal() as db:
+                    galaxy = GalaxyService(db)
+                    nodes = await galaxy.semantic_search_nodes(
+                        parsed_summary,
+                        limit=5,
+                        threshold=0.15,
+                    )
+                    for n in nodes:
+                        matched_nodes.append({
+                            "node_id": str(n.id),
+                            "node_name": getattr(n, "name", str(n.id)),
+                        })
+            except Exception as galaxy_err:
+                logger.debug("P9 Galaxy node mapping skipped: {}", galaxy_err)
+
+        # Step 2: 存储映射结果到 Redis（7天 TTL，供 Flutter 读取高亮节点）
+        node_ids = [m["node_id"] for m in matched_nodes]
+        mapping_key = f"spine:file_nodes:{user_id}:{file_id}"
+        await self.redis.set(
+            mapping_key,
+            json.dumps({
+                "file_id": file_id,
+                "filename": filename,
+                "goal_id": goal_id,
+                "mime_type": mime_type,
+                "mapped_nodes": matched_nodes,
+                "mapped_at": datetime.now(timezone.utc).isoformat(),
+            }),
+            ex=7 * 24 * 3600,
+        )
+
+        # Step 3: 注册到 MaterialSignalDetector（供后续利用率监测使用）
+        await self.material_signal_detector.register_uploaded_file(
+            user_id=user_id,
+            file_id=file_id,
+            filename=filename,
+            node_ids=node_ids,
+        )
+
+        # Step 4: 生成 source_material:material_received signal
+        confidence = 0.75 if matched_nodes else 0.45
+        node_names = [m["node_name"] for m in matched_nodes[:3]]
+        signal = ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[file_id],
+            source_system="file_integration",
+            state_key="source_material",
+            claim="material_received",
+            confidence=confidence,
+            scope="current_sprint",
+            ttl_hours=168,  # 7 days
+            evidence_summary=(
+                f"用户上传了课件「{filename}」。"
+                + (
+                    f"语义检索匹配到 {len(matched_nodes)} 个知识节点：{', '.join(node_names)}。"
+                    if matched_nodes
+                    else "暂未匹配到相关知识节点，待索引建立后重新匹配。"
+                )
+            ),
+            possible_effects=[
+                "highlight_galaxy_nodes",
+                "prefer_targeted_source_rag",
+                "suggest_material_review",
+            ],
+            priority="medium",
+        )
+
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=[f"file_{file_id}"],
+        )
+
+    async def get_file_node_mapping(
+        self,
+        *,
+        user_id: str,
+        file_id: str,
+    ) -> dict[str, Any] | None:
+        """
+        读取文件-知识节点映射（供 Flutter 星图高亮消费）。
+
+        Returns:
+            dict with keys: file_id, filename, goal_id, mapped_nodes, mapped_at
+            None if no mapping found.
+        """
+        import json
+        mapping_key = f"spine:file_nodes:{user_id}:{file_id}"
+        raw = await self.redis.get(mapping_key)
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return None
+
     # ── P1 Integration: Recall Opportunity ─────────────────────────────
 
     async def on_recall_check(
