@@ -14471,8 +14471,8 @@ def test_p4_5_anonymized_stat_large_cohort():
     stat = engine.compute_anonymized_stat("task_completion_rate", raw, epsilon=1.0)
     assert stat.is_reliable is True
     assert stat.cohort_size == 10
-    # Value is noised — just check it's in a plausible range
-    assert 0.0 <= stat.value <= 1.5
+    # Value is noised with Laplace(scale=1) — wide plausible range
+    assert -1.0 <= stat.value <= 3.0
     d = stat.to_dict()
     assert "noise_std" in d
     assert d["noise_std"] > 0
@@ -16700,3 +16700,272 @@ def test_p4_4_registry_to_dict():
     assert d["total_cards"] == 2
     assert d["active_cards"] == 2
     assert len(d["cards"]) == 2
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-5: Privacy-Preserving Community Intelligence v2
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_5_temporal_privacy_budget_creation():
+    """TemporalPrivacyBudget enforces per-window query caps."""
+    from app.signals.privacy_community_intelligence import TemporalPrivacyBudget
+
+    budget = TemporalPrivacyBudget(user_id="u1")
+    assert budget.can_query()["allowed"]
+    assert budget.hourly_count == 0
+
+
+def test_p4_5_temporal_privacy_budget_hourly_cap():
+    """TemporalPrivacyBudget blocks queries after hourly cap exhausted."""
+    from app.signals.privacy_community_intelligence import TemporalPrivacyBudget
+
+    budget = TemporalPrivacyBudget(
+        user_id="u1", max_hourly_queries=3,
+        max_daily_queries=100, max_weekly_queries=500,
+    )
+    for _ in range(3):
+        result = budget.record_query()
+        assert result["recorded"]
+
+    # 4th query blocked
+    result = budget.record_query()
+    assert not result["recorded"]
+    assert budget.exhausted
+
+
+def test_p4_5_temporal_privacy_budget_daily_cap():
+    """TemporalPrivacyBudget blocks queries after daily cap."""
+    from app.signals.privacy_community_intelligence import TemporalPrivacyBudget
+
+    budget = TemporalPrivacyBudget(
+        user_id="u1", max_hourly_queries=100,
+        max_daily_queries=2, max_weekly_queries=500,
+    )
+    budget.record_query()
+    budget.record_query()
+    assert not budget.record_query()["recorded"]
+    assert budget.exhausted
+
+
+def test_p4_5_temporal_privacy_budget_renew():
+    """TemporalPrivacyBudget can be renewed at window boundary."""
+    from app.signals.privacy_community_intelligence import TemporalPrivacyBudget
+
+    budget = TemporalPrivacyBudget(
+        user_id="u1", max_hourly_queries=1,
+        max_daily_queries=100, max_weekly_queries=500,
+    )
+    budget.record_query()
+    assert budget.exhausted
+
+    renewed = budget.try_renew(current_window_start="2026-04-28T00:00:00")
+    assert renewed
+    assert not budget.exhausted
+    assert budget.hourly_count == 0
+
+
+def test_p4_5_cohort_drift_detection_growing():
+    """CohortDriftDetector detects growing cohort."""
+    from app.signals.privacy_community_intelligence import CohortDriftDetector
+
+    report = CohortDriftDetector.compute_drift(initial_size=10, current_size=25)
+    assert report.drift_detected
+    assert report.direction == "growing"
+    assert report.requires_requery
+
+
+def test_p4_5_cohort_drift_detection_shrinking():
+    """CohortDriftDetector detects shrinking cohort."""
+    from app.signals.privacy_community_intelligence import CohortDriftDetector
+
+    report = CohortDriftDetector.compute_drift(initial_size=100, current_size=60)
+    assert report.drift_detected
+    assert report.direction == "shrinking"
+
+
+def test_p4_5_cohort_drift_detection_stable():
+    """CohortDriftDetector treats small changes as stable."""
+    from app.signals.privacy_community_intelligence import CohortDriftDetector
+
+    report = CohortDriftDetector.compute_drift(initial_size=100, current_size=105)
+    assert not report.drift_detected
+    assert report.direction == "stable"
+    assert not report.requires_requery
+
+
+def test_p4_5_cohort_drift_criteria_shift():
+    """Criteria changes trigger drift regardless of size change."""
+    from app.signals.privacy_community_intelligence import CohortDriftDetector
+
+    report = CohortDriftDetector.compute_drift(
+        initial_size=100, current_size=100,
+        initial_criteria={"goal_type": "exam"},
+        current_criteria={"goal_type": "project"},
+    )
+    assert report.drift_detected
+    assert report.direction == "shifting"
+
+
+def test_p4_5_drift_should_refresh():
+    """should_refresh returns refresh decision with priority."""
+    from app.signals.privacy_community_intelligence import (
+        CohortDriftDetector, CohortDriftReport,
+    )
+
+    shrinking = CohortDriftReport(
+        cohort_id="c1", initial_member_count=100,
+        current_member_count=70, drift_detected=True, direction="shrinking",
+    )
+    decision = CohortDriftDetector.should_refresh(shrinking)
+    assert decision["refresh"]
+    assert decision["priority"] == "high"
+
+    stable = CohortDriftReport(
+        cohort_id="c2", initial_member_count=100,
+        current_member_count=95, drift_detected=False, direction="stable",
+    )
+    decision = CohortDriftDetector.should_refresh(stable)
+    assert not decision["refresh"]
+
+
+def test_p4_5_federated_insight_creation():
+    """FederatedInsight carries audit trail data."""
+    from app.signals.privacy_community_intelligence import FederatedInsight
+
+    insight = FederatedInsight(
+        insight_type="cross_cohort_trend",
+        description="Exam sprint users who adopt survival mode show 40% better outcomes",
+        contributing_cohort_ids=["coh_1", "coh_2"],
+        confidence=0.7,
+        privacy_cost=0.3,
+    )
+    assert insight.insight_id.startswith("fi")
+    assert insight.requires_human_review
+    assert insight.status == "candidate"
+
+    d = insight.to_dict()
+    assert d["insight_type"] == "cross_cohort_trend"
+    assert d["confidence"] == 0.7
+
+
+def test_p4_5_secure_aggregation_federated_average():
+    """SecureAggregationEngine computes weighted average across cohorts."""
+    from app.signals.privacy_community_intelligence import (
+        SecureAggregationEngine, AnonymizedCohortStat,
+    )
+
+    stat1 = AnonymizedCohortStat(
+        stat_id="s1", stat_name="completion_rate",
+        cohort_size=50, value=0.75, noise_std=0.05, is_reliable=True,
+        confidence_interval=(0.70, 0.80),
+    )
+    stat2 = AnonymizedCohortStat(
+        stat_id="s2", stat_name="completion_rate",
+        cohort_size=100, value=0.85, noise_std=0.03, is_reliable=True,
+        confidence_interval=(0.82, 0.88),
+    )
+    stat3 = AnonymizedCohortStat(
+        stat_id="s3", stat_name="completion_rate",
+        cohort_size=3, value=0.90, noise_std=0.10, is_reliable=False,
+        confidence_interval=(0.0, 0.0),
+    )
+
+    result = SecureAggregationEngine.federated_average([stat1, stat2, stat3])
+    assert result["computed"]
+    assert result["cohorts_contributing"] == 2  # stat3 excluded
+    assert result["total_members"] == 150
+    assert result["value"] > 0
+
+
+def test_p4_5_secure_aggregation_insufficient_cohorts():
+    """Federated average requires minimum reliable cohorts."""
+    from app.signals.privacy_community_intelligence import (
+        SecureAggregationEngine, AnonymizedCohortStat,
+    )
+
+    stat = AnonymizedCohortStat(
+        stat_id="s1", stat_name="completion_rate",
+        cohort_size=20, value=0.75, noise_std=0.05, is_reliable=True,
+        confidence_interval=(0.70, 0.80),
+    )
+    result = SecureAggregationEngine.federated_average([stat], min_reliable_cohorts=2)
+    assert not result["computed"]
+    assert result["value"] is None
+
+
+def test_p4_5_secure_aggregation_audit_trail():
+    """Audit trail shows which cohorts contributed to an insight."""
+    from app.signals.privacy_community_intelligence import (
+        SecureAggregationEngine, FederatedInsight, PrivacyPreservingCohort,
+    )
+
+    cohorts = {
+        "coh_1": PrivacyPreservingCohort(
+            cohort_id="coh_1", cohort_criteria={"goal_type": "exam"},
+            member_count=50,
+        ),
+        "coh_2": PrivacyPreservingCohort(
+            cohort_id="coh_2", cohort_criteria={"goal_type": "project"},
+            member_count=30,
+        ),
+    }
+
+    insight = FederatedInsight(
+        insight_type="cross_cohort_trend",
+        description="Cross-domain strategy transfer detected",
+        contributing_cohort_ids=["coh_1", "coh_2"],
+        confidence=0.8, privacy_cost=0.5,
+    )
+
+    trail = SecureAggregationEngine.audit_trail(insight, cohorts)
+    assert trail["cohorts_audited"] == 2
+    assert trail["verifiable"]
+    assert len(trail["entries"]) == 2
+
+
+def test_p4_5_privacy_preserving_rank():
+    """Privacy-preserving rank suppresses items below privacy floor."""
+    from app.signals.privacy_community_intelligence import SecureAggregationEngine
+
+    items = [
+        {"name": "A", "value": 0.9, "cohort_size": 50},
+        {"name": "B", "value": 0.8, "cohort_size": 3},   # Below floor
+        {"name": "C", "value": 0.7, "cohort_size": 30},
+        {"name": "D", "value": 0.95, "cohort_size": 2},  # Below floor
+    ]
+    ranked = SecureAggregationEngine.privacy_preserving_rank(items, score_key="value")
+    # A and C get ranked
+    visible = [r for r in ranked if r.get("rank_reason") != "below_privacy_floor"]
+    suppressed = [r for r in ranked if r.get("rank_reason") == "below_privacy_floor"]
+    assert len(visible) == 2
+    assert len(suppressed) == 2
+    assert visible[0]["name"] == "A"  # 0.9 > 0.7
+
+
+def test_p4_5_anonymized_stat_small_cohort():
+    """compute_anonymized_stat returns unreliable for small cohorts."""
+    from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
+
+    engine = PrivacyPreservingCommunityEngine()
+    stat = engine.compute_anonymized_stat("test_stat", [1.0, 2.0, 3.0])  # n=3 < 5
+    assert not stat.is_reliable
+    assert stat.cohort_size == 3
+
+
+def test_p4_5_community_engine_cohort_tier_auto():
+    """PrivacyPreservingCohort auto-determines privacy tier."""
+    from app.signals.privacy_community_intelligence import (
+        PrivacyPreservingCommunityEngine,
+    )
+
+    engine = PrivacyPreservingCommunityEngine()
+
+    tiny = engine.create_cohort({"goal_type": "exam"}, member_count=3)
+    assert tiny.privacy_tier == "suppressed"
+
+    small = engine.create_cohort({"goal_type": "exam"}, member_count=10)
+    assert small.privacy_tier == "trend_only"
+
+    large = engine.create_cohort({"goal_type": "exam"}, member_count=50)
+    assert large.privacy_tier == "anonymous_aggregate"

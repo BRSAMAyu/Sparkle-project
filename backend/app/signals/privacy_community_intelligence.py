@@ -352,3 +352,317 @@ class PrivacyPreservingCommunityEngine:
                 "No individual user data is exposed."
             ),
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-5 v2: Temporal Privacy Budget + Cohort Drift + Secure Aggregation
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class TemporalPrivacyBudget:
+    """Privacy budget with time-windowed spending and renewal.
+
+    Key protocol:
+    - Short windows (hourly) have strict caps
+    - Longer windows (daily/weekly) allow more queries
+    - Budget renews at window boundaries
+    - Exhaustion triggers graceful degradation, never data leak
+    """
+    user_id: str
+    epsilon_per_query: float = 0.1
+    max_hourly_queries: int = 5
+    max_daily_queries: int = 30
+    max_weekly_queries: int = 100
+    hourly_count: int = 0
+    daily_count: int = 0
+    weekly_count: int = 0
+    total_queries: int = 0
+    exhausted: bool = False
+    exhaustion_reason: str = ""
+    window_start: str = field(default_factory=_utcnow)
+    last_query_at: str = ""
+
+    def can_query(self) -> dict[str, Any]:
+        """Check if any time window has remaining capacity."""
+        if self.exhausted:
+            return {"allowed": False, "reason": f"budget_exhausted: {self.exhaustion_reason}"}
+        if self.hourly_count >= self.max_hourly_queries:
+            return {"allowed": False, "reason": "hourly_cap_exceeded"}
+        if self.daily_count >= self.max_daily_queries:
+            return {"allowed": False, "reason": "daily_cap_exceeded"}
+        if self.weekly_count >= self.max_weekly_queries:
+            return {"allowed": False, "reason": "weekly_cap_exceeded"}
+        return {"allowed": True, "reason": "ok"}
+
+    def record_query(self) -> dict[str, Any]:
+        """Record a query against this budget. Auto-exhausts if any cap is hit."""
+        check = self.can_query()
+        if not check["allowed"]:
+            self.exhausted = True
+            self.exhaustion_reason = check["reason"]
+            return {"recorded": False, **check}
+
+        self.hourly_count += 1
+        self.daily_count += 1
+        self.weekly_count += 1
+        self.total_queries += 1
+        self.last_query_at = _utcnow()
+
+        # Check if this query exhausted any window
+        if self.hourly_count >= self.max_hourly_queries:
+            self.exhausted = True
+            self.exhaustion_reason = "hourly_cap_hit"
+
+        return {"recorded": True, "remaining_hourly": self.max_hourly_queries - self.hourly_count}
+
+    def try_renew(self, current_window_start: str | None = None) -> bool:
+        """Attempt to renew budget (e.g., at hour/day/week boundary)."""
+        # Simplified: reset if explicitly called with new window
+        if current_window_start and current_window_start != self.window_start:
+            self.hourly_count = 0
+            self.daily_count = 0
+            self.weekly_count = 0
+            self.exhausted = False
+            self.exhaustion_reason = ""
+            self.window_start = current_window_start
+            return True
+        return False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "user_id": self.user_id,
+            "hourly_used": self.hourly_count,
+            "daily_used": self.daily_count,
+            "weekly_used": self.weekly_count,
+            "total_queries": self.total_queries,
+            "exhausted": self.exhausted,
+            "exhaustion_reason": self.exhaustion_reason,
+            "can_query": self.can_query()["allowed"],
+        }
+
+
+@dataclass
+class CohortDriftReport:
+    """Report on cohort composition changes over time."""
+    cohort_id: str
+    initial_member_count: int
+    current_member_count: int
+    drift_detected: bool = False
+    drift_magnitude: float = 0.0          # 0-1 normalized
+    direction: str = "stable"             # "growing" | "shrinking" | "shifting" | "stable"
+    criteria_shifts: dict[str, Any] = field(default_factory=dict)
+    requires_requery: bool = False
+    generated_at: str = field(default_factory=_utcnow)
+
+
+class CohortDriftDetector:
+    """Detect when cohort composition has shifted enough to warrant re-computation.
+
+    Key rule: if a cohort changes >20% in size or composition, re-query the
+    privacy engine to refresh aggregate stats. Stale cohort stats mislead users.
+    """
+
+    DRIFT_THRESHOLD = 0.2  # 20% change triggers re-query recommendation
+
+    @classmethod
+    def compute_drift(
+        cls,
+        initial_size: int,
+        current_size: int,
+        *,
+        initial_criteria: dict[str, str] | None = None,
+        current_criteria: dict[str, str] | None = None,
+    ) -> CohortDriftReport:
+        """Compute drift between initial and current cohort state."""
+        if initial_size == 0:
+            return CohortDriftReport(
+                cohort_id="unknown",
+                initial_member_count=0,
+                current_member_count=current_size,
+                drift_detected=True,
+                drift_magnitude=1.0,
+                direction="growing",
+                requires_requery=True,
+            )
+
+        magnitude = abs(current_size - initial_size) / initial_size
+        drift_detected = magnitude >= cls.DRIFT_THRESHOLD
+
+        direction = "stable"
+        if current_size > initial_size * 1.2:
+            direction = "growing"
+        elif current_size < initial_size * 0.8:
+            direction = "shrinking"
+
+        # Check criteria changes
+        criteria_shifts = {}
+        if initial_criteria and current_criteria:
+            for key in set(initial_criteria.keys()) | set(current_criteria.keys()):
+                old_val = initial_criteria.get(key, "")
+                new_val = current_criteria.get(key, "")
+                if old_val != new_val:
+                    criteria_shifts[key] = {"from": old_val, "to": new_val}
+            if criteria_shifts:
+                direction = "shifting"
+                drift_detected = True
+
+        return CohortDriftReport(
+            cohort_id="unknown",
+            initial_member_count=initial_size,
+            current_member_count=current_size,
+            drift_detected=drift_detected,
+            drift_magnitude=round(min(magnitude, 1.0), 3),
+            direction=direction,
+            criteria_shifts=criteria_shifts,
+            requires_requery=drift_detected,
+        )
+
+    @classmethod
+    def should_refresh(cls, report: CohortDriftReport) -> dict[str, Any]:
+        """Decision: should we spend privacy budget to refresh this cohort?"""
+        if not report.drift_detected:
+            return {"refresh": False, "reason": "no_significant_drift"}
+        if report.direction == "shrinking":
+            return {"refresh": True, "reason": "cohort_shrinking", "priority": "high"}
+        if report.direction == "shifting":
+            return {"refresh": True, "reason": "criteria_changed", "priority": "high"}
+        if report.direction == "growing":
+            return {"refresh": True, "reason": "cohort_growing", "priority": "medium"}
+        return {"refresh": False, "reason": "stable"}
+
+
+@dataclass
+class FederatedInsight:
+    """Cross-cohort insight derived without raw data sharing.
+
+    All insights carry audit trail showing which cohorts contributed,
+    when, and at what privacy cost.
+    """
+    insight_id: str = ""
+    insight_type: str = ""               # "cross_cohort_trend" | "strategy_transfer" | "risk_signal"
+    description: str = ""
+    contributing_cohort_ids: list[str] = field(default_factory=list)
+    confidence: float = 0.0              # 0-1, derived from cohort sizes and epsilon
+    privacy_cost: float = 0.0            # Total epsilon spent to derive this insight
+    requires_human_review: bool = True   # Federated insights always need review
+    status: str = "candidate"            # "candidate" | "reviewed" | "published" | "rejected"
+    generated_at: str = field(default_factory=_utcnow)
+
+    def __post_init__(self):
+        if not self.insight_id:
+            self.insight_id = _uid("fi")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "insight_id": self.insight_id,
+            "insight_type": self.insight_type,
+            "description": self.description,
+            "contributing_cohort_ids": self.contributing_cohort_ids,
+            "confidence": self.confidence,
+            "privacy_cost": self.privacy_cost,
+            "requires_human_review": self.requires_human_review,
+            "status": self.status,
+            "generated_at": self.generated_at,
+        }
+
+
+class SecureAggregationEngine:
+    """Privacy-preserving cross-cohort aggregation.
+
+    All aggregations:
+    - Never expose individual data
+    - Carry privacy cost (epsilon spent)
+    - Require minimum cohort sizes
+    - Produce audit trail
+    """
+
+    @staticmethod
+    def federated_average(
+        cohort_stats: list[AnonymizedCohortStat],
+        *,
+        min_reliable_cohorts: int = 2,
+    ) -> dict[str, Any]:
+        """Compute a privacy-preserving average across cohorts.
+
+        Each cohort contributes its already-noised stat. The result is a
+        meta-aggregate that doesn't touch raw data.
+        """
+        reliable = [s for s in cohort_stats if s.is_reliable]
+        if len(reliable) < min_reliable_cohorts:
+            return {
+                "computed": False,
+                "reason": f"Only {len(reliable)} reliable cohorts, need {min_reliable_cohorts}",
+                "value": None,
+            }
+
+        # Weight by cohort size (larger cohorts get more weight)
+        total_weight = sum(s.cohort_size for s in reliable)
+        weighted_avg = sum(s.value * s.cohort_size for s in reliable) / total_weight if total_weight > 0 else 0
+
+        # Meta noise: combined standard error
+        import math
+        combined_noise = math.sqrt(sum(s.noise_std ** 2 for s in reliable)) / len(reliable)
+
+        return {
+            "computed": True,
+            "value": round(weighted_avg, 4),
+            "meta_noise_std": round(combined_noise, 4),
+            "cohorts_contributing": len(reliable),
+            "total_members": sum(s.cohort_size for s in reliable),
+        }
+
+    @staticmethod
+    def privacy_preserving_rank(
+        items: list[dict[str, Any]],
+        *,
+        score_key: str = "value",
+        privacy_floor: int = 5,
+    ) -> list[dict[str, Any]]:
+        """Rank items with privacy protection: items below floor get 'suppressed'."""
+        ranked = []
+        for item in items:
+            if item.get("cohort_size", 0) < privacy_floor:
+                ranked.append({**item, "rank": None, "rank_reason": "below_privacy_floor"})
+            else:
+                ranked.append({**item, "rank": None})  # Will fill after sorting
+
+        # Sort rankable items by score
+        rankable = [r for r in ranked if r["rank"] is not None or r.get("rank_reason") != "below_privacy_floor"]
+
+        # Actually, let me fix the logic:
+        visible = [r for r in ranked if r.get("rank_reason") != "below_privacy_floor"]
+        suppressed = [r for r in ranked if r.get("rank_reason") == "below_privacy_floor"]
+
+        visible.sort(key=lambda x: x.get(score_key, 0), reverse=True)
+        for i, item in enumerate(visible):
+            item["rank"] = i + 1
+
+        return visible + suppressed
+
+    @staticmethod
+    def audit_trail(
+        insight: FederatedInsight,
+        cohorts: dict[str, PrivacyPreservingCohort],
+    ) -> dict[str, Any]:
+        """Generate audit trail for a federated insight."""
+        trail_entries = []
+        for cid in insight.contributing_cohort_ids:
+            cohort = cohorts.get(cid)
+            if cohort:
+                trail_entries.append({
+                    "cohort_id": cid,
+                    "member_count": cohort.member_count,
+                    "privacy_tier": cohort.privacy_tier,
+                    "criteria": cohort.cohort_criteria,
+                    "contributed_at": insight.generated_at,
+                })
+
+        return {
+            "insight_id": insight.insight_id,
+            "privacy_cost": insight.privacy_cost,
+            "confidence": insight.confidence,
+            "cohorts_audited": len(trail_entries),
+            "entries": trail_entries,
+            "verifiable": len(trail_entries) >= 2,  # At least 2 cohorts to cross-verify
+        }

@@ -76,9 +76,14 @@ from app.signals.learning_base import LearningBase, StrategyBelief
 from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
 from app.signals.privacy_community_intelligence import (
     AnonymizedCohortStat,
+    CohortDriftDetector,
+    CohortDriftReport,
+    FederatedInsight,
     PrivacyBudget,
     PrivacyPreservingCohort,
     PrivacyPreservingCommunityEngine,
+    SecureAggregationEngine,
+    TemporalPrivacyBudget,
 )
 from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
 from app.signals.relationship_model import RelationshipModelService, RelationshipState
@@ -174,6 +179,8 @@ __all__ = [
     "CalendarSignalBridge",
     "CausalTrace",
     "ChronicleEntry",
+    "CohortDriftDetector",
+    "CohortDriftReport",
     "CoreSession",
     "CoreSessionManager",
     "CommunityDirective",
@@ -201,6 +208,7 @@ __all__ = [
     "ExternalRawEvent",
     "ExternalToolBridge",
     "ExternalToolSignal",
+    "FederatedInsight",
     "FileIntegration",
     "FileReference",
     "GitHubRepoBridge",
@@ -257,6 +265,7 @@ __all__ = [
     "SafeExperimentRegistry",
     "SafePolicyExperiment",
     "ScenarioSimulator",
+    "SecureAggregationEngine",
     "ScenarioStep",
     "SimulatedUserProfile",
     "SparkleGoalBench",
@@ -280,6 +289,7 @@ __all__ = [
     "TaskCardProtocol",
     "TaskCardValidator",
     "TASK_TYPES",
+    "TemporalPrivacyBudget",
     "TestScenario",
     "TraceReplaySimulator",
     "TrustOutcome",
