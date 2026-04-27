@@ -103,4 +103,33 @@
 
 ---
 
+### Phase: v2.9 Production Wiring — 接通真实生产路径
+
+**动作**:
+- 发现 ProductionChatOrchestrator 是遗留死代码，真正的生产路径是 orchestrator.py → standard_workflow.py
+- 在 orchestrator.py::process_stream() 中增加 ResponseDirective / RetrievalDirective / GrowthChronicle / FatigueGuard 的 fetch
+- 在 standard_workflow.py 中将 spine 参数传递给 build_system_prompt() 和 RAG retrieval
+- 新增 AuroraControlSignal envelope 和 AuroraAgendaItem 数据类型
+- 修复 linter 添加的类型和 pipeline 变更（directive_id 收集 + control signal 存储）
+- 5 个新 production wiring tests
+
+**审查**:
+- 600/600 tests passing
+- 4 个 commits: v2.9 wiring, AuroraControlSignal, test imports, dashboard
+
+**关键设计决策**:
+- 在 orchestrator.py 已有的 spine block 中扩展 fetch，不新建 spine 块
+- ResponseDirective 通过 build_system_prompt() 的 spine_response_directive 参数注入
+- RetrievalDirective 通过覆盖 RAG depth/mode 在 graph retrieval 中注入
+- Chronicle 和 Fatigue 只在 level >= medium 时注入（避免噪声）
+- 所有 spine fetch 保持在 try/except 中，spine 故障不影响主流程
+- AuroraControlSignal 存储 spine:aurora_control_signal:{user_id}:latest (72h TTL)
+
+**差距**:
+- Production path 现在接通了 4/7 directive types (Response, Retrieval, Plan via planning_workflow, Execution via exam_sprint)
+- NotificationDirective, ModelWriteDirective, UXDirective, CommunityDirective, SkillDirective 仍通过 Redis 存储 + 独立 consumer
+- AuroraAgendaItem 数据类型已定义但 Core Session 多消息流程未实现
+
+---
+
 *（后续日志按时间追加）*

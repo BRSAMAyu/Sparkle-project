@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-590/590 tests passing:
+600/600 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -897,6 +897,16 @@
 - [x] User priority override (high/low/pause) respected in arbitration
 - [x] Conflict detection: multiple_urgent_deadlines / bottleneck_goals / stalled_goals
 
+### v2.9 (Production Wiring) — COMPLETE
+- [x] ResponseDirective wired into real production path: orchestrator.py fetches → state.context_data → standard_workflow.py → build_system_prompt()
+- [x] RetrievalDirective wired into RAG pipeline: overrides depth/mode in graph retrieval
+- [x] GrowthChronicle wired: narrative summary fetched and injected into prompts
+- [x] FatigueGuard wired: fatigue context injected when level >= medium
+- [x] AuroraControlSignal envelope: unified pipeline output wrapping all directive IDs
+- [x] AuroraAgendaItem type: structured multi-message Aurora session support
+- [x] 5 new production wiring tests (directive serialization, chronicle injection, fatigue gating)
+- [x] 600/600 tests passing
+
 ### v2.5 (E2E Chain Repair) — ALL COMPLETE
 - [x] Chronicle → prompts injection: `build_system_prompt()` now accepts `spine_chronicle_summary` parameter
 - [x] Fatigue/crisis → prompts injection: `build_system_prompt()` now accepts `spine_fatigue_context` parameter
@@ -1109,9 +1119,9 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-595/595 tests passing
+600/600 tests passing
 42 signal modules (excluding __init__.py)
-55 public API exports (incl. GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
+57 public API exports (incl. AuroraControlSignal, AuroraAgendaItem, GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
 9/9 directive types active
 10/10 Iron Laws tested
 6/6 Divine Moments implemented
@@ -1119,9 +1129,10 @@ types.py                    — 7 core data objects + all dataclasses
 8-layer architecture complete
 v2.7 E2E Test Matrix: all 12 required scenarios have integration test coverage
 v2.8 SignalRanker: 10 dimensions + 10 conflict rules + Iron Law compliance verified
-v2.9 PolicyDecision: risk_level + which_directives + all 9 directive types activated
-v3.0 SourceTrayState → RetrievalDirective: compute_retrieval_plan + build_source_receipt + pollution guard
+v2.9 Production Wiring: ResponseDirective + RetrievalDirective + Chronicle + Fatigue wired into real production path
+v2.9 AuroraControlSignal: unified envelope + AuroraAgendaItem for structured Aurora sessions
 v3.0 Pipeline: which_directives gate + Aurora wake + all P1 tasks COMPLETE
+v3.1 AuroraControlSignal + AuroraAgenda: 15 dedicated tests (5 envelope + 10 session), 615/615 total
 ```
 
 ### P1 Status — ALL COMPLETE

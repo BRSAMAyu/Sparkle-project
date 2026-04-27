@@ -11115,3 +11115,280 @@ async def test_v29_fatigue_context_high_injected():
     assert fatigue["fatigue_level"] in ("high", "critical")
     # This context would be injected into state.context_data["spine_fatigue_context"]
     assert "recommended_policy" in fatigue
+
+
+# ── v3.1: AuroraControlSignal envelope tests ──────────────────────────
+
+def test_aurora_control_signal_roundtrip():
+    """AuroraControlSignal serializes and deserializes correctly."""
+    cs = AuroraControlSignal(
+        control_id=_uid("ctrl"),
+        energy="full",
+        policy_decision_id="pd_001",
+        response_policy="task_recovery_support",
+        directive_ids={
+            "execution": "ed_001",
+            "response": "rd_001",
+            "retrieval": "rv_001",
+        },
+        risk_level="high",
+    )
+    d = cs.to_dict()
+    restored = AuroraControlSignal.from_dict(d)
+    assert restored.control_id == cs.control_id
+    assert restored.energy == "full"
+    assert restored.policy_decision_id == "pd_001"
+    assert restored.directive_ids["execution"] == "ed_001"
+    assert restored.risk_level == "high"
+    assert "created_at" in d
+
+
+def test_aurora_control_signal_default_risk():
+    """Default risk_level is 'medium'."""
+    cs = AuroraControlSignal(
+        control_id=_uid("ctrl"),
+        energy="light",
+        policy_decision_id="pd_002",
+        response_policy="normal",
+        directive_ids={},
+    )
+    assert cs.risk_level == "medium"
+    d = cs.to_dict()
+    assert d["risk_level"] == "medium"
+
+
+def test_aurora_control_signal_all_9_directive_types():
+    """All 9 directive types can be tracked in directive_ids."""
+    directive_ids = {
+        "response": "rd_1",
+        "execution": "ed_1",
+        "plan": "pld_1",
+        "retrieval": "rvd_1",
+        "model_write": "mwd_1",
+        "notification": "nd_1",
+        "ux": "uxd_1",
+        "skill": "sd_1",
+        "community": "cd_1",
+    }
+    cs = AuroraControlSignal(
+        control_id=_uid("ctrl"),
+        energy="full",
+        policy_decision_id="pd_003",
+        response_policy="full_aurora_wake",
+        directive_ids=directive_ids,
+        risk_level="critical",
+    )
+    assert len(cs.directive_ids) == 9
+    d = cs.to_dict()
+    assert len(d["directive_ids"]) == 9
+
+
+def test_aurora_control_signal_energy_values():
+    """All valid energy values are accepted."""
+    for energy in ("light", "medium", "full"):
+        cs = AuroraControlSignal(
+            control_id=_uid("ctrl"),
+            energy=energy,
+            policy_decision_id="pd_e",
+            response_policy="test",
+            directive_ids={},
+        )
+        assert cs.energy == energy
+
+
+# ── v3.1: AuroraAgenda tests ──────────────────────────────────────────
+
+def test_aurora_agenda_item_roundtrip():
+    """AuroraAgendaItem serializes and deserializes correctly."""
+    item = AuroraAgendaItem(
+        item_id=_uid("ai"),
+        item_type="explain_conflict",
+        status="pending",
+        payload={"conflict_key": "growth_momentum vs exam_rescue"},
+    )
+    d = item.to_dict()
+    restored = AuroraAgendaItem.from_dict(d)
+    assert restored.item_id == item.item_id
+    assert restored.item_type == "explain_conflict"
+    assert restored.status == "pending"
+    assert restored.payload["conflict_key"] == "growth_momentum vs exam_rescue"
+
+
+def test_aurora_agenda_roundtrip():
+    """AuroraAgenda serializes and deserializes correctly with items."""
+    items = [
+        AuroraAgendaItem(item_id="ai_1", item_type="confirm_available_time", status="done"),
+        AuroraAgendaItem(item_id="ai_2", item_type="update_strategy", status="in_progress"),
+        AuroraAgendaItem(item_id="ai_3", item_type="motivation_check", status="pending"),
+    ]
+    agenda = AuroraAgenda(
+        session_id=_uid("sess"),
+        scope="exam_sprint_day3",
+        agenda_items=items,
+        interruption_policy="answer_then_resume",
+    )
+    d = agenda.to_dict()
+    restored = AuroraAgenda.from_dict(d)
+    assert restored.session_id == agenda.session_id
+    assert len(restored.agenda_items) == 3
+    assert restored.agenda_items[0].status == "done"
+    assert restored.agenda_items[1].item_type == "update_strategy"
+    assert restored.interruption_policy == "answer_then_resume"
+
+
+def test_aurora_agenda_current_item():
+    """current_item() returns first non-done, non-interrupted item."""
+    items = [
+        AuroraAgendaItem(item_id="ai_1", item_type="confirm_time", status="done"),
+        AuroraAgendaItem(item_id="ai_2", item_type="update_strategy", status="interrupted"),
+        AuroraAgendaItem(item_id="ai_3", item_type="motivation_check", status="pending"),
+        AuroraAgendaItem(item_id="ai_4", item_type="relationship_check", status="pending"),
+    ]
+    agenda = AuroraAgenda(session_id="sess_1", scope="test", agenda_items=items)
+    current = agenda.current_item()
+    assert current is not None
+    assert current.item_id == "ai_3"
+
+
+def test_aurora_agenda_current_item_all_done():
+    """current_item() returns None when all items are done/interrupted."""
+    items = [
+        AuroraAgendaItem(item_id="ai_1", item_type="confirm_time", status="done"),
+        AuroraAgendaItem(item_id="ai_2", item_type="update_strategy", status="interrupted"),
+    ]
+    agenda = AuroraAgenda(session_id="sess_2", scope="test", agenda_items=items)
+    assert agenda.current_item() is None
+
+
+def test_aurora_agenda_current_item_empty():
+    """current_item() returns None for empty agenda."""
+    agenda = AuroraAgenda(session_id="sess_3", scope="test")
+    assert agenda.current_item() is None
+
+
+def test_aurora_agenda_advance():
+    """advance() updates the status of a specific item."""
+    items = [
+        AuroraAgendaItem(item_id="ai_1", item_type="confirm_time", status="pending"),
+        AuroraAgendaItem(item_id="ai_2", item_type="update_strategy", status="pending"),
+    ]
+    agenda = AuroraAgenda(session_id="sess_4", scope="test", agenda_items=items)
+    agenda.advance("ai_1", "done")
+    assert agenda.agenda_items[0].status == "done"
+    assert agenda.agenda_items[1].status == "pending"
+    # current_item now returns ai_2
+    current = agenda.current_item()
+    assert current is not None
+    assert current.item_id == "ai_2"
+
+
+def test_aurora_agenda_advance_nonexistent():
+    """advance() is a no-op for nonexistent item_id."""
+    items = [AuroraAgendaItem(item_id="ai_1", item_type="test", status="pending")]
+    agenda = AuroraAgenda(session_id="sess_5", scope="test", agenda_items=items)
+    agenda.advance("nonexistent", "done")
+    assert agenda.agenda_items[0].status == "pending"
+
+
+def test_aurora_agenda_item_types():
+    """All valid item_types are representable."""
+    valid_types = [
+        "explain_conflict", "confirm_available_time", "update_strategy",
+        "confirm_hypothesis", "relationship_check", "motivation_check",
+    ]
+    for t in valid_types:
+        item = AuroraAgendaItem(item_id=_uid("ai"), item_type=t, status="pending")
+        assert item.item_type == t
+
+
+def test_aurora_agenda_item_statuses():
+    """All valid statuses are representable."""
+    valid_statuses = ["pending", "in_progress", "waiting_user", "done", "interrupted"]
+    for s in valid_statuses:
+        item = AuroraAgendaItem(item_id=_uid("ai"), item_type="test", status=s)
+        assert item.status == s
+
+
+def test_aurora_control_signal_in_pipeline():
+    """Integration: PolicyEngine + AuroraControlSignal envelope wires correctly for a high-risk signal."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=["evt_deadline"],
+        source_system="goal_service",
+        state_key="goal_mode",
+        claim="exam_rescue_detected",
+        confidence=0.9,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="考试倒计时 < 7 天",
+        possible_effects=["seven_day_survival"],
+        priority="high",
+    )
+    result = asyncio.get_event_loop().run_until_complete(engine.evaluate(signal))
+    assert result is not None
+    policy, _directive = result
+    assert policy.risk_level == "high"
+    assert policy.which_directives.get("execution", False) is True
+
+    # Wrap in AuroraControlSignal envelope
+    envelope = AuroraControlSignal(
+        control_id=_uid("ctrl"),
+        energy="full",
+        policy_decision_id=policy.policy_decision_id,
+        response_policy=policy.primary_strategy,
+        directive_ids={"execution": _directive.directive_id} if _directive else {},
+        risk_level=policy.risk_level,
+    )
+    assert envelope.risk_level == "high"
+    assert envelope.policy_decision_id == policy.policy_decision_id
+    d = envelope.to_dict()
+    assert d["risk_level"] == "high"
+
+
+# ── v3.1: AuroraAgenda full-session simulation ────────────────────────
+
+def test_aurora_agenda_session_flow():
+    """Simulate a full Aurora session with multiple agenda items advancing."""
+    items = [
+        AuroraAgendaItem(item_id="ai_1", item_type="confirm_available_time", status="pending"),
+        AuroraAgendaItem(item_id="ai_2", item_type="explain_conflict", status="pending"),
+        AuroraAgendaItem(item_id="ai_3", item_type="update_strategy", status="pending"),
+    ]
+    agenda = AuroraAgenda(
+        session_id=_uid("sess"),
+        scope="exam_rescue_mode",
+        agenda_items=items,
+    )
+
+    # Step 1: Start first item
+    agenda.advance("ai_1", "in_progress")
+    assert agenda.current_item().item_id == "ai_1"
+    assert agenda.current_item().status == "in_progress"
+
+    # Step 2: User answers, first item done
+    agenda.advance("ai_1", "done")
+    current = agenda.current_item()
+    assert current.item_id == "ai_2"
+    assert current.status == "pending"
+
+    # Step 3: Explain conflict, then wait for user
+    agenda.advance("ai_2", "in_progress")
+    agenda.advance("ai_2", "waiting_user")
+    assert agenda.current_item().status == "waiting_user"
+
+    # Step 4: User responds, finish explanation
+    agenda.advance("ai_2", "done")
+    assert agenda.current_item().item_id == "ai_3"
+
+    # Step 5: Complete strategy update
+    agenda.advance("ai_3", "done")
+    assert agenda.current_item() is None
+    agenda.status = "completed"
+    assert agenda.status == "completed"
+
+    # Verify serialization preserves final state
+    d = agenda.to_dict()
+    restored = AuroraAgenda.from_dict(d)
+    assert restored.status == "completed"
+    assert all(i.status == "done" for i in restored.agenda_items)
