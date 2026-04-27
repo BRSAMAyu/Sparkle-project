@@ -187,7 +187,6 @@ __all__ = [
     "StateEntry",
     "StuckProtocol",
     "StrategyBelief",
-    "TaskCardBridge",
     "TaskCardBuilder",
     "TaskCardProtocol",
     "TaskCardValidator",
