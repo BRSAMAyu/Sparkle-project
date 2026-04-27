@@ -155,6 +155,7 @@ class ChatState {
     this.dualCoreMode,
     this.pendingStaleCard,
     this.pendingSpineReceipt,
+    this.pendingCommunityHint,
   });
 
   static const int maxRetainedMessages = 500;
@@ -216,6 +217,9 @@ class ChatState {
 
   /// Spine: pending UserVisibleReceipt card from orchestrator.
   final SpineReceiptEvent? pendingSpineReceipt;
+
+  /// Spine: pending community hint card — divine moment #6 "社群经验转策略".
+  final CommunityHintEvent? pendingCommunityHint;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -307,6 +311,8 @@ class ChatState {
     bool clearStaleCard = false,
     SpineReceiptEvent? pendingSpineReceipt,
     bool clearSpineReceipt = false,
+    CommunityHintEvent? pendingCommunityHint,
+    bool clearCommunityHint = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -399,5 +405,8 @@ class ChatState {
         pendingSpineReceipt: clearSpineReceipt
             ? null
             : pendingSpineReceipt ?? this.pendingSpineReceipt,
+        pendingCommunityHint: clearCommunityHint
+            ? null
+            : pendingCommunityHint ?? this.pendingCommunityHint,
       );
 }

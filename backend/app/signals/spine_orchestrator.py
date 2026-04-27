@@ -383,6 +383,18 @@ class SpineOrchestrator:
                 )
             except Exception as exc:
                 logger.warning("Failed to record user correction to self_model: {}", exc)
+
+            # Divine moment 2: 承认误判 — chronicle + relationship update
+            try:
+                await self.on_user_correction(
+                    user_id=user_id,
+                    correction_type="receipt_correction",
+                    original_claim="strategy_adjustment",
+                    corrected_understanding="user_disagreed_with_adjustment",
+                    trace_id=receipt_id,
+                )
+            except Exception as exc:
+                logger.debug("on_user_correction skipped: {}", exc)
         elif action == "confirm":
             await self.metrics.record_outcome_recorded(effective=True)
         elif action == "dismiss":
@@ -533,25 +545,52 @@ class SpineOrchestrator:
         signal: ActionableSignal,
         event_ids: list[str] | None = None,
     ) -> CausalTrace | None:
-        """通用 Signal → PolicyEngine → Directive → Trace 链路。"""
+        """通用 Signal → PolicyEngine → Directive → Trace 链路。Wrapped with circuit breaker."""
         import json
+        from app.signals.redis_resilience import resilient_redis_call
 
-        trace = await self.trace_store.create_trace()
+        trace = await resilient_redis_call(
+            "spine_pipeline", self.trace_store.create_trace(),
+            fallback=None,
+        )
+        if trace is None:
+            logger.warning("Spine pipeline skipped: trace creation failed for user={}", user_id)
+            return None
+
         if event_ids:
             trace.raw_event_ids.extend(event_ids)
-        await self.trace_store.link_to_user(user_id, trace.trace_id)
+        await resilient_redis_call(
+            "spine_pipeline",
+            self.trace_store.link_to_user(user_id, trace.trace_id),
+        )
 
-        await self.trace_store.store_signal(signal)
-        await self.trace_store.append_signal(trace.trace_id, signal)
-        trace.signal_ids.append(signal.signal_id)  # Keep local trace in sync
-        await self.metrics.record_signal_generated()
+        await resilient_redis_call(
+            "spine_pipeline", self.trace_store.store_signal(signal),
+        )
+        await resilient_redis_call(
+            "spine_pipeline",
+            self.trace_store.append_signal(trace.trace_id, signal),
+        )
+        trace.signal_ids.append(signal.signal_id)
+        await resilient_redis_call(
+            "spine_pipeline", self.metrics.record_signal_generated(),
+        )
 
         # Layer 4: Persist signal state to StateRegister
-        await self.state_register.upsert_from_signal(user_id, signal)
-        await self.metrics.record_signal_entered_state()
+        await resilient_redis_call(
+            "state_register",
+            self.state_register.upsert_from_signal(user_id, signal),
+        )
+        await resilient_redis_call(
+            "spine_pipeline", self.metrics.record_signal_entered_state(),
+        )
 
         # Fetch recent policy effects for shadow learning
-        recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+        recent_effects = await resilient_redis_call(
+            "spine_pipeline",
+            self.outcome_recorder.get_recent_policy_effects(user_id, limit=10),
+            fallback=[],
+        )
 
         result = await self.policy_engine.evaluate(
             signal,
@@ -589,6 +628,17 @@ class SpineOrchestrator:
         ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
         if ret_dir:
             await self._store_retrieval_directive(user_id, ret_dir)
+            # Divine moment 3: 知道不用资料 — build context receipt
+            try:
+                await self.build_context_receipt(
+                    user_id=user_id,
+                    used_sources=list(ret_dir.must_load or []),
+                    excluded_sources=list(ret_dir.do_not_load or []),
+                    reason=signal.evidence_summary or "",
+                    retrieval_mode=ret_dir.retrieval_mode,
+                )
+            except Exception:
+                pass
 
         # Build and store PlanDirective
         plan_dir = self.policy_engine.build_plan_directive(decision, signal)
@@ -712,7 +762,7 @@ class SpineOrchestrator:
         user_id: str,
         time_context: dict,
     ) -> CausalTrace | None:
-        """用户返回 → StaleStateGuard 检测 → trace。"""
+        """用户返回 → StaleStateGuard 检测 → trace + recovery card + snapshot recovery。"""
         from app.signals.stale_state_guard import TimeContext
         tc = TimeContext(**time_context)
         packet = self.stale_guard.check(tc)
@@ -726,6 +776,26 @@ class SpineOrchestrator:
         await self.trace_store._save_trace(trace)
 
         logger.info("Spine stale: user={} elapsed={}min", user_id, tc.elapsed_since_last_interaction_min)
+
+        # P2: Build recovery card for returning user (divine moment 4)
+        try:
+            await self.build_recovery_card(
+                user_id=user_id,
+                elapsed_minutes=tc.elapsed_since_last_interaction_min,
+            )
+        except Exception as exc:
+            logger.debug("build_recovery_card skipped: {}", exc)
+
+        # P2: Try to recover state from snapshot if states are empty (TTL expired)
+        try:
+            states = await self.state_register.get_active_states(user_id)
+            if not states:
+                recovered = await self.recover_from_snapshot(user_id=user_id)
+                if recovered:
+                    logger.info("Spine state recovered from snapshot for user={}", user_id)
+        except Exception as exc:
+            logger.debug("recover_from_snapshot skipped: {}", exc)
+
         return trace
 
     # ── P0-3 Integration: ActionableStatePacket ────────────────────────
@@ -812,6 +882,17 @@ class SpineOrchestrator:
         if hint is None:
             return None
         await self._store_community_loop_artifact(user_id, "cohort_mistake_hint", hint)
+
+        # Divine moment 6: 社群经验转策略
+        try:
+            await self.on_community_hint(
+                user_id=user_id,
+                knowledge_node=knowledge_node_id,
+                common_mistake=common_misconception,
+                cohort_size=cohort_size,
+            )
+        except Exception:
+            pass
 
         signal = self.community_detector.to_actionable_signal(pattern)
         return await self._run_signal_pipeline(
@@ -981,12 +1062,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
 
     async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
-        """获取用户当前 ResponseDirective。"""
-        import json
-        raw = await self.redis.get(f"spine:response_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 ResponseDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:response_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return ResponseDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_response_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return ResponseDirective.from_dict(json.loads(raw))
 
     async def _store_notification_directive(self, user_id: str, nd: NotificationDirective) -> None:
         """存储 NotificationDirective 供通知服务消费。"""
@@ -996,12 +1081,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
 
     async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
-        """获取用户当前 NotificationDirective。"""
-        import json
-        raw = await self.redis.get(f"spine:notification_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 NotificationDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:notification_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return NotificationDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_notification_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return NotificationDirective.from_dict(json.loads(raw))
 
     async def _store_recall_message(self, user_id: str, message: RecallMessage) -> None:
         """存储用户可见 RecallMessage 供通知服务消费。"""
@@ -1010,12 +1099,16 @@ class SpineOrchestrator:
         await self.redis.set(key, json.dumps(message.to_dict()), ex=72 * 3600)
 
     async def get_recall_notification(self, user_id: str) -> RecallMessage | None:
-        """获取用户当前 RecallMessage。"""
-        import json
-        raw = await self.redis.get(f"spine:recall_notification:{user_id}:latest")
-        if not raw:
+        """获取用户当前 RecallMessage。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:recall_notification:{user_id}:latest")
+            if not raw:
+                return None
+            return RecallMessage.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_recall_notification degraded: Redis unavailable for user={}", user_id)
             return None
-        return RecallMessage.from_dict(json.loads(raw))
 
     async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
         import json
@@ -1024,11 +1117,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
 
     async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
-        import json
-        raw = await self.redis.get(f"spine:retrieval_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 RetrievalDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:retrieval_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return RetrievalDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_retrieval_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return RetrievalDirective.from_dict(json.loads(raw))
 
     # ── Layer 6: PlanDirective ──────────────────────────────────────────
 
@@ -1039,11 +1137,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
 
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
-        import json
-        raw = await self.redis.get(f"spine:plan_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 PlanDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:plan_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return PlanDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_plan_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return PlanDirective.from_dict(json.loads(raw))
 
     # ── Layer 6: ModelWriteDirective ────────────────────────────────────
 
@@ -1054,11 +1157,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(mwd.directive_id, mwd.to_dict())
 
     async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
-        import json
-        raw = await self.redis.get(f"spine:model_write_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 ModelWriteDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:model_write_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return ModelWriteDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_model_write_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return ModelWriteDirective.from_dict(json.loads(raw))
 
     async def _apply_model_writes(self, user_id: str, mwd: ModelWriteDirective) -> None:
         """Apply model write claims to user state (confidence-gated, auto-apply only)."""
@@ -1097,11 +1205,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
 
     async def get_ux_directive(self, user_id: str) -> UXDirective | None:
-        import json
-        raw = await self.redis.get(f"spine:ux_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 UXDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:ux_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return UXDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_ux_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return UXDirective.from_dict(json.loads(raw))
 
     # ── P0-6: ExamSprintPolicy ──────────────────────────────────────────
 
@@ -1205,6 +1318,26 @@ class SpineOrchestrator:
         if not raw:
             return None
         return CommunityDirective.from_dict(json.loads(raw))
+
+    async def get_latest_community_hint(self, user_id: str) -> dict[str, Any] | None:
+        """Return the latest privacy-safe community hint for Flutter to render.
+
+        Checks cohort_mistake first, then partner_feedback.
+        Returns None if no hint or the directive has cohort_hint_shown=False.
+        """
+        import json
+        directive = await self.get_community_directive(user_id)
+        if directive and not directive.cohort_hint_shown:
+            return None
+
+        for artifact_type in ("cohort_mistake", "partner_feedback"):
+            raw = await self.redis.get(f"spine:community_loop:{user_id}:{artifact_type}:latest")
+            if raw:
+                try:
+                    return json.loads(raw)
+                except Exception:
+                    pass
+        return None
 
     # ── Layer 6: SkillDirective ──────────────────────────────────────────
 

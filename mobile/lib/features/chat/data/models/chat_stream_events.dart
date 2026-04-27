@@ -1694,6 +1694,32 @@ class StaleRecoveryEvent extends ChatStreamEvent {
   }
 }
 
+/// Community Insight Event — divine moment #6 "社群经验转策略"
+/// Emitted when backend returns a privacy-safe community hint in metadata.
+/// Backend key: response_metadata['spine_community_hint']
+class CommunityHintEvent extends ChatStreamEvent {
+  CommunityHintEvent({
+    required this.hintData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> hintData;
+
+  String get hintType => hintData['hint_type'] as String? ?? 'cohort_mistake';
+  String get title => hintData['title'] as String? ?? '社群洞察';
+  String get anonymousSummary => hintData['anonymous_summary'] as String? ?? '';
+  String get tip => hintData['tip'] as String? ?? '';
+
+  List<String> get affectedNodes {
+    final raw = hintData['affected_nodes'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}
+
 /// Spine Receipt Event
 /// Emitted when orchestrator returns a UserVisibleReceipt in metadata.
 /// Backend key: response_metadata['spine_receipt']

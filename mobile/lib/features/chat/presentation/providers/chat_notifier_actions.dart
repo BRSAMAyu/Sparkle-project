@@ -703,6 +703,10 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(clearSpineReceipt: true);
   }
 
+  void dismissCommunityHint() {
+    state = state.copyWith(clearCommunityHint: true);
+  }
+
   void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
     debugPrint('🔄 Sprint mode switch event received');
 

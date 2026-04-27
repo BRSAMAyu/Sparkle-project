@@ -435,6 +435,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Spine: Community hint card (divine moment #6 社群经验转策略)
+        if (metadata != null && metadata['spine_community_hint'] != null) {
+          final hintData = _decodeMapOrString(metadata['spine_community_hint']);
+          if (hintData != null) {
+            return CommunityHintEvent(
+              hintData: hintData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         return TextEvent(
           content: deltaContent,
           responseId: responseId,

@@ -1074,10 +1074,18 @@ class ProductionChatOrchestrator:
                 # UserVisibleReceipt → include in streaming metadata so Flutter can render it
                 _latest_receipt = await _spine.get_latest_receipt(str(user_id))
                 if _latest_receipt:
+                    _receipt_actions = list(_latest_receipt.actions or [])
+                    _correctable = "correct" in _receipt_actions
+                    _correction_options = (
+                        ["这个判断不准确", "我不同意这个调整", "继续，先看看效果"]
+                        if _correctable else []
+                    )
                     _spine_receipt_payload = {
                         "receipt_id": _latest_receipt.receipt_id,
-                        "message": _latest_receipt.message,
-                        "actions": _latest_receipt.actions,
+                        "trigger": _latest_receipt.receipt_type,
+                        "summary": _latest_receipt.message,
+                        "correctable": _correctable,
+                        "correction_options": _correction_options,
                     }
 
                 # StaleStateGuard → check if user returned after extended absence

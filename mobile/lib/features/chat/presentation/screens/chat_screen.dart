@@ -41,6 +41,8 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
@@ -1278,6 +1280,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onDismiss: () => ref
                             .read(chatProvider.notifier)
                             .dismissStaleCard(),
+                      ),
+                    // Spine: Aurora Judgment-Correction Card (divine moment #2 承认误判)
+                    if (chatState.pendingSpineReceipt != null)
+                      SpineReceiptCard(
+                        trigger: chatState.pendingSpineReceipt!.trigger,
+                        summary: chatState.pendingSpineReceipt!.summary,
+                        correctable: chatState.pendingSpineReceipt!.correctable,
+                        correctionOptions:
+                            chatState.pendingSpineReceipt!.correctionOptions,
+                        onCorrect: (correction) {
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissSpineReceipt();
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage(correction);
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissSpineReceipt(),
+                      ),
+                    // Spine: Community Insight Card (divine moment #6 社群经验转策略)
+                    if (chatState.pendingCommunityHint != null)
+                      CommunityInsightCard(
+                        hintType:
+                            chatState.pendingCommunityHint!.hintType,
+                        title: chatState.pendingCommunityHint!.title,
+                        anonymousSummary:
+                            chatState.pendingCommunityHint!.anonymousSummary,
+                        tip: chatState.pendingCommunityHint!.tip,
+                        onApply: () {
+                          final hint = chatState.pendingCommunityHint!;
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissCommunityHint();
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage(
+                                '参考社群建议：${hint.anonymousSummary}。${hint.tip}',
+                              );
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissCommunityHint(),
                       ),
                     SparkleExitTransition(
                       visible: chatState.pendingPlanReview != null,
