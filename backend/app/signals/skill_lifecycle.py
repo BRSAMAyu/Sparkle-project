@@ -123,19 +123,21 @@ class SkillLifecycleManager:
             return None
 
         avg_confidence = self._avg_confidence(skill)
+        user_options = [
+            {"action": "confirm", "label": "Use this"},
+            {"action": "not_now", "label": "Not now"},
+            {"action": "dont_suggest_again", "label": "Don't suggest again"},
+        ]
         return {
             "skill_id": skill.skill_id,
             "title": "发现一个对你有效的策略",
             "evidence_summary": (
-                f"这个策略已有效 {skill.effective_count} 次"
-                f"，平均置信度 {avg_confidence:.0%}。"
+                f"Worked {skill.effective_count}/{self._sample_size(skill)} times "
+                f"(avg confidence {avg_confidence:.0%})."
             ),
             "strategy_summary": skill.strategy.get("intervention_summary", ""),
-            "options": [
-                {"action": "confirm", "label": "以后继续用"},
-                {"action": "not_now", "label": "暂时不用"},
-                {"action": "dont_suggest_again", "label": "不再建议"},
-            ],
+            "user_options": user_options,
+            "options": user_options,
         }
 
     def validate_extraction(self, skill: SkillEntry) -> dict[str, Any]:
@@ -149,8 +151,12 @@ class SkillLifecycleManager:
             issues.append("missing_source_policy_key")
         if not skill.strategy:
             issues.append("missing_strategy")
+            issues.append("missing_intervention_summary")
+        elif not skill.strategy.get("intervention_summary"):
+            issues.append("missing_intervention_summary")
         if skill.effective_count < 3:
             issues.append("insufficient_effective_count")
+            issues.append("effective_count_below_threshold")
         if skill.sample_size < skill.effective_count:
             issues.append("sample_size_below_effective_count")
         if self._avg_confidence(skill) < 0.7:

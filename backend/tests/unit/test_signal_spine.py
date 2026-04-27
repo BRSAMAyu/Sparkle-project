@@ -6541,6 +6541,231 @@ def test_timeline_card_evidence_chain_full():
 
 
 # ══════════════════════════════════════════════════════════════════════
+# Task #3: CommunityDirective v1 — 3 Loops
+# ══════════════════════════════════════════════════════════════════════
+
+
+def test_cohort_mistake_hint_basic():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    hint = manager.build_cohort_mistake_hint({
+        "knowledge_node_id": "tcp_handshake",
+        "subject": "计算机网络",
+        "mistake_type": "概念混淆",
+        "cohort_size": 6,
+        "error_count": 4,
+        "common_misconception": "把 SYN 和 ACK 的顺序记反",
+    })
+
+    assert hint is not None
+    assert hint["hint_type"] == "cohort_mistake"
+    assert "6位同学" in hint["anonymous_summary"]
+    assert hint["affected_nodes"] == ["tcp_handshake"]
+
+
+def test_cohort_mistake_hint_too_small():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    hint = manager.build_cohort_mistake_hint({
+        "knowledge_node_id": "tcp",
+        "subject": "计算机网络",
+        "mistake_type": "概念混淆",
+        "cohort_size": 2,
+        "error_count": 2,
+        "common_misconception": "test",
+    })
+
+    assert hint is None
+
+
+def test_cohort_mistake_hint_anonymous():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    hint = manager.build_cohort_mistake_hint({
+        "knowledge_node_id": "node_1",
+        "subject": "math",
+        "mistake_type": "calculation",
+        "cohort_size": 3,
+        "student_id": "private_student",
+        "student_name": "private_name",
+        "common_misconception": "forgets sign",
+    })
+
+    assert hint is not None
+    payload = json.dumps(hint, ensure_ascii=False)
+    assert "private_student" not in payload
+    assert "private_name" not in payload
+    assert hint["privacy"] == "anonymous_aggregate_only"
+
+
+def test_partner_feedback_pacing():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    adjustment = manager.apply_partner_feedback({
+        "partner_id": "p1",
+        "observation_type": "pacing",
+        "observation_text": "She is moving too fast and seems overwhelmed.",
+        "target_area": "networking",
+    })
+
+    assert adjustment is not None
+    assert adjustment["adjustment_type"] == "pace_adjustment"
+    assert adjustment["scope"] == "next_48h"
+    assert adjustment["claim"] == "pacing_too_fast"
+    assert adjustment["strategy_patch"]["pace_direction"] == "slow_down"
+    assert "partner_id" not in adjustment
+
+
+def test_partner_feedback_focus():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    adjustment = manager.apply_partner_feedback({
+        "partner_id": "p1",
+        "observation_type": "focus",
+        "observation_text": "Keeps switching topics.",
+        "target_area": "TCP",
+    })
+
+    assert adjustment is not None
+    assert adjustment["adjustment_type"] == "topic_refocus"
+    assert adjustment["scope"] == "current_sprint"
+    assert adjustment["strategy_patch"]["reduce_context_switching"] is True
+
+
+def test_partner_feedback_morale():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    adjustment = manager.apply_partner_feedback({
+        "partner_id": "p1",
+        "observation_type": "morale",
+        "observation_text": "Seems discouraged today.",
+        "target_area": "exam prep",
+    })
+
+    assert adjustment is not None
+    assert adjustment["adjustment_type"] == "encouragement"
+    assert adjustment["scope"] == "this_turn"
+    assert adjustment["claim"] == "morale_encouragement_needed"
+
+
+def test_resource_quality_high():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    score = manager.score_resource_quality({
+        "resource_id": "res_1",
+        "peer_ratings": [0.9, 0.8, 0.95],
+        "usage_count": 8,
+        "completion_rate": 0.85,
+        "relevance_score": 0.9,
+    })
+
+    assert score["quality_score"] >= 0.8
+    assert score["recommendation_level"] == "high"
+
+
+def test_resource_quality_low():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    score = manager.score_resource_quality({
+        "resource_id": "res_2",
+        "peer_ratings": [0.2, 0.3, 0.4],
+        "usage_count": 5,
+        "completion_rate": 0.3,
+        "relevance_score": 0.2,
+    })
+
+    assert score["quality_score"] < 0.5
+    assert score["recommendation_level"] == "low"
+
+
+def test_resource_quality_too_few_data():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    score = manager.score_resource_quality({
+        "resource_id": "res_3",
+        "peer_ratings": [1.0, 1.0],
+        "usage_count": 2,
+        "completion_rate": 1.0,
+        "relevance_score": 1.0,
+    })
+
+    assert score["quality_score"] is None
+    assert score["recommendation_level"] == "too_few_data"
+
+
+def test_community_loop_serialization():
+    from app.signals.community_loops import CommunityLoopManager
+
+    manager = CommunityLoopManager()
+    score = manager.score_resource_quality({
+        "resource_id": "res_json",
+        "peer_ratings": [0.7, 0.8, 0.9],
+        "usage_count": 3,
+        "completion_rate": 0.8,
+        "relevance_score": 0.9,
+    })
+
+    restored = json.loads(json.dumps(score))
+    assert restored["resource_id"] == "res_json"
+    assert "quality_score" in restored
+
+
+@pytest.mark.asyncio
+async def test_policy_partner_feedback_pacing_plan_directive():
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_partner_pacing",
+        source_event_ids=["community_partner_observation"],
+        source_system="community_loops",
+        state_key="community_partner_feedback",
+        claim="pacing_too_fast",
+        confidence=0.75,
+        scope="next_48h",
+        ttl_hours=48,
+        evidence_summary="moving too fast",
+        possible_effects=["strategy_micro_adjustment"],
+        priority="medium",
+    )
+
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    plan_dir = engine.build_plan_directive(decision, signal)
+
+    assert decision.primary_strategy == "adjust_partner_reported_pacing"
+    assert plan_dir is not None
+    assert plan_dir.scope == "next_48h"
+    assert plan_dir.constraints["pace_adjustment"] == "slow_down"
+
+
+@pytest.mark.asyncio
+async def test_spine_partner_observation_pipeline():
+    spine = SpineOrchestrator(FakeRedis())
+    trace = await spine.on_partner_observation(
+        user_id="u_partner",
+        partner_id="partner_private",
+        observation_type="pacing",
+        observation_text="The pace is too fast this week.",
+        target_area="networking",
+    )
+
+    assert trace is not None
+    assert "community_partner_observation" in trace.raw_event_ids
+    plan_dir = await spine.get_plan_directive("u_partner")
+    assert plan_dir is not None
+    assert plan_dir.scope == "next_48h"
+
+
+# ══════════════════════════════════════════════════════════════════════
 # Task #9: P3-1 — GoalWorldGraph Goal Type Adapter
 # ══════════════════════════════════════════════════════════════════════
 

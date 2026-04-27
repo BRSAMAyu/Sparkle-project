@@ -21,7 +21,6 @@ from loguru import logger
 
 from app.signals.types import _uid
 
-
 _CHRONICLE_KEY = "spine:chronicle:{user_id}"
 _CHRONICLE_TTL_SECONDS = 90 * 24 * 3600
 _MAX_STORED_ENTRIES = 100
