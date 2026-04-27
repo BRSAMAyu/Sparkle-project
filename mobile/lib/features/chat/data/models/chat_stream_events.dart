@@ -1770,3 +1770,43 @@ class SpineReceiptEvent extends ChatStreamEvent {
     return [];
   }
 }
+
+/// Goal Arbitration Event — multi-goal conflict surface
+/// Emitted when Aurora detects ≥2 active goals with priority tension.
+/// Backend key: response_metadata['spine_goal_arbitration']
+class GoalArbitrationEvent extends ChatStreamEvent {
+  GoalArbitrationEvent({
+    required this.arbData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> arbData;
+
+  String get primaryGoalId =>
+      arbData['primary_goal_id'] as String? ?? '';
+
+  String get primaryGoalTitle =>
+      arbData['primary_goal_title'] as String? ?? '';
+
+  String get reason => arbData['reason'] as String? ?? '';
+
+  List<Map<String, dynamic>> get goals {
+    final raw = arbData['goals'];
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return [];
+  }
+
+  List<String> get conflicts {
+    final raw = arbData['conflicts'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}

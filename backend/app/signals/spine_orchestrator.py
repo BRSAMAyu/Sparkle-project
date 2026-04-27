@@ -18,6 +18,7 @@ from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
 from app.signals.policy_engine import PolicyEngine
 from app.signals.task_timeout_detector import TaskTimeoutDetector
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
+from app.signals.mistake_signal import MistakeSignalDetector
 from app.signals.recall_opportunity import RecallOpportunityDetector
 from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
 from app.signals.signal_ranker import SignalRanker
@@ -85,6 +86,7 @@ class SpineOrchestrator:
         self.redis = redis_client
         self.trace_store = CausalTraceStore(redis_client)
         self.timeout_detector = TaskTimeoutDetector(redis_client)
+        self.mistake_detector = MistakeSignalDetector(redis_client)
         self.achievement_consumer = AchievementReinforcementConsumer()
         self.recall_detector = RecallOpportunityDetector()
         self.recall_notification_builder = RecallNotificationBuilder()
@@ -521,6 +523,96 @@ class SpineOrchestrator:
             user_id=user_id,
             signal=signal,
             event_ids=[f"achievement_{achievement_id}"],
+        )
+
+    # ── P8: Mistake Event Integration ──────────────────────────────────
+
+    async def on_mistake_event(
+        self,
+        *,
+        user_id: str,
+        error_id: str,
+        linked_node_ids: list[str],
+        error_type: str | None = None,
+    ) -> CausalTrace | None:
+        """
+        错题创建事件 → MistakeSignalDetector → transfer_failure signal → pipeline。
+
+        Called from galaxy_event_consumer._handle_error_created() when an error.created
+        event arrives. If the same knowledge node has 3+ consecutive errors, generates
+        a transfer_failure ActionableSignal that constrains the next task card.
+
+        Iron Rule: This is a read-only Spine call. Galaxy mastery updates happen
+        separately in ErrorBookMasterySyncService — no double-write here.
+        """
+        signals = await self.mistake_detector.on_error_created(
+            user_id=user_id,
+            error_id=error_id,
+            linked_node_ids=linked_node_ids,
+            error_type=error_type,
+        )
+        if not signals:
+            return None
+
+        # Run each triggering signal through the full pipeline.
+        # Multiple nodes triggering simultaneously is rare; first trace wins.
+        trace = None
+        for signal in signals:
+            t = await self._run_signal_pipeline(
+                user_id=user_id,
+                signal=signal,
+                event_ids=[f"error_{error_id}"],
+            )
+            if t is not None and trace is None:
+                trace = t
+        return trace
+
+    async def on_quiz_result(
+        self,
+        *,
+        user_id: str,
+        task_id: str,
+        quiz_accuracy: float,
+        linked_node_ids: list[str] | None = None,
+        node_id: str | None = None,
+    ) -> CausalTrace | None:
+        """
+        小测结果事件 → 低正确率 → transfer_failure signal → pipeline。
+
+        Threshold: quiz_accuracy < 0.5 → generate signal (知识迁移失败).
+        High accuracy (>= 0.7) → no signal (不干预).
+        Mid accuracy (0.5-0.69) → no signal (观察, 不立即干预).
+        """
+        _LOW_ACCURACY_THRESHOLD = 0.5
+        if quiz_accuracy >= _LOW_ACCURACY_THRESHOLD:
+            return None
+
+        effective_node = node_id or (linked_node_ids[0] if linked_node_ids else "unknown")
+        signal = ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[task_id],
+            source_system="quiz_result",
+            state_key="knowledge_transfer",
+            claim="transfer_failure",
+            confidence=min(0.4 + (1.0 - quiz_accuracy) * 0.5, 0.85),
+            scope="current_sprint",
+            ttl_hours=48,
+            evidence_summary=(
+                f"小测正确率 {quiz_accuracy:.0%}，低于 50% 阈值。"
+                f"节点 {effective_node} 当前掌握度不足，判断为知识迁移未完成。"
+            ),
+            possible_effects=[
+                "avoid_new_chapter",
+                "require_worked_example",
+                "reduce_task_difficulty",
+            ],
+            priority="high",
+        )
+
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=[f"quiz_{task_id}"],
         )
 
     # ── P1 Integration: Recall Opportunity ─────────────────────────────
@@ -2785,6 +2877,43 @@ class SpineOrchestrator:
             await self.trace_store._save_trace(trace)
             await self.trace_store.link_to_user(user_id, trace.trace_id)
         return result
+
+    async def get_goal_arbitration_summary(self, user_id: str) -> dict | None:
+        """Return a card-ready summary when the user has multiple active goals with tension.
+
+        Only surfaces when ≥2 goals exist AND either conflicts detected or ≥3 goals.
+        """
+        try:
+            goals = await self.goal_arbitrator.get_active_goals(user_id)
+            if len(goals) < 2:
+                return None
+            result = self.goal_arbitrator.arbitrate(goals)
+            if not result:
+                return None
+            # Only show when there is genuine multi-goal tension
+            if not result.conflicts and len(goals) < 3:
+                return None
+            title_map = {g.goal_id: g.title for g in goals}
+            top_goals = sorted(
+                result.priority_scores.items(), key=lambda x: x[1], reverse=True
+            )[:3]
+            return {
+                "primary_goal_id": result.primary_goal_id,
+                "primary_goal_title": title_map.get(result.primary_goal_id, ""),
+                "reason": result.reason,
+                "goals": [
+                    {
+                        "goal_id": gid,
+                        "title": title_map.get(gid, gid),
+                        "time_fraction": result.suggested_time_split.get(gid, 0.0),
+                        "score": round(score, 3),
+                    }
+                    for gid, score in top_goals
+                ],
+                "conflicts": result.conflicts,
+            }
+        except Exception:
+            return None
 
     async def register_goal(
         self, user_id: str, goal_id: str, goal_type: str, title: str,

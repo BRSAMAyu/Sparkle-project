@@ -658,6 +658,11 @@ class ResponseBuilderMixin:
                     response_metadata["spine_ux_warning"] = json.dumps(
                         _ux_warning, ensure_ascii=False
                     )
+                _goal_arb = await _spine.get_goal_arbitration_summary(user_id)
+                if _goal_arb:
+                    response_metadata["spine_goal_arbitration"] = json.dumps(
+                        _goal_arb, ensure_ascii=False
+                    )
             except Exception:
                 pass
 

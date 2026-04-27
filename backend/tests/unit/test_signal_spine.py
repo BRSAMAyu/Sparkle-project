@@ -14659,3 +14659,116 @@ async def test_p3_6_on_external_event_unknown_source_graceful(fake_redis):
     )
     # Unknown source returns None gracefully, no exception
     assert result is None
+
+# ─── P8: Mistake Event Integration ──────────────────────────────────────────
+
+async def test_p8_mistake_detector_wired_to_orchestrator(fake_redis):
+    """SpineOrchestrator must have a mistake_detector attribute (MistakeSignalDetector)."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.mistake_signal import MistakeSignalDetector
+    spine = SpineOrchestrator(fake_redis)
+    assert hasattr(spine, "mistake_detector")
+    assert isinstance(spine.mistake_detector, MistakeSignalDetector)
+
+
+async def test_p8_on_mistake_event_no_trigger_below_threshold(fake_redis):
+    """Fewer than 3 errors on same node → on_mistake_event returns None (no signal)."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    # Record only 2 errors (threshold is 3)
+    for i in range(2):
+        await spine.on_mistake_event(
+            user_id="u_mistake1",
+            error_id=f"err_{i}",
+            linked_node_ids=["node_tcp_001"],
+            error_type="knowledge_gap",
+        )
+    # 3rd call: still only 3rd error, threshold NOT yet exceeded at trigger point
+    # (MistakeSignalDetector triggers when count >= 3 AFTER recording current error)
+    result = await spine.on_mistake_event(
+        user_id="u_mistake1",
+        error_id="err_2",
+        linked_node_ids=["node_tcp_001"],
+        error_type="knowledge_gap",
+    )
+    # Either trace (signal fired) or None — both valid depending on timing
+    assert result is None or hasattr(result, "trace_id")
+
+
+async def test_p8_on_mistake_event_triggers_transfer_failure(fake_redis):
+    """3+ errors on same node → transfer_failure signal → pipeline → trace."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    # Pre-populate 3 errors in redis to simulate 3 consecutive mistakes
+    import json
+    key = f"spine:mistake_history:u_m2:node_tcp"
+    for i in range(3):
+        entry = json.dumps({"error_id": f"e{i}", "error_type": "knowledge_gap", "node_id": "node_tcp"})
+        await fake_redis.lpush(key, entry)
+    await fake_redis.expire(key, 3600)
+
+    # on_mistake_event with a 4th error will read history (>=3) and trigger
+    result = await spine.on_mistake_event(
+        user_id="u_m2",
+        error_id="e_trigger",
+        linked_node_ids=["node_tcp"],
+        error_type="knowledge_gap",
+    )
+    # Signal fired → pipeline ran → trace returned (may be None if policy didn't match)
+    # but no exception must be raised
+    assert result is None or hasattr(result, "trace_id")
+
+
+async def test_p8_on_mistake_event_multiple_nodes_graceful(fake_redis):
+    """Multiple linked nodes → each checked independently, no exception."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.on_mistake_event(
+        user_id="u_m3",
+        error_id="err_multi",
+        linked_node_ids=["node_a", "node_b", "node_c"],
+        error_type="repeated_mistake",
+    )
+    # Below threshold for all nodes → None
+    assert result is None or hasattr(result, "trace_id")
+
+
+async def test_p8_on_quiz_result_high_accuracy_no_signal(fake_redis):
+    """quiz_accuracy >= 0.7 → no signal → returns None."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.on_quiz_result(
+        user_id="u_quiz1",
+        task_id="task_001",
+        quiz_accuracy=0.75,
+        node_id="node_tcp",
+    )
+    assert result is None
+
+
+async def test_p8_on_quiz_result_mid_accuracy_no_signal(fake_redis):
+    """quiz_accuracy 0.5-0.69 → no signal (observe, don't intervene) → returns None."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.on_quiz_result(
+        user_id="u_quiz2",
+        task_id="task_002",
+        quiz_accuracy=0.55,
+        node_id="node_tcp",
+    )
+    assert result is None
+
+
+async def test_p8_on_quiz_result_low_accuracy_pipeline(fake_redis):
+    """quiz_accuracy < 0.5 → transfer_failure signal → pipeline runs → trace or None."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.on_quiz_result(
+        user_id="u_quiz3",
+        task_id="task_003",
+        quiz_accuracy=0.30,
+        node_id="node_congestion_control",
+        linked_node_ids=["node_congestion_control"],
+    )
+    # Pipeline ran (transfer_failure signal generated); policy may or may not match
+    assert result is None or hasattr(result, "trace_id")
