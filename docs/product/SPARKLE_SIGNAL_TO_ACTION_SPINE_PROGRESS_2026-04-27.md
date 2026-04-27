@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-523/523 tests passing:
+542/542 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -200,6 +200,12 @@
 - E2E 7-Day Exam Sprint Acceptance: 6 tests (Day 0 rescue + Day 1-2 timeout + Day 3-4 error strategy + full causal trace + user correction + momentum stalled)
 - v2.0 Closed Loops: 74+ tests (skill lifecycle 7, community loops 9, core session 9, goal type 8, growth chronicle 9, policy analytics 8, recall notification 7, relationship model 8, quality cross-check 6, ExamSprintPolicy 15, SourceTrayIntegration 6, soft difficulty + momentum 4+)
 - P2-8 Notification Integration: 7 tests (build+store, cooldown, independent triggers, pre-exam template, task missed recovery, preference schema, Celery task registration)
+- v2.4 SourceEffectiveness: 6 tests (record effective/insufficient/mixed, sorted retrieval, low-effect filter, trial threshold)
+- v2.4 StrategyBelief Consumption: 4 tests (bias applied, not applied when effective, not applied low evidence, no beliefs)
+- v2.4 PolicyExperiment Full Loop: 3 tests (create+trial, promotion after conclusion, shadow heuristic)
+- v2.4 Skill Auto-Deprecation: 2 tests (no stale, with stale skill)
+- v2.4 Belief Persistence: 2 tests (persist+load, empty on new user)
+- v2.4 Outcome Integration: 2 tests (outcome→source effectiveness, outcome→experiment trial)
 
 ---
 
@@ -858,11 +864,19 @@
 
 ---
 
-## 当前状态: v2.3 COMPLETE — Production Hardening
+## 当前状态: v2.4 COMPLETE — Learning Layer
 
-**523/523 tests passing** | **9/9 directive types active** | **47+ public API exports** | **40 signal modules**
+**542/542 tests passing** | **9/9 directive types active** | **48+ public API exports** | **40 signal modules**
 
-### v2.3 (Production Hardening) — ALL COMPLETE
+### v2.4 (Learning Layer) — ALL COMPLETE
+- [x] PolicyExperiment full loop: create → record_trial with real outcomes → suggest_promotions
+- [x] StrategyBelief consumption: PolicyEngine.evaluate() accepts strategy_beliefs, applies Bayesian bias
+- [x] Skill auto-deprecation: run_auto_deprecation() wired into pipeline
+- [x] SourceEffectiveness tracking: SourceEffectivenessTracker records source→outcome mapping
+- [x] record_outcome triggers experiment trial update + source effectiveness recording
+- [x] Beliefs persist to Redis and reload across pipeline calls
+- [x] _enrich_pipeline_post_policy: fixed experiment creation, added promotion suggestion check
+- [x] 19 new tests (6 source effectiveness + 4 belief consumption + 3 experiment loop + 2 skill deprecation + 2 belief persistence + 2 outcome integration)
 - [x] Dead method wiring: 7 divine moment + recovery methods wired into production paths
 - [x] StateRegister MGET: batch loading replaces N+1 individual GETs
 - [x] GrowthChronicle WATCH/MULTI: atomic writes prevent race conditions
@@ -878,7 +892,7 @@
 - [x] on_community_hint wired into on_community_cohort_data
 - [x] build_experience_envelope exposed via API endpoint
 
-### v2.2 (Long-term Stability) — ALL COMPLETE
+### v2.3 (Production Hardening) — ALL COMPLETE
 - [x] SpineSnapshot + Rehydration — Celery tasks (spine_snapshot_task + scan_spine_snapshots)
 - [x] TraceCompaction — compress traces >50 into aggregated summaries (compact_old_traces)
 - [x] RollingMetrics — get_rolling_metrics method
@@ -1041,14 +1055,14 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-513/513 tests passing
-37 signal modules (excluding __init__.py)
-47 public API exports (incl. SpineAuroraBridge)
+542/542 tests passing
+40 signal modules (excluding __init__.py)
+48 public API exports (incl. SourceEffectivenessTracker)
 9/9 directive types active
 10/10 Iron Laws tested
 6/6 Divine Moments implemented
 8-layer architecture complete
-38+ production wiring points (incl. snapshot + compaction)
+v2.4 Learning Layer complete: Bayesian belief bias + experiment full loop + source effectiveness + skill auto-deprecation
 ```
 
 ---

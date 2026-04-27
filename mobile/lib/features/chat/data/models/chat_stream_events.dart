@@ -1694,6 +1694,32 @@ class StaleRecoveryEvent extends ChatStreamEvent {
   }
 }
 
+/// UX Risk Warning Event — divine moment #5 "阻止低收益"
+/// Proactive intervention when Aurora detects a risk in the user's current path.
+/// Backend key: response_metadata['spine_ux_warning']
+class UXWarningEvent extends ChatStreamEvent {
+  UXWarningEvent({
+    required this.warningData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> warningData;
+
+  String get label => warningData['label'] as String? ?? '策略风险';
+  String get reason => warningData['reason'] as String? ?? '';
+  String get suggestedAction =>
+      warningData['suggested_action'] as String? ?? '帮我调整策略';
+  String get riskLevel => warningData['risk_level'] as String? ?? 'medium';
+  List<String> get predictedReplyOptions {
+    final raw = warningData['predicted_reply_options'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}
+
 /// Community Insight Event — divine moment #6 "社群经验转策略"
 /// Emitted when backend returns a privacy-safe community hint in metadata.
 /// Backend key: response_metadata['spine_community_hint']

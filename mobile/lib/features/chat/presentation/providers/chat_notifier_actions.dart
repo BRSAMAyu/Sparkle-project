@@ -707,6 +707,10 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(clearCommunityHint: true);
   }
 
+  void dismissUXWarning() {
+    state = state.copyWith(clearUXWarning: true);
+  }
+
   void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
     debugPrint('🔄 Sprint mode switch event received');
 

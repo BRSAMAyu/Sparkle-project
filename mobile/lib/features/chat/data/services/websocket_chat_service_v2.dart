@@ -435,6 +435,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Spine: UX risk warning (divine moment #5 阻止低收益)
+        if (metadata != null && metadata['spine_ux_warning'] != null) {
+          final warningData = _decodeMapOrString(metadata['spine_ux_warning']);
+          if (warningData != null) {
+            return UXWarningEvent(
+              warningData: warningData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         // Spine: Community hint card (divine moment #6 社群经验转策略)
         if (metadata != null && metadata['spine_community_hint'] != null) {
           final hintData = _decodeMapOrString(metadata['spine_community_hint']);

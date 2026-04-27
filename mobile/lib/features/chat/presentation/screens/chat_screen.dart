@@ -44,6 +44,7 @@ import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart
 import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
@@ -1324,6 +1325,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onDismiss: () => ref
                             .read(chatProvider.notifier)
                             .dismissCommunityHint(),
+                      ),
+                    // Spine: Strategy Intervention Card (divine moment #5 阻止低收益)
+                    if (chatState.pendingUXWarning != null)
+                      StrategyInterventionCard(
+                        label: chatState.pendingUXWarning!.label,
+                        reason: chatState.pendingUXWarning!.reason,
+                        suggestedAction:
+                            chatState.pendingUXWarning!.suggestedAction,
+                        onAdjust: () {
+                          final warning = chatState.pendingUXWarning!;
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissUXWarning();
+                          ref.read(chatProvider.notifier).sendMessage(
+                                '${warning.suggestedAction}。原因：${warning.reason}',
+                              );
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissUXWarning(),
                       ),
                     SparkleExitTransition(
                       visible: chatState.pendingPlanReview != null,

@@ -156,6 +156,7 @@ class ChatState {
     this.pendingStaleCard,
     this.pendingSpineReceipt,
     this.pendingCommunityHint,
+    this.pendingUXWarning,
   });
 
   static const int maxRetainedMessages = 500;
@@ -220,6 +221,9 @@ class ChatState {
 
   /// Spine: pending community hint card — divine moment #6 "社群经验转策略".
   final CommunityHintEvent? pendingCommunityHint;
+
+  /// Spine: pending UX risk warning card — divine moment #5 "阻止低收益".
+  final UXWarningEvent? pendingUXWarning;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -313,6 +317,8 @@ class ChatState {
     bool clearSpineReceipt = false,
     CommunityHintEvent? pendingCommunityHint,
     bool clearCommunityHint = false,
+    UXWarningEvent? pendingUXWarning,
+    bool clearUXWarning = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -408,5 +414,8 @@ class ChatState {
         pendingCommunityHint: clearCommunityHint
             ? null
             : pendingCommunityHint ?? this.pendingCommunityHint,
+        pendingUXWarning: clearUXWarning
+            ? null
+            : pendingUXWarning ?? this.pendingUXWarning,
       );
 }

@@ -1747,6 +1747,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Spine: community insight card (divine moment #6 社群经验转策略)
           state = state.copyWith(pendingCommunityHint: event);
           flushPending();
+        } else if (event is UXWarningEvent) {
+          // Spine: proactive risk warning (divine moment #5 阻止低收益)
+          state = state.copyWith(pendingUXWarning: event);
+          flushPending();
         } else if (event is NotificationEvent) {
           // Notification Event - 实时通知推送
           _handleNotificationEvent(event);

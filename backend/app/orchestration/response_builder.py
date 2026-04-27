@@ -653,6 +653,11 @@ class ResponseBuilderMixin:
                     response_metadata["spine_community_hint"] = json.dumps(
                         _community_hint, ensure_ascii=False
                     )
+                _ux_warning = await _spine.get_ux_risk_warning(user_id)
+                if _ux_warning:
+                    response_metadata["spine_ux_warning"] = json.dumps(
+                        _ux_warning, ensure_ascii=False
+                    )
             except Exception:
                 pass
 
