@@ -17251,3 +17251,311 @@ def test_p4_6_self_healing_controller_to_dict():
     assert d["total_actions"] == 1
     assert len(d["recent_actions"]) == 1
     assert d["active_circuit_breaks"] == []
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-7: Research Mode — Continuous Improvement Loop
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_7_research_proposal_creation():
+    """ResearchProposal captures a hypothesis-driven improvement proposal."""
+    from app.signals.research_mode import ResearchProposal
+
+    prop = ResearchProposal(
+        title="Improve Deadline Detection",
+        description="Current deadline detection misses implicit deadlines in messages",
+        source="quality_guard",
+        hypothesis="Adding implicit deadline NLP will improve crisis mode detection",
+        target_metric="crisis_detection_rate",
+        expected_effect_size=0.25,
+        risk_level="low",
+        domain="exam_sprint",
+        proposed_policies=["implicit_deadline_nlp"],
+    )
+    assert prop.proposal_id.startswith("rp")
+    assert prop.status == "draft"
+    assert prop.evidence_grade == 0
+
+    d = prop.to_dict()
+    assert d["title"] == "Improve Deadline Detection"
+    assert d["risk_level"] == "low"
+
+
+def test_p4_7_research_conclusion_creation():
+    """ResearchConclusion integrates all evidence for a final decision."""
+    from app.signals.research_mode import ResearchConclusion
+
+    conclusion = ResearchConclusion(
+        proposal_id="rp_test",
+        experiment_id="exp_test",
+        title="Deadline Detection — Concluded",
+        summary="NLP-based deadline detection improved crisis detection by 30%",
+        evidence_grade=4,
+        effect_size=0.30,
+        confidence_interval=(0.15, 0.45),
+        statistical_significance=True,
+        practical_significance=True,
+        action="promote",
+        recommendations=["Deploy to production", "Monitor for regression"],
+    )
+    assert conclusion.conclusion_id.startswith("rc")
+    assert conclusion.action == "promote"
+    assert conclusion.statistical_significance
+
+    d = conclusion.to_dict()
+    assert d["evidence_grade"] == 4
+    assert d["effect_size"] == 0.30
+
+
+def test_p4_7_gap_detector_quality_critical():
+    """GapDetector generates proposals from critical quality state."""
+    from app.signals.research_mode import GapDetector
+
+    proposals = GapDetector.from_quality_report(
+        quality_health="critical",
+        quality_score=0.35,
+        systemic_issues=["orphan_signals", "chain_breaks"],
+        domain="exam_sprint",
+    )
+    assert len(proposals) >= 1
+    critical = proposals[0]
+    assert critical.risk_level == "high"
+    assert critical.source == "quality_guard"
+
+
+def test_p4_7_gap_detector_quality_degraded():
+    """GapDetector generates uplift proposals from degraded state."""
+    from app.signals.research_mode import GapDetector
+
+    proposals = GapDetector.from_quality_report(
+        quality_health="degraded",
+        quality_score=0.65,
+        systemic_issues=["latency_warning"],
+        domain="exam_sprint",
+    )
+    assert len(proposals) >= 1
+    assert proposals[0].risk_level == "low"
+
+
+def test_p4_7_gap_detector_quality_healthy():
+    """GapDetector produces no proposals when healthy."""
+    from app.signals.research_mode import GapDetector
+
+    proposals = GapDetector.from_quality_report(
+        quality_health="healthy",
+        quality_score=0.95,
+        systemic_issues=[],
+    )
+    assert len(proposals) == 0
+
+
+def test_p4_7_gap_detector_counterfactual():
+    """GapDetector generates proposals from counterfactual comparison."""
+    from app.signals.research_mode import GapDetector
+
+    comp = {
+        "best_policy": "survival_mode_v2",
+        "effect_size": 0.35,
+        "evidence_grade": 4,
+        "recommendation": "strong_evidence_for_change",
+    }
+    prop = GapDetector.from_counterfactual_gap(comp, domain="exam_sprint")
+    assert prop is not None
+    assert prop.source == "counterfactual"
+    assert prop.evidence_grade == 4
+    assert "survival_mode_v2" in prop.proposed_policies
+
+
+def test_p4_7_gap_detector_counterfactual_no_change():
+    """GapDetector returns None when counterfactual recommends no change."""
+    from app.signals.research_mode import GapDetector
+
+    comp = {"recommendation": "no_change"}
+    prop = GapDetector.from_counterfactual_gap(comp)
+    assert prop is None
+
+
+def test_p4_7_gap_detector_benchmark_failure():
+    """GapDetector generates proposals from failing scenarios."""
+    from app.signals.research_mode import GapDetector
+
+    benchmark = {
+        "pass_rate": 0.85,
+        "reports": [
+            {"passed": False, "scenario_id": "scn_test", "violations": ["spine_integrity"]},
+        ],
+    }
+    proposals = GapDetector.from_benchmark_failure(benchmark, domain="exam_sprint")
+    assert len(proposals) == 1
+    assert proposals[0].source == "simulation"
+    assert "Fix Regression" in proposals[0].title
+
+
+def test_p4_7_continuous_improvement_loop_ingest():
+    """ContinuousImprovementLoop ingests gaps and generates proposals."""
+    from app.signals.research_mode import ContinuousImprovementLoop
+
+    loop = ContinuousImprovementLoop()
+    proposals = loop.ingest_gaps(
+        quality_health="degraded",
+        quality_score=0.65,
+        systemic_issues=["latency_warning"],
+        domain="exam_sprint",
+    )
+    assert len(proposals) >= 1
+    assert len(loop._proposals) >= 1
+
+
+def test_p4_7_continuous_improvement_loop_prioritize():
+    """prioritize_proposals ranks by evidence, effect, risk."""
+    from app.signals.research_mode import (
+        ContinuousImprovementLoop, ResearchProposal,
+    )
+
+    loop = ContinuousImprovementLoop()
+    loop._proposals["rp_1"] = ResearchProposal(
+        proposal_id="rp_1", title="High evidence, low risk",
+        evidence_grade=4, expected_effect_size=0.5, risk_level="low",
+        status="draft",
+    )
+    loop._proposals["rp_2"] = ResearchProposal(
+        proposal_id="rp_2", title="Low evidence, high risk",
+        evidence_grade=1, expected_effect_size=0.1, risk_level="high",
+        status="draft",
+    )
+
+    ranked = loop.prioritize_proposals()
+    assert len(ranked) == 2
+    assert ranked[0]["proposal_id"] == "rp_1"
+    assert ranked[0]["priority_score"] > ranked[1]["priority_score"]
+
+
+def test_p4_7_continuous_improvement_loop_top_proposal():
+    """get_top_proposal returns highest-priority ready proposal."""
+    from app.signals.research_mode import (
+        ContinuousImprovementLoop, ResearchProposal,
+    )
+
+    loop = ContinuousImprovementLoop()
+    loop._proposals["rp_1"] = ResearchProposal(
+        proposal_id="rp_1", title="Top", evidence_grade=4,
+        expected_effect_size=0.5, risk_level="low", status="draft",
+    )
+
+    top = loop.get_top_proposal()
+    assert top is not None
+    assert top["proposal_id"] == "rp_1"
+    assert "proposal" in top
+
+
+def test_p4_7_continuous_improvement_loop_record_conclusion():
+    """record_conclusion updates proposal status and logs."""
+    from app.signals.research_mode import (
+        ContinuousImprovementLoop, ResearchProposal, ResearchConclusion,
+    )
+
+    loop = ContinuousImprovementLoop()
+    loop._proposals["rp_1"] = ResearchProposal(
+        proposal_id="rp_1", title="Test", evidence_grade=3,
+        status="approved",
+    )
+
+    conclusion = ResearchConclusion(
+        proposal_id="rp_1", experiment_id="exp_1",
+        title="Test Complete", summary="Works well",
+        evidence_grade=4, effect_size=0.3, action="promote",
+    )
+    result = loop.record_conclusion(conclusion)
+    assert result["recorded"]
+    assert loop._proposals["rp_1"].status == "completed"
+
+
+def test_p4_7_continuous_improvement_loop_measure_improvement():
+    """measure_improvement tracks cumulative effect and trajectory."""
+    from app.signals.research_mode import (
+        ContinuousImprovementLoop, ResearchConclusion,
+    )
+
+    loop = ContinuousImprovementLoop()
+    loop.record_conclusion(ResearchConclusion(
+        proposal_id="rp_1", title="Improvement 1", effect_size=0.2,
+        action="promote", concluded_at="2026-04-01T00:00:00",
+    ))
+    loop.record_conclusion(ResearchConclusion(
+        proposal_id="rp_2", title="Improvement 2", effect_size=0.3,
+        action="promote", concluded_at="2026-04-15T00:00:00",
+    ))
+
+    improvement = loop.measure_improvement()
+    assert improvement["promoted_count"] == 2
+    assert improvement["cumulative_effect"] == 0.5
+
+
+def test_p4_7_research_dashboard():
+    """ResearchDashboard aggregates all P4 metrics into one view."""
+    from app.signals.research_mode import ResearchDashboard
+
+    db = ResearchDashboard(
+        active_experiments=3, completed_experiments=12,
+        total_episodes_collected=5000, total_users_reached=200,
+        quality_health="healthy", quality_score=0.92,
+        marketplace_cards=15, marketplace_adoptions=85,
+        active_cohorts=8, benchmark_pass_rate=0.96,
+        proposals_active=5, proposals_completed=20,
+    )
+    assert db.dashboard_id.startswith("rdb")
+
+    d = db.to_dict()
+    assert d["active_experiments"] == 3
+    assert d["quality_health"] == "healthy"
+    assert d["benchmark_pass_rate"] == 0.96
+
+
+def test_p4_7_continuous_improvement_loop_build_dashboard():
+    """ContinuousImprovementLoop.build_dashboard integrates all P4 data."""
+    from app.signals.research_mode import ContinuousImprovementLoop
+
+    loop = ContinuousImprovementLoop()
+    db = loop.build_dashboard(
+        experiment_registry={
+            "active_experiments": 2, "total_episodes": 1000, "total_users": 50,
+        },
+        marketplace_registry={
+            "total_cards": 10, "total_adoptions": 60,
+            "cards": [
+                {"status": "active", "effectiveness_decay": 0.9},
+                {"status": "active", "effectiveness_decay": 0.8},
+            ],
+        },
+        quality_health="degraded", quality_score=0.7,
+        iron_law_violations=2, benchmark_pass_rate=0.88,
+        community_stats={
+            "active_cohorts": 5, "total_members": 200, "federated_insights": 3,
+        },
+    )
+    assert db.quality_health == "degraded"
+    assert db.marketplace_cards == 10
+    assert db.average_card_effectiveness == pytest.approx(0.85, abs=0.01)
+    assert db.active_cohorts == 5
+    assert db.benchmark_pass_rate == 0.88
+
+
+def test_p4_7_continuous_improvement_loop_to_dict():
+    """to_dict provides loop aggregate state."""
+    from app.signals.research_mode import (
+        ContinuousImprovementLoop, ResearchProposal, ResearchConclusion,
+    )
+
+    loop = ContinuousImprovementLoop()
+    loop._proposals["rp_1"] = ResearchProposal(
+        proposal_id="rp_1", title="Test", status="draft",
+    )
+    loop._conclusions["rc_1"] = ResearchConclusion(
+        proposal_id="rp_1", title="Test", action="promote",
+    )
+
+    d = loop.to_dict()
+    assert d["total_proposals"] == 1
+    assert d["total_conclusions"] == 1
+    assert "improvement_summary" in d

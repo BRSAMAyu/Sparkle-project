@@ -86,6 +86,13 @@ from app.signals.privacy_community_intelligence import (
     TemporalPrivacyBudget,
 )
 from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
+from app.signals.research_mode import (
+    ContinuousImprovementLoop,
+    GapDetector,
+    ResearchConclusion,
+    ResearchDashboard,
+    ResearchProposal,
+)
 from app.signals.relationship_model import RelationshipModelService, RelationshipState
 from app.signals.research_experiment_platform import (
     ExperimentConclusion,
@@ -189,6 +196,7 @@ __all__ = [
     "ChronicleEntry",
     "CohortDriftDetector",
     "CohortDriftReport",
+    "ContinuousImprovementLoop",
     "CoreSession",
     "CoreSessionManager",
     "CommunityDirective",
@@ -223,6 +231,7 @@ __all__ = [
     "FileReference",
     "GitHubRepoBridge",
     "GitHubRepoSummary",
+    "GapDetector",
     "GOAL_TYPE_PROFILES",
     "GoalTypeAdapter",
     "GoalTypeProfile",
@@ -270,6 +279,9 @@ __all__ = [
     "RegressionReport",
     "RelationshipModelService",
     "RelationshipState",
+    "ResearchConclusion",
+    "ResearchDashboard",
+    "ResearchProposal",
     "ResponseDirective",
     "RetrievalDirective",
     "RewardModel",
