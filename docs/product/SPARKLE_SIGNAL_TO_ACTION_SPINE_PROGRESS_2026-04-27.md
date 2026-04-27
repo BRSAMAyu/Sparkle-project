@@ -1086,7 +1086,7 @@ types.py                    — 7 core data objects + all dataclasses
 | P0-9: UserVisibleReceipt | ✅ | Short, specific, correctable |
 | P0-10: CausalTrace | ✅ | Full chain: event→signal→policy→directive→audit→receipt |
 | P1-1 through P1-6 | ✅ | All 6 items complete |
-| P2-1 through P2-5 | ✅ | Self-improving learning layer |
+| P2-1 through P2-8 | ✅ | Self-improving learning layer + quota/cooldown |
 | P3-1 through P3-3 | ✅ | General goal OS layer |
 | P4: Research-grade | ✅ | Counterfactual + simulator + marketplace |
 
@@ -1135,6 +1135,7 @@ v3.0 Pipeline: which_directives gate + Aurora wake + all P1 tasks COMPLETE
 v3.1 AuroraControlSignal + AuroraAgenda: 15 dedicated tests (5 envelope + 10 session), 615/615 total
 v3.2 P0-3 complete: ActionableStatePacket 7/7 fields (time_context, execution_pattern, context_recommendation added), 8 new tests, 623/623 total
 v4.0 P2 Batch 1 COMPLETE: state vocabulary (cognitive_load/affective_pressure) + model write roundtrip + learning persistence + retract_if, 656/656 total
+v4.1 P2 Batch 2 COMPLETE: relationship behavioral evolution + multi-strategy experiments + partner accountability loop + directive quota/cooldown, 683/683 total
 ```
 
 ### P1 Status — ALL COMPLETE
