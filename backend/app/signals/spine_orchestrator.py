@@ -2722,11 +2722,24 @@ class SpineOrchestrator:
         return self.goal_graph.suggest_focus_nodes(graph, limit=limit)
 
     async def arbitrate_goals(self, user_id: str):
-        """v2.5: Arbitrate between multiple active goals."""
+        """v2.5: Arbitrate between multiple active goals.
+
+        P3-3 ruling: 取舍写入 CausalTrace.
+        """
         goals = await self.goal_arbitrator.get_active_goals(user_id)
         if not goals:
             return None
-        return self.goal_arbitrator.arbitrate(goals)
+        result = self.goal_arbitrator.arbitrate(goals)
+        if result and result.conflicts:
+            trace = CausalTrace(
+                trace_id=_uid("ct"),
+                raw_event_ids=[g.goal_id for g in goals],
+                signal_ids=["multi_goal_arbitration"],
+                state_keys_changed=[f"goal_priority.{result.primary_goal_id}"],
+            )
+            await self.trace_store._save_trace(trace)
+            await self.trace_store.link_to_user(user_id, trace.trace_id)
+        return result
 
     async def register_goal(
         self, user_id: str, goal_id: str, goal_type: str, title: str,

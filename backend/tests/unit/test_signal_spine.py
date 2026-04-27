@@ -13874,3 +13874,48 @@ def test_v216_risk_patterns():
         assert risk.detection_signal
         assert risk.mitigation_strategy
         assert risk.severity in ("low", "medium", "high")
+
+
+# ── P3-3: MultiGoal Arbitration + CausalTrace Tests ───────────────────
+
+@pytest.mark.asyncio
+async def test_v217_arbitrate_goals_writes_causal_trace():
+    """P3-3: Goal arbitration with conflicts writes to CausalTrace."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedis()
+    orch = SpineOrchestrator(redis)
+
+    # Register two competing goals
+    await orch.register_goal("u1", "exam", "exam_sprint", "计网考试", deadline_days=2, mastery=0.3)
+    await orch.register_goal("u1", "resume", "job_search", "简历投递", deadline_days=5, mastery=0.5)
+
+    result = await orch.arbitrate_goals("u1")
+    assert result is not None
+    assert result.primary_goal_id == "exam"
+    assert result.reason == "deadline_urgent"
+
+    # Check CausalTrace was written
+    traces = await orch.trace_store.get_user_traces("u1", limit=5)
+    assert len(traces) >= 1
+    last_trace = traces[-1]
+    assert "multi_goal_arbitration" in last_trace.signal_ids
+
+
+@pytest.mark.asyncio
+async def test_v217_arbitrate_single_goal_no_trace():
+    """P3-3: Single goal arbitration doesn't create trace (no conflict)."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedis()
+    orch = SpineOrchestrator(redis)
+
+    await orch.register_goal("u2", "exam", "exam_sprint", "计网考试", deadline_days=5)
+
+    result = await orch.arbitrate_goals("u2")
+    assert result is not None
+    assert result.primary_goal_id == "exam"
+    assert result.conflicts == []
+
+    # No trace with arbitration for single goal
+    traces = await orch.trace_store.get_user_traces("u2", limit=5)
+    arbitration_traces = [t for t in traces if "multi_goal_arbitration" in t.signal_ids]
+    assert len(arbitration_traces) == 0
