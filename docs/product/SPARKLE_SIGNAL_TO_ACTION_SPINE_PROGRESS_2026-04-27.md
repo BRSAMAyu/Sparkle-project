@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-508/508 tests passing:
+513/513 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -858,11 +858,18 @@
 
 ---
 
-## 当前状态: v2.1 COMPLETE
+## 当前状态: v2.2 IN PROGRESS — Long-term Stability
 
-**508/508 tests passing** | **9/9 directive types active** | **47 public API exports** | **38 signal modules**
+**513/513 tests passing** | **9/9 directive types active** | **47 public API exports** | **38 signal modules**
 
-### v2.1 Progress (Deep Audit Remediation) — ALL COMPLETE
+### v2.2 Progress (Long-term Stability)
+- [x] SpineSnapshot + Rehydration — Celery tasks (spine_snapshot_task + scan_spine_snapshots)
+- [x] TraceCompaction — compress traces >50 into aggregated summaries (compact_old_traces)
+- [x] RollingMetrics — get_rolling_metrics method
+- [x] MultiGoalNamespace — goal_scoped_key + get_goal_scoped_states
+- [ ] Degraded Mode — Redis down fallback (future scope)
+
+### v2.1 COMPLETE
 - [x] Deep audit conducted — identified 12 orphaned modules, 4 stub divine moments, Aurora↔Spine split
 - [x] SpineAuroraBridge — bidirectional bridge (Spine→Aurora context, Aurora→Spine attribution)
 - [x] Aurora decision_loop now consumes Spine directives, risk flags, outcomes, trust level
@@ -1010,14 +1017,14 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-508/508 tests passing
+513/513 tests passing
 37 signal modules (excluding __init__.py)
 47 public API exports (incl. SpineAuroraBridge)
 9/9 directive types active
 10/10 Iron Laws tested
 6/6 Divine Moments implemented
 8-layer architecture complete
-35+ production wiring points
+38+ production wiring points (incl. snapshot + compaction)
 ```
 
 ---
