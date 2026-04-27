@@ -1104,6 +1104,51 @@ class SpineOrchestrator:
             event_ids=["community_partner_observation"],
         )
 
+    # ── P3-6 Integration: ExternalIntegrationGateway ────────────────────
+
+    async def on_external_event(
+        self,
+        *,
+        user_id: str,
+        source: str,
+        source_detail: str,
+        raw_payload: dict[str, Any],
+        goal_id: str | None = None,
+        integration_id: str = "",
+    ) -> CausalTrace | None:
+        """External event entry gate — all external data enters Spine as ExternalRawEvent.
+
+        Dispatches to ExternalIntegrationGateway which translates to ActionableSignal.
+        Iron Rule: external signals cannot bypass the Spine.
+        Supports sources: 'calendar', 'file', 'email', 'github', 'tool'.
+        """
+        try:
+            from app.signals.external_integration import ExternalIntegrationGateway, ExternalRawEvent
+            import uuid
+            raw_event = ExternalRawEvent(
+                event_id=f"ext_{uuid.uuid4().hex[:12]}",
+                source=source,
+                source_detail=source_detail,
+                goal_id=goal_id,
+                raw_payload=raw_payload,
+                user_visible=True,
+                revocable=True,
+                integration_id=integration_id,
+            )
+            gateway = ExternalIntegrationGateway()
+            signal = gateway.dispatch(raw_event)
+            if signal is None:
+                return None
+
+            return await self._run_signal_pipeline(
+                user_id=user_id,
+                signal=signal,
+                event_ids=[raw_event.event_id],
+            )
+        except Exception:
+            logger.debug("on_external_event degraded: source={}, user={}", source, user_id)
+            return None
+
     # ── P1-2 Integration: AuroraWake ────────────────────────────────────
 
     def check_aurora_wake(

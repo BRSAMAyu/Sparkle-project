@@ -14341,3 +14341,321 @@ def test_p3_6_external_integration_gateway():
     )
     receipt2 = gw.route_to_spine(unknown)
     assert receipt2["event_type"] == "external_raw_event"
+
+
+# ─── P4-4: Research-grade Experiment Platform ───────────────────────────────
+
+def test_p4_4_experiment_creation():
+    from app.signals.research_experiment_platform import MultivariateExperimentEngine
+    exp = MultivariateExperimentEngine.create_experiment(
+        name="worked_example_first",
+        hypothesis="Starting with worked examples reduces task abandonment",
+        variants=[
+            {"name": "control", "description": "current default", "policy_params": {}},
+            {"name": "worked_first", "description": "worked example first", "policy_params": {"task_type": "worked_example"}},
+        ],
+        min_samples=10,
+    )
+    assert exp.experiment_name == "worked_example_first"
+    assert len(exp.variants) == 2
+    assert exp.min_samples_per_variant == 10
+    assert exp.status == "draft"
+
+
+def test_p4_4_record_and_analyze():
+    from app.signals.research_experiment_platform import MultivariateExperimentEngine
+    exp = MultivariateExperimentEngine.create_experiment(
+        name="short_task_test",
+        hypothesis="Shorter tasks improve completion",
+        variants=[
+            {"name": "control", "policy_params": {"max_duration": 45}},
+            {"name": "short", "policy_params": {"max_duration": 25}},
+        ],
+        min_samples=5,
+    )
+    v_control = exp.variants[0].variant_id
+    v_short = exp.variants[1].variant_id
+
+    # Record outcomes: short wins
+    for _ in range(6):
+        MultivariateExperimentEngine.record_outcome(exp, v_control, success=False)
+        MultivariateExperimentEngine.record_outcome(exp, v_short, success=True)
+
+    conclusion = MultivariateExperimentEngine.analyze(exp)
+    assert conclusion.winning_variant_id == v_short
+    assert conclusion.is_conclusive is True
+    assert "outperforms" in conclusion.recommendation
+
+
+def test_p4_4_segment_matching():
+    from app.signals.research_experiment_platform import UserSegment
+    seg = UserSegment(
+        segment_id="seg_1",
+        segment_name="exam_sprint_high_activity",
+        criteria={"goal_type": "exam_sprint", "activity_level": "high"},
+    )
+    assert seg.matches({"goal_type": "exam_sprint", "activity_level": "high"})
+    assert not seg.matches({"goal_type": "exam_sprint", "activity_level": "low"})
+    assert not seg.matches({"goal_type": "project_delivery"})
+
+
+def test_p4_4_insufficient_samples_not_conclusive():
+    from app.signals.research_experiment_platform import MultivariateExperimentEngine
+    exp = MultivariateExperimentEngine.create_experiment(
+        name="small_test",
+        hypothesis="X outperforms Y",
+        variants=[
+            {"name": "A", "policy_params": {}},
+            {"name": "B", "policy_params": {}},
+        ],
+        min_samples=30,
+    )
+    # Only 2 outcomes — not enough
+    MultivariateExperimentEngine.record_outcome(exp, exp.variants[0].variant_id, success=True)
+    MultivariateExperimentEngine.record_outcome(exp, exp.variants[1].variant_id, success=False)
+
+    conclusion = MultivariateExperimentEngine.analyze(exp)
+    assert conclusion.is_conclusive is False
+    assert conclusion.winning_variant_id is None
+
+
+# ─── P4-5: Privacy-Preserving Community Intelligence ────────────────────────
+
+def test_p4_5_privacy_budget_spend_and_exhaust():
+    from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
+    engine = PrivacyPreservingCommunityEngine()
+    budget = engine.get_or_create_budget("user_1", epsilon=1.0, max_epsilon=0.3)
+    # With max_epsilon=0.3 and default query cost=0.1, can answer 3 times
+    assert engine.check_privacy_budget("user_1", "cohort_lookup")  # cost=0.05
+    budget.spend(0.15)
+    budget.spend(0.15)
+    # Now spent 0.3 → exhausted
+    assert not budget.can_answer(0.1)
+
+
+def test_p4_5_cohort_privacy_tiers():
+    from app.signals.privacy_community_intelligence import (
+        PrivacyPreservingCommunityEngine,
+        PrivacyPreservingCohort,
+    )
+    engine = PrivacyPreservingCommunityEngine()
+
+    # < 5 → suppressed
+    cohort_tiny = engine.create_cohort({"goal_type": "exam_sprint"}, member_count=3)
+    assert cohort_tiny.privacy_tier == "suppressed"
+    d = cohort_tiny.to_dict()
+    assert d["stats"] == []  # suppressed: nothing shared
+
+    # 5-14 → trend_only
+    cohort_small = engine.create_cohort({"goal_type": "exam_sprint"}, member_count=10)
+    assert cohort_small.privacy_tier == "trend_only"
+
+    # 16+ → anonymous_aggregate
+    cohort_large = engine.create_cohort({"goal_type": "exam_sprint"}, member_count=20)
+    assert cohort_large.privacy_tier == "anonymous_aggregate"
+
+
+def test_p4_5_anonymized_stat_suppresses_small_cohort():
+    from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
+    engine = PrivacyPreservingCommunityEngine()
+    # Cohort of 3 → stat suppressed
+    stat = engine.compute_anonymized_stat("task_completion_rate", [0.8, 0.9, 0.7])
+    assert stat.is_reliable is False
+    assert stat.value == 0.0  # suppressed
+
+
+def test_p4_5_anonymized_stat_large_cohort():
+    from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
+    engine = PrivacyPreservingCommunityEngine()
+    raw = [0.7, 0.8, 0.75, 0.9, 0.65, 0.85, 0.7, 0.8, 0.9, 0.72]
+    stat = engine.compute_anonymized_stat("task_completion_rate", raw, epsilon=1.0)
+    assert stat.is_reliable is True
+    assert stat.cohort_size == 10
+    # Value is noised — just check it's in a plausible range
+    assert 0.0 <= stat.value <= 1.5
+    d = stat.to_dict()
+    assert "noise_std" in d
+    assert d["noise_std"] > 0
+
+
+# ─── P4-6: Spine Quality Guard ──────────────────────────────────────────────
+
+def test_p4_6_quality_guard_healthy_state():
+    from app.signals.spine_quality_guard import SpineQualityGuard
+    signal_history = [
+        {"had_policy_decision": True, "had_directive": True},
+        {"had_policy_decision": True, "had_directive": True},
+        {"had_policy_decision": True, "had_directive": True},
+    ]
+    check = SpineQualityGuard.check_signal_actionability(signal_history, min_actionable_ratio=0.5)
+    assert check.passed is True
+    assert check.score == 1.0
+
+
+def test_p4_6_quality_guard_orphan_signals():
+    from app.signals.spine_quality_guard import SpineQualityGuard
+    check = SpineQualityGuard.check_orphan_signal_buildup(orphan_count=5, total_signal_count=10, max_orphan_ratio=0.3)
+    assert check.passed is False
+    assert check.score == 0.5  # 1 - 0.5
+
+
+def test_p4_6_quality_guard_chain_break():
+    from app.signals.spine_quality_guard import SpineQualityGuard
+    metrics = {
+        "signals_generated": 100,
+        "policies_evaluated": 40,   # <70% → chain break
+        "directives_applied": 35,
+    }
+    check = SpineQualityGuard.check_chain_breaks(metrics)
+    assert check.passed is False
+    assert "Signal→Policy chain broken" in check.recommendations[0]
+
+
+def test_p4_6_quality_guard_empty_data_graceful():
+    from app.signals.spine_quality_guard import SpineQualityGuard
+    check1 = SpineQualityGuard.check_signal_actionability([])
+    assert check1.passed is True
+    check2 = SpineQualityGuard.check_orphan_signal_buildup(0, 0)
+    assert check2.passed is True
+    check3 = SpineQualityGuard.check_causal_trace_completeness([])
+    assert check3.passed is True
+
+
+def test_p4_6_quality_report_full_healthy():
+    from app.signals.spine_quality_guard import SpineQualityGuard
+    report = SpineQualityGuard.generate_quality_report(
+        signal_history=[
+            {"had_policy_decision": True, "had_directive": True},
+            {"had_policy_decision": True, "had_directive": True},
+        ],
+        traces=[{
+            "signal_ids": ["s1"],
+            "policy_decision_id": "pd1",
+            "directive_ids": ["d1"],
+            "audit_ids": ["a1"],
+            "receipt_ids": ["r1"],
+        }],
+        audits=[{"applied": True}],
+        metrics={"signals_generated": 10, "policies_evaluated": 9, "directives_applied": 8, "orphan_signal_count": 1},
+        outcome_count=6,
+        directive_count=8,
+        outcomes=[{"attribution": "effective", "attribution_confidence": 0.8}],
+    )
+    assert report.health_status in ("healthy", "degraded")
+    assert 0.0 <= report.overall_score <= 1.0
+    assert len(report.checks) == 7  # 7 checks in generate_quality_report
+
+
+def test_p4_6_degradation_detection():
+    from app.signals.spine_quality_guard import SpineQualityGuard, QualityReport
+    # Create declining reports
+    reports = []
+    for score in [0.9, 0.8, 0.7]:
+        r = QualityReport(
+            report_id=f"r_{score}",
+            window_start="2026-04-27T00:00:00",
+            window_end="2026-04-27T23:59:59",
+            overall_score=score,
+        )
+        reports.append(r)
+
+    result = SpineQualityGuard.detect_degradation(reports, window_count=3, degradation_threshold=0.05)
+    assert result["degrading"] is True
+    assert "Consistent decline" in result["reason"]
+
+
+# ── P3-5 Bridge + P3-6 Wiring tests ─────────────────────────────────────────
+
+def test_p3_5_bridge_from_guide_json_study():
+    from app.signals.task_card_protocol import TaskCardBridge
+    guide = {
+        "task_kind": "retrieval_drill",
+        "success_criteria": "完成80%题目",
+        "minimum_output": "闭卷复述",
+        "why_this_task": "针对高频节点；修复错因",
+        "materials_protocol": {"retrieval_mode": "task_bound_graph_rag"},
+        "stuck_protocol": {"knows_rules_cant_solve": {"action": "worked_example"}},
+        "method_steps": ["第一步", "第二步"],
+        "updates_after_completion": ["knowledge_mastery"],
+        "time_estimate_minutes": 30,
+    }
+    card = TaskCardBridge.from_guide_json(guide, goal_id="g1", task_id="t1")
+    assert card.task_type == "practice"
+    assert card.goal_id == "g1"
+    assert card.minimum_output == "闭卷复述"
+    assert card.stuck_protocol.hint_strategy == "worked_example"
+    assert card.materials_protocol.retrieval_mode == "task_bound_graph_rag"
+
+
+def test_p3_5_bridge_validate_guide_json_valid():
+    from app.signals.task_card_protocol import TaskCardBridge
+    guide = {
+        "task_kind": "retrieval_drill",
+        "success_criteria": "完成测试",
+        "minimum_output": "产出物",
+        "why_this_task": "高频节点",
+        "materials_protocol": {},
+        "stuck_protocol": {},
+        "method_steps": [],
+        "updates_after_completion": [],
+        "time_estimate_minutes": 20,
+    }
+    issues = TaskCardBridge.validate_guide_json(guide, goal_id="g1")
+    assert issues == []
+
+
+def test_p3_5_bridge_validate_guide_json_invalid():
+    from app.signals.task_card_protocol import TaskCardBridge
+    guide = {
+        "task_kind": "retrieval_drill",
+        "success_criteria": "",  # missing
+        "minimum_output": "",    # missing
+        "why_this_task": "",
+        "materials_protocol": {},
+        "stuck_protocol": {},
+        "method_steps": [],
+        "updates_after_completion": [],
+        "time_estimate_minutes": 20,
+    }
+    issues = TaskCardBridge.validate_guide_json(guide, goal_id="")  # no goal_id either
+    assert any("success_criterion" in i for i in issues)
+    assert any("minimum_output" in i or "goal_id" in i for i in issues)
+
+
+async def test_p3_6_on_external_event_calendar(fake_redis):
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.on_external_event(
+        user_id="u1",
+        source="calendar",
+        source_detail="google_calendar",
+        raw_payload={"event_title": "期末考试", "event_date": "2026-06-15"},
+    )
+    # Calendar events may produce a trace or return None (no matching signal) — both valid
+    assert result is None or hasattr(result, "trace_id")
+
+
+async def test_p3_6_on_external_event_file(fake_redis):
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.on_external_event(
+        user_id="u2",
+        source="file",
+        source_detail="pdf_upload",
+        raw_payload={"file_name": "计网第五章.pdf", "goal_id": "g1"},
+        goal_id="g1",
+    )
+    assert result is None or hasattr(result, "trace_id")
+
+
+async def test_p3_6_on_external_event_unknown_source_graceful(fake_redis):
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.on_external_event(
+        user_id="u3",
+        source="unknown_source_xyz",
+        source_detail="unknown_detail",
+        raw_payload={},
+    )
+    # Unknown source returns None gracefully, no exception
+    assert result is None

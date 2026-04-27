@@ -74,8 +74,21 @@ from app.signals.goal_type_adapter import GOAL_TYPE_PROFILES, GoalTypeAdapter, G
 from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
 from app.signals.learning_base import LearningBase, StrategyBelief
 from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
+from app.signals.privacy_community_intelligence import (
+    AnonymizedCohortStat,
+    PrivacyBudget,
+    PrivacyPreservingCohort,
+    PrivacyPreservingCommunityEngine,
+)
 from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
 from app.signals.relationship_model import RelationshipModelService, RelationshipState
+from app.signals.research_experiment_platform import (
+    ExperimentConclusion,
+    ExperimentVariant,
+    MultivariateExperiment,
+    MultivariateExperimentEngine,
+    UserSegment,
+)
 from app.signals.research_grade import (
     CounterfactualEngine,
     CounterfactualResult,
@@ -86,6 +99,11 @@ from app.signals.research_grade import (
 )
 from app.signals.skill_lifecycle import SkillLifecycleManager
 from app.signals.source_tray_integration import SourceEffectivenessTracker
+from app.signals.spine_quality_guard import (
+    QualityCheck,
+    QualityReport,
+    SpineQualityGuard,
+)
 from app.signals.task_card_protocol import TaskCardBuilder, TaskCardValidator
 from app.signals.goal_world_graph import GoalWorldGraph, GoalWorldGraphService, GraphNode
 from app.signals.multi_goal_arbitration import ActiveGoal, GoalArbitrationResult, MultiGoalArbitrator
@@ -94,6 +112,8 @@ from app.signals.spine_aurora_bridge import SpineAuroraBridge
 __all__ = [
     "ActionableSignal",
     "ActionableStatePacket",
+    "ActiveGoal",
+    "AnonymizedCohortStat",
     "AuroraAgendaItem",
     "AuroraControlSignal",
     "CalendarEvent",
@@ -112,6 +132,8 @@ __all__ = [
     "EmailDeadlineExtractor",
     "EmailDeadlineHint",
     "ExecutionDirective",
+    "ExperimentConclusion",
+    "ExperimentVariant",
     "ExternalIntegrationGateway",
     "ExternalRawEvent",
     "ExternalToolBridge",
@@ -123,9 +145,15 @@ __all__ = [
     "GOAL_TYPE_PROFILES",
     "GoalTypeAdapter",
     "GoalTypeProfile",
+    "GoalWorldGraph",
+    "GoalWorldGraphService",
+    "GraphNode",
+    "GrowthChronicleService",
     "LearningBase",
     "MaterialsProtocol",
     "ModelWriteDirective",
+    "MultivariateExperiment",
+    "MultivariateExperimentEngine",
     "MultiGoalArbitrator",
     "NotificationDirective",
     "OutcomeRecord",
@@ -134,6 +162,11 @@ __all__ = [
     "PolicyEffectEntry",
     "PolicyExperiment",
     "PolicyExperimentManager",
+    "PrivacyBudget",
+    "PrivacyPreservingCohort",
+    "PrivacyPreservingCommunityEngine",
+    "QualityCheck",
+    "QualityReport",
     "RelationshipModelService",
     "RelationshipState",
     "ResponseDirective",
@@ -149,24 +182,20 @@ __all__ = [
     "SourceSlice",
     "SourceTraySelection",
     "SourceTrayState",
+    "SpineAuroraBridge",
+    "SpineQualityGuard",
     "StateEntry",
     "StuckProtocol",
     "StrategyBelief",
+    "TaskCardBridge",
     "TaskCardBuilder",
     "TaskCardProtocol",
     "TaskCardValidator",
     "TASK_TYPES",
     "TASK_TYPE_NODE_BINDINGS",
+    "UserSegment",
     "UserSimulator",
     "UserVisibleReceipt",
     "UXDirective",
     "WhyThisTask",
-    "GrowthChronicleService",
-    "GoalWorldGraph",
-    "GoalWorldGraphService",
-    "GraphNode",
-    "ActiveGoal",
-    "GoalArbitrationResult",
-    "MultiGoalArbitrator",
-    "SpineAuroraBridge",
 ]

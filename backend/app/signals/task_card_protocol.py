@@ -228,6 +228,99 @@ class TaskCardBuilder:
         return f"tcp_{uuid.uuid4().hex[:12]}"
 
 
+class TaskCardBridge:
+    """Converts between the existing planning_workflow guide_json format and TaskCardProtocol."""
+
+    @staticmethod
+    def from_guide_json(
+        guide_json: dict[str, Any],
+        goal_id: str = "",
+        task_id: str = "",
+    ) -> "TaskCardProtocol":
+        """Build a TaskCardProtocol from a planning_workflow guide_json dict.
+
+        Bridges the existing exam-sprint dict format to the typed protocol.
+        Used for validation and audit trail — does not replace guide_json generation.
+        """
+        why_raw = guide_json.get("why_this_task")
+        why: WhyThisTask
+        if isinstance(why_raw, dict):
+            why = WhyThisTask(
+                signal_ids=why_raw.get("signal_ids", []),
+                policy_decision_id=why_raw.get("policy_decision_id"),
+                bottleneck_node_id=why_raw.get("bottleneck_node_id"),
+                reasoning_summary=why_raw.get("reasoning_summary", ""),
+            )
+        else:
+            why = WhyThisTask(reasoning_summary=str(why_raw or ""))
+
+        mp_raw = guide_json.get("materials_protocol", {})
+        if isinstance(mp_raw, dict):
+            mp = MaterialsProtocol(
+                retrieval_mode=mp_raw.get("retrieval_mode", "task_bound_graph_rag"),
+                must_load_node_ids=mp_raw.get("must_load_node_ids", []),
+                may_load_node_ids=mp_raw.get("may_load_node_ids", []),
+                source_tray_selection=mp_raw.get("source_tray_selection", []),
+            )
+        else:
+            mp = MaterialsProtocol()
+
+        sp_raw = guide_json.get("stuck_protocol", {})
+        sp = StuckProtocol(
+            escalation_after_min=int(guide_json.get("time_estimate_minutes", 25) // 2),
+            hint_strategy="worked_example",
+        )
+        if isinstance(sp_raw, dict) and "knows_rules_cant_solve" in sp_raw:
+            sp.hint_strategy = "worked_example"
+        elif isinstance(sp_raw, dict) and "cant_understand_rules" in sp_raw:
+            sp.hint_strategy = "simplify"
+
+        raw_task_kind = guide_json.get("task_kind", "retrieval_drill")
+        task_type_map = {
+            "retrieval_drill": "practice",
+            "diagnostic_triage": "study",
+            "worked_example": "practice",
+            "artifact_build": "artifact_build",
+            "habit_action": "habit_action",
+            "review": "review",
+            "feedback_collection": "feedback_collection",
+        }
+        task_type = task_type_map.get(raw_task_kind, "study")
+
+        success_raw = guide_json.get("success_criteria", "")
+        success_criteria = [success_raw] if isinstance(success_raw, str) and success_raw else (
+            success_raw if isinstance(success_raw, list) else []
+        )
+
+        updates_raw = guide_json.get("updates_after_completion", [])
+        updates = updates_raw if isinstance(updates_raw, list) else []
+
+        return TaskCardProtocol(
+            task_id=task_id or TaskCardBuilder._new_id(),
+            goal_id=goal_id,
+            task_type=task_type,
+            bound_nodes=[],
+            why_this_task=why,
+            materials_protocol=mp,
+            steps=list(guide_json.get("method_steps", [])),
+            stuck_protocol=sp,
+            success_criteria=success_criteria,
+            minimum_output=guide_json.get("minimum_output", ""),
+            updates_after_completion=updates,
+            fallback_if_failed=[],
+        )
+
+    @staticmethod
+    def validate_guide_json(
+        guide_json: dict[str, Any],
+        goal_id: str = "",
+        task_id: str = "",
+    ) -> list[str]:
+        """Convenience: bridge to TaskCardProtocol and validate. Returns issue list."""
+        card = TaskCardBridge.from_guide_json(guide_json, goal_id=goal_id, task_id=task_id)
+        return TaskCardValidator.validate(card)
+
+
 class TaskCardValidator:
     """Validates TaskCardProtocol instances for completeness and correctness."""
 
