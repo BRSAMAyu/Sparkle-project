@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-575/575 tests passing:
+590/590 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -1109,7 +1109,7 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-584/584 tests passing
+590/590 tests passing
 42 signal modules (excluding __init__.py)
 55 public API exports (incl. GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
 9/9 directive types active

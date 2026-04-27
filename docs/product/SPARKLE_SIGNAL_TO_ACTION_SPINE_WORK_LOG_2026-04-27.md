@@ -77,4 +77,30 @@
 
 ---
 
+### Phase: v2.8 SignalRanker 10维扩展 + StopIteration 修复
+
+**动作**:
+- SignalRanker 从 3 维扩展到 10 维评分（goal_impact, decision_relevance, urgency, freshness, cost_of_inaction, reversibility, user_visibility_need, privacy_sensitivity + 原有 confidence, tier_inverse）
+- 10 条冲突规则扩展（deadline_pressure > growth_momentum, knowledge_transfer > community_cohort 等）
+- 8 个新 ranker 维度测试（goal_impact_tier1, privacy_sensitivity, reversibility, user_visibility, decision_relevance, expanded_conflict_growth_vs_deadline, expanded_conflict_community_vs_knowledge, dimensions_count）
+- 修复 StopIteration bug：async test 中 `next(generator)` 替换为 list comprehension 索引
+
+**审查**:
+- 590/590 tests passing
+- commit `3d1a51f6` 已包含所有修复
+
+**关键设计决策**:
+- 10 维评分权重通过 _DIMENSION_WEIGHTS 配置，保持可调节
+- 高隐私信号（community_cohort）自动提升 privacy_sensitivity 维度分数
+- 不可逆操作（goal scope）降低 reversibility 分数，降低排序权重
+- 安全/Deadline 信号 user_visibility_need=1.0 确保必须告知用户
+
+**差距**:
+- P0-P4 规划全部完成
+- Spec 定义的 10 铁律、6 神性时刻、9 类 Directive 全部实现并测试
+- 8 层架构完整，12/12 E2E 场景覆盖
+- **Signal-to-Action Spine v2.8 COMPLETE — 规划内所有任务已完成**
+
+---
+
 *（后续日志按时间追加）*
