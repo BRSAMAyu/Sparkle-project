@@ -15586,3 +15586,236 @@ def test_p4_1_batch_evaluate_contexts():
     )
     assert len(results) >= 2
     assert "transfer_failure" in results or "knowledge_gap" in results
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-2: Safe Adaptive Experiment Platform
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_2_experiment_lifecycle_transitions():
+    """SafePolicyExperiment follows valid 7-stage lifecycle transitions."""
+    from app.signals.safe_experiment_platform import SafePolicyExperiment
+
+    exp = SafePolicyExperiment(name="test", domain="exam_sprint")
+    assert exp.status == "draft"
+
+    # Draft → Shadow
+    exp.policies = [{"policy_key": "a", "risk_level": "low"}, {"policy_key": "b", "risk_level": "low"}]
+    exp.hypothesis = "Policy A better than B"
+    ok, msg = exp.transition_to("shadow")
+    assert ok, msg
+    assert exp.status == "shadow"
+
+    # Shadow → Canary (needs 10 episodes)
+    exp.current_episodes = 10
+    ok, msg = exp.transition_to("canary")
+    assert ok, msg
+    assert exp.status == "canary"
+
+    # Canary → Safe Live (needs min_episodes + min_users)
+    exp.current_episodes = 60
+    exp.distinct_users = [f"u{i}" for i in range(20)]
+    ok, msg = exp.transition_to("safe_live")
+    assert ok, msg
+    assert exp.status == "safe_live"
+
+    # Safe Live → Paused
+    exp.pause("guardrail: negative_feedback_high")
+    assert exp.status == "paused"
+
+    # Invalid transition rejected
+    ok, msg = exp.transition_to("shadow")
+    assert not ok
+
+
+def test_p4_2_experiment_guardrails():
+    """ExperimentGuardrails detects violations and triggers auto-stop."""
+    from app.signals.safe_experiment_platform import ExperimentGuardrails
+    from app.signals.intervention_episode import (
+        OutcomeVector, TrustOutcome, AgencyOutcome, LoadOutcome,
+    )
+
+    guardrails = ExperimentGuardrails()
+    clean_outcomes = [OutcomeVector() for _ in range(10)]
+    result = guardrails.check(clean_outcomes)
+    assert result["status"] == "ok"
+
+    # High negative feedback → violation
+    bad_outcomes = []
+    for i in range(20):
+        ov = OutcomeVector()
+        ov.trust = TrustOutcome(explicit_negative_feedback=(i < 4))
+        bad_outcomes.append(ov)
+    result = guardrails.check(bad_outcomes)
+    assert result["status"] == "violated"
+    assert any(v["guardrail"] == "negative_feedback" for v in result["violations"])
+
+
+def test_p4_2_guardrail_context_eligibility():
+    """Guardrails exclude high-risk contexts from experimentation."""
+    from app.signals.safe_experiment_platform import ExperimentGuardrails
+    from app.signals.intervention_episode import ContextSignature
+
+    guardrails = ExperimentGuardrails()
+    cs_critical = ContextSignature(deadline_phase="D0_exam_day")
+    eligible, reason = guardrails.is_context_eligible(cs_critical)
+    assert not eligible
+
+    cs_normal = ContextSignature(deadline_phase="D-3", affective_pressure="calm")
+    eligible, reason = guardrails.is_context_eligible(cs_normal)
+    assert eligible
+
+
+def test_p4_2_reward_model():
+    """RewardModel computes multi-objective reward, penalizes guardrail violations."""
+    from app.signals.safe_experiment_platform import RewardModel
+    from app.signals.intervention_episode import (
+        OutcomeVector, ExecutionOutcome, LearningOutcome,
+        GoalProgressOutcome, TrustOutcome,
+    )
+
+    model = RewardModel()
+    ov_good = OutcomeVector(
+        execution=ExecutionOutcome(completed=True),
+        learning=LearningOutcome(accuracy_delta_from_baseline=0.2),
+        goal_progress=GoalProgressOutcome(node_mastery_delta=0.1),
+    )
+    result = model.compute_reward(ov_good)
+    assert result["guardrail_clean"]
+    assert result["total_score"] > 0.3
+
+    ov_bad = OutcomeVector()
+    ov_bad.trust = TrustOutcome(explicit_negative_feedback=True)
+    result = model.compute_reward(ov_bad)
+    assert not result["guardrail_clean"]
+
+
+def test_p4_2_safe_bandit_controller():
+    """SafeBanditController respects risk levels and user preferences."""
+    from app.signals.safe_experiment_platform import SafeBanditController
+    from app.signals.intervention_episode import ContextSignature
+
+    bandit = SafeBanditController()
+    cs = ContextSignature(goal_mode="exam_rescue")
+
+    # Cold start
+    decision = bandit.select_action(["a", "b", "c"], context=cs, risk_level="low")
+    assert decision["selected_action"] in ["a", "b", "c"]
+    assert decision["reason"] == "cold_start_uniform"
+
+    # User preference overrides
+    decision = bandit.select_action(
+        ["a", "b", "c"], context=cs, risk_level="low",
+        user_preference="b",
+    )
+    assert decision["selected_action"] == "b"
+    assert decision["reason"] == "user_preference"
+
+    # Critical risk → conservative
+    decision = bandit.select_action(["a", "b"], context=cs, risk_level="critical")
+    assert decision["exploration_allowed"] is False
+    assert decision["reason"] == "critical_risk_conservative"
+
+
+def test_p4_2_bandit_update_and_learning():
+    """SafeBanditController updates beliefs from observed rewards."""
+    from app.signals.safe_experiment_platform import SafeBanditController
+    from app.signals.intervention_episode import ContextSignature
+
+    bandit = SafeBanditController()
+    cs = ContextSignature(goal_mode="exam_rescue")
+
+    bandit.update("policy_a", reward=0.8)
+    bandit.update("policy_a", reward=0.7)
+    bandit.update("policy_b", reward=0.3)
+    bandit.update("policy_b", reward=0.2)
+
+    assert "policy_a" in bandit.action_stats
+    assert bandit.action_stats["policy_a"].pull_count == 2
+    assert bandit.action_stats["policy_a"].mean_reward > 0.7
+
+    # After learning, bandit prefers better action
+    decision = bandit.select_action(["policy_a", "policy_b"], context=cs, risk_level="low")
+    assert decision["selected_action"] == "policy_a"
+
+    best = bandit.get_best_action()
+    assert best is None or best["action_key"] == "policy_a"
+
+
+def test_p4_2_experiment_registry():
+    """SafeExperimentRegistry manages experiments and monitors guardrails."""
+    from app.signals.safe_experiment_platform import (
+        SafeExperimentRegistry, SafePolicyExperiment,
+    )
+
+    registry = SafeExperimentRegistry()
+    exp1 = SafePolicyExperiment(name="exp1", domain="exam_sprint", status="shadow")
+    exp2 = SafePolicyExperiment(name="exp2", domain="exam_sprint", status="draft")
+    exp3 = SafePolicyExperiment(name="exp3", domain="project_delivery", status="safe_live")
+
+    registry.register(exp1)
+    registry.register(exp2)
+    registry.register(exp3)
+
+    active = registry.list_active()
+    assert len(active) == 2
+
+    by_domain = registry.list_by_domain("exam_sprint")
+    assert len(by_domain) == 2
+
+    assert registry.get(exp1.experiment_id) is not None
+    assert registry.to_dict()["total_experiments"] == 3
+
+
+def test_p4_2_experiment_design_validator():
+    """ExperimentDesignValidator catches unsafe designs."""
+    from app.signals.safe_experiment_platform import (
+        ExperimentDesignValidator, SafePolicyExperiment,
+    )
+
+    exp = SafePolicyExperiment()
+    result = ExperimentDesignValidator.validate(exp)
+    assert not result["valid"]
+    assert "missing_name" in result["issues"]
+
+    exp.name = "Test experiment"
+    exp.hypothesis = "A is better"
+    exp.domain = "exam_sprint"
+    exp.excluded_context = ["D0_exam_day"]
+    exp.policies = [
+        {"policy_key": "a", "risk_level": "low"},
+        {"policy_key": "b", "risk_level": "low"},
+    ]
+    result = ExperimentDesignValidator.validate(exp)
+    assert result["valid"]
+    assert result["can_proceed_to_shadow"]
+
+
+def test_p4_2_safe_experiment_record_outcome():
+    """SafePolicyExperiment records outcomes and checks guardrails."""
+    from app.signals.safe_experiment_platform import SafePolicyExperiment
+    from app.signals.intervention_episode import OutcomeVector, TrustOutcome
+
+    exp = SafePolicyExperiment(
+        name="test", domain="exam_sprint",
+        policies=[{"policy_key": "a", "risk_level": "low"}, {"policy_key": "b", "risk_level": "low"}],
+        hypothesis="test hypothesis",
+        status="safe_live",
+    )
+    # Record clean outcomes
+    for i in range(10):
+        ov = OutcomeVector()
+        exp.record_outcome(f"u{i}", ov)
+
+    assert exp.current_episodes == 10
+    assert len(exp.distinct_users) == 10
+
+    # Record bad outcomes
+    for i in range(10):
+        ov = OutcomeVector()
+        ov.trust = TrustOutcome(explicit_negative_feedback=True)
+        exp.record_outcome(f"u{i+100}", ov)
+
+    # Should be paused by guardrail
+    assert exp.status == "paused"
