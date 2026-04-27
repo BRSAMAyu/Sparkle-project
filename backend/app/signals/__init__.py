@@ -50,8 +50,18 @@ from app.signals.core_session import CoreSession, CoreSessionManager
 from app.signals.exam_sprint_policy import ExamSprintDirective, ExamSprintPhase, ExamSprintPolicyService
 from app.signals.goal_type_adapter import GOAL_TYPE_PROFILES, GoalTypeAdapter, GoalTypeProfile
 from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+from app.signals.learning_base import LearningBase, StrategyBelief
+from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
 from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
 from app.signals.relationship_model import RelationshipModelService, RelationshipState
+from app.signals.research_grade import (
+    CounterfactualEngine,
+    CounterfactualResult,
+    DomainPack,
+    DomainPackMarketplace,
+    SimulatedUserProfile,
+    UserSimulator,
+)
 from app.signals.skill_lifecycle import SkillLifecycleManager
 
 __all__ = [
@@ -63,23 +73,31 @@ __all__ = [
     "CoreSessionManager",
     "CommunityDirective",
     "CommunityLoopManager",
+    "CounterfactualEngine",
+    "CounterfactualResult",
     "DirectiveApplicationAudit",
+    "DomainPack",
+    "DomainPackMarketplace",
     "ExecutionDirective",
     "GOAL_TYPE_PROFILES",
     "GoalTypeAdapter",
     "GoalTypeProfile",
+    "LearningBase",
     "ModelWriteDirective",
     "NotificationDirective",
     "OutcomeRecord",
     "PlanDirective",
     "PolicyDecision",
     "PolicyEffectEntry",
+    "PolicyExperiment",
+    "PolicyExperimentManager",
     "RelationshipModelService",
     "RelationshipState",
     "ResponseDirective",
     "RetrievalDirective",
     "RecallMessage",
     "RecallNotificationBuilder",
+    "SimulatedUserProfile",
     "SkillDirective",
     "SkillEntry",
     "SkillLifecycleManager",
@@ -88,6 +106,8 @@ __all__ = [
     "SourceTraySelection",
     "SourceTrayState",
     "StateEntry",
+    "StrategyBelief",
+    "UserSimulator",
     "UserVisibleReceipt",
     "UXDirective",
     "GrowthChronicleService",
