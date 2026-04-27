@@ -157,6 +157,7 @@ class ChatState {
     this.pendingSpineReceipt,
     this.pendingCommunityHint,
     this.pendingUXWarning,
+    this.pendingGoalArbitration,
   });
 
   static const int maxRetainedMessages = 500;
@@ -224,6 +225,9 @@ class ChatState {
 
   /// Spine: pending UX risk warning card — divine moment #5 "阻止低收益".
   final UXWarningEvent? pendingUXWarning;
+
+  /// Spine: pending multi-goal arbitration card — surfaces when ≥2 goals conflict.
+  final GoalArbitrationEvent? pendingGoalArbitration;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -319,6 +323,8 @@ class ChatState {
     bool clearCommunityHint = false,
     UXWarningEvent? pendingUXWarning,
     bool clearUXWarning = false,
+    GoalArbitrationEvent? pendingGoalArbitration,
+    bool clearGoalArbitration = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -417,5 +423,8 @@ class ChatState {
         pendingUXWarning: clearUXWarning
             ? null
             : pendingUXWarning ?? this.pendingUXWarning,
+        pendingGoalArbitration: clearGoalArbitration
+            ? null
+            : pendingGoalArbitration ?? this.pendingGoalArbitration,
       );
 }

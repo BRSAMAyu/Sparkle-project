@@ -1751,6 +1751,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Spine: proactive risk warning (divine moment #5 阻止低收益)
           state = state.copyWith(pendingUXWarning: event);
           flushPending();
+        } else if (event is GoalArbitrationEvent) {
+          // Spine: multi-goal conflict surface
+          state = state.copyWith(pendingGoalArbitration: event);
+          flushPending();
         } else if (event is NotificationEvent) {
           // Notification Event - 实时通知推送
           _handleNotificationEvent(event);

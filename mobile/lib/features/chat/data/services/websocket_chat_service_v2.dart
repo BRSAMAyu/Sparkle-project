@@ -463,6 +463,21 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Spine: Goal Arbitration Card — multi-goal conflict surface
+        if (metadata != null && metadata['spine_goal_arbitration'] != null) {
+          final arbData =
+              _decodeMapOrString(metadata['spine_goal_arbitration']);
+          if (arbData != null) {
+            return GoalArbitrationEvent(
+              arbData: arbData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         return TextEvent(
           content: deltaContent,
           responseId: responseId,

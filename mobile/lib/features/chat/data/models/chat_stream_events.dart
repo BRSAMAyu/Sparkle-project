@@ -1797,8 +1797,8 @@ class GoalArbitrationEvent extends ChatStreamEvent {
     final raw = arbData['goals'];
     if (raw is List) {
       return raw
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
           .toList();
     }
     return [];

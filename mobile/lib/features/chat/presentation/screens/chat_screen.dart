@@ -42,6 +42,7 @@ import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_wid
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
@@ -1345,6 +1346,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onDismiss: () => ref
                             .read(chatProvider.notifier)
                             .dismissUXWarning(),
+                      ),
+                    // Spine: Goal Arbitration Card — multi-goal conflict surface
+                    if (chatState.pendingGoalArbitration != null)
+                      GoalArbitrationCard(
+                        primaryGoalTitle: chatState
+                            .pendingGoalArbitration!.primaryGoalTitle,
+                        reason: chatState.pendingGoalArbitration!.reason,
+                        goals: chatState.pendingGoalArbitration!.goals,
+                        conflicts:
+                            chatState.pendingGoalArbitration!.conflicts,
+                        onFocusPrimary: () {
+                          final arb = chatState.pendingGoalArbitration!;
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissGoalArbitration();
+                          ref.read(chatProvider.notifier).sendMessage(
+                                '我想先专注在「${arb.primaryGoalTitle}」这个目标上。',
+                              );
+                        },
+                        onContinueMulti: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissGoalArbitration(),
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissGoalArbitration(),
                       ),
                     SparkleExitTransition(
                       visible: chatState.pendingPlanReview != null,
