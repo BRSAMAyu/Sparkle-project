@@ -5948,3 +5948,140 @@ def test_skill_extraction_with_context():
     assert skills[0].scope == "cohort"
     assert skills[0].applicable_when["goal_mode"] == "exam_rescue"
     assert skills[0].privacy["shareable"] is True
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# v2.0: SourceTrayIntegration — SourceAsset ↔ RetrievalDirective
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_source_tray_must_load_user_included():
+    """User explicitly includes a source → must_load."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
+    from app.signals.source_tray_integration import compute_retrieval_plan
+
+    tray = SourceTrayState(
+        mode="manual_only",
+        selections=[SourceTraySelection(source_id="src_1", action="include")],
+        available_sources=[
+            SourceAsset(source_id="src_1", title="TCP Slides", source_type="slides",
+                        mapped_nodes=["tcp", "congestion_control"]),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1", policy_decision_id="pd_1",
+        retrieval_mode="targeted_source_rag", pollution_guard="strict",
+    )
+    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    assert len(plan["must_load"]) == 1
+    assert plan["must_load"][0]["source_id"] == "src_1"
+    assert plan["must_load"][0]["reason"] == "user_explicitly_included"
+
+
+def test_source_tray_do_not_load_user_excluded():
+    """User explicitly excludes a source → do_not_load."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
+    from app.signals.source_tray_integration import compute_retrieval_plan
+
+    tray = SourceTrayState(
+        mode="auto",
+        selections=[SourceTraySelection(source_id="src_2", action="exclude")],
+        available_sources=[
+            SourceAsset(source_id="src_2", title="Old Notes", source_type="notes"),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1", policy_decision_id="pd_1",
+        retrieval_mode="targeted_source_rag", pollution_guard="strict",
+    )
+    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    assert len(plan["do_not_load"]) == 1
+    assert plan["do_not_load"][0]["reason"] == "user_explicitly_excluded"
+
+
+def test_source_tray_strict_guard_low_relevance():
+    """Strict pollution_guard skips low-relevance sources."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
+    from app.signals.source_tray_integration import compute_retrieval_plan
+
+    tray = SourceTrayState(
+        mode="auto",
+        available_sources=[
+            SourceAsset(source_id="src_a", title="UDP Slides", source_type="slides",
+                        mapped_nodes=["udp"]),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1", policy_decision_id="pd_1",
+        retrieval_mode="targeted_source_rag", pollution_guard="strict",
+    )
+    # Query for TCP nodes — UDP source has 0 relevance
+    plan = compute_retrieval_plan(
+        retrieval_directive=directive, source_tray=tray,
+        target_nodes=["tcp", "congestion_control"],
+    )
+    assert len(plan["do_not_load"]) == 1
+    assert "low_relevance" in plan["do_not_load"][0]["reason"]
+
+
+def test_source_tray_high_relevance_in_may_load():
+    """High-relevance source goes to may_load in auto mode."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
+    from app.signals.source_tray_integration import compute_retrieval_plan
+
+    tray = SourceTrayState(
+        mode="auto",
+        available_sources=[
+            SourceAsset(source_id="src_tcp", title="TCP Slides", source_type="slides",
+                        mapped_nodes=["tcp", "congestion_control"]),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1", policy_decision_id="pd_1",
+        retrieval_mode="targeted_source_rag", pollution_guard="permissive",
+        token_budget=5000,
+    )
+    plan = compute_retrieval_plan(
+        retrieval_directive=directive, source_tray=tray,
+        target_nodes=["tcp"],
+    )
+    # TCP source has 1.0 relevance for TCP query
+    assert plan["relevance_scores"]["src_tcp"] == 1.0
+    assert any(s["source_id"] == "src_tcp" for s in plan["may_load"] + plan["must_load"])
+
+
+def test_source_tray_failed_parse_excluded():
+    """Failed parse sources always go to do_not_load."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
+    from app.signals.source_tray_integration import compute_retrieval_plan
+
+    tray = SourceTrayState(
+        mode="auto",
+        available_sources=[
+            SourceAsset(source_id="bad", title="Bad File", source_type="notes",
+                        parsed_status="failed"),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1", policy_decision_id="pd_1",
+        retrieval_mode="targeted_source_rag",
+    )
+    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    assert len(plan["do_not_load"]) == 1
+    assert plan["do_not_load"][0]["reason"] == "parse_failed"
+
+
+def test_source_tray_empty_sources():
+    """Empty source tray returns empty plan."""
+    from app.signals.types import RetrievalDirective, SourceTrayState
+    from app.signals.source_tray_integration import compute_retrieval_plan
+
+    tray = SourceTrayState(mode="auto")
+    directive = RetrievalDirective(
+        directive_id="rd_1", policy_decision_id="pd_1",
+        retrieval_mode="no_rag",
+    )
+    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    assert plan["must_load"] == []
+    assert plan["may_load"] == []
+    assert plan["do_not_load"] == []

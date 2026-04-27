@@ -426,11 +426,19 @@ class CausalTimelineEntry(BaseModel):
     directives: list[dict[str, Any]] = Field(default_factory=list)
     receipt: dict[str, Any] | None = None
     outcome: dict[str, Any] | None = None
+    card: dict[str, Any] | None = None  # P1-1: TimelineCard for UI rendering
 
 
 class CausalTimelineResponse(BaseModel):
     entries: list[CausalTimelineEntry]
     total: int
+
+
+class TimelineCardCorrectionRequest(BaseModel):
+    trace_id: str
+    card_id: str
+    action: str  # "confirm" | "correct" | "partial" | "dismiss"
+    user_explanation: str | None = None
 
 
 @router.get("/spine/timeline")
@@ -443,6 +451,7 @@ async def get_causal_timeline(
 
     from app.signals.causal_trace_store import CausalTraceStore
     from app.signals.outcome_recorder import OutcomeRecorder
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
     from app.signals.types import ActionableSignal, PolicyDecision, UserVisibleReceipt
 
     redis = cache_service.redis
@@ -451,6 +460,7 @@ async def get_causal_timeline(
 
     store = CausalTraceStore(redis)
     traces = await store.get_user_traces(str(current_user.id), limit=limit)
+    renderer = TimelineCardRenderer()
 
     entries: list[CausalTimelineEntry] = []
     for trace in traces:
@@ -503,6 +513,24 @@ async def get_causal_timeline(
             event_parts.append(f"策略: {policy_data.get('primary_strategy', '?')}")
         event_summary = " → ".join(event_parts) if event_parts else "系统事件"
 
+        # P1-1: Render timeline card
+        card_data = None
+        try:
+            card = renderer.render_card(
+                trace_id=trace.trace_id,
+                signal_data=signal_data,
+                policy_data=policy_data,
+                directives=directives,
+                receipt_data=receipt_data,
+                outcome_data=outcome_data,
+                mode="compact",
+                timestamp=trace.created_at,
+            )
+            if card:
+                card_data = card.to_dict()
+        except Exception:
+            pass
+
         entries.append(CausalTimelineEntry(
             trace_id=trace.trace_id,
             created_at=trace.created_at,
@@ -513,6 +541,7 @@ async def get_causal_timeline(
             directives=directives,
             receipt=receipt_data,
             outcome=outcome_data,
+            card=card_data,
         ))
 
     return CausalTimelineResponse(entries=entries, total=len(entries))
@@ -549,5 +578,61 @@ async def get_spine_metrics(
         return {}
     collector = SpineMetricsCollector(redis)
     return await collector.snapshot()
+
+
+@router.post("/spine/timeline/correct")
+async def correct_timeline_card(
+    request: TimelineCardCorrectionRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """User corrects a timeline card judgment (P1-1: Causal Timeline UI)."""
+    import json as json_mod
+
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"status": "error", "message": "service unavailable"}
+
+    spine = SpineOrchestrator(redis)
+
+    if request.action == "correct":
+        # User says judgment was wrong → clear directive, record correction
+        await spine.trace_store.clear_active_directive(str(current_user.id))
+        await spine.metrics.record_retraction()
+        await spine.metrics.record_outcome_recorded(effective=False)
+
+        # Record correction to self_model
+        try:
+            from app.signals.self_model import SparkleSelfModelService
+            await SparkleSelfModelService(redis).record_user_correction(
+                user_id=str(current_user.id),
+                signal_id=f"card_correct:{request.card_id}",
+                reason=request.user_explanation or "user_corrected_timeline_card",
+                source="timeline_card",
+            )
+        except Exception:
+            pass
+
+    elif request.action == "confirm":
+        await spine.metrics.record_outcome_recorded(effective=True)
+    elif request.action == "partial":
+        await spine.metrics.record_outcome_recorded(effective=False)
+    elif request.action == "dismiss":
+        pass
+
+    # Store the correction action
+    await redis.set(
+        f"spine:card_action:{request.card_id}",
+        json_mod.dumps({
+            "action": request.action,
+            "user_id": str(current_user.id),
+            "trace_id": request.trace_id,
+            "user_explanation": request.user_explanation,
+        }),
+        ex=72 * 3600,
+    )
+
+    return {"status": "ok", "action": request.action}
 
 
