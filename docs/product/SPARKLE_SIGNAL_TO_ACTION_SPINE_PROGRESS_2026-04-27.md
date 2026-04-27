@@ -1137,6 +1137,9 @@ v3.2 P0-3 complete: ActionableStatePacket 7/7 fields (time_context, execution_pa
 v4.0 P2 Batch 1 COMPLETE: state vocabulary (cognitive_load/affective_pressure) + model write roundtrip + learning persistence + retract_if, 656/656 total
 v4.1 P2 Batch 2 COMPLETE: relationship behavioral evolution + multi-strategy experiments + partner accountability loop + directive quota/cooldown, 683/683 total
 v5.0 P3 COMPLETE: core session lifecycle + agenda queue + L4 async deep learning + strategy marketplace, 698/698 total
+v5.1 Ruling alignment: P2-5 Aurora Core Session v1 (AuroraCaseFile + Agenda lifecycle + SessionClosure) + D4 Relationship hybrid FSM (6-stance + 5 dimensions), 713/713 total
+v5.2 D10 per-scenario quota (normal=1/sprint=2/crisis=3 per day + quick_calibration unlimited + technical failure no consume) + L4 6 async deep learning jobs (DailyGoalReflection, PolicyEffectCompaction, SkillCandidate, SourceEffectiveness, CommunityAggregation, StateDecayAndRetraction), 728/728 total
+v5.3 D3 three-layer ModelWrite (Hot=Redis for turn/session/task/day, Warm=PG for sprint/goal/domain/relationship, Cold=GrowthChronicle for long_term candidates requiring user confirmation), 734/734 total
 ```
 
 ### P1 Status — ALL COMPLETE
