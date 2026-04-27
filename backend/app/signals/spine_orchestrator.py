@@ -1313,11 +1313,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(cd.directive_id, cd.to_dict())
 
     async def get_community_directive(self, user_id: str) -> CommunityDirective | None:
-        import json
-        raw = await self.redis.get(f"spine:community_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 CommunityDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:community_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return CommunityDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_community_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return CommunityDirective.from_dict(json.loads(raw))
 
     async def get_latest_community_hint(self, user_id: str) -> dict[str, Any] | None:
         """Return the latest privacy-safe community hint for Flutter to render.

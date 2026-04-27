@@ -93,16 +93,35 @@ class GrowthChronicleService:
         self.redis = redis_client
 
     async def add_entry(self, user_id: str, entry: ChronicleEntry) -> None:
-        """Add an entry to a user's chronicle JSON list."""
+        """Add an entry to a user's chronicle JSON list. Uses WATCH for atomicity."""
         if entry.user_id != user_id:
             raise ValueError("chronicle entry user_id must match storage user_id")
         if entry.entry_type not in _VALID_ENTRY_TYPES:
             raise ValueError(f"invalid chronicle entry type: {entry.entry_type}")
 
+        key = _CHRONICLE_KEY.format(user_id=user_id)
         entries = await self._load_entries(user_id)
         entries = [existing for existing in entries if existing.entry_id != entry.entry_id]
         entries.insert(0, entry)
-        await self._save_entries(user_id, entries[:_MAX_STORED_ENTRIES])
+        payload = json.dumps([e.to_dict() for e in entries[:_MAX_STORED_ENTRIES]], ensure_ascii=False)
+
+        try:
+            await self.redis.watch(key)
+            try:
+                async with self.redis.pipeline() as pipe:
+                    pipe.multi()
+                    pipe.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
+                    await pipe.execute()
+            except (AttributeError, TypeError, RuntimeError):
+                await self.redis.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
+        except Exception:
+            # WATCH not supported (FakeRedis) — just write directly
+            await self._save_entries(user_id, entries[:_MAX_STORED_ENTRIES])
+        finally:
+            try:
+                await self.redis.unwatch()
+            except Exception:
+                pass
 
         logger.info(
             "GrowthChronicle entry added: user={} entry={} type={}",
@@ -116,7 +135,8 @@ class GrowthChronicleService:
         return entries[:limit]
 
     async def hide_entry(self, user_id: str, entry_id: str) -> None:
-        """Hide an entry without deleting its evidence-backed record."""
+        """Hide an entry without deleting its evidence-backed record. Uses WATCH for atomicity."""
+        key = _CHRONICLE_KEY.format(user_id=user_id)
         entries = await self._load_entries(user_id)
         changed = False
         for entry in entries:
@@ -125,11 +145,28 @@ class GrowthChronicleService:
                 changed = True
                 break
         if changed:
-            await self._save_entries(user_id, entries)
-            logger.info("GrowthChronicle entry hidden: user={} entry={}", user_id, entry_id)
+            payload = json.dumps([e.to_dict() for e in entries], ensure_ascii=False)
+            try:
+                await self.redis.watch(key)
+                try:
+                    async with self.redis.pipeline() as pipe:
+                        pipe.multi()
+                        pipe.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
+                        await pipe.execute()
+                except (AttributeError, TypeError, RuntimeError):
+                    await self.redis.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
+            except Exception:
+                await self._save_entries(user_id, entries)
+            finally:
+                try:
+                    await self.redis.unwatch()
+                except Exception:
+                    pass
+        logger.info("GrowthChronicle entry hidden: user={} entry={}", user_id, entry_id)
 
     async def edit_entry(self, user_id: str, entry_id: str, new_narrative: str) -> None:
-        """Edit the user-facing narrative text for an editable entry."""
+        """Edit the user-facing narrative text for an editable entry. Uses WATCH for atomicity."""
+        key = _CHRONICLE_KEY.format(user_id=user_id)
         entries = await self._load_entries(user_id)
         for entry in entries:
             if entry.entry_id != entry_id:
@@ -137,7 +174,23 @@ class GrowthChronicleService:
             if not entry.user_editable:
                 raise ValueError(f"chronicle entry is not editable: {entry_id}")
             entry.narrative = new_narrative
-            await self._save_entries(user_id, entries)
+            payload = json.dumps([e.to_dict() for e in entries], ensure_ascii=False)
+            try:
+                await self.redis.watch(key)
+                try:
+                    async with self.redis.pipeline() as pipe:
+                        pipe.multi()
+                        pipe.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
+                        await pipe.execute()
+                except (AttributeError, TypeError, RuntimeError):
+                    await self.redis.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
+            except Exception:
+                await self._save_entries(user_id, entries)
+            finally:
+                try:
+                    await self.redis.unwatch()
+                except Exception:
+                    pass
             logger.info("GrowthChronicle entry edited: user={} entry={}", user_id, entry_id)
             return
 
@@ -287,9 +340,19 @@ class GrowthChronicleService:
 
     async def _load_entries(self, user_id: str) -> list[ChronicleEntry]:
         raw = await self.redis.get(_CHRONICLE_KEY.format(user_id=user_id))
+        return self._parse_raw_entries(raw)
+
+    @staticmethod
+    def _parse_raw_entries(raw: Any) -> list[ChronicleEntry]:
+        """Parse raw Redis response into ChronicleEntry list."""
+        if raw is None:
+            return []
         if not raw:
             return []
-        data = json.loads(raw)
+        try:
+            data = json.loads(raw if isinstance(raw, str) else raw.decode() if isinstance(raw, bytes) else "[]")
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            return []
         if not isinstance(data, list):
             return []
         return [

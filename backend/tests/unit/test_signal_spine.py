@@ -9547,3 +9547,98 @@ async def test_trace_compaction_celery_task_registered():
     """Celery compaction task is registered."""
     from app.core.celery_tasks import compact_user_traces
     assert compact_user_traces.name == "app.core.celery_tasks.compact_user_traces"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# v2.2: Redis Resilience (Degraded Mode) Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_transitions():
+    """Circuit breaker transitions closed → open → half_open → closed."""
+    from app.signals.redis_resilience import CircuitBreaker
+    cb = CircuitBreaker("test", failure_threshold=3, recovery_timeout=0.01)
+
+    assert cb.state == "closed"
+    assert cb.allow_request() is True
+
+    # 3 failures → open
+    cb.record_failure()
+    cb.record_failure()
+    cb.record_failure()
+    assert cb.state == "open"
+    assert cb.allow_request() is False
+
+    # Wait for recovery timeout
+    import asyncio
+    await asyncio.sleep(0.02)
+    assert cb.state == "half_open"
+    assert cb.allow_request() is True
+
+    # Success → closed
+    cb.record_success()
+    assert cb.state == "closed"
+
+
+@pytest.mark.asyncio
+async def test_resilient_redis_call_success():
+    """resilient_redis_call returns result on success."""
+    from app.signals.redis_resilience import resilient_redis_call
+
+    async def good_call():
+        return "ok"
+
+    result = await resilient_redis_call("spine_pipeline", good_call())
+    assert result == "ok"
+
+
+@pytest.mark.asyncio
+async def test_resilient_redis_call_fallback():
+    """resilient_redis_call returns fallback on failure."""
+    from app.signals.redis_resilience import resilient_redis_call, CircuitBreaker
+    # Use a breaker that's already open
+    breaker = CircuitBreaker("test_open", failure_threshold=1, recovery_timeout=60.0)
+    breaker.record_failure()  # 1 failure
+
+    # Manually set to open
+    breaker._state = "open"
+
+    async def bad_call():
+        raise Exception("redis down")
+
+    result = await resilient_redis_call("test_open", bad_call(), fallback="safe_default")
+    # breaker is open so it should return fallback immediately
+    assert result == "safe_default"
+
+
+@pytest.mark.asyncio
+async def test_resilient_redis_call_retries():
+    """resilient_redis_call returns fallback when coroutine fails."""
+    from app.signals.redis_resilience import resilient_redis_call
+
+    async def failing_call():
+        raise Exception("redis connection refused")
+
+    result = await resilient_redis_call("spine_pipeline", failing_call(), fallback="safe", max_retries=2)
+    assert result == "safe"
+
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_named_breakers():
+    """Named breakers for spine subsystems exist."""
+    from app.signals.redis_resilience import get_breaker
+
+    bp = get_breaker("spine_pipeline")
+    assert bp.name == "spine_pipeline"
+
+    bs = get_breaker("state_register")
+    assert bs.name == "state_register"
+
+    bc = get_breaker("chronicle")
+    assert bc.name == "chronicle"
+
+    # Unknown name → creates new breaker
+    bx = get_breaker("unknown")
+    assert bx.name == "unknown"
+    assert bx.state == "closed"

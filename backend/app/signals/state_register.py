@@ -134,24 +134,34 @@ class StateRegister:
         return entry
 
     async def get_active_states(self, user_id: str) -> list[StateEntry]:
-        """Get all active (non-expired) states for a user."""
+        """Get all active (non-expired) states for a user. Uses MGET for batch loading."""
         index_key = f"spine:state_index:{user_id}"
         state_keys = await self.redis.smembers(index_key)
         if not state_keys:
             return []
 
+        decoded_keys = [
+            raw_key if isinstance(raw_key, str) else raw_key.decode()
+            for raw_key in state_keys
+        ]
+
+        # MGET: single round-trip instead of N individual GETs
+        # Fallback to individual GETs if mget not available (e.g. FakeRedis)
+        redis_keys = [f"spine:state:{user_id}:{sk}" for sk in decoded_keys]
+        try:
+            raw_values = await self.redis.mget(*redis_keys)
+        except AttributeError:
+            raw_values = [await self.redis.get(k) for k in redis_keys]
+
         entries: list[StateEntry] = []
         expired: list[str] = []
 
-        for raw_key in state_keys:
-            state_key = raw_key if isinstance(raw_key, str) else raw_key.decode()
-            data = await self.redis.get(f"spine:state:{user_id}:{state_key}")
+        for state_key, data in zip(decoded_keys, raw_values):
             if data is None:
                 expired.append(state_key)
                 continue
 
             entry = StateEntry.from_dict(json.loads(data))
-
             if self._is_expired(entry):
                 expired.append(state_key)
                 continue
@@ -198,16 +208,25 @@ class StateRegister:
         await self._remove_keys(user_id, [state_key])
 
     async def expire_stale(self, user_id: str) -> int:
-        """Remove all expired states. Returns count of expired."""
+        """Remove all expired states. Returns count of expired. Uses MGET."""
         index_key = f"spine:state_index:{user_id}"
         all_keys = await self.redis.smembers(index_key)
         if not all_keys:
             return 0
 
+        decoded_keys = [
+            raw_key if isinstance(raw_key, str) else raw_key.decode()
+            for raw_key in all_keys
+        ]
+
+        redis_keys = [f"spine:state:{user_id}:{sk}" for sk in decoded_keys]
+        try:
+            raw_values = await self.redis.mget(*redis_keys)
+        except AttributeError:
+            raw_values = [await self.redis.get(k) for k in redis_keys]
+
         expired: list[str] = []
-        for raw_key in all_keys:
-            state_key = raw_key if isinstance(raw_key, str) else raw_key.decode()
-            data = await self.redis.get(f"spine:state:{user_id}:{state_key}")
+        for state_key, data in zip(decoded_keys, raw_values):
             if data is None:
                 expired.append(state_key)
                 continue
@@ -246,10 +265,18 @@ class StateRegister:
         await self.redis.sadd(index_key, entry.state_key)
 
     async def _remove_keys(self, user_id: str, state_keys: list[str]) -> None:
-        """Remove state entries and their index entries in batch."""
+        """Remove state entries and their index entries using pipeline for batch deletes."""
         if not state_keys:
             return
         index_key = f"spine:state_index:{user_id}"
-        for sk in state_keys:
-            await self.redis.delete(f"spine:state:{user_id}:{sk}")
-        await self.redis.srem(index_key, *state_keys)
+        try:
+            async with self.redis.pipeline() as pipe:
+                for sk in state_keys:
+                    pipe.delete(f"spine:state:{user_id}:{sk}")
+                pipe.srem(index_key, *state_keys)
+                await pipe.execute()
+        except (AttributeError, TypeError):
+            # Fallback for FakeRedis or non-pipeline clients
+            for sk in state_keys:
+                await self.redis.delete(f"spine:state:{user_id}:{sk}")
+            await self.redis.srem(index_key, *state_keys)
