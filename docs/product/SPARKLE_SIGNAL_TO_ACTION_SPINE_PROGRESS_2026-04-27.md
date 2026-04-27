@@ -1109,7 +1109,7 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-590/590 tests passing
+595/595 tests passing
 42 signal modules (excluding __init__.py)
 55 public API exports (incl. GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
 9/9 directive types active
@@ -1119,7 +1119,21 @@ types.py                    — 7 core data objects + all dataclasses
 8-layer architecture complete
 v2.7 E2E Test Matrix: all 12 required scenarios have integration test coverage
 v2.8 SignalRanker: 10 dimensions + 10 conflict rules + Iron Law compliance verified
+v2.9 PolicyDecision: risk_level + which_directives + all 9 directive types activated
+v3.0 SourceTrayState → RetrievalDirective: compute_retrieval_plan + build_source_receipt + pollution guard
+v3.0 Pipeline: which_directives gate + Aurora wake + all P1 tasks COMPLETE
 ```
+
+### P1 Status — ALL COMPLETE
+
+| P1 Task | Status | Key Change |
+|---------|--------|-----------|
+| P1-1 Causal Timeline UI | ✅ | TimelineCardRenderer |
+| P1-2 Source Tray + RetrievalDirective | ✅ | compute_retrieval_plan + pollution guard |
+| P1-3 Aurora Wake + Core Session | ✅ | Pipeline wake check + CoreSessionManager |
+| P1-4 CommunityDirective 3 Loops | ✅ | CommunityLoopManager cohort/partner/resource |
+| P1-5 SkillDirective v1 | ✅ | SkillLifecycleManager inject/extract/recommend |
+| P1-6 Goal-Respectful Recall | ✅ | RecallNotificationBuilder + Celery scan |
 
 ---
 
