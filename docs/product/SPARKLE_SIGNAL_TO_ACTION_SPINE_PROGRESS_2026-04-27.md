@@ -858,36 +858,87 @@
 
 ---
 
-## 当前状态: v2.0 COMPLETE
+## 当前状态: v2.0 P1-P4 ALL COMPLETE
 
-**450/450 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **3 divine moments implemented** | **Notification service integrated**
+**484/484 tests passing** | **9/9 directive types active** | **46 public API exports** | **28 signal modules**
 
-### v1.1 完成任务
-- [x] P0-1: Achievement → PolicyEngine (3-tier rules + soft difficulty + shadow learning)
-- [x] P0-2: CommunityDirective + SkillDirective v1
-- [x] P0-4: Outcome → PolicyEffectLedger + self-correction loop
-- [x] P0-3: Task card 8-field protocol (why_this_task, materials_protocol, stuck_protocol, updates_after_completion)
-- [x] P0-6: ExamSprintPolicy + D-7→D-0 (5 phases + mastery mapping + node priority scoring)
-- [x] P0-1b: Achievement quality cross-check (Rule A: quality_ok, Rule B: declining_accuracy, Rule C: overrun/pressure)
-- [x] P0-7: Divine moments (admit misjudgment + remember time)
-- [x] Opus review fixes (C-1, C-3, W-1, W-2)
+### P1: Living Experience Layer (ALL COMPLETE)
+- [x] P1-1: Causal Timeline UI — TimelineCardRenderer (compact/expanded + user correction)
+- [x] P1-2: Source Tray + RetrievalDirective integration (receipt builder + selection validation)
+- [x] P1-3: Core Session Lifecycle (create/advance/pause/resume/complete)
+- [x] P1-4: CommunityDirective v1 — 3 loops (cohort_mistake/partner_observation/resource_quality)
+- [x] P1-5: SkillDirective v1 — inject/recommend/extract + worked-example-repair TCP
+- [x] P1-6: Goal-Respectful Recall — notification builder + cooldown + user preferences
 
-### v2.0 进展
-- [x] P0-5: SourceAsset / SourceSlice / SourceTray wrapper types (10 tests)
-- [x] Skill extraction triggers — auto-extract effective strategies (7 tests)
+### P2: Self-Improving Learning Layer (ALL COMPLETE)
+- [x] P2-1: PolicyAnalytics — strategy accuracy, degrading detection, confidence distribution
+- [x] P2-2: PolicyExperiments — shadow A/B experiment framework with auto-conclusion
+- [x] P2-3: Skill Lifecycle — promote/deprecate/auto-deprecate/health scoring
+- [x] P2-4: LearningBase — Bayesian belief update + rule-based hybrid selection
+- [x] P2-5: RelationshipModel — trust level, interaction style, strategy adjustment
 
-### v2.0 剩余
-- [x] SourceAsset ↔ RetrievalDirective integration
-- [x] Community commitment loop (Divine Moment 6 completion)
-- [x] Notification service integration (recall activation)
+### P3: General Goal OS Layer (ALL COMPLETE)
+- [x] P3-1: GoalTypeAdapter — 6 goal types (exam/project/job_search/fitness/startup/general)
+- [x] P3-2: GrowthChronicle — user-co-owned growth narrative (milestone/turning_point/pattern)
+- [x] P3-3: ExternalIntegration — Calendar deadline pressure signals + tool activity bridge
 
-### v2.0 Notification Integration (COMPLETE)
+### P4: Research-Grade (ALL COMPLETE)
+- [x] CounterfactualEngine — baseline/rule/random methods for "what if no intervention"
+- [x] UserSimulator — synthetic user profiles + Monte Carlo strategy comparison
+- [x] DomainPackMarketplace — user-contributed strategy packs with validation + ranking
+
+### Opus Review Fixes Applied
+- [x] C-1: relationship_model.py 30-day TTL (Iron Law 5 compliance)
+- [x] C-2: source_tray_integration.py inverted filter fix
+
+### Notification Integration (COMPLETE)
 - `recall_notification_task` — Celery task: single user → SpineOrchestrator.build_recall_notification() → NotificationService.create() push
 - `scan_recall_notifications` — Celery task: scan active users with plans → dispatch per-trigger tasks
 - 4 trigger types: undigested_material, task_not_started, task_missed, pre_exam_silence
 - Cooldown enforced per trigger type via RecallNotificationBuilder
 - PolicyEngine gates notification delivery
 - Frontend retrieves via `spine.get_recall_notification(user_id)` from Redis
+
+### Module Inventory (28 files in backend/app/signals/)
+```
+__init__.py                 — 46 public API exports
+achievement_reinforcement.py — achievement → momentum signal
+aurora_wake.py              — Aurora wake eligibility
+causal_trace_store.py       — CausalTrace Redis store
+community_loops.py          — 3 community feedback loops (P1-4)
+community_signal.py         — community signal detection
+core_session.py             — session lifecycle (P1-3)
+directive_applier.py        — DirectiveApplier + DirectiveAuditor
+exam_rescue_detector.py     — exam intent detection
+exam_sprint_policy.py       — D-7→D-0 sprint strategy
+external_integration.py     — Calendar + tool signals (P3-3)
+goal_type_adapter.py        — 6 goal type profiles (P3-1)
+growth_chronicle.py         — user-co-owned narrative (P3-2)
+learning_base.py            — Bayesian + rule hybrid (P2-4)
+material_signal.py          — material utilization signal
+mistake_signal.py           — mistake pattern detection
+outcome_recorder.py         — outcome recording + attribution
+policy_analytics.py         — strategy effectiveness analysis (P2-1)
+policy_engine.py            — deterministic rule arbitration
+policy_experiments.py       — shadow A/B experiments (P2-2)
+predicted_reply_options.py  — quick reply engine
+recall_notification.py      — goal-respectful recall (P1-6)
+recall_opportunity.py       — 4 recall trigger types
+relationship_model.py       — user-AI relationship (P2-5)
+self_model.py               — system self-modeling
+signal_ranker.py            — signal ranking + conflict resolution
+skill_extraction.py         — strategy → skill extraction
+skill_lifecycle.py          — skill promote/deprecate (P2-3)
+source_tray_integration.py  — SourceTray → Retrieval bridge
+spine_metrics.py            — 10 Decision Realization metrics
+spine_orchestrator.py       — full pipeline orchestrator
+stale_state_guard.py        — stale state detection + recovery
+state_packet_builder.py     — ActionableStatePacket builder
+state_register.py           — per-user persistent state
+task_timeout_detector.py    — task timeout detection
+timeline_card_renderer.py   — timeline card rendering (P1-1)
+types.py                    — 7 core data objects + all dataclasses
+```
 
 ---
 
