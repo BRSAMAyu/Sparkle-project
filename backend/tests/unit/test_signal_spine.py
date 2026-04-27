@@ -9642,3 +9642,79 @@ async def test_circuit_breaker_named_breakers():
     bx = get_breaker("unknown")
     assert bx.name == "unknown"
     assert bx.state == "closed"
+
+
+# ── v2.2: Degraded Mode Tests ──────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_degraded_get_response_directive():
+    """When Redis raises, get_response_directive returns None (degraded mode)."""
+    from unittest.mock import AsyncMock
+
+    redis = FakeRedis()
+    redis.get = AsyncMock(side_effect=Exception("connection refused"))
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.get_response_directive("u1")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_degraded_get_plan_directive():
+    """When Redis raises, get_plan_directive returns None (degraded mode)."""
+    from unittest.mock import AsyncMock
+
+    redis = FakeRedis()
+    redis.get = AsyncMock(side_effect=Exception("connection refused"))
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.get_plan_directive("u1")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_degraded_get_latest_receipt():
+    """When Redis raises, get_latest_receipt returns None (degraded mode)."""
+    from unittest.mock import AsyncMock
+
+    redis = FakeRedis()
+    redis.get = AsyncMock(side_effect=Exception("connection refused"))
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.get_latest_receipt("u1")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_degraded_get_ux_directive():
+    """When Redis raises, get_ux_directive returns None (degraded mode)."""
+    from unittest.mock import AsyncMock
+
+    redis = FakeRedis()
+    redis.get = AsyncMock(side_effect=Exception("connection refused"))
+    spine = SpineOrchestrator(redis)
+
+    result = await spine.get_ux_directive("u1")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_degraded_circuit_breaker_blocks_pipeline():
+    """When circuit breaker is open, pipeline returns None early."""
+    from app.signals.redis_resilience import _spine_pipeline_breaker
+
+    _spine_pipeline_breaker._failure_count = 10
+    _spine_pipeline_breaker._state = "open"
+
+    from app.signals.redis_resilience import resilient_redis_call
+
+    async def would_crash():
+        raise Exception("should not be called")
+
+    result = await resilient_redis_call("spine_pipeline", would_crash(), fallback="blocked")
+    assert result == "blocked"
+
+    # Reset
+    _spine_pipeline_breaker._failure_count = 0
+    _spine_pipeline_breaker._state = "closed"

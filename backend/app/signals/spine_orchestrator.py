@@ -336,20 +336,24 @@ class SpineOrchestrator:
         return modified_spec, audit
 
     async def get_latest_receipt(self, user_id: str) -> UserVisibleReceipt | None:
-        """供前端调用——获取最新的 Receipt。"""
-        import json
-        raw = await self.redis.get(f"spine:receipt:{user_id}:latest")
-        if not raw:
+        """供前端调用——获取最新的 Receipt。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:receipt:{user_id}:latest")
+            if not raw:
+                return None
+            d = json.loads(raw)
+            return UserVisibleReceipt(
+                receipt_id=d["receipt_id"],
+                receipt_type=d["receipt_type"],
+                message=d["message"],
+                actions=d["actions"],
+                related_state_keys=d["related_state_keys"],
+                created_at=d.get("created_at", ""),
+            )
+        except Exception:
+            logger.debug("get_latest_receipt degraded: Redis unavailable for user={}", user_id)
             return None
-        d = json.loads(raw)
-        return UserVisibleReceipt(
-            receipt_id=d["receipt_id"],
-            receipt_type=d["receipt_type"],
-            message=d["message"],
-            actions=d["actions"],
-            related_state_keys=d["related_state_keys"],
-            created_at=d.get("created_at", ""),
-        )
 
     async def handle_user_receipt_action(
         self,
@@ -1353,11 +1357,16 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(sd.directive_id, sd.to_dict())
 
     async def get_skill_directive(self, user_id: str) -> SkillDirective | None:
-        import json
-        raw = await self.redis.get(f"spine:skill_directive:{user_id}:latest")
-        if not raw:
+        """获取用户当前 SkillDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:skill_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return SkillDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_skill_directive degraded: Redis unavailable for user={}", user_id)
             return None
-        return SkillDirective.from_dict(json.loads(raw))
 
     async def get_applicable_skills(self, user_id: str, context: dict[str, Any]) -> list[SkillEntry]:
         """Return skills that can safely be injected for the current context."""

@@ -56,16 +56,21 @@ class SpineAuroraBridge:
                     "constraints": directive.get("execution_constraints"),
                 }
 
-            # Fetch state entries for risk flags
-            state_keys_raw = await self.redis.smembers(f"spine:state:keys:{user_id}")
+            # Fetch state entries for risk flags using MGET
+            state_keys_raw = await self.redis.smembers(f"spine:state_index:{user_id}")
             risk_flags: list[str] = []
-            for key in state_keys_raw:
-                key_str = key if isinstance(key, str) else key.decode()
-                state_raw = await self.redis.get(f"spine:state:{user_id}:{key_str}")
-                if state_raw:
-                    state = json.loads(state_raw if isinstance(state_raw, str) else state_raw.decode())
-                    if state.get("confidence", 0) >= 0.7 and "risk" in state.get("scope", ""):
-                        risk_flags.append(state.get("value", ""))
+            if state_keys_raw:
+                decoded_keys = [k if isinstance(k, str) else k.decode() for k in state_keys_raw]
+                redis_keys = [f"spine:state:{user_id}:{sk}" for sk in decoded_keys]
+                try:
+                    raw_values = await self.redis.mget(*redis_keys)
+                except AttributeError:
+                    raw_values = [await self.redis.get(k) for k in redis_keys]
+                for data in raw_values:
+                    if data:
+                        state = json.loads(data if isinstance(data, str) else data.decode())
+                        if state.get("confidence", 0) >= 0.7 and "risk" in state.get("scope", ""):
+                            risk_flags.append(state.get("value", ""))
             context["risk_flags"] = risk_flags
 
             # Fetch recent outcome summary
@@ -115,12 +120,17 @@ class SpineAuroraBridge:
                     "target_domain": chat_directive.get("target_domain"),
                 }
 
-            await self.redis.rpush(
-                f"spine:aurora_decisions:{user_id}",
-                json.dumps(event),
-            )
-            await self.redis.ltrim(f"spine:aurora_decisions:{user_id}", -50, -1)
-            await self.redis.expire(f"spine:aurora_decisions:{user_id}", 30 * 24 * 3600)
+            key = f"spine:aurora_decisions:{user_id}"
+            try:
+                async with self.redis.pipeline() as pipe:
+                    pipe.rpush(key, json.dumps(event))
+                    pipe.ltrim(key, -50, -1)
+                    pipe.expire(key, 30 * 24 * 3600)
+                    await pipe.execute()
+            except (AttributeError, TypeError):
+                await self.redis.rpush(key, json.dumps(event))
+                await self.redis.ltrim(key, -50, -1)
+                await self.redis.expire(key, 30 * 24 * 3600)
         except Exception as e:
             logger.debug(f"SpineAuroraBridge.feed_aurora_decision skipped: {e}")
 

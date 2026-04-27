@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-513/513 tests passing:
+523/523 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -858,16 +858,40 @@
 
 ---
 
-## 当前状态: v2.2 IN PROGRESS — Long-term Stability
+## 当前状态: v2.3 COMPLETE — Production Hardening
 
-**513/513 tests passing** | **9/9 directive types active** | **47 public API exports** | **38 signal modules**
+**523/523 tests passing** | **9/9 directive types active** | **47+ public API exports** | **40 signal modules**
 
-### v2.2 Progress (Long-term Stability)
+### v2.3 (Production Hardening) — ALL COMPLETE
+- [x] Dead method wiring: 7 divine moment + recovery methods wired into production paths
+- [x] StateRegister MGET: batch loading replaces N+1 individual GETs
+- [x] GrowthChronicle WATCH/MULTI: atomic writes prevent race conditions
+- [x] Redis pipelining: batch deletes in StateRegister._remove_keys()
+- [x] Circuit breaker: CircuitBreaker + resilient_redis_call (redis_resilience.py)
+- [x] Degraded mode: all get_*_directive methods return None on Redis failure
+- [x] API endpoints: GET /signals/envelope, POST /signals/receipt-action, GET /signals/context-receipt, GET /signals/metrics
+- [x] SpineAuroraBridge MGET + pipelined writes
+- [x] on_achievement_unlocked wired into achievement_event_consumer
+- [x] on_user_correction wired into handle_user_receipt_action
+- [x] build_recovery_card + recover_from_snapshot wired into on_user_return
+- [x] build_context_receipt wired into _run_signal_pipeline
+- [x] on_community_hint wired into on_community_cohort_data
+- [x] build_experience_envelope exposed via API endpoint
+
+### v2.2 (Long-term Stability) — ALL COMPLETE
 - [x] SpineSnapshot + Rehydration — Celery tasks (spine_snapshot_task + scan_spine_snapshots)
 - [x] TraceCompaction — compress traces >50 into aggregated summaries (compact_old_traces)
 - [x] RollingMetrics — get_rolling_metrics method
 - [x] MultiGoalNamespace — goal_scoped_key + get_goal_scoped_states
-- [ ] Degraded Mode — Redis down fallback (future scope)
+- [x] Degraded Mode — CircuitBreaker + resilient_redis_call (redis_resilience.py)
+
+### v2.2 Additional Production Wiring
+- [x] GET /signals/envelope — ExperienceEnvelope API endpoint
+- [x] POST /signals/receipt-action — user correction API (divine moment #2)
+- [x] SpineReceiptCard — Flutter widget wired into chat_screen.dart
+- [x] GrowthChronicle enhanced with weekly pattern detection
+- [x] StateRegister protected with circuit breaker
+- [x] Achievement event consumer spine wiring
 
 ### v2.1 COMPLETE
 - [x] Deep audit conducted — identified 12 orphaned modules, 4 stub divine moments, Aurora↔Spine split
