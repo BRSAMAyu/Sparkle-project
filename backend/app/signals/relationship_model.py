@@ -27,6 +27,7 @@ _MIN_TRUST = 0.1
 _MAX_TRUST = 1.0
 _DEFAULT_TRUST = 0.5
 _VALID_INTERACTION_TYPES = {"confirmed", "corrected", "dismissed", "expanded", "ignored"}
+_VALID_BEHAVIORAL_SIGNALS = {"task_completed", "task_abandoned", "streak_maintained", "streak_broken", "session_engaged", "session_idle"}
 
 
 def _now() -> str:
@@ -46,6 +47,10 @@ class RelationshipState:
     total_interactions: int = 0
     total_corrections: int = 0
     total_confirmations: int = 0
+    total_tasks_completed: int = 0
+    total_tasks_abandoned: int = 0
+    current_streak: int = 0
+    longest_streak: int = 0
     preferences: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -59,6 +64,10 @@ class RelationshipState:
             "total_interactions": self.total_interactions,
             "total_corrections": self.total_corrections,
             "total_confirmations": self.total_confirmations,
+            "total_tasks_completed": self.total_tasks_completed,
+            "total_tasks_abandoned": self.total_tasks_abandoned,
+            "current_streak": self.current_streak,
+            "longest_streak": self.longest_streak,
             "preferences": self.preferences,
         }
 
@@ -131,6 +140,56 @@ class RelationshipModelService:
             interaction_type,
             state.trust_level,
             state.interaction_style,
+        )
+        return state
+
+    async def update_from_behavioral_signal(
+        self, user_id: str, signal_type: str, metadata: dict[str, Any] | None = None,
+    ) -> RelationshipState:
+        """Update relationship from behavioral events (task completion, streaks, etc.).
+
+        Trust changes are smaller than interaction-based changes to avoid
+        overwhelming the signal from direct user feedback.
+        """
+        if signal_type not in _VALID_BEHAVIORAL_SIGNALS:
+            raise ValueError(f"Unsupported behavioral signal: {signal_type}")
+
+        state = await self.get_or_create(user_id)
+        state.last_interaction_at = _now()
+
+        meta = metadata or {}
+        behavioral_counts = dict(state.preferences.get("behavioral_counts", {}))
+        behavioral_counts[signal_type] = int(behavioral_counts.get(signal_type, 0)) + 1
+        state.preferences["behavioral_counts"] = behavioral_counts
+
+        if signal_type == "task_completed":
+            state.total_tasks_completed += 1
+            state.trust_level = min(_MAX_TRUST, state.trust_level + 0.015)
+        elif signal_type == "task_abandoned":
+            state.total_tasks_abandoned += 1
+            state.trust_level = max(_MIN_TRUST, state.trust_level - 0.01)
+        elif signal_type == "streak_maintained":
+            streak_len = int(meta.get("streak_length", 0))
+            state.current_streak = max(state.current_streak, streak_len)
+            state.longest_streak = max(state.longest_streak, streak_len)
+            # Streak bonus scales with length, capped
+            bonus = min(0.03, 0.005 * streak_len)
+            state.trust_level = min(_MAX_TRUST, state.trust_level + bonus)
+        elif signal_type == "streak_broken":
+            state.current_streak = 0
+            state.trust_level = max(_MIN_TRUST, state.trust_level - 0.02)
+        elif signal_type == "session_engaged":
+            state.trust_level = min(_MAX_TRUST, state.trust_level + 0.005)
+        elif signal_type == "session_idle":
+            state.trust_level = max(_MIN_TRUST, state.trust_level - 0.005)
+
+        state.trust_level = round(state.trust_level, 4)
+        state.engagement_depth = self._infer_engagement_depth(state)
+
+        await self._save(state)
+        logger.info(
+            "Relationship behavioral: user={} signal={} trust={:.2f} streak={}",
+            user_id, signal_type, state.trust_level, state.current_streak,
         )
         return state
 

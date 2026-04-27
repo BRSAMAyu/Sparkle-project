@@ -9,11 +9,14 @@ privacy-preserving patches for the Signal-to-Action Spine.
 
 from __future__ import annotations
 
+import json
 from typing import Any
+
+from loguru import logger
 
 
 class CommunityLoopManager:
-    """3 community feedback loops."""
+    """3 community feedback loops + partner accountability loop."""
 
     # Loop 1: cohort_mistake → anonymous hint
     def build_cohort_mistake_hint(self, pattern: dict[str, Any]) -> dict[str, Any] | None:
@@ -166,3 +169,71 @@ class CommunityLoopManager:
     @staticmethod
     def _clamp(value: float) -> float:
         return max(0.0, min(1.0, value))
+
+    # Loop 4: partner accountability — check-in milestone tracking
+
+    async def record_partner_checkin(
+        self,
+        redis_client: Any,
+        *,
+        user_id: str,
+        partner_id: str,
+        checkin_type: str,  # "encouragement" | "nudge" | "celebration" | "check_in"
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Record a partner check-in event and update accountability state."""
+        key = f"spine:partner_accountability:{user_id}"
+        raw = await redis_client.get(key)
+        state: dict[str, Any] = json.loads(raw) if raw else {
+            "partner_id": partner_id,
+            "total_checkins": 0,
+            "checkin_types": {},
+            "last_checkin_at": None,
+            "streak_days": 0,
+        }
+
+        state["total_checkins"] = int(state.get("total_checkins", 0)) + 1
+        state["last_checkin_at"] = _now_iso()
+        types = dict(state.get("checkin_types", {}))
+        types[checkin_type] = int(types.get(checkin_type, 0)) + 1
+        state["checkin_types"] = types
+
+        await redis_client.set(key, json.dumps(state), ex=30 * 24 * 3600)
+
+        # Generate accountability signal if threshold reached
+        signal = None
+        total = state["total_checkins"]
+        if total >= 3:
+            signal = {
+                "state_key": "partner_accountability_active",
+                "claim": f"partner_has_{total}_checkins",
+                "confidence": min(0.9, 0.5 + 0.05 * total),
+                "scope": "current_sprint",
+                "ttl_hours": 168,
+                "evidence_summary": f"Partner {checkin_type} (total: {total})",
+                "priority": "medium" if total < 7 else "high",
+            }
+
+        logger.info(
+            "PartnerAccountability: user={} partner={} type={} total={}",
+            user_id, partner_id, checkin_type, state["total_checkins"],
+        )
+
+        return {"recorded": True, "total_checkins": total, "signal": signal}
+
+    async def get_accountability_state(
+        self, redis_client: Any, user_id: str,
+    ) -> dict[str, Any]:
+        """Get current accountability state for a user."""
+        key = f"spine:partner_accountability:{user_id}"
+        raw = await redis_client.get(key)
+        if not raw:
+            return {"active": False, "total_checkins": 0}
+        state = json.loads(raw)
+        state["active"] = state.get("total_checkins", 0) >= 3
+        return state
+
+
+def _now_iso() -> str:
+    from datetime import UTC, datetime
+    return datetime.now(UTC).isoformat()

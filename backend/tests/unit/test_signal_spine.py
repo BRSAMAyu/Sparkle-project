@@ -12078,3 +12078,440 @@ async def test_v210_all_directive_types_fetched():
     assert await spine.get_model_write_directive("u_none") is None
     assert await spine.get_notification_directive("u_none") is None
     assert await spine.get_active_directive("u_none") is None
+
+
+# ============================================================
+# P2-5: Relationship model dynamic evolution (behavioral signals)
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_task_completed():
+    """task_completed behavioral signal increases trust."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    state = await svc.update_from_behavioral_signal("u1", "task_completed")
+    assert state.trust_level > 0.5
+    assert state.total_tasks_completed == 1
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_task_abandoned():
+    """task_abandoned decreases trust slightly."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    state = await svc.update_from_behavioral_signal("u1", "task_abandoned")
+    assert state.trust_level < 0.5
+    assert state.total_tasks_abandoned == 1
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_streak_maintained():
+    """streak_maintained scales trust bonus with streak length."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    state = await svc.update_from_behavioral_signal("u1", "streak_maintained", {"streak_length": 5})
+    assert state.trust_level > 0.5
+    assert state.current_streak == 5
+    assert state.longest_streak == 5
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_streak_broken():
+    """streak_broken resets current streak and lowers trust."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    # Build up a streak first
+    await svc.update_from_behavioral_signal("u1", "streak_maintained", {"streak_length": 7})
+    state = await svc.update_from_behavioral_signal("u1", "streak_broken")
+    assert state.current_streak == 0
+    assert state.longest_streak == 7
+    # trust went up from streak bonus then down from break — net still above default
+    assert state.trust_level < 0.5 + 0.035
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_session_signals():
+    """session_engaged increases, session_idle decreases trust."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    s1 = await svc.update_from_behavioral_signal("u1", "session_engaged")
+    assert s1.trust_level > 0.5
+
+    s2 = await svc.update_from_behavioral_signal("u2", "session_idle")
+    assert s2.trust_level < 0.5
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_invalid_signal():
+    """Invalid behavioral signal raises ValueError."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    with pytest.raises(ValueError, match="Unsupported behavioral signal"):
+        await svc.update_from_behavioral_signal("u1", "invalid_signal")
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_counts_tracked():
+    """Behavioral counts are tracked in preferences."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    await svc.update_from_behavioral_signal("u1", "task_completed")
+    await svc.update_from_behavioral_signal("u1", "task_completed")
+    await svc.update_from_behavioral_signal("u1", "streak_maintained", {"streak_length": 3})
+
+    state = await svc.get_or_create("u1")
+    counts = state.preferences.get("behavioral_counts", {})
+    assert counts.get("task_completed") == 2
+    assert counts.get("streak_maintained") == 1
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_behavioral_persistence():
+    """Behavioral state persists across get_or_create calls."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    await svc.update_from_behavioral_signal("u1", "task_completed")
+    await svc.update_from_behavioral_signal("u1", "streak_maintained", {"streak_length": 4})
+
+    reloaded = await svc.get_or_create("u1")
+    assert reloaded.total_tasks_completed == 1
+    assert reloaded.current_streak == 4
+
+
+@pytest.mark.asyncio
+async def test_v210_spine_on_task_completed_updates_relationship():
+    """on_task_completed triggers relationship behavioral update even without signal."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+
+    # Normal task completion (no timeout signal generated)
+    trace = await spine.on_task_completed(
+        user_id="u_rel",
+        task_id="t1",
+        estimated_minutes=30,
+        actual_minutes=25,
+    )
+    assert trace is not None
+
+    # Relationship should have been updated
+    rel = await spine.relationship_model.get_or_create("u_rel")
+    assert rel.total_tasks_completed == 1
+
+
+@pytest.mark.asyncio
+async def test_v210_spine_on_streak_update():
+    """on_streak_update correctly delegates to relationship model."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+
+    await spine.on_streak_update(user_id="u_streak", streak_length=5)
+    rel = await spine.relationship_model.get_or_create("u_streak")
+    assert rel.current_streak == 5
+    assert rel.longest_streak == 5
+
+    await spine.on_streak_update(user_id="u_streak", streak_length=5, broken=True)
+    rel = await spine.relationship_model.get_or_create("u_streak")
+    assert rel.current_streak == 0
+    assert rel.longest_streak == 5
+
+
+# ============================================================
+# P2-6: Multi-strategy experiment system upgrade
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_experiment_cognitive_shadow():
+    """Cognitive load strategies have shadow alternatives."""
+    from app.signals.policy_experiments import PolicyExperimentManager, _SHADOW_ALTERNATIVES
+    assert "reduce_cognitive_pressure" in _SHADOW_ALTERNATIVES
+    assert "reduce_affective_pressure" in _SHADOW_ALTERNATIVES
+    assert "prevent_burnout" in _SHADOW_ALTERNATIVES
+
+    redis = FakeRedis()
+    mgr = PolicyExperimentManager(redis)
+    exp = await mgr.create_experiment(
+        user_id="u1",
+        signal_state_key="cognitive_load",
+        signal_claim="high_load_detected",
+        primary_strategy="reduce_cognitive_pressure",
+    )
+    assert exp is not None
+    assert exp.shadow_strategy == "reduce_cognitive_pressure_micro"
+
+
+@pytest.mark.asyncio
+async def test_v210_experiment_affective_shadow():
+    """Affective pressure shadow experiment."""
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = FakeRedis()
+    mgr = PolicyExperimentManager(redis)
+    exp = await mgr.create_experiment(
+        user_id="u1",
+        signal_state_key="affective_pressure",
+        signal_claim="stress_detected",
+        primary_strategy="reduce_affective_pressure",
+    )
+    assert exp is not None
+    assert exp.shadow_strategy == "reduce_affective_pressure_social"
+
+
+@pytest.mark.asyncio
+async def test_v210_experiment_conclude_all_for_user():
+    """conclude_all_for_user closes all running experiments."""
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = FakeRedis()
+    mgr = PolicyExperimentManager(redis)
+
+    e1 = await mgr.create_experiment(
+        user_id="u1", signal_state_key="k1", signal_claim="c1",
+        primary_strategy="recover_execution_rhythm",
+    )
+    # Add trials
+    for _ in range(5):
+        await mgr.record_trial(e1.experiment_id, primary_outcome="effective", shadow_hypothesis="insufficient")
+
+    concluded = await mgr.conclude_all_for_user("u1")
+    assert len(concluded) == 1
+    assert concluded[0].status == "concluded"
+
+
+@pytest.mark.asyncio
+async def test_v210_experiment_get_best_strategy():
+    """get_best_strategy_for_signal returns best performing strategy."""
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = FakeRedis()
+    mgr = PolicyExperimentManager(redis)
+
+    exp = await mgr.create_experiment(
+        user_id="u1", signal_state_key="cognitive_load", signal_claim="high_load",
+        primary_strategy="reduce_cognitive_pressure",
+    )
+    # Shadow wins more
+    for _ in range(8):
+        await mgr.record_trial(exp.experiment_id, primary_outcome="insufficient", shadow_hypothesis="effective")
+    for _ in range(2):
+        await mgr.record_trial(exp.experiment_id, primary_outcome="effective", shadow_hypothesis="insufficient")
+
+    best = await mgr.get_best_strategy_for_signal("u1", "cognitive_load")
+    assert best is not None
+    assert best["strategy"] == "reduce_cognitive_pressure_micro"
+    assert best["win_rate"] == 0.8
+
+
+@pytest.mark.asyncio
+async def test_v210_experiment_shadow_cognitive_context():
+    """Shadow evaluation handles cognitive context keywords."""
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = FakeRedis()
+    mgr = PolicyExperimentManager(redis)
+
+    result = mgr.evaluate_shadow_outcome(
+        primary_outcome="insufficient",
+        primary_strategy="reduce_cognitive_pressure",
+        context={"new_hypothesis": "cognitive overload from complex material"},
+    )
+    assert result == "effective"
+
+
+@pytest.mark.asyncio
+async def test_v210_experiment_shadow_affective_context():
+    """Shadow evaluation handles affective context keywords."""
+    from app.signals.policy_experiments import PolicyExperimentManager
+    redis = FakeRedis()
+    mgr = PolicyExperimentManager(redis)
+
+    result = mgr.evaluate_shadow_outcome(
+        primary_outcome="insufficient",
+        primary_strategy="reduce_affective_pressure",
+        context={"new_hypothesis": "user experiencing stress and anxiety"},
+    )
+    assert result == "effective"
+
+
+# ============================================================
+# P2-7: Partner accountability loop completion
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_partner_checkin_records():
+    """record_partner_checkin stores check-in and returns count."""
+    from app.signals.community_loops import CommunityLoopManager
+    redis = FakeRedis()
+    mgr = CommunityLoopManager()
+
+    result = await mgr.record_partner_checkin(
+        redis, user_id="u1", partner_id="p1", checkin_type="encouragement",
+    )
+    assert result["recorded"] is True
+    assert result["total_checkins"] == 1
+    assert result["signal"] is None  # Below threshold
+
+
+@pytest.mark.asyncio
+async def test_v210_partner_checkin_signal_after_threshold():
+    """Partner accountability signal generated after 3 check-ins."""
+    from app.signals.community_loops import CommunityLoopManager
+    redis = FakeRedis()
+    mgr = CommunityLoopManager()
+
+    for i in range(3):
+        result = await mgr.record_partner_checkin(
+            redis, user_id="u1", partner_id="p1", checkin_type="nudge",
+        )
+    assert result["total_checkins"] == 3
+    assert result["signal"] is not None
+    assert result["signal"]["state_key"] == "partner_accountability_active"
+
+
+@pytest.mark.asyncio
+async def test_v210_partner_checkin_confidence_scales():
+    """Signal confidence increases with more check-ins."""
+    from app.signals.community_loops import CommunityLoopManager
+    redis = FakeRedis()
+    mgr = CommunityLoopManager()
+
+    for i in range(5):
+        await mgr.record_partner_checkin(
+            redis, user_id="u1", partner_id="p1", checkin_type="check_in",
+        )
+    state = await mgr.get_accountability_state(redis, "u1")
+    assert state["active"] is True
+    assert state["total_checkins"] == 5
+
+
+@pytest.mark.asyncio
+async def test_v210_partner_get_accountability_state_empty():
+    """get_accountability_state returns default when no check-ins."""
+    from app.signals.community_loops import CommunityLoopManager
+    redis = FakeRedis()
+    mgr = CommunityLoopManager()
+
+    state = await mgr.get_accountability_state(redis, "u1")
+    assert state["active"] is False
+    assert state["total_checkins"] == 0
+
+
+@pytest.mark.asyncio
+async def test_v210_spine_on_partner_checkin():
+    """SpineOrchestrator.on_partner_checkin creates state after 3 check-ins."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+
+    for i in range(3):
+        result = await spine.on_partner_checkin(
+            user_id="u1", partner_id="p1", checkin_type="celebration",
+        )
+    assert result is not None
+    assert result["total_checkins"] == 3
+
+    # State should exist in StateRegister
+    state = await spine.state_register.get_state("u1", "partner_accountability_active")
+    assert state is not None
+    assert "3" in state.value
+
+
+# ============================================================
+# P2-8: Quota/cooldown system upgrade
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_quota_check_allowed_initial():
+    """First directive of any type is always allowed."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    result = await svc.check_allowed("u1", "notification")
+    assert result["allowed"] is True
+    assert result["quota_remaining"] > 0
+
+
+@pytest.mark.asyncio
+async def test_v210_quota_hourly_limit():
+    """Directive is blocked after hourly quota exceeded."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    # notification quota = 4
+    for i in range(4):
+        await svc.record_emission("u1", "notification")
+
+    result = await svc.check_allowed("u1", "notification")
+    assert result["allowed"] is False
+    assert result["reason"] == "hourly_quota_exceeded"
+
+
+@pytest.mark.asyncio
+async def test_v210_quota_cooldown_blocks():
+    """Cooldown prevents rapid re-emission."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    await svc.record_emission("u1", "notification")
+    result = await svc.check_allowed("u1", "notification")
+    assert result["allowed"] is False
+    assert result["reason"] == "cooldown_active"
+
+
+@pytest.mark.asyncio
+async def test_v210_quota_response_no_cooldown():
+    """Response type has no cooldown (cooldown = 0)."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    await svc.record_emission("u1", "response")
+    result = await svc.check_allowed("u1", "response")
+    assert result["allowed"] is True
+
+
+@pytest.mark.asyncio
+async def test_v210_quota_get_status():
+    """get_status returns status for all directive types."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    await svc.record_emission("u1", "notification")
+    await svc.record_emission("u1", "execution")
+
+    status = await svc.get_status("u1")
+    assert "notification" in status
+    assert status["notification"]["used"] == 1
+    assert status["execution"]["used"] == 1
+    assert "response" in status
+
+
+@pytest.mark.asyncio
+async def test_v210_quota_independent_per_type():
+    """Each directive type has independent quota."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    # Fill notification quota
+    for i in range(4):
+        await svc.record_emission("u1", "notification")
+
+    # Execution should still be allowed
+    result = await svc.check_allowed("u1", "execution")
+    assert result["allowed"] is True

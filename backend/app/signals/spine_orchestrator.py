@@ -46,6 +46,7 @@ from app.signals.timeline_card_renderer import TimelineCardRenderer
 from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.goal_world_graph import GoalWorldGraphService
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
+from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -108,6 +109,7 @@ class SpineOrchestrator:
         self.learning_base = LearningBase()
         self.growth_chronicle = GrowthChronicleService(redis_client)
         self.relationship_model = RelationshipModelService(redis_client)
+        self.directive_quota = DirectiveQuotaService(redis_client)
         self.skill_extraction = SkillExtractionService()
         self.goal_type_adapter = GoalTypeAdapter()
         self.material_signal_detector = MaterialSignalDetector(redis_client)
@@ -150,6 +152,13 @@ class SpineOrchestrator:
             # 无信号 — trace 记录了事件但无后续动作
             trace.outcome_to_measure = ["task_completed_normally"]
             await self.trace_store._save_trace(trace)
+            # Still update relationship from behavioral signal
+            try:
+                await self.relationship_model.update_from_behavioral_signal(
+                    user_id, "task_completed", {"task_id": task_id},
+                )
+            except Exception:
+                pass
             return trace
 
         # Step 2b: 存储 signal 并链接到 trace
@@ -209,8 +218,11 @@ class SpineOrchestrator:
         if wd.get("notification"):
             notif_dir = self.policy_engine.build_notification_directive(decision, signal)
             if notif_dir:
-                await self._store_notification_directive(user_id, notif_dir)
-                _collected_directive_ids["notification"] = notif_dir.directive_id
+                quota_check = await self.directive_quota.check_allowed(user_id, "notification")
+                if quota_check["allowed"]:
+                    await self._store_notification_directive(user_id, notif_dir)
+                    await self.directive_quota.record_emission(user_id, "notification")
+                    _collected_directive_ids["notification"] = notif_dir.directive_id
 
         if wd.get("retrieval"):
             ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
@@ -1890,6 +1902,26 @@ class SpineOrchestrator:
         except Exception:
             return None
 
+    async def on_streak_update(
+        self,
+        *,
+        user_id: str,
+        streak_length: int,
+        broken: bool = False,
+    ) -> None:
+        """Update relationship model from streak events."""
+        try:
+            if broken:
+                await self.relationship_model.update_from_behavioral_signal(
+                    user_id, "streak_broken", {"streak_length": streak_length},
+                )
+            else:
+                await self.relationship_model.update_from_behavioral_signal(
+                    user_id, "streak_maintained", {"streak_length": streak_length},
+                )
+        except Exception:
+            pass
+
     async def on_user_correction(
         self,
         *,
@@ -1941,6 +1973,41 @@ class SpineOrchestrator:
             )
 
             return correction_event
+        except Exception:
+            return None
+
+    async def on_partner_checkin(
+        self,
+        *,
+        user_id: str,
+        partner_id: str,
+        checkin_type: str,
+    ) -> dict[str, Any] | None:
+        """Process a partner accountability check-in event."""
+        try:
+            result = await self.community_loops.record_partner_checkin(
+                self.redis,
+                user_id=user_id,
+                partner_id=partner_id,
+                checkin_type=checkin_type,
+            )
+            signal_data = result.get("signal")
+            if signal_data:
+                signal = ActionableSignal(
+                    signal_id=_uid("sig"),
+                    source_event_ids=[partner_id],
+                    source_system="community_loops",
+                    state_key=signal_data["state_key"],
+                    claim=signal_data["claim"],
+                    confidence=signal_data["confidence"],
+                    scope=signal_data["scope"],
+                    ttl_hours=signal_data["ttl_hours"],
+                    evidence_summary=signal_data["evidence_summary"],
+                    possible_effects=["adjust_strategy_for_partner_engagement"],
+                    priority=signal_data["priority"],
+                )
+                await self.state_register.upsert_from_signal(user_id, signal)
+            return result
         except Exception:
             return None
 

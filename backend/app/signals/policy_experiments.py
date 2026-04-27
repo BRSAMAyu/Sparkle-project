@@ -87,6 +87,22 @@ _SHADOW_ALTERNATIVES: dict[str, dict[str, str]] = {
         "shadow": "encourage_momentum_challenge",
         "description": "Offer a challenge task instead of simple encouragement",
     },
+    "reduce_cognitive_pressure": {
+        "shadow": "reduce_cognitive_pressure_micro",
+        "description": "Break tasks into micro-steps instead of shortening duration",
+    },
+    "reduce_affective_pressure": {
+        "shadow": "reduce_affective_pressure_social",
+        "description": "Suggest community support instead of reducing difficulty",
+    },
+    "prevent_burnout": {
+        "shadow": "prevent_burnout_achievement",
+        "description": "Highlight recent achievements instead of suggesting break",
+    },
+    "exam_rescue_mode": {
+        "shadow": "exam_rescue_mode_selective",
+        "description": "Focus on high-yield topics only instead of full rescue plan",
+    },
 }
 
 
@@ -212,6 +228,15 @@ class PolicyExperimentManager:
         if "pressure" in insufficient_reason.lower() or "overwhelm" in insufficient_reason.lower():
             if "gentle" in shadow_strategy or "break" in shadow_strategy:
                 return "effective"
+        if "cognitive" in insufficient_reason.lower() or "complex" in insufficient_reason.lower():
+            if "micro" in shadow_strategy or "guided" in shadow_strategy:
+                return "effective"
+        if "affective" in insufficient_reason.lower() or "stress" in insufficient_reason.lower() or "anxiety" in insufficient_reason.lower():
+            if "social" in shadow_strategy or "achievement" in shadow_strategy:
+                return "effective"
+        if "exam" in insufficient_reason.lower() or "deadline" in insufficient_reason.lower():
+            if "selective" in shadow_strategy:
+                return "effective"
 
         # Default: shadow also insufficient
         return "insufficient"
@@ -243,6 +268,46 @@ class PolicyExperimentManager:
                 })
 
         return suggestions
+
+    async def conclude_all_for_user(self, user_id: str) -> list[PolicyExperiment]:
+        """Conclude all running experiments for a user."""
+        experiments = await self.get_user_experiments(user_id)
+        concluded = []
+        for exp in experiments:
+            if exp.status == "running" and exp.total_trials >= 3:
+                exp = self._conclude(exp)
+                await self._save(exp)
+                concluded.append(exp)
+        return concluded
+
+    async def get_best_strategy_for_signal(
+        self,
+        user_id: str,
+        signal_state_key: str,
+    ) -> dict[str, Any] | None:
+        """Find the best-performing strategy for a given signal type across experiments."""
+        experiments = await self.get_user_experiments(user_id)
+        best: dict[str, Any] | None = None
+        best_rate = -1.0
+
+        for exp in experiments:
+            if exp.signal_state_key != signal_state_key or exp.total_trials < 3:
+                continue
+            primary_rate = exp.primary_wins / max(exp.total_trials, 1)
+            shadow_rate = exp.shadow_wins / max(exp.total_trials, 1)
+            winner_strategy = exp.primary_strategy if primary_rate >= shadow_rate else exp.shadow_strategy
+            winner_rate = max(primary_rate, shadow_rate)
+
+            if winner_rate > best_rate:
+                best_rate = winner_rate
+                best = {
+                    "strategy": winner_strategy,
+                    "win_rate": round(winner_rate, 3),
+                    "trials": exp.total_trials,
+                    "experiment_id": exp.experiment_id,
+                }
+
+        return best
 
     @staticmethod
     def _conclude(experiment: PolicyExperiment) -> PolicyExperiment:
