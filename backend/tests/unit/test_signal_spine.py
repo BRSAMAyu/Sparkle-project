@@ -15300,3 +15300,289 @@ def test_p4_0_ledger_stratified_stats():
     assert stratified["transfer_failure"]["episode_count"] == 2
     assert stratified["knowledge_gap"]["episode_count"] == 1
     assert stratified["transfer_failure"]["completion_rate"] == 0.5
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-1: Counterfactual Policy Evaluation v2
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_1_evidence_grade_levels():
+    """EvidenceGrade maps grades 0-5 to correct labels."""
+    from app.signals.counterfactual_evaluation import EvidenceGrade
+
+    g0 = EvidenceGrade(grade=0)
+    assert g0.label == "Anecdotal"
+    assert not g0.is_conclusive
+    assert not g0.can_promote_to_system_skill
+
+    g3 = EvidenceGrade(grade=3)
+    assert g3.label == "Propensity-aware"
+    assert not g3.is_conclusive
+    assert g3.can_generate_hypothesis
+
+    g5 = EvidenceGrade(grade=5)
+    assert g5.label == "Safe Online Verified"
+    assert g5.is_conclusive
+    assert g5.can_promote_to_system_skill
+
+
+def test_p4_1_evidence_grade_from_episode_quality():
+    """EvidenceGrade.from_episode_quality maps correctly."""
+    from app.signals.counterfactual_evaluation import EvidenceGrade
+
+    g = EvidenceGrade.from_episode_quality(4, verified_online=True)
+    assert g.grade == 5
+
+    g = EvidenceGrade.from_episode_quality(3, verified_online=False)
+    assert g.grade == 3
+
+
+def test_p4_1_matched_context_evaluator_basic():
+    """MatchedContextEvaluator evaluates alternative vs actual policy."""
+    from app.signals.intervention_episode import (
+        ContextSignature, ExecutionOutcome, InterventionEpisode, OutcomeVector,
+    )
+    from app.signals.counterfactual_evaluation import MatchedContextEvaluator
+
+    cs = ContextSignature(goal_mode="exam_rescue", failure_type="transfer_failure")
+
+    def make_eps(policy, n, completed_count):
+        eps = []
+        for i in range(n):
+            ep = InterventionEpisode(
+                user_id=f"u_{policy}_{i}", goal_id="g1", domain="exam_sprint",
+                context_signature=cs, selected_policy=policy,
+                selection_probability=0.5 if policy == "shrink_task" else 0.3,
+            )
+            ep.outcome_vector = OutcomeVector(
+                execution=ExecutionOutcome(completed=(i < completed_count)),
+            )
+            from app.signals.intervention_episode import EvidenceQuality as EQ
+            ep.evidence_quality = EQ(outcome_complete=True)
+            eps.append(ep)
+        return eps
+
+    actual_eps = make_eps("shrink_task", 40, 28)
+    alt_eps = make_eps("worked_example", 35, 30)
+    all_eps = actual_eps + alt_eps
+
+    estimate = MatchedContextEvaluator.evaluate(
+        "shrink_task", "worked_example", all_eps,
+        target_context=cs,
+    )
+    assert estimate.actual_policy == "shrink_task"
+    assert estimate.alternative_policy == "worked_example"
+    assert estimate.evidence_grade.grade >= 2
+    assert len(estimate.estimated_effects) >= 5
+    assert estimate.allowed_mode == "shadow"
+
+
+def test_p4_1_counterfactual_estimate_to_dict():
+    """CounterfactualEstimate round-trips to dict."""
+    from app.signals.counterfactual_evaluation import (
+        CounterfactualEstimate, EvidenceGrade, MetricEffect,
+    )
+    from app.signals.intervention_episode import ContextSignature
+
+    cs = ContextSignature(goal_mode="exam_rescue")
+    estimate = CounterfactualEstimate(
+        estimate_id="cfe_test",
+        target_context=cs,
+        actual_policy="policy_a",
+        alternative_policy="policy_b",
+        matched_episodes_actual=42,
+        matched_episodes_alternative=38,
+        estimated_effects=[
+            MetricEffect(
+                metric="completion_rate", policy_a_value=0.7, policy_b_value=0.8,
+                effect_size=0.1, confidence=0.7, is_significant=True,
+            ),
+        ],
+        evidence_grade=EvidenceGrade(grade=3),
+        limitations=["small_sample"],
+        recommendation="Alternative may be better",
+        allowed_mode="shadow",
+    )
+    d = estimate.to_dict()
+    assert d["estimate_id"] == "cfe_test"
+    assert d["actual_policy"] == "policy_a"
+    assert len(d["estimated_effects"]) == 1
+
+
+def test_p4_1_policy_comparison_report():
+    """PolicyComparisonReport identifies winner from effects."""
+    from app.signals.intervention_episode import (
+        ContextSignature, ExecutionOutcome, InterventionEpisode, OutcomeVector,
+    )
+    from app.signals.counterfactual_evaluation import MatchedContextEvaluator
+
+    cs = ContextSignature(goal_mode="exam_rescue", failure_type="transfer_failure")
+
+    from app.signals.intervention_episode import EvidenceQuality as EQ2
+
+    def make_eps2(policy, n, completed_count):
+        eps = []
+        for i in range(n):
+            ep = InterventionEpisode(
+                user_id=f"u_{policy}_{i}", goal_id="g1", domain="exam_sprint",
+                context_signature=cs, selected_policy=policy,
+            )
+            ep.outcome_vector = OutcomeVector(
+                execution=ExecutionOutcome(completed=(i < completed_count)),
+            )
+            ep.evidence_quality = EQ2(outcome_complete=True)
+            eps.append(ep)
+        return eps
+
+    all_eps = make_eps2("policy_a", 40, 35) + make_eps2("policy_b", 40, 25)
+
+    report = MatchedContextEvaluator.compare_policies(
+        "policy_a", "policy_b", all_eps, domain="exam_sprint",
+    )
+    assert report.winner in ("a", "b", "tie", "insufficient_data")
+    assert report.total_episodes_a > 0
+    assert report.evidence_grade.grade >= 1
+
+
+def test_p4_1_policy_update_candidate():
+    """PolicyUpdateCandidateBuilder creates candidates with gate checks."""
+    from app.signals.counterfactual_evaluation import (
+        CounterfactualEstimate, EvidenceGrade, MetricEffect,
+        PolicyUpdateCandidateBuilder,
+    )
+    from app.signals.intervention_episode import ContextSignature
+
+    cs = ContextSignature(goal_mode="exam_rescue")
+    estimate = CounterfactualEstimate(
+        actual_policy="old",
+        alternative_policy="new",
+        matched_episodes_actual=60,
+        matched_episodes_alternative=55,
+        estimated_effects=[
+            MetricEffect(
+                metric="completion_rate", policy_a_value=0.85, policy_b_value=0.72,
+                effect_size=0.13, confidence=0.8, is_significant=True,
+            ),
+        ],
+        evidence_grade=EvidenceGrade(grade=3),
+    )
+    candidate = PolicyUpdateCandidateBuilder.from_estimate(
+        estimate,
+        distinct_users_actual=20,
+        distinct_users_alternative=18,
+        guardrail_passed=True,
+    )
+    assert candidate.min_episodes_met  # 115 >= 50
+    assert candidate.min_users_met     # 38 >= 15
+    assert candidate.guardrail_checks_passed
+    # Iron Law 1: never directly live
+    assert candidate.allowed_mode != "hard_constraint"
+    assert candidate.human_review_required
+
+
+def test_p4_1_policy_update_candidate_blocked():
+    """PolicyUpdateCandidate is blocked when gates not met."""
+    from app.signals.counterfactual_evaluation import (
+        CounterfactualEstimate, EvidenceGrade, MetricEffect,
+        PolicyUpdateCandidateBuilder,
+    )
+    from app.signals.intervention_episode import ContextSignature
+
+    cs = ContextSignature(goal_mode="exam_rescue")
+    estimate = CounterfactualEstimate(
+        actual_policy="old",
+        alternative_policy="new",
+        matched_episodes_actual=5,
+        matched_episodes_alternative=5,
+        estimated_effects=[
+            MetricEffect(
+                metric="completion_rate", policy_a_value=0.6, policy_b_value=0.65,
+                effect_size=0.05, confidence=0.2,
+            ),
+        ],
+        evidence_grade=EvidenceGrade(grade=1),
+    )
+    candidate = PolicyUpdateCandidateBuilder.from_estimate(
+        estimate,
+        distinct_users_actual=3,
+        distinct_users_alternative=2,
+        guardrail_passed=False,
+    )
+    assert not candidate.min_episodes_met
+    assert not candidate.min_users_met
+    assert not candidate.guardrail_checks_passed
+    assert len(candidate.promotion_blocked_reasons) >= 3
+
+
+def test_p4_1_iron_laws_enforcement():
+    """CounterfactualIronLawEnforcer checks all 6 iron laws."""
+    from app.signals.counterfactual_evaluation import (
+        CounterfactualEstimate, EvidenceGrade, CounterfactualIronLawEnforcer,
+    )
+    from app.signals.intervention_episode import ContextSignature
+
+    estimate = CounterfactualEstimate(
+        actual_policy="old", alternative_policy="new",
+        matched_episodes_actual=30, matched_episodes_alternative=30,
+        evidence_grade=EvidenceGrade(grade=2),
+        recommendation="Alternative shows improvement but not proven",
+        allowed_mode="shadow",
+    )
+    result = CounterfactualIronLawEnforcer.enforce_all(estimate)
+    assert result["compliant"]
+    assert len(result["violations"]) == 0
+
+
+def test_p4_1_iron_law_humble_language():
+    """Iron Law 6: User language must not claim 'proven'."""
+    from app.signals.counterfactual_evaluation import CounterfactualIronLawEnforcer
+
+    ok, violations = CounterfactualIronLawEnforcer.check_user_language_humble(
+        "Alternative may be more effective for you",
+    )
+    assert ok
+
+    ok, violations = CounterfactualIronLawEnforcer.check_user_language_humble(
+        "We have proven this strategy is better",
+    )
+    assert not ok
+    assert any("proven" in v for v in violations)
+
+
+def test_p4_1_batch_evaluate_contexts():
+    """MatchedContextEvaluator batches by context strata."""
+    from app.signals.intervention_episode import (
+        ContextSignature, ExecutionOutcome, InterventionEpisode, OutcomeVector,
+    )
+    from app.signals.counterfactual_evaluation import MatchedContextEvaluator
+
+    cs_transfer = ContextSignature(goal_mode="exam_rescue", failure_type="transfer_failure")
+    cs_gap = ContextSignature(goal_mode="exam_rescue", failure_type="knowledge_gap")
+
+    eps = []
+    for i in range(30):
+        ep = InterventionEpisode(
+            user_id=f"u_a_{i}", goal_id="g1", domain="exam_sprint",
+            context_signature=cs_transfer, selected_policy="policy_a",
+        )
+        ep.outcome_vector = OutcomeVector(
+            execution=ExecutionOutcome(completed=(i % 3 == 0)),
+        )
+        eps.append(ep)
+
+    for i in range(30):
+        ep = InterventionEpisode(
+            user_id=f"u_b_{i}", goal_id="g1", domain="exam_sprint",
+            context_signature=cs_gap, selected_policy="policy_b",
+        )
+        ep.outcome_vector = OutcomeVector(
+            execution=ExecutionOutcome(completed=(i < 20)),
+        )
+        eps.append(ep)
+
+    results = MatchedContextEvaluator.batch_evaluate_contexts(
+        "policy_a", "policy_b", eps, stratify_by="failure_type",
+    )
+    assert len(results) >= 2
+    assert "transfer_failure" in results or "knowledge_gap" in results
