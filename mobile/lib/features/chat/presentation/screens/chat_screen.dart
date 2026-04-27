@@ -2051,6 +2051,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       state.streamingContent.isEmpty;
 
   void _showStudyMaterialsSheet(bool retrievalEnabled) {
+    final chatState = ref.read(chatProvider);
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -2058,6 +2059,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         backgroundColor: Colors.transparent,
         builder: (_) => StudyMaterialsSheet(
           retrievalEnabled: retrievalEnabled,
+          documentContextMode: chatState.documentContextMode,
+          onModeChanged: (mode) {
+            ref.read(chatProvider.notifier).setDocumentContextMode(mode);
+          },
         ),
       ),
     );
