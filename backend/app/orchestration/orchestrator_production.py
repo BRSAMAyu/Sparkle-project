@@ -1019,6 +1019,8 @@ class ProductionChatOrchestrator:
             _spine_exec_section = ""  # Extra prompt section for ExamSprint phase context
             _spine_receipt_payload = None  # Latest UserVisibleReceipt for response metadata
             _spine_stale_card = None  # StaleStateGuard comeback card
+            _spine_chronicle_summary = None  # Growth chronicle narrative
+            _spine_fatigue_context = None  # Fatigue/crisis state
             try:
                 from app.signals.spine_orchestrator import SpineOrchestrator
                 _spine = SpineOrchestrator(self.redis)
@@ -1107,6 +1109,35 @@ class ProductionChatOrchestrator:
                                 _spine_stale_card = _stale_card
                     except Exception:
                         pass
+
+                # Growth chronicle → inject recent narrative for AI awareness
+                try:
+                    _chronicle_entries = await _spine.growth_chronicle.get_chronicle(
+                        str(user_id), limit=3,
+                    )
+                    if _chronicle_entries:
+                        _spine_chronicle_summary = "；".join(
+                            f"{e.title}（{e.narrative[:60]}）"
+                            for e in _chronicle_entries
+                        )
+                except Exception:
+                    pass
+
+                # Fatigue + crisis → inject tone modulation
+                try:
+                    _fatigue_raw = await self.redis.get(f"spine:fatigue:{user_id}:latest")
+                    _crisis_raw = await self.redis.get(f"spine:crisis:{user_id}:latest")
+                    if _fatigue_raw or _crisis_raw:
+                        _spine_fatigue_context = {}
+                        if _fatigue_raw:
+                            _spine_fatigue_context["fatigue_level"] = _json.loads(
+                                _fatigue_raw if isinstance(_fatigue_raw, str) else _fatigue_raw.decode()
+                            ).get("fatigue_level")
+                        if _crisis_raw:
+                            _spine_fatigue_context["crisis_mode"] = True
+                except Exception:
+                    pass
+
                 # Record current timestamp for next stale check
                 import json as _json
                 await self.redis.set(
@@ -1124,6 +1155,8 @@ class ProductionChatOrchestrator:
                 session_feedback_instruction=str((context_data or {}).get("session_feedback_instruction") or ""),
                 dual_core_instruction=str((context_data or {}).get("dual_core_prompt_instruction") or ""),
                 spine_response_directive=spine_response_directive,
+                spine_chronicle_summary=_spine_chronicle_summary,
+                spine_fatigue_context=_spine_fatigue_context,
             )
 
             if preferred_tools_hint:

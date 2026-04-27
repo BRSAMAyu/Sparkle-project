@@ -86,9 +86,13 @@ class SpineMetricsCollector:
         self._prefix = "spine:metrics"
 
     async def increment(self, counter: str, amount: int = 1) -> None:
-        """递增计数器。"""
+        """递增计数器。Auto-TTL: refresh 7-day expiry on each increment."""
         key = f"{self._prefix}:{counter}"
         await self.redis.incrby(key, amount)
+        try:
+            await self.redis.expire(key, 7 * 24 * 3600)
+        except Exception:
+            pass
 
     async def get_counter(self, counter: str) -> int:
         """获取计数器值。"""

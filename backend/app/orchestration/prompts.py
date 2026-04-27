@@ -883,6 +883,8 @@ def build_system_prompt(
     chat_mode: str = "standard",
     model_key: str | None = None,  # P2: model-aware prompt budget
     spine_response_directive: dict | None = None,  # Signal-to-Action Spine ResponseDirective
+    spine_chronicle_summary: str | None = None,  # Growth chronicle narrative
+    spine_fatigue_context: dict | None = None,  # Fatigue/crisis state for tone modulation
 ) -> str:
     """
 
@@ -1587,6 +1589,34 @@ def build_system_prompt(
         if include_options:
             spine_section += "- 提供可操作选项\n"
         prompt += spine_section
+
+    # Signal-to-Action Spine: inject growth chronicle summary
+    if spine_chronicle_summary:
+        prompt += (
+            f"\n\n## 用户成长叙事\n"
+            f"{spine_chronicle_summary}\n"
+            f"- 参考这些叙事来校准鼓励的力度和方向\n"
+            f"- 不要逐条重复，而是内化后自然融入回复\n"
+        )
+
+    # Signal-to-Action Spine: inject fatigue/crisis context
+    if spine_fatigue_context:
+        level = spine_fatigue_context.get("fatigue_level", "")
+        if level in ("high", "critical"):
+            prompt += (
+                "\n\n## 用户疲劳状态\n"
+                "- 用户当前处于高疲劳状态，主动减轻负担\n"
+                "- 缩短回复，降低任务密度建议\n"
+                "- 优先关注健康节奏，而非学习效率\n"
+            )
+        crisis = spine_fatigue_context.get("crisis_mode")
+        if crisis:
+            prompt += (
+                "\n\n## 考前高压状态\n"
+                "- 用户处于考前高压，避免增加焦虑\n"
+                "- 聚焦「已经掌握的」和「最可能拿分的」\n"
+                "- 不建议大幅调整计划，微调为主\n"
+            )
 
     prompt += (
         "\n\n## 输出格式约束\n"

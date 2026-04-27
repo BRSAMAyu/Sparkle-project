@@ -2389,3 +2389,152 @@ def compact_user_traces(self, user_id: str):
     except Exception as exc:
         logger.error("compact_user_traces failed for user %s: %s", user_id, exc)
         raise self.retry(exc=exc, countdown=120)
+
+
+# =============================================================================
+# Spine v2.5: Community Cohort Signal Injection
+# =============================================================================
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.community_cohort_signal_task")
+def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
+    """Inject community error patterns into Spine for a specific user+node."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.signals.spine_orchestrator import SpineOrchestrator
+        import json
+
+        redis = get_redis()
+        spine = SpineOrchestrator(redis_client=redis)
+
+        # Load community_signal from knowledge node metadata
+        sig_raw = await redis.get(f"galaxy:community_signal:{knowledge_node_id}")
+        if not sig_raw:
+            return {"status": "no_data"}
+        sig = json.loads(sig_raw if isinstance(sig_raw, str) else sig_raw.decode())
+        patterns = sig.get("common_mistake_patterns", [])
+        if not patterns:
+            return {"status": "no_patterns"}
+
+        top = max(patterns, key=lambda p: p.get("count", 0))
+        trace = await spine.on_community_cohort_data(
+            user_id=user_id,
+            knowledge_node_id=knowledge_node_id,
+            subject=sig.get("subject", ""),
+            mistake_type=top.get("error_type", "unknown"),
+            cohort_size=top.get("user_count", 0),
+            error_count=top.get("count", 0),
+            common_misconception=top.get("error_category", ""),
+        )
+        return {"status": "injected" if trace else "skipped"}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("community_cohort_signal_task failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_community_cohort_signals")
+def scan_community_cohort_signals(self, limit: int = 200):
+    """Scan active users and dispatch community cohort signal tasks."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        import json
+
+        redis = get_redis()
+        # Find users with active Spine state (recently interacted)
+        cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
+        dispatched = 0
+        for key in keys:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            # Check if user has knowledge nodes with community_signal
+            node_cursor = "0"
+            while True:
+                node_cursor, node_keys = await redis.scan(
+                    cursor=node_cursor, match=f"galaxy:user_nodes:{user_id}:*", count=50,
+                )
+                for nk in node_keys:
+                    nk_str = nk if isinstance(nk, str) else nk.decode()
+                    node_id = nk_str.split(":")[-1]
+                    # Check for community signal on this node
+                    has_signal = await redis.get(f"galaxy:community_signal:{node_id}")
+                    if has_signal:
+                        celery_app.send_task(
+                            "app.core.celery_tasks.community_cohort_signal_task",
+                            args=(user_id, node_id),
+                            queue="low_priority",
+                        )
+                        dispatched += 1
+                if node_cursor in (0, "0"):
+                    break
+            if dispatched >= limit:
+                break
+
+        return {"dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_community_cohort_signals failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+# =============================================================================
+# Spine v2.5: StateRegister expiry + Skill auto-deprecation
+# =============================================================================
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_expire_stale_states")
+def spine_expire_stale_states(self, limit: int = 500):
+    """Expire stale state entries for active users."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.signals.state_register import StateRegister
+
+        redis = get_redis()
+        register = StateRegister(redis)
+        cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
+        expired_total = 0
+        for key in keys:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            expired = await register.expire_stale(user_id)
+            expired_total += expired
+        return {"users_scanned": len(keys), "states_expired": expired_total}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("spine_expire_stale_states failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_auto_deprecate_skills")
+def spine_auto_deprecate_skills(self, limit: int = 500):
+    """Auto-deprecate stale skills for active users."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.signals.skill_lifecycle import SkillLifecycleManager
+
+        redis = get_redis()
+        manager = SkillLifecycleManager(redis)
+        cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
+        total_deprecated = 0
+        for key in keys:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            deprecated = await manager.auto_deprecate_check(user_id)
+            total_deprecated += len(deprecated)
+        return {"users_scanned": len(keys), "skills_deprecated": total_deprecated}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("spine_auto_deprecate_skills failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)

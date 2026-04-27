@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-542/542 tests passing:
+565/565 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -206,6 +206,11 @@
 - v2.4 Skill Auto-Deprecation: 2 tests (no stale, with stale skill)
 - v2.4 Belief Persistence: 2 tests (persist+load, empty on new user)
 - v2.4 Outcome Integration: 2 tests (outcome→source effectiveness, outcome→experiment trial)
+- v2.5 E2E Chain Repair: 7 tests (chronicle injection, fatigue injection, crisis injection, no-chronicle, correction→self_model, concurrency guard, metrics TTL)
+- v2.6 GoalWorldGraph: 5 tests (create graph, update mastery, find bottleneck, suggest focus, add dependency)
+- v2.6 MultiGoalArbitration: 10 tests (single goal, deadline urgent, bottleneck severity, user override, paused, conflicts, redis register/get, spine integration)
+- v2.6 Spine Goal Integration: 3 tests (get graph none, focus empty, arbitrate no goals)
+- v2.5 E2E Chain Repair: 7 tests (chronicle injection, fatigue injection, crisis injection, no-chronicle, correction→self_model, concurrency guard, metrics TTL)
 
 ---
 
@@ -864,9 +869,42 @@
 
 ---
 
-## 当前状态: v2.4 COMPLETE — Learning Layer
+## 当前状态: v2.6 COMPLETE — General Goal OS
 
-**542/542 tests passing** | **9/9 directive types active** | **48+ public API exports** | **40 signal modules**
+**565/565 tests passing** | **9/9 directive types active** | **55+ public API exports** | **42 signal modules**
+
+### v2.6 (General Goal OS) — ALL COMPLETE
+- [x] GoalWorldGraph — per-goal dependency/prerequisite graph with bottleneck detection + focus suggestions
+- [x] MultiGoalArbitration — deadline/momentum/bottleneck priority scoring + time split + conflict detection
+- [x] SpineOrchestrator delegation: get_goal_graph / get_goal_focus_suggestions / arbitrate_goals / register_goal
+- [x] 23 new tests (5 graph CRUD/mastery/bottleneck/focus/dep + 10 arbitration + 3 spine integration)
+- [x] User priority override (high/low/pause) respected in arbitration
+- [x] Conflict detection: multiple_urgent_deadlines / bottleneck_goals / stalled_goals
+
+### v2.5 (E2E Chain Repair) — ALL COMPLETE
+- [x] Chronicle → prompts injection: `build_system_prompt()` now accepts `spine_chronicle_summary` parameter
+- [x] Fatigue/crisis → prompts injection: `build_system_prompt()` now accepts `spine_fatigue_context` parameter
+- [x] `orchestrator_production.py` fetches chronicle (limit=3) and fatigue/crisis from Redis
+- [x] `on_user_correction` → `self_model.record_user_correction()`: correction now flows to strategy learning
+- [x] Pipeline concurrency guard: Redis NX lock prevents concurrent `_run_signal_pipeline` for same user
+- [x] Metrics counter TTL: 7-day auto-expiry on each increment
+- [x] Community cohort Celery task: `community_cohort_signal_task` + `scan_community_cohort_signals`
+- [x] StateRegister expiry Celery task: `spine_expire_stale_states`
+- [x] Skill auto-deprecation Celery task: `spine_auto_deprecate_skills`
+- [x] Beat schedule: 5 new entries (snapshot daily, recall q4h, expire q6h, deprecate daily, community q8h)
+- [x] 7 new tests (chronicle injection, fatigue injection, crisis injection, no-chronicle, correction→self_model, concurrency guard, metrics TTL)
+
+### v2.5 Audit Findings (All Fixed)
+
+| # | Issue | Root Cause | Fix |
+|---|-------|-----------|-----|
+| 1 | Chronicle data invisible to AI | prompts.py had no chronicle reference | Added `spine_chronicle_summary` param + fetch in orchestrator_production |
+| 2 | Corrections don't update strategy | on_user_correction skipped self_model | Added `self_model.record_user_correction()` call |
+| 3 | Fatigue/crisis not in AI tone | FatigueGuard stored but never consumed | Added `spine_fatigue_context` param + fetch in orchestrator_production |
+| 4 | Community signal dead flow | on_community_cohort_data() had zero callers | Created Celery task + beat schedule |
+| 5 | 5 Celery tasks unscheduled | Methods existed but not in beat_schedule | Added all 5 to beat_schedule |
+| 6 | Metrics counter infinite growth | No TTL on Redis counters | Added 7-day expiry on each increment |
+| 7 | Concurrent pipeline data race | No lock on _run_signal_pipeline | Added Redis NX lock with 30s TTL |
 
 ### v2.4 (Learning Layer) — ALL COMPLETE
 - [x] PolicyExperiment full loop: create → record_trial with real outcomes → suggest_promotions
@@ -1055,14 +1093,14 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-542/542 tests passing
-40 signal modules (excluding __init__.py)
-48 public API exports (incl. SourceEffectivenessTracker)
+565/565 tests passing
+42 signal modules (excluding __init__.py)
+55 public API exports (incl. GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
 9/9 directive types active
 10/10 Iron Laws tested
 6/6 Divine Moments implemented
 8-layer architecture complete
-v2.4 Learning Layer complete: Bayesian belief bias + experiment full loop + source effectiveness + skill auto-deprecation
+v2.6 General Goal OS: GoalWorldGraph + MultiGoalArbitration + user override + conflict detection
 ```
 
 ---
