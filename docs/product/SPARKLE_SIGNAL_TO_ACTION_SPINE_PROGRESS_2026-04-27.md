@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-321/321 tests passing:
+336/336 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -858,7 +858,7 @@
 
 ## 当前状态: v2.0 Source Layer IN PROGRESS
 
-**330/330 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **2 divine moments implemented**
+**336/336 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **2 divine moments implemented**
 
 ### v1.1 完成任务
 - [x] P0-1: Achievement → PolicyEngine (3-tier rules + soft difficulty + shadow learning)
@@ -875,7 +875,7 @@
 - [x] Skill extraction triggers — auto-extract effective strategies (7 tests)
 
 ### v2.0 剩余
-- [ ] SourceAsset ↔ RetrievalDirective integration
+- [x] SourceAsset ↔ RetrievalDirective integration
 - [ ] Community commitment loop (Divine Moment 6 completion)
 - [ ] Notification service integration (recall activation)
 
