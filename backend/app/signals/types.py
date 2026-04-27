@@ -133,9 +133,11 @@ class PolicyDecision:
     secondary_strategy: str | None
     hard_constraints: dict[str, Any]    # e.g. {"max_task_duration_min": 25}
     soft_biases: dict[str, Any]         # e.g. {"tone": "direct_but_reassuring"}
-    visibility: str                     # "receipt" | "silent" | "log"
+    visibility: str                     # "receipt" | "silent" | "log" | "status_band" | "inline_hint"
     requires_user_confirmation: bool
     reasoning_summary: str
+    risk_level: str = "medium"          # "critical" | "high" | "medium" | "low"
+    which_directives: dict[str, bool] = field(default_factory=dict)  # which of 9 directive types to generate
     created_at: str = field(default_factory=_utcnow)
 
     def to_dict(self) -> dict[str, Any]:
@@ -148,6 +150,8 @@ class PolicyDecision:
             "visibility": self.visibility,
             "requires_user_confirmation": self.requires_user_confirmation,
             "reasoning_summary": self.reasoning_summary,
+            "risk_level": self.risk_level,
+            "which_directives": self.which_directives,
             "created_at": self.created_at,
         }
 

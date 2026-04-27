@@ -289,6 +289,57 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
 _DIRECTIVE_TARGET_MODULE = "task_generator"
 _DIRECTIVE_SCOPE = "today"
 
+# ── Risk Level Mapping ──────────────────────────────────────────────
+# Tier 1-2 state_keys → "high", Tier 3-4 → "medium", rest → "low"
+# goal_mode with exam_rescue → "critical"
+_RISK_LEVEL_MAP: dict[str, str] = {
+    "safety_boundary": "critical",
+    "user_correction": "high",
+    "deadline_pressure": "high",
+    "exam_rescue": "critical",
+    "goal_mode": "high",
+    "task_granularity_fit": "medium",
+    "knowledge_transfer": "medium",
+    "recall_needed": "medium",
+    "material_utilization": "low",
+    "growth_momentum": "low",
+    "community_cohort_pattern": "low",
+    "community_resource_recommendation": "low",
+    "community_partner_feedback": "medium",
+}
+
+# ── Directive Activation Map ────────────────────────────────────────
+# Which directive types to generate per state_key
+_WHICH_DIRECTIVES: dict[str, dict[str, bool]] = {
+    "task_granularity_fit": {
+        "response": True, "execution": True, "ux": True, "model_write": True,
+    },
+    "material_utilization": {
+        "retrieval": True, "response": True, "ux": True,
+    },
+    "goal_mode": {
+        "response": True, "execution": True, "plan": True, "ux": True, "model_write": True,
+    },
+    "knowledge_transfer": {
+        "response": True, "execution": True, "retrieval": True, "ux": True, "model_write": True, "skill": True,
+    },
+    "growth_momentum": {
+        "response": True, "ux": True,
+    },
+    "recall_needed": {
+        "notification": True, "response": True, "ux": True,
+    },
+    "community_cohort_pattern": {
+        "response": True, "community": True, "ux": True,
+    },
+    "community_resource_recommendation": {
+        "retrieval": True, "community": True, "ux": True,
+    },
+    "community_partner_feedback": {
+        "response": True, "execution": True, "ux": True, "model_write": True,
+    },
+}
+
 
 class PolicyEngine:
     """Signal → PolicyDecision → ExecutionDirective（固定规则版）。"""
@@ -520,6 +571,8 @@ class PolicyEngine:
             visibility=rule.get("visibility", "receipt"),
             requires_user_confirmation=rule.get("requires_user_confirmation", False),
             reasoning_summary=reasoning,
+            risk_level=_RISK_LEVEL_MAP.get(signal.state_key, "medium"),
+            which_directives=dict(_WHICH_DIRECTIVES.get(signal.state_key, {"response": True, "execution": True})),
         )
 
         directive = ExecutionDirective(

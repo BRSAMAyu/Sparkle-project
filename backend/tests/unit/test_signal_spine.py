@@ -10804,3 +10804,115 @@ async def test_signal_ranker_dimension_scores_in_to_dict():
     d = result.ranked[0].to_dict()
     assert "dimension_scores" in d
     assert "goal_impact" in d["dimension_scores"]
+
+
+# ── v2.9: PolicyDecision risk_level + which_directives ──────────────
+
+@pytest.mark.asyncio
+async def test_policy_decision_risk_level_critical():
+    """exam_rescue and safety_boundary get critical risk_level."""
+    engine = PolicyEngine()
+    signal = _make_signal("goal_mode", confidence=0.9)
+    signal_claim_hack = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="goal_mode", claim="exam_rescue_detected", confidence=0.9,
+        evidence_summary="test", scope="sprint", ttl_hours=24,
+        possible_effects=["effect_1"], priority="high",
+    )
+    result = await engine.evaluate(signal_claim_hack)
+    assert result is not None
+    decision, _ = result
+    assert decision.risk_level == "high"
+    assert decision.to_dict()["risk_level"] == "high"
+
+
+@pytest.mark.asyncio
+async def test_policy_decision_risk_level_low():
+    """growth_momentum gets low risk_level."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="growth_momentum", claim="momentum_high", confidence=0.9,
+        evidence_summary="test", scope="sprint", ttl_hours=24,
+        possible_effects=["effect_1"], priority="low",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    assert decision.risk_level == "low"
+
+
+@pytest.mark.asyncio
+async def test_policy_decision_which_directives_task_granularity():
+    """task_granularity_fit activates response+execution+ux+model_write."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large", confidence=0.9,
+        evidence_summary="test", scope="sprint", ttl_hours=24,
+        possible_effects=["effect_1"], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    wd = decision.which_directives
+    assert wd.get("response") is True
+    assert wd.get("execution") is True
+    assert wd.get("ux") is True
+    assert wd.get("model_write") is True
+    assert wd.get("notification") is None or wd.get("notification") is False
+
+
+@pytest.mark.asyncio
+async def test_policy_decision_which_directives_recall():
+    """recall_needed activates notification+response+ux."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="undigested_material", confidence=0.9,
+        evidence_summary="test", scope="sprint", ttl_hours=24,
+        possible_effects=["effect_1"], priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    wd = decision.which_directives
+    assert wd.get("notification") is True
+    assert wd.get("response") is True
+
+
+@pytest.mark.asyncio
+async def test_policy_decision_which_directives_community():
+    """community_cohort_pattern activates community+response."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="community_cohort_pattern", claim="cohort_mistake_detected", confidence=0.9,
+        evidence_summary="test", scope="sprint", ttl_hours=24,
+        possible_effects=["effect_1"], priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    wd = decision.which_directives
+    assert wd.get("community") is True
+    assert wd.get("response") is True
+
+
+@pytest.mark.asyncio
+async def test_policy_decision_to_dict_includes_new_fields():
+    """to_dict() includes risk_level and which_directives."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large", confidence=0.9,
+        evidence_summary="test", scope="sprint", ttl_hours=24,
+        possible_effects=["effect_1"], priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    d = decision.to_dict()
+    assert "risk_level" in d
+    assert "which_directives" in d
+    assert isinstance(d["which_directives"], dict)
