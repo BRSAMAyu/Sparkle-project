@@ -1087,7 +1087,7 @@ types.py                    — 7 core data objects + all dataclasses
 | P0-10: CausalTrace | ✅ | Full chain: event→signal→policy→directive→audit→receipt |
 | P1-1 through P1-6 | ✅ | All 6 items complete |
 | P2-1 through P2-8 | ✅ | Self-improving learning layer + quota/cooldown |
-| P3-1 through P3-3 | ✅ | General goal OS layer |
+| P3-1 through P3-4 | ✅ | General goal OS layer + marketplace |
 | P4: Research-grade | ✅ | Counterfactual + simulator + marketplace |
 
 ### 10 Iron Laws — All Covered by Tests
@@ -1136,6 +1136,7 @@ v3.1 AuroraControlSignal + AuroraAgenda: 15 dedicated tests (5 envelope + 10 ses
 v3.2 P0-3 complete: ActionableStatePacket 7/7 fields (time_context, execution_pattern, context_recommendation added), 8 new tests, 623/623 total
 v4.0 P2 Batch 1 COMPLETE: state vocabulary (cognitive_load/affective_pressure) + model write roundtrip + learning persistence + retract_if, 656/656 total
 v4.1 P2 Batch 2 COMPLETE: relationship behavioral evolution + multi-strategy experiments + partner accountability loop + directive quota/cooldown, 683/683 total
+v5.0 P3 COMPLETE: core session lifecycle + agenda queue + L4 async deep learning + strategy marketplace, 698/698 total
 ```
 
 ### P1 Status — ALL COMPLETE
