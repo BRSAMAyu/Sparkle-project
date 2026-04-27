@@ -759,6 +759,11 @@ async def get_goal_graph(
             ],
             "bottleneck_node_id": bottleneck.node_id if bottleneck else None,
             "focus_suggestions": suggestions or [],
+            "deferred_nodes": await spine.get_goal_deferred_nodes(
+                user_id=str(current_user.id),
+                goal_id=goal_id,
+                focus_ids={s["node_id"] for s in (suggestions or [])},
+            ),
         }
     except Exception:
         return {"active": False, "nodes": [], "edges": []}
@@ -805,5 +810,61 @@ async def submit_external_event(
         "trace_id": trace.trace_id if trace else None,
         "signal_triggered": trace is not None,
     }
+
+
+# route-tier: authed
+@router.get("/spine/source-tray")
+async def get_source_tray_state(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Demo Experience Point #5: 用户能手动选择资料参与本轮。
+
+    Returns the current SourceTrayState for the user — what materials
+    are included/excluded and whether the user has overridden auto-mode.
+    """
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"mode": "auto", "selections": [], "available_sources": []}
+    spine = SpineOrchestrator(redis)
+    return await spine.get_source_tray_state(user_id=str(current_user.id))
+
+
+# route-tier: authed
+@router.post("/spine/source-tray/select")
+async def set_source_tray_selection(
+    request: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Demo Experience Point #5: User manually selects which sources enter AI context.
+
+    Body: {
+      "selections": [{"source_id": "...", "action": "include|exclude|auto",
+                      "scope": "this_turn|this_task|today|this_goal",
+                      "user_initiated": true}],
+      "mode": "manual_only|auto|no_materials"
+    }
+
+    Iron Rule: Only writes to Redis session state. No long-term DB writes.
+    """
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"status": "error", "message": "service unavailable"}
+
+    spine = SpineOrchestrator(redis)
+    selections = request.get("selections", [])
+    mode = str(request.get("mode", "manual_only"))
+
+    state = await spine.set_source_tray_selection(
+        user_id=str(current_user.id),
+        selections=selections if isinstance(selections, list) else [],
+        mode=mode,
+    )
+    return {"status": "ok", "state": state}
 
 

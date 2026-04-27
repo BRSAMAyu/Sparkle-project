@@ -553,6 +553,75 @@ class SpineOrchestrator:
 
         return cards
 
+    # ── P12: SourceTray User Override ──────────────────────────────────
+
+    async def set_source_tray_selection(
+        self,
+        *,
+        user_id: str,
+        selections: list[dict[str, Any]],
+        mode: str = "manual_only",
+    ) -> dict[str, Any]:
+        """
+        Demo Experience Point #5: 用户能手动选择资料参与本轮。
+
+        Persists the user's explicit source tray selections. These are consumed
+        by the retrieval layer to control which materials enter context.
+
+        Args:
+            user_id: User identifier
+            selections: List of {source_id, action, scope, user_initiated} dicts.
+                        action ∈ {include, exclude, auto}
+                        scope ∈ {this_turn, this_task, today, this_goal}
+            mode: "manual_only" | "auto" | "no_materials"
+
+        Iron Rule: This only writes to Redis (ephemeral session state).
+        It does NOT write to any database or affect long-term user state.
+        """
+        import json
+        from app.signals.types import SourceTraySelection, SourceTrayState
+
+        parsed: list[SourceTraySelection] = []
+        for sel in selections:
+            try:
+                parsed.append(SourceTraySelection(
+                    source_id=str(sel.get("source_id", "")),
+                    action=str(sel.get("action", "auto")),
+                    scope=str(sel.get("scope", "this_task")),
+                    user_initiated=bool(sel.get("user_initiated", True)),
+                ))
+            except Exception:
+                continue
+
+        state = SourceTrayState(mode=mode, selections=parsed)
+        key = f"spine:source_tray:{user_id}"
+        await self.redis.set(key, json.dumps(state.to_dict()), ex=24 * 3600)  # 24h TTL
+        logger.info(
+            "SourceTray: user={} mode={} selections={}",
+            user_id, mode, len(parsed),
+        )
+        return state.to_dict()
+
+    async def get_source_tray_state(self, user_id: str) -> dict[str, Any]:
+        """
+        Returns the current SourceTrayState for the user.
+
+        If no selections have been made, returns the default auto-mode state.
+        Flutter reads this to render the source tray UI and indicate user overrides.
+        """
+        import json
+        from app.signals.types import SourceTrayState
+
+        key = f"spine:source_tray:{user_id}"
+        raw = await self.redis.get(key)
+        if not raw:
+            # Default: auto mode, no explicit selections
+            return SourceTrayState(mode="auto", selections=[]).to_dict()
+        try:
+            return json.loads(raw if isinstance(raw, str) else raw.decode())
+        except (json.JSONDecodeError, TypeError):
+            return SourceTrayState(mode="auto", selections=[]).to_dict()
+
     async def apply_directive_to_task_spec(
         self,
         user_id: str,
@@ -1716,7 +1785,18 @@ class SpineOrchestrator:
         except Exception:
             return
 
-        plan = compute_retrieval_plan(retrieval_directive=rd, source_tray=tray)
+        # SRC-014: Fetch user-corrected blocklist
+        from app.signals.source_tray_integration import SourceEffectivenessTracker
+        blocked: set[str] = set()
+        try:
+            tracker = SourceEffectivenessTracker(self.redis)
+            blocked = set(await tracker.get_blocked_sources(user_id))
+        except Exception:
+            pass
+
+        plan = await compute_retrieval_plan(
+            retrieval_directive=rd, source_tray=tray, blocked_source_ids=blocked or None,
+        )
         if plan["must_load"]:
             rd.must_load = list({s["source_id"] for s in plan["must_load"]} | set(rd.must_load or []))
         if plan["do_not_load"]:
@@ -1823,8 +1903,15 @@ class SpineOrchestrator:
         except Exception:
             return []
 
+    # C7 guard: scopes below "sprint" must never be written to persistent preference store.
+    _SHORT_SCOPES = frozenset({"turn", "session", "task", "day"})
+
     async def _apply_model_writes(self, user_id: str, mwd: ModelWriteDirective) -> None:
-        """Apply model write claims to user state (confidence-gated, auto-apply only)."""
+        """Apply model write claims to user state (confidence-gated, auto-apply only).
+
+        Short-lived scopes (turn/session/task/day) are only stored in Redis with TTL
+        and must never be persisted to long-term preference/self-model storage.
+        """
         import json
         for entry in mwd.writes:
             # Only auto-apply high-confidence claims that don't need user confirmation
@@ -1838,6 +1925,7 @@ class SpineOrchestrator:
                     "confidence": entry.confidence,
                     "source": "spine_auto",
                     "directive_id": mwd.directive_id,
+                    "scope": entry.scope,
                 }),
                 ex=self._ttl_to_seconds(entry.ttl),
             )
@@ -3301,6 +3389,18 @@ class SpineOrchestrator:
         if not graph:
             return []
         return self.goal_graph.suggest_focus_nodes(graph, limit=limit)
+
+    async def get_goal_deferred_nodes(
+        self, user_id: str, goal_id: str, focus_ids: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """GOAL-006: Get deferred nodes with why_deferred explanations."""
+        graph = await self.goal_graph.get_graph(user_id, goal_id)
+        if not graph:
+            return []
+        if focus_ids is None:
+            suggestions = self.goal_graph.suggest_focus_nodes(graph)
+            focus_ids = {s["node_id"] for s in suggestions}
+        return self.goal_graph.get_deferred_nodes(graph, focus_ids=focus_ids)
 
     async def arbitrate_goals(self, user_id: str):
         """v2.5: Arbitrate between multiple active goals.

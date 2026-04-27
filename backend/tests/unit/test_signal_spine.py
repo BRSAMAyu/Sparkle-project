@@ -92,6 +92,9 @@ class FakeRedis:
     async def smembers(self, key: str) -> set[str]:
         return self._sets.get(key, set())
 
+    async def sismember(self, key: str, member: str) -> bool:
+        return member in self._sets.get(key, set())
+
     async def sadd(self, key: str, *members: str) -> int:
         s = self._sets.setdefault(key, set())
         before = len(s)
@@ -6102,7 +6105,7 @@ def test_skill_extraction_with_context():
 # ═══════════════════════════════════════════════════════════════════════
 
 
-def test_source_tray_must_load_user_included():
+async def test_source_tray_must_load_user_included():
     """User explicitly includes a source → must_load."""
     from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
     from app.signals.source_tray_integration import compute_retrieval_plan
@@ -6119,13 +6122,13 @@ def test_source_tray_must_load_user_included():
         directive_id="rd_1", policy_decision_id="pd_1",
         retrieval_mode="targeted_source_rag", pollution_guard="strict",
     )
-    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    plan = await compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
     assert len(plan["must_load"]) == 1
     assert plan["must_load"][0]["source_id"] == "src_1"
     assert plan["must_load"][0]["reason"] == "user_explicitly_included"
 
 
-def test_source_tray_do_not_load_user_excluded():
+async def test_source_tray_do_not_load_user_excluded():
     """User explicitly excludes a source → do_not_load."""
     from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
     from app.signals.source_tray_integration import compute_retrieval_plan
@@ -6141,12 +6144,12 @@ def test_source_tray_do_not_load_user_excluded():
         directive_id="rd_1", policy_decision_id="pd_1",
         retrieval_mode="targeted_source_rag", pollution_guard="strict",
     )
-    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    plan = await compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
     assert len(plan["do_not_load"]) == 1
     assert plan["do_not_load"][0]["reason"] == "user_explicitly_excluded"
 
 
-def test_source_tray_strict_guard_low_relevance():
+async def test_source_tray_strict_guard_low_relevance():
     """Strict pollution_guard skips low-relevance sources."""
     from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
     from app.signals.source_tray_integration import compute_retrieval_plan
@@ -6163,7 +6166,7 @@ def test_source_tray_strict_guard_low_relevance():
         retrieval_mode="targeted_source_rag", pollution_guard="strict",
     )
     # Query for TCP nodes — UDP source has 0 relevance
-    plan = compute_retrieval_plan(
+    plan = await compute_retrieval_plan(
         retrieval_directive=directive, source_tray=tray,
         target_nodes=["tcp", "congestion_control"],
     )
@@ -6171,7 +6174,7 @@ def test_source_tray_strict_guard_low_relevance():
     assert "low_relevance" in plan["do_not_load"][0]["reason"]
 
 
-def test_source_tray_high_relevance_in_may_load():
+async def test_source_tray_high_relevance_in_may_load():
     """High-relevance source goes to may_load in auto mode."""
     from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
     from app.signals.source_tray_integration import compute_retrieval_plan
@@ -6188,7 +6191,7 @@ def test_source_tray_high_relevance_in_may_load():
         retrieval_mode="targeted_source_rag", pollution_guard="permissive",
         token_budget=5000,
     )
-    plan = compute_retrieval_plan(
+    plan = await compute_retrieval_plan(
         retrieval_directive=directive, source_tray=tray,
         target_nodes=["tcp"],
     )
@@ -6197,7 +6200,7 @@ def test_source_tray_high_relevance_in_may_load():
     assert any(s["source_id"] == "src_tcp" for s in plan["may_load"] + plan["must_load"])
 
 
-def test_source_tray_failed_parse_excluded():
+async def test_source_tray_failed_parse_excluded():
     """Failed parse sources always go to do_not_load."""
     from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
     from app.signals.source_tray_integration import compute_retrieval_plan
@@ -6213,12 +6216,12 @@ def test_source_tray_failed_parse_excluded():
         directive_id="rd_1", policy_decision_id="pd_1",
         retrieval_mode="targeted_source_rag",
     )
-    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    plan = await compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
     assert len(plan["do_not_load"]) == 1
     assert plan["do_not_load"][0]["reason"] == "parse_failed"
 
 
-def test_source_tray_empty_sources():
+async def test_source_tray_empty_sources():
     """Empty source tray returns empty plan."""
     from app.signals.types import RetrievalDirective, SourceTrayState
     from app.signals.source_tray_integration import compute_retrieval_plan
@@ -6228,7 +6231,7 @@ def test_source_tray_empty_sources():
         directive_id="rd_1", policy_decision_id="pd_1",
         retrieval_mode="no_rag",
     )
-    plan = compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+    plan = await compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
     assert plan["must_load"] == []
     assert plan["may_load"] == []
     assert plan["do_not_load"] == []
@@ -11113,7 +11116,7 @@ async def test_source_tray_pollution_guard_blocks_low_relevance():
                         mapped_nodes=["tcp", "congestion_control"], parsed_status="parsed"),
         ],
     )
-    plan = compute_retrieval_plan(retrieval_directive=rd, source_tray=tray, target_nodes=["tcp", "congestion_control"])
+    plan = await compute_retrieval_plan(retrieval_directive=rd, source_tray=tray, target_nodes=["tcp", "congestion_control"])
     # src_high has overlap → should be in must_load or may_load
     must_ids = [s["source_id"] for s in plan["must_load"]]
     may_ids = [s["source_id"] for s in plan["may_load"]]
@@ -17719,6 +17722,116 @@ async def test_p10_get_status_band_wired_to_orchestrator(fake_redis):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# P12 Tests: SourceTraySelection User Override
+# Demo Experience Point #5: 用户能手动选择资料参与本轮
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def test_p12_source_tray_methods_wired(fake_redis):
+    """SpineOrchestrator has set_source_tray_selection and get_source_tray_state."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    assert hasattr(spine, "set_source_tray_selection")
+    assert hasattr(spine, "get_source_tray_state")
+    assert callable(spine.set_source_tray_selection)
+    assert callable(spine.get_source_tray_state)
+
+
+async def test_p12_get_source_tray_empty_default(fake_redis):
+    """No selections → get_source_tray_state returns auto mode with empty selections."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.get_source_tray_state(user_id="u_tray0")
+    assert result["mode"] == "auto"
+    assert isinstance(result["selections"], list)
+    assert len(result["selections"]) == 0
+
+
+async def test_p12_set_source_tray_persists(fake_redis):
+    """set_source_tray_selection stores selections in Redis."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    await spine.set_source_tray_selection(
+        user_id="u_tray1",
+        selections=[
+            {"source_id": "file_001", "action": "include", "scope": "this_task"},
+        ],
+        mode="manual_only",
+    )
+    raw = await fake_redis.get("spine:source_tray:u_tray1")
+    assert raw is not None, "Selection must be persisted to Redis"
+
+
+async def test_p12_get_source_tray_returns_stored(fake_redis):
+    """get_source_tray_state returns exactly what was stored by set."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    await spine.set_source_tray_selection(
+        user_id="u_tray2",
+        selections=[
+            {"source_id": "file_abc", "action": "include", "scope": "this_turn", "user_initiated": True},
+            {"source_id": "file_xyz", "action": "exclude", "scope": "today", "user_initiated": True},
+        ],
+        mode="manual_only",
+    )
+    state = await spine.get_source_tray_state(user_id="u_tray2")
+    assert state["mode"] == "manual_only"
+    assert len(state["selections"]) == 2
+    source_ids = {s["source_id"] for s in state["selections"]}
+    assert "file_abc" in source_ids
+    assert "file_xyz" in source_ids
+
+
+async def test_p12_source_tray_session_isolated(fake_redis):
+    """Different users have independent source tray states."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    await spine.set_source_tray_selection(
+        user_id="u_tray3",
+        selections=[{"source_id": "u3_file", "action": "include", "scope": "this_task"}],
+        mode="manual_only",
+    )
+    # Different user should have no selections
+    state_other = await spine.get_source_tray_state(user_id="u_tray4")
+    assert state_other["mode"] == "auto"
+    assert len(state_other["selections"]) == 0
+
+
+async def test_p12_source_tray_override_existing(fake_redis):
+    """Calling set_source_tray_selection twice replaces previous selections."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    await spine.set_source_tray_selection(
+        user_id="u_tray5",
+        selections=[{"source_id": "old_file", "action": "include", "scope": "this_task"}],
+        mode="manual_only",
+    )
+    # Override with new selection
+    await spine.set_source_tray_selection(
+        user_id="u_tray5",
+        selections=[{"source_id": "new_file", "action": "include", "scope": "today"}],
+        mode="manual_only",
+    )
+    state = await spine.get_source_tray_state(user_id="u_tray5")
+    assert len(state["selections"]) == 1
+    assert state["selections"][0]["source_id"] == "new_file"
+
+
+async def test_p12_source_tray_no_materials_mode(fake_redis):
+    """mode=no_materials stores correctly and is readable."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.set_source_tray_selection(
+        user_id="u_tray6",
+        selections=[],
+        mode="no_materials",
+    )
+    assert result["mode"] == "no_materials"
+    state = await spine.get_source_tray_state(user_id="u_tray6")
+    assert state["mode"] == "no_materials"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # P11 Tests: CausalTrace Timeline Rendering in Experience Envelope
 # Demo Experience Point #11: 混合时间轴记录完整 causal trace
 # ─────────────────────────────────────────────────────────────────────────────
@@ -17817,3 +17930,157 @@ async def test_p11_get_rendered_timeline_graceful_on_missing_data(fake_redis):
     if result:
         assert "trace_id" in result[0]
         assert result[0]["card"] is None  # No signal → card=None
+
+
+# ── SRC-014: Source Trust Correction Tests ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_source_trust_record_user_correction():
+    """record_user_correction sets blocklist and records insufficient outcome."""
+    from app.signals.source_tray_integration import SourceEffectivenessTracker
+    import json
+
+    r = FakeRedis()
+    tracker = SourceEffectivenessTracker(r)
+
+    result = await tracker.record_user_correction(
+        user_id="u1", source_id="src_bad", reason="user_marked_irrelevant",
+    )
+
+    assert result["source_id"] == "src_bad"
+    assert result["auto_reuse_blocked"] is True
+    assert result["status"] == "user_corrected"
+
+    # Should be blocked now
+    assert await tracker.is_source_blocked("u1", "src_bad") is True
+    assert await tracker.is_source_blocked("u1", "src_ok") is False
+
+    # Blocklist should list it
+    blocked = await tracker.get_blocked_sources("u1")
+    assert "src_bad" in blocked
+
+
+@pytest.mark.asyncio
+async def test_source_trust_blocked_sources_excluded_from_retrieval():
+    """Blocked sources go to do_not_load in compute_retrieval_plan."""
+    from app.signals.source_tray_integration import compute_retrieval_plan
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
+
+    tray = SourceTrayState(
+        mode="auto",
+        selections=[],
+        available_sources=[
+            SourceAsset(source_id="src_ok", title="Good", source_type="notes", parsed_status="parsed"),
+            SourceAsset(source_id="src_blocked", title="Bad", source_type="notes", parsed_status="parsed"),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_bl", policy_decision_id="pd_bl",
+        retrieval_mode="targeted_source_rag", pollution_guard="default",
+    )
+
+    plan = await compute_retrieval_plan(
+        retrieval_directive=directive,
+        source_tray=tray,
+        blocked_source_ids={"src_blocked"},
+    )
+
+    skip_ids = [s["source_id"] for s in plan["do_not_load"]]
+    assert "src_blocked" in skip_ids
+    # src_ok should not be blocked
+    assert "src_ok" not in skip_ids
+
+
+
+# ── GOAL-006: Deferred Node Explanation ──────────────────────────────
+
+@pytest.mark.asyncio
+async def test_deferred_nodes_explain_why():
+    """get_deferred_nodes returns why_deferred for each non-focus node."""
+    from app.signals.goal_world_graph import GoalWorldGraph, GoalWorldGraphService, GraphNode
+
+    graph = GoalWorldGraph(
+        graph_id="g1", user_id="u1", goal_id="goal1", goal_type="exam_sprint",
+        nodes=[
+            GraphNode(node_id="n1", label="TCP", node_type="knowledge", mastery=0.0, status="pending"),
+            GraphNode(node_id="n2", label="UDP", node_type="knowledge", mastery=0.8, status="in_progress"),
+            GraphNode(node_id="n3", label="Reliability", node_type="knowledge", mastery=0.0,
+                      dependency_ids=["n1"], status="blocked"),
+            GraphNode(node_id="n4", label="Congestion", node_type="knowledge", mastery=1.0, status="mastered"),
+        ],
+    )
+
+    svc = GoalWorldGraphService(FakeRedis())
+    focus_ids = {"n1"}  # TCP is in focus
+    deferred = svc.get_deferred_nodes(graph, focus_ids=focus_ids)
+
+    # n1 is in focus → not deferred; n4 is mastered → not deferred
+    deferred_ids = [d["node_id"] for d in deferred]
+    assert "n1" not in deferred_ids
+    assert "n4" not in deferred_ids
+
+    # n3 is blocked → reason should mention blocker
+    n3_entry = next(d for d in deferred if d["node_id"] == "n3")
+    assert "被阻塞" in n3_entry["why_deferred"]
+
+    # n2 has high mastery → reason should mention
+    n2_entry = next(d for d in deferred if d["node_id"] == "n2")
+    assert "掌握" in n2_entry["why_deferred"]
+
+
+# ── PLAN-009: Plan version diff surfacing ──────────────────────────────────
+
+
+def test_plan_revision_summary_fields():
+    """PlanRevisionSummary has all required fields for user-facing diff."""
+    from app.orchestration.plan_revision_summary import PlanRevisionSummary
+
+    summary = PlanRevisionSummary(
+        why_plan_changed="用户反馈任务太难",
+        what_assumption_failed="假设用户能每天学习3小时",
+        what_stays="核心知识点覆盖范围",
+        what_changes="每日任务量从3个减为2个，难度从3降为2",
+        new_next_action="今天只做1个基础题",
+    )
+    d = summary.to_dict()
+    assert d["why_plan_changed"] == "用户反馈任务太难"
+    assert d["what_assumption_failed"]
+    assert d["what_stays"]
+    assert d["what_changes"]
+    assert d["new_next_action"]
+    assert "created_at" in d
+
+
+def test_version_conflict_result_has_diff_fields():
+    """VersionConflictResult tracks changed_fields for plan diff."""
+    from app.orchestration.version_conflict_service import VersionConflictResult
+
+    result = VersionConflictResult(
+        has_conflict=True,
+        conflict_type="plan_version",
+        expected_version=1,
+        current_version=3,
+        changed_fields=["constraints", "active_tasks"],
+        recommendation="hitl",
+    )
+    d = result.to_dict()
+    assert d["has_conflict"] is True
+    assert d["expected_version"] == 1
+    assert d["current_version"] == 3
+    assert "constraints" in d["changed_fields"]
+
+
+def test_executable_plan_has_plan_version():
+    """ExecutablePlan carries plan_version for version conflict detection."""
+    from app.orchestration.schemas import ExecutablePlan
+
+    plan = ExecutablePlan(
+        plan_id="test-plan-001",
+        context_version="plan-abc:1",
+        plan_version=5,
+    )
+    assert plan.plan_version == 5
+    d = plan.to_dict()
+    assert d["plan_version"] == 5
+
