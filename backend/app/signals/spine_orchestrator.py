@@ -47,6 +47,7 @@ from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.goal_world_graph import GoalWorldGraphService
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.directive_quota import DirectiveQuotaService
+from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -110,6 +111,7 @@ class SpineOrchestrator:
         self.growth_chronicle = GrowthChronicleService(redis_client)
         self.relationship_model = RelationshipModelService(redis_client)
         self.directive_quota = DirectiveQuotaService(redis_client)
+        self.aurora_core = AuroraCoreSessionService(redis_client)
         self.skill_extraction = SkillExtractionService()
         self.goal_type_adapter = GoalTypeAdapter()
         self.material_signal_detector = MaterialSignalDetector(redis_client)
@@ -2010,6 +2012,91 @@ class SpineOrchestrator:
             return result
         except Exception:
             return None
+
+    async def start_aurora_core_session(
+        self,
+        *,
+        user_id: str,
+        goal_summary: str,
+        current_plan_summary: str,
+        wake_reason: str,
+        session_type: str = "strategy_recalibration",
+    ) -> dict[str, Any] | None:
+        """Start an L3 Aurora Core Session. Per D6: backend builds case file + agenda."""
+        try:
+            states = await self.state_register.get_active_states(user_id)
+            state_dicts = [s.to_dict() for s in states]
+
+            recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=5)
+
+            case_file = self.aurora_core.build_case_file(
+                user_id,
+                goal_summary=goal_summary,
+                current_plan_summary=current_plan_summary,
+                wake_reason=wake_reason,
+                active_states=state_dicts,
+                recent_outcomes=recent_effects,
+            )
+
+            agenda = self.aurora_core.build_agenda_from_case_file(case_file, session_type)
+
+            session = await self.aurora_core.create_session(user_id, case_file, agenda)
+            return session
+        except Exception:
+            return None
+
+    async def process_aurora_reply(
+        self,
+        session_id: str,
+        item_index: int,
+        reply: str,
+    ) -> dict[str, Any] | None:
+        """Process a user reply to an Aurora agenda item."""
+        return await self.aurora_core.record_reply(session_id, item_index, reply)
+
+    async def close_aurora_session(
+        self,
+        session_id: str,
+        *,
+        state_patches: list[dict[str, Any]] | None = None,
+        policy_changes: list[dict[str, Any]] | None = None,
+        user_summary: str = "",
+    ) -> dict[str, Any] | None:
+        """Close an Aurora session and apply closure through Spine."""
+        patches = [StatePatch(**p) for p in (state_patches or [])]
+        changes = [PolicyChange(**c) for c in (policy_changes or [])]
+
+        closure = SessionClosure(
+            session_id=session_id,
+            state_patches=patches,
+            policy_changes=changes,
+            directives_to_regenerate=["ExecutionDirective", "ResponseDirective"],
+            user_visible_summary=user_summary,
+        )
+
+        session = await self.aurora_core.close_session(session_id, closure)
+        if not session or "error" in session:
+            return session
+
+        # Apply state patches through Spine (proper audit trail)
+        user_id = session.get("user_id", "")
+        for patch in patches:
+            signal = ActionableSignal(
+                signal_id=_uid("sig"),
+                source_event_ids=[session_id],
+                source_system="aurora_core_session",
+                state_key=patch.state_key,
+                claim=patch.new_value,
+                confidence=patch.confidence,
+                scope="current_sprint",
+                ttl_hours=168,
+                evidence_summary=f"Aurora校准: {patch.reason}",
+                possible_effects=["strategy_update"],
+                priority="high",
+            )
+            await self.state_register.upsert_from_signal(user_id, signal)
+
+        return session
 
     async def build_recovery_card(
         self,

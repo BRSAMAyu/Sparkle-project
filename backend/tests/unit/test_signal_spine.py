@@ -8116,11 +8116,9 @@ async def test_relationship_strategy_conservative():
 
     adjustment = await service.get_strategy_adjustment("u_rel")
 
-    assert adjustment["tone_adjustment"] == "conservative"
-    assert adjustment["proactivity_level"] == "confirm_before_acting"
+    # D4 hybrid: stance-driven tone (strained or cooldown)
+    assert adjustment["tone_adjustment"] in ("cautious", "minimal", "conservative")
     assert adjustment["requires_confirmation"] is True
-    assert adjustment["include_why_evidence"] is True
-    assert adjustment["explanation_depth"] == "brief_with_evidence"
 
 
 @pytest.mark.asyncio
@@ -12795,3 +12793,279 @@ async def test_v210_marketplace_cache_recommendations():
     cached = await mp.get_cached_recommendations("u1")
     assert len(cached) == 1
     assert cached[0]["strategy_key"] == "s1"
+
+
+# ============================================================
+# P2-5: Full Aurora Core Session v1
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_aurora_case_file_build():
+    """AuroraCaseFile is built with correct structure from context."""
+    from app.signals.aurora_core_session import AuroraCoreSessionService
+    svc = AuroraCoreSessionService(FakeRedis())
+
+    case = svc.build_case_file(
+        "u1",
+        goal_summary="7天计网先过",
+        current_plan_summary="第3天 TCP 拥塞控制",
+        wake_reason="consecutive_strategy_failure",
+        active_states=[
+            {"state_key": "task_granularity_fit", "value": "too_large"},
+            {"state_key": "knowledge_bottleneck", "value": "tcp_window_transfer"},
+        ],
+        recent_outcomes=[
+            {"attribution": "insufficient", "strategy": "shrink_duration"},
+        ],
+    )
+    assert case.user_id == "u1"
+    assert len(case.active_hypotheses) == 2
+    assert len(case.conflicts_to_resolve) == 1
+    assert "可能不是太大" in case.conflicts_to_resolve[0]
+
+
+@pytest.mark.asyncio
+async def test_v210_aurora_agenda_from_case_file():
+    """Agenda is generated with 5 standard items."""
+    from app.signals.aurora_core_session import AuroraCoreSessionService
+    svc = AuroraCoreSessionService(FakeRedis())
+
+    case = svc.build_case_file("u1", goal_summary="test", current_plan_summary="", wake_reason="test")
+    agenda = svc.build_agenda_from_case_file(case)
+
+    # Without conflicts: enter + ask + apply + close = 4
+    assert len(agenda.agenda_items) >= 4
+    types = [item.item_type for item in agenda.agenda_items]
+    assert "enter_session" in types
+    assert "ask_confirmation" in types
+    assert "close_session" in types
+
+
+@pytest.mark.asyncio
+async def test_v210_aurora_reply_options_have_free_text():
+    """Predicted reply options always include a free-text entry."""
+    from app.signals.aurora_core_session import AuroraCoreSessionService
+    svc = AuroraCoreSessionService(FakeRedis())
+
+    options = svc.build_reply_options("确实是这样")
+    assert len(options) >= 2
+    assert any(o.is_free_text for o in options)
+
+
+@pytest.mark.asyncio
+async def test_v210_aurora_session_create_and_get():
+    """Session is created and can be retrieved."""
+    from app.signals.aurora_core_session import AuroraCoreSessionService
+    redis = FakeRedis()
+    svc = AuroraCoreSessionService(redis)
+
+    case = svc.build_case_file("u1", goal_summary="test", current_plan_summary="", wake_reason="test")
+    agenda = svc.build_agenda_from_case_file(case)
+
+    session = await svc.create_session("u1", case, agenda)
+    assert session["status"] == "active"
+
+    loaded = await svc.get_session(agenda.session_id)
+    assert loaded is not None
+    assert loaded["user_id"] == "u1"
+
+
+@pytest.mark.asyncio
+async def test_v210_aurora_session_record_reply():
+    """Recording a reply advances the agenda."""
+    from app.signals.aurora_core_session import AuroraCoreSessionService
+    redis = FakeRedis()
+    svc = AuroraCoreSessionService(redis)
+
+    case = svc.build_case_file("u1", goal_summary="test", current_plan_summary="", wake_reason="test")
+    agenda = svc.build_agenda_from_case_file(case)
+    await svc.create_session("u1", case, agenda)
+
+    result = await svc.record_reply(agenda.session_id, 0, "好的")
+    assert result is not None
+    items = result["agenda"]["agenda_items"]
+    assert items[0]["status"] == "done"
+    assert items[1]["status"] == "waiting_user"
+
+
+@pytest.mark.asyncio
+async def test_v210_aurora_session_close():
+    """Closing a session stores closure and clears active pointer."""
+    from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch
+    redis = FakeRedis()
+    svc = AuroraCoreSessionService(redis)
+
+    case = svc.build_case_file("u1", goal_summary="test", current_plan_summary="", wake_reason="test")
+    agenda = svc.build_agenda_from_case_file(case)
+    await svc.create_session("u1", case, agenda)
+
+    closure = SessionClosure(
+        session_id=agenda.session_id,
+        state_patches=[StatePatch("task_granularity_fit", "too_large", "knowledge_bottleneck", "用户反馈", 0.8)],
+        user_visible_summary="我把判断从任务太大改成题型迁移失败。",
+    )
+    result = await svc.close_session(agenda.session_id, closure)
+    assert result["status"] == "completed"
+    assert len(result["closure"]["state_patches"]) == 1
+
+    # Active session should be cleared
+    active = await svc.get_active_session("u1")
+    assert active is None
+
+
+@pytest.mark.asyncio
+async def test_v210_spine_start_aurora_core_session():
+    """SpineOrchestrator can start an Aurora Core Session."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+
+    result = await spine.start_aurora_core_session(
+        user_id="u1",
+        goal_summary="7天计网先过",
+        current_plan_summary="第3天 TCP",
+        wake_reason="consecutive_strategy_failure",
+    )
+    assert result is not None
+    assert result["status"] == "active"
+    assert "case_file" in result
+    assert "agenda" in result
+
+
+@pytest.mark.asyncio
+async def test_v210_spine_close_aurora_session():
+    """SpineOrchestrator closes Aurora session and applies state patches."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+
+    session = await spine.start_aurora_core_session(
+        user_id="u1",
+        goal_summary="test",
+        current_plan_summary="",
+        wake_reason="test",
+    )
+    session_id = session["agenda"]["session_id"]
+
+    result = await spine.close_aurora_session(
+        session_id,
+        state_patches=[{"state_key": "test_key", "old_value": "old", "new_value": "new", "reason": "calibration", "confidence": 0.8}],
+        user_summary="已更新判断",
+    )
+    assert result is not None
+    assert result["status"] == "completed"
+
+    # State should be in StateRegister
+    state = await spine.state_register.get_state("u1", "test_key")
+    assert state is not None
+    assert state.value == "new"
+
+
+# ============================================================
+# D4: RelationshipModel hybrid FSM + continuous dimensions
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_stance_starts_new():
+    """New user starts with stance=new."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    state = await svc.get_or_create("u_new")
+    assert state.stance == "new"
+    assert state.directness_tolerance == 0.5
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_stance_transitions_to_calibrating():
+    """After 3+ interactions with decent trust, stance becomes calibrating."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    for _ in range(4):
+        await svc.update_from_interaction("u1", "confirmed")
+
+    state = await svc.get_or_create("u1")
+    assert state.stance == "calibrating"
+    assert state.trust_in_strategy > 0.5
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_stance_becomes_trusted():
+    """High trust + low corrections → trusted stance."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    for _ in range(15):
+        await svc.update_from_interaction("u1", "confirmed")
+
+    state = await svc.get_or_create("u1")
+    assert state.stance == "trusted"
+    assert state.trust_level >= 0.7
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_stance_becomes_strained():
+    """High correction frequency → strained stance."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    # 5 corrections gives correction_frequency >= 3 but won't hit cooldown
+    for _ in range(5):
+        await svc.update_from_interaction("u1", "corrected")
+
+    state = await svc.get_or_create("u1")
+    assert state.stance in ("strained", "cooldown")  # FSM may transition further
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_dimensions_update():
+    """Continuous dimensions update correctly from interactions."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    # Corrections increase explanation_need and pressure_sensitivity
+    await svc.update_from_interaction("u_dim", "corrected")
+    state = await svc.get_or_create("u_dim")
+    assert state.explanation_need > 0.5
+    assert state.pressure_sensitivity > 0.5
+
+    # Confirmations increase trust_in_strategy and directness_tolerance
+    await svc.update_from_interaction("u_dim2", "confirmed")
+    state = await svc.get_or_create("u_dim2")
+    assert state.trust_in_strategy > 0.5
+    assert state.directness_tolerance > 0.5
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_strategy_adjustment_by_stance():
+    """Strategy adjustment uses FSM stance for richer output."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    # New user → gentle_exploratory
+    adj = await svc.get_strategy_adjustment("u1")
+    assert adj["stance"] == "new"
+    assert adj["tone_adjustment"] == "gentle_exploratory"
+    assert adj["requires_confirmation"] is True
+    assert "directness_tolerance" in adj
+    assert "pressure_sensitivity" in adj
+
+
+@pytest.mark.asyncio
+async def test_v210_relationship_dimension_persistence():
+    """Continuous dimensions persist across get_or_create calls."""
+    from app.signals.relationship_model import RelationshipModelService
+    redis = FakeRedis()
+    svc = RelationshipModelService(redis)
+
+    await svc.update_from_interaction("u1", "corrected")
+    state = await svc.get_or_create("u1")
+    saved_need = state.explanation_need
+
+    reloaded = await svc.get_or_create("u1")
+    assert abs(reloaded.explanation_need - saved_need) < 0.001

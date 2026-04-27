@@ -1,9 +1,16 @@
 """
 Core: execution
 Phase: reflect→adapt
-Stage: Signal-to-Action Spine P2-3 RelationshipModel
+Stage: Signal-to-Action Spine P2-3 RelationshipModel (D4 Hybrid)
 
-用户-AI 关系模型 — 记录当前 sprint 可用的关系状态，影响策略选择。
+用户-AI 关系模型 — FSM stance + 连续维度，影响策略表达方式。
+
+D4 裁定：
+- 6-stance FSM: new → calibrating → trusted → strained → repairing → cooldown
+- 5 连续维度: directness_tolerance, autonomy_preference, explanation_need,
+              pressure_sensitivity, trust_in_strategy
+- 不直接展示给用户
+- 只影响语气、确认、频率、挑战强度
 
 核心原则：
 - 只建模可改变下一步策略的关系状态
@@ -28,6 +35,7 @@ _MAX_TRUST = 1.0
 _DEFAULT_TRUST = 0.5
 _VALID_INTERACTION_TYPES = {"confirmed", "corrected", "dismissed", "expanded", "ignored"}
 _VALID_BEHAVIORAL_SIGNALS = {"task_completed", "task_abandoned", "streak_maintained", "streak_broken", "session_engaged", "session_idle"}
+_VALID_STANCES = {"new", "calibrating", "trusted", "strained", "repairing", "cooldown"}
 
 
 def _now() -> str:
@@ -36,7 +44,10 @@ def _now() -> str:
 
 @dataclass
 class RelationshipState:
-    """Current user-AI relationship state used for policy adjustment."""
+    """Current user-AI relationship state used for policy adjustment.
+
+    D4 hybrid model: FSM stance + 5 continuous dimensions.
+    """
 
     user_id: str
     trust_level: float
@@ -52,6 +63,14 @@ class RelationshipState:
     current_streak: int = 0
     longest_streak: int = 0
     preferences: dict[str, Any] = field(default_factory=dict)
+    # D4: FSM stance
+    stance: str = "new"
+    # D4: Continuous dimensions (0.0 - 1.0)
+    directness_tolerance: float = 0.5
+    autonomy_preference: float = 0.5
+    explanation_need: float = 0.5
+    pressure_sensitivity: float = 0.5
+    trust_in_strategy: float = 0.5
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -69,6 +88,12 @@ class RelationshipState:
             "current_streak": self.current_streak,
             "longest_streak": self.longest_streak,
             "preferences": self.preferences,
+            "stance": self.stance,
+            "directness_tolerance": self.directness_tolerance,
+            "autonomy_preference": self.autonomy_preference,
+            "explanation_need": self.explanation_need,
+            "pressure_sensitivity": self.pressure_sensitivity,
+            "trust_in_strategy": self.trust_in_strategy,
         }
 
     @classmethod
@@ -133,6 +158,11 @@ class RelationshipModelService:
         state.interaction_style = self._infer_interaction_style(state)
         state.engagement_depth = self._infer_engagement_depth(state)
 
+        # D4: Update continuous dimensions
+        self._update_dimensions(state, interaction_type)
+        # D4: FSM stance transition
+        state.stance = self._compute_stance(state)
+
         await self._save(state)
         logger.info(
             "Relationship updated: user={} interaction={} trust={:.2f} style={}",
@@ -194,22 +224,55 @@ class RelationshipModelService:
         return state
 
     async def get_strategy_adjustment(self, user_id: str) -> dict[str, Any]:
-        """Get strategy adjustments based on relationship state."""
+        """Get strategy adjustments based on relationship state.
+
+        D4: Uses FSM stance + continuous dimensions for richer adjustments.
+        """
         state = await self.get_or_create(user_id)
 
-        if state.trust_level < 0.3:
+        # Base adjustment from FSM stance
+        stance = state.stance
+        if stance == "new":
             adjustment: dict[str, Any] = {
-                "tone_adjustment": "conservative",
+                "tone_adjustment": "gentle_exploratory",
                 "proactivity_level": "confirm_before_acting",
                 "explanation_depth": "brief",
                 "requires_confirmation": True,
             }
-        elif state.trust_level > 0.8:
+        elif stance == "calibrating":
+            adjustment = {
+                "tone_adjustment": "calm_direct",
+                "proactivity_level": "balanced",
+                "explanation_depth": "medium",
+                "requires_confirmation": False,
+            }
+        elif stance == "trusted":
             adjustment = {
                 "tone_adjustment": "confident",
                 "proactivity_level": "act_first",
                 "explanation_depth": "summary",
                 "requires_confirmation": False,
+            }
+        elif stance == "strained":
+            adjustment = {
+                "tone_adjustment": "cautious",
+                "proactivity_level": "confirm_before_acting",
+                "explanation_depth": "evidence_first",
+                "requires_confirmation": True,
+            }
+        elif stance == "repairing":
+            adjustment = {
+                "tone_adjustment": "transparent",
+                "proactivity_level": "balanced",
+                "explanation_depth": "medium_with_evidence",
+                "requires_confirmation": True,
+            }
+        elif stance == "cooldown":
+            adjustment = {
+                "tone_adjustment": "minimal",
+                "proactivity_level": "low_frequency",
+                "explanation_depth": "brief",
+                "requires_confirmation": True,
             }
         else:
             adjustment = {
@@ -221,9 +284,16 @@ class RelationshipModelService:
 
         adjustment.update(
             {
+                "stance": stance,
                 "interaction_style": state.interaction_style,
                 "engagement_depth": state.engagement_depth,
                 "trust_level": state.trust_level,
+                # D4 continuous dimensions
+                "directness_tolerance": round(state.directness_tolerance, 3),
+                "autonomy_preference": round(state.autonomy_preference, 3),
+                "explanation_need": round(state.explanation_need, 3),
+                "pressure_sensitivity": round(state.pressure_sensitivity, 3),
+                "trust_in_strategy": round(state.trust_in_strategy, 3),
             }
         )
 
@@ -276,3 +346,49 @@ class RelationshipModelService:
         if state.total_interactions >= 3 or expanded_count >= 1:
             return "moderate"
         return "surface"
+
+    def _update_dimensions(self, state: RelationshipState, interaction_type: str) -> None:
+        """D4: Update continuous dimensions based on interaction."""
+        step = 0.03
+        if interaction_type == "confirmed":
+            state.trust_in_strategy = min(1.0, state.trust_in_strategy + step)
+            state.directness_tolerance = min(1.0, state.directness_tolerance + step * 0.5)
+        elif interaction_type == "corrected":
+            state.trust_in_strategy = max(0.0, state.trust_in_strategy - step * 2)
+            state.explanation_need = min(1.0, state.explanation_need + step)
+            state.pressure_sensitivity = min(1.0, state.pressure_sensitivity + step * 0.5)
+        elif interaction_type == "expanded":
+            state.autonomy_preference = min(1.0, state.autonomy_preference + step)
+            state.explanation_need = max(0.0, state.explanation_need - step * 0.3)
+        elif interaction_type == "dismissed":
+            state.pressure_sensitivity = min(1.0, state.pressure_sensitivity + step)
+            state.directness_tolerance = max(0.0, state.directness_tolerance - step)
+        elif interaction_type == "ignored":
+            state.pressure_sensitivity = min(1.0, state.pressure_sensitivity + step * 0.5)
+            state.autonomy_preference = min(1.0, state.autonomy_preference + step * 0.3)
+
+    def _compute_stance(self, state: RelationshipState) -> str:
+        """D4: Compute FSM stance from current state."""
+        if state.total_interactions == 0:
+            return "new"
+        if state.stance == "cooldown":
+            # Cooldown: stay until trust recovers
+            if state.trust_level >= 0.4:
+                return "calibrating"
+            return "cooldown"
+
+        if state.correction_frequency >= 3.0:
+            if state.stance in ("strained", "repairing"):
+                return "cooldown"
+            return "strained"
+
+        if state.trust_level >= 0.7 and state.correction_frequency < 1.0:
+            return "trusted"
+
+        if state.stance == "strained" and state.trust_level >= 0.4:
+            return "repairing"
+
+        if state.total_interactions >= 3 and state.trust_level >= 0.4:
+            return "calibrating"
+
+        return state.stance if state.stance in _VALID_STANCES else "calibrating"
