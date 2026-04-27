@@ -207,6 +207,7 @@ class SpineOrchestrator:
         if wd.get("retrieval"):
             ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
             if ret_dir:
+                await self._enrich_retrieval_with_source_tray(user_id, ret_dir)
                 await self._store_retrieval_directive(user_id, ret_dir)
 
         if wd.get("plan"):
@@ -1179,6 +1180,35 @@ class SpineOrchestrator:
             logger.debug("get_recall_notification degraded: Redis unavailable for user={}", user_id)
             return None
 
+    async def _enrich_retrieval_with_source_tray(self, user_id: str, rd: RetrievalDirective) -> None:
+        """Enrich RetrievalDirective with SourceTrayState, producing concrete load plans."""
+        from app.signals.source_tray_integration import compute_retrieval_plan, build_source_receipt
+        from app.signals.types import SourceTrayState
+
+        try:
+            import json
+            raw = await self.redis.get(f"spine:source_tray:{user_id}")
+            if not raw:
+                return
+            tray = SourceTrayState.from_dict(json.loads(raw if isinstance(raw, str) else raw.decode()))
+        except Exception:
+            return
+
+        plan = compute_retrieval_plan(retrieval_directive=rd, source_tray=tray)
+        if plan["must_load"]:
+            rd.must_load = list({s["source_id"] for s in plan["must_load"]} | set(rd.must_load or []))
+        if plan["do_not_load"]:
+            rd.do_not_load = list({s["source_id"] for s in plan["do_not_load"]} | set(rd.do_not_load or []))
+
+        loaded_ids = [s["source_id"] for s in plan["must_load"]]
+        receipt = build_source_receipt(rd, tray, loaded_ids)
+        import json
+        await self.redis.set(
+            f"spine:source_receipt:{user_id}:latest",
+            json.dumps(receipt),
+            ex=72 * 3600,
+        )
+
     async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
         import json
         key = f"spine:retrieval_directive:{user_id}:latest"
@@ -1196,6 +1226,26 @@ class SpineOrchestrator:
         except Exception:
             logger.debug("get_retrieval_directive degraded: Redis unavailable for user={}", user_id)
             return None
+
+    async def get_source_receipt(self, user_id: str) -> dict[str, Any] | None:
+        """获取用户最新的资料使用回执。"""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:source_receipt:{user_id}:latest")
+            if not raw:
+                return None
+            return json.loads(raw if isinstance(raw, str) else raw.decode())
+        except Exception:
+            return None
+
+    async def set_source_tray(self, user_id: str, tray_state: dict[str, Any]) -> None:
+        """存储用户的 SourceTrayState 供检索时使用。"""
+        import json
+        await self.redis.set(
+            f"spine:source_tray:{user_id}",
+            json.dumps(tray_state),
+            ex=7 * 24 * 3600,
+        )
 
     # ── Layer 6: PlanDirective ──────────────────────────────────────────
 

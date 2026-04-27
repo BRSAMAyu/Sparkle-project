@@ -10916,3 +10916,123 @@ async def test_policy_decision_to_dict_includes_new_fields():
     assert "risk_level" in d
     assert "which_directives" in d
     assert isinstance(d["which_directives"], dict)
+
+
+# ── v3.0: Source Tray + RetrievalDirective integration ────────────────
+
+@pytest.mark.asyncio
+async def test_source_tray_enriches_retrieval_directive():
+    """RetrievalDirective enriched with SourceTrayState → concrete load plan."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    # Set up source tray with one included source
+    await spine.set_source_tray("user_1", {
+        "mode": "manual_only",
+        "selections": [{"source_id": "src_a", "action": "include", "scope": "this_task", "user_initiated": True}],
+        "available_sources": [
+            {"source_id": "src_a", "title": "TCP Slides", "source_type": "slides", "parsed_status": "parsed", "quality_score": 0.9},
+            {"source_id": "src_b", "title": "UDP Notes", "source_type": "notes", "parsed_status": "parsed", "quality_score": 0.7},
+        ],
+    })
+    # Create a material_utilization signal → policy → retrieval directive
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="material_utilization", claim="material_underutilized", confidence=0.9,
+        evidence_summary="test", scope="sprint", ttl_hours=24,
+        possible_effects=["activate_retrieval"], priority="medium",
+    )
+    result = await spine.policy_engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    # Build and enrich retrieval directive
+    ret_dir = spine.policy_engine.build_retrieval_directive(decision, signal)
+    assert ret_dir is not None
+    await spine._enrich_retrieval_with_source_tray("user_1", ret_dir)
+    # src_a should be in must_load since user explicitly included it
+    assert "src_a" in (ret_dir.must_load or [])
+    # Verify source receipt was stored
+    receipt = await spine.get_source_receipt("user_1")
+    assert receipt is not None
+    assert "loaded" in receipt
+    assert "reason_for_user" in receipt
+
+
+@pytest.mark.asyncio
+async def test_source_tray_pollution_guard_blocks_low_relevance():
+    """pollution_guard=strict blocks sources below 0.3 relevance."""
+    from app.signals.source_tray_integration import compute_retrieval_plan
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
+
+    rd = RetrievalDirective(
+        directive_id="rd_test", policy_decision_id="pd_test",
+        retrieval_mode="task_bound_rag", pollution_guard="strict",
+        token_budget=3000, must_load=[], may_load=[], do_not_load=[],
+    )
+    tray = SourceTrayState(
+        mode="auto",
+        selections=[],
+        available_sources=[
+            SourceAsset(source_id="src_low", title="Low Relevance", source_type="notes",
+                        mapped_nodes=["udp"], parsed_status="parsed"),
+            SourceAsset(source_id="src_high", title="High Relevance", source_type="slides",
+                        mapped_nodes=["tcp", "congestion_control"], parsed_status="parsed"),
+        ],
+    )
+    plan = compute_retrieval_plan(retrieval_directive=rd, source_tray=tray, target_nodes=["tcp", "congestion_control"])
+    # src_high has overlap → should be in must_load or may_load
+    must_ids = [s["source_id"] for s in plan["must_load"]]
+    may_ids = [s["source_id"] for s in plan["may_load"]]
+    skip_ids = [s["source_id"] for s in plan["do_not_load"]]
+    assert "src_high" in must_ids or "src_high" in may_ids
+    assert "src_low" in skip_ids
+
+
+@pytest.mark.asyncio
+async def test_source_receipt_built_correctly():
+    """build_source_receipt produces loaded/skipped/excluded lists."""
+    from app.signals.source_tray_integration import build_source_receipt
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
+
+    rd = RetrievalDirective(
+        directive_id="rd_test", policy_decision_id="pd_test",
+        retrieval_mode="targeted_source_rag", pollution_guard="default",
+        token_budget=3000, must_load=["src_a"], may_load=[], do_not_load=["src_c"],
+    )
+    tray = SourceTrayState(
+        mode="manual_only",
+        selections=[
+            SourceTraySelection(source_id="src_a", action="include"),
+            SourceTraySelection(source_id="src_c", action="exclude"),
+        ],
+        available_sources=[
+            SourceAsset(source_id="src_a", title="TCP Slides", source_type="slides", parsed_status="parsed"),
+            SourceAsset(source_id="src_b", title="UDP Notes", source_type="notes", parsed_status="parsed"),
+            SourceAsset(source_id="src_c", title="Old Notes", source_type="notes", parsed_status="parsed"),
+        ],
+    )
+    receipt = build_source_receipt(rd, tray, loaded_source_ids=["src_a"])
+    loaded_ids = [s["source_id"] for s in receipt["loaded"]]
+    assert "src_a" in loaded_ids
+    assert receipt["reason_for_user"] is not None
+
+
+@pytest.mark.asyncio
+async def test_source_tray_no_data_graceful():
+    """When no source tray stored, enrichment is a no-op."""
+    from app.signals.types import RetrievalDirective
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    rd = RetrievalDirective(
+        directive_id="rd_test", policy_decision_id="pd_test",
+        retrieval_mode="no_retrieval", pollution_guard="default",
+        token_budget=3000, must_load=[], may_load=[], do_not_load=[],
+    )
+    await spine._enrich_retrieval_with_source_tray("user_nodata", rd)
+    # Should not crash, must_load stays empty
+    assert rd.must_load == []
+
+
+@pytest.mark.asyncio
+async def test_get_source_receipt_returns_none_when_empty():
+    """get_source_receipt returns None when no receipt stored."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    result = await spine.get_source_receipt("user_empty")
+    assert result is None
