@@ -10807,13 +10807,14 @@ class TestE2EMatrixScenario12_CrisisMode:
 _make_signal_counter = itertools.count()
 
 def _make_signal(state_key: str, priority: str = "medium", confidence: float = 0.8,
-                 scope: str = "sprint", possible_effects: list[str] | None = None) -> ActionableSignal:
+                 scope: str = "sprint", possible_effects: list[str] | None = None,
+                 claim: str | None = None) -> ActionableSignal:
     return ActionableSignal(
         signal_id=f"sig_{state_key}_{next(_make_signal_counter)}",
         source_event_ids=["evt_1"],
         source_system="test",
         state_key=state_key,
-        claim=f"test_{state_key}",
+        claim=claim or f"test_{state_key}",
         confidence=confidence,
         evidence_summary="test",
         scope=scope,
@@ -11536,8 +11537,8 @@ async def test_v210_ux_directive_stored_and_retrievable():
     """UXDirective is stored in Redis and retrievable for stream metadata."""
     from app.signals.types import UXDirective
     spine = SpineOrchestrator(redis_client=FakeRedis())
-    signal = _make_signal("task_granularity_fit", confidence=0.9)
-    await spine._run_signal_pipeline(user_id="u_ux_test", signals=[signal])
+    signal = _make_signal("task_granularity_fit", claim="recent_task_too_large", confidence=0.9)
+    await spine._run_signal_pipeline(user_id="u_ux_test", signal=signal)
     ux = await spine.get_ux_directive("u_ux_test")
     assert ux is not None
     assert ux.status_band_state == "risk_detected"
@@ -11549,8 +11550,8 @@ async def test_v210_community_directive_stored_and_retrievable():
     """CommunityDirective is stored and retrievable."""
     from app.signals.types import CommunityDirective
     spine = SpineOrchestrator(redis_client=FakeRedis())
-    signal = _make_signal("community_cohort_pattern", confidence=0.8)
-    await spine._run_signal_pipeline(user_id="u_comm_test", signals=[signal])
+    signal = _make_signal("community_cohort_pattern", claim="cohort_mistake_detected", confidence=0.8)
+    await spine._run_signal_pipeline(user_id="u_comm_test", signal=signal)
     comm = await spine.get_community_directive("u_comm_test")
     assert comm is not None
     assert comm.peer_context_mode == "anonymous"
@@ -11562,7 +11563,7 @@ async def test_v210_skill_directive_stored_and_retrievable():
     from app.signals.types import SkillDirective
     spine = SpineOrchestrator(redis_client=FakeRedis())
     signal = _make_signal("knowledge_transfer", claim="transfer_failure", confidence=0.9)
-    await spine._run_signal_pipeline(user_id="u_skill_test", signals=[signal])
+    await spine._run_signal_pipeline(user_id="u_skill_test", signal=signal)
     skill = await spine.get_skill_directive("u_skill_test")
     assert skill is not None
     assert skill.skill_action in ("none", "inject", "recommend")
@@ -11599,4 +11600,4 @@ async def test_v210_all_directive_types_fetched():
     assert await spine.get_skill_directive("u_none") is None
     assert await spine.get_model_write_directive("u_none") is None
     assert await spine.get_notification_directive("u_none") is None
-    assert await spine.get_execution_directive("u_none") is None
+    assert await spine.get_active_directive("u_none") is None
