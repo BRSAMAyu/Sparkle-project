@@ -255,7 +255,7 @@ def _receipt_candidate_ids(
     }
     directive_candidates = set(retrieval_directive.must_load or []) | set(retrieval_directive.may_load or [])
     available_candidates = {
-        source.source_id for source in (source_tray.available_sources or []) if source.parsed_status == "failed"
+        source.source_id for source in (source_tray.available_sources or []) if source.parsed_status != "failed"
     }
     return (selected_includes | directive_candidates | available_candidates) - loaded_ids - excluded_ids
 

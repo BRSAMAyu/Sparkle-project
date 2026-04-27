@@ -185,6 +185,7 @@ class RelationshipModelService:
         await self.redis.set(
             _RELATIONSHIP_KEY.format(user_id=state.user_id),
             json.dumps(state.to_dict()),
+            ex=30 * 24 * 3600,  # 30-day TTL — resets each sprint, no permanent personality
         )
 
     def _compute_correction_frequency(self, state: RelationshipState) -> float:
