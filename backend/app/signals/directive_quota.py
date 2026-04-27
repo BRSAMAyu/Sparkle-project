@@ -3,8 +3,12 @@ Core: execution
 Phase: sense
 Stage: Signal-to-Action Spine P2-8 Directive Quota & Cooldown
 
-Per-user, per-directive-type rate limiting to prevent directive flooding.
-Each directive type has an hourly quota and a minimum cooldown between emissions.
+D10 Ruling: 按场景配额，不做统一配额。
+- user_initiated: Full Aurora sessions per day, varies by sprint mode
+- system_initiated: risk budget for system-triggered sessions
+- quick_calibration: unlimited but lightweight (no full Aurora)
+
+Per-type hourly quotas and cooldowns remain for directive-level rate limiting.
 """
 
 from __future__ import annotations
@@ -13,6 +17,19 @@ import json
 from typing import Any
 
 from loguru import logger
+
+
+# ── D10: Per-scenario daily quotas for Aurora Core Sessions ──────────
+# normal = standard goal, sprint = 7/14-day exam sprint, crisis = exam 48h/24h
+_SCENARIO_DAILY_QUOTA: dict[str, dict[str, int]] = {
+    "normal": {"user_initiated": 1, "system_initiated": 1},
+    "sprint": {"user_initiated": 2, "system_initiated": 2},
+    "crisis": {"user_initiated": 3, "system_initiated": 3},
+}
+
+# Quick calibration is always unlimited (it's lightweight, no full Aurora)
+# Technical failures don't consume quota (handled in record logic)
+# User exits before model_write: refund partial quota (P4 future)
 
 
 # Default quotas: max directives per hour by type
@@ -124,6 +141,137 @@ class DirectiveQuotaService:
             "DirectiveQuota: emitted user={} type={}",
             user_id, directive_type,
         )
+
+    # ── D10: Per-scenario Aurora Core Session quotas ──────────────────
+
+    async def check_aurora_session_allowed(
+        self,
+        user_id: str,
+        scenario: str,
+        initiated_by: str = "user_initiated",
+    ) -> dict[str, Any]:
+        """D10: Check if an Aurora Core Session is allowed per scenario quota.
+
+        Args:
+            user_id: user identifier
+            scenario: "normal" | "sprint" | "crisis"
+            initiated_by: "user_initiated" | "system_initiated" | "quick_calibration"
+
+        Returns:
+            {"allowed": bool, "reason": str, "daily_quota": int, "daily_used": int}
+        """
+        # Quick calibration is always allowed (lightweight, no full Aurora)
+        if initiated_by == "quick_calibration":
+            return {
+                "allowed": True,
+                "reason": "quick_calibration_unlimited",
+                "daily_quota": -1,
+                "daily_used": 0,
+            }
+
+        scenario_quotas = _SCENARIO_DAILY_QUOTA.get(scenario, _SCENARIO_DAILY_QUOTA["normal"])
+        quota = scenario_quotas.get(initiated_by, 1)
+
+        daily_key = f"spine:aurora_quota:daily:{user_id}:{scenario}:{initiated_by}"
+        raw_count = await self.redis.get(daily_key)
+        current = int(raw_count) if raw_count else 0
+        if isinstance(raw_count, bytes):
+            current = int(raw_count.decode())
+
+        if current >= quota:
+            return {
+                "allowed": False,
+                "reason": "daily_quota_exceeded",
+                "daily_quota": quota,
+                "daily_used": current,
+                "scenario": scenario,
+                "initiated_by": initiated_by,
+            }
+
+        # Crisis mode: system can exceed user quota, but must write wake_reason
+        # (wake_reason enforcement is caller's responsibility)
+        if scenario == "crisis" and initiated_by == "system_initiated":
+            return {
+                "allowed": True,
+                "reason": "crisis_system_override",
+                "daily_quota": quota,
+                "daily_used": current,
+                "scenario": scenario,
+                "initiated_by": initiated_by,
+                "requires_wake_reason": True,
+            }
+
+        return {
+            "allowed": True,
+            "reason": "ok",
+            "daily_quota": quota,
+            "daily_used": current,
+            "scenario": scenario,
+            "initiated_by": initiated_by,
+        }
+
+    async def record_aurora_session(
+        self,
+        user_id: str,
+        scenario: str,
+        initiated_by: str = "user_initiated",
+        *,
+        was_technical_failure: bool = False,
+        user_exited_early: bool = False,
+    ) -> None:
+        """D10: Record an Aurora Core Session consumption.
+
+        Technical failures don't consume quota.
+        User exits before model_write get partial refund (P4).
+        """
+        if initiated_by == "quick_calibration":
+            return
+
+        if was_technical_failure:
+            logger.info(
+                "AuroraQuota: technical failure — not consuming quota user={} scenario={}",
+                user_id, scenario,
+            )
+            return
+
+        daily_key = f"spine:aurora_quota:daily:{user_id}:{scenario}:{initiated_by}"
+
+        raw_count = await self.redis.get(daily_key)
+        count = int(raw_count) if raw_count else 0
+        if isinstance(raw_count, bytes):
+            count = int(raw_count.decode())
+
+        count += 1
+
+        # TTL until end of day (max 24h)
+        await self.redis.set(daily_key, str(count), ex=24 * 3600)
+
+        logger.info(
+            "AuroraQuota: consumed user={} scenario={} by={} count={}/{}",
+            user_id, scenario, initiated_by, count,
+            _SCENARIO_DAILY_QUOTA.get(scenario, _SCENARIO_DAILY_QUOTA["normal"]).get(initiated_by, 1),
+        )
+
+    async def get_aurora_quota_status(self, user_id: str) -> dict[str, Any]:
+        """D10: Get Aurora session quota status across all scenarios."""
+        status = {}
+        for scenario, quotas in _SCENARIO_DAILY_QUOTA.items():
+            scenario_status = {}
+            for initiated_by, quota in quotas.items():
+                daily_key = f"spine:aurora_quota:daily:{user_id}:{scenario}:{initiated_by}"
+                raw_count = await self.redis.get(daily_key)
+                current = int(raw_count) if raw_count else 0
+                if isinstance(raw_count, bytes):
+                    current = int(raw_count.decode())
+                scenario_status[initiated_by] = {
+                    "daily_quota": quota,
+                    "daily_used": current,
+                    "remaining": quota - current,
+                }
+            status[scenario] = scenario_status
+        return status
+
+    # ── Directive-level quotas (unchanged) ─────────────────────────────
 
     async def get_status(self, user_id: str) -> dict[str, Any]:
         """Get quota status for all directive types for a user."""

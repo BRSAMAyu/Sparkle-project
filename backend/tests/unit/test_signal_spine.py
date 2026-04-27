@@ -13069,3 +13069,306 @@ async def test_v210_relationship_dimension_persistence():
 
     reloaded = await svc.get_or_create("u1")
     assert abs(reloaded.explanation_need - saved_need) < 0.001
+
+
+# ── D10: Per-Scenario Quota Tests ──────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_v211_aurora_quota_normal_user_initiated():
+    """D10: Normal scenario allows 1 user-initiated Aurora session per day."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    result = await svc.check_aurora_session_allowed("u1", "normal", "user_initiated")
+    assert result["allowed"] is True
+    assert result["daily_quota"] == 1
+
+    # Consume the quota
+    await svc.record_aurora_session("u1", "normal", "user_initiated")
+
+    # Now blocked
+    result2 = await svc.check_aurora_session_allowed("u1", "normal", "user_initiated")
+    assert result2["allowed"] is False
+    assert result2["reason"] == "daily_quota_exceeded"
+
+
+@pytest.mark.asyncio
+async def test_v211_aurora_quota_sprint_allows_2():
+    """D10: Sprint scenario allows 2 user-initiated sessions per day."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    result1 = await svc.check_aurora_session_allowed("u1", "sprint", "user_initiated")
+    assert result1["allowed"] is True
+
+    await svc.record_aurora_session("u1", "sprint", "user_initiated")
+
+    result2 = await svc.check_aurora_session_allowed("u1", "sprint", "user_initiated")
+    assert result2["allowed"] is True
+
+    await svc.record_aurora_session("u1", "sprint", "user_initiated")
+
+    result3 = await svc.check_aurora_session_allowed("u1", "sprint", "user_initiated")
+    assert result3["allowed"] is False
+
+
+@pytest.mark.asyncio
+async def test_v211_aurora_quota_crisis_allows_3():
+    """D10: Crisis scenario allows 3 user-initiated sessions per day."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    for i in range(3):
+        result = await svc.check_aurora_session_allowed("u1", "crisis", "user_initiated")
+        assert result["allowed"] is True, f"iteration {i} should be allowed"
+        await svc.record_aurora_session("u1", "crisis", "user_initiated")
+
+    result4 = await svc.check_aurora_session_allowed("u1", "crisis", "user_initiated")
+    assert result4["allowed"] is False
+
+
+@pytest.mark.asyncio
+async def test_v211_aurora_quota_quick_calibration_unlimited():
+    """D10: Quick calibration is always unlimited (lightweight)."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    for _ in range(10):
+        result = await svc.check_aurora_session_allowed("u1", "normal", "quick_calibration")
+        assert result["allowed"] is True
+        assert result["reason"] == "quick_calibration_unlimited"
+
+
+@pytest.mark.asyncio
+async def test_v211_aurora_quota_technical_failure_no_consume():
+    """D10: Technical failures don't consume quota."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    await svc.record_aurora_session("u1", "normal", "user_initiated", was_technical_failure=True)
+
+    result = await svc.check_aurora_session_allowed("u1", "normal", "user_initiated")
+    assert result["allowed"] is True
+    assert result["daily_used"] == 0
+
+
+@pytest.mark.asyncio
+async def test_v211_aurora_quota_crisis_system_override():
+    """D10: Crisis mode system-initiated gets override flag but still has limits."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    result = await svc.check_aurora_session_allowed("u1", "crisis", "system_initiated")
+    assert result["allowed"] is True
+    assert result["requires_wake_reason"] is True
+
+
+@pytest.mark.asyncio
+async def test_v211_aurora_quota_status():
+    """D10: get_aurora_quota_status returns all scenarios."""
+    from app.signals.directive_quota import DirectiveQuotaService
+    redis = FakeRedis()
+    svc = DirectiveQuotaService(redis)
+
+    await svc.record_aurora_session("u1", "sprint", "user_initiated")
+    status = await svc.get_aurora_quota_status("u1")
+
+    assert "normal" in status
+    assert "sprint" in status
+    assert "crisis" in status
+    assert status["sprint"]["user_initiated"]["daily_used"] == 1
+    assert status["normal"]["user_initiated"]["daily_used"] == 0
+
+
+# ── L4: 6 Async Deep Learning Jobs Tests ──────────────────────────────
+
+@pytest.mark.asyncio
+async def test_v212_daily_goal_reflection():
+    """L4 Job 1: DailyGoalReflection produces bottleneck + focus."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    signals = [
+        {"state_key": "knowledge_bottleneck", "claim": "stuck_on_tcp"},
+        {"state_key": "knowledge_bottleneck", "claim": "stuck_on_tcp"},
+        {"state_key": "knowledge_bottleneck", "claim": "stuck_on_tcp"},
+        {"state_key": "task_granularity_fit", "claim": "too_large"},
+    ]
+    outcomes = [
+        {"attribution": "insufficient"},
+        {"attribution": "insufficient"},
+        {"attribution": "sufficient"},
+    ]
+
+    candidate = await learner.run_daily_goal_reflection("u1", signals, outcomes)
+
+    assert candidate["job_type"] == "daily_goal_reflection"
+    assert candidate["user_visible"] is True
+    assert candidate["output"]["yesterday_bottleneck"] == "knowledge_bottleneck"
+    assert candidate["output"]["strategy_correction_needed"] is True
+    assert candidate["confidence"] > 0
+    assert "evidence" in candidate
+
+
+@pytest.mark.asyncio
+async def test_v212_policy_effect_compaction():
+    """L4 Job 2: PolicyEffectCompaction compresses ledger → beliefs."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    ledger = [
+        {"strategy": "worked_example", "outcome": "positive"},
+        {"strategy": "worked_example", "outcome": "positive"},
+        {"strategy": "worked_example", "outcome": "positive"},
+        {"strategy": "full_review", "outcome": "negative"},
+        {"strategy": "full_review", "outcome": "negative"},
+    ]
+
+    candidate = await learner.run_policy_effect_compaction("u1", ledger)
+
+    assert candidate["job_type"] == "policy_effect_compaction"
+    beliefs = candidate["output"]["strategy_beliefs"]
+    assert len(beliefs) == 2
+    we_belief = next(b for b in beliefs if b["strategy"] == "worked_example")
+    assert we_belief["belief_strength"] > 0
+    assert candidate["user_visible"] is False
+
+
+@pytest.mark.asyncio
+async def test_v212_skill_candidate():
+    """L4 Job 3: SkillCandidate extracts repeated effective strategies."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    history = [
+        {"strategy": "worked_example_practice", "outcome": "positive"},
+        {"strategy": "worked_example_practice", "outcome": "positive"},
+        {"strategy": "worked_example_practice", "outcome": "positive"},
+        {"strategy": "failed_strategy", "outcome": "negative"},
+    ]
+
+    candidate = await learner.run_skill_candidate("u1", history)
+
+    assert candidate["job_type"] == "skill_candidate"
+    skills = candidate["output"]["skill_candidates"]
+    assert len(skills) == 1
+    assert skills[0]["strategy"] == "worked_example_practice"
+    assert skills[0]["success_rate"] >= 0.6
+    assert skills[0]["skill_type"] == "practice_oriented"
+
+
+@pytest.mark.asyncio
+async def test_v212_source_effectiveness():
+    """L4 Job 4: SourceEffectiveness tags materials by context."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    interactions = [
+        {"source_id": "ch3_slides", "outcome": "positive", "context": "concept_compression"},
+        {"source_id": "ch3_slides", "outcome": "positive", "context": "concept_compression"},
+        {"source_id": "past_exam", "outcome": "positive", "context": "worked_example"},
+        {"source_id": "past_exam", "outcome": "positive", "context": "worked_example"},
+        {"source_id": "full_textbook", "outcome": "negative", "context": "exam_eve"},
+        {"source_id": "full_textbook", "outcome": "negative", "context": "exam_eve"},
+    ]
+
+    candidate = await learner.run_source_effectiveness("u1", interactions)
+
+    assert candidate["job_type"] == "source_effectiveness"
+    effs = candidate["output"]["source_effectiveness"]
+    assert len(effs) == 3
+    ch3 = next(e for e in effs if e["source_id"] == "ch3_slides")
+    assert ch3["effectiveness_tag"] == "effective"
+    assert ch3["best_context"] == "concept_compression"
+
+
+@pytest.mark.asyncio
+async def test_v212_community_aggregation():
+    """L4 Job 5: CommunityAggregation produces anonymous common errors."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    signals = [
+        {"error_pattern": "tcp_window_confusion", "resource_id": "ch3", "rating": 3.0},
+        {"error_pattern": "tcp_window_confusion", "resource_id": "ch3", "rating": 4.0},
+        {"error_pattern": "tcp_window_confusion", "resource_id": "past_exam", "rating": 4.5},
+        {"error_pattern": "subnet_mask_mistake", "resource_id": "ch4", "rating": 2.0},
+        {"error_pattern": "subnet_mask_mistake", "resource_id": "ch4", "rating": 3.0},
+    ]
+
+    candidate = await learner.run_community_aggregation("u1", signals)
+
+    assert candidate["job_type"] == "community_aggregation"
+    errors = candidate["output"]["common_errors"]
+    assert len(errors) == 2
+    tcp = next(e for e in errors if e["pattern"] == "tcp_window_confusion")
+    assert tcp["frequency"] >= 2
+    res_qual = candidate["output"]["resource_quality"]
+    assert len(res_qual) >= 1
+
+
+@pytest.mark.asyncio
+async def test_v212_state_decay_and_retraction():
+    """L4 Job 6: StateDecayAndRetraction decays old states + finds counter-evidence."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    from datetime import UTC, datetime, timedelta
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    old_time = (datetime.now(UTC) - timedelta(hours=72)).isoformat()
+    active_states = [
+        {"state_key": "knowledge_bottleneck", "value": "tcp", "confidence": 0.8, "created_at": old_time},
+        {"state_key": "task_granularity", "value": "too_large", "confidence": 0.6, "created_at": old_time},
+    ]
+    new_signals = [
+        {"state_key": "knowledge_bottleneck", "claim": "not_tcp_actually_subnet"},
+    ]
+
+    candidate = await learner.run_state_decay_and_retraction("u1", active_states, new_signals)
+
+    assert candidate["job_type"] == "state_decay_and_retraction"
+    decayed = candidate["output"]["decayed_states"]
+    assert len(decayed) == 2
+    for d in decayed:
+        assert d["new_confidence"] < d["old_confidence"]
+
+    retractions = candidate["output"]["retractions"]
+    assert len(retractions) == 1
+    assert retractions[0]["state_key"] == "knowledge_bottleneck"
+
+
+@pytest.mark.asyncio
+async def test_v212_l4_candidate_stored_and_retrieved():
+    """L4 candidates are stored in Redis and retrievable."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    await learner.run_daily_goal_reflection("u_stored", [{"state_key": "x", "claim": "y"}] * 5)
+
+    candidate = await learner.get_candidate("u_stored", "daily_goal_reflection")
+    assert candidate is not None
+    assert candidate["job_type"] == "daily_goal_reflection"
+
+
+@pytest.mark.asyncio
+async def test_v212_l4_empty_input_returns_zero_confidence():
+    """L4 jobs with empty input return zero-confidence empty candidates."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    candidate = await learner.run_policy_effect_compaction("u_empty", [])
+    assert candidate["confidence"] == 0.0
+    assert candidate["evidence"]["note"] == "insufficient_data"
