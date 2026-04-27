@@ -12515,3 +12515,283 @@ async def test_v210_quota_independent_per_type():
     # Execution should still be allowed
     result = await svc.check_allowed("u1", "execution")
     assert result["allowed"] is True
+
+
+# ============================================================
+# P3-1: Core Session closure + phase transition hooks
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_session_get_or_create():
+    """get_or_create_active returns existing or creates new."""
+    from app.signals.core_session import CoreSessionManager
+    redis = FakeRedis()
+    mgr = CoreSessionManager(redis)
+
+    s1 = await mgr.get_or_create_active("u1", goal_id="g1")
+    assert s1.phase == "modeling"
+
+    s2 = await mgr.get_or_create_active("u1")
+    assert s2.session_id == s1.session_id
+
+
+@pytest.mark.asyncio
+async def test_v210_session_phase_transition_validation():
+    """Invalid phase transitions raise ValueError."""
+    from app.signals.core_session import CoreSessionManager
+    redis = FakeRedis()
+    mgr = CoreSessionManager(redis)
+
+    session = await mgr.create_session("u1")
+    with pytest.raises(ValueError, match="invalid transition"):
+        await mgr.advance_phase(session.session_id, "executing")  # modeling → executing not allowed
+
+
+@pytest.mark.asyncio
+async def test_v210_session_valid_transitions():
+    """Valid phase transitions work: modeling → planning → executing → reflecting → completed."""
+    from app.signals.core_session import CoreSessionManager
+    redis = FakeRedis()
+    mgr = CoreSessionManager(redis)
+
+    session = await mgr.create_session("u1")
+    s = await mgr.advance_phase(session.session_id, "planning")
+    assert s.phase == "planning"
+    s = await mgr.advance_phase(session.session_id, "executing")
+    assert s.phase == "executing"
+    s = await mgr.advance_phase(session.session_id, "reflecting")
+    assert s.phase == "reflecting"
+    s = await mgr.advance_phase(session.session_id, "completed")
+    assert s.phase == "completed"
+
+
+@pytest.mark.asyncio
+async def test_v210_session_complete_with_summary():
+    """complete_with_summary returns lifecycle metrics."""
+    from app.signals.core_session import CoreSessionManager
+    redis = FakeRedis()
+    mgr = CoreSessionManager(redis)
+
+    session = await mgr.create_session("u1", goal_id="g1")
+    await mgr.advance_phase(session.session_id, "planning")
+    await mgr.advance_phase(session.session_id, "executing")
+    for _ in range(3):
+        await mgr.record_task(session.session_id, completed=True)
+    await mgr.record_task(session.session_id, completed=False)
+
+    summary = await mgr.complete_with_summary(session.session_id)
+    assert summary["completed_tasks"] == 3
+    assert summary["total_tasks"] == 4
+    assert summary["completion_rate"] == 0.75
+
+
+@pytest.mark.asyncio
+async def test_v210_session_summary_persistence():
+    """Session summary can be retrieved after completion."""
+    from app.signals.core_session import CoreSessionManager
+    redis = FakeRedis()
+    mgr = CoreSessionManager(redis)
+
+    session = await mgr.create_session("u1")
+    await mgr.complete_with_summary(session.session_id)
+
+    retrieved = await mgr.get_session_summary(session.session_id)
+    assert retrieved is not None
+    assert retrieved["session_id"] == session.session_id
+
+
+# ============================================================
+# P3-2: Multi-message queue
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_agenda_save_and_get():
+    """Agenda persists and can be retrieved."""
+    from app.signals.agenda_queue import AgendaQueueService
+    from app.signals.types import AuroraAgenda, AuroraAgendaItem, _uid
+    redis = FakeRedis()
+    svc = AgendaQueueService(redis)
+
+    agenda = AuroraAgenda(
+        session_id="sess_1",
+        scope="test agenda",
+        agenda_items=[
+            AuroraAgendaItem(item_id=_uid("ai"), item_type="confirm_available_time", status="pending"),
+        ],
+    )
+    await svc.save_agenda("u1", agenda)
+
+    loaded = await svc.get_agenda("sess_1")
+    assert loaded is not None
+    assert len(loaded.agenda_items) == 1
+
+
+@pytest.mark.asyncio
+async def test_v210_agenda_pending_items():
+    """get_pending_items returns items needing user interaction."""
+    from app.signals.agenda_queue import AgendaQueueService
+    from app.signals.types import AuroraAgenda, AuroraAgendaItem, _uid
+    redis = FakeRedis()
+    svc = AgendaQueueService(redis)
+
+    agenda = AuroraAgenda(
+        session_id="sess_2",
+        scope="pending test",
+        agenda_items=[
+            AuroraAgendaItem(item_id=_uid("ai"), item_type="confirm_available_time", status="pending"),
+            AuroraAgendaItem(item_id=_uid("ai"), item_type="motivation_check", status="done"),
+        ],
+    )
+    await svc.save_agenda("u1", agenda)
+
+    pending = await svc.get_pending_items("u1")
+    assert len(pending) == 1
+    assert pending[0]["item"]["item_type"] == "confirm_available_time"
+
+
+@pytest.mark.asyncio
+async def test_v210_agenda_add_item():
+    """add_item_to_agenda adds a new pending item."""
+    from app.signals.agenda_queue import AgendaQueueService
+    from app.signals.types import AuroraAgenda
+    redis = FakeRedis()
+    svc = AgendaQueueService(redis)
+
+    agenda = AuroraAgenda(session_id="sess_3", scope="add test")
+    await svc.save_agenda("u1", agenda)
+
+    item = await svc.add_item_to_agenda("u1", "sess_3", "relationship_check", {"reason": "test"})
+    assert item is not None
+    assert item.item_type == "relationship_check"
+    assert item.status == "pending"
+
+
+# ============================================================
+# P3-3: L4 Async Deep Learning
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_deep_learner_accumulate():
+    """Signal accumulation works without triggering below threshold."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    result = await learner.accumulate_signal("u1", {"state_key": "test"})
+    assert result["triggered"] is False
+    assert result["accumulated_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_v210_deep_learner_trigger_on_diversity():
+    """Deep learning triggers when diverse signals accumulate."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    # Add 10 signals with 5+ unique keys
+    for i in range(10):
+        key = f"key_{i % 6}"
+        result = await learner.accumulate_signal("u1", {"state_key": key})
+
+    assert result["triggered"] is True
+
+
+@pytest.mark.asyncio
+async def test_v210_deep_learner_pop_and_analyze():
+    """Pop task and run analysis on accumulated signals."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    # Trigger a task with fresh user
+    for i in range(12):
+        result = await learner.accumulate_signal("u_pop_test", {"state_key": f"k{i % 6}"})
+
+    assert result["triggered"] is True
+    task = await learner.pop_task()
+    assert task is not None
+    assert task["user_id"] == "u_pop_test"
+
+    # Analyze patterns — use data that creates persistent issues
+    signals = [{"state_key": f"k{i % 2}"} for i in range(12)]
+    analysis = learner.analyze_signal_patterns(signals)
+    assert analysis["total_signals"] == 12
+    assert len(analysis["patterns"]) > 0  # persistent_issue detected
+
+
+@pytest.mark.asyncio
+async def test_v210_deep_learner_store_result():
+    """Deep learning results can be stored and retrieved."""
+    from app.signals.async_deep_learner import AsyncDeepLearner
+    redis = FakeRedis()
+    learner = AsyncDeepLearner(redis)
+
+    result = {"patterns": [{"type": "persistent_issue"}], "recommendations": []}
+    await learner.store_result("u1", result)
+
+    retrieved = await learner.get_result("u1")
+    assert retrieved is not None
+    assert retrieved["patterns"][0]["type"] == "persistent_issue"
+
+
+# ============================================================
+# P3-4: Strategy Marketplace
+# ============================================================
+
+
+@pytest.mark.asyncio
+async def test_v210_marketplace_publish_and_get():
+    """Strategy can be published and retrieved."""
+    from app.signals.strategy_marketplace import StrategyMarketplace
+    redis = FakeRedis()
+    mp = StrategyMarketplace(redis)
+
+    entry = await mp.publish_strategy(
+        "recover_execution_rhythm",
+        source_user_id="u1",
+        effectiveness=0.85,
+        evidence_count=12,
+        goal_type="exam_prep",
+        subject="数学",
+    )
+    assert entry["effectiveness"] == 0.85
+    assert entry["source_user_id"] != "u1"  # anonymized
+
+    retrieved = await mp.get_strategy("recover_execution_rhythm")
+    assert retrieved is not None
+    assert retrieved["evidence_count"] == 12
+
+
+@pytest.mark.asyncio
+async def test_v210_marketplace_find_recommendations():
+    """Recommendations filtered by effectiveness and goal type."""
+    from app.signals.strategy_marketplace import StrategyMarketplace
+    redis = FakeRedis()
+    mp = StrategyMarketplace(redis)
+
+    await mp.publish_strategy("s1", source_user_id="u1", effectiveness=0.9, evidence_count=10, goal_type="exam_prep")
+    await mp.publish_strategy("s2", source_user_id="u2", effectiveness=0.6, evidence_count=5, goal_type="exam_prep")
+    await mp.publish_strategy("s3", source_user_id="u3", effectiveness=0.85, evidence_count=8, goal_type="fitness")
+
+    recs = await mp.find_recommendations(goal_type="exam_prep", min_effectiveness=0.7)
+    assert len(recs) == 1
+    assert recs[0]["strategy_key"] == "s1"
+
+
+@pytest.mark.asyncio
+async def test_v210_marketplace_cache_recommendations():
+    """Recommendations can be cached and retrieved for a user."""
+    from app.signals.strategy_marketplace import StrategyMarketplace
+    redis = FakeRedis()
+    mp = StrategyMarketplace(redis)
+
+    recs = [{"strategy_key": "s1", "effectiveness": 0.9}]
+    await mp.store_recommendations("u1", recs)
+
+    cached = await mp.get_cached_recommendations("u1")
+    assert len(cached) == 1
+    assert cached[0]["strategy_key"] == "s1"

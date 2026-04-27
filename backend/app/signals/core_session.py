@@ -22,6 +22,14 @@ _SESSION_KEY = "spine:session:{session_id}"
 _ACTIVE_SESSION_KEY = "spine:session_active:{user_id}"
 _SESSION_TTL_SECONDS = 7 * 24 * 3600
 _VALID_PHASES = {"modeling", "planning", "executing", "reflecting", "completed"}
+# Valid transitions: from_phase → set of allowed to_phases
+_PHASE_TRANSITIONS: dict[str, set[str]] = {
+    "modeling": {"planning"},
+    "planning": {"executing"},
+    "executing": {"reflecting"},
+    "reflecting": {"completed", "executing"},  # can loop back
+    "completed": set(),  # terminal
+}
 
 
 def _utcnow() -> str:
@@ -98,6 +106,9 @@ class CoreSessionManager:
         if to_phase not in _VALID_PHASES:
             raise ValueError(f"invalid core session phase: {to_phase}")
         session = await self._require_session(session_id)
+        allowed = _PHASE_TRANSITIONS.get(session.phase, set())
+        if allowed and to_phase not in allowed:
+            raise ValueError(f"invalid transition: {session.phase} → {to_phase}")
         session.phase = to_phase
         session.updated_at = _utcnow()
         if to_phase == "completed":
@@ -106,6 +117,61 @@ class CoreSessionManager:
             return session
         await self._save_session(session, set_active=True)
         return session
+
+    async def get_or_create_active(self, user_id: str, goal_id: str | None = None) -> CoreSession:
+        """Get active session or create a new one if none exists."""
+        active = await self.get_active_session(user_id)
+        if active and active.phase != "completed":
+            return active
+        return await self.create_session(user_id, goal_id)
+
+    async def complete_with_summary(self, session_id: str) -> dict[str, Any]:
+        """Complete a session and return a summary of its lifecycle.
+
+        Can be called from any phase — force-transitions to completed.
+        """
+        session = await self._require_session(session_id)
+        session.phase = "completed"
+        session.updated_at = _utcnow()
+        await self._save_session(session, set_active=False)
+        await self.redis.delete(_ACTIVE_SESSION_KEY.format(user_id=session.user_id))
+
+        completion_rate = (
+            session.completed_task_count / max(session.task_count, 1)
+        )
+
+        summary = {
+            "session_id": session.session_id,
+            "user_id": session.user_id,
+            "goal_id": session.goal_id,
+            "started_at": session.started_at,
+            "completed_at": session.updated_at,
+            "total_tasks": session.task_count,
+            "completed_tasks": session.completed_task_count,
+            "completion_rate": round(completion_rate, 3),
+            "pause_count": session.pause_count,
+            "final_phase": session.phase,
+        }
+
+        # Store summary for retrospective access
+        await self.redis.set(
+            f"spine:session_summary:{session_id}",
+            json.dumps(summary),
+            ex=30 * 24 * 3600,  # 30-day retention
+        )
+
+        logger.info(
+            "CoreSession completed: session={} tasks={}/{} rate={:.0%}",
+            session_id, session.completed_task_count, session.task_count, completion_rate,
+        )
+        return summary
+
+    async def get_session_summary(self, session_id: str) -> dict[str, Any] | None:
+        """Retrieve a completed session's summary."""
+        raw = await self.redis.get(f"spine:session_summary:{session_id}")
+        if not raw:
+            return None
+        return json.loads(raw)
 
     async def pause_session(self, session_id: str) -> CoreSession:
         session = await self._require_session(session_id)
@@ -123,7 +189,13 @@ class CoreSessionManager:
         return session
 
     async def complete_session(self, session_id: str) -> CoreSession:
-        return await self.advance_phase(session_id, "completed")
+        """Force-complete a session regardless of current phase."""
+        session = await self._require_session(session_id)
+        session.phase = "completed"
+        session.updated_at = _utcnow()
+        await self._save_session(session, set_active=False)
+        await self.redis.delete(_ACTIVE_SESSION_KEY.format(user_id=session.user_id))
+        return session
 
     async def record_task(self, session_id: str, completed: bool = False) -> CoreSession:
         session = await self._require_session(session_id)
