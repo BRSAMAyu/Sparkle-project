@@ -2096,6 +2096,43 @@ class SpineOrchestrator:
             )
             await self.state_register.upsert_from_signal(user_id, signal)
 
+        # P2-C: Regenerate directives for affected states
+        regenerated: list[dict[str, Any]] = []
+        if user_id and patches:
+            active_states = await self.state_register.get_active_states(user_id)
+            state_map = {s.state_key: s for s in active_states}
+            for patch in patches:
+                state_key = patch.state_key
+                state_entry = state_map.get(state_key)
+                if not state_entry:
+                    continue
+                # Build a synthetic signal from the patched state for policy evaluation
+                synthetic_signal = ActionableSignal(
+                    signal_id=_uid("regen"),
+                    source_event_ids=[session_id],
+                    source_system="aurora_regen",
+                    state_key=state_entry.state_key,
+                    claim=state_entry.value,
+                    confidence=state_entry.confidence,
+                    scope=state_entry.scope,
+                    ttl_hours=state_entry.ttl_hours,
+                    evidence_summary=f"Aurora校准后重新评估: {patch.reason}",
+                    possible_effects=["directive_update"],
+                    priority="high",
+                )
+                decision = await self.policy_engine.evaluate(synthetic_signal)
+                if decision:
+                    regenerated.append({
+                        "state_key": state_key,
+                        "strategy": decision.strategy,
+                        "directive_count": len(decision.directives) if hasattr(decision, "directives") else 1,
+                    })
+                    logger.info(
+                        "AuroraRegen: state={} → strategy={}",
+                        state_key, decision.strategy,
+                    )
+
+        session["regenerated_directives"] = regenerated
         return session
 
     async def build_recovery_card(

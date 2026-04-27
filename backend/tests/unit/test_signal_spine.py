@@ -13479,3 +13479,112 @@ def test_v213_model_write_entry_roundtrip():
     assert restored.claim == original.claim
     assert restored.confidence == original.confidence
     assert restored.write_layer == "warm"
+
+
+# ── P2-C: Aurora Core Policy/Directive Regeneration Tests ─────────────
+
+@pytest.mark.asyncio
+async def test_v214_aurora_close_regenerates_directives():
+    """P2-C: Closing Aurora session regenerates directives for patched states."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedis()
+    orch = SpineOrchestrator(redis)
+
+    # Create an Aurora session first
+    await orch.aurora_core.create_session(
+        user_id="u1",
+        case_file=orch.aurora_core.build_case_file(
+            "u1", goal_summary="test", current_plan_summary="plan", wake_reason="test",
+        ),
+        agenda=orch.aurora_core.build_agenda_from_case_file(
+            orch.aurora_core.build_case_file(
+                "u1", goal_summary="test", current_plan_summary="plan", wake_reason="test",
+            ),
+        ),
+    )
+    session_id = orch.aurora_core.build_agenda_from_case_file(
+        orch.aurora_core.build_case_file(
+            "u1", goal_summary="test", current_plan_summary="plan", wake_reason="test",
+        ),
+    ).session_id
+
+    # Set up state that the patch will modify
+    signal = ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=["e1"],
+        source_system="test",
+        state_key="task_granularity_fit",
+        claim="too_large",
+        confidence=0.8,
+        scope="current_sprint",
+        ttl_hours=72,
+        evidence_summary="test",
+        possible_effects=["strategy_change"],
+        priority="high",
+    )
+    await orch.state_register.upsert_from_signal("u1", signal)
+
+    # Create session properly
+    case_file = orch.aurora_core.build_case_file(
+        "u1", goal_summary="test", current_plan_summary="plan", wake_reason="calibration",
+    )
+    agenda = orch.aurora_core.build_agenda_from_case_file(case_file)
+    await orch.aurora_core.create_session("u1", case_file, agenda)
+
+    # Close with state patches
+    result = await orch.close_aurora_session(
+        agenda.session_id,
+        state_patches=[{
+            "state_key": "task_granularity_fit",
+            "old_value": "too_large",
+            "new_value": "appropriate",
+            "reason": "user confirmed tasks are right size",
+            "confidence": 0.9,
+        }],
+        policy_changes=[{
+            "signal_state_key": "task_granularity_fit",
+            "old_strategy": "recover_execution_rhythm",
+            "new_strategy": "maintain_pace",
+            "reason": "calibration corrected",
+        }],
+        user_summary="我更新了对任务大小的判断。",
+    )
+
+    assert result is not None
+    assert "error" not in result
+    # Check that directive regeneration was attempted
+    assert "regenerated_directives" in result
+
+
+@pytest.mark.asyncio
+async def test_v214_aurora_close_applies_state_patches():
+    """P2-C: State patches from Aurora closure update the state register."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    redis = FakeRedis()
+    orch = SpineOrchestrator(redis)
+
+    case_file = orch.aurora_core.build_case_file(
+        "u2", goal_summary="calculus exam", current_plan_summary="7 day sprint", wake_reason="conflict",
+    )
+    agenda = orch.aurora_core.build_agenda_from_case_file(case_file)
+    await orch.aurora_core.create_session("u2", case_file, agenda)
+
+    result = await orch.close_aurora_session(
+        agenda.session_id,
+        state_patches=[
+            {
+                "state_key": "knowledge_bottleneck",
+                "old_value": "tcp_window",
+                "new_value": "subnet_masking",
+                "reason": "user clarified actual weak point",
+                "confidence": 0.85,
+            },
+        ],
+        user_summary="校准完成。",
+    )
+
+    # Verify state was updated in register
+    active_states = await orch.state_register.get_active_states("u2")
+    state_map = {s.state_key: s for s in active_states}
+    assert "knowledge_bottleneck" in state_map
+    assert state_map["knowledge_bottleneck"].value == "subnet_masking"
