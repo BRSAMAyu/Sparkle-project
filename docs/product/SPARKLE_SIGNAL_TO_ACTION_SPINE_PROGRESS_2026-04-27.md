@@ -13,6 +13,8 @@
 | M1: 控制链路最小可运行 | ✅ 完成 | 5/5 steps | 2026-04-27 |
 | M2: 资料闭环最小可运行 | ✅ 完成 | 3/3 steps | 2026-04-27 |
 | M3: 错因驱动策略改变 | ✅ 完成 | 3/3 steps | 2026-04-27 |
+| P3-5: 通用任务协议 | ✅ 完成 | TaskCardProtocol + Bridge + 12 tests | 2026-04-27 |
+| P3-6: 外部集成网关 | ✅ 完成 | ExternalIntegrationGateway + Spine wiring + 8 tests | 2026-04-27 |
 
 ---
 
@@ -870,8 +872,22 @@
 
 ---
 
-## 当前状态: v2.7 COMPLETE — E2E Test Matrix Verified
+## 当前状态: v3.0 COMPLETE — Full Goal OS + External Integration + Production Wiring
 
+**795/795 tests passing** | **9/9 directive types active** | **57+ public API exports** | **43 signal modules**
+
+### v3.0 (P3-5/P3-6 + Wiring) — ALL COMPLETE
+- [x] P3-5: TaskCardProtocol — 6 task types, WhyThisTask, MaterialsProtocol, StuckProtocol, TaskCardBuilder, TaskCardValidator
+- [x] P3-5: TaskCardBridge — from_guide_json() converts existing planning_workflow guide_json to typed protocol
+- [x] P3-5: TaskCardBridge.validate_guide_json() — validates task before persistence (9+3=12 tests)
+- [x] P3-6: ExternalIntegrationGateway — unified dispatch for calendar/file/email/github/tool events
+- [x] P3-6: ExternalRawEvent entry gate — all external data must become RawEvent first (Iron Rule)
+- [x] P3-6: SpineOrchestrator.on_external_event() — external events enter the Spine pipeline
+- [x] P3-6: FileIntegration, EmailDeadlineExtractor, GitHubRepoBridge, ExternalToolBridge all wired
+- [x] 6 new wiring tests (3 bridge + 3 external event)
+- [x] 57+ public exports via __init__.py (TaskCardBridge added)
+
+### v2.7 (E2E Test Matrix) — ALL 12 SCENARIOS COVERED
 **575/575 tests passing** | **9/9 directive types active** | **55+ public API exports** | **42 signal modules**
 
 ### v2.7 (E2E Test Matrix) — ALL 12 SCENARIOS COVERED
