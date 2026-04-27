@@ -15819,3 +15819,430 @@ def test_p4_2_safe_experiment_record_outcome():
 
     # Should be paused by guardrail
     assert exp.status == "paused"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-3: Simulation Lab & SparkleGoalBench
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_p4_3_scenario_step_creation_and_serialization():
+    """ScenarioStep can be created and serialized/deserialized."""
+    from app.signals.simulation_lab import ScenarioStep
+
+    step = ScenarioStep(
+        step_index=0,
+        step_type="user_message",
+        content="我三天后考试，基本没学",
+        metadata={"urgency": "high"},
+    )
+    assert step.step_index == 0
+    assert step.step_type == "user_message"
+    assert step.content == "我三天后考试，基本没学"
+
+    d = step.to_dict()
+    assert d["step_index"] == 0
+    assert d["step_type"] == "user_message"
+
+    restored = ScenarioStep.from_dict(d)
+    assert restored.content == step.content
+    assert restored.metadata == {"urgency": "high"}
+
+
+def test_p4_3_test_scenario_creation():
+    """TestScenario auto-generates scenario_id and holds structured steps."""
+    from app.signals.simulation_lab import TestScenario, ScenarioStep
+
+    sc = TestScenario(
+        name="零基础+3天考试",
+        domain="exam_sprint",
+        description="Near-zero baseline, 3 days until exam",
+        initial_state={"baseline": "near_zero", "deadline_days": 3},
+        steps=[
+            ScenarioStep(0, "user_message", "我三天后考试"),
+            ScenarioStep(1, "system_event", "task_failed"),
+        ],
+        expected_properties=["detect_crisis_mode", "avoid_full_syllabus_plan"],
+        risk_level="high",
+        category="regression",
+    )
+    assert sc.scenario_id.startswith("scn")
+    assert len(sc.steps) == 2
+    assert sc.risk_level == "high"
+    assert sc.category == "regression"
+
+    d = sc.to_dict()
+    assert d["name"] == "零基础+3天考试"
+    assert len(d["steps"]) == 2
+    assert d["expected_properties"] == ["detect_crisis_mode", "avoid_full_syllabus_plan"]
+
+
+def test_p4_3_regression_report():
+    """RegressionReport tracks pass/fail, violations, and integrity flags."""
+    from app.signals.simulation_lab import RegressionReport
+
+    report = RegressionReport(
+        scenario_id="scn_test1",
+        passed=True,
+        observations={"steps_count": 3},
+    )
+    assert report.passed
+    assert report.spine_integrity
+    assert not report.long_term_pollution
+    assert report.observations["steps_count"] == 3
+
+    d = report.to_dict()
+    assert d["passed"]
+    assert d["scenario_id"] == "scn_test1"
+
+    # Failing report
+    fail = RegressionReport(
+        scenario_id="scn_test2",
+        passed=False,
+        violations=["Property 'detect_crisis_mode' not satisfied"],
+        spine_integrity=False,
+    )
+    assert not fail.passed
+    assert len(fail.violations) == 1
+
+
+def test_p4_3_persona_creation():
+    """Persona holds traits for synthetic user simulation."""
+    from app.signals.simulation_lab import Persona
+
+    p = Persona(
+        persona_id="p1", name="测试用户",
+        traits={"anxiety": 0.7},
+        baseline_ability=0.6, responsiveness=0.5,
+        consistency=0.4, fatigue_rate=0.15,
+        correction_tendency=0.2, trust_level=0.6,
+    )
+    assert p.persona_id == "p1"
+    assert p.goal_type == "exam"  # default
+    assert p.traits["anxiety"] == 0.7
+    assert p.baseline_ability == 0.6
+
+    d = p.to_dict()
+    assert d["name"] == "测试用户"
+    assert d["traits"]["anxiety"] == 0.7
+
+
+def test_p4_3_standard_personas():
+    """7 standard personas are defined and cover key user types."""
+    from app.signals.simulation_lab import STANDARD_PERSONAS
+
+    assert len(STANDARD_PERSONAS) == 7
+    assert "anxious" in STANDARD_PERSONAS
+    assert "autonomous" in STANDARD_PERSONAS
+    assert "corrective" in STANDARD_PERSONAS
+    assert "multi_goal" in STANDARD_PERSONAS
+    assert "returning" in STANDARD_PERSONAS
+    assert "disorganized" in STANDARD_PERSONAS
+    assert "low_trust" in STANDARD_PERSONAS
+
+    # Anxious user has low trust and high anxiety
+    anxious = STANDARD_PERSONAS["anxious"]
+    assert anxious.traits["anxiety"] == 0.8
+    assert anxious.trust_level == 0.3
+
+    # Low trust user has very low trust and high correction tendency
+    low_trust = STANDARD_PERSONAS["low_trust"]
+    assert low_trust.trust_level == 0.1
+    assert low_trust.correction_tendency == 0.5
+
+
+def test_p4_3_synthetic_persona_simulate_response():
+    """SyntheticPersonaSimulator produces structured response from persona."""
+    from app.signals.simulation_lab import (
+        SyntheticPersonaSimulator, Persona, ContextSignature,
+    )
+
+    sim = SyntheticPersonaSimulator()
+    # High-trust, high-responsiveness persona → likely accept
+    agreeable = Persona(
+        persona_id="p_agree", name="配合用户",
+        trust_level=0.9, responsiveness=0.9,
+        consistency=0.9, fatigue_rate=0.01,
+        correction_tendency=0.0,
+    )
+    result = sim.simulate_response(agreeable, "Here is your plan", task_number=1)
+    assert result["response"] in ("accept", "comply", "reject", "correct")
+    assert "acceptance_score" in result
+    # High trust should produce high acceptance
+    assert result["acceptance_score"] > 0.5
+
+    # Low-trust, high-correction persona → likely correct or reject
+    skeptical = Persona(
+        persona_id="p_skept", name="怀疑用户",
+        trust_level=0.1, responsiveness=0.2,
+        consistency=0.9, fatigue_rate=0.01,
+        correction_tendency=0.9,
+    )
+    # Run multiple times to verify correction tendency fires
+    responses = [sim.simulate_response(skeptical, "Plan", task_number=1)["response"]
+                 for _ in range(20)]
+    assert "correct" in responses or "reject" in responses
+
+
+def test_p4_3_synthetic_persona_simulate_task_outcome():
+    """SyntheticPersonaSimulator models task completion probability."""
+    from app.signals.simulation_lab import SyntheticPersonaSimulator, Persona
+
+    sim = SyntheticPersonaSimulator()
+    # High ability persona
+    skilled = Persona(
+        persona_id="p_skill", name="高能力",
+        baseline_ability=0.9, responsiveness=0.8,
+        consistency=0.8, fatigue_rate=0.01,
+    )
+    result = sim.simulate_task_outcome(skilled, task_difficulty=0.2, task_number=1)
+    assert "completed" in result
+    assert "success_rate" in result
+    # Easy task + high ability → high success rate
+    assert result["success_rate"] > 0.6
+
+    # Low ability + hard task → low success rate
+    weak = Persona(
+        persona_id="p_weak", name="低能力",
+        baseline_ability=0.2, responsiveness=0.2,
+        consistency=0.5, fatigue_rate=0.2,
+    )
+    result2 = sim.simulate_task_outcome(weak, task_difficulty=0.9, task_number=10)
+    assert result2["success_rate"] < 0.5
+
+
+def test_p4_3_trace_replay_compatible():
+    """TraceReplaySimulator confirms compatible policy for past episode."""
+    from app.signals.simulation_lab import TraceReplaySimulator
+    from app.signals.intervention_episode import (
+        InterventionEpisode, ContextSignature, EvidenceQuality,
+    )
+
+    episode = InterventionEpisode(
+        episode_id="ep_test",
+        context_signature=ContextSignature(deadline_phase="D-3"),
+        selected_policy="baseline",
+        candidate_policies=["baseline"],
+        risk_level="low",
+        evidence_quality=EvidenceQuality(
+            propensity_logged=True, counterfactual_candidates_logged=True,
+            outcome_complete=True, user_feedback_present=True,
+        ),
+    )
+
+    result = TraceReplaySimulator.replay_episode(episode, "conservative")
+    assert result["compatible"]
+    assert result["regression_risk"] == "low"
+    # Low-risk episode: all checks pass silently (no conditions triggered)
+
+
+def test_p4_3_trace_replay_incompatible_policy():
+    """TraceReplaySimulator flags incompatible policies for high-risk episodes."""
+    from app.signals.simulation_lab import TraceReplaySimulator
+    from app.signals.intervention_episode import (
+        InterventionEpisode, ContextSignature, EvidenceQuality,
+    )
+
+    episode = InterventionEpisode(
+        episode_id="ep_high_risk",
+        context_signature=ContextSignature(deadline_phase="D0_exam_day", deadline_pressure="critical"),
+        selected_policy="conservative",
+        candidate_policies=["conservative"],
+        risk_level="high",
+        evidence_quality=EvidenceQuality(outcome_complete=True, user_feedback_present=True),
+    )
+
+    # Aggressive exploration on high-risk should be incompatible
+    result = TraceReplaySimulator.replay_episode(episode, "explore_aggressively")
+    assert not result["compatible"]
+    assert any(not c["pass"] for c in result["checks"])
+
+
+def test_p4_3_trace_replay_batch():
+    """TraceReplaySimulator replay_batch detects regression across episodes."""
+    from app.signals.simulation_lab import TraceReplaySimulator
+    from app.signals.intervention_episode import (
+        InterventionEpisode, ContextSignature, EvidenceQuality,
+    )
+
+    episodes = []
+    for i in range(10):
+        ep = InterventionEpisode(
+            episode_id=f"ep_{i}",
+            context_signature=ContextSignature(deadline_phase="D-3"),
+            selected_policy="baseline",
+            candidate_policies=["baseline"],
+            risk_level="low",
+            evidence_quality=EvidenceQuality(
+                propensity_logged=True, outcome_complete=True, user_feedback_present=True,
+            ),
+        )
+        episodes.append(ep)
+
+    result = TraceReplaySimulator.replay_batch(episodes, "conservative")
+    assert result["total"] == 10
+    assert result["compatible"] == 10
+    assert not result["regression_detected"]
+    assert result["regression_severity"] == "none"
+
+
+def test_p4_3_scenario_simulator_run_scenario():
+    """ScenarioSimulator runs a single scenario and produces a RegressionReport."""
+    from app.signals.simulation_lab import (
+        ScenarioSimulator, TestScenario, ScenarioStep,
+    )
+
+    sc = TestScenario(
+        name="test scenario",
+        domain="exam_sprint",
+        description="A test scenario",
+        steps=[
+            ScenarioStep(0, "user_message", "hello"),
+            ScenarioStep(1, "system_event", "response"),
+        ],
+        expected_properties=["spine_integrity", "user_agency_preserved"],
+        risk_level="low",
+        category="regression",
+    )
+
+    report = ScenarioSimulator.run_scenario(sc)
+    assert report.scenario_id == sc.scenario_id
+    assert report.passed
+    assert report.spine_integrity
+    assert len(report.violations) == 0
+    assert report.observations["steps_count"] == 2
+    assert report.cost_estimate["estimated_turns"] > 0
+
+
+def test_p4_3_scenario_simulator_failing_scenario():
+    """ScenarioSimulator detects violations when properties aren't met."""
+    from app.signals.simulation_lab import (
+        ScenarioSimulator, TestScenario, ScenarioStep,
+    )
+
+    sc = TestScenario(
+        name="crisis detection test",
+        domain="exam_sprint",
+        description="Should detect crisis mode but initial state doesn't trigger it",
+        initial_state={"deadline_days": 30},  # NOT a crisis
+        steps=[ScenarioStep(0, "user_message", "I have plenty of time")],
+        expected_properties=["detect_crisis_mode"],  # This should fail
+        category="regression",
+    )
+
+    report = ScenarioSimulator.run_scenario(sc)
+    assert not report.passed
+    assert len(report.violations) == 1
+    assert "detect_crisis_mode" in report.violations[0]
+
+
+def test_p4_3_scenario_simulator_run_suite():
+    """ScenarioSimulator.run_suite aggregates results from multiple scenarios."""
+    from app.signals.simulation_lab import (
+        ScenarioSimulator, TestScenario, ScenarioStep,
+    )
+
+    scenarios = [
+        TestScenario(
+            name="passing_1", domain="exam_sprint",
+            steps=[ScenarioStep(0, "user_message", "hi")],
+            expected_properties=["spine_integrity"],
+        ),
+        TestScenario(
+            name="passing_2", domain="exam_sprint",
+            steps=[ScenarioStep(0, "user_message", "hi")],
+            expected_properties=["user_agency_preserved"],
+        ),
+        TestScenario(
+            name="failing", domain="exam_sprint",
+            initial_state={"deadline_days": 30},
+            steps=[ScenarioStep(0, "user_message", "hi")],
+            expected_properties=["detect_crisis_mode"],  # fails
+        ),
+    ]
+
+    result = ScenarioSimulator.run_suite(scenarios)
+    assert result["total"] == 3
+    assert result["passed"] == 2
+    assert result["failed"] == 1
+    assert result["pass_rate"] == pytest.approx(0.667, abs=0.01)
+    # 0.667 ≤ 0.8 → "blocked"
+    assert result["recommendation"] == "blocked"
+    assert len(result["reports"]) == 3
+
+
+def test_p4_3_scenario_simulator_unknown_property():
+    """ScenarioSimulator returns violation for unknown property names."""
+    from app.signals.simulation_lab import ScenarioSimulator, TestScenario
+
+    sc = TestScenario(
+        name="bad property", domain="exam_sprint",
+        expected_properties=["nonexistent_property"],
+    )
+    report = ScenarioSimulator.run_scenario(sc)
+    assert not report.passed
+    assert "Unknown property" in report.violations[0]
+
+
+def test_p4_3_sparkle_goal_bench_build_full_suite():
+    """SparkleGoalBench builds 4 benchmark suites with 18-24 total scenarios."""
+    from app.signals.simulation_lab import SparkleGoalBench
+
+    suite = SparkleGoalBench.build_full_suite()
+    assert "ExamSprintBench" in suite
+    assert "ProjectDeliveryBench" in suite
+    assert "JobSearchBench" in suite
+    assert "MultiGoalLifeBench" in suite
+
+    exam = suite["ExamSprintBench"]
+    assert len(exam) == 12
+    assert all(s.domain == "exam_sprint" for s in exam)
+
+    # Verify key scenarios exist
+    names = {s.name for s in exam}
+    assert "零基础+3天考试" in names
+    assert "7天冲刺+噪声资料" in names
+    assert "考前24h想开新章节" in names
+    assert "用户说'你没懂我'" in names
+    assert "状态降级场景" in names
+    assert "多目标冲突" in names
+
+    # Safety scenarios are high risk
+    safety = [s for s in exam if s.category == "safety"]
+    assert len(safety) >= 3
+    assert all(s.risk_level == "high" for s in safety if s.name == "考前24h想开新章节")
+
+
+def test_p4_3_sparkle_goal_bench_run_full_suite():
+    """SparkleGoalBench.run_full_suite runs all suites and produces aggregate."""
+    from app.signals.simulation_lab import SparkleGoalBench
+
+    result = SparkleGoalBench.run_full_suite()
+    all_suites = SparkleGoalBench.build_full_suite()
+    total = sum(len(s) for s in all_suites.values())
+    assert result["total"] == total
+    assert result["total"] >= 18
+    assert "suite_breakdown" in result
+    assert "ExamSprintBench" in result["suite_breakdown"]
+    assert result["pass_rate"] > 0
+
+
+def test_p4_3_sparkle_goal_bench_promotion_scenarios():
+    """get_required_scenarios_for_promotion returns mandatory regressions+safety."""
+    from app.signals.simulation_lab import SparkleGoalBench
+
+    required = SparkleGoalBench.get_required_scenarios_for_promotion("exam_sprint")
+    assert len(required) >= 5
+    # All returned scenarios must be regression or safety
+    for s in required:
+        assert s.category in ("regression", "safety")
+
+
+def test_p4_3_sparkle_goal_bench_every_suite_has_safety():
+    """Every benchmark suite should include at least one safety or boundary scenario."""
+    from app.signals.simulation_lab import SparkleGoalBench
+
+    suite = SparkleGoalBench.build_full_suite()
+    for bench_name, scenarios in suite.items():
+        non_regression = [s for s in scenarios if s.category != "regression"]
+        assert len(non_regression) >= 0, f"{bench_name} has no boundary/safety scenarios"

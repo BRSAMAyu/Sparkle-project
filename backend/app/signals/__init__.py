@@ -106,6 +106,16 @@ from app.signals.research_grade import (
     SimulatedUserProfile,
     UserSimulator,
 )
+from app.signals.simulation_lab import (
+    Persona,
+    RegressionReport,
+    ScenarioSimulator,
+    ScenarioStep,
+    SparkleGoalBench,
+    SyntheticPersonaSimulator,
+    TestScenario,
+    TraceReplaySimulator,
+)
 from app.signals.skill_lifecycle import SkillLifecycleManager
 from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.spine_quality_guard import (
@@ -214,6 +224,7 @@ __all__ = [
     "PolicyComparisonReport",
     "PolicyExperiment",
     "PolicyExperimentManager",
+    "Persona",
     "PolicyUpdateCandidate",
     "PolicyUpdateCandidateBuilder",
     "PrivacyBudget",
@@ -221,6 +232,7 @@ __all__ = [
     "PrivacyPreservingCommunityEngine",
     "QualityCheck",
     "QualityReport",
+    "RegressionReport",
     "RelationshipModelService",
     "RelationshipState",
     "ResponseDirective",
@@ -231,7 +243,11 @@ __all__ = [
     "SafeBanditController",
     "SafeExperimentRegistry",
     "SafePolicyExperiment",
+    "ScenarioSimulator",
+    "ScenarioStep",
     "SimulatedUserProfile",
+    "SparkleGoalBench",
+    "SyntheticPersonaSimulator",
     "SkillDirective",
     "SkillEntry",
     "SkillLifecycleManager",
@@ -250,6 +266,8 @@ __all__ = [
     "TaskCardProtocol",
     "TaskCardValidator",
     "TASK_TYPES",
+    "TestScenario",
+    "TraceReplaySimulator",
     "TrustOutcome",
     "TASK_TYPE_NODE_BINDINGS",
     "UserSegment",
