@@ -2424,6 +2424,15 @@ class ChatOrchestrator(
                                 request_extra_context["spine_fatigue_context"] = _fatigue
                         except Exception:
                             pass
+                        _spine_ux = await _spine.get_ux_directive(user_id)
+                        if _spine_ux:
+                            request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
+                        _spine_comm = await _spine.get_community_directive(user_id)
+                        if _spine_comm:
+                            request_extra_context["spine_community_directive"] = _spine_comm.to_dict()
+                        _spine_skill = await _spine.get_skill_directive(user_id)
+                        if _spine_skill:
+                            request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
                     except Exception as _spine_err:
                         logger.debug(f"Spine signal check skipped: {_spine_err}")
 
@@ -2490,9 +2499,11 @@ class ChatOrchestrator(
 
                 state = WorkflowState()
                 state.context_data.update(initial_document_context_state)
-                # v2.9: Inject spine directives into workflow state
+                # v2.9/v2.10: Inject spine directives into workflow state
                 for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
-                                   "spine_fatigue_context", "spine_retrieval_directive"):
+                                   "spine_fatigue_context", "spine_retrieval_directive",
+                                   "spine_ux_directive", "spine_community_directive",
+                                   "spine_skill_directive"):
                     _spine_val = (request_extra_context or {}).get(_spine_key)
                     if _spine_val:
                         state.context_data[_spine_key] = _spine_val
@@ -2571,6 +2582,20 @@ class ChatOrchestrator(
                     stream_callback=stream_callback,
                     chat_mode=chat_mode,
                 )
+
+                # v2.10: Emit UXDirective metadata for Flutter status band + receipt display
+                _spine_ux_data = (request_extra_context or {}).get("spine_ux_directive")
+                if _spine_ux_data and stream_callback:
+                    try:
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                metadata={
+                                    "spine_ux": json.dumps(_spine_ux_data, ensure_ascii=False),
+                                },
+                            )
+                        )
+                    except Exception as _ux_err:
+                        logger.debug(f"Spine UX directive emission skipped: {_ux_err}")
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
 
