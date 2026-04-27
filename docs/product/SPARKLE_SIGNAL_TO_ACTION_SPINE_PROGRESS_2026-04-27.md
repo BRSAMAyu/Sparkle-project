@@ -872,11 +872,21 @@
 
 ---
 
-## 当前状态: v3.2 COMPLETE — Mistake Event → Spine Production Loop
+## 当前状态: v7.1 COMPLETE — GoalArbitrationCard Flutter UI
 
 **802/802 tests passing** | **9/9 directive types active** | **70+ public API exports** | **47 signal modules**
 
-### v3.2 (P8 Mistake Event Integration) — ALL COMPLETE
+### v7.1 (P9 GoalArbitrationCard + REST API surface) — ALL COMPLETE
+- [x] P9: `GoalArbitrationCard` Flutter widget — animated card with time-split bars, conflict pills, Focus/Continue actions
+- [x] P9: `GoalArbitrationEvent` parsed from `spine_goal_arbitration` metadata in websocket service
+- [x] P9: `pendingGoalArbitration` state + `dismissGoalArbitration()` in chat notifier
+- [x] P9: `GoalArbitrationCard` wired in `chat_screen.dart` with focus→sendMessage feedback loop
+- [x] P9: `get_goal_arbitration_summary()` in SpineOrchestrator — surfaces card only when ≥2 goals with tension
+- [x] P9: `spine_goal_arbitration` injected via `response_builder` alongside other spine cards
+- [x] P9: REST endpoints: `GET /aurora/spine/goals`, `GET /aurora/spine/goal-graph/{goal_id}`, `POST /aurora/spine/external-event`
+- [x] P9: Flutter API constants: `auroraSpineGoals`, `auroraSpineGoalGraph()`, `auroraSpineExternalEvent`
+
+### v7.0 (P8 Mistake Event Integration) — ALL COMPLETE
 - [x] P8: `MistakeSignalDetector` wired into `SpineOrchestrator.__init__()` (was isolated, now production-connected)
 - [x] P8: `on_mistake_event(user_id, error_id, linked_node_ids, error_type)` — `error.created` → transfer_failure signal → pipeline
 - [x] P8: `on_quiz_result(user_id, task_id, quiz_accuracy)` — low accuracy (<50%) → transfer_failure signal → pipeline
@@ -1201,6 +1211,7 @@ v6.6 P4-4 Research Experiment Platform: MultivariateExperimentEngine (design/rec
 v6.7 P4-5 Privacy Community Intelligence: PrivacyPreservingCommunityEngine + differential privacy (Laplace noise) + 3-tier cohort privacy (suppressed/trend_only/anonymous_aggregate) + privacy budget management, 783/783 tests
 v6.8 P4-6 Spine Quality Guard: SpineQualityGuard (signal quality/causal chain/directive compliance/outcome quality) + QualityReport auto-generation + degradation detection, 789/789 tests
 v6.9 P3-6 External Events + SpineOrchestrator wiring: on_external_event() method + ExternalIntegrationGateway→Spine routing, 795/795 tests
+v7.1 P9 GoalArbitrationCard: GoalArbitrationCard Flutter widget (time-split bars + conflict pills + Focus/Continue), spine REST endpoints (goals/goal-graph/external-event), Flutter API constants, 802/802 tests
 v7.0 P8 Mistake Event Integration: MistakeSignalDetector wired to SpineOrchestrator, on_mistake_event() + on_quiz_result() production methods, galaxy_event_consumer bridge, GoalArbitrationEvent Flutter type, 802/802 tests
 ```
 
