@@ -36,6 +36,7 @@ from app.signals.types import (
     ResponseDirective,
     RetrievalDirective,
     SkillDirective,
+    SkillEntry,
     SourceAsset,
     SourceSlice,
     SourceTraySelection,
@@ -44,24 +45,44 @@ from app.signals.types import (
     UserVisibleReceipt,
     UXDirective,
 )
+from app.signals.community_loops import CommunityLoopManager
+from app.signals.core_session import CoreSession, CoreSessionManager
 from app.signals.exam_sprint_policy import ExamSprintDirective, ExamSprintPhase, ExamSprintPolicyService
+from app.signals.goal_type_adapter import GOAL_TYPE_PROFILES, GoalTypeAdapter, GoalTypeProfile
+from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
+from app.signals.relationship_model import RelationshipModelService, RelationshipState
+from app.signals.skill_lifecycle import SkillLifecycleManager
 
 __all__ = [
     "ActionableSignal",
     "ActionableStatePacket",
     "CausalTrace",
+    "ChronicleEntry",
+    "CoreSession",
+    "CoreSessionManager",
     "CommunityDirective",
+    "CommunityLoopManager",
     "DirectiveApplicationAudit",
     "ExecutionDirective",
+    "GOAL_TYPE_PROFILES",
+    "GoalTypeAdapter",
+    "GoalTypeProfile",
     "ModelWriteDirective",
     "NotificationDirective",
     "OutcomeRecord",
     "PlanDirective",
     "PolicyDecision",
     "PolicyEffectEntry",
+    "RelationshipModelService",
+    "RelationshipState",
     "ResponseDirective",
     "RetrievalDirective",
+    "RecallMessage",
+    "RecallNotificationBuilder",
     "SkillDirective",
+    "SkillEntry",
+    "SkillLifecycleManager",
     "SourceAsset",
     "SourceSlice",
     "SourceTraySelection",
@@ -69,4 +90,5 @@ __all__ = [
     "StateEntry",
     "UserVisibleReceipt",
     "UXDirective",
+    "GrowthChronicleService",
 ]

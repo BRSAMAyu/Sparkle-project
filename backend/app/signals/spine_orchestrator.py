@@ -13,11 +13,13 @@ from typing import Any
 from loguru import logger
 
 from app.signals.causal_trace_store import CausalTraceStore
+from app.signals.core_session import CoreSession, CoreSessionManager
 from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
 from app.signals.policy_engine import PolicyEngine
 from app.signals.task_timeout_detector import TaskTimeoutDetector
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.recall_opportunity import RecallOpportunityDetector
+from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
 from app.signals.signal_ranker import SignalRanker
 from app.signals.state_register import StateRegister
 from app.signals.exam_rescue_detector import ExamRescueDetector
@@ -25,11 +27,13 @@ from app.signals.stale_state_guard import StaleStateGuard
 from app.signals.state_packet_builder import ActionableStatePacketBuilder
 from app.signals.self_model import SparkleSelfModelService
 from app.signals.community_signal import CommunitySignalDetector
+from app.signals.community_loops import CommunityLoopManager
 from app.signals.predicted_reply_options import SpineReplyOptionEngine
 from app.signals.aurora_wake import AuroraWakeJudge
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.spine_metrics import SpineMetricsCollector
 from app.signals.exam_sprint_policy import ExamSprintPolicyService
+from app.signals.skill_lifecycle import SkillLifecycleManager
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -43,6 +47,7 @@ from app.signals.types import (
     ResponseDirective,
     RetrievalDirective,
     SkillDirective,
+    SkillEntry,
     UXDirective,
     UserVisibleReceipt,
     _uid,
@@ -68,11 +73,13 @@ class SpineOrchestrator:
         self.timeout_detector = TaskTimeoutDetector(redis_client)
         self.achievement_consumer = AchievementReinforcementConsumer()
         self.recall_detector = RecallOpportunityDetector()
+        self.recall_notification_builder = RecallNotificationBuilder()
         self.exam_rescue = ExamRescueDetector()
         self.stale_guard = StaleStateGuard()
         self.state_packet_builder = ActionableStatePacketBuilder()
         self.self_model = SparkleSelfModelService(redis_client)
         self.community_detector = CommunitySignalDetector()
+        self.community_loops = CommunityLoopManager()
         self.reply_engine = SpineReplyOptionEngine()
         self.wake_judge = AuroraWakeJudge()
         self.signal_ranker = SignalRanker()
@@ -81,6 +88,8 @@ class SpineOrchestrator:
         self.metrics = SpineMetricsCollector(redis_client)
         self.policy_engine = PolicyEngine(reply_engine=self.reply_engine)
         self.exam_sprint_policy = ExamSprintPolicyService()
+        self.core_session_manager = CoreSessionManager(redis_client)
+        self.skill_lifecycle_manager = SkillLifecycleManager(redis_client)
 
     async def on_task_completed(
         self,
@@ -151,6 +160,7 @@ class SpineOrchestrator:
 
         # Step 4: 存储 active directive 供 task_generator 消费
         await self.trace_store.set_active_directive(user_id, directive)
+        await self._link_directive_to_active_session(user_id, directive.directive_id)
         await self.metrics.record_directive_generated()
 
         # Step 4b: Build and store ResponseDirective
@@ -433,6 +443,65 @@ class SpineOrchestrator:
             event_ids=[f"recall_{trigger_type}"],
         )
 
+    async def build_recall_notification(
+        self,
+        user_id: str,
+        trigger_type: str,
+        context: dict[str, Any],
+    ) -> RecallMessage | None:
+        """Build and store a user-facing recall notification if policy allows it."""
+        normalized_trigger = {
+            "first_task_not_started": "task_not_started",
+        }.get(trigger_type, trigger_type)
+
+        in_cooldown = await self.recall_notification_builder.check_cooldown_async(
+            user_id,
+            normalized_trigger,
+            self.redis,
+        )
+        if in_cooldown:
+            return None
+
+        signal = ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[f"recall_{normalized_trigger}"],
+            source_system="recall_notification",
+            state_key="recall_needed",
+            claim=normalized_trigger,
+            confidence=0.80,
+            scope="current_sprint",
+            ttl_hours=6,
+            evidence_summary=context.get("evidence_summary", f"recall notification: {normalized_trigger}"),
+            possible_effects=["send_recall_message"],
+            priority=context.get("priority", "medium"),
+        )
+        result = await self.policy_engine.evaluate(signal, context={"source": "recall_notification"})
+        if result is None:
+            return None
+
+        decision, _ = result
+        notif_dir = self.policy_engine.build_notification_directive(decision, signal)
+        if notif_dir is None or not notif_dir.allowed:
+            return None
+
+        message_context = {
+            **context,
+            "cooldown_until": self.recall_notification_builder.get_cooldown_until(normalized_trigger),
+            "frequency_tag": notif_dir.max_frequency,
+        }
+        message = self.recall_notification_builder.build_message(
+            trigger_type=normalized_trigger,
+            message_strategy=notif_dir.message_strategy,
+            context=message_context,
+        )
+        if message is None:
+            return None
+
+        await self._store_notification_directive(user_id, notif_dir)
+        await self._store_recall_message(user_id, message)
+        await self.recall_notification_builder.record_sent_async(user_id, normalized_trigger, self.redis)
+        return message
+
     # ── Generic signal pipeline (shared by all P1 sources) ─────────────
 
     async def _run_signal_pipeline(
@@ -477,6 +546,7 @@ class SpineOrchestrator:
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
         await self.trace_store.set_active_directive(user_id, directive)
+        await self._link_directive_to_active_session(user_id, directive.directive_id)
         trace.policy_decision_id = decision.policy_decision_id  # Keep local in sync
         trace.directive_ids.append(directive.directive_id)  # Keep local in sync
         await self.metrics.record_directive_generated()
@@ -689,6 +759,11 @@ class SpineOrchestrator:
         if pattern is None:
             return None
 
+        hint = self.community_loops.build_cohort_mistake_hint(pattern.to_dict())
+        if hint is None:
+            return None
+        await self._store_community_loop_artifact(user_id, "cohort_mistake_hint", hint)
+
         signal = self.community_detector.to_actionable_signal(pattern)
         return await self._run_signal_pipeline(
             user_id=user_id,
@@ -705,15 +780,32 @@ class SpineOrchestrator:
         subject: str,
         peer_count: int,
         relevance_score: float,
+        peer_ratings: list[float] | None = None,
+        completion_rate: float | None = None,
     ) -> CausalTrace | None:
         """社群资料推荐 → CommunitySignalDetector → PolicyEngine → trace。"""
+        quality = self.community_loops.score_resource_quality({
+            "resource_id": resource_id,
+            "peer_ratings": peer_ratings or [relevance_score],
+            "usage_count": peer_count,
+            "completion_rate": completion_rate if completion_rate is not None else relevance_score,
+            "relevance_score": relevance_score,
+        })
+        if quality["quality_score"] is None or quality["recommendation_level"] == "low":
+            return None
+        await self._store_community_loop_artifact(user_id, "resource_quality", quality)
+
         rec = self.community_detector.detect_shared_resource(
             resource_id=resource_id,
             resource_title=resource_title,
             subject=subject,
-            recommendation_reason="highly_rated_by_cohort",
+            recommendation_reason=(
+                "highly_rated_by_cohort"
+                if quality["recommendation_level"] == "high"
+                else "frequently_used"
+            ),
             peer_count=peer_count,
-            relevance_score=relevance_score,
+            relevance_score=float(quality["quality_score"]),
         )
         if rec is None:
             return None
@@ -723,6 +815,46 @@ class SpineOrchestrator:
             user_id=user_id,
             signal=signal,
             event_ids=["community_shared_resource"],
+        )
+
+    async def on_partner_observation(
+        self,
+        *,
+        user_id: str,
+        partner_id: str,
+        observation_type: str,
+        observation_text: str,
+        target_area: str,
+    ) -> CausalTrace | None:
+        """Partner observation → CommunityLoopManager → ActionableSignal → trace."""
+        adjustment = self.community_loops.apply_partner_feedback({
+            "partner_id": partner_id,
+            "observation_type": observation_type,
+            "observation_text": observation_text,
+            "target_area": target_area,
+        })
+        if adjustment is None:
+            return None
+
+        await self._store_community_loop_artifact(user_id, "partner_feedback", adjustment)
+        scope = str(adjustment["scope"])
+        signal = ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=["community_partner_observation"],
+            source_system="community_loops",
+            state_key=str(adjustment["state_key"]),
+            claim=str(adjustment["claim"]),
+            confidence=0.75,
+            scope=scope,
+            ttl_hours=48 if scope in ("next_48h", "current_sprint") else 12,
+            evidence_summary=str(adjustment["evidence_summary"]),
+            possible_effects=["strategy_micro_adjustment", "plan_patch"],
+            priority="medium",
+        )
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=["community_partner_observation"],
         )
 
     # ── P1-2 Integration: AuroraWake ────────────────────────────────────
@@ -748,6 +880,27 @@ class SpineOrchestrator:
             user_requested_deep_review=user_requested_deep_review,
             momentum_stalled=momentum_stalled,
         )
+
+    # ── P1-3 Integration: CoreSession lifecycle ────────────────────────
+
+    async def create_core_session(self, user_id: str, goal_id: str | None = None) -> CoreSession:
+        """Create an active CoreSession for a user's current goal loop."""
+        return await self.core_session_manager.create_session(user_id=user_id, goal_id=goal_id)
+
+    async def get_active_core_session(self, user_id: str) -> CoreSession | None:
+        """Return the user's active CoreSession, if one exists."""
+        return await self.core_session_manager.get_active_session(user_id)
+
+    async def advance_session_phase(self, session_id: str, phase: str) -> CoreSession:
+        """Advance a CoreSession to the next lifecycle phase."""
+        return await self.core_session_manager.advance_phase(session_id=session_id, to_phase=phase)
+
+    async def _link_directive_to_active_session(self, user_id: str, directive_id: str) -> None:
+        """Attach the newest directive to the user's active CoreSession when present."""
+        session = await self.core_session_manager.get_active_session(user_id)
+        if session is None:
+            return
+        await self.core_session_manager.link_directive(session.session_id, directive_id)
 
     # ── Layer 3: Signal Ranking ────────────────────────────────────────
 
@@ -800,6 +953,20 @@ class SpineOrchestrator:
         if not raw:
             return None
         return NotificationDirective.from_dict(json.loads(raw))
+
+    async def _store_recall_message(self, user_id: str, message: RecallMessage) -> None:
+        """存储用户可见 RecallMessage 供通知服务消费。"""
+        import json
+        key = f"spine:recall_notification:{user_id}:latest"
+        await self.redis.set(key, json.dumps(message.to_dict()), ex=72 * 3600)
+
+    async def get_recall_notification(self, user_id: str) -> RecallMessage | None:
+        """获取用户当前 RecallMessage。"""
+        import json
+        raw = await self.redis.get(f"spine:recall_notification:{user_id}:latest")
+        if not raw:
+            return None
+        return RecallMessage.from_dict(json.loads(raw))
 
     async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
         import json
@@ -904,6 +1071,12 @@ class SpineOrchestrator:
 
     # ── Layer 6: CommunityDirective ──────────────────────────────────────
 
+    async def _store_community_loop_artifact(self, user_id: str, artifact_type: str, artifact: dict[str, Any]) -> None:
+        """Store latest privacy-safe community loop output for downstream consumers."""
+        import json
+        key = f"spine:community_loop:{user_id}:{artifact_type}:latest"
+        await self.redis.set(key, json.dumps(artifact), ex=72 * 3600)
+
     async def _store_community_directive(self, user_id: str, cd: CommunityDirective) -> None:
         import json
         key = f"spine:community_directive:{user_id}:latest"
@@ -931,6 +1104,52 @@ class SpineOrchestrator:
         if not raw:
             return None
         return SkillDirective.from_dict(json.loads(raw))
+
+    async def get_applicable_skills(self, user_id: str, context: dict[str, Any]) -> list[SkillEntry]:
+        """Return skills that can safely be injected for the current context."""
+        skills = await self.skill_lifecycle_manager.get_user_skills(user_id)
+        return self.skill_lifecycle_manager.find_applicable_skills(skills, context)
+
+    async def inject_skill_to_task(
+        self,
+        user_id: str,
+        task_spec: dict[str, Any],
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Apply the strongest applicable worked-example-repair skill to a task."""
+        applicable = await self.get_applicable_skills(user_id, context)
+        if not applicable:
+            return dict(task_spec)
+
+        skill = applicable[0]
+        patch = self.skill_lifecycle_manager.build_worked_example_repair(skill, context)
+        modified = dict(task_spec)
+        modified["task_type"] = patch["task_type_override"]
+        modified["strategy_summary"] = patch["strategy_summary"]
+        modified["applies_to_nodes"] = patch["applies_to_nodes"]
+        modified["_skill_injection"] = {
+            "skill_id": skill.skill_id,
+            "source_policy_key": skill.source_policy_key,
+            "evidence": patch["evidence"],
+        }
+        return modified
+
+    async def recommend_skill(self, user_id: str) -> dict[str, Any] | None:
+        """Return the highest-confidence user-confirmable skill recommendation."""
+        skills = await self.skill_lifecycle_manager.get_user_skills(user_id)
+        candidates = sorted(
+            skills,
+            key=lambda skill: (
+                -skill.effective_count,
+                skill.sample_size,
+                skill.skill_id,
+            ),
+        )
+        for skill in candidates:
+            recommendation = self.skill_lifecycle_manager.build_recommendation(skill)
+            if recommendation is not None:
+                return recommendation
+        return None
 
     # ── Layer 8: Outcome Recording ────────────────────────────────────
 

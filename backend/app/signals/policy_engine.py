@@ -214,6 +214,76 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "跟你同考的同学在看这个资料，也许对你也有帮助。",
         },
     },
+    "community_partner_feedback": {
+        "pacing_too_fast": {
+            "primary_strategy": "adjust_partner_reported_pacing",
+            "secondary_strategy": "reduce_next_48h_load",
+            "hard_constraints": {
+                "pace_direction": "slow_down",
+                "partner_feedback": True,
+            },
+            "soft_biases": {
+                "tone": "calm_direct",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你的学习伙伴观察到节奏可能偏快，接下来 48 小时先降一点负荷。",
+        },
+        "pacing_too_slow": {
+            "primary_strategy": "adjust_partner_reported_pacing",
+            "secondary_strategy": "increase_next_48h_activation",
+            "hard_constraints": {
+                "pace_direction": "speed_up",
+                "partner_feedback": True,
+            },
+            "soft_biases": {
+                "tone": "calm_direct",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你的学习伙伴观察到节奏可能偏慢，接下来 48 小时给你一个更清晰的启动安排。",
+        },
+        "focus_refocus_needed": {
+            "primary_strategy": "apply_partner_focus_patch",
+            "secondary_strategy": None,
+            "hard_constraints": {
+                "reduce_context_switching": True,
+                "partner_feedback": True,
+            },
+            "soft_biases": {
+                "tone": "calm_direct",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你的学习伙伴观察到注意力可能分散，本轮先收窄到关键主题。",
+        },
+        "difficulty_shift_needed": {
+            "primary_strategy": "apply_partner_difficulty_patch",
+            "secondary_strategy": None,
+            "hard_constraints": {
+                "partner_feedback": True,
+            },
+            "soft_biases": {
+                "tone": "encouraging_diagnostic",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你的学习伙伴观察到难度可能不匹配，接下来 48 小时先微调题目难度。",
+        },
+        "morale_encouragement_needed": {
+            "primary_strategy": "encourage_partner_observed_morale",
+            "secondary_strategy": None,
+            "hard_constraints": {
+                "partner_feedback": True,
+            },
+            "soft_biases": {
+                "tone": "encouraging_low_pressure",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你的学习伙伴观察到你可能有点低落，这一轮先给你一个低压力的推进方式。",
+        },
+    },
 }
 
 _DIRECTIVE_TARGET_MODULE = "task_generator"
@@ -561,11 +631,18 @@ class PolicyEngine:
         if not params:
             return None
 
+        hard_constraints = decision.hard_constraints or {}
+        retrieval_mode = hard_constraints.get("retrieval_mode", params["retrieval_mode"])
+        source_scope = hard_constraints.get("source_scope", params["source_scope"])
+        if signal.state_key == "material_utilization" and signal.claim == "material_underutilized":
+            retrieval_mode = "targeted_source_rag"
+            source_scope = source_scope or "user_selected"
+
         return RetrievalDirective(
             directive_id=_uid("rtd"),
             policy_decision_id=decision.policy_decision_id,
-            retrieval_mode=params["retrieval_mode"],
-            source_scope=params["source_scope"],
+            retrieval_mode=retrieval_mode,
+            source_scope=source_scope,
             pollution_guard=params["pollution_guard"],
             reason_for_user=params["reason"],
             scope="turn",
@@ -614,6 +691,44 @@ class PolicyEngine:
             "constraints": {
                 "recovery_task": True,
                 "adjust_subsequent_deadlines": True,
+            },
+        },
+        "pacing_too_fast": {
+            "plan_action": "local_replan",
+            "scope": "next_48h",
+            "constraints": {
+                "do_not_rebuild_entire_plan": True,
+                "pace_adjustment": "slow_down",
+                "reduce_task_load": True,
+                "partner_feedback": True,
+            },
+        },
+        "pacing_too_slow": {
+            "plan_action": "local_replan",
+            "scope": "next_48h",
+            "constraints": {
+                "do_not_rebuild_entire_plan": True,
+                "pace_adjustment": "speed_up",
+                "insert_starter_task": True,
+                "partner_feedback": True,
+            },
+        },
+        "focus_refocus_needed": {
+            "plan_action": "local_replan",
+            "scope": "current_sprint",
+            "constraints": {
+                "do_not_rebuild_entire_plan": True,
+                "reduce_context_switching": True,
+                "partner_feedback": True,
+            },
+        },
+        "difficulty_shift_needed": {
+            "plan_action": "local_replan",
+            "scope": "next_48h",
+            "constraints": {
+                "do_not_rebuild_entire_plan": True,
+                "adjust_difficulty": True,
+                "partner_feedback": True,
             },
         },
     }
@@ -868,6 +983,9 @@ class PolicyEngine:
     # ── SkillDirective ─────────────────────────────────────────────────
 
     _SKILL_MAP: dict[str, dict[str, Any]] = {
+        "recent_task_too_large": {
+            "skill_action": "inject",
+        },
         "momentum_high": {
             "skill_action": "extract",
             "extraction_trigger": "outcome_positive",

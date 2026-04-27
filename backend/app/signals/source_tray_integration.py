@@ -17,7 +17,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
+from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
 
 
 def compute_retrieval_plan(
@@ -124,9 +124,159 @@ def compute_retrieval_plan(
     }
 
 
+def build_source_receipt(
+    retrieval_directive: RetrievalDirective,
+    source_tray: SourceTrayState,
+    loaded_source_ids: list[str],
+) -> dict[str, Any]:
+    """
+    Build a user-visible receipt for how SourceTray materials were used.
+
+    The receipt is intentionally compact: it names loaded sources, sources that
+    could not be loaded, explicit exclusions, and one corrective sentence.
+    """
+    sources_by_id = {source.source_id: source for source in (source_tray.available_sources or [])}
+    selections_by_id = {selection.source_id: selection for selection in (source_tray.selections or [])}
+    loaded_ids = set(loaded_source_ids)
+    directive_includes = set(retrieval_directive.must_load or []) | set(retrieval_directive.may_load or [])
+    directive_excludes = set(retrieval_directive.do_not_load or [])
+
+    loaded = [
+        {
+            "source_id": source_id,
+            "title": _source_title(source_id, sources_by_id),
+            "reason": _receipt_load_reason(source_id, selections_by_id, directive_includes),
+        }
+        for source_id in loaded_source_ids
+    ]
+
+    excluded_ids = {
+        selection.source_id for selection in (source_tray.selections or []) if selection.action == "exclude"
+    } | directive_excludes
+    excluded = [
+        {
+            "source_id": source_id,
+            "title": _source_title(source_id, sources_by_id),
+            "reason": _receipt_exclude_reason(source_id, selections_by_id, directive_excludes),
+        }
+        for source_id in sorted(excluded_ids)
+        if source_id not in loaded_ids
+    ]
+
+    candidate_ids = _receipt_candidate_ids(retrieval_directive, source_tray, loaded_ids, excluded_ids)
+    skipped = [
+        {
+            "source_id": source_id,
+            "title": _source_title(source_id, sources_by_id),
+            "reason": _receipt_skip_reason(source_id, sources_by_id),
+        }
+        for source_id in sorted(candidate_ids)
+    ]
+
+    return {
+        "loaded": loaded,
+        "skipped": skipped,
+        "excluded": excluded,
+        "reason_for_user": _build_receipt_reason(len(loaded), skipped),
+    }
+
+
+def validate_source_tray_selections(
+    source_tray: SourceTrayState,
+    available_sources: list[SourceAsset],
+) -> SourceTrayState:
+    """Remove stale include selections that no longer point to available sources."""
+    available_ids = {source.source_id for source in available_sources}
+    cleaned_selections: list[SourceTraySelection] = []
+
+    for selection in source_tray.selections or []:
+        if selection.action == "include" and selection.source_id not in available_ids:
+            logger.info(
+                "SourceTrayIntegration: removing stale include selection source_id={}",
+                selection.source_id,
+            )
+            continue
+        cleaned_selections.append(selection)
+
+    return SourceTrayState(
+        mode=source_tray.mode,
+        selections=cleaned_selections,
+        available_sources=available_sources,
+    )
+
+
 def _estimate_tokens(source: SourceAsset) -> int:
     """Rough token estimate: ~4 tokens per char of summary, min 500."""
     slices = source.slices or []
     if slices:
         return sum(200 for _ in slices)  # ~200 tokens per slice
     return 500
+
+
+def _source_title(source_id: str, sources_by_id: dict[str, SourceAsset]) -> str:
+    source = sources_by_id.get(source_id)
+    return source.title if source else source_id
+
+
+def _receipt_load_reason(
+    source_id: str,
+    selections_by_id: dict[str, SourceTraySelection],
+    directive_includes: set[str],
+) -> str:
+    selection = selections_by_id.get(source_id)
+    if selection and selection.action == "include":
+        return "user_selected"
+    if source_id in directive_includes:
+        return "directive_selected"
+    return "auto_selected"
+
+
+def _receipt_exclude_reason(
+    source_id: str,
+    selections_by_id: dict[str, SourceTraySelection],
+    directive_excludes: set[str],
+) -> str:
+    selection = selections_by_id.get(source_id)
+    if selection and selection.action == "exclude":
+        return "user_excluded"
+    if source_id in directive_excludes:
+        return "directive_excluded"
+    return "excluded"
+
+
+def _receipt_candidate_ids(
+    retrieval_directive: RetrievalDirective,
+    source_tray: SourceTrayState,
+    loaded_ids: set[str],
+    excluded_ids: set[str],
+) -> set[str]:
+    selected_includes = {
+        selection.source_id for selection in (source_tray.selections or []) if selection.action == "include"
+    }
+    directive_candidates = set(retrieval_directive.must_load or []) | set(retrieval_directive.may_load or [])
+    available_candidates = {
+        source.source_id for source in (source_tray.available_sources or []) if source.parsed_status == "failed"
+    }
+    return (selected_includes | directive_candidates | available_candidates) - loaded_ids - excluded_ids
+
+
+def _receipt_skip_reason(source_id: str, sources_by_id: dict[str, SourceAsset]) -> str:
+    source = sources_by_id.get(source_id)
+    if source and source.parsed_status == "failed":
+        return "parse_failed"
+    return "not_loaded"
+
+
+def _build_receipt_reason(loaded_count: int, skipped: list[dict[str, Any]]) -> str:
+    skipped_count = len(skipped)
+    if loaded_count == 0 and skipped_count == 0:
+        return "这轮没有加载资料。"
+    if loaded_count == 0:
+        return f"这轮没有加载资料，跳过了 {skipped_count} 份。"
+    if skipped_count == 0:
+        return f"使用了你选的 {loaded_count} 份资料。"
+
+    parse_failed_count = sum(1 for item in skipped if item["reason"] == "parse_failed")
+    if parse_failed_count:
+        return f"使用了你选的 {loaded_count} 份资料，跳过了 {skipped_count} 份（解析失败）。"
+    return f"使用了你选的 {loaded_count} 份资料，跳过了 {skipped_count} 份。"

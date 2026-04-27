@@ -41,6 +41,7 @@ class FakeRedis:
 
     def __init__(self):
         self._store: dict[str, str] = {}
+        self._expires: dict[str, int] = {}
         self._lists: dict[str, list[str]] = {}
         self._sets: dict[str, set[str]] = {}
 
@@ -49,6 +50,8 @@ class FakeRedis:
 
     async def set(self, key: str, value: str, ex: int | None = None) -> None:
         self._store[key] = value
+        if ex is not None:
+            self._expires[key] = ex
 
     async def delete(self, key: str) -> None:
         self._store.pop(key, None)
@@ -6087,6 +6090,195 @@ def test_source_tray_empty_sources():
     assert plan["do_not_load"] == []
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# P1-2: Source Tray → RetrievalDirective Integration
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_build_source_receipt_with_loaded_sources():
+    """Receipt lists loaded sources with user-selected reasons."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
+    from app.signals.source_tray_integration import build_source_receipt
+
+    tray = SourceTrayState(
+        mode="manual_only",
+        selections=[SourceTraySelection(source_id="src_1", action="include")],
+        available_sources=[SourceAsset(source_id="src_1", title="TCP Slides", source_type="slides")],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1",
+        policy_decision_id="pd_1",
+        must_load=["src_1"],
+    )
+
+    receipt = build_source_receipt(directive, tray, ["src_1"])
+
+    assert receipt["loaded"] == [{"source_id": "src_1", "title": "TCP Slides", "reason": "user_selected"}]
+    assert receipt["skipped"] == []
+    assert receipt["excluded"] == []
+    assert "使用了你选的 1 份资料" in receipt["reason_for_user"]
+
+
+def test_build_source_receipt_empty():
+    """Empty tray and no loaded sources returns an empty receipt."""
+    from app.signals.types import RetrievalDirective, SourceTrayState
+    from app.signals.source_tray_integration import build_source_receipt
+
+    tray = SourceTrayState(mode="auto")
+    directive = RetrievalDirective(directive_id="rd_1", policy_decision_id="pd_1")
+
+    receipt = build_source_receipt(directive, tray, [])
+
+    assert receipt["loaded"] == []
+    assert receipt["skipped"] == []
+    assert receipt["excluded"] == []
+    assert receipt["reason_for_user"] == "这轮没有加载资料。"
+
+
+def test_build_source_receipt_mixed():
+    """Receipt separates loaded, skipped, and excluded materials."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
+    from app.signals.source_tray_integration import build_source_receipt
+
+    tray = SourceTrayState(
+        mode="manual_only",
+        selections=[
+            SourceTraySelection(source_id="src_1", action="include"),
+            SourceTraySelection(source_id="bad", action="include"),
+            SourceTraySelection(source_id="old", action="exclude"),
+        ],
+        available_sources=[
+            SourceAsset(source_id="src_1", title="TCP Slides", source_type="slides"),
+            SourceAsset(source_id="bad", title="Corrupt PDF", source_type="notes", parsed_status="failed"),
+            SourceAsset(source_id="old", title="Old Notes", source_type="notes"),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1",
+        policy_decision_id="pd_1",
+        must_load=["src_1", "bad"],
+        do_not_load=["old"],
+    )
+
+    receipt = build_source_receipt(directive, tray, ["src_1"])
+
+    assert receipt["loaded"][0]["source_id"] == "src_1"
+    assert receipt["skipped"] == [{"source_id": "bad", "title": "Corrupt PDF", "reason": "parse_failed"}]
+    assert receipt["excluded"] == [{"source_id": "old", "title": "Old Notes", "reason": "user_excluded"}]
+    assert "解析失败" in receipt["reason_for_user"]
+
+
+def test_validate_source_tray_removes_invalid():
+    """Stale include selections are removed when the source is unavailable."""
+    from app.signals.types import SourceAsset, SourceTraySelection, SourceTrayState
+    from app.signals.source_tray_integration import validate_source_tray_selections
+
+    available = [SourceAsset(source_id="src_1", title="TCP Slides", source_type="slides")]
+    tray = SourceTrayState(
+        mode="manual_only",
+        selections=[
+            SourceTraySelection(source_id="src_1", action="include"),
+            SourceTraySelection(source_id="missing", action="include"),
+        ],
+        available_sources=available,
+    )
+
+    cleaned = validate_source_tray_selections(tray, available)
+
+    assert [selection.source_id for selection in cleaned.selections or []] == ["src_1"]
+    assert cleaned.available_sources == available
+
+
+def test_validate_source_tray_keeps_valid():
+    """Valid selections are preserved after SourceTray validation."""
+    from app.signals.types import SourceAsset, SourceTraySelection, SourceTrayState
+    from app.signals.source_tray_integration import validate_source_tray_selections
+
+    available = [
+        SourceAsset(source_id="src_1", title="TCP Slides", source_type="slides"),
+        SourceAsset(source_id="src_2", title="UDP Notes", source_type="notes"),
+    ]
+    tray = SourceTrayState(
+        mode="auto",
+        selections=[
+            SourceTraySelection(source_id="src_1", action="include"),
+            SourceTraySelection(source_id="src_2", action="exclude"),
+        ],
+    )
+
+    cleaned = validate_source_tray_selections(tray, available)
+
+    assert [selection.source_id for selection in cleaned.selections or []] == ["src_1", "src_2"]
+    assert cleaned.mode == "auto"
+
+
+@pytest.mark.asyncio
+async def test_retrieval_directive_source_tray_integration():
+    """Policy hard constraints flow into RetrievalDirective source_scope."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="material_utilization", claim="material_underutilized",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+    decision.hard_constraints["source_scope"] = "user_selected"
+
+    directive = engine.build_retrieval_directive(decision, signal)
+
+    assert directive is not None
+    assert directive.retrieval_mode == "targeted_source_rag"
+    assert directive.source_scope == "user_selected"
+
+
+@pytest.mark.asyncio
+async def test_retrieval_directive_material_signal():
+    """Material signals always build targeted SourceTray retrieval directives."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="material_signal",
+        state_key="material_utilization", claim="material_underutilized",
+        confidence=0.9, scope="current_sprint", ttl_hours=72,
+        evidence_summary="unused source tray materials", possible_effects=["change_retrieval_strategy"],
+        priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, _ = result
+
+    directive = engine.build_retrieval_directive(decision, signal)
+
+    assert directive is not None
+    assert directive.retrieval_mode == "targeted_source_rag"
+    assert directive.source_scope == "user_selected"
+    assert directive.pollution_guard == "strict"
+
+
+def test_source_receipt_serialization():
+    """Source receipt is a plain JSON-serializable structure."""
+    import json
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
+    from app.signals.source_tray_integration import build_source_receipt
+
+    tray = SourceTrayState(
+        selections=[SourceTraySelection(source_id="src_1", action="include")],
+        available_sources=[SourceAsset(source_id="src_1", title="TCP Slides", source_type="slides")],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_1",
+        policy_decision_id="pd_1",
+        must_load=["src_1"],
+    )
+
+    restored = json.loads(json.dumps(build_source_receipt(directive, tray, ["src_1"])))
+
+    assert restored["loaded"][0]["title"] == "TCP Slides"
+    assert restored["loaded"][0]["reason"] == "user_selected"
+
+
 # ══════════════════════════════════════════════════════════════════════
 # P1-1: Causal Timeline UI — TimelineCardRenderer
 # ══════════════════════════════════════════════════════════════════════
@@ -6346,3 +6538,1436 @@ def test_timeline_card_evidence_chain_full():
     assert "执行" in steps
     assert "通知" in steps
     assert "结果" in steps
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Task #9: P3-1 — GoalWorldGraph Goal Type Adapter
+# ══════════════════════════════════════════════════════════════════════
+
+
+def test_goal_type_profile_exam():
+    """Exam profile preserves knowledge graph and deadline-sensitive defaults."""
+    from app.signals.goal_type_adapter import GoalTypeProfile
+
+    profile = GoalTypeProfile.get_profile("exam")
+
+    assert profile.goal_type == "exam"
+    assert profile.deadline_sensitive is True
+    assert profile.mastery_trackable is True
+    assert profile.has_knowledge_graph is True
+    assert profile.default_phase_count == 5
+    assert profile.default_sprint_duration_days == 7
+    assert profile.node_label == "知识点"
+
+
+def test_goal_type_profile_project():
+    """Project profile uses milestone semantics."""
+    from app.signals.goal_type_adapter import GoalTypeProfile
+
+    profile = GoalTypeProfile.get_profile("project")
+
+    assert profile.goal_type == "project"
+    assert profile.deadline_sensitive is True
+    assert profile.mastery_trackable is False
+    assert profile.has_knowledge_graph is False
+    assert profile.default_phase_count == 4
+    assert profile.default_sprint_duration_days == 14
+    assert profile.node_label == "里程碑"
+
+
+def test_goal_type_profile_job_search():
+    """Job search profile tracks skills and supports graph-backed retrieval."""
+    from app.signals.goal_type_adapter import GoalTypeProfile
+
+    profile = GoalTypeProfile.get_profile("job_search")
+
+    assert profile.goal_type == "job_search"
+    assert profile.deadline_sensitive is False
+    assert profile.mastery_trackable is True
+    assert profile.has_knowledge_graph is True
+    assert profile.default_phase_count == 5
+    assert profile.default_sprint_duration_days == 30
+    assert profile.node_label == "技能"
+
+
+def test_goal_type_profile_general():
+    """Unknown goal types fall back to the general profile safely."""
+    from app.signals.goal_type_adapter import GoalTypeProfile
+
+    profile = GoalTypeProfile.get_profile("unknown_goal")
+    serialized = profile.to_dict()
+    restored = GoalTypeProfile.from_dict(serialized)
+
+    assert profile.goal_type == "general"
+    assert profile.deadline_sensitive is False
+    assert profile.mastery_trackable is False
+    assert profile.default_phase_count == 3
+    assert restored == profile
+
+
+def test_adapt_mastery_mapping_exam():
+    """Exam mastery mapping delegates to the existing exam sprint policy semantics."""
+    from app.signals.goal_type_adapter import GoalTypeAdapter
+
+    adapter = GoalTypeAdapter()
+    low = adapter.adapt_mastery_mapping(0.2, "exam")
+    high = adapter.adapt_mastery_mapping(0.9, "exam")
+
+    assert low["task_type"] == "concept_compression"
+    assert low["difficulty"] == 5
+    assert low["node_label"] == "知识点"
+    assert high["task_type"] == "mixed_practice_exam_simulation"
+    assert high["difficulty"] == 1
+
+
+def test_adapt_mastery_mapping_project():
+    """Project mastery mapping moves from outline to submit."""
+    from app.signals.goal_type_adapter import GoalTypeAdapter
+
+    adapter = GoalTypeAdapter()
+    early = adapter.adapt_mastery_mapping(0.1, "project")
+    middle = adapter.adapt_mastery_mapping(0.45, "project")
+    ready = adapter.adapt_mastery_mapping(0.92, "project")
+
+    assert early["task_type"] == "outline"
+    assert early["focus"] == "clarify_scope"
+    assert middle["task_type"] == "draft"
+    assert ready["task_type"] == "submit"
+    assert ready["node_label"] == "里程碑"
+
+
+def test_adapt_sprint_phases():
+    """Sprint phases adapt count, labels, retrieval mode, and urgency by goal type."""
+    from app.signals.goal_type_adapter import GoalTypeAdapter
+
+    adapter = GoalTypeAdapter()
+    project_phases = adapter.adapt_sprint_phases(days_to_deadline=10, goal_type="project")
+    job_phases = adapter.adapt_sprint_phases(days_to_deadline=45, goal_type="job_search")
+
+    assert [p["phase_id"] for p in project_phases] == ["scope", "build", "review", "ship"]
+    assert project_phases[0]["node_label"] == "里程碑"
+    assert project_phases[0]["urgency"] == "deadline"
+    assert project_phases[0]["retrieval_mode"] == "targeted_source_rag"
+    assert len(job_phases) == 5
+    assert job_phases[0]["node_label"] == "技能"
+    assert job_phases[0]["retrieval_mode"] == "task_bound_graph_rag"
+
+
+def test_adapt_recall_message():
+    """Recall copy changes language for exam and project contexts."""
+    from app.signals.goal_type_adapter import GoalTypeAdapter
+
+    adapter = GoalTypeAdapter()
+    exam_message = adapter.adapt_recall_message(
+        "pre_exam_silence",
+        "exam",
+        {"subject": "计网"},
+    )
+    project_message = adapter.adapt_recall_message(
+        "pre_exam_silence",
+        "project",
+        {"target": "Demo"},
+    )
+    fallback = adapter.adapt_recall_message("unknown", "does_not_exist", {})
+
+    assert "计网：" in exam_message
+    assert "考前" in exam_message
+    assert "Demo：" in project_message
+    assert "交付前检查" in project_message
+    assert fallback == "先把目标收束成一个下一步。"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P1-5: SkillDirective v1 — inject/recommend/extract lifecycle
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _make_lifecycle_skill(
+    *,
+    skill_id: str = "skill_life_1",
+    scope: str = "personal",
+    effective_count: int = 5,
+    sample_size: int = 6,
+    applicable_when: dict | None = None,
+):
+    from app.signals.types import SkillEntry
+
+    return SkillEntry(
+        skill_id=skill_id,
+        scope=scope,
+        source_policy_key="repair_knowledge_bottleneck",
+        strategy={"intervention_summary": "Show a worked example before the drill."},
+        applicable_when=applicable_when or {"goal_mode": "exam_rescue", "state_key": "knowledge_transfer"},
+        evidence={"effective_count": effective_count, "total_observed": sample_size, "avg_confidence": 0.84},
+        privacy={"contains_personal_data": scope == "personal", "shareable": scope != "personal"},
+        effective_count=effective_count,
+        sample_size=sample_size,
+    )
+
+
+@pytest.mark.asyncio
+async def test_skill_store_and_retrieve():
+    """SkillLifecycleManager stores a user list entry and an ID lookup entry."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    redis = FakeRedis()
+    manager = SkillLifecycleManager(redis)
+    skill = _make_lifecycle_skill(skill_id="skill_store")
+
+    await manager.store_skill("u_skill", skill)
+
+    user_skills = await manager.get_user_skills("u_skill")
+    by_id = await manager.get_skill("skill_store")
+    assert len(user_skills) == 1
+    assert user_skills[0].skill_id == "skill_store"
+    assert by_id is not None
+    assert by_id.strategy["intervention_summary"].startswith("Show a worked example")
+
+
+def test_find_applicable_skills_by_scope():
+    """Personal skills rank before cohort and system skills."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skills = [
+        _make_lifecycle_skill(skill_id="skill_system", scope="system", effective_count=12),
+        _make_lifecycle_skill(skill_id="skill_personal", scope="personal", effective_count=3),
+        _make_lifecycle_skill(skill_id="skill_cohort", scope="cohort", effective_count=9),
+    ]
+
+    applicable = manager.find_applicable_skills(
+        skills,
+        {"goal_mode": "exam_rescue", "state_key": "knowledge_transfer"},
+    )
+
+    assert [skill.skill_id for skill in applicable] == ["skill_personal", "skill_cohort", "skill_system"]
+
+
+def test_find_applicable_skills_by_context():
+    """Applicable skills must match declared goal_mode and state_key conditions."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skills = [
+        _make_lifecycle_skill(skill_id="skill_goal", applicable_when={"goal_mode": "exam_rescue"}),
+        _make_lifecycle_skill(skill_id="skill_state", applicable_when={"state_key": "knowledge_transfer"}),
+        _make_lifecycle_skill(skill_id="skill_wrong", applicable_when={"goal_mode": "daily_growth"}),
+    ]
+
+    applicable = manager.find_applicable_skills(
+        skills,
+        {"goal_mode": "exam_rescue", "state_key": "knowledge_transfer"},
+    )
+
+    assert {skill.skill_id for skill in applicable} == {"skill_goal", "skill_state"}
+
+
+def test_find_applicable_min_effective_count():
+    """Skills below effective_count threshold are not injectable."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skills = [
+        _make_lifecycle_skill(skill_id="skill_low", effective_count=2),
+        _make_lifecycle_skill(skill_id="skill_ready", effective_count=3),
+    ]
+
+    applicable = manager.find_applicable_skills(
+        skills,
+        {"goal_mode": "exam_rescue", "state_key": "knowledge_transfer"},
+    )
+
+    assert [skill.skill_id for skill in applicable] == ["skill_ready"]
+
+
+def test_build_worked_example_repair():
+    """A skill converts into the worked-example-then-drill task patch."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skill = _make_lifecycle_skill()
+
+    patch = manager.build_worked_example_repair(skill, {"state_key": "knowledge_transfer"})
+
+    assert patch["task_type_override"] == "worked_example_then_drill"
+    assert patch["strategy_summary"] == "Show a worked example before the drill."
+    assert patch["applies_to_nodes"] == "knowledge_transfer"
+    assert patch["evidence"]["effective_count"] == 5
+
+
+def test_build_recommendation_high_evidence():
+    """High-evidence skills produce a user-confirmable recommendation."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skill = _make_lifecycle_skill(effective_count=5)
+
+    recommendation = manager.build_recommendation(skill)
+
+    assert recommendation is not None
+    assert recommendation["skill_id"] == skill.skill_id
+    assert "Worked 5/6 times" in recommendation["evidence_summary"]
+    labels = [option["label"] for option in recommendation["user_options"]]
+    assert "Not now" in labels
+    assert "Don't suggest again" in labels
+
+
+def test_build_recommendation_low_evidence_none():
+    """Low-evidence skills are not recommended to the user yet."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skill = _make_lifecycle_skill(effective_count=4)
+
+    assert manager.build_recommendation(skill) is None
+
+
+def test_validate_extraction_valid():
+    """A complete extracted skill passes validation."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skill = _make_lifecycle_skill()
+
+    result = manager.validate_extraction(skill)
+
+    assert result == {"valid": True, "issues": []}
+
+
+def test_validate_extraction_issues():
+    """Invalid candidate skills report concrete extraction issues."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skill = _make_lifecycle_skill(
+        skill_id="",
+        scope="global",
+        effective_count=1,
+        sample_size=0,
+    )
+    skill.source_policy_key = ""
+    skill.strategy = {}
+
+    result = manager.validate_extraction(skill)
+
+    assert result["valid"] is False
+    assert "missing_skill_id" in result["issues"]
+    assert "invalid_scope" in result["issues"]
+    assert "missing_intervention_summary" in result["issues"]
+    assert "effective_count_below_threshold" in result["issues"]
+
+
+def test_skill_lifecycle_serialization():
+    """SkillEntry remains serializable for lifecycle persistence."""
+    from app.signals.types import SkillEntry
+
+    skill = _make_lifecycle_skill(skill_id="skill_serial")
+
+    restored = SkillEntry.from_dict(skill.to_dict())
+
+    assert restored.skill_id == "skill_serial"
+    assert restored.effective_count == 5
+    assert restored.privacy["contains_personal_data"] is True
+
+
+@pytest.mark.asyncio
+async def test_skill_lifecycle_orchestrator_inject_skill_to_task():
+    """SpineOrchestrator injects the strongest applicable skill into task specs."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+    skill = _make_lifecycle_skill(skill_id="skill_inject", effective_count=7)
+    await spine.skill_lifecycle_manager.store_skill("u_inject", skill)
+
+    modified = await spine.inject_skill_to_task(
+        "u_inject",
+        {"task_id": "task_1", "task_type": "drill"},
+        {"goal_mode": "exam_rescue", "state_key": "knowledge_transfer"},
+    )
+
+    assert modified["task_type"] == "worked_example_then_drill"
+    assert modified["_skill_injection"]["skill_id"] == "skill_inject"
+
+
+@pytest.mark.asyncio
+async def test_skill_lifecycle_orchestrator_recommend_skill():
+    """SpineOrchestrator returns the highest-evidence recommendable skill."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+    await spine.skill_lifecycle_manager.store_skill(
+        "u_rec",
+        _make_lifecycle_skill(skill_id="skill_recommend", effective_count=6),
+    )
+
+    recommendation = await spine.recommend_skill("u_rec")
+
+    assert recommendation is not None
+    assert recommendation["skill_id"] == "skill_recommend"
+
+
+@pytest.mark.asyncio
+async def test_skill_directive_inject_action():
+    """recent_task_too_large can request SkillDirective injection."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_skill_inject",
+        source_event_ids=["test"],
+        source_system="task_service",
+        state_key="task_granularity_fit",
+        claim="recent_task_too_large",
+        confidence=0.8,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="two recent tasks ran long",
+        possible_effects=["inject_skill"],
+        priority="high",
+    )
+    result = await engine.evaluate(signal, context={"consecutive": 2})
+    assert result is not None
+    decision, _ = result
+
+    skill_dir = engine.build_skill_directive(decision, signal)
+
+    assert skill_dir is not None
+    assert skill_dir.skill_action == "inject"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Task #7: Skill Lifecycle — promote/deprecate/health
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _skill_lifecycle_entry(
+    *,
+    skill_id: str = "skill_life_1",
+    scope: str = "personal",
+    effective_count: int = 10,
+    sample_size: int = 12,
+    avg_confidence: float = 0.82,
+    shareable: bool = True,
+    evidence_extra: dict | None = None,
+):
+    from app.signals.types import SkillEntry
+
+    evidence = {
+        "effective_count": effective_count,
+        "total_observed": sample_size,
+        "avg_confidence": avg_confidence,
+    }
+    if evidence_extra:
+        evidence.update(evidence_extra)
+    return SkillEntry(
+        skill_id=skill_id,
+        scope=scope,
+        source_policy_key="recover_execution_rhythm",
+        strategy={"intervention_summary": "worked_example_then_drill"},
+        applicable_when={"goal_mode": "exam_rescue", "state_key": "tcp"},
+        evidence=evidence,
+        privacy={"contains_personal_data": False, "shareable": shareable},
+        effective_count=effective_count,
+        sample_size=sample_size,
+    )
+
+
+@pytest.mark.asyncio
+async def test_promote_skill_personal_to_cohort():
+    """Personal skill promotes to cohort when evidence and privacy gates pass."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    redis = FakeRedis()
+    manager = SkillLifecycleManager(redis)
+    skill = _skill_lifecycle_entry(effective_count=10, avg_confidence=0.81)
+    await manager.store_skill("u1", skill)
+
+    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort")
+
+    assert promoted is not None
+    assert promoted.scope == "cohort"
+    assert promoted.evidence["promoted_from"] == "personal"
+    stored = await manager.get_skill(skill.skill_id)
+    assert stored is not None
+    assert stored.scope == "cohort"
+
+
+@pytest.mark.asyncio
+async def test_promote_skill_insufficient_evidence():
+    """Promotion is blocked below threshold."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    redis = FakeRedis()
+    manager = SkillLifecycleManager(redis)
+    skill = _skill_lifecycle_entry(effective_count=9, avg_confidence=0.79)
+    await manager.store_skill("u1", skill)
+
+    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort")
+
+    assert promoted is None
+    stored = await manager.get_skill(skill.skill_id)
+    assert stored is not None
+    assert stored.scope == "personal"
+
+
+@pytest.mark.asyncio
+async def test_promote_skill_cohort_to_system():
+    """Cohort skill promotes to system with stronger evidence."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    redis = FakeRedis()
+    manager = SkillLifecycleManager(redis)
+    skill = _skill_lifecycle_entry(
+        skill_id="skill_life_system",
+        scope="cohort",
+        effective_count=50,
+        sample_size=55,
+        avg_confidence=0.86,
+    )
+    await manager.store_skill("u1", skill)
+
+    promoted = await manager.promote_skill("u1", skill.skill_id, "system")
+
+    assert promoted is not None
+    assert promoted.scope == "system"
+    assert promoted.evidence["promotion_history"][-1]["to"] == "system"
+
+
+@pytest.mark.asyncio
+async def test_deprecate_skill():
+    """Deprecation marks the skill but does not delete it."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    redis = FakeRedis()
+    manager = SkillLifecycleManager(redis)
+    skill = _skill_lifecycle_entry()
+    await manager.store_skill("u1", skill)
+
+    await manager.deprecate_skill("u1", skill.skill_id, "user_rejected")
+
+    stored = await manager.get_skill(skill.skill_id)
+    assert stored is not None
+    assert stored.evidence["deprecated"] is True
+    assert stored.evidence["deprecation_reason"] == "user_rejected"
+
+
+@pytest.mark.asyncio
+async def test_auto_deprecate_stale_skill():
+    """Auto deprecation catches skills whose effective count is stale."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    redis = FakeRedis()
+    manager = SkillLifecycleManager(redis)
+    skill = _skill_lifecycle_entry(
+        evidence_extra={"effective_count_updated_at": "2026-03-01T00:00:00Z"},
+    )
+    await manager.store_skill("u1", skill)
+
+    deprecated = await manager.auto_deprecate_check("u1")
+
+    assert deprecated == [skill.skill_id]
+    stored = await manager.get_skill(skill.skill_id)
+    assert stored is not None
+    assert stored.evidence["deprecated"] is True
+    assert stored.evidence["deprecation_reason"] == "effective_count_stale_30_days"
+
+
+@pytest.mark.asyncio
+async def test_auto_deprecate_healthy_skill():
+    """Healthy skills with recent effective outcomes remain active."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    redis = FakeRedis()
+    manager = SkillLifecycleManager(redis)
+    skill = _skill_lifecycle_entry(
+        evidence_extra={
+            "effective_count_updated_at": "2026-04-20T00:00:00Z",
+            "recent_outcomes": ["effective", "effective", "insufficient", "effective", "effective"],
+        },
+    )
+    await manager.store_skill("u1", skill)
+
+    deprecated = await manager.auto_deprecate_check("u1")
+
+    assert deprecated == []
+    stored = await manager.get_skill(skill.skill_id)
+    assert stored is not None
+    assert stored.evidence.get("deprecated") is None
+
+
+def test_compute_skill_health_good():
+    """Healthy skill gets high score and reuse recommendation."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skill = _skill_lifecycle_entry(
+        effective_count=9,
+        sample_size=10,
+        evidence_extra={"recent_outcomes": ["effective", "effective", "effective", "effective"]},
+    )
+
+    health = manager.compute_skill_health(skill)
+
+    assert health["health_score"] == 0.9
+    assert health["trend"] == "stable"
+    assert health["recommendation"] == "promote_or_reuse"
+
+
+def test_compute_skill_health_declining():
+    """Declining recent outcomes trigger review recommendation."""
+    from app.signals.skill_lifecycle import SkillLifecycleManager
+
+    manager = SkillLifecycleManager(FakeRedis())
+    skill = _skill_lifecycle_entry(
+        effective_count=4,
+        sample_size=8,
+        evidence_extra={
+            "recent_outcomes": [
+                "effective",
+                "effective",
+                "effective",
+                "effective",
+                "insufficient",
+                "insufficient",
+                "insufficient",
+                "insufficient",
+            ],
+        },
+    )
+
+    health = manager.compute_skill_health(skill)
+
+    assert health["health_score"] == 0.5
+    assert health["trend"] == "declining"
+    assert health["recommendation"] == "review_or_deprecate"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Task #5: Goal-Respectful Recall Notification
+# ═══════════════════════════════════════════════════════════════════
+
+
+def test_recall_message_undigested_material():
+    """undigested_material → low-effort user-facing message."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    builder = RecallNotificationBuilder()
+    message = builder.build_message(
+        "undigested_material",
+        "low_effort_next_step",
+        {"uploaded": 3, "undigested": 2},
+    )
+    assert message is not None
+    assert message.title == "你的课件还没看完"
+    assert "3份资料" in message.body
+    assert "2份没诊断" in message.body
+    assert message.deep_link == "/materials?filter=undigested"
+
+
+def test_recall_message_task_not_started():
+    """task_not_started → pending task deep link."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    builder = RecallNotificationBuilder()
+    message = builder.build_message("task_not_started", "low_effort_next_step", {})
+    assert message is not None
+    assert message.title == "任务等你开始"
+    assert message.deep_link == "/tasks?status=pending"
+    assert message.frequency_tag == "1_per_day"
+
+
+def test_recall_message_task_missed():
+    """task_missed → recovery_offer message."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    builder = RecallNotificationBuilder()
+    message = builder.build_message("task_missed", "recovery_offer", {})
+    assert message is not None
+    assert message.strategy == "recovery_offer"
+    assert message.title == "有个任务错过了"
+    assert message.frequency_tag == "2_per_day"
+
+
+def test_recall_message_pre_exam_silence():
+    """pre_exam_silence → quick review message."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    builder = RecallNotificationBuilder()
+    message = builder.build_message(
+        "pre_exam_silence",
+        "quick_review_offer",
+        {"exam_deadline_days": 2.0},
+    )
+    assert message is not None
+    assert message.title == "考前快速复习"
+    assert "还有2天就考了" in message.body
+    assert message.deep_link == "/review?mode=quick"
+
+
+def test_recall_message_unknown_trigger_none():
+    """Unknown recall trigger should not build a notification."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    builder = RecallNotificationBuilder()
+    assert builder.build_message("unknown", "low_effort_next_step", {}) is None
+
+
+def test_recall_cooldown_check():
+    """record_sent starts cooldown for the trigger type."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    redis = FakeRedis()
+    builder = RecallNotificationBuilder()
+    builder.record_sent("u_recall", "undigested_material", redis)
+    assert builder.check_cooldown("u_recall", "undigested_material", redis) is True
+
+
+def test_recall_cooldown_not_in_cooldown():
+    """No sent marker means no cooldown."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    redis = FakeRedis()
+    builder = RecallNotificationBuilder()
+    assert builder.check_cooldown("u_recall", "task_not_started", redis) is False
+
+
+def test_recall_record_sent():
+    """record_sent stores sent_at and cooldown_until metadata."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    redis = FakeRedis()
+    builder = RecallNotificationBuilder()
+    builder.record_sent("u_recall", "task_missed", redis)
+    raw = redis._store["spine:recall_notification_cooldown:u_recall:task_missed"]
+    data = json.loads(raw)
+    assert "sent_at" in data
+    assert "cooldown_until" in data
+
+
+def test_recall_user_preference_schema():
+    """Recall preferences are explicit per trigger type."""
+    from app.signals.recall_notification import RecallNotificationBuilder
+
+    schema = RecallNotificationBuilder().build_user_preference_schema()
+    assert schema["undigested_material"]["enabled"] is True
+    assert schema["undigested_material"]["quiet_hours"] == "22:00-08:00"
+    assert schema["task_missed"]["max_per_day"] == 2
+    assert schema["task_not_started"]["max_per_day"] == 1
+
+
+def test_recall_message_serialization():
+    """RecallMessage round-trips through dict serialization."""
+    from app.signals.recall_notification import RecallMessage
+
+    message = RecallMessage(
+        message_id="rmsg_1",
+        trigger_type="task_missed",
+        strategy="recovery_offer",
+        title="有个任务错过了",
+        body="没关系，帮你重新安排了一个更合适的任务。",
+        deep_link="/tasks?status=recovery",
+        cooldown_until="2026-04-27T10:00:00+00:00",
+        frequency_tag="2_per_day",
+    )
+    restored = RecallMessage.from_dict(message.to_dict())
+    assert restored.message_id == "rmsg_1"
+    assert restored.trigger_type == "task_missed"
+    assert restored.frequency_tag == "2_per_day"
+
+
+@pytest.mark.asyncio
+async def test_recall_notification_orchestrator_integration():
+    """Spine builds NotificationDirective and RecallMessage together."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+    message = await spine.build_recall_notification(
+        user_id="u_recall",
+        trigger_type="undigested_material",
+        context={"uploaded": 4, "undigested": 1},
+    )
+    assert message is not None
+    assert "4份资料" in message.body
+
+    stored_message = await spine.get_recall_notification("u_recall")
+    stored_directive = await spine.get_notification_directive("u_recall")
+    assert stored_message is not None
+    assert stored_message.trigger_type == "undigested_material"
+    assert stored_directive is not None
+    assert stored_directive.trigger == "undigested_material"
+
+
+# ══════════════════════════════════════════════════════════════════════
+# P1-3: Core Session Lifecycle
+# ══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_core_session_create():
+    """CoreSessionManager creates an active modeling session."""
+    from app.signals.core_session import CoreSessionManager
+
+    redis = FakeRedis()
+    manager = CoreSessionManager(redis)
+    session = await manager.create_session(user_id="u_session", goal_id="goal_1")
+
+    assert session.session_id.startswith("sess_")
+    assert session.user_id == "u_session"
+    assert session.goal_id == "goal_1"
+    assert session.phase == "modeling"
+    assert redis._store[f"spine:session_active:u_session"] == session.session_id
+
+
+@pytest.mark.asyncio
+async def test_core_session_advance_phases():
+    """CoreSession advances through planning/executing/reflecting."""
+    from app.signals.core_session import CoreSessionManager
+
+    manager = CoreSessionManager(FakeRedis())
+    session = await manager.create_session(user_id="u_phase")
+
+    session = await manager.advance_phase(session.session_id, "planning")
+    assert session.phase == "planning"
+    session = await manager.advance_phase(session.session_id, "executing")
+    assert session.phase == "executing"
+    session = await manager.advance_phase(session.session_id, "reflecting")
+    assert session.phase == "reflecting"
+
+
+@pytest.mark.asyncio
+async def test_core_session_pause_resume():
+    """Pause increments pause_count and resume clears paused snapshot flag."""
+    from app.signals.core_session import CoreSessionManager
+
+    manager = CoreSessionManager(FakeRedis())
+    session = await manager.create_session(user_id="u_pause")
+
+    paused = await manager.pause_session(session.session_id)
+    assert paused.pause_count == 1
+    assert paused.context_snapshot["paused"] is True
+
+    resumed = await manager.resume_session(session.session_id)
+    assert resumed.pause_count == 1
+    assert resumed.context_snapshot["paused"] is False
+
+
+@pytest.mark.asyncio
+async def test_core_session_complete():
+    """Completing a session marks it completed and clears active user pointer."""
+    from app.signals.core_session import CoreSessionManager
+
+    redis = FakeRedis()
+    manager = CoreSessionManager(redis)
+    session = await manager.create_session(user_id="u_complete")
+
+    completed = await manager.complete_session(session.session_id)
+    assert completed.phase == "completed"
+    assert await manager.get_active_session("u_complete") is None
+
+
+@pytest.mark.asyncio
+async def test_core_session_record_tasks():
+    """Task counters track total and completed tasks."""
+    from app.signals.core_session import CoreSessionManager
+
+    manager = CoreSessionManager(FakeRedis())
+    session = await manager.create_session(user_id="u_tasks")
+
+    session = await manager.record_task(session.session_id, completed=False)
+    session = await manager.record_task(session.session_id, completed=True)
+
+    assert session.task_count == 2
+    assert session.completed_task_count == 1
+
+
+@pytest.mark.asyncio
+async def test_core_session_link_directive():
+    """Session stores the most recent linked directive id."""
+    from app.signals.core_session import CoreSessionManager
+
+    manager = CoreSessionManager(FakeRedis())
+    session = await manager.create_session(user_id="u_link")
+
+    linked = await manager.link_directive(session.session_id, "ed_123")
+    assert linked.last_directive_id == "ed_123"
+
+
+def test_core_session_serialization():
+    """CoreSession serializes and restores all lifecycle fields."""
+    from app.signals.core_session import CoreSession
+
+    session = CoreSession(
+        session_id="sess_1",
+        user_id="u_serial",
+        goal_id="goal_1",
+        phase="executing",
+        started_at="2026-04-27T00:00:00+00:00",
+        updated_at="2026-04-27T00:05:00+00:00",
+        pause_count=1,
+        task_count=3,
+        completed_task_count=2,
+        last_directive_id="ed_1",
+        context_snapshot={"paused": False},
+    )
+
+    restored = CoreSession.from_dict(session.to_dict())
+    assert restored.session_id == session.session_id
+    assert restored.task_count == 3
+    assert restored.context_snapshot["paused"] is False
+
+
+@pytest.mark.asyncio
+async def test_core_session_manager_redis():
+    """Manager persists session JSON with 7-day TTL."""
+    from app.signals.core_session import CoreSessionManager
+
+    redis = FakeRedis()
+    manager = CoreSessionManager(redis)
+    session = await manager.create_session(user_id="u_redis")
+    restored = await manager.get_session(session.session_id)
+
+    assert restored is not None
+    assert restored.session_id == session.session_id
+    assert redis._expires[f"spine:session:{session.session_id}"] == 7 * 24 * 3600
+    assert redis._expires["spine:session_active:u_redis"] == 7 * 24 * 3600
+
+
+@pytest.mark.asyncio
+async def test_core_session_active_user():
+    """Active-session lookup returns the newest active session for a user."""
+    from app.signals.core_session import CoreSessionManager
+
+    manager = CoreSessionManager(FakeRedis())
+    first = await manager.create_session(user_id="u_active", goal_id="goal_old")
+    second = await manager.create_session(user_id="u_active", goal_id="goal_new")
+    active = await manager.get_active_session("u_active")
+
+    assert active is not None
+    assert active.session_id == second.session_id
+    assert active.session_id != first.session_id
+    assert active.goal_id == "goal_new"
+
+
+@pytest.mark.asyncio
+async def test_spine_orchestrator_session_integration():
+    """_run_signal_pipeline links generated directive to active CoreSession."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+    session = await spine.create_core_session(user_id="u_integrated", goal_id="goal_pipe")
+    signal = ActionableSignal(
+        signal_id="sig_core_session",
+        source_event_ids=["evt_core_session"],
+        source_system="test",
+        state_key="task_granularity_fit",
+        claim="recent_task_too_large",
+        confidence=0.8,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="连续 2 次超时",
+        possible_effects=["cap_task_duration"],
+        priority="high",
+    )
+
+    trace = await spine._run_signal_pipeline(user_id="u_integrated", signal=signal)
+    active = await spine.get_active_core_session("u_integrated")
+
+    assert trace is not None
+    assert active is not None
+    assert active.session_id == session.session_id
+    assert active.last_directive_id is not None
+    assert active.last_directive_id in trace.directive_ids
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P2-1: PolicyEffectLedger Analytics
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _policy_effect(
+    entry_id: str,
+    policy_key: str,
+    attribution: str,
+    confidence: float = 0.8,
+    feedback: str | None = None,
+):
+    """Build a PolicyEffectEntry for analytics tests."""
+    from app.signals.types import PolicyEffectEntry
+
+    return PolicyEffectEntry(
+        entry_id=entry_id,
+        policy_key=policy_key,
+        intervention_summary="test intervention",
+        attribution=attribution,
+        attribution_confidence=confidence,
+        user_feedback_signal=feedback,
+    )
+
+
+def test_compute_strategy_accuracy_basic():
+    """Accuracy is computed per policy_key."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+    effects = [
+        _policy_effect("pe_1", "recover_execution_rhythm", "effective"),
+        _policy_effect("pe_2", "recover_execution_rhythm", "insufficient"),
+        _policy_effect("pe_3", "sustain_momentum", "effective"),
+    ]
+
+    accuracy = analytics.compute_strategy_accuracy(effects)
+
+    assert accuracy["recover_execution_rhythm"] == 0.5
+    assert accuracy["sustain_momentum"] == 1.0
+
+
+def test_compute_strategy_accuracy_empty():
+    """Empty ledgers return an empty accuracy map."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+
+    assert analytics.compute_strategy_accuracy([]) == {}
+
+
+def test_detect_degrading_strategies():
+    """A policy is degrading when its latest window performs worse than all history."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+    effects = [
+        _policy_effect(f"pe_good_{i}", "recover_execution_rhythm", "effective")
+        for i in range(8)
+    ]
+    effects += [
+        _policy_effect(f"pe_bad_{i}", "recover_execution_rhythm", "insufficient")
+        for i in range(2)
+    ]
+
+    assert analytics.detect_degrading_strategies(effects, window=2) == ["recover_execution_rhythm"]
+
+
+def test_detect_degrading_stable():
+    """Stable policies are not marked as degrading."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+    effects = [
+        _policy_effect(f"pe_{i}", "sustain_momentum", "effective")
+        for i in range(5)
+    ]
+
+    assert analytics.detect_degrading_strategies(effects, window=2) == []
+
+
+def test_compute_confidence_distribution():
+    """Confidence stats include core descriptive statistics."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+    effects = [
+        _policy_effect("pe_1", "policy", "effective", confidence=0.6),
+        _policy_effect("pe_2", "policy", "effective", confidence=0.8),
+        _policy_effect("pe_3", "policy", "insufficient", confidence=1.0),
+    ]
+
+    stats = analytics.compute_confidence_distribution(effects)
+
+    assert stats["count"] == 3
+    assert stats["mean"] == 0.8
+    assert stats["median"] == 0.8
+    assert stats["min"] == 0.6
+    assert stats["max"] == 1.0
+    assert stats["std"] > 0
+
+
+def test_suggest_policy_review():
+    """Low accuracy, confidence decline, and mixed feedback trigger review."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+    effects = [
+        _policy_effect("pe_1", "recover_execution_rhythm", "effective", 0.9, "completed"),
+        _policy_effect("pe_2", "recover_execution_rhythm", "insufficient", 0.82, "too_hard"),
+        _policy_effect("pe_3", "recover_execution_rhythm", "insufficient", 0.68, "cant_understand"),
+        _policy_effect("pe_4", "recover_execution_rhythm", "insufficient", 0.58, "too_hard"),
+    ]
+
+    suggestions = analytics.suggest_policy_review(effects)
+
+    assert len(suggestions) == 1
+    suggestion = suggestions[0]
+    assert suggestion["policy_key"] == "recover_execution_rhythm"
+    assert "low_accuracy" in suggestion["reasons"]
+    assert "confidence_declining" in suggestion["reasons"]
+    assert "mixed_user_feedback" in suggestion["reasons"]
+
+
+def test_suggest_policy_review_none_needed():
+    """Healthy policies produce no human review suggestions."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+    effects = [
+        _policy_effect(f"pe_{i}", "sustain_momentum", "effective", 0.85, "completed")
+        for i in range(5)
+    ]
+
+    assert analytics.suggest_policy_review(effects) == []
+
+
+def test_build_analytics_snapshot():
+    """Snapshot combines all policy analytics outputs."""
+    from app.signals.policy_analytics import PolicyAnalytics
+
+    analytics = PolicyAnalytics(redis_client=None)
+    effects = [
+        _policy_effect(f"pe_good_{i}", "recover_execution_rhythm", "effective", 0.8)
+        for i in range(10)
+    ]
+    effects += [
+        _policy_effect(f"pe_bad_{i}", "recover_execution_rhythm", "insufficient", 0.6)
+        for i in range(2)
+    ]
+
+    snapshot = analytics.build_analytics_snapshot("u_analytics", effects)
+
+    assert snapshot["user_id"] == "u_analytics"
+    assert snapshot["total_effects"] == 12
+    assert snapshot["accuracy_by_policy"]["recover_execution_rhythm"] == 0.8333
+    assert snapshot["degrading"] == ["recover_execution_rhythm"]
+    assert snapshot["confidence_stats"]["count"] == 12
+    assert "review_suggestions" in snapshot
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Task #8: P2-3 — Relationship Model
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_relationship_create_default():
+    """RelationshipModelService creates a default relationship state."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+    state = await service.get_or_create("u_rel")
+
+    assert state.user_id == "u_rel"
+    assert state.trust_level == 0.5
+    assert state.interaction_style == "exploratory"
+    assert state.correction_frequency == 0.0
+    assert state.engagement_depth == "surface"
+    assert state.total_interactions == 0
+
+
+@pytest.mark.asyncio
+async def test_relationship_update_confirmed():
+    """Confirmed interactions increase trust and confirmation count."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+    state = await service.update_from_interaction("u_rel", "confirmed")
+
+    assert state.trust_level == 0.52
+    assert state.total_interactions == 1
+    assert state.total_confirmations == 1
+    assert state.total_corrections == 0
+
+
+@pytest.mark.asyncio
+async def test_relationship_update_corrected():
+    """Corrected interactions lower trust and update correction frequency."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+    state = await service.update_from_interaction("u_rel", "corrected")
+
+    assert state.trust_level == 0.45
+    assert state.total_corrections == 1
+    assert state.correction_frequency == 10.0
+    assert state.interaction_style == "corrective"
+
+
+@pytest.mark.asyncio
+async def test_relationship_update_dismissed():
+    """Dismissed interactions lower trust slightly."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+    state = await service.update_from_interaction("u_rel", "dismissed")
+
+    assert state.trust_level == 0.49
+    assert state.total_interactions == 1
+    assert state.preferences["last_interaction_type"] == "dismissed"
+
+
+@pytest.mark.asyncio
+async def test_relationship_trust_bounds():
+    """Trust level stays within floor and cap."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+    for _ in range(40):
+        low_state = await service.update_from_interaction("u_low", "corrected")
+    for _ in range(40):
+        high_state = await service.update_from_interaction("u_high", "confirmed")
+
+    assert low_state.trust_level == 0.1
+    assert high_state.trust_level == 1.0
+
+
+@pytest.mark.asyncio
+async def test_relationship_interaction_style():
+    """Repeated corrections, ignored turns, and confirmations infer styles."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+
+    corrected = await service.update_from_interaction("u_corrective", "corrected")
+    assert corrected.interaction_style == "corrective"
+
+    await service.update_from_interaction("u_passive", "ignored")
+    await service.update_from_interaction("u_passive", "dismissed")
+    passive = await service.update_from_interaction("u_passive", "ignored")
+    assert passive.interaction_style == "passive"
+
+    await service.update_from_interaction("u_directive", "confirmed")
+    await service.update_from_interaction("u_directive", "confirmed")
+    directive = await service.update_from_interaction("u_directive", "confirmed")
+    assert directive.interaction_style == "directive"
+
+
+@pytest.mark.asyncio
+async def test_relationship_strategy_conservative():
+    """Low trust uses conservative strategy adjustments."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+    for _ in range(6):
+        await service.update_from_interaction("u_rel", "corrected")
+
+    adjustment = await service.get_strategy_adjustment("u_rel")
+
+    assert adjustment["tone_adjustment"] == "conservative"
+    assert adjustment["proactivity_level"] == "confirm_before_acting"
+    assert adjustment["requires_confirmation"] is True
+    assert adjustment["include_why_evidence"] is True
+    assert adjustment["explanation_depth"] == "brief_with_evidence"
+
+
+@pytest.mark.asyncio
+async def test_relationship_strategy_proactive():
+    """High trust uses proactive strategy adjustments."""
+    from app.signals.relationship_model import RelationshipModelService
+
+    service = RelationshipModelService(FakeRedis())
+    for _ in range(16):
+        await service.update_from_interaction("u_rel", "confirmed")
+
+    adjustment = await service.get_strategy_adjustment("u_rel")
+
+    assert adjustment["tone_adjustment"] == "confident"
+    assert adjustment["proactivity_level"] == "act_first"
+    assert adjustment["explanation_depth"] == "summary"
+    assert adjustment["requires_confirmation"] is False
+
+
+# ══════ Task #10: Growth Chronicle ═══════════════════════════════════
+
+def test_chronicle_entry_create():
+    """ChronicleEntry serializes and deserializes as a user-governed story artifact."""
+    from app.signals.growth_chronicle import ChronicleEntry
+
+    entry = ChronicleEntry(
+        entry_id="chron_1",
+        user_id="u1",
+        entry_type="milestone",
+        timestamp="2026-04-27T10:00:00+00:00",
+        title="里程碑：完成复盘",
+        narrative="你完成了一次关键复盘。",
+        evidence_refs=["or_1", "trace_1"],
+        user_editable=True,
+    )
+
+    data = entry.to_dict()
+    restored = ChronicleEntry.from_dict(data)
+
+    assert data["user_editable"] is True
+    assert restored.entry_id == "chron_1"
+    assert restored.user_hidden is False
+
+
+def test_build_milestone_from_outcome():
+    """Effective high-confidence outcomes become milestone entries."""
+    from app.signals.growth_chronicle import GrowthChronicleService
+
+    service = GrowthChronicleService(redis_client=None)
+    entry = service.build_milestone_from_outcome({
+        "outcome_id": "or_1",
+        "causal_trace_id": "trace_1",
+        "user_id": "u1",
+        "intervention": "25分钟小任务",
+        "reason": "拆小任务",
+        "attribution": "effective",
+        "attribution_confidence": 0.86,
+        "actual_outcome": {"count": 3, "type": "复习", "strategy": "25分钟小任务"},
+        "created_at": "2026-04-27T10:00:00+00:00",
+    })
+
+    assert entry is not None
+    assert entry.entry_type == "milestone"
+    assert entry.user_editable is True
+    assert "连续3次" in entry.narrative
+    assert "or_1" in entry.evidence_refs
+    assert "trace_1" in entry.evidence_refs
+
+
+def test_build_milestone_insufficient_outcome():
+    """Insufficient or low-confidence outcomes do not enter the chronicle."""
+    from app.signals.growth_chronicle import GrowthChronicleService
+
+    service = GrowthChronicleService(redis_client=None)
+
+    assert service.build_milestone_from_outcome({
+        "outcome_id": "or_low",
+        "user_id": "u1",
+        "attribution": "effective",
+        "attribution_confidence": 0.6,
+    }) is None
+    assert service.build_milestone_from_outcome({
+        "outcome_id": "or_bad",
+        "user_id": "u1",
+        "attribution": "insufficient",
+        "attribution_confidence": 0.9,
+    }) is None
+
+
+def test_build_turning_point_from_correction():
+    """User corrections become turning-point entries with explicit lesson text."""
+    from app.signals.growth_chronicle import GrowthChronicleService
+
+    service = GrowthChronicleService(redis_client=None)
+    entry = service.build_turning_point_from_correction({
+        "correction_id": "corr_1",
+        "trace_id": "trace_2",
+        "user_id": "u1",
+        "topic": "概率题卡点",
+        "lesson": "先区分公式不会还是题意没读懂",
+    })
+
+    assert entry.entry_type == "turning_point"
+    assert entry.user_editable is True
+    assert "概率题卡点" in entry.title
+    assert "系统对概率题卡点的判断有偏差" in entry.narrative
+    assert "corr_1" in entry.evidence_refs
+
+
+def test_build_pattern_discovery():
+    """Five outcomes with the same strategy produce a pattern discovery entry."""
+    from app.signals.growth_chronicle import GrowthChronicleService
+
+    service = GrowthChronicleService(redis_client=None)
+    patterns = [
+        {
+            "outcome_id": f"or_{i}",
+            "causal_trace_id": f"trace_{i}",
+            "user_id": "u1",
+            "strategy": "例题后立刻练习",
+            "actual_outcome": {"type": "数学"},
+        }
+        for i in range(5)
+    ]
+
+    entry = service.build_pattern_discovery(patterns)
+
+    assert entry is not None
+    assert entry.entry_type == "pattern_discovered"
+    assert entry.user_editable is True
+    assert "例题后立刻练习" in entry.narrative
+    assert len(entry.evidence_refs) == 10
+
+
+@pytest.mark.asyncio
+async def test_chronicle_hide_entry():
+    """Hidden entries remain stored but disappear from the visible chronicle."""
+    from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+
+    redis = FakeRedis()
+    service = GrowthChronicleService(redis)
+    entry = ChronicleEntry(
+        entry_id="chron_hide",
+        user_id="u1",
+        entry_type="milestone",
+        timestamp="2026-04-27T10:00:00+00:00",
+        title="里程碑：开始行动",
+        narrative="你开始行动了。",
+        evidence_refs=["or_1"],
+        user_editable=True,
+    )
+
+    await service.add_entry("u1", entry)
+    await service.hide_entry("u1", "chron_hide")
+
+    assert await service.get_chronicle("u1") == []
+    raw = await redis.get("spine:chronicle:u1")
+    assert json.loads(raw)[0]["user_hidden"] is True
+
+
+@pytest.mark.asyncio
+async def test_chronicle_edit_entry():
+    """Editable chronicle entries can be rewritten by the user."""
+    from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+
+    redis = FakeRedis()
+    service = GrowthChronicleService(redis)
+    entry = ChronicleEntry(
+        entry_id="chron_edit",
+        user_id="u1",
+        entry_type="turning_point",
+        timestamp="2026-04-27T10:00:00+00:00",
+        title="转折点：修正计划",
+        narrative="旧叙事",
+        evidence_refs=["corr_1"],
+        user_editable=True,
+    )
+
+    await service.add_entry("u1", entry)
+    await service.edit_entry("u1", "chron_edit", "这是我自己改过的叙事。")
+
+    entries = await service.get_chronicle("u1")
+    assert entries[0].narrative == "这是我自己改过的叙事。"
+
+
+@pytest.mark.asyncio
+async def test_weekly_summary():
+    """Weekly summaries are template-based aggregations of visible entries."""
+    from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+
+    redis = FakeRedis()
+    service = GrowthChronicleService(redis)
+    await service.add_entry("u1", ChronicleEntry(
+        entry_id="chron_week_1",
+        user_id="u1",
+        entry_type="milestone",
+        timestamp="2026-04-27T10:00:00+00:00",
+        title="里程碑：连续完成复习",
+        narrative="你连续完成了复习任务。",
+        evidence_refs=["or_1"],
+        user_editable=True,
+    ))
+    await service.add_entry("u1", ChronicleEntry(
+        entry_id="chron_week_2",
+        user_id="u1",
+        entry_type="turning_point",
+        timestamp="2026-04-27T11:00:00+00:00",
+        title="转折点：纠正了系统判断",
+        narrative="你纠正了系统判断。",
+        evidence_refs=["corr_1"],
+        user_editable=True,
+    ))
+
+    summary = await service.generate_weekly_summary("u1")
+
+    assert "新增了2条记录" in summary
+    assert "1个里程碑" in summary
+    assert "1次重要修正" in summary
+    assert "你可以继续编辑或隐藏" in summary
