@@ -2107,6 +2107,153 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recall_notification_task")
+def recall_notification_task(self, user_id: str, trigger_type: str, context: str = "{}"):
+    """
+    Spine v2.0 Recall: Build and push a recall notification for a single user.
+
+    Uses SpineOrchestrator.build_recall_notification() which:
+    1. Checks cooldown
+    2. Runs through PolicyEngine
+    3. Builds NotificationDirective + RecallMessage
+    4. Stores in Redis for frontend consumption
+
+    Then pushes via NotificationPushService if a message was produced.
+    """
+    import json
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationCreate
+
+    parsed_context = json.loads(context) if isinstance(context, str) else context
+
+    async def _run():
+        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        spine = SpineOrchestrator(redis=redis)
+
+        message = await spine.build_recall_notification(
+            user_id=user_id,
+            trigger_type=trigger_type,
+            context=parsed_context,
+        )
+        if message is None:
+            return {"status": "skipped", "reason": "cooldown_or_policy_blocked"}
+
+        async with AsyncSessionLocal() as session:
+            deep_link = message.deep_link or "/chat?source=recall"
+            await NotificationService.create(
+                session,
+                UUID(user_id),
+                NotificationCreate(
+                    title=message.title,
+                    content=message.body,
+                    type="recall_notification",
+                    data={
+                        "trigger_type": message.trigger_type,
+                        "strategy": message.strategy,
+                        "message_id": message.message_id,
+                        "cooldown_until": message.cooldown_until,
+                        "frequency_tag": message.frequency_tag,
+                        "deep_link": deep_link,
+                    },
+                ),
+                push_via_websocket=True,
+            )
+
+        logger.info(
+            "Recall notification sent: user=%s trigger=%s strategy=%s",
+            user_id, trigger_type, message.strategy,
+        )
+        return {"status": "sent", "user_id": user_id, "trigger_type": trigger_type}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("recall_notification_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_recall_notifications")
+def scan_recall_notifications(self, limit: int = 500):
+    """
+    Spine v2.0 Recall: Scan active users and dispatch recall_notification_task
+    for each applicable trigger type.
+
+    Trigger detection uses data from Redis/DB:
+    - undigested_material: uploaded but not diagnosed files
+    - task_not_started: assigned tasks not started after 1h
+    - task_missed: overdue tasks
+    - pre_exam_silence: exam within 48h + no activity for 5h
+
+    Runs every 30 minutes via Celery beat.
+    """
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import and_, select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.plan import Plan
+    from app.models.user import User
+
+    TRIGGER_TYPES = ["undigested_material", "task_not_started", "task_missed", "pre_exam_silence"]
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+            active_plan_users = (
+                select(Plan.user_id)
+                .where(
+                    and_(
+                        Plan.is_active.is_(True),
+                        Plan.target_date.isnot(None),
+                        Plan.not_deleted_filter(),
+                    )
+                )
+                .distinct()
+            )
+            stmt = (
+                select(User.id)
+                .where(
+                    and_(
+                        User.is_active.is_(True),
+                        User.last_login_at >= cutoff,
+                        User.id.in_(active_plan_users),
+                    )
+                )
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            user_ids = [str(row[0]) for row in result.all()]
+
+        dispatched = 0
+        for uid in user_ids:
+            for trigger_type in TRIGGER_TYPES:
+                celery_app.send_task(
+                    "app.core.celery_tasks.recall_notification_task",
+                    args=(uid, trigger_type, json.dumps({})),
+                    queue="default",
+                )
+                dispatched += 1
+
+        logger.info(
+            "Recall scan: %d users × %d triggers = %d tasks dispatched",
+            len(user_ids), len(TRIGGER_TYPES), dispatched,
+        )
+        return {"users": len(user_ids), "dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_recall_notifications failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300)
+
+
 @celery_app.task(bind=True, max_retries=2, name="aggregate_community_error_patterns")
 def aggregate_community_error_patterns(self):
     """Periodically aggregate anonymous community error patterns onto knowledge nodes."""

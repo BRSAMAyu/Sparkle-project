@@ -8196,3 +8196,130 @@ async def test_weekly_summary():
     assert "1个里程碑" in summary
     assert "1次重要修正" in summary
     assert "你可以继续编辑或隐藏" in summary
+
+
+# ── P2-8: Notification Service Integration Tests ──────────────────────────
+
+from app.signals.recall_notification import RecallNotificationBuilder
+
+
+@pytest.mark.asyncio
+async def test_recall_notification_build_and_store():
+    """RecallNotificationBuilder produces message + stores in Redis via SpineOrchestrator."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+
+    message = await spine.build_recall_notification(
+        user_id="u1",
+        trigger_type="undigested_material",
+        context={"material_count": 5, "undigested": 2},
+    )
+    assert message is not None
+    assert message.trigger_type == "undigested_material"
+    assert message.strategy == "low_effort_next_step"
+    assert "5" in message.body
+    assert "2" in message.body
+    assert message.message_id.startswith("rmsg_")
+
+    # Verify stored in Redis
+    stored = await spine.get_recall_notification("u1")
+    assert stored is not None
+    assert stored.message_id == message.message_id
+
+
+@pytest.mark.asyncio
+async def test_recall_notification_cooldown_blocks_duplicate():
+    """Second recall notification within cooldown period is blocked."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+
+    msg1 = await spine.build_recall_notification(
+        user_id="u1",
+        trigger_type="task_not_started",
+        context={},
+    )
+    assert msg1 is not None
+
+    # Second call for same trigger type → blocked by cooldown
+    msg2 = await spine.build_recall_notification(
+        user_id="u1",
+        trigger_type="task_not_started",
+        context={},
+    )
+    assert msg2 is None
+
+
+@pytest.mark.asyncio
+async def test_recall_notification_different_triggers_independent_cooldown():
+    """Different trigger types have independent cooldowns."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+
+    msg1 = await spine.build_recall_notification(
+        user_id="u1",
+        trigger_type="undigested_material",
+        context={"material_count": 3, "undigested": 1},
+    )
+    assert msg1 is not None
+
+    # Different trigger → not blocked
+    msg2 = await spine.build_recall_notification(
+        user_id="u1",
+        trigger_type="pre_exam_silence",
+        context={"days_to_exam": 1, "exam_deadline_days": 1},
+    )
+    assert msg2 is not None
+    assert msg2.trigger_type == "pre_exam_silence"
+
+
+@pytest.mark.asyncio
+async def test_recall_notification_pre_exam_silence_template():
+    """Pre-exam silence trigger uses correct template with days_to_exam."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+
+    message = await spine.build_recall_notification(
+        user_id="u1",
+        trigger_type="pre_exam_silence",
+        context={"days_to_exam": 2, "exam_deadline_days": 2},
+    )
+    assert message is not None
+    assert "2" in message.body
+    assert message.deep_link == "/review?mode=quick"
+
+
+@pytest.mark.asyncio
+async def test_recall_notification_task_missed_recovery():
+    """Task missed trigger produces recovery_offer strategy."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis_client=redis)
+
+    message = await spine.build_recall_notification(
+        user_id="u1",
+        trigger_type="task_missed",
+        context={},
+    )
+    assert message is not None
+    assert message.strategy == "recovery_offer"
+    assert message.deep_link == "/tasks?status=recovery"
+
+
+@pytest.mark.asyncio
+async def test_recall_notification_builder_user_preference_schema():
+    """RecallNotificationBuilder exposes user preference schema."""
+    builder = RecallNotificationBuilder()
+    schema = builder.build_user_preference_schema()
+    assert "undigested_material" in schema
+    assert "task_not_started" in schema
+    assert "task_missed" in schema
+    assert "pre_exam_silence" in schema
+    assert schema["undigested_material"]["max_per_day"] == 1
+    assert schema["task_missed"]["max_per_day"] == 2
+
+
+@pytest.mark.asyncio
+async def test_celery_recall_task_import():
+    """Celery recall tasks are importable and registered."""
+    from app.core.celery_tasks import recall_notification_task, scan_recall_notifications
+    assert recall_notification_task.name == "app.core.celery_tasks.recall_notification_task"
+    assert scan_recall_notifications.name == "app.core.celery_tasks.scan_recall_notifications"

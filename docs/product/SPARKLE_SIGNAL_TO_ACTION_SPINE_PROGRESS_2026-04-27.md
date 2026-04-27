@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-336/336 tests passing:
+450/450 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -198,6 +198,8 @@
 - P4 Production directive consumption: 12 tests (3 prompt + 4 plan + 1 model-write + 1 retrieval + 1 retrieval-pipeline + 1 UX + 1 notification)
 - P5 Causal Audit Timeline API: 8 tests (3 timeline CRUD + 1 timeline format + 1 state packet + 1 empty state + 1 metrics + 1 directive-by-id)
 - E2E 7-Day Exam Sprint Acceptance: 6 tests (Day 0 rescue + Day 1-2 timeout + Day 3-4 error strategy + full causal trace + user correction + momentum stalled)
+- v2.0 Closed Loops: 74+ tests (skill lifecycle 7, community loops 9, core session 9, goal type 8, growth chronicle 9, policy analytics 8, recall notification 7, relationship model 8, quality cross-check 6, ExamSprintPolicy 15, SourceTrayIntegration 6, soft difficulty + momentum 4+)
+- P2-8 Notification Integration: 7 tests (build+store, cooldown, independent triggers, pre-exam template, task missed recovery, preference schema, Celery task registration)
 
 ---
 
@@ -856,9 +858,9 @@
 
 ---
 
-## 当前状态: v2.0 Source Layer IN PROGRESS
+## 当前状态: v2.0 COMPLETE
 
-**336/336 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **2 divine moments implemented**
+**450/450 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **3 divine moments implemented** | **Notification service integrated**
 
 ### v1.1 完成任务
 - [x] P0-1: Achievement → PolicyEngine (3-tier rules + soft difficulty + shadow learning)
@@ -876,8 +878,16 @@
 
 ### v2.0 剩余
 - [x] SourceAsset ↔ RetrievalDirective integration
-- [ ] Community commitment loop (Divine Moment 6 completion)
-- [ ] Notification service integration (recall activation)
+- [x] Community commitment loop (Divine Moment 6 completion)
+- [x] Notification service integration (recall activation)
+
+### v2.0 Notification Integration (COMPLETE)
+- `recall_notification_task` — Celery task: single user → SpineOrchestrator.build_recall_notification() → NotificationService.create() push
+- `scan_recall_notifications` — Celery task: scan active users with plans → dispatch per-trigger tasks
+- 4 trigger types: undigested_material, task_not_started, task_missed, pre_exam_silence
+- Cooldown enforced per trigger type via RecallNotificationBuilder
+- PolicyEngine gates notification delivery
+- Frontend retrieves via `spine.get_recall_notification(user_id)` from Redis
 
 ---
 
