@@ -942,4 +942,66 @@ types.py                    — 7 core data objects + all dataclasses
 
 ---
 
+## Final Audit: Signal-to-Action Spine v2.0 COMPLETE
+
+### Final Spec Coverage
+
+| Section | Status | Notes |
+|---------|--------|-------|
+| P0-1: FirstMinuteSnapshot | ✅ | ExamRescueDetector + 14 tests |
+| P0-2: TimeContext + StaleStateGuard | ✅ | 60-min threshold + 4 recovery options |
+| P0-3: ActionableStatePacket v1 | ✅ | Structured fields for downstream |
+| P0-4: ExecutionDirective | ✅ | 3 hard constraints (duration/chapter/type) |
+| P0-5: RetrievalDirective / ContextPlan | ✅ | 5 retrieval modes + pollution_guard |
+| P0-6: SourceAsset / SourceSlice | ✅ | SourceTrayState + relevance scoring |
+| P0-7: ContextReceipt | ✅ | SourceTrayIntegration receipt builder |
+| P0-8: DirectiveApplicationAudit | ✅ | DirectiveAuditor verifies constraints |
+| P0-9: UserVisibleReceipt | ✅ | Short, specific, correctable |
+| P0-10: CausalTrace | ✅ | Full chain: event→signal→policy→directive→audit→receipt |
+| P1-1 through P1-6 | ✅ | All 6 items complete |
+| P2-1 through P2-5 | ✅ | Self-improving learning layer |
+| P3-1 through P3-3 | ✅ | General goal OS layer |
+| P4: Research-grade | ✅ | Counterfactual + simulator + marketplace |
+
+### 10 Iron Laws — All Covered by Tests
+
+| Iron Law | Test Coverage |
+|----------|--------------|
+| 1. No-action signal is noise | SignalRanker filters + orphan_signal_count metric |
+| 2. No-audit directive is hallucination | DirectiveAuditor constraint verification |
+| 3. No-outcome action is not learning | OutcomeRecorder + shadow learning loop |
+| 4. No-receipt personalization is invisible | UserVisibleReceipt with 3 correction actions |
+| 5. Material must not pollute context | pollution_guard=strict + SourceTrayIntegration |
+| 6. RAG is ContextPlan not switch | 5 retrieval modes + token_budget |
+| 7. Sprint state must not become personality | scope TTL clamp + relationship 30-day TTL |
+| 8. High-impact judgment must be correctable | handle_user_receipt_action + E2E correction |
+| 9. Full Aurora not always-on | AuroraWakeJudge + quota/cooldown |
+| 10. Sparkle must change action | E2E 7-day exam sprint acceptance |
+
+### 6 Divine Moments — All Implemented
+
+| Divine Moment | Implementation |
+|---------------|---------------|
+| 15.1: It sees my persistence | AchievementMomentum → momentum_high/low signal |
+| 15.2: It admits misjudgment | handle_user_receipt_action("correct") → retraction + strategy switch |
+| 15.3: It knows when not to use materials | RetrievalDirective pollution_guard + ContextReceipt |
+| 15.4: It remembers time passed | StaleStateGuard → TimeDeltaPacket recovery options |
+| 15.5: It prevents low-yield action | ExamSprintPolicy D-7→D-0 phases + avoid_new_chapter |
+| 15.6: It turns community experience into strategy | CommunityLoopManager cohort_mistake → anonymous hint → verified task |
+
+### Summary Statistics
+
+```
+484/484 tests passing
+37 signal modules (excluding __init__.py)
+46 public API exports
+9/9 directive types active
+10/10 Iron Laws tested
+6/6 Divine Moments implemented
+8-layer architecture complete
+28 production wiring points
+```
+
+---
+
 *(每次 stage 完成后更新此文档)*
