@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-565/565 tests passing:
+575/575 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -210,6 +210,7 @@
 - v2.6 GoalWorldGraph: 5 tests (create graph, update mastery, find bottleneck, suggest focus, add dependency)
 - v2.6 MultiGoalArbitration: 10 tests (single goal, deadline urgent, bottleneck severity, user override, paused, conflicts, redis register/get, spine integration)
 - v2.6 Spine Goal Integration: 3 tests (get graph none, focus empty, arbitrate no goals)
+- v2.7 E2E Test Matrix: 10 tests (#4 no retrieval + receipt, #5 user requests source, #8 multi-goal conflict, #9 Redis degraded, #10 snapshot rehydration, #11 fatigue guard, #12 crisis mode)
 - v2.5 E2E Chain Repair: 7 tests (chronicle injection, fatigue injection, crisis injection, no-chronicle, correction→self_model, concurrency guard, metrics TTL)
 
 ---
@@ -869,9 +870,24 @@
 
 ---
 
-## 当前状态: v2.6 COMPLETE — General Goal OS
+## 当前状态: v2.7 COMPLETE — E2E Test Matrix Verified
 
-**565/565 tests passing** | **9/9 directive types active** | **55+ public API exports** | **42 signal modules**
+**575/575 tests passing** | **9/9 directive types active** | **55+ public API exports** | **42 signal modules**
+
+### v2.7 (E2E Test Matrix) — ALL 12 SCENARIOS COVERED
+- [x] #1: First Minute Aha → exam rescue detection (test_e2e_exam_sprint_day0)
+- [x] #2: 用户离开2h → Recovery Card (StaleStateGuard tests)
+- [x] #3: 用户纠正 → 自我纠错 (test_e2e_exam_sprint_user_correction_flow)
+- [x] #4: 普通概念问题 → 不调用课件 + ContextReceipt (TestE2EMatrixScenario4)
+- [x] #5: 用户明确按课件讲 → SourceSlice retrieval (TestE2EMatrixScenario5)
+- [x] #6: 七连胜 → Growth Card + 策略改变 (test_e2e_exam_sprint_momentum_stalled)
+- [x] #7: 社区共性错因 → 任务模板改变 (CommunityLoopManager tests)
+- [x] #8: 多目标冲突 → MultiGoalArbitration (TestE2EMatrixScenario8)
+- [x] #9: Redis down → Degraded Mode (TestE2EMatrixScenario9)
+- [x] #10: 老用户3月回归 → Snapshot Rehydration (TestE2EMatrixScenario10)
+- [x] #11: 考前24h高频 → FatigueGuard (TestE2EMatrixScenario11)
+- [x] #12: 零基础3天考试 → Crisis Mode (TestE2EMatrixScenario12)
+- 10 new E2E integration tests added
 
 ### v2.6 (General Goal OS) — ALL COMPLETE
 - [x] GoalWorldGraph — per-goal dependency/prerequisite graph with bottleneck detection + focus suggestions
@@ -1093,14 +1109,15 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-565/565 tests passing
+575/575 tests passing
 42 signal modules (excluding __init__.py)
 55 public API exports (incl. GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
 9/9 directive types active
 10/10 Iron Laws tested
 6/6 Divine Moments implemented
+12/12 E2E test scenarios verified
 8-layer architecture complete
-v2.6 General Goal OS: GoalWorldGraph + MultiGoalArbitration + user override + conflict detection
+v2.7 E2E Test Matrix: all 12 required scenarios have integration test coverage
 ```
 
 ---
