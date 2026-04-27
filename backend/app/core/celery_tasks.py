@@ -2273,3 +2273,93 @@ def aggregate_community_error_patterns(self):
     except Exception as exc:
         logger.error(f"aggregate_community_error_patterns failed: {exc}")
         raise self.retry(exc=exc, countdown=300)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_snapshot_task")
+def spine_snapshot_task(self, user_id: str):
+    """
+    Spine v2.1: Save a snapshot of the user's Spine state for recovery after TTL expiry.
+
+    Snapshots persist for 90 days in Redis and include:
+    - Active states from StateRegister
+    - Relationship model state
+    - Growth chronicle summary
+    - Recent policy effects
+    - Known skills
+    """
+    async def _run():
+        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        spine = SpineOrchestrator(redis_client=redis)
+        snapshot = await spine.save_spine_snapshot(user_id=user_id)
+        return {"status": "saved", "snapshot_id": snapshot.get("snapshot_id")}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("spine_snapshot_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_spine_snapshots")
+def scan_spine_snapshots(self, limit: int = 500):
+    """
+    Spine v2.1: Daily scan — save snapshots for all active users with plans.
+
+    Runs daily via Celery beat to ensure long-term stability.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import and_, select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.plan import Plan
+    from app.models.user import User
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+            active_plan_users = (
+                select(Plan.user_id)
+                .where(
+                    and_(
+                        Plan.is_active.is_(True),
+                        Plan.target_date.isnot(None),
+                        Plan.not_deleted_filter(),
+                    )
+                )
+                .distinct()
+            )
+            stmt = (
+                select(User.id)
+                .where(
+                    and_(
+                        User.is_active.is_(True),
+                        User.last_login_at >= cutoff,
+                        User.id.in_(active_plan_users),
+                    )
+                )
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            user_ids = [str(row[0]) for row in result.all()]
+
+        dispatched = 0
+        for uid in user_ids:
+            celery_app.send_task(
+                "app.core.celery_tasks.spine_snapshot_task",
+                args=(uid,),
+                queue="default",
+            )
+            dispatched += 1
+
+        logger.info("Spine snapshot scan: %d users, %d tasks dispatched", len(user_ids), dispatched)
+        return {"users": len(user_ids), "dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_spine_snapshots failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300)

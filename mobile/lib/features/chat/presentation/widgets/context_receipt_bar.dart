@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 
 class ContextReceiptBar extends StatelessWidget {
   const ContextReceiptBar({required this.rawMetadata, super.key});
@@ -225,6 +226,37 @@ class _ReceiptDetailSheet extends StatelessWidget {
               (name) => _SourceRow(name: name, isUsed: false),
             ),
           ],
+          const SizedBox(height: 12),
+          // Link to full causal timeline
+          GestureDetector(
+            onTap: () {
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+              Navigator.of(context).pop();
+              showModalBottomSheet<void>(
+                context: context,
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (_) => DraggableScrollableSheet(
+                  expand: false,
+                  initialChildSize: 0.7,
+                  minChildSize: 0.4,
+                  maxChildSize: 0.92,
+                  builder: (_, controller) => const CausalTimelinePanel(),
+                ),
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.timeline, size: 13, color: DS.brandPrimary),
+                const SizedBox(width: 4),
+                Text(
+                  '查看完整决策链路',
+                  style: DS.labelSmall.copyWith(color: DS.brandPrimary),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 8),
         ],
       ),

@@ -205,6 +205,11 @@ class ApiEndpoints {
   static String auroraCoreSessionClose(String id) =>
       '/aurora/core-session/$id/close';
   static const String auroraChipTelemetry = '/aurora/telemetry/chip-selected';
+  static const String auroraSpineTimeline = '/aurora/spine/timeline';
+  static const String auroraSpineTimelineCorrect =
+      '/aurora/spine/timeline/correct';
+  static const String auroraSpineReceipt = '/aurora/spine/receipt';
+  static const String auroraSpineState = '/aurora/spine/state';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
