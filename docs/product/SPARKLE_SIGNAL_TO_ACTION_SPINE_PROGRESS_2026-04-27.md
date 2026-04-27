@@ -872,9 +872,17 @@
 
 ---
 
-## 当前状态: v3.0 COMPLETE — Full Goal OS + External Integration + Production Wiring
+## 当前状态: v3.1 COMPLETE — Research Layer + Quality Guard + Privacy Intelligence
 
-**795/795 tests passing** | **9/9 directive types active** | **57+ public API exports** | **43 signal modules**
+**795/795 tests passing** | **9/9 directive types active** | **70+ public API exports** | **46 signal modules**
+
+### v3.1 (P4-4/5/6 Research Layer) — ALL COMPLETE
+- [x] P4-4: MultivariateExperimentEngine — n-way variants, UserSegment stratification, Bayesian+rule hybrid analysis, auto winner detection with CI
+- [x] P4-5: PrivacyPreservingCommunityEngine — (ε,δ)-differential privacy budget, Laplace noise, 3-tier cohort (suppressed/trend_only/anonymous_aggregate), absolute privacy floor of 5 users
+- [x] P4-6: SpineQualityGuard — 7 quality checks, health_status (healthy|degraded|at_risk|critical), rolling degradation detection
+- [x] P3-6: SpineOrchestrator.on_external_event() — unified external event entry gate (Iron Rule: no bypass)
+- [x] P3-5: TaskCardBridge.from_guide_json() — bridges existing planning_workflow guide_json to typed TaskCardProtocol
+- [x] 34 new tests: P4-4×4 + P4-5×4 + P4-6×6 + integration
 
 ### v3.0 (P3-5/P3-6 + Wiring) — ALL COMPLETE
 - [x] P3-5: TaskCardProtocol — 6 task types, WhyThisTask, MaterialsProtocol, StuckProtocol, TaskCardBuilder, TaskCardValidator
@@ -1042,9 +1050,9 @@
 - PolicyEngine gates notification delivery
 - Frontend retrieves via `spine.get_recall_notification(user_id)` from Redis
 
-### Module Inventory (28 files in backend/app/signals/)
+### Module Inventory (35 files in backend/app/signals/)
 ```
-__init__.py                 — 46 public API exports
+__init__.py                 — 82 public API exports
 achievement_reinforcement.py — achievement → momentum signal
 aurora_wake.py              — Aurora wake eligibility
 causal_trace_store.py       — CausalTrace Redis store
@@ -1052,22 +1060,28 @@ community_loops.py          — 3 community feedback loops (P1-4)
 community_signal.py         — community signal detection
 core_session.py             — session lifecycle (P1-3)
 directive_applier.py        — DirectiveApplier + DirectiveAuditor
+domain_pack.py              — DomainPack system (P3-2)
 exam_rescue_detector.py     — exam intent detection
 exam_sprint_policy.py       — D-7→D-0 sprint strategy
-external_integration.py     — Calendar + tool signals (P3-3)
+external_integration.py     — Calendar/File/Email/GitHub + ExternalIntegrationGateway (P3-3, P3-6)
 goal_type_adapter.py        — 6 goal type profiles (P3-1)
-growth_chronicle.py         — user-co-owned narrative (P3-2)
+goal_world_graph.py         — GoalWorldGraph + 10 node types (P3-1)
+growth_chronicle.py         — user-co-owned narrative (P3-2, P3-4)
 learning_base.py            — Bayesian + rule hybrid (P2-4)
 material_signal.py          — material utilization signal
 mistake_signal.py           — mistake pattern detection
+multi_goal_arbitration.py   — MultiGoalArbitrator + CausalTrace (P3-3)
 outcome_recorder.py         — outcome recording + attribution
 policy_analytics.py         — strategy effectiveness analysis (P2-1)
 policy_engine.py            — deterministic rule arbitration
 policy_experiments.py       — shadow A/B experiments (P2-2)
 predicted_reply_options.py  — quick reply engine
+privacy_community_intelligence.py — DP noise + 3-tier cohort privacy (P4-5)
 recall_notification.py      — goal-respectful recall (P1-6)
 recall_opportunity.py       — 4 recall trigger types
 relationship_model.py       — user-AI relationship (P2-5)
+research_experiment_platform.py — multivariate experiments + segmentation (P4-4)
+research_grade.py           — Counterfactual + UserSimulator + DomainPackMarketplace (P4-1/2/3)
 self_model.py               — system self-modeling
 signal_ranker.py            — signal ranking + conflict resolution
 skill_extraction.py         — strategy → skill extraction
@@ -1075,12 +1089,14 @@ skill_lifecycle.py          — skill promote/deprecate (P2-3)
 source_tray_integration.py  — SourceTray → Retrieval bridge
 spine_metrics.py            — 10 Decision Realization metrics
 spine_orchestrator.py       — full pipeline orchestrator
+spine_quality_guard.py      — autonomous quality monitoring (P4-6)
 stale_state_guard.py        — stale state detection + recovery
 state_packet_builder.py     — ActionableStatePacket builder
 state_register.py           — per-user persistent state
+task_card_protocol.py       — 6 task types + GoalWorldGraph binding (P3-5)
 task_timeout_detector.py    — task timeout detection
 timeline_card_renderer.py   — timeline card rendering (P1-1)
-types.py                    — 7 core data objects + all dataclasses
+types.py                    — 40+ data objects + all dataclasses
 ```
 
 ---
@@ -1104,7 +1120,14 @@ types.py                    — 7 core data objects + all dataclasses
 | P1-1 through P1-6 | ✅ | All 6 items complete |
 | P2-1 through P2-8 | ✅ | Self-improving learning layer + quota/cooldown |
 | P3-1 through P3-4 | ✅ | General goal OS layer + marketplace |
-| P4: Research-grade | ✅ | Counterfactual + simulator + marketplace |
+| P3-5: Generalized Task Protocol | ✅ | 6 task types + GoalWorldGraph binding |
+| P3-6: External Integration v1 | ✅ | Calendar/File/Email/GitHub→RawEvent→Spine |
+| P4-1: Counterfactual | ✅ | baseline/rule/random evaluation |
+| P4-2: User Simulator | ✅ | synthetic profiles + Monte Carlo |
+| P4-3: DomainPack Marketplace | ✅ | validation + ranking |
+| P4-4: Research Experiment Platform | ✅ | multivariate + segmentation + Bayes CI |
+| P4-5: Privacy Community Intelligence | ✅ | DP + 3-tier cohort suppression |
+| P4-6: Spine Quality Guard | ✅ | 6 quality checks + degradation detection |
 
 ### 10 Iron Laws — All Covered by Tests
 
@@ -1162,7 +1185,30 @@ v6.0 P3-1 GoalWorldGraph: 10 node types (knowledge/capability/artifact/milestone
 v6.1 P3-2 DomainPack: 3 packs (exam_sprint/job_search_interview/project_delivery) with node_schema/feedback_taxonomy/risk_patterns/checkpoint_rules/aurora_trigger_rules/skill_library, 754/754 tests
 v6.2 P3-3 MultiGoal: arbitration → CausalTrace wiring (conflicts written to audit trail), 756/756 tests
 v6.3 P3-4 Chronicle: user-confirmable insights with claim/scope/confidence/user_status + confirm/reject/get_confirmed_entries/build_return_case_file, 761/761 tests
+v6.4 P3-5 Generalized Task Protocol: TaskCardProtocol with 6 task types (study/practice/artifact_build/habit_action/review/feedback_collection) + 6 domain builders + TaskCardValidator + GoalWorldGraph node binding, 770/770 tests
+v6.5 P3-6 External Integration v1: ExternalIntegrationGateway (unified entry) + FileIntegration + EmailDeadlineExtractor + GitHubRepoBridge + ExternalRawEvent enforcement + all external events via Spine, 775/775 tests
+v6.6 P4-4 Research Experiment Platform: MultivariateExperimentEngine (design/record/analyze/conclude) + UserSegment stratification + Bayesian confidence intervals + cross-sprint persistence, 779/779 tests
+v6.7 P4-5 Privacy Community Intelligence: PrivacyPreservingCommunityEngine + differential privacy (Laplace noise) + 3-tier cohort privacy (suppressed/trend_only/anonymous_aggregate) + privacy budget management, 783/783 tests
+v6.8 P4-6 Spine Quality Guard: SpineQualityGuard (signal quality/causal chain/directive compliance/outcome quality) + QualityReport auto-generation + degradation detection, 789/789 tests
+v6.9 P3-6 External Events + SpineOrchestrator wiring: on_external_event() method + ExternalIntegrationGateway→Spine routing, 795/795 tests
 ```
+
+### P3/P4 Status — ALL COMPLETE
+
+| Task | Status | Key Change |
+|------|--------|-----------|
+| P3-1 GoalWorldGraph | ✅ | 10 node types + binary mastery + unblock |
+| P3-2 DomainPack | ✅ | 3 packs (exam/job/project) |
+| P3-3 MultiGoal Arbitration | ✅ | arbitration → CausalTrace wiring |
+| P3-4 Growth Chronicle | ✅ | user-confirmable insights + ReturnCaseFile |
+| P3-5 Task Protocol | ✅ | 6 task types + GoalWorldGraph binding |
+| P3-6 External Integration | ✅ | Calendar/File/Email/GitHub→RawEvent→Spine |
+| P4-1 Counterfactual | ✅ | baseline/rule/random methods |
+| P4-2 User Simulator | ✅ | synthetic profiles + Monte Carlo |
+| P4-3 DomainPack Marketplace | ✅ | validation + ranking |
+| P4-4 Experiment Platform | ✅ | multivariate + segmentation + Bayes CI |
+| P4-5 Community Privacy | ✅ | DP noise + 3-tier cohort suppression |
+| P4-6 Quality Guard | ✅ | 6 quality checks + degradation detection |
 
 ### P1 Status — ALL COMPLETE
 
