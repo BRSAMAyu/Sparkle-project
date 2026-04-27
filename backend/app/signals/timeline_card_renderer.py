@@ -91,7 +91,7 @@ _HEADLINE_MAP: dict[str, dict[str, str]] = {
 
 _EXPLANATION_MAP: dict[str, str] = {
     "task_granularity_fit": "系统检测到连续{consecutive}次任务超时，将任务时长上限调整为{max_minutes}分钟。",
-    "knowledge_transfer": "你在「{node}」的学习效果不理想，系统切换为"例题+练习"模式。",
+    "knowledge_transfer": "你在「{node}」的学习效果不理想，系统切换为例题+练习模式。",
     "goal_mode": "系统检测到你有考试目标，自动切换到冲刺规划模式。",
     "growth_momentum": "你的成就动量{direction}，系统{action_desc}。",
     "recall_needed": "{recall_reason}",

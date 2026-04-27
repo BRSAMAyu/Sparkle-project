@@ -6085,3 +6085,264 @@ def test_source_tray_empty_sources():
     assert plan["must_load"] == []
     assert plan["may_load"] == []
     assert plan["do_not_load"] == []
+
+
+# ══════════════════════════════════════════════════════════════════════
+# P1-1: Causal Timeline UI — TimelineCardRenderer
+# ══════════════════════════════════════════════════════════════════════
+
+
+def test_timeline_card_compact_basic():
+    """Compact card renders from signal + policy + directive."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_001",
+        signal_data={
+            "signal_id": "sig_1",
+            "state_key": "task_granularity_fit",
+            "claim": "recent_task_too_large",
+            "confidence": 0.85,
+            "evidence_summary": "连续2次任务超时",
+        },
+        policy_data={
+            "policy_decision_id": "pd_1",
+            "primary_strategy": "recover_execution_rhythm",
+            "reason_for_user": "将任务时长调整为25分钟以内",
+        },
+        directives=[{
+            "directive_id": "ed_1",
+            "target_module": "task_generator",
+            "user_visible_reason": "任务时长上限25分钟",
+        }],
+        receipt_data={
+            "receipt_id": "rcpt_1",
+            "message": "你的任务有点大，帮你拆小了",
+            "actions": ["confirm", "correct", "dismiss"],
+        },
+        mode="compact",
+        timestamp="2026-04-27T10:00:00Z",
+    )
+    assert card is not None
+    assert card.mode == "compact"
+    assert card.trace_id == "ct_001"
+    assert "任务" in card.headline
+    assert len(card.evidence_chain) >= 3
+    assert card.card_type == "causal"
+
+
+def test_timeline_card_expanded_with_evidence_chain():
+    """Expanded card includes full evidence chain including outcome."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_002",
+        signal_data={
+            "state_key": "knowledge_transfer",
+            "claim": "transfer_failure",
+            "confidence": 0.9,
+            "evidence_summary": "TCP协议连续3题出错",
+        },
+        policy_data={"primary_strategy": "repair_knowledge_gap"},
+        outcome_data={"attribution": "insufficient", "new_hypothesis": "worked_example_needed"},
+        mode="expanded",
+        timestamp="2026-04-27T11:00:00Z",
+    )
+    assert card is not None
+    assert card.mode == "expanded"
+    assert card.card_type == "self_correction"
+    assert any(step["step"] == "结果" for step in card.evidence_chain)
+
+
+def test_timeline_card_exam_rescue():
+    """Exam rescue signal renders with appropriate headline."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_003",
+        signal_data={
+            "state_key": "goal_mode", "claim": "exam_rescue_detected",
+            "confidence": 0.95, "evidence_summary": "",
+        },
+        policy_data={"primary_strategy": "exam_sprint"},
+        mode="compact",
+    )
+    assert card is not None
+    assert "备考" in card.headline or "冲刺" in card.headline
+
+
+def test_timeline_card_momentum_high_and_stalled():
+    """Momentum signals render correctly for high and stalled."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+
+    card_high = renderer.render_card(
+        trace_id="ct_high",
+        signal_data={"state_key": "growth_momentum", "claim": "momentum_high", "confidence": 0.8},
+        mode="compact",
+    )
+    assert card_high is not None
+    assert "好" in card_high.headline
+
+    card_stalled = renderer.render_card(
+        trace_id="ct_stalled",
+        signal_data={"state_key": "growth_momentum", "claim": "momentum_stalled", "confidence": 0.7},
+        mode="compact",
+    )
+    assert card_stalled is not None
+    assert "慢" in card_stalled.headline or "调整" in card_stalled.headline
+
+
+def test_timeline_card_recall_divine_moment():
+    """Recall signals are tagged as divine_moment card type."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_recall",
+        signal_data={"state_key": "recall_needed", "claim": "pre_exam_silence", "confidence": 0.6},
+        mode="compact",
+    )
+    assert card is not None
+    assert card.card_type == "divine_moment"
+
+
+def test_timeline_card_no_signal_no_policy_returns_none():
+    """Trace with no signal or policy returns None."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(trace_id="ct_empty", signal_data=None, policy_data=None, mode="compact")
+    assert card is None
+
+
+def test_timeline_card_community_cohort():
+    """Community cohort mistake renders with appropriate headline."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_comm",
+        signal_data={
+            "state_key": "community_cohort_pattern", "claim": "cohort_mistake",
+            "confidence": 0.7, "evidence_summary": "20个同学在TCP三次握手出错",
+        },
+        mode="compact",
+    )
+    assert card is not None
+    assert "同学" in card.headline or "避坑" in card.headline
+
+
+def test_timeline_card_user_actions_with_receipt():
+    """Card with receipt has correct user actions."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_rcpt",
+        signal_data={"state_key": "task_granularity_fit", "claim": "recent_task_too_large"},
+        receipt_data={"actions": ["confirm", "correct", "dismiss"], "message": "调整任务大小"},
+        mode="compact",
+    )
+    assert card is not None
+    assert len(card.user_actions) >= 3
+    assert any(a["action"] == "correct" for a in card.user_actions)
+
+
+def test_timeline_card_user_actions_without_receipt():
+    """Card without receipt defaults to 'why?' expand action."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_no_rcpt",
+        signal_data={"state_key": "task_granularity_fit", "claim": "recent_task_too_large"},
+        mode="compact",
+    )
+    assert card is not None
+    assert len(card.user_actions) == 1
+    assert card.user_actions[0]["action"] == "expand"
+
+
+def test_timeline_card_batch_render():
+    """Batch rendering skips non-renderable traces."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    traces = [
+        {"trace_id": "ct_good", "signal": {"state_key": "task_granularity_fit", "claim": "recent_task_too_large"}},
+        {"trace_id": "ct_empty"},
+        {"trace_id": "ct_good2", "signal": {"state_key": "knowledge_transfer", "claim": "transfer_failure"}},
+    ]
+    cards = renderer.render_cards_batch(traces=traces, mode="compact")
+    assert len(cards) == 2
+    assert cards[0].trace_id == "ct_good"
+    assert cards[1].trace_id == "ct_good2"
+
+
+def test_timeline_card_serialization():
+    """TimelineCard serializes to dict correctly."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_ser",
+        signal_data={"state_key": "growth_momentum", "claim": "momentum_high"},
+        mode="compact",
+        timestamp="2026-04-27T10:00:00Z",
+    )
+    assert card is not None
+    d = card.to_dict()
+    assert d["trace_id"] == "ct_ser"
+    assert d["mode"] == "compact"
+    assert "headline" in d
+    assert "evidence_chain" in d
+    assert "user_actions" in d
+    assert d["card_type"] in ("causal", "self_correction", "divine_moment")
+
+
+def test_build_correction_options():
+    """Correction options are context-specific."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    options = TimelineCardRenderer.build_correction_options(
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+    )
+    assert any("不用调" in o["label"] for o in options)
+
+    options = TimelineCardRenderer.build_correction_options(
+        state_key="knowledge_transfer", claim="transfer_failure",
+    )
+    assert any("粗心" in o["label"] for o in options)
+
+    options = TimelineCardRenderer.build_correction_options(
+        state_key="growth_momentum", claim="momentum_stalled",
+    )
+    assert any("休息" in o["label"] for o in options)
+
+
+def test_timeline_card_evidence_chain_full():
+    """Full evidence chain contains all 5 steps."""
+    from app.signals.timeline_card_renderer import TimelineCardRenderer
+
+    renderer = TimelineCardRenderer()
+    card = renderer.render_card(
+        trace_id="ct_full",
+        signal_data={"state_key": "task_granularity_fit", "claim": "recent_task_too_large", "confidence": 0.9},
+        policy_data={"primary_strategy": "recover_execution_rhythm", "reason_for_user": "调整任务时长"},
+        directives=[{"target_module": "task_generator", "user_visible_reason": "25分钟上限"}],
+        receipt_data={"message": "调整完成", "actions": ["confirm"]},
+        outcome_data={"attribution": "effective"},
+        mode="expanded",
+    )
+    assert card is not None
+    steps = [s["step"] for s in card.evidence_chain]
+    assert "检测" in steps
+    assert "策略" in steps
+    assert "执行" in steps
+    assert "通知" in steps
+    assert "结果" in steps
