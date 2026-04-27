@@ -638,3 +638,151 @@ class PolicyEffectEntry:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> PolicyEffectEntry:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ── 10. SourceAsset / SourceSlice / Source Tray ────────────────────────
+# Adapter-first: wraps DocumentChunk with structured metadata for the Spine.
+# Does NOT replace DocumentChunk — these are lightweight wrappers for context routing.
+
+@dataclass
+class SourceSlice:
+    """A structured slice of a source document, mapped to knowledge nodes."""
+    slice_id: str
+    source_id: str
+    location: str                     # e.g. "p32-p45", "chap3.sec2"
+    summary: str
+    concepts: list[str]
+    knowledge_nodes: list[str]        # Galaxy node IDs
+    evidence_type: str = "definition_and_example"  # definition/worked_example/exercise/explanation
+    noise_risk: str = "low"           # low/medium/high
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "slice_id": self.slice_id,
+            "source_id": self.source_id,
+            "location": self.location,
+            "summary": self.summary,
+            "concepts": self.concepts,
+            "knowledge_nodes": self.knowledge_nodes,
+            "evidence_type": self.evidence_type,
+            "noise_risk": self.noise_risk,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> SourceSlice:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class SourceAsset:
+    """A source document with structured metadata for the Spine."""
+    source_id: str
+    title: str
+    source_type: str                  # slides/textbook/notes/exam_paper/homework
+    course: str = ""
+    goal_id: str = ""
+    owner: str = "user"               # user / community / system
+    visibility: str = "private"       # private / cohort / public
+    parsed_status: str = "parsed"     # pending / parsed / failed
+    quality_score: float = 1.0        # 0.0 - 1.0
+    mapped_nodes: list[str] | None = None
+    slices: list[SourceSlice] | None = None
+    recommended_uses: list[str] | None = None
+    not_recommended_uses: list[str] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "source_id": self.source_id,
+            "title": self.title,
+            "source_type": self.source_type,
+            "course": self.course,
+            "goal_id": self.goal_id,
+            "owner": self.owner,
+            "visibility": self.visibility,
+            "parsed_status": self.parsed_status,
+            "quality_score": self.quality_score,
+        }
+        if self.mapped_nodes is not None:
+            d["mapped_nodes"] = self.mapped_nodes
+        if self.slices is not None:
+            d["slices"] = [s.to_dict() for s in self.slices]
+        if self.recommended_uses is not None:
+            d["recommended_uses"] = self.recommended_uses
+        if self.not_recommended_uses is not None:
+            d["not_recommended_uses"] = self.not_recommended_uses
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> SourceAsset:
+        slices = None
+        if "slices" in d and d["slices"] is not None:
+            slices = [SourceSlice.from_dict(s) for s in d["slices"]]
+        return cls(
+            **{k: v for k, v in d.items() if k in cls.__dataclass_fields__ and k != "slices"},
+            slices=slices,
+        )
+
+    def relevance_for_nodes(self, target_nodes: list[str]) -> float:
+        """Compute relevance score for a set of target knowledge nodes."""
+        if not self.mapped_nodes or not target_nodes:
+            return 0.0
+        overlap = len(set(self.mapped_nodes) & set(target_nodes))
+        return overlap / max(len(target_nodes), 1)
+
+
+@dataclass
+class SourceTraySelection:
+    """A user's material selection with scope binding."""
+    source_id: str
+    action: str                       # include / exclude / auto
+    scope: str = "this_task"          # this_turn / this_task / today / this_goal
+    user_initiated: bool = True       # True = user explicitly chose; False = system default
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_id": self.source_id,
+            "action": self.action,
+            "scope": self.scope,
+            "user_initiated": self.user_initiated,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> SourceTraySelection:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class SourceTrayState:
+    """Current state of the user's source tray — what's included, excluded, and why."""
+    mode: str = "auto"                # auto / manual_only / no_materials
+    selections: list[SourceTraySelection] | None = None
+    available_sources: list[SourceAsset] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "mode": self.mode,
+            "selections": [s.to_dict() for s in (self.selections or [])],
+            "available_sources": [s.to_dict() for s in (self.available_sources or [])],
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> SourceTrayState:
+        selections = None
+        if "selections" in d and d["selections"] is not None:
+            selections = [SourceTraySelection.from_dict(s) for s in d["selections"]]
+        sources = None
+        if "available_sources" in d and d["available_sources"] is not None:
+            sources = [SourceAsset.from_dict(s) for s in d["available_sources"]]
+        return cls(
+            mode=d.get("mode", "auto"),
+            selections=selections,
+            available_sources=sources,
+        )
+
+    def get_included_source_ids(self) -> list[str]:
+        """Get source IDs that are explicitly included."""
+        return [s.source_id for s in (self.selections or []) if s.action == "include"]
+
+    def get_excluded_source_ids(self) -> list[str]:
+        """Get source IDs that are explicitly excluded."""
+        return [s.source_id for s in (self.selections or []) if s.action == "exclude"]

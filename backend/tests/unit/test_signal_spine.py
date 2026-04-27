@@ -5598,3 +5598,170 @@ def test_remember_time_no_deadline():
     card = guard.build_recovery_card(packet)
     assert card["deadline_context"] is None
     assert card["recommended_action"]["action"] == "resume_or_fresh"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-5: SourceAsset / SourceSlice / Source Tray
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_source_slice_serialization():
+    """SourceSlice round-trips through to_dict/from_dict."""
+    from app.signals.types import SourceSlice
+    s = SourceSlice(
+        slice_id="slice_001",
+        source_id="src_001",
+        location="p32-p45",
+        summary="TCP 拥塞控制",
+        concepts=["slow_start", "congestion_avoidance"],
+        knowledge_nodes=["cn.tcp.congestion_control"],
+        evidence_type="definition_and_example",
+        noise_risk="low",
+    )
+    d = s.to_dict()
+    restored = SourceSlice.from_dict(d)
+    assert restored.slice_id == "slice_001"
+    assert restored.source_id == "src_001"
+    assert restored.concepts == ["slow_start", "congestion_avoidance"]
+    assert restored.noise_risk == "low"
+
+
+def test_source_asset_basic():
+    """SourceAsset stores metadata and computes node relevance."""
+    from app.signals.types import SourceAsset
+    asset = SourceAsset(
+        source_id="src_001",
+        title="计算机网络第 3 章：传输层",
+        source_type="slides",
+        course="computer_networks",
+        quality_score=0.78,
+        mapped_nodes=["cn.tcp", "cn.udp", "cn.congestion_control"],
+        recommended_uses=["concept_explanation", "task_material"],
+        not_recommended_uses=["full_exam_scope_confirmation"],
+    )
+    d = asset.to_dict()
+    restored = SourceAsset.from_dict(d)
+    assert restored.source_id == "src_001"
+    assert restored.quality_score == 0.78
+    assert len(restored.mapped_nodes) == 3
+
+
+def test_source_asset_relevance():
+    """SourceAsset.relevance_for_nodes computes overlap ratio."""
+    from app.signals.types import SourceAsset
+    asset = SourceAsset(
+        source_id="src_001",
+        title="传输层课件",
+        source_type="slides",
+        mapped_nodes=["cn.tcp", "cn.udp", "cn.congestion_control"],
+    )
+    # 2 out of 3 target nodes overlap
+    assert asset.relevance_for_nodes(["cn.tcp", "cn.congestion_control", "cn.http"]) == pytest.approx(2 / 3)
+    # Full overlap
+    assert asset.relevance_for_nodes(["cn.tcp"]) == 1.0
+    # No overlap
+    assert asset.relevance_for_nodes(["cn.http"]) == pytest.approx(0.0)
+    # Empty target
+    assert asset.relevance_for_nodes([]) == 0.0
+
+
+def test_source_asset_with_slices():
+    """SourceAsset with nested SourceSlice round-trips."""
+    from app.signals.types import SourceAsset, SourceSlice
+    slice1 = SourceSlice(
+        slice_id="slice_001",
+        source_id="src_001",
+        location="p32-p45",
+        summary="TCP 拥塞控制",
+        concepts=["slow_start"],
+        knowledge_nodes=["cn.tcp.congestion_control"],
+    )
+    asset = SourceAsset(
+        source_id="src_001",
+        title="传输层课件",
+        source_type="slides",
+        slices=[slice1],
+    )
+    d = asset.to_dict()
+    assert len(d["slices"]) == 1
+    restored = SourceAsset.from_dict(d)
+    assert restored.slices is not None
+    assert restored.slices[0].slice_id == "slice_001"
+
+
+def test_source_tray_selection():
+    """SourceTraySelection round-trips."""
+    from app.signals.types import SourceTraySelection
+    sel = SourceTraySelection(
+        source_id="src_001",
+        action="include",
+        scope="this_task",
+        user_initiated=True,
+    )
+    d = sel.to_dict()
+    restored = SourceTraySelection.from_dict(d)
+    assert restored.action == "include"
+    assert restored.scope == "this_task"
+
+
+def test_source_tray_state_include_exclude():
+    """SourceTrayState filters included and excluded sources."""
+    from app.signals.types import SourceTrayState, SourceTraySelection
+    state = SourceTrayState(
+        mode="manual_only",
+        selections=[
+            SourceTraySelection(source_id="src_001", action="include", scope="this_task"),
+            SourceTraySelection(source_id="src_002", action="exclude", scope="this_turn"),
+            SourceTraySelection(source_id="src_003", action="include", scope="today"),
+        ],
+    )
+    assert state.get_included_source_ids() == ["src_001", "src_003"]
+    assert state.get_excluded_source_ids() == ["src_002"]
+
+
+def test_source_tray_state_auto_mode():
+    """SourceTrayState defaults to auto mode with no selections."""
+    from app.signals.types import SourceTrayState
+    state = SourceTrayState()
+    assert state.mode == "auto"
+    assert state.get_included_source_ids() == []
+    assert state.get_excluded_source_ids() == []
+
+
+def test_source_asset_no_mapped_nodes():
+    """SourceAsset with no mapped_nodes has 0 relevance."""
+    from app.signals.types import SourceAsset
+    asset = SourceAsset(source_id="src_002", title="笔记", source_type="notes")
+    assert asset.relevance_for_nodes(["cn.tcp"]) == 0.0
+
+
+def test_source_asset_empty_slices_round_trip():
+    """SourceAsset with empty slices list round-trips correctly (W-3 fix)."""
+    from app.signals.types import SourceAsset
+    asset = SourceAsset(source_id="src_003", title="空切片", source_type="notes", slices=[])
+    d = asset.to_dict()
+    # to_dict includes slices as empty list
+    assert d["slices"] == []
+    restored = SourceAsset.from_dict(d)
+    assert restored.slices == []
+
+
+def test_source_tray_state_from_dict():
+    """SourceTrayState round-trips through to_dict/from_dict (W-1 fix)."""
+    from app.signals.types import SourceTrayState, SourceTraySelection, SourceAsset
+    state = SourceTrayState(
+        mode="manual_only",
+        selections=[
+            SourceTraySelection(source_id="src_001", action="include", scope="this_task"),
+        ],
+        available_sources=[
+            SourceAsset(source_id="src_001", title="课件", source_type="slides"),
+        ],
+    )
+    d = state.to_dict()
+    restored = SourceTrayState.from_dict(d)
+    assert restored.mode == "manual_only"
+    assert len(restored.selections) == 1
+    assert restored.selections[0].source_id == "src_001"
+    assert len(restored.available_sources) == 1
+    assert restored.available_sources[0].title == "课件"

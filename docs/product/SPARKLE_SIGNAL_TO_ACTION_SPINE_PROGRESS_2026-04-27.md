@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-313/313 tests passing:
+321/321 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -856,9 +856,9 @@
 
 ---
 
-## 当前状态: Closed Loops v1.1 COMPLETE
+## 当前状态: v2.0 Source Layer IN PROGRESS
 
-**313/313 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **2 divine moments implemented**
+**321/321 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **2 divine moments implemented**
 
 ### v1.1 完成任务
 - [x] P0-1: Achievement → PolicyEngine (3-tier rules + soft difficulty + shadow learning)
@@ -867,10 +867,16 @@
 - [x] P0-3: Task card 8-field protocol (why_this_task, materials_protocol, stuck_protocol, updates_after_completion)
 - [x] P0-6: ExamSprintPolicy + D-7→D-0 (5 phases + mastery mapping + node priority scoring)
 - [x] P0-1b: Achievement quality cross-check (Rule A: quality_ok, Rule B: declining_accuracy, Rule C: overrun/pressure)
-- [x] P0-7: Divine moments (admit misjudgment: self-correction receipt + remember time: structured recovery card)
-- [x] Opus review fixes (C-1 dead branch, C-3 missing context, W-1 dead code, W-2 missing export)
+- [x] P0-7: Divine moments (admit misjudgment + remember time)
+- [x] Opus review fixes (C-1, C-3, W-1, W-2)
 
-### All v1.1 tasks DONE — no remaining items
+### v2.0 进展
+- [x] P0-5: SourceAsset / SourceSlice / SourceTray wrapper types (8 tests)
+
+### v2.0 剩余
+- [ ] SourceAsset ↔ RetrievalDirective integration
+- [ ] Community commitment loop (Divine Moment 6 completion)
+- [ ] Skill extraction triggers
 
 ---
 
