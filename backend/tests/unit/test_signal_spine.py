@@ -17559,3 +17559,160 @@ def test_p4_7_continuous_improvement_loop_to_dict():
     assert d["total_proposals"] == 1
     assert d["total_conclusions"] == 1
     assert "improvement_summary" in d
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P10 Tests: Aurora Status Band Summary API
+# Demo Experience Point #10: Aurora 状态带显示"策略风险 / 资料感知"
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def test_p10_get_status_band_empty(fake_redis):
+    """No active signals → all risk flags False, band_severity = none."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.get_status_band_summary(user_id="u_band0")
+    assert result["strategy_risk"] is False
+    assert result["material_aware"] is False
+    assert result["execution_risk"] is False
+    assert result["stale_guard"] is False
+    assert result["has_active_directive"] is False
+    assert result["band_severity"] == "none"
+    assert isinstance(result["active_claims"], list)
+    assert isinstance(result["active_state_keys"], list)
+
+
+async def test_p10_get_status_band_transfer_failure(fake_redis):
+    """knowledge_transfer:transfer_failure signal → strategy_risk=True, severity=warning."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import ActionableSignal, _uid
+    spine = SpineOrchestrator(fake_redis)
+    # Seed a transfer_failure signal into StateRegister
+    signal = ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=["err_001"],
+        source_system="mistake_signal",
+        state_key="knowledge_transfer",
+        claim="transfer_failure",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="3 consecutive errors on TCP windowing",
+        possible_effects=["avoid_new_chapter"],
+        priority="high",
+    )
+    await spine.state_register.upsert_from_signal("u_band1", signal)
+
+    result = await spine.get_status_band_summary(user_id="u_band1")
+    assert result["strategy_risk"] is True
+    assert result["material_aware"] is False
+    assert result["band_severity"] == "warning"
+    assert "transfer_failure" in result["active_claims"]
+    assert "knowledge_transfer" in result["active_state_keys"]
+
+
+async def test_p10_get_status_band_material_aware(fake_redis):
+    """source_material:material_received signal → material_aware=True, severity=info."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import ActionableSignal, _uid
+    spine = SpineOrchestrator(fake_redis)
+    signal = ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=["file_002"],
+        source_system="file_integration",
+        state_key="source_material",
+        claim="material_received",
+        confidence=0.75,
+        scope="current_sprint",
+        ttl_hours=168,
+        evidence_summary="File organic_chemistry.pdf uploaded",
+        possible_effects=["prefer_targeted_source_rag"],
+        priority="medium",
+    )
+    await spine.state_register.upsert_from_signal("u_band2", signal)
+
+    result = await spine.get_status_band_summary(user_id="u_band2")
+    assert result["material_aware"] is True
+    assert result["strategy_risk"] is False
+    assert result["band_severity"] == "info"
+    assert "material_received" in result["active_claims"]
+
+
+async def test_p10_get_status_band_execution_risk(fake_redis):
+    """task_granularity_fit:too_large signal → execution_risk=True, severity=warning."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import ActionableSignal, _uid
+    spine = SpineOrchestrator(fake_redis)
+    signal = ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=["task_timeout"],
+        source_system="task_timeout_detector",
+        state_key="task_granularity_fit",
+        claim="too_large",
+        confidence=0.80,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="2 consecutive task timeouts",
+        possible_effects=["reduce_task_duration"],
+        priority="high",
+    )
+    await spine.state_register.upsert_from_signal("u_band3", signal)
+
+    result = await spine.get_status_band_summary(user_id="u_band3")
+    assert result["execution_risk"] is True
+    assert result["strategy_risk"] is False
+    assert result["band_severity"] == "warning"
+
+
+async def test_p10_get_status_band_combined_critical(fake_redis):
+    """strategy_risk + execution_risk simultaneously → band_severity = critical."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.types import ActionableSignal, _uid
+    spine = SpineOrchestrator(fake_redis)
+    # Seed both signals
+    for state_key, claim in [
+        ("knowledge_transfer", "transfer_failure"),
+        ("task_granularity_fit", "too_large"),
+    ]:
+        signal = ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=["combined_test"],
+            source_system="test",
+            state_key=state_key,
+            claim=claim,
+            confidence=0.80,
+            scope="current_sprint",
+            ttl_hours=24,
+            evidence_summary=f"Combined {state_key}",
+            possible_effects=[],
+            priority="high",
+        )
+        await spine.state_register.upsert_from_signal("u_band4", signal)
+
+    result = await spine.get_status_band_summary(user_id="u_band4")
+    assert result["strategy_risk"] is True
+    assert result["execution_risk"] is True
+    assert result["band_severity"] == "critical"
+
+
+async def test_p10_get_status_band_structure_complete(fake_redis):
+    """Response contains all required fields for Flutter status band rendering."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    result = await spine.get_status_band_summary(user_id="u_band5")
+    required_keys = {
+        "strategy_risk", "material_aware", "execution_risk", "stale_guard",
+        "has_active_directive", "active_claims", "active_state_keys",
+        "directive_summary", "band_severity",
+    }
+    for key in required_keys:
+        assert key in result, f"Missing required field: {key}"
+    assert result["band_severity"] in ("none", "info", "warning", "critical")
+
+
+async def test_p10_get_status_band_wired_to_orchestrator(fake_redis):
+    """SpineOrchestrator exposes get_status_band_summary as a public method."""
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(fake_redis)
+    assert hasattr(spine, "get_status_band_summary"), "get_status_band_summary must exist"
+    assert callable(spine.get_status_band_summary)

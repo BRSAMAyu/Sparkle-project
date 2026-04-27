@@ -374,6 +374,7 @@ class SpineReceiptActionRequest(BaseModel):
     action: Literal["confirm", "correct", "dismiss"]
 
 
+# route-tier: authed
 @router.get("/spine/receipt")
 async def get_spine_receipt(
     current_user: User = Depends(get_current_user),
@@ -393,6 +394,7 @@ async def get_spine_receipt(
     return result
 
 
+# route-tier: authed
 @router.post("/spine/receipt/action")
 async def submit_spine_receipt_action(
     payload: SpineReceiptActionRequest,
@@ -441,6 +443,7 @@ class TimelineCardCorrectionRequest(BaseModel):
     user_explanation: str | None = None
 
 
+# route-tier: authed
 @router.get("/spine/timeline")
 async def get_causal_timeline(
     limit: int = Query(default=10, ge=1, le=50),
@@ -547,6 +550,7 @@ async def get_causal_timeline(
     return CausalTimelineResponse(entries=entries, total=len(entries))
 
 
+# route-tier: authed
 @router.get("/spine/state")
 async def get_spine_state(
     current_user: User = Depends(get_current_user),
@@ -566,6 +570,39 @@ async def get_spine_state(
     return result
 
 
+# route-tier: authed
+@router.get("/spine/status-band")
+async def get_spine_status_band(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Demo Experience Point #10: Aurora 状态带 — 策略风险 / 资料感知。
+
+    Returns structured status band summary for Flutter to render the aurora status bar.
+    Fields: strategy_risk, material_aware, execution_risk, stale_guard,
+            has_active_directive, active_claims, active_state_keys,
+            directive_summary, band_severity.
+    """
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {
+            "strategy_risk": False,
+            "material_aware": False,
+            "execution_risk": False,
+            "stale_guard": False,
+            "has_active_directive": False,
+            "active_claims": [],
+            "active_state_keys": [],
+            "directive_summary": None,
+            "band_severity": "none",
+        }
+    spine = SpineOrchestrator(redis)
+    return await spine.get_status_band_summary(user_id=str(current_user.id))
+
+
+# route-tier: authed
 @router.get("/spine/metrics")
 async def get_spine_metrics(
     current_user: User = Depends(get_current_user),
@@ -580,6 +617,7 @@ async def get_spine_metrics(
     return await collector.snapshot()
 
 
+# route-tier: authed
 @router.post("/spine/timeline/correct")
 async def correct_timeline_card(
     request: TimelineCardCorrectionRequest,
@@ -636,6 +674,7 @@ async def correct_timeline_card(
     return {"status": "ok", "action": request.action}
 
 
+# route-tier: authed
 @router.get("/spine/goals")
 async def get_spine_goals(
     current_user: User = Depends(get_current_user),
@@ -670,6 +709,7 @@ async def get_spine_goals(
         return {"goals": [], "arbitration": None, "active": False}
 
 
+# route-tier: authed
 @router.get("/spine/goal-graph/{goal_id}")
 async def get_goal_graph(
     goal_id: str,
@@ -724,6 +764,7 @@ async def get_goal_graph(
         return {"active": False, "nodes": [], "edges": []}
 
 
+# route-tier: authed
 @router.post("/spine/external-event")
 async def submit_external_event(
     request: dict[str, Any],

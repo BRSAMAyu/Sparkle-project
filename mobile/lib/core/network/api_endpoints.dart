@@ -214,6 +214,8 @@ class ApiEndpoints {
   static String auroraSpineGoalGraph(String goalId) =>
       '/aurora/spine/goal-graph/$goalId';
   static const String auroraSpineExternalEvent = '/aurora/spine/external-event';
+  // P10: Demo Experience Point #10 — Aurora status band (策略风险 / 资料感知)
+  static const String auroraSpineStatusBand = '/aurora/spine/status-band';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

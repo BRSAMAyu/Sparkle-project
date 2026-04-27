@@ -360,6 +360,88 @@ class SpineOrchestrator:
         """供 planning_workflow 调用——获取当前用户的活跃 directive。"""
         return await self.trace_store.get_active_directive(user_id)
 
+    async def get_status_band_summary(self, user_id: str) -> dict[str, Any]:
+        """
+        Demo Experience Point #10: Aurora 状态带显示"策略风险 / 资料感知"。
+
+        读取 StateRegister 中活跃信号状态，生成结构化状态带摘要供 Flutter 展示。
+
+        Returns:
+            {
+              "strategy_risk": bool,     # knowledge_transfer:transfer_failure 活跃
+              "material_aware": bool,    # source_material:material_received 活跃
+              "execution_risk": bool,    # task_granularity_fit:too_large 活跃
+              "stale_guard": bool,       # stale_state 活跃
+              "has_active_directive": bool,
+              "active_claims": list[str],
+              "active_state_keys": list[str],
+              "directive_summary": str | None,
+              "band_severity": str,      # "none" | "info" | "warning" | "critical"
+            }
+        """
+        # Read all active signals from StateRegister
+        active_entries = await self.state_register.get_active_states(user_id)
+
+        strategy_risk = False
+        material_aware = False
+        execution_risk = False
+        stale_guard = False
+        active_claims: list[str] = []
+        active_state_keys: list[str] = []
+
+        for entry in active_entries:
+            active_state_keys.append(entry.state_key)
+            active_claims.append(entry.value)  # value = claim
+
+            if entry.state_key == "knowledge_transfer" and entry.value == "transfer_failure":
+                strategy_risk = True
+            elif entry.state_key == "source_material" and entry.value in (
+                "material_received", "material_underutilized"
+            ):
+                material_aware = True
+            elif entry.state_key == "task_granularity_fit" and entry.value == "too_large":
+                execution_risk = True
+            elif entry.state_key == "stale_state":
+                stale_guard = True
+
+        # Read active directive
+        directive = await self.get_active_directive(user_id)
+        has_active_directive = directive is not None
+        directive_summary: str | None = None
+        if directive is not None:
+            parts = []
+            if directive.max_task_duration_min is not None:
+                parts.append(f"max_duration={directive.max_task_duration_min}min")
+            if directive.required_task_type is not None:
+                parts.append(f"type={directive.required_task_type}")
+            if directive.avoid_new_chapter:
+                parts.append("avoid_new_chapter")
+            directive_summary = ", ".join(parts) if parts else directive.user_visible_reason
+
+        # Severity: none < info < warning < critical
+        risk_flags = [strategy_risk, execution_risk, stale_guard]
+        risk_count = sum(1 for f in risk_flags if f)
+        if risk_count >= 2 or (strategy_risk and execution_risk):
+            band_severity = "critical"
+        elif risk_count == 1:
+            band_severity = "warning"
+        elif material_aware:
+            band_severity = "info"
+        else:
+            band_severity = "none"
+
+        return {
+            "strategy_risk": strategy_risk,
+            "material_aware": material_aware,
+            "execution_risk": execution_risk,
+            "stale_guard": stale_guard,
+            "has_active_directive": has_active_directive,
+            "active_claims": active_claims,
+            "active_state_keys": active_state_keys,
+            "directive_summary": directive_summary,
+            "band_severity": band_severity,
+        }
+
     async def apply_directive_to_task_spec(
         self,
         user_id: str,
