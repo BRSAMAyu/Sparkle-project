@@ -166,13 +166,14 @@
 
 ## 当前测试覆盖
 
-248/248 tests passing:
+281/281 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
 - P0-1 FirstMinuteSnapshot: 14 tests
 - P0-2 StaleStateGuard: 6 tests
 - P0-3 ActionableStatePacket: 7 tests
+- P0-3 Task Card 8-Field Protocol: 9 tests (why_this_task + materials_protocol + stuck_protocol + updates_after_completion)
 - P1-1 AchievementReinforcement: 6 tests
 - P1-2 AuroraWakeEligibility: 7 tests
 - P1-3 PredictedReplyOption: 8 tests
@@ -856,11 +857,17 @@
 
 ## 当前状态: Closed Loops v1.1 IN PROGRESS
 
-**272/272 tests passing** | **9/9 directive types active** | **Shadow learning loop active**
+**281/281 tests passing** | **9/9 directive types active** | **Shadow learning loop active**
+
+### v1.1 完成任务
+- [x] P0-1: Achievement → PolicyEngine (3-tier rules + soft difficulty + shadow learning)
+- [x] P0-2: CommunityDirective + SkillDirective v1
+- [x] P0-4: Outcome → PolicyEffectLedger + self-correction loop
+- [x] P0-3: Task card 8-field protocol (why_this_task, materials_protocol, stuck_protocol, updates_after_completion)
+- [x] Opus review fixes (C-1 dead branch, C-3 missing context, W-1 dead code, W-2 missing export)
 
 ### 剩余 v1.1 任务
 - [ ] P0-1b: Achievement quality cross-check (3-tier rules)
-- [ ] P0-3: Task card 8-field protocol
 - [ ] P0-6: ExamSprintPolicy + D-7→D-0
 - [ ] P0-7: Divine moments (admit misjudgment + remember time)
 
