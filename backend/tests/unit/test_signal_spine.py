@@ -14054,3 +14054,290 @@ async def test_v218_chronicle_build_return_case_file():
     assert case_file["chronicle_summary"]["confirmed_count"] == 1
     assert len(case_file["confirmed_insights"]) == 1
     assert case_file["confirmed_insights"][0]["claim"] == "短任务更适合高压"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# P3-5: Generalized Task Protocol
+# ══════════════════════════════════════════════════════════════════════════════
+
+def test_p3_5_task_card_protocol_study():
+    """TaskCardProtocol for study type binds to knowledge/capability nodes."""
+    from app.signals.task_card_protocol import TaskCardBuilder
+    from app.signals.types import WhyThisTask
+
+    why = WhyThisTask(
+        signal_ids=["sig_1"], policy_decision_id="pd_1",
+        bottleneck_node_id="cn.tcp", reasoning_summary="learning gap",
+    )
+    card = TaskCardBuilder.for_study(
+        goal_id="g1", bound_nodes=["cn.tcp", "cn.tcp.congestion"],
+        why=why, steps=["Read material", "Take notes"],
+    )
+    assert card.task_type == "study"
+    assert card.goal_id == "g1"
+    assert "cn.tcp" in card.bound_nodes
+    assert card.is_knowledge_task()
+    assert not card.is_artifact_task()
+    d = card.to_dict()
+    rt = type(card).from_dict(d)
+    assert rt.task_type == "study"
+    assert rt.why_this_task.bottleneck_node_id == "cn.tcp"
+
+
+def test_p3_5_task_card_protocol_practice():
+    """TaskCardProtocol for practice type."""
+    from app.signals.task_card_protocol import TaskCardBuilder
+
+    card = TaskCardBuilder.for_practice(goal_id="g1", bound_nodes=["cn.tcp.cwnd"])
+    assert card.task_type == "practice"
+    assert card.stuck_protocol.aurora_wake_on_stuck
+    assert "capability_mastery" in card.updates_after_completion
+
+
+def test_p3_5_task_card_protocol_artifact_build():
+    """TaskCardProtocol for artifact_build requires minimum_output."""
+    from app.signals.task_card_protocol import TaskCardBuilder
+
+    card = TaskCardBuilder.for_artifact_build(
+        goal_id="g2", bound_nodes=["proj.mvp"],
+        minimum_output="Working login page",
+    )
+    assert card.task_type == "artifact_build"
+    assert card.minimum_output == "Working login page"
+    assert not card.is_knowledge_task()
+    assert card.is_artifact_task()
+    assert "artifact_status" in card.updates_after_completion
+
+
+def test_p3_5_task_card_protocol_habit():
+    """TaskCardProtocol for habit_action doesn't load materials."""
+    from app.signals.task_card_protocol import TaskCardBuilder
+
+    card = TaskCardBuilder.for_habit_action(goal_id="g3", bound_nodes=["habit.morning"])
+    assert card.task_type == "habit_action"
+    assert card.materials_protocol.retrieval_mode == "none"
+    assert card.is_habit_task()
+    assert "habit_streak" in card.updates_after_completion
+
+
+def test_p3_5_task_card_protocol_all_types():
+    """All 6 task types construct correctly."""
+    from app.signals.task_card_protocol import TaskCardBuilder
+    from app.signals.types import TASK_TYPES
+
+    builders = {
+        "study": TaskCardBuilder.for_study,
+        "practice": TaskCardBuilder.for_practice,
+        "artifact_build": TaskCardBuilder.for_artifact_build,
+        "habit_action": TaskCardBuilder.for_habit_action,
+        "review": TaskCardBuilder.for_review,
+        "feedback_collection": TaskCardBuilder.for_feedback_collection,
+    }
+    for ttype, builder in builders.items():
+        card = builder(goal_id="g", bound_nodes=["n1"])
+        assert card.task_type == ttype, f"{ttype} mismatch"
+        assert ttype in TASK_TYPES
+
+
+def test_p3_5_task_card_validator():
+    """Validator catches missing fields."""
+    from app.signals.task_card_protocol import TaskCardBuilder, TaskCardValidator
+    from app.signals.types import TaskCardProtocol
+
+    # Valid card
+    card = TaskCardBuilder.for_study(goal_id="g1", bound_nodes=["n1"])
+    issues = TaskCardValidator.validate(card)
+    assert len(issues) == 0
+
+    # Invalid: no goal_id
+    bad = TaskCardProtocol(task_id="t1", task_type="study")
+    issues = TaskCardValidator.validate(bad)
+    assert any("goal_id" in i for i in issues)
+
+    # Invalid task_type is caught by __post_init__, not validator
+    with pytest.raises(ValueError, match="task_type"):
+        TaskCardProtocol(task_id="t2", goal_id="g1", task_type="invalid_type")
+
+
+def test_p3_5_task_card_from_goal_type():
+    """from_goal_type selects correct builder per domain."""
+    from app.signals.task_card_protocol import TaskCardBuilder
+
+    exam_card = TaskCardBuilder.from_goal_type("exam_sprint", goal_id="g1", bound_nodes=["n1"])
+    assert exam_card.task_type == "study"
+
+    job_card = TaskCardBuilder.from_goal_type("job_search_interview", goal_id="g2", bound_nodes=["n2"])
+    assert job_card.task_type == "practice"
+
+    project_card = TaskCardBuilder.from_goal_type("project_delivery", goal_id="g3", bound_nodes=["n3"])
+    assert project_card.task_type == "artifact_build"
+
+
+def test_p3_5_outcome_fields_for_type():
+    """outcome_fields_for_type returns correct state keys per task type."""
+    from app.signals.task_card_protocol import TaskCardValidator
+
+    assert "knowledge_mastery" in TaskCardValidator.outcome_fields_for_type("study")
+    assert "capability_mastery" in TaskCardValidator.outcome_fields_for_type("practice")
+    assert "artifact_status" in TaskCardValidator.outcome_fields_for_type("artifact_build")
+    assert "habit_streak" in TaskCardValidator.outcome_fields_for_type("habit_action")
+    assert "knowledge_retention" in TaskCardValidator.outcome_fields_for_type("review")
+    assert "feedback_data" in TaskCardValidator.outcome_fields_for_type("feedback_collection")
+
+
+def test_p3_5_binds_to_node_type():
+    """TaskCardProtocol.binds_to_node_type validates node-type compatibility."""
+    from app.signals.task_card_protocol import TaskCardBuilder
+
+    study_card = TaskCardBuilder.for_study(goal_id="g1", bound_nodes=["n1"])
+    assert study_card.binds_to_node_type("knowledge")
+    assert study_card.binds_to_node_type("capability")
+    assert not study_card.binds_to_node_type("habit")
+
+    artifact_card = TaskCardBuilder.for_artifact_build(goal_id="g2", bound_nodes=["n2"])
+    assert artifact_card.binds_to_node_type("artifact")
+    assert not artifact_card.binds_to_node_type("knowledge")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# P3-6: External Integration v1
+# ══════════════════════════════════════════════════════════════════════════════
+
+def test_p3_6_external_raw_event_required():
+    """All external events must become ExternalRawEvent before Spine."""
+    from app.signals.external_integration import ExternalRawEvent
+
+    evt = ExternalRawEvent(
+        event_id="evt_cal_1", source="calendar", source_detail="google_calendar",
+        goal_id="g1", raw_payload={"action": "deadline_detected", "hours_until": 48},
+    )
+    assert evt.source == "calendar"
+    assert evt.user_visible
+    assert evt.revocable
+    d = evt.to_dict()
+    rt = ExternalRawEvent.from_dict(d)
+    assert rt.event_id == "evt_cal_1"
+    assert rt.raw_payload["hours_until"] == 48
+
+
+def test_p3_6_file_integration():
+    """File uploads are converted to ExternalRawEvents."""
+    from app.signals.external_integration import FileIntegration, FileReference
+
+    fref = FileReference(
+        file_id="f1", file_name="ch4_transport.pdf", source="upload",
+        mime_type="application/pdf", goal_id="g1", parsed_summary="传输层课件",
+    )
+    handler = FileIntegration()
+    evt = handler.on_file_received(fref)
+    assert evt.source == "file"
+    assert evt.raw_payload["file_name"] == "ch4_transport.pdf"
+
+    # Undiagnosed detection
+    undiag = handler.detect_undiagnosed_materials(
+        [fref], diagnosed_file_ids={"other_file"},
+    )
+    assert len(undiag) == 1
+    assert undiag[0].file_id == "f1"
+
+    # File context
+    ctx = handler.build_file_context([fref], goal_id="g1")
+    assert ctx["total_files"] == 1
+    assert ctx["undiagnosed_count"] == 0  # parsed_summary is set
+
+
+def test_p3_6_email_deadline_extractor():
+    """Email subjects with deadline keywords produce ExternalRawEvents."""
+    from app.signals.external_integration import EmailDeadlineExtractor
+
+    extractor = EmailDeadlineExtractor()
+    hint = extractor.extract_from_subject(
+        email_id="em1", subject="明天计网期中考试", goal_id="g1",
+    )
+    assert hint is not None
+    assert "考试" in hint.extracted_keywords or any("exam" in kw.lower() for kw in hint.extracted_keywords)
+    assert hint.confidence >= 0.3
+
+    evt = extractor.to_external_event(hint)
+    assert evt.source == "email"
+    assert evt.user_visible
+
+    # No deadline keywords → None
+    no_hint = extractor.extract_from_subject(
+        email_id="em2", subject="今天天气不错", goal_id="g1",
+    )
+    assert no_hint is None
+
+    # Batch extraction
+    hints = extractor.batch_extract([
+        {"email_id": "em3", "subject": "Final exam schedule", "goal_id": "g2"},
+        {"email_id": "em4", "subject": "Lunch meeting"},
+    ])
+    assert len(hints) == 1
+
+
+def test_p3_6_github_repo_bridge():
+    """GitHub activity summaries become ExternalRawEvents."""
+    from app.signals.external_integration import GitHubRepoBridge, GitHubRepoSummary
+
+    repo = GitHubRepoSummary(
+        repo_id="r1", repo_name="sparkle-app", owner="team",
+        recent_commits=12, open_prs=3, open_issues=7,
+        last_activity="2026-04-27T10:00:00Z", goal_id="g3",
+    )
+    bridge = GitHubRepoBridge()
+    evt = bridge.summarize_repo(repo)
+    assert evt.source == "github"
+    assert evt.raw_payload["recent_commits"] == 12
+
+    # Project velocity
+    velocity = bridge.detect_project_velocity([repo])
+    assert velocity["total_commits"] == 12
+    assert not velocity["has_stalled"]
+
+    stale_repo = GitHubRepoSummary(
+        repo_id="r2", repo_name="stale-project", owner="team",
+        recent_commits=0, open_prs=0, open_issues=0, goal_id="g3",
+    )
+    velocity2 = bridge.detect_project_velocity([stale_repo])
+    assert velocity2["has_stalled"]
+
+
+def test_p3_6_external_integration_gateway():
+    """Gateway enforces all events route through Spine."""
+    from app.signals.external_integration import (
+        ExternalIntegrationGateway, ExternalRawEvent,
+    )
+
+    gw = ExternalIntegrationGateway()
+
+    # Register integration
+    iid = gw.register_integration("u1", "calendar", "google_calendar", goal_id="g1")
+    assert iid
+    assert gw.is_connected(iid)
+
+    # Route event
+    evt = ExternalRawEvent(
+        event_id="evt_99", source="calendar", source_detail="google_calendar",
+        goal_id="g1", raw_payload={"action": "test"},
+    )
+    receipt = gw.route_to_spine(evt)
+    assert receipt["event_type"] == "external_raw_event"
+    assert receipt["source"] == "calendar"
+
+    # Disconnect
+    assert gw.disconnect_integration(iid)
+    assert not gw.is_connected(iid)
+
+    # List active
+    gw.register_integration("u1", "email", "gmail", goal_id="g1")
+    active = gw.list_active_integrations("u1")
+    assert len(active) == 1  # only the second one is active
+
+    # Unknown source still routes (with warning)
+    unknown = ExternalRawEvent(
+        event_id="evt_100", source="slack", source_detail="slack_workspace",
+        goal_id="g1",
+    )
+    receipt2 = gw.route_to_spine(unknown)
+    assert receipt2["event_type"] == "external_raw_event"

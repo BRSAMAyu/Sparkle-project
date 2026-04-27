@@ -29,6 +29,7 @@ from app.signals.types import (
     CommunityDirective,
     DirectiveApplicationAudit,
     ExecutionDirective,
+    MaterialsProtocol,
     ModelWriteDirective,
     NotificationDirective,
     OutcomeRecord,
@@ -44,12 +45,31 @@ from app.signals.types import (
     SourceTraySelection,
     SourceTrayState,
     StateEntry,
+    StuckProtocol,
+    TaskCardProtocol,
+    TASK_TYPES,
+    TASK_TYPE_NODE_BINDINGS,
     UserVisibleReceipt,
     UXDirective,
+    WhyThisTask,
 )
 from app.signals.community_loops import CommunityLoopManager
 from app.signals.core_session import CoreSession, CoreSessionManager
 from app.signals.exam_sprint_policy import ExamSprintDirective, ExamSprintPhase, ExamSprintPolicyService
+from app.signals.external_integration import (
+    CalendarEvent,
+    CalendarSignalBridge,
+    EmailDeadlineExtractor,
+    EmailDeadlineHint,
+    ExternalIntegrationGateway,
+    ExternalRawEvent,
+    ExternalToolBridge,
+    ExternalToolSignal,
+    FileIntegration,
+    FileReference,
+    GitHubRepoBridge,
+    GitHubRepoSummary,
+)
 from app.signals.goal_type_adapter import GOAL_TYPE_PROFILES, GoalTypeAdapter, GoalTypeProfile
 from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
 from app.signals.learning_base import LearningBase, StrategyBelief
@@ -66,6 +86,7 @@ from app.signals.research_grade import (
 )
 from app.signals.skill_lifecycle import SkillLifecycleManager
 from app.signals.source_tray_integration import SourceEffectivenessTracker
+from app.signals.task_card_protocol import TaskCardBuilder, TaskCardValidator
 from app.signals.goal_world_graph import GoalWorldGraph, GoalWorldGraphService, GraphNode
 from app.signals.multi_goal_arbitration import ActiveGoal, GoalArbitrationResult, MultiGoalArbitrator
 from app.signals.spine_aurora_bridge import SpineAuroraBridge
@@ -75,6 +96,8 @@ __all__ = [
     "ActionableStatePacket",
     "AuroraAgendaItem",
     "AuroraControlSignal",
+    "CalendarEvent",
+    "CalendarSignalBridge",
     "CausalTrace",
     "ChronicleEntry",
     "CoreSession",
@@ -86,12 +109,24 @@ __all__ = [
     "DirectiveApplicationAudit",
     "DomainPack",
     "DomainPackMarketplace",
+    "EmailDeadlineExtractor",
+    "EmailDeadlineHint",
     "ExecutionDirective",
+    "ExternalIntegrationGateway",
+    "ExternalRawEvent",
+    "ExternalToolBridge",
+    "ExternalToolSignal",
+    "FileIntegration",
+    "FileReference",
+    "GitHubRepoBridge",
+    "GitHubRepoSummary",
     "GOAL_TYPE_PROFILES",
     "GoalTypeAdapter",
     "GoalTypeProfile",
     "LearningBase",
+    "MaterialsProtocol",
     "ModelWriteDirective",
+    "MultiGoalArbitrator",
     "NotificationDirective",
     "OutcomeRecord",
     "PlanDirective",
@@ -115,10 +150,17 @@ __all__ = [
     "SourceTraySelection",
     "SourceTrayState",
     "StateEntry",
+    "StuckProtocol",
     "StrategyBelief",
+    "TaskCardBuilder",
+    "TaskCardProtocol",
+    "TaskCardValidator",
+    "TASK_TYPES",
+    "TASK_TYPE_NODE_BINDINGS",
     "UserSimulator",
     "UserVisibleReceipt",
     "UXDirective",
+    "WhyThisTask",
     "GrowthChronicleService",
     "GoalWorldGraph",
     "GoalWorldGraphService",

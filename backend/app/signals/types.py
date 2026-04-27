@@ -994,3 +994,158 @@ class AuroraAgenda:
             if item.item_id == item_id:
                 item.status = new_status
                 return
+
+
+# ── P3-5: Generalized Task Protocol ──────────────────────────────────────────
+
+TASK_TYPES = frozenset({
+    "study",               # Learn new material (most common for exam sprint)
+    "practice",            # Practice problems / drills
+    "artifact_build",      # Create a tangible output (code, doc, design)
+    "habit_action",        # Perform a habit/routine action
+    "review",              # Review previously learned material
+    "feedback_collection", # Gather feedback from external sources
+})
+
+TASK_TYPE_NODE_BINDINGS: dict[str, list[str]] = {
+    "study":               ["knowledge", "capability"],
+    "practice":            ["capability", "knowledge"],
+    "artifact_build":      ["artifact", "milestone"],
+    "habit_action":        ["habit"],
+    "review":              ["knowledge", "capability", "feedback"],
+    "feedback_collection": ["feedback", "relationship"],
+}
+
+
+@dataclass
+class WhyThisTask:
+    """Explains why this task exists — audit trail for task generation decisions."""
+    signal_ids: list[str] = field(default_factory=list)
+    policy_decision_id: str | None = None
+    bottleneck_node_id: str | None = None
+    reasoning_summary: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "signal_ids": self.signal_ids,
+            "policy_decision_id": self.policy_decision_id,
+            "bottleneck_node_id": self.bottleneck_node_id,
+            "reasoning_summary": self.reasoning_summary,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> WhyThisTask:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class MaterialsProtocol:
+    """How materials should be used for this task."""
+    retrieval_mode: str = "task_bound_graph_rag"  # task_bound_graph_rag | user_pinned | none
+    must_load_node_ids: list[str] = field(default_factory=list)
+    may_load_node_ids: list[str] = field(default_factory=list)
+    source_tray_selection: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "retrieval_mode": self.retrieval_mode,
+            "must_load_node_ids": self.must_load_node_ids,
+            "may_load_node_ids": self.may_load_node_ids,
+            "source_tray_selection": self.source_tray_selection,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> MaterialsProtocol:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class StuckProtocol:
+    """What to do when the user is stuck on this task."""
+    escalation_after_min: int = 15
+    hint_strategy: str = "worked_example"  # worked_example | simplify | skip | ask_peer
+    fallback_task_type: str | None = None
+    aurora_wake_on_stuck: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "escalation_after_min": self.escalation_after_min,
+            "hint_strategy": self.hint_strategy,
+            "fallback_task_type": self.fallback_task_type,
+            "aurora_wake_on_stuck": self.aurora_wake_on_stuck,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> StuckProtocol:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class TaskCardProtocol:
+    """P3-5 Generalized Task Card — binds tasks to GoalWorldGraph nodes.
+
+    No longer assumes all tasks are knowledge-learning. Supports 6 task types
+    across exam, job search, project, fitness, and general goal domains.
+    """
+    task_id: str = ""
+    goal_id: str = ""
+    bound_nodes: list[str] = field(default_factory=list)  # GoalWorldGraph node IDs
+    task_type: str = "study"                              # One of TASK_TYPES
+    why_this_task: WhyThisTask = field(default_factory=WhyThisTask)
+    materials_protocol: MaterialsProtocol = field(default_factory=MaterialsProtocol)
+    steps: list[str] = field(default_factory=list)
+    stuck_protocol: StuckProtocol = field(default_factory=StuckProtocol)
+    success_criteria: list[str] = field(default_factory=list)
+    minimum_output: str = ""
+    updates_after_completion: list[str] = field(default_factory=list)  # State keys to update
+    fallback_if_failed: list[str] = field(default_factory=list)        # Alternative task IDs
+
+    def __post_init__(self):
+        if self.task_type not in TASK_TYPES:
+            raise ValueError(f"task_type must be one of {TASK_TYPES}, got {self.task_type}")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "task_id": self.task_id,
+            "goal_id": self.goal_id,
+            "bound_nodes": self.bound_nodes,
+            "task_type": self.task_type,
+            "why_this_task": self.why_this_task.to_dict(),
+            "materials_protocol": self.materials_protocol.to_dict(),
+            "steps": self.steps,
+            "stuck_protocol": self.stuck_protocol.to_dict(),
+            "success_criteria": self.success_criteria,
+            "minimum_output": self.minimum_output,
+            "updates_after_completion": self.updates_after_completion,
+            "fallback_if_failed": self.fallback_if_failed,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> TaskCardProtocol:
+        return cls(
+            task_id=d.get("task_id", ""),
+            goal_id=d.get("goal_id", ""),
+            bound_nodes=d.get("bound_nodes", []),
+            task_type=d.get("task_type", "study"),
+            why_this_task=WhyThisTask.from_dict(d.get("why_this_task", {})),
+            materials_protocol=MaterialsProtocol.from_dict(d.get("materials_protocol", {})),
+            steps=d.get("steps", []),
+            stuck_protocol=StuckProtocol.from_dict(d.get("stuck_protocol", {})),
+            success_criteria=d.get("success_criteria", []),
+            minimum_output=d.get("minimum_output", ""),
+            updates_after_completion=d.get("updates_after_completion", []),
+            fallback_if_failed=d.get("fallback_if_failed", []),
+        )
+
+    def is_knowledge_task(self) -> bool:
+        return self.task_type in ("study", "practice")
+
+    def is_artifact_task(self) -> bool:
+        return self.task_type == "artifact_build"
+
+    def is_habit_task(self) -> bool:
+        return self.task_type == "habit_action"
+
+    def binds_to_node_type(self, node_type: str) -> bool:
+        allowed = TASK_TYPE_NODE_BINDINGS.get(self.task_type, [])
+        return node_type in allowed
