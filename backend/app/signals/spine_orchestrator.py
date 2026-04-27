@@ -191,51 +191,54 @@ class SpineOrchestrator:
         await self._link_directive_to_active_session(user_id, directive.directive_id)
         await self.metrics.record_directive_generated()
 
-        # Step 4b: Build and store ResponseDirective
-        response_dir = self.policy_engine.build_response_directive(decision, signal)
-        if response_dir:
-            await self._store_response_directive(user_id, response_dir)
+        # Step 4b: Build and store directives (only those flagged in which_directives)
+        wd = decision.which_directives
 
-        # Step 4c: Build and store NotificationDirective
-        notif_dir = self.policy_engine.build_notification_directive(decision, signal)
-        if notif_dir:
-            await self._store_notification_directive(user_id, notif_dir)
+        if wd.get("response"):
+            response_dir = self.policy_engine.build_response_directive(decision, signal)
+            if response_dir:
+                await self._store_response_directive(user_id, response_dir)
 
-        # Step 4c2: Build and store RetrievalDirective
-        ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
-        if ret_dir:
-            await self._store_retrieval_directive(user_id, ret_dir)
+        if wd.get("notification"):
+            notif_dir = self.policy_engine.build_notification_directive(decision, signal)
+            if notif_dir:
+                await self._store_notification_directive(user_id, notif_dir)
 
-        # Step 4d: Build and store PlanDirective
-        plan_dir = self.policy_engine.build_plan_directive(decision, signal)
-        if plan_dir:
-            await self._store_plan_directive(user_id, plan_dir)
-            trace.directive_ids.append(plan_dir.directive_id)
+        if wd.get("retrieval"):
+            ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
+            if ret_dir:
+                await self._store_retrieval_directive(user_id, ret_dir)
 
-        # Step 4e: Build and store ModelWriteDirective
-        mw_dir = self.policy_engine.build_model_write_directive(decision, signal)
-        if mw_dir:
-            await self._store_model_write_directive(user_id, mw_dir)
-            trace.directive_ids.append(mw_dir.directive_id)
-            await self._apply_model_writes(user_id, mw_dir)
+        if wd.get("plan"):
+            plan_dir = self.policy_engine.build_plan_directive(decision, signal)
+            if plan_dir:
+                await self._store_plan_directive(user_id, plan_dir)
+                trace.directive_ids.append(plan_dir.directive_id)
 
-        # Step 4f: Build and store UXDirective
-        ux_dir = self.policy_engine.build_ux_directive(decision, signal)
-        if ux_dir:
-            await self._store_ux_directive(user_id, ux_dir)
-            trace.directive_ids.append(ux_dir.directive_id)
+        if wd.get("model_write"):
+            mw_dir = self.policy_engine.build_model_write_directive(decision, signal)
+            if mw_dir:
+                await self._store_model_write_directive(user_id, mw_dir)
+                trace.directive_ids.append(mw_dir.directive_id)
+                await self._apply_model_writes(user_id, mw_dir)
 
-        # Step 4g: Build and store CommunityDirective
-        comm_dir = self.policy_engine.build_community_directive(decision, signal)
-        if comm_dir:
-            await self._store_community_directive(user_id, comm_dir)
-            trace.directive_ids.append(comm_dir.directive_id)
+        if wd.get("ux"):
+            ux_dir = self.policy_engine.build_ux_directive(decision, signal)
+            if ux_dir:
+                await self._store_ux_directive(user_id, ux_dir)
+                trace.directive_ids.append(ux_dir.directive_id)
 
-        # Step 4h: Build and store SkillDirective
-        skill_dir = self.policy_engine.build_skill_directive(decision, signal)
-        if skill_dir:
-            await self._store_skill_directive(user_id, skill_dir)
-            trace.directive_ids.append(skill_dir.directive_id)
+        if wd.get("community"):
+            comm_dir = self.policy_engine.build_community_directive(decision, signal)
+            if comm_dir:
+                await self._store_community_directive(user_id, comm_dir)
+                trace.directive_ids.append(comm_dir.directive_id)
+
+        if wd.get("skill"):
+            skill_dir = self.policy_engine.build_skill_directive(decision, signal)
+            if skill_dir:
+                await self._store_skill_directive(user_id, skill_dir)
+                trace.directive_ids.append(skill_dir.directive_id)
 
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":
@@ -270,6 +273,30 @@ class SpineOrchestrator:
             "user_feedback",
         ]
         await self.trace_store._save_trace(trace)
+
+        # Step 6b: Check Aurora wake eligibility for high-risk signals
+        if decision.risk_level in ("critical", "high"):
+            neg_outcomes = sum(
+                1 for pe in recent_effects
+                if getattr(pe, "attribution", "") == "insufficient"
+            ) if recent_effects else 0
+            wake_result = self.check_aurora_wake(
+                user_id=user_id,
+                quota_remaining=3,
+                cooldown_status="available",
+                consecutive_negative_outcomes=neg_outcomes,
+            )
+            if wake_result.can_wake:
+                import json
+                await self.redis.set(
+                    f"spine:aurora_wake_pending:{user_id}",
+                    json.dumps(wake_result.to_dict()),
+                    ex=3600,
+                )
+                logger.info(
+                    "Aurora wake recommended: user={} type={}",
+                    user_id, wake_result.recommended_session_type,
+                )
 
         logger.info(
             "Spine complete: trace={} signal={} policy={} directive={}",
