@@ -40,6 +40,7 @@ from app.signals.types import (
     UserVisibleReceipt,
     UXDirective,
 )
+from app.signals.exam_sprint_policy import ExamSprintDirective, ExamSprintPhase, ExamSprintPolicyService
 
 __all__ = [
     "ActionableSignal",

@@ -5065,3 +5065,396 @@ def test_why_this_task_and_materials_in_guide_json():
     assert "TCP" in guide["why_this_task"]
     assert "updates_after_completion" in guide
     assert isinstance(guide["updates_after_completion"], list)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-1b: Achievement Quality Cross-Check (3-tier rules)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_quality_cross_check_rule_a_quality_ok():
+    """Rule A: momentum_high + quality_ok → standard sustain_momentum."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_qa",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_high",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="7天解锁5个成就",
+        possible_effects=["reinforce"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal, context={"quality_ok": True, "accuracy_trend": "improving"})
+    assert result is not None
+    decision, _ = result
+    assert decision.primary_strategy == "sustain_momentum"
+
+
+@pytest.mark.asyncio
+async def test_quality_cross_check_rule_b_declining_accuracy():
+    """Rule B: momentum_high + declining accuracy → mistake repair."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_qb",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_high",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="7天解锁5个成就",
+        possible_effects=["reinforce"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal, context={"quality_ok": False, "accuracy_trend": "declining"})
+    assert result is not None
+    decision, _ = result
+    assert decision.primary_strategy == "recognize_effort_but_repair_quality"
+    assert decision.soft_biases.get("task_type") == "mistake_repair"
+
+
+@pytest.mark.asyncio
+async def test_quality_cross_check_rule_c_overrun():
+    """Rule C: momentum_high + time overrun → protect sustainability."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_qc",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_high",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="7天解锁5个成就",
+        possible_effects=["reinforce"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal, context={"time_overrun": True})
+    assert result is not None
+    decision, _ = result
+    assert decision.primary_strategy == "protect_sustainability"
+    assert decision.hard_constraints.get("max_task_duration_min") == 25
+
+
+@pytest.mark.asyncio
+async def test_quality_cross_check_rule_c_high_pressure():
+    """Rule C: momentum_high + high_pressure → protect sustainability."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_qc2",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_high",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="7天解锁5个成就",
+        possible_effects=["reinforce"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal, context={"high_pressure": True})
+    assert result is not None
+    decision, _ = result
+    assert decision.primary_strategy == "protect_sustainability"
+
+
+@pytest.mark.asyncio
+async def test_quality_cross_check_no_context():
+    """No context → standard momentum_high behavior (Rule A default)."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_qd",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_high",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="7天解锁5个成就",
+        possible_effects=["reinforce"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal, context=None)
+    assert result is not None
+    decision, _ = result
+    assert decision.primary_strategy == "sustain_momentum"
+
+
+@pytest.mark.asyncio
+async def test_quality_cross_check_does_not_affect_momentum_stalled():
+    """Quality cross-check only applies to momentum_high, not stalled."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_qs",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_stalled",
+        confidence=0.75,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="7天仅解锁1个成就",
+        possible_effects=["reduce_pressure"],
+        priority="medium",
+    )
+    result = await engine.evaluate(signal, context={"time_overrun": True})
+    assert result is not None
+    decision, _ = result
+    # Should be rekindle_engagement, NOT protect_sustainability
+    assert decision.primary_strategy == "rekindle_engagement"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-6: ExamSprintPolicy + Galaxy Mastery Mapping
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_exam_sprint_phase_d7():
+    """D-7 → build_path phase."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=7, subject="计网")
+    assert directive.phase.phase_id == "build_path"
+    assert directive.phase.allow_new_chapters is True
+
+
+def test_exam_sprint_phase_d3():
+    """D-3 → bottleneck_training phase."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=3)
+    assert directive.phase.phase_id == "bottleneck_training"
+    assert directive.phase.allow_new_chapters is False
+
+
+def test_exam_sprint_phase_d1():
+    """D-1 → survival phase."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=1)
+    assert directive.phase.phase_id == "survival"
+    assert directive.phase.max_task_duration_min == 20
+
+
+def test_exam_sprint_phase_d0():
+    """D-0 → final_review phase."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=0)
+    assert directive.phase.phase_id == "final_review"
+    assert directive.phase.difficulty_cap == 1
+
+
+def test_exam_sprint_should_activate():
+    """should_activate only for exam_rescue <= 7 days."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=7)
+    assert not ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=14)
+    assert not ExamSprintPolicyService.should_activate(goal_mode="normal", days_to_deadline=3)
+    assert not ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=None)
+
+
+def test_mastery_to_task_type():
+    """Mastery maps to correct task types."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    assert svc.mastery_to_task_type(0.1) == "concept_compression"
+    assert svc.mastery_to_task_type(0.4) == "worked_example_guided_drill"
+    assert svc.mastery_to_task_type(0.6) == "drill_mistake_check"
+    assert svc.mastery_to_task_type(0.9) == "mixed_practice_exam_simulation"
+
+
+def test_mastery_to_difficulty():
+    """Mastery maps to correct difficulty levels."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    assert svc.mastery_to_difficulty(0.1) == 5
+    assert svc.mastery_to_difficulty(0.4) == 3
+    assert svc.mastery_to_difficulty(0.6) == 2
+    assert svc.mastery_to_difficulty(0.9) == 1
+
+
+def test_score_node_priorities():
+    """Nodes sorted by priority: low mastery + high weight first."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    nodes = [
+        {"node_id": "n1", "label": "TCP", "mastery": 0.8, "exam_weight": 1.0},
+        {"node_id": "n2", "label": "UDP", "mastery": 0.2, "exam_weight": 1.5},
+        {"node_id": "n3", "label": "HTTP", "mastery": 0.5, "exam_weight": 0.8},
+    ]
+    scored = svc.score_node_priorities(nodes)
+    # UDP should be highest priority (low mastery, high weight)
+    assert scored[0]["node_id"] == "n2"
+    assert scored[0]["recommended_task_type"] == "concept_compression"
+    assert scored[0]["recommended_difficulty"] == 5
+    # TCP should be lowest priority (high mastery)
+    assert scored[-1]["node_id"] == "n1"
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-6: ExamSprintPolicy — Deadline-Phase Adaptive Strategy
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_exam_sprint_phase_d7_build_path():
+    """D-7 → build_path: allow new chapters, mixed tasks, 45 min cap."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=7)
+    assert directive.phase.phase_id == "build_path"
+    assert directive.phase.allow_new_chapters is True
+    assert directive.phase.max_task_duration_min == 45
+    assert directive.phase.task_type_bias == "mixed"
+    assert directive.days_to_deadline == 7
+
+
+def test_exam_sprint_phase_d5_build_path():
+    """D-5 still build_path."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=5)
+    assert directive.phase.phase_id == "build_path"
+
+
+def test_exam_sprint_phase_d4_bottleneck_training():
+    """D-4 → bottleneck_training: no new chapters, worked_example."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=4)
+    assert directive.phase.phase_id == "bottleneck_training"
+    assert directive.phase.allow_new_chapters is False
+    assert directive.phase.max_task_duration_min == 35
+    assert directive.phase.task_type_bias == "worked_example"
+
+
+def test_exam_sprint_phase_d2_error_repair():
+    """D-2 → error_repair: drill mode, high-yield review, 25 min cap."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=2)
+    assert directive.phase.phase_id == "error_repair"
+    assert directive.phase.prefer_high_yield_review is True
+    assert directive.phase.max_task_duration_min == 25
+    assert directive.phase.task_type_bias == "drill"
+    assert directive.phase.tone == "calm_urgent"
+
+
+def test_exam_sprint_phase_d1_survival():
+    """D-1 → survival: 20 min cap, exam_pack retrieval."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=1)
+    assert directive.phase.phase_id == "survival"
+    assert directive.phase.max_task_duration_min == 20
+    assert directive.phase.retrieval_mode == "graph_summary_or_exam_pack"
+    assert directive.phase.difficulty_cap == 2
+
+
+def test_exam_sprint_phase_d0_final_review():
+    """D-0 → final_review: 15 min cap, difficulty 1, only review."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=0)
+    assert directive.phase.phase_id == "final_review"
+    assert directive.phase.max_task_duration_min == 15
+    assert directive.phase.difficulty_cap == 1
+    assert directive.phase.task_type_bias == "review"
+
+
+def test_exam_sprint_phase_past_deadline():
+    """Past deadline (days < 0) → final_review as fallback."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=-1)
+    assert directive.phase.phase_id == "final_review"
+
+
+def test_exam_sprint_should_activate():
+    """should_activate only true for exam_rescue + <=7 days."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=7) is True
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=0) is True
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=8) is False
+    assert ExamSprintPolicyService.should_activate(goal_mode="standard", days_to_deadline=3) is False
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=None) is False
+
+
+def test_exam_sprint_mastery_to_task_type():
+    """Mastery level maps to correct task types."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    assert svc.mastery_to_task_type(0.1) == "concept_compression"
+    assert svc.mastery_to_task_type(0.4) == "worked_example_guided_drill"
+    assert svc.mastery_to_task_type(0.6) == "drill_mistake_check"
+    assert svc.mastery_to_task_type(0.8) == "mixed_practice_exam_simulation"
+
+
+def test_exam_sprint_mastery_to_difficulty():
+    """Mastery level maps to correct difficulty."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    assert svc.mastery_to_difficulty(0.1) == 5
+    assert svc.mastery_to_difficulty(0.4) == 3
+    assert svc.mastery_to_difficulty(0.6) == 2
+    assert svc.mastery_to_difficulty(0.8) == 1
+
+
+def test_exam_sprint_score_node_priorities():
+    """Node priority scoring: lower mastery + higher weight = higher priority."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    nodes = [
+        {"node_id": "tcp", "label": "TCP", "mastery": 0.8, "exam_weight": 2.0},
+        {"node_id": "udp", "label": "UDP", "mastery": 0.2, "exam_weight": 1.5},
+        {"node_id": "http", "label": "HTTP", "mastery": 0.5, "exam_weight": 3.0},
+    ]
+    scored = svc.score_node_priorities(nodes)
+    assert scored[0]["node_id"] == "http"  # (1-0.5)*3.0 = 1.5
+    assert scored[1]["node_id"] == "udp"  # (1-0.2)*1.5 = 1.2
+    assert scored[2]["node_id"] == "tcp"  # (1-0.8)*2.0 = 0.4
+    assert "priority_score" in scored[0]
+    assert "recommended_task_type" in scored[0]
+
+
+def test_exam_sprint_directive_serialization():
+    """ExamSprintDirective round-trips through to_dict."""
+    from app.signals.exam_sprint_policy import ExamSprintPolicyService
+    svc = ExamSprintPolicyService()
+    directive = svc.compute(days_to_deadline=3)
+    d = directive.to_dict()
+    assert "directive_id" in d
+    assert "phase" in d
+    assert d["phase"]["phase_id"] == "bottleneck_training"
+    assert d["days_to_deadline"] == 3
+    assert "max_task_duration_min" in d["constraints"]
+
+
+@pytest.mark.asyncio
+async def test_spine_get_exam_sprint_policy():
+    """SpineOrchestrator.get_exam_sprint_policy delegates correctly."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(redis_client=redis)
+
+    # Not exam rescue
+    result = spine.get_exam_sprint_policy(days_to_deadline=3, goal_mode="standard")
+    assert result is None
+
+    # Exam rescue D-3
+    result = spine.get_exam_sprint_policy(days_to_deadline=3, goal_mode="exam_rescue")
+    assert result is not None
+    assert result.phase.phase_id == "bottleneck_training"
+
+    # Exam rescue D-0
+    result = spine.get_exam_sprint_policy(days_to_deadline=0, goal_mode="exam_rescue")
+    assert result is not None
+    assert result.phase.phase_id == "final_review"

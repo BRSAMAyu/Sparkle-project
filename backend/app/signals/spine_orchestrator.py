@@ -29,6 +29,7 @@ from app.signals.predicted_reply_options import SpineReplyOptionEngine
 from app.signals.aurora_wake import AuroraWakeJudge
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.spine_metrics import SpineMetricsCollector
+from app.signals.exam_sprint_policy import ExamSprintPolicyService
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -79,6 +80,7 @@ class SpineOrchestrator:
         self.outcome_recorder = OutcomeRecorder(redis_client)
         self.metrics = SpineMetricsCollector(redis_client)
         self.policy_engine = PolicyEngine(reply_engine=self.reply_engine)
+        self.exam_sprint_policy = ExamSprintPolicyService()
 
     async def on_task_completed(
         self,
@@ -884,6 +886,21 @@ class SpineOrchestrator:
         if not raw:
             return None
         return UXDirective.from_dict(json.loads(raw))
+
+    # ── P0-6: ExamSprintPolicy ──────────────────────────────────────────
+
+    def get_exam_sprint_policy(
+        self,
+        *,
+        days_to_deadline: int,
+        goal_mode: str = "exam_rescue",
+    ):
+        """Compute phase-appropriate constraints for exam sprint."""
+        if not ExamSprintPolicyService.should_activate(
+            goal_mode=goal_mode, days_to_deadline=days_to_deadline,
+        ):
+            return None
+        return self.exam_sprint_policy.compute(days_to_deadline=days_to_deadline)
 
     # ── Layer 6: CommunityDirective ──────────────────────────────────────
 
