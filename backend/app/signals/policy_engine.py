@@ -291,6 +291,60 @@ class PolicyEngine:
 
         return adjusted_rule
 
+    @staticmethod
+    def _apply_quality_cross_check(
+        rule: dict[str, Any],
+        context: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """
+        P0-1b: 3-tier quality cross-check for momentum_high.
+
+        Rule A: quality_ok → recognize consistency, allow slight challenge increase
+        Rule B: declining_accuracy → avoid challenge, focus on mistake repair
+        Rule C: overrun / high_pressure → protect sustainability, cap task duration
+        """
+        if not context:
+            return rule
+
+        accuracy_trend = context.get("accuracy_trend")  # "improving" / "stable" / "declining"
+        time_overrun = context.get("time_overrun", False)
+        high_pressure = context.get("high_pressure", False)
+        quality_ok = context.get("quality_ok", True)  # default true when unknown
+
+        adjusted = dict(rule)
+
+        # Rule C: overrun or high pressure takes highest priority
+        if time_overrun or high_pressure:
+            adjusted["primary_strategy"] = "protect_sustainability"
+            adjusted["secondary_strategy"] = None
+            adjusted["hard_constraints"] = {"max_task_duration_min": 25}
+            adjusted["soft_biases"] = {
+                "tone": "low_pressure",
+                "nudge_style": "minimal",
+            }
+            adjusted["reasoning_template"] = (
+                "虽然节奏稳定，但最近有超时/压力大的情况，先保持当前节奏不加码。"
+            )
+            return adjusted
+
+        # Rule B: momentum high but accuracy declining
+        if accuracy_trend == "declining" or not quality_ok:
+            adjusted["primary_strategy"] = "recognize_effort_but_repair_quality"
+            adjusted["secondary_strategy"] = "mistake_repair_priority"
+            adjusted["hard_constraints"] = {}
+            adjusted["soft_biases"] = {
+                "tone": "recognition_not_praise",
+                "task_type": "mistake_repair",
+            }
+            adjusted["reasoning_template"] = (
+                "连续做得不错，但准确率有下降趋势。先巩固错因，不急着加难度。"
+            )
+            return adjusted
+
+        # Rule A: quality_ok (default) — standard momentum_high is fine
+        # Already has: sustain_momentum, gradual_challenge_increase
+        return adjusted
+
     async def evaluate(
         self,
         signal: ActionableSignal,
@@ -320,6 +374,10 @@ class PolicyEngine:
         # Shadow-mode learning: if recent policy effects show repeated failure,
         # adjust strategy instead of repeating the same intervention
         rule = self._apply_shadow_learning(rule, signal, recent_policy_effects)
+
+        # P0-1b: Achievement quality cross-check (3-tier rules for momentum_high)
+        if signal.state_key == "growth_momentum" and signal.claim == "momentum_high":
+            rule = self._apply_quality_cross_check(rule, context)
 
         consecutive = context.get("consecutive", 2) if context else 2
         try:

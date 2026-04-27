@@ -189,3 +189,60 @@ class StaleStateGuard:
             )
 
         return f"你离开了{time_desc}。欢迎回来，我们继续。"
+
+    # ── 神性时刻: 记得时间 ──────────────────────────────────────────
+
+    def build_recovery_card(
+        self,
+        packet: TimeDeltaPacket,
+        *,
+        deadline_phase: str = "normal_sprint",
+        days_to_deadline: int | None = None,
+    ) -> dict[str, Any]:
+        """
+        Build a structured recovery card for the "Remember Time" divine moment.
+
+        The card includes:
+        - Time context (how long away, what changed)
+        - Deadline urgency (if applicable)
+        - Personalized resume action based on where the user left off
+        """
+        hours = int(packet.elapsed_since_last_seen_min // 60)
+        mins = int(packet.elapsed_since_last_seen_min % 60)
+
+        if hours > 0:
+            time_summary = f"{hours} 小时 {mins} 分钟"
+        else:
+            time_summary = f"{mins} 分钟"
+
+        # Deadline context
+        deadline_context = None
+        if days_to_deadline is not None and days_to_deadline <= 7:
+            deadline_context = {
+                "days_to_deadline": days_to_deadline,
+                "urgency": "high" if days_to_deadline <= 3 else "medium",
+                "message": f"距考试还有 {days_to_deadline} 天" if days_to_deadline > 0 else "考试日",
+            }
+
+        # Recommended action
+        action = self._derive_recovery_action(packet, deadline_phase)
+
+        return {
+            "type": "divine_moment_recovery",
+            "time_summary": time_summary,
+            "message": packet.message_template,
+            "resume_options": packet.resume_options,
+            "recommended_action": action,
+            "deadline_context": deadline_context,
+        }
+
+    @staticmethod
+    def _derive_recovery_action(packet: TimeDeltaPacket, deadline_phase: str) -> dict[str, str]:
+        """Derive the single best recovery action from context."""
+        if deadline_phase == "final_day":
+            return {"action": "light_recall", "reason": "考试日，只推荐轻量回忆任务"}
+        if packet.pending_task_status == "expected_finished_but_no_feedback":
+            return {"action": "ask_status", "reason": "需要确认上次任务状态才能继续"}
+        if deadline_phase == "high_pressure":
+            return {"action": "high_yield_drill", "reason": "冲刺阶段，优先高频收益节点"}
+        return {"action": "resume_or_fresh", "reason": "正常节奏恢复"}

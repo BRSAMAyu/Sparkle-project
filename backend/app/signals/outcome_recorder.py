@@ -281,3 +281,61 @@ class OutcomeRecorder:
             1 for e in effects
             if e.policy_key == policy_key and e.attribution == "insufficient"
         )
+
+    # ── 神性时刻: 承认误判 ──────────────────────────────────────────
+
+    @staticmethod
+    def build_self_correction_receipt(record: OutcomeRecord) -> dict[str, Any] | None:
+        """
+        Build a self-correction receipt when outcome is "insufficient".
+
+        Divine moment: the system admits it was wrong and explains what it's changing.
+
+        Template: "我需要修正一下。之前把问题理解成 X，但反馈说明更可能是 Y。所以改成 Z。"
+        """
+        if record.attribution != "insufficient":
+            return None
+
+        # Derive what we originally thought
+        original_assumption = record.reason
+        feedback_signal = record.actual_outcome.get("user_feedback", "")
+
+        # Determine the correction based on hypothesis
+        hypothesis = record.new_hypothesis or "strategy_mismatch"
+        correction_map = {
+            "task_completed_but_intervention_may_be_insufficient": {
+                "correction": "不再机械重复相同策略，改为检查具体执行障碍",
+                "new_action": "diagnostic_check",
+            },
+            "user_did_not_respond": {
+                "correction": "减少提醒频率，改用更自然的引导方式",
+                "new_action": "reduce_nudge_frequency",
+            },
+            "no_behavioral_change_detected": {
+                "correction": "换一种更直接的方式帮助用户行动",
+                "new_action": "escalate_or_try_different_approach",
+            },
+            "knowledge_explanation_failure": {
+                "correction": "换成一步步演示 + 练习模式，不再单纯讲解",
+                "new_action": "worked_example_then_drill",
+            },
+        }
+
+        matched = correction_map.get(hypothesis, {
+            "correction": "调整策略方向",
+            "new_action": "reassess_and_adjust",
+        })
+
+        return {
+            "type": "divine_moment_self_correction",
+            "outcome_id": record.outcome_id,
+            "original_assumption": original_assumption,
+            "feedback_signal": feedback_signal,
+            "correction": matched["correction"],
+            "new_action": matched["new_action"],
+            "message": (
+                f"我需要修正一下。之前把问题理解成「{original_assumption}」，"
+                f"但你的反馈说明更可能是「{hypothesis}」。"
+                f"所以我改成：{matched['correction']}。"
+            ),
+        }

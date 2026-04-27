@@ -5458,3 +5458,143 @@ async def test_spine_get_exam_sprint_policy():
     result = spine.get_exam_sprint_policy(days_to_deadline=0, goal_mode="exam_rescue")
     assert result is not None
     assert result.phase.phase_id == "final_review"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P0-7: Divine Moments — Admit Misjudgment + Remember Time
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_self_correction_receipt_insufficient():
+    """When outcome is insufficient, build_self_correction_receipt returns correction."""
+    from app.signals.types import CausalTrace, OutcomeRecord
+    from app.signals.outcome_recorder import OutcomeRecorder
+    redis = FakeRedis()
+    recorder = OutcomeRecorder(redis)
+
+    record = OutcomeRecord(
+        outcome_id="or_test",
+        causal_trace_id="tr_test",
+        intervention="max_task_duration_25min",
+        reason="recent_task_overrun",
+        expected_outcome="task_started_and_completed",
+        actual_outcome={"started": True, "completed": False, "user_feedback": "看不懂"},
+        attribution="insufficient",
+        attribution_confidence=0.6,
+        new_hypothesis="knowledge_explanation_failure",
+        next_policy_suggestion="switch_to_worked_example",
+    )
+    receipt = recorder.build_self_correction_receipt(record)
+    assert receipt is not None
+    assert receipt["type"] == "divine_moment_self_correction"
+    assert "recent_task_overrun" in receipt["message"]
+    assert "knowledge_explanation_failure" in receipt["message"]
+    assert receipt["new_action"] == "worked_example_then_drill"
+
+
+def test_self_correction_receipt_effective():
+    """When outcome is effective (not insufficient), no correction receipt."""
+    from app.signals.types import OutcomeRecord
+    from app.signals.outcome_recorder import OutcomeRecorder
+    redis = FakeRedis()
+    recorder = OutcomeRecorder(redis)
+
+    record = OutcomeRecord(
+        outcome_id="or_ok",
+        causal_trace_id="tr_ok",
+        intervention="reduce_pressure",
+        reason="momentum_stalled",
+        expected_outcome="task_started_and_completed",
+        actual_outcome={"completed": True},
+        attribution="effective",
+        attribution_confidence=0.8,
+    )
+    receipt = recorder.build_self_correction_receipt(record)
+    assert receipt is None
+
+
+def test_remember_time_recovery_card():
+    """StaleStateGuard builds structured recovery card with deadline context."""
+    from app.signals.stale_state_guard import StaleStateGuard, TimeContext, TimeDeltaPacket
+    guard = StaleStateGuard()
+
+    ctx = TimeContext(
+        now="2026-04-27T10:00:00",
+        elapsed_since_last_interaction_min=120,
+        active_task_id="task_123",
+        active_task_status="started",
+    )
+    packet = guard.check(ctx, user_id="u_test")
+    assert packet is not None
+
+    card = guard.build_recovery_card(
+        packet,
+        deadline_phase="high_pressure",
+        days_to_deadline=3,
+    )
+    assert card["type"] == "divine_moment_recovery"
+    assert "deadline_context" in card
+    assert card["deadline_context"]["urgency"] == "high"
+    assert card["deadline_context"]["days_to_deadline"] == 3
+    # Active task pending → must ask status first regardless of deadline
+    assert card["recommended_action"]["action"] == "ask_status"
+
+
+def test_remember_time_high_pressure_no_task():
+    """High pressure + no active task → high_yield_drill recommended."""
+    from app.signals.stale_state_guard import StaleStateGuard, TimeContext
+    guard = StaleStateGuard()
+
+    ctx = TimeContext(
+        now="2026-04-27T10:00:00",
+        elapsed_since_last_interaction_min=120,
+        active_task_id=None,
+    )
+    packet = guard.check(ctx, user_id="u_test")
+    assert packet is not None
+
+    card = guard.build_recovery_card(
+        packet,
+        deadline_phase="high_pressure",
+        days_to_deadline=3,
+    )
+    assert card["recommended_action"]["action"] == "high_yield_drill"
+
+
+def test_remember_time_recovery_card_exam_day():
+    """Exam day recovery: only light recall recommended."""
+    from app.signals.stale_state_guard import StaleStateGuard, TimeContext
+    guard = StaleStateGuard()
+
+    ctx = TimeContext(
+        now="2026-04-27T10:00:00",
+        elapsed_since_last_interaction_min=90,
+        active_task_id=None,
+    )
+    packet = guard.check(ctx, user_id="u_test")
+    assert packet is not None
+
+    card = guard.build_recovery_card(
+        packet,
+        deadline_phase="final_day",
+        days_to_deadline=0,
+    )
+    assert card["recommended_action"]["action"] == "light_recall"
+
+
+def test_remember_time_no_deadline():
+    """Recovery card without deadline context."""
+    from app.signals.stale_state_guard import StaleStateGuard, TimeContext
+    guard = StaleStateGuard()
+
+    ctx = TimeContext(
+        now="2026-04-27T10:00:00",
+        elapsed_since_last_interaction_min=90,
+        active_task_id=None,
+    )
+    packet = guard.check(ctx, user_id="u_test")
+    assert packet is not None
+
+    card = guard.build_recovery_card(packet)
+    assert card["deadline_context"] is None
+    assert card["recommended_action"]["action"] == "resume_or_fresh"
