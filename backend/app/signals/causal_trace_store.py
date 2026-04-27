@@ -26,10 +26,13 @@ from app.signals.types import (
 
 _TRACE_KEY = "spine:trace:{trace_id}"
 _USER_TRACES_KEY = "spine:user_traces:{user_id}"
+_USER_COMPACT_KEY = "spine:user_traces_compact:{user_id}"
 _ACTIVE_DIRECTIVE_KEY = "spine:directive:{user_id}"
 _TRACE_TTL = 30 * 24 * 3600  # 30 days
+_COMPACT_TTL = 90 * 24 * 3600  # 90 days for compacted summaries
 _DIRECTIVE_TTL = 48 * 3600   # 48 hours
 _MAX_USER_TRACES = 50
+_COMPACT_BATCH_SIZE = 10  # compact when traces exceed this many
 
 
 class CausalTraceStore:
@@ -124,6 +127,117 @@ class CausalTraceStore:
             if t:
                 traces.append(t)
         return traces
+
+    # ── Trace Compaction ──────────────────────────────────────────────
+
+    async def compact_old_traces(self, user_id: str) -> dict[str, Any] | None:
+        """Compact traces beyond the retention window into a summary.
+
+        Reads the oldest traces, aggregates their key statistics into a
+        compact summary, deletes the individual traces, and returns the
+        summary.  Keeps the most recent _MAX_USER_TRACES intact.
+
+        Returns None if there are not enough traces to compact.
+        """
+        key = _USER_TRACES_KEY.format(user_id=user_id)
+        all_ids = await self.redis.lrange(key, 0, -1)
+        total = len(all_ids)
+        if total <= _MAX_USER_TRACES:
+            return None
+
+        # IDs to compact: everything beyond the kept window
+        keep_count = _MAX_USER_TRACES
+        compact_ids = all_ids[keep_count:]
+
+        summary: dict[str, Any] = {
+            "compaction_id": _uid("compact"),
+            "user_id": user_id,
+            "traces_compacted": len(compact_ids),
+            "signal_types": {},
+            "policy_strategies": {},
+            "directive_types": {},
+            "outcomes": {"effective": 0, "insufficient": 0, "inconclusive": 0},
+            "time_range": {"earliest": None, "latest": None},
+        }
+
+        for tid in compact_ids:
+            tid_str = tid if isinstance(tid, str) else tid.decode()
+            t = await self.get_trace(tid_str)
+            if not t:
+                continue
+
+            # Aggregate signal state keys
+            for sk in t.state_keys_changed:
+                summary["signal_types"][sk] = summary["signal_types"].get(sk, 0) + 1
+
+            # Track time range
+            if t.created_at:
+                if summary["time_range"]["earliest"] is None or t.created_at < summary["time_range"]["earliest"]:
+                    summary["time_range"]["earliest"] = t.created_at
+                if summary["time_range"]["latest"] is None or t.created_at > summary["time_range"]["latest"]:
+                    summary["time_range"]["latest"] = t.created_at
+
+            # Aggregate directive types
+            for did in t.directive_ids:
+                d_raw = await self.redis.get(f"spine:directive_by_id:{did}")
+                if d_raw:
+                    d = json.loads(d_raw if isinstance(d_raw, str) else d_raw.decode())
+                    dtype = d.get("directive_type", "unknown")
+                    summary["directive_types"][dtype] = summary["directive_types"].get(dtype, 0) + 1
+
+            # Aggregate outcomes
+            if t.outcome_to_measure:
+                o_raw = await self.redis.get(f"spine:outcome:{t.trace_id}")
+                if o_raw:
+                    o = json.loads(o_raw if isinstance(o_raw, str) else o_raw.decode())
+                    eff = o.get("attribution", "inconclusive")
+                    if eff in summary["outcomes"]:
+                        summary["outcomes"][eff] += 1
+
+            # Delete individual trace
+            await self.redis.delete(_TRACE_KEY.format(trace_id=tid_str))
+
+        # Trim user traces list to kept window
+        await self.redis.ltrim(key, 0, keep_count - 1)
+
+        # Store compact summary
+        compact_key = _USER_COMPACT_KEY.format(user_id=user_id)
+        existing_raw = await self.redis.get(compact_key)
+        existing_summaries = []
+        if existing_raw:
+            existing_summaries = json.loads(existing_raw if isinstance(existing_raw, str) else existing_raw.decode())
+
+        existing_summaries.append(summary)
+        # Keep max 10 compact summaries
+        if len(existing_summaries) > 10:
+            existing_summaries = existing_summaries[-10:]
+
+        await self.redis.set(compact_key, json.dumps(existing_summaries), ex=_COMPACT_TTL)
+
+        logger.info(
+            "TraceCompaction: user={} compacted={} traces, kept {} summaries",
+            user_id, summary["traces_compacted"], len(existing_summaries),
+        )
+        return summary
+
+    async def get_compact_summaries(self, user_id: str) -> list[dict[str, Any]]:
+        """Retrieve all compact summaries for a user."""
+        compact_key = _USER_COMPACT_KEY.format(user_id=user_id)
+        raw = await self.redis.get(compact_key)
+        if not raw:
+            return []
+        return json.loads(raw if isinstance(raw, str) else raw.decode())
+
+    async def get_full_trace_history(self, user_id: str) -> dict[str, Any]:
+        """Get combined view: active traces + compacted summaries."""
+        active = await self.get_user_traces(user_id, limit=_MAX_USER_TRACES)
+        compact = await self.get_compact_summaries(user_id)
+        return {
+            "active_traces": len(active),
+            "compact_summaries": len(compact),
+            "traces": [t.to_dict() for t in active],
+            "compacted": compact,
+        }
 
     # ── Active Directive ──────────────────────────────────────────────
 

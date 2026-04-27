@@ -9449,3 +9449,101 @@ async def test_experience_envelope_aggregates_all_cards():
     assert "recovery_card" in card_types
     assert "growth_milestone" in card_types
     assert "community_hint" in card_types
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# v2.2: Trace Compaction Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_trace_compaction_below_threshold():
+    """Compaction skipped when traces below 50."""
+    from app.signals.causal_trace_store import CausalTraceStore
+    redis = FakeRedis()
+    store = CausalTraceStore(redis)
+
+    # Create only 5 traces
+    for _ in range(5):
+        trace = await store.create_trace()
+        await store.link_to_user("u1", trace.trace_id)
+
+    result = await store.compact_old_traces("u1")
+    assert result is None  # nothing to compact
+
+
+@pytest.mark.asyncio
+async def test_trace_compaction_aggregates_stats():
+    """Compaction aggregates signal types and directive types."""
+    from app.signals.causal_trace_store import CausalTraceStore, _USER_TRACES_KEY
+    redis = FakeRedis()
+    store = CausalTraceStore(redis)
+    key = _USER_TRACES_KEY.format(user_id="u1")
+
+    # Create 55 traces with manual push (bypass ltrim)
+    for i in range(55):
+        trace = await store.create_trace()
+        trace.state_keys_changed.append("task_granularity_fit" if i % 2 == 0 else "knowledge_transfer")
+        await store._save_trace(trace)
+        await redis.lpush(key, trace.trace_id)
+
+    result = await store.compact_old_traces("u1")
+    assert result is not None
+    assert result["traces_compacted"] == 5  # 55 - 50
+    assert "task_granularity_fit" in result["signal_types"]
+    assert "knowledge_transfer" in result["signal_types"]
+
+    # Verify compact summary stored
+    summaries = await store.get_compact_summaries("u1")
+    assert len(summaries) == 1
+    assert summaries[0]["traces_compacted"] == 5
+
+
+@pytest.mark.asyncio
+async def test_trace_compaction_preserves_recent():
+    """Compaction keeps most recent 50 traces intact."""
+    from app.signals.causal_trace_store import CausalTraceStore, _USER_TRACES_KEY
+    redis = FakeRedis()
+    store = CausalTraceStore(redis)
+    key = _USER_TRACES_KEY.format(user_id="u1")
+
+    trace_ids = []
+    for i in range(55):
+        trace = await store.create_trace()
+        await redis.lpush(key, trace.trace_id)
+        trace_ids.append(trace.trace_id)
+
+    await store.compact_old_traces("u1")
+
+    # Oldest 5 (last in list) should be deleted
+    for old_id in trace_ids[:5]:
+        old_trace = await store.get_trace(old_id)
+        assert old_trace is None
+
+
+@pytest.mark.asyncio
+async def test_trace_compaction_full_history():
+    """get_full_trace_history returns both active and compacted."""
+    from app.signals.causal_trace_store import CausalTraceStore, _USER_TRACES_KEY
+    redis = FakeRedis()
+    store = CausalTraceStore(redis)
+    key = _USER_TRACES_KEY.format(user_id="u1")
+
+    for i in range(55):
+        trace = await store.create_trace()
+        await redis.lpush(key, trace.trace_id)
+
+    await store.compact_old_traces("u1")
+
+    history = await store.get_full_trace_history("u1")
+    assert history["active_traces"] == 50
+    assert history["compact_summaries"] == 1
+    assert len(history["traces"]) == 50
+    assert len(history["compacted"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_trace_compaction_celery_task_registered():
+    """Celery compaction task is registered."""
+    from app.core.celery_tasks import compact_user_traces
+    assert compact_user_traces.name == "app.core.celery_tasks.compact_user_traces"

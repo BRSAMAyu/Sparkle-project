@@ -2363,3 +2363,29 @@ def scan_spine_snapshots(self, limit: int = 500):
     except Exception as exc:
         logger.error("scan_spine_snapshots failed: %s", exc)
         raise self.retry(exc=exc, countdown=300)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.compact_user_traces")
+def compact_user_traces(self, user_id: str):
+    """
+    Spine v2.2: Compact old traces beyond the 50-trace retention window.
+
+    Aggregates signal types, directive types, and outcome stats into a
+    compact summary. Individual traces are deleted to free Redis memory.
+    """
+    async def _run():
+        from app.signals.causal_trace_store import CausalTraceStore
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        store = CausalTraceStore(redis)
+        result = await store.compact_old_traces(user_id)
+        if result is None:
+            return {"status": "skipped", "reason": "below_threshold"}
+        return {"status": "compacted", "traces": result["traces_compacted"]}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("compact_user_traces failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=120)
