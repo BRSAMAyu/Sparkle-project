@@ -157,6 +157,7 @@ class ChatState {
     this.pendingSpineReceipt,
     this.pendingCommunityHint,
     this.pendingUXWarning,
+    this.pendingGrowthCard,
     this.pendingGoalArbitration,
   });
 
@@ -225,6 +226,9 @@ class ChatState {
 
   /// Spine: pending UX risk warning card — divine moment #5 "阻止低收益".
   final UXWarningEvent? pendingUXWarning;
+
+  /// Spine: pending growth card — divine moment #1 "看见坚持".
+  final GrowthCardEvent? pendingGrowthCard;
 
   /// Spine: pending multi-goal arbitration card — surfaces when ≥2 goals conflict.
   final GoalArbitrationEvent? pendingGoalArbitration;
@@ -323,6 +327,8 @@ class ChatState {
     bool clearCommunityHint = false,
     UXWarningEvent? pendingUXWarning,
     bool clearUXWarning = false,
+    GrowthCardEvent? pendingGrowthCard,
+    bool clearGrowthCard = false,
     GoalArbitrationEvent? pendingGoalArbitration,
     bool clearGoalArbitration = false,
   }) =>
@@ -423,6 +429,9 @@ class ChatState {
         pendingUXWarning: clearUXWarning
             ? null
             : pendingUXWarning ?? this.pendingUXWarning,
+        pendingGrowthCard: clearGrowthCard
+            ? null
+            : pendingGrowthCard ?? this.pendingGrowthCard,
         pendingGoalArbitration: clearGoalArbitration
             ? null
             : pendingGoalArbitration ?? this.pendingGoalArbitration,

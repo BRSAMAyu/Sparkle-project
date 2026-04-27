@@ -1751,6 +1751,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Spine: proactive risk warning (divine moment #5 阻止低收益)
           state = state.copyWith(pendingUXWarning: event);
           flushPending();
+        } else if (event is GrowthCardEvent) {
+          // Spine: growth milestone card (divine moment #1 看见坚持)
+          state = state.copyWith(pendingGrowthCard: event);
+          flushPending();
         } else if (event is GoalArbitrationEvent) {
           // Spine: multi-goal conflict surface
           state = state.copyWith(pendingGoalArbitration: event);

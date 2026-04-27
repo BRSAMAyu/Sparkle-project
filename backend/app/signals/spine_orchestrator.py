@@ -2116,6 +2116,106 @@ class SpineOrchestrator:
         except Exception:
             pass
 
+        # 8. P4 counterfactual evaluation: store policy decision for later analysis
+        try:
+            from datetime import datetime as _dt, timezone as _tz
+            decision_record = {
+                "strategy": decision.primary_strategy,
+                "signal_claim": signal.claim,
+                "signal_confidence": signal.confidence,
+                "risk_level": decision.risk_level,
+                "timestamp": _dt.now(_tz.utc).isoformat(),
+            }
+            await self.redis.rpush(
+                f"spine:policy_decisions:{user_id}",
+                json.dumps(decision_record),
+            )
+            await self.redis.ltrim(f"spine:policy_decisions:{user_id}", -100, -1)
+            await self.redis.expire(f"spine:policy_decisions:{user_id}", 90 * 24 * 3600)
+        except Exception:
+            pass
+
+        # 9. P4 quality guard: signal quality + directive compliance checks
+        try:
+            from app.signals.spine_quality_guard import SpineQualityGuard
+            traces = await self.trace_store.get_user_traces(user_id, limit=20)
+            if traces:
+                trace_dicts = []
+                for t in traces:
+                    td = t.to_dict() if hasattr(t, "to_dict") else {}
+                    td["had_policy_decision"] = bool(getattr(t, "policy_decision_id", ""))
+                    td["had_directive"] = bool(getattr(t, "directive_ids", []))
+                    trace_dicts.append(td)
+                sig_check = SpineQualityGuard.check_signal_actionability(trace_dicts)
+                dir_check = SpineQualityGuard.check_directive_compliance(trace_dicts)
+                violations = []
+                for chk in (sig_check, dir_check):
+                    if not chk.passed:
+                        violations.append(chk.to_dict() if hasattr(chk, "to_dict") else {"name": chk.check_name, "score": chk.score})
+                if violations:
+                    await self.redis.set(
+                        f"spine:quality_violations:{user_id}:latest",
+                        json.dumps({"violations": violations}),
+                        ex=24 * 3600,
+                    )
+        except Exception:
+            pass
+
+        # 10. P4 research mode: gap detection for continuous improvement
+        try:
+            from app.signals.research_mode import GapDetector
+            quality_health = "healthy"
+            quality_score = 1.0
+            systemic_issues: list[str] = []
+            raw_violations = await self.redis.get(f"spine:quality_violations:{user_id}:latest")
+            if raw_violations:
+                viol_data = json.loads(raw_violations if isinstance(raw_violations, str) else raw_violations.decode())
+                quality_health = "at_risk"
+                quality_score = 0.5
+                systemic_issues = [v.get("name", "unknown") for v in viol_data.get("violations", [])]
+            proposals = GapDetector.from_quality_report(
+                quality_health=quality_health,
+                quality_score=quality_score,
+                systemic_issues=systemic_issues,
+            )
+            if proposals:
+                await self.redis.set(
+                    f"spine:research_gaps:{user_id}:latest",
+                    json.dumps([p.to_dict() if hasattr(p, "to_dict") else p for p in proposals[:5]]),
+                    ex=24 * 3600,
+                )
+        except Exception:
+            pass
+
+        # 11. P4 safe experiment: bandit suggestion for strategy selection
+        try:
+            from app.signals.safe_experiment_platform import SafeBanditController
+            from app.signals.intervention_episode import ContextSignature
+            ctx_sig = ContextSignature(
+                goal_mode="standard",
+                failure_type=signal.claim,
+                cognitive_load="medium" if signal.priority == "high" else "low",
+                user_id=user_id,
+            )
+            candidate_strategies = [decision.primary_strategy, "reduce_pace", "reinforce_without_overpressure"]
+            bandit = SafeBanditController()
+            result = bandit.select_action(
+                candidate_actions=candidate_strategies,
+                context=ctx_sig,
+                risk_level=decision.risk_level or "low",
+            )
+            if result and result.get("selected_action") != decision.primary_strategy:
+                await self.redis.set(
+                    f"spine:bandit_suggestion:{user_id}:latest",
+                    json.dumps({
+                        "suggested_strategy": result["selected_action"],
+                        "reason": result.get("reason", ""),
+                    }),
+                    ex=24 * 3600,
+                )
+        except Exception:
+            pass
+
     # ── P1: Divine Moment Enrichers ──────────────────────────────────
 
     async def on_achievement_unlocked(

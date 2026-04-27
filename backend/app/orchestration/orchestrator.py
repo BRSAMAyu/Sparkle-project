@@ -2419,7 +2419,16 @@ class ChatOrchestrator(
                         except Exception:
                             pass
                         try:
-                            _fatigue = await _spine.check_fatigue(user_id)
+                            # Track interaction count for fatigue detection
+                            _inter_key = f"spine:interaction_count:{user_id}:24h"
+                            await self.redis.incr(_inter_key)
+                            await self.redis.expire(_inter_key, 24 * 3600)
+                            _inter_count_raw = await self.redis.get(_inter_key)
+                            _inter_count = int(_inter_count_raw) if _inter_count_raw else 0
+                            _fatigue = await _spine.check_fatigue(
+                                user_id=user_id,
+                                interactions_last_24h=_inter_count,
+                            )
                             if _fatigue and _fatigue.get("fatigue_level") not in ("low", "normal"):
                                 request_extra_context["spine_fatigue_context"] = _fatigue
                         except Exception:
@@ -2596,6 +2605,28 @@ class ChatOrchestrator(
                         )
                     except Exception as _ux_err:
                         logger.debug(f"Spine UX directive emission skipped: {_ux_err}")
+
+                # v2.11: Emit growth card metadata for Flutter (divine moment #1 看见坚持)
+                if stream_callback:
+                    try:
+                        _spine = SpineOrchestrator(self.redis) if '_spine' not in dir() else None
+                        if _spine is None:
+                            from app.signals.spine_orchestrator import SpineOrchestrator
+                            _spine_instance = SpineOrchestrator(self.redis)
+                        else:
+                            _spine_instance = _spine
+                        _growth_raw = await self.redis.get(f"spine:card:growth:{user_id}:latest")
+                        if _growth_raw:
+                            _growth_data = json.loads(_growth_raw if isinstance(_growth_raw, str) else _growth_raw.decode())
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    metadata={
+                                        "spine_growth_card": json.dumps(_growth_data, ensure_ascii=False),
+                                    },
+                                ),
+                            )
+                    except Exception:
+                        pass
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
 

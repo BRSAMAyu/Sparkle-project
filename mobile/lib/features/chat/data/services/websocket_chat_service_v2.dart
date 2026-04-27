@@ -463,6 +463,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Spine: Growth card (divine moment #1 看见坚持)
+        if (metadata != null && metadata['spine_growth_card'] != null) {
+          final growthData = _decodeMapOrString(metadata['spine_growth_card']);
+          if (growthData != null) {
+            return GrowthCardEvent(
+              cardData: growthData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         // Spine: Goal Arbitration Card — multi-goal conflict surface
         if (metadata != null && metadata['spine_goal_arbitration'] != null) {
           final arbData =

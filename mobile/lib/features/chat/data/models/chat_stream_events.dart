@@ -1771,6 +1771,33 @@ class SpineReceiptEvent extends ChatStreamEvent {
   }
 }
 
+/// Growth Card Event — divine moment #1 "看见坚持"
+/// Emitted when backend detects a significant streak or growth milestone.
+/// Backend key: response_metadata['spine_growth_card']
+class GrowthCardEvent extends ChatStreamEvent {
+  GrowthCardEvent({
+    required this.cardData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> cardData;
+
+  String get title => cardData['title'] as String? ?? '看见你的坚持';
+  String get narrative => cardData['narrative'] as String? ?? '';
+  int get streakDays => cardData['streak_days'] as int? ?? 0;
+  String get strategyEffect => cardData['strategy_effect'] as String? ?? '';
+  bool get isMilestone => cardData['is_milestone'] as bool? ?? false;
+
+  List<String> get actions {
+    final raw = cardData['actions'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return ['收到', '我其实很累'];
+  }
+}
+
 /// Goal Arbitration Event — multi-goal conflict surface
 /// Emitted when Aurora detects ≥2 active goals with priority tension.
 /// Backend key: response_metadata['spine_goal_arbitration']

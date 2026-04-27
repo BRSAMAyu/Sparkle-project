@@ -711,6 +711,10 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(clearUXWarning: true);
   }
 
+  void dismissGrowthCard() {
+    state = state.copyWith(clearGrowthCard: true);
+  }
+
   void dismissGoalArbitration() {
     state = state.copyWith(clearGoalArbitration: true);
   }

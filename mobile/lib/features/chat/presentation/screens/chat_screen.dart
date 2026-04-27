@@ -43,6 +43,7 @@ import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/growth_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
@@ -1346,6 +1347,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onDismiss: () => ref
                             .read(chatProvider.notifier)
                             .dismissUXWarning(),
+                      ),
+                    // Spine: Growth Card — divine moment #1 看见坚持
+                    if (chatState.pendingGrowthCard != null)
+                      GrowthCard(
+                        title: chatState.pendingGrowthCard!.title,
+                        narrative: chatState.pendingGrowthCard!.narrative,
+                        streakDays: chatState.pendingGrowthCard!.streakDays,
+                        strategyEffect:
+                            chatState.pendingGrowthCard!.strategyEffect,
+                        isMilestone: chatState.pendingGrowthCard!.isMilestone,
+                        actions: chatState.pendingGrowthCard!.actions,
+                        onAction: (action) {
+                          ref.read(chatProvider.notifier).dismissGrowthCard();
+                          if (action.contains('累') || action.contains('不需要')) {
+                            ref.read(chatProvider.notifier).sendMessage(action);
+                          }
+                        },
                       ),
                     // Spine: Goal Arbitration Card — multi-goal conflict surface
                     if (chatState.pendingGoalArbitration != null)
