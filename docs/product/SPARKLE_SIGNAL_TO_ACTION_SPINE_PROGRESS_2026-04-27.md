@@ -1142,6 +1142,10 @@ v5.2 D10 per-scenario quota (normal=1/sprint=2/crisis=3 per day + quick_calibrat
 v5.3 D3 three-layer ModelWrite (Hot=Redis for turn/session/task/day, Warm=PG for sprint/goal/domain/relationship, Cold=GrowthChronicle for long_term candidates requiring user confirmation), 734/734 total
 v5.4 P2-C Aurora Core policy/directive regeneration after session closure — state patches → synthetic signal → PolicyEngine re-evaluate → regenerated directives, 736/736 total
 v5.5 P2 RULING COMPLETE: All D1-D12 rulings addressed, P2-1 through P2-9 tasks implemented, P2-A through P2-D phases done. 736/736 tests passing.
+v6.0 P3-1 GoalWorldGraph: 10 node types (knowledge/capability/artifact/milestone/habit/risk/constraint/resource/feedback/relationship) + binary mastery for artifacts + unblock on dependency resolution, 744/744 tests
+v6.1 P3-2 DomainPack: 3 packs (exam_sprint/job_search_interview/project_delivery) with node_schema/feedback_taxonomy/risk_patterns/checkpoint_rules/aurora_trigger_rules/skill_library, 754/754 tests
+v6.2 P3-3 MultiGoal: arbitration → CausalTrace wiring (conflicts written to audit trail), 756/756 tests
+v6.3 P3-4 Chronicle: user-confirmable insights with claim/scope/confidence/user_status + confirm/reject/get_confirmed_entries/build_return_case_file, 761/761 tests
 ```
 
 ### P1 Status — ALL COMPLETE
