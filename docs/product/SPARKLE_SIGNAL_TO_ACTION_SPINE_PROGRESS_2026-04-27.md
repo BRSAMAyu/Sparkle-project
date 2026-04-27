@@ -872,9 +872,19 @@
 
 ---
 
-## 当前状态: v3.1 COMPLETE — Research Layer + Quality Guard + Privacy Intelligence
+## 当前状态: v3.2 COMPLETE — Mistake Event → Spine Production Loop
 
-**795/795 tests passing** | **9/9 directive types active** | **70+ public API exports** | **46 signal modules**
+**802/802 tests passing** | **9/9 directive types active** | **70+ public API exports** | **47 signal modules**
+
+### v3.2 (P8 Mistake Event Integration) — ALL COMPLETE
+- [x] P8: `MistakeSignalDetector` wired into `SpineOrchestrator.__init__()` (was isolated, now production-connected)
+- [x] P8: `on_mistake_event(user_id, error_id, linked_node_ids, error_type)` — `error.created` → transfer_failure signal → pipeline
+- [x] P8: `on_quiz_result(user_id, task_id, quiz_accuracy)` — low accuracy (<50%) → transfer_failure signal → pipeline
+- [x] P8: `galaxy_event_consumer._handle_error_created()` calls `spine.on_mistake_event()` (try/except, non-blocking)
+- [x] P8: Iron Rule preserved — Galaxy mastery double-write prevented (ErrorBookMasterySyncService owns mastery)
+- [x] P8: `GoalArbitrationEvent` Flutter type for multi-goal conflict UI surface
+- [x] P8: `spine_goal_arbitration` surfaced in `response_builder` metadata
+- [x] 7 new tests: detector wiring, threshold, trigger, multi-node, quiz accuracy tiers
 
 ### v3.1 (P4-4/5/6 Research Layer) — ALL COMPLETE
 - [x] P4-4: MultivariateExperimentEngine — n-way variants, UserSegment stratification, Bayesian+rule hybrid analysis, auto winner detection with CI
@@ -1191,6 +1201,7 @@ v6.6 P4-4 Research Experiment Platform: MultivariateExperimentEngine (design/rec
 v6.7 P4-5 Privacy Community Intelligence: PrivacyPreservingCommunityEngine + differential privacy (Laplace noise) + 3-tier cohort privacy (suppressed/trend_only/anonymous_aggregate) + privacy budget management, 783/783 tests
 v6.8 P4-6 Spine Quality Guard: SpineQualityGuard (signal quality/causal chain/directive compliance/outcome quality) + QualityReport auto-generation + degradation detection, 789/789 tests
 v6.9 P3-6 External Events + SpineOrchestrator wiring: on_external_event() method + ExternalIntegrationGateway→Spine routing, 795/795 tests
+v7.0 P8 Mistake Event Integration: MistakeSignalDetector wired to SpineOrchestrator, on_mistake_event() + on_quiz_result() production methods, galaxy_event_consumer bridge, GoalArbitrationEvent Flutter type, 802/802 tests
 ```
 
 ### P3/P4 Status — ALL COMPLETE
