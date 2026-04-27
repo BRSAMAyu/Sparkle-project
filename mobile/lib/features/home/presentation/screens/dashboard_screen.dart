@@ -15,7 +15,9 @@ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboa
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
+import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_alert.dart';
+import 'package:sparkle/features/home/presentation/widgets/aurora_status_band.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
@@ -73,6 +75,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return state.nextActions.isEmpty &&
         state.sprint == null &&
         state.growth == null;
+  }
+
+  AuroraBandState _resolveAuroraState(DashboardState state) {
+    final sprint = state.sprint;
+    if (sprint != null) {
+      if (sprint.daysLeft <= 2) return AuroraBandState.riskDetected;
+      return AuroraBandState.strategyActive;
+    }
+    if (state.nextActions.isEmpty && state.growth == null) {
+      return AuroraBandState.calibrated;
+    }
+    return AuroraBandState.calibrated;
+  }
+
+  String? _auroraBandLabel(DashboardState state) {
+    final sprint = state.sprint;
+    if (sprint != null) {
+      if (sprint.daysLeft <= 2) return '考前冲刺阶段，策略已调整';
+      return '冲刺剩余 ${sprint.daysLeft} 天，已对齐今日任务';
+    }
+    return null;
   }
 
   void _handleOmniBarHeightChanged(double height) {
@@ -156,6 +179,56 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   accentColor: DS.brandPrimary,
                   title: context.l10n.dashboardSetFirstGoal,
                   summary: context.l10n.dashboardSetFirstGoalSummary,
+                ),
+                const SizedBox(height: DS.spacing16),
+                Text(
+                  '你现在最想推进什么？',
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing12),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    _GoalChip(
+                      label: '考试冲刺',
+                      icon: Icons.local_fire_department_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent('我想准备考试冲刺')}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: '长期学习',
+                      icon: Icons.school_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent('我想系统学习一门课')}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: '项目交付',
+                      icon: Icons.rocket_launch_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent('我有一个项目要完成')}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: '自我成长',
+                      icon: Icons.psychology_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent('我想更好地管理自己')}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: '我也说不清',
+                      icon: Icons.help_outline,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent('我也说不清我想要什么')}',
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: DS.spacing16),
                 Wrap(
@@ -347,6 +420,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: CompactStatusBar(
             user: user,
             dashboardState: dashboardState,
+          ),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: AuroraStatusBand(
+            state: _resolveAuroraState(dashboardState),
+            label: _auroraBandLabel(dashboardState),
+            onTap: () => context.push(ChatRoutes.chat),
           ),
         ),
         _staggeredSection(
@@ -1213,6 +1294,47 @@ class _DashboardChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      );
+}
+
+class _GoalChip extends StatelessWidget {
+  const _GoalChip({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: DS.brandPrimary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: DS.labelSmall.copyWith(
+                  color: DS.brandPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       );
 }

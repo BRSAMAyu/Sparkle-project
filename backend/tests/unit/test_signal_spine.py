@@ -19,6 +19,9 @@ import pytest
 from app.signals.types import (
     ActionableSignal,
     ActionableStatePacket,
+    AuroraAgenda,
+    AuroraAgendaItem,
+    AuroraControlSignal,
     CausalTrace,
     DirectiveApplicationAudit,
     ExecutionDirective,
