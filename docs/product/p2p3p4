@@ -1,0 +1,2409 @@
+# Sparkle P2 / P3 / P4 最终开发裁定书
+
+## 目标：把 Sparkle 从“闭环系统”推进到“会长期学习、可跨目标迁移、具备研究级自我进化能力的 AI-native Goal OS”
+
+我先给最终判断。
+
+你现在已经不是在补 P0/P1 的基础闭环。根据你最新的架构师裁定书，当前系统已经有 42 个信号模块、12,018 行、127 类、322 个公开方法，P0/P1 主体完成，学习层、Directive、E2E 场景和生产连接都已经有相当基础；但 P2/P3/P4 目前还缺少像 P0/P1 那样可执行的任务书和架构裁定。
+
+所以接下来最重要的不是“继续加功能”，而是把高级愿景拆成三层：
+
+```text
+P2：让 Sparkle 会长期学习和自我修正
+P3：让 Sparkle 从 Exam Sprint 进化成通用 Goal OS
+P4：让 Sparkle 具备研究级策略进化、模拟评估和平台化能力
+```
+
+我会直接替你裁定，不再把关键问题留给 coding agent 自己猜。
+
+---
+
+# 0. 总原则：P2/P3/P4 不能破坏已经成型的 Causal Control Spine
+
+完全体愿景已经非常清楚：Sparkle 不是一个更会聊天的 AI，而是以 Aurora 为认知内核、知识星图为用户世界模型、任务卡为执行协议、Causal Control Spine 为因果控制主脊柱、社群为共调节层、Skill Extraction 为持续学习机制的 AI-native 目标实现系统。
+
+所以后续任何高级模块都必须继续遵守这条链：
+
+```text
+Raw Event
+→ Actionable Signal
+→ Signal Ranking & Conflict
+→ Actionable State Register
+→ Policy Arbitration
+→ Aurora Control Signal
+→ Directives
+→ Actuation
+→ DirectiveApplicationAudit
+→ User-visible Receipt
+→ Outcome
+→ Causal Attribution
+→ Model Update
+→ Skill Extraction
+→ Learning Base / Domain Pack / Personal Strategy
+```
+
+你后面所有 P2/P3/P4 功能，都必须能回答：
+
+```text
+它产生什么事件？
+它生成什么信号？
+它更新哪个状态？
+它改变哪个 PolicyDecision？
+它生成哪个 Directive？
+哪个模块消费？
+用户是否感知？
+Outcome 如何回流？
+它是否能被撤销？
+```
+
+如果答不上来，就是高级功能幻觉。
+
+---
+
+# 1. 先裁定 12 个架构决策
+
+下面是我对 D1-D12 的最终裁定。coding agent 可以直接照这个执行。
+
+---
+
+## D1. Aurora 能级调度实现策略
+
+**裁定：选择 A + 模块边界拆分。**
+
+也就是：
+
+```text
+L0 / L1 / L2 继续由 Unified Causal Runtime / SpineOrchestrator 编排；
+L3 Full Aurora Core 拆到 aurora_core 模块，但只能通过 Spine 发起；
+L4 Async Learning 拆到 learning / jobs 模块，通过候选输出回到 Spine。
+```
+
+不要选纯 B，把 L1/L2/L3 全拆成独立服务，会过早复杂化。
+也不要选纯 C，让 L3 完全归 Aurora Runtime 自管，那会重新造成 Aurora 和 Spine 割裂。
+
+最终结构：
+
+```text
+spine_runtime/
+  负责 turn pipeline、state、policy、directive、audit
+
+aurora_core/
+  负责 L3 case file、agenda、多轮校准、session closure
+
+learning/
+  负责 L4 jobs、policy learning、skill learning、source effectiveness
+
+goal_world/
+  负责 GoalWorldGraph、DomainPack、MultiGoal
+```
+
+L3 Aurora 可以有专门 prompt 和会话机制，但它的进入、退出、写回、策略改写，都必须受 Spine 管控。
+
+---
+
+## D2. 状态词汇表扩展
+
+**裁定：必须补全 cognitive_load 和 affective_pressure，但第一版用规则 + 用户表达 + 行为信号，不做医学化判断。**
+
+这两个状态是完全体必须有的，因为没有它们，系统无法判断：
+
+```text
+什么时候不该加难度；
+什么时候该缩短任务；
+什么时候不该召回；
+什么时候应该让 Aurora 显性校准；
+什么时候应该停止推进新内容。
+```
+
+第一版取值：
+
+```text
+cognitive_load:
+  low | medium | high | overloaded | unknown
+
+affective_pressure:
+  calm | tense | anxious | overwhelmed | unknown
+```
+
+信号源：
+
+```text
+任务超时
+重复求助
+短时间多次“看不懂”
+小测正确率连续下降
+深夜高频使用
+用户显式说“焦虑/崩了/来不及”
+连续切换资料
+连续要求重讲
+```
+
+注意：不要写成“用户有焦虑症”。只能写成：
+
+```text
+当前目标/当前任务下，用户表现出较高压力信号。
+```
+
+作用域默认：
+
+```text
+task / day / current_sprint
+```
+
+不得直接写 long_term。
+
+---
+
+## D3. ModelWriteDirective 的实际写入目标
+
+**裁定：三层写入。不能只写 Redis。**
+
+```text
+Hot：Redis / StateRegister
+用于 turn、session、task、day 的短期状态。
+
+Warm：PostgreSQL
+用于 goal、sprint、strategy、source、skill、policy effect 的可恢复状态。
+
+Cold：GrowthChronicle / LearningBase / Archive
+用于用户确认过的长期成长洞察、策略信念、跨目标经验、重要 CausalTrace summary。
+```
+
+写入规则：
+
+```text
+turn/session/task/day → Redis with TTL
+goal/sprint → Postgres + TTL/valid_until
+relationship → Postgres + decay
+long_term → 必须是 candidate，用户确认后才正式进入
+partner_observation → candidate，必须用户确认
+community_signal → aggregate-only，不能写个人长期模型
+```
+
+ModelWriteDirective 必须包含：
+
+```json
+{
+  "target": "state_register | goal_state | sparkle_self_model | learning_base | growth_chronicle_candidate",
+  "scope": "turn | session | task | day | sprint | goal | domain | relationship | long_term",
+  "confidence": 0.0,
+  "ttl": "",
+  "evidence": [],
+  "counter_evidence": [],
+  "requires_user_confirmation": true,
+  "retract_if": []
+}
+```
+
+---
+
+## D4. 关系模型复杂度
+
+**裁定：混合模型。FSM + 少量连续维度。**
+
+不要只做简单 FSM，因为太僵。
+也不要做高维向量，因为不可解释、难测试、容易伪智能。
+
+关系模型应该是：
+
+```text
+关系姿态 FSM：
+new
+calibrating
+trusted
+strained
+repairing
+cooldown
+
+连续维度：
+directness_tolerance      0-1
+autonomy_preference       0-1
+explanation_need          0-1
+pressure_sensitivity      0-1
+trust_in_strategy         0-1
+```
+
+它不直接展示给用户，不显示：
+
+```text
+trust = 0.73
+```
+
+它只影响：
+
+```text
+语气直接程度
+是否先解释再安排
+是否需要确认
+提醒频率
+挑战强度
+是否可以指出回避
+是否需要承认不确定
+```
+
+例子：
+
+```text
+新用户：我先不武断判断，给你几个选项确认。
+老用户且信任高：我直接说，你现在可能不是没时间，而是在绕开 TCP 窗口题。如果我判断错了，你可以纠正我。
+关系 strained：我先不继续替你判断，我们重新确认一下目标和可用时间。
+```
+
+---
+
+## D5. P2 优先级排序
+
+**裁定：P2 的优先级是学习闭环优先，不是炫技优先。**
+
+顺序：
+
+```text
+1. ModelWriteDirective 真实写入
+2. cognitive_load / affective_pressure
+3. Learning Base 长期信念
+4. Policy Learning + CounterEvidence
+5. Skill Lifecycle
+6. Full Aurora Core Session v1
+7. Relationship Model
+8. Partner Commitment Loop
+9. Policy Experiments 升级
+10. Quota/Cooldown 增强
+```
+
+原因：如果没有真实写入、长期信念、反证和策略回流，Full Aurora 再漂亮也是高级聊天窗口。
+
+---
+
+## D6. Full Aurora Core Session 交互模式
+
+**裁定：后端维护 session 状态，前端驱动展示。**
+
+也就是说：
+
+```text
+后端：
+生成 AuroraCaseFile
+维护 AuroraAgenda
+决定 current agenda item
+记录用户回答
+产出 StatePatch / PolicyProposal / ModelWriteCandidate
+
+前端：
+负责渲染多消息
+展示预测选项
+支持自由纠正
+支持暂停/稍后/退出
+```
+
+不要让前端自己决定 Aurora 怎么校准。
+也不要让 LLM 通过 WebSocket 完全自由推送 agenda，否则难审计。
+
+L3 Aurora 必须使用专门 session prompt template，不复用普通聊天 prompt。
+
+L3 的入口必须是：
+
+```text
+AuroraWakeRequest
+→ AuroraWakeEligibility
+→ AuroraCaseFile
+→ AuroraCoreSession
+→ SessionClosure
+→ PolicyDecision / Directives / ExperienceEnvelope
+```
+
+---
+
+## D7. Skill 晋升门槛
+
+**裁定：分阶段门槛，先保守，允许 shadow。**
+
+### personal_candidate → personal_live
+
+满足任一：
+
+```text
+同一用户相似场景下使用 ≥ 3 次
+且有效率 ≥ 0.67
+且无明显负反馈
+```
+
+或：
+
+```text
+使用 ≥ 5 次
+有效率 ≥ 0.6
+且用户至少 1 次显式正反馈
+```
+
+### personal_live → cohort_candidate
+
+要求：
+
+```text
+不同用户 ≥ 10
+总使用 ≥ 30
+同类场景有效率相对 baseline 提升明显
+负反馈率低于阈值
+无隐私数据
+```
+
+### cohort_candidate → cohort_live
+
+要求：
+
+```text
+shadow 验证通过
+样本覆盖至少 2 个不同 cohort
+没有明显 subgroup 伤害
+```
+
+### cohort_live → system_skill
+
+要求：
+
+```text
+不同用户 ≥ 50
+总使用 ≥ 200
+跨 cohort 稳定
+人工审核通过
+有 contraindications
+有 retract_if
+有版本号
+```
+
+早期内测可以降低样本要求，但必须标记：
+
+```text
+experimental_skill
+```
+
+不能伪装成系统级稳定能力。
+
+---
+
+## D8. 伙伴信号隐私边界
+
+**裁定：伙伴信号永远不能直接写长期模型。**
+
+伙伴反馈分两类：
+
+### 事实类
+
+例如：
+
+```text
+伙伴点击“提醒过”
+伙伴点击“已见证完成”
+伙伴看到用户没有打卡
+```
+
+可以写入：
+
+```text
+timeline / current_goal / current_sprint factual event
+```
+
+### 解释类
+
+例如：
+
+```text
+他最近总是做到一半就停。
+他可能在逃避难点。
+他不太适合长任务。
+```
+
+只能写成：
+
+```text
+external_observation_candidate
+needs_user_confirmation = true
+scope = current_sprint / current_goal
+```
+
+用户必须看到并可拒绝：
+
+```text
+你的责任伙伴提到你最近长任务容易中断。
+我不会直接把这当成事实。
+这是否接近你的情况？
+
+[确实是这样]
+[只是这几天忙]
+[不是任务大，是我卡住]
+[不要用伙伴反馈判断我]
+```
+
+如果用户选择最后一个，后续该伙伴的解释类信号只能进 timeline，不进入模型。
+
+---
+
+## D9. 实验系统统计方法
+
+**裁定：混合规则 + 贝叶斯，不用频率学派 p-value 作为主机制。**
+
+第一阶段：
+
+```text
+shadow-first
+规则阈值保护
+贝叶斯后验作为晋升参考
+```
+
+晋升示例：
+
+```text
+min_samples >= 20
+posterior P(strategy_better_than_baseline) >= 0.8
+negative_feedback_rate <= threshold
+no_safety_violation
+```
+
+不要用 p-value 作为主要机制，原因是早期样本小、上下文复杂、用户个体差异大，频率学派显著性会误导工程决策。
+
+实验系统必须区分：
+
+```text
+personal experiment
+cohort experiment
+system experiment
+```
+
+高影响策略只能 shadow 或 requiring confirmation，不能直接 live。
+
+---
+
+## D10. 配额系统复杂度
+
+**裁定：按场景配额，不做统一配额。**
+
+Full Aurora 是稀缺资源，但不同场景需求不同。
+
+建议：
+
+```text
+普通目标：每天 1 次用户主动 Full Aurora
+标准学习/项目：每天 1-2 次
+7/14 天冲刺：每天 2 次
+考前 48h：每天 3 次
+考前 24h / crisis：系统主动可越过用户主动配额，但必须写 wake_reason
+```
+
+区分：
+
+```text
+user_initiated_quota
+system_initiated_risk_budget
+quick_calibration_unlimited_but_lightweight
+```
+
+技术失败不消耗额度。
+用户主动退出且未发生模型写入，不消耗完整额度。
+“上次 session 有效返还配额”先不要做，P4 再考虑。
+
+---
+
+## D11. 多消息队列实现
+
+**裁定：AuroraAgenda 后端权威存储 + 前端逐步渲染。WebSocket 可选，不能作为必要条件。**
+
+第一版：
+
+```text
+AuroraAgenda 存 Redis + Postgres checkpoint
+前端请求 current_item
+用户响应后 POST reply
+后端推进 agenda
+```
+
+允许将来加 WebSocket，但不要让 P2 卡在实时推送上。
+
+每个 agenda item 必须可审计：
+
+```json
+{
+  "item_id": "",
+  "type": "explain_conflict | ask_confirmation | update_model | close_session",
+  "message": "",
+  "predicted_reply_options": [],
+  "expected_model_effect": {},
+  "status": "pending | waiting_user | done | skipped"
+}
+```
+
+---
+
+## D12. 代码组织
+
+**裁定：P2 开始必须拆目录。不要继续把所有东西塞进 app/signals。**
+
+建议结构：
+
+```text
+app/spine/
+  runtime/
+  state/
+  policy/
+  directives/
+  audit/
+  experience/
+
+app/signals/
+  detectors/
+  rankers/
+  producers/
+
+app/aurora_core/
+  wake/
+  case_file/
+  agenda/
+  session/
+  prompts/
+  closure/
+
+app/learning/
+  learning_base/
+  policy_experiments/
+  skill_lifecycle/
+  source_effectiveness/
+  l4_jobs/
+
+app/goal_world/
+  graph/
+  domain_pack/
+  adapters/
+  multi_goal/
+
+app/community/
+  partner_loop/
+  cohort_mistake/
+  resource_quality/
+```
+
+`app/signals/` 继续保留，但只放 signal 相关模块。高级学习、Aurora Core、GoalWorld 不要继续堆进去。
+
+---
+
+# 2. P2 开发总目标：Self-Improving Sparkle
+
+P2 的主题不是“更多高级功能”，而是：
+
+> **Sparkle 能不能从自己的行动结果中学习，并在未来更好地帮助同一个用户、同类用户和整个系统。**
+
+P2 做完后，系统应该具备：
+
+```text
+1. 能写入长期但有边界的策略信念；
+2. 能识别反证并撤销错误判断；
+3. 能把有效策略沉淀为 Skill；
+4. 能让 Full Aurora 进行真正的模型校准；
+5. 能让关系模型影响表达和确认方式；
+6. 能让 L4 后台任务产出候选洞察；
+7. 能让 PolicyEngine 消费 Learning Base；
+8. 能让用户对长期洞察拥有确认、修改、删除权。
+```
+
+---
+
+# 3. P2-1：补全高级状态词汇与状态写入闭环
+
+## 目标
+
+把 `cognitive_load`、`affective_pressure`、`strategy_confidence`、`intervention_acceptance`、`relationship_stance` 变成一等状态，不再只是文案或隐含判断。
+
+## 必须新增或补全的状态
+
+```text
+cognitive_load
+affective_pressure
+strategy_confidence
+intervention_acceptance
+relationship_stance
+learning_fatigue
+source_trust
+skill_applicability
+```
+
+## 状态对象
+
+```json
+{
+  "state_key": "cognitive_load",
+  "value": "high",
+  "confidence": 0.71,
+  "scope": "current_task",
+  "ttl": "24h",
+  "supporting_evidence": [
+    "用户连续 3 次要求重讲",
+    "当前任务第 2 步停留时间超过预期"
+  ],
+  "counter_evidence": [
+    "用户仍完成了最低产出"
+  ],
+  "can_affect": [
+    "ResponseDirective",
+    "ExecutionDirective",
+    "RetrievalDirective",
+    "AuroraWakeEligibility"
+  ],
+  "requires_user_confirmation_if_high_impact": true
+}
+```
+
+## Policy 影响
+
+```text
+cognitive_load = high:
+  - response length shorter
+  - avoid_new_chapter = true
+  - prefer worked example
+  - reduce retrieval breadth
+  - show recovery options
+
+affective_pressure = high:
+  - tone warm_direct
+  - notification pressure low
+  - avoid challenge increase
+  - ask before hard correction
+
+strategy_confidence = low:
+  - increase Aurora wake score
+  - show self-correction receipt
+  - prefer confirmatory question
+```
+
+## 验收标准
+
+输入：
+
+```text
+用户连续 3 次说“还是看不懂”，并且同一任务超时。
+```
+
+系统必须：
+
+```text
+1. 写入 cognitive_load=high；
+2. 不推进新章节；
+3. RetrievalDirective 不加载完整资料；
+4. ResponseDirective 改为短解释 + worked example；
+5. ExperienceEnvelope 给出“我先不继续扩展”的回执；
+6. CausalTrace 可追踪。
+```
+
+---
+
+# 4. P2-2：Learning Base v1 —— 长期策略信念系统
+
+当前文档里已经指出，learning_base 有 Bayesian 更新基础，但缺少长期学习循环、跨 sprint 保留信念、反证机制和自动策略晋升。
+
+## 目标
+
+让 Sparkle 能逐渐学到：
+
+```text
+对这个用户，在什么状态下，什么策略更有效；
+对这个 cohort，什么任务模板更有效；
+对系统整体，哪些策略值得沉淀为默认能力。
+```
+
+## StrategyBelief
+
+```json
+{
+  "belief_id": "belief_001",
+  "strategy_key": "worked_example_before_drill",
+  "context_signature": {
+    "goal_mode": "exam_rescue",
+    "node_type": "knowledge_node",
+    "failure_type": "transfer_failure",
+    "deadline_pressure": "high"
+  },
+  "scope": "personal | cohort | system",
+  "belief_score": 0.76,
+  "confidence": 0.68,
+  "evidence_count": 8,
+  "effective_count": 6,
+  "insufficient_count": 1,
+  "negative_count": 1,
+  "supporting_evidence": [],
+  "counter_evidence": [],
+  "last_updated_at": "",
+  "decay_policy": "context_sensitive",
+  "retract_if": [
+    "fails_3_times_in_similar_context",
+    "user_rejects_twice"
+  ]
+}
+```
+
+## 写入来源
+
+```text
+OutcomeRecorder
+PolicyEffectLedger
+DirectiveApplicationAudit
+UserCorrectionEvent
+SkillEffectiveness
+SourceEffectiveness
+CommunityAggregateSignal
+```
+
+## PolicyEngine 如何消费
+
+Learning Base 不能直接变成硬规则。
+
+它只能提供：
+
+```text
+soft_bias
+strategy_prior
+contraindication
+confidence_modifier
+```
+
+例子：
+
+```json
+{
+  "policy_bias": {
+    "prefer_strategy": "worked_example_before_drill",
+    "belief_score": 0.76,
+    "reason": "该用户在题型迁移失败时，此策略历史效果较好",
+    "hard_constraint": false
+  }
+}
+```
+
+## 用户体验
+
+不要说：
+
+```text
+Learning Base 判断 worked_example_before_drill posterior=0.76。
+```
+
+要说：
+
+```text
+上次类似情况里，直接重看课件没有太大帮助。
+你对“跟做例题 → 两道变式”的方式反应更好。
+所以这次我先用这个结构。
+```
+
+## 验收标准
+
+同一用户在三次“会规则但不会做题”的场景中，worked example 策略有效后，下一次相似场景中：
+
+```text
+1. PolicyEngine 自动偏向 worked_example；
+2. 任务卡结构改变；
+3. ResponseReceipt 说明“沿用上次有效结构”；
+4. 如果用户拒绝两次，该 belief 降权；
+5. CausalTrace 显示 LearningBase → PolicyDecision。
+```
+
+---
+
+# 5. P2-3：Policy Learning + CounterEvidence
+
+## 目标
+
+系统不能只积累“我判断对了”的证据，也要积累反证。
+
+否则 Aurora 会越来越固执。
+
+## PolicyEffectLedger
+
+```json
+{
+  "policy_effect_id": "pe_001",
+  "policy_key": "reduce_task_duration_after_overrun",
+  "context_signature": {
+    "goal_mode": "exam_rescue",
+    "recent_overrun": true,
+    "knowledge_bottleneck": "tcp_congestion_control"
+  },
+  "intervention": {
+    "max_task_duration_min": 25,
+    "avoid_new_chapter": true
+  },
+  "expected_outcome": [
+    "task_started",
+    "task_completed"
+  ],
+  "actual_outcome": {
+    "task_started": true,
+    "task_completed": false,
+    "user_feedback": "不是没时间，是不会做"
+  },
+  "attribution": {
+    "effect": "insufficient",
+    "new_hypothesis": "knowledge_explanation_failure",
+    "confidence": 0.63
+  },
+  "counter_evidence_for": [
+    "task_too_large"
+  ],
+  "supporting_evidence_for": [
+    "knowledge_bottleneck"
+  ]
+}
+```
+
+## 反证规则
+
+如果系统判断：
+
+```text
+task_granularity_fit = too_large
+```
+
+但用户连续反馈：
+
+```text
+不是任务大，是看不懂
+```
+
+那么：
+
+```text
+task_granularity_fit confidence ↓
+knowledge_bottleneck confidence ↑
+strategy 从 shrink_task 改成 worked_example / step_by_step
+```
+
+## 验收标准
+
+系统不能连续三次机械缩短任务。
+
+如果用户连续反馈“不会做”，第三次必须触发：
+
+```text
+1. 策略改判；
+2. Aurora self-correction；
+3. new PolicyDecision；
+4. Timeline card：我为什么不再只缩短任务。
+```
+
+---
+
+# 6. P2-4：Skill Lifecycle v1
+
+P2 的 Skill 目标不是“能抽取”，而是完整生命周期：
+
+```text
+candidate
+→ personal_shadow
+→ personal_live
+→ cohort_candidate
+→ cohort_shadow
+→ cohort_live
+→ system_skill
+→ deprecated / retracted
+```
+
+## SkillEntry
+
+```json
+{
+  "skill_id": "skill_tcp_transfer_repair_v1",
+  "version": "1.0.0",
+  "status": "personal_live",
+  "scope": "personal",
+  "applicable_when": {
+    "goal_mode": "exam_rescue",
+    "knowledge_node": "cn.tcp.congestion_control",
+    "failure_type": "transfer_failure"
+  },
+  "strategy": {
+    "task_type": "worked_example_then_drill",
+    "duration_min": 25,
+    "retrieval_mode": "task_bound_rag",
+    "steps": [
+      "compressed_rule",
+      "worked_example",
+      "two_variants",
+      "mistake_reflection"
+    ]
+  },
+  "evidence": {
+    "uses": 5,
+    "effective": 4,
+    "insufficient": 1,
+    "negative": 0
+  },
+  "contraindications": [
+    "user_already_mastered_node",
+    "deadline_phase_D0_low_load_only"
+  ],
+  "retract_if": [
+    "fails_3_times_in_similar_context",
+    "user_rejects_strategy_twice"
+  ]
+}
+```
+
+## SkillDirective
+
+```json
+{
+  "directive_id": "sd_001",
+  "skill_id": "skill_tcp_transfer_repair_v1",
+  "scope": "current_task",
+  "applicable_reason": "用户在 TCP 窗口题中出现迁移失败",
+  "confidence": 0.78,
+  "skill_parameters": {
+    "duration_min": 25,
+    "worked_example_count": 1,
+    "drill_count": 2,
+    "reflection_min": 4
+  },
+  "fallback_if_failed": "step_by_step_trace"
+}
+```
+
+## 用户体验
+
+```text
+我会沿用上次对你有效的结构：
+先跟做一道例题，再做两道变式，最后做错因标记。
+
+上次类似情况里，这比直接重看课件更能帮你做题。
+```
+
+## 验收标准
+
+```text
+1. 有效策略能从 outcome 中进入 skill candidate；
+2. skill 能进入 shadow；
+3. skill 能影响任务卡步骤；
+4. skill 使用后有 SkillEffectiveness；
+5. skill 可以被降级或撤销；
+6. 用户可以说“不要再用这种方式”。
+```
+
+---
+
+# 7. P2-5：Full Aurora Core Session v1
+
+完全体文档已经把 Aurora 定义为 L0/L1/L2/L3/L4 分层：L1 每轮轻量参与，L3 是高成本、限时、显性的 Full Aurora Core，L4 是异步深度学习。
+
+P2 要实现的是 **可生产使用的 L3 v1**。
+
+## 进入条件
+
+```text
+用户说“你没懂我”
+用户连续纠正系统
+同一策略连续失败
+State conflict 高
+用户目标发生变化
+Deadline 高风险
+SparkleSelfModel 置信度下降
+用户主动唤醒
+```
+
+## AuroraCaseFile
+
+```json
+{
+  "case_file_id": "acf_001",
+  "goal_summary": "7 天计网先过",
+  "current_plan_summary": "",
+  "recent_task_events": [],
+  "recent_failures": [],
+  "recent_user_corrections": [],
+  "active_hypotheses": [
+    "任务颗粒度偏大",
+    "知识瓶颈更强"
+  ],
+  "conflicts_to_resolve": [
+    "用户说每天 2 小时，但连续任务超时",
+    "系统缩短任务后仍失败"
+  ],
+  "source_summary": [],
+  "relationship_notes": [],
+  "suggested_questions": []
+}
+```
+
+## AuroraAgenda
+
+```json
+{
+  "session_id": "aurora_core_001",
+  "scope": "校准当前失败原因和今晚任务策略",
+  "agenda_items": [
+    {
+      "type": "enter_session",
+      "message": "我需要重新校准一个判断。"
+    },
+    {
+      "type": "explain_conflict",
+      "message": "我之前把问题理解成任务太长，但你的反馈说明可能是题型迁移失败。"
+    },
+    {
+      "type": "ask_confirmation",
+      "question": "更接近哪一种？",
+      "options": []
+    },
+    {
+      "type": "apply_update",
+      "expected_state_patch": {}
+    },
+    {
+      "type": "close_session",
+      "message": "Aurora 先退回后台，标准层会接着生成新任务。"
+    }
+  ]
+}
+```
+
+## PredictedReplyOption 铁律
+
+每组都必须有自由纠正入口。
+
+```text
+[确实任务太大]
+[不是任务大，是我不会]
+[只是今天临时忙]
+[都不对，我解释一下]
+```
+
+## SessionClosure
+
+```json
+{
+  "session_id": "",
+  "state_patches": [],
+  "policy_changes": [],
+  "directives_to_regenerate": [
+    "ExecutionDirective",
+    "RetrievalDirective",
+    "ResponseDirective"
+  ],
+  "user_visible_summary": "我把主要判断从任务太大改成题型迁移失败。",
+  "aurora_returns_to_background": true
+}
+```
+
+## 验收标准
+
+用户说：
+
+```text
+你又没懂，我不是没时间，是完全不会做。
+```
+
+系统必须：
+
+```text
+1. 标准层不继续硬答；
+2. 生成 AuroraWakeRequest；
+3. 展示 Aurora Core Session；
+4. 用户选择或自由解释；
+5. 状态改判；
+6. 下一张任务卡改变；
+7. Aurora 退回后台；
+8. CausalTrace 记录完整链路。
+```
+
+---
+
+# 8. P2-6：Relationship Model v1
+
+## 目标
+
+让 Sparkle 不是只“知道策略”，还知道：
+
+```text
+这位用户现在适合被怎么帮助。
+```
+
+## RelationshipState
+
+```json
+{
+  "relationship_state": {
+    "stance": "trusted",
+    "directness_tolerance": 0.72,
+    "autonomy_preference": 0.48,
+    "explanation_need": 0.61,
+    "pressure_sensitivity": 0.69,
+    "trust_in_strategy": 0.76,
+    "supporting_evidence": [],
+    "counter_evidence": [],
+    "scope": "relationship",
+    "user_visible": "indirect_only"
+  }
+}
+```
+
+## 影响
+
+```text
+directness_tolerance 高：
+  可以更直接指出低收益行为。
+
+pressure_sensitivity 高：
+  避免“再不做就来不及”。
+
+trust_in_strategy 低：
+  多解释为什么这样安排，少直接命令。
+
+autonomy_preference 高：
+  多给选项，少自动重排。
+```
+
+## 用户控制入口
+
+设置里必须有：
+
+```text
+[直接安排我]
+[多解释为什么]
+[少分析我]
+[不要用压力提醒]
+[我喜欢你直接指出问题]
+```
+
+## 验收标准
+
+同一个策略在不同关系状态下，输出方式不同，但 PolicyDecision 本身仍可追踪。
+
+---
+
+# 9. P2-7：Partner Commitment Loop v1
+
+## 目标
+
+把社群责任伙伴从页面功能变成 Causal Spine 的外部调节信号。
+
+## 流程
+
+```text
+CommitmentCreated
+→ PartnerReminder
+→ PartnerWitness
+→ PartnerObservationCandidate
+→ UserConfirmation
+→ StatePatch / PolicyDecision
+```
+
+## 伙伴承诺对象
+
+```json
+{
+  "commitment_id": "cmt_001",
+  "goal_id": "goal_cn_exam_7d",
+  "task_id": "task_tcp_001",
+  "commitment_text": "今晚 25 分钟完成 TCP 拥塞控制专项",
+  "success_criteria": "2 道变式至少做对 1 道",
+  "partner_id": "",
+  "visibility": "limited",
+  "expires_at": ""
+}
+```
+
+## 伙伴反馈
+
+```json
+{
+  "partner_signal": {
+    "type": "witnessed_completion | reminder_sent | observation_candidate",
+    "claim": "",
+    "needs_user_confirmation": true,
+    "scope": "current_sprint",
+    "privacy_level": "partner_limited"
+  }
+}
+```
+
+## 验收标准
+
+```text
+1. 伙伴能提醒/见证；
+2. 伙伴解释类反馈必须用户确认；
+3. 确认后才能影响任务粒度/提醒策略；
+4. 拒绝后不再用该反馈建模；
+5. Timeline 可见。
+```
+
+---
+
+# 10. P2-8：Policy Experiment v1
+
+## 目标
+
+让系统在安全边界内比较策略，而不是永远写死规则。
+
+## 第一版只做 shadow + safe live
+
+```json
+{
+  "experiment_id": "exp_failure_recovery_v1",
+  "mode": "shadow",
+  "trigger_context": {
+    "goal_mode": "exam_rescue",
+    "recent_task_failed": true
+  },
+  "actual_strategy": "ask_failure_reason",
+  "shadow_alternatives": [
+    "shrink_duration",
+    "worked_example_first",
+    "lower_difficulty"
+  ],
+  "metrics": [
+    "task_started",
+    "task_completed",
+    "accuracy_delta",
+    "user_correction",
+    "negative_feedback"
+  ],
+  "safety_constraints": {
+    "no_high_pressure_language": true,
+    "no_new_chapter_if_deadline_high": true
+  }
+}
+```
+
+## 晋升条件
+
+```text
+shadow evidence 足够
+posterior > 0.8
+negative_feedback 低
+无高影响误伤
+人工/规则审核通过
+```
+
+## 验收标准
+
+```text
+1. 实验不会直接覆盖硬约束；
+2. 每次实验有 CausalTrace；
+3. 实验结果产出 PolicyUpdateCandidate；
+4. 被晋升策略进入 LearningBase，而不是直接改代码规则。
+```
+
+---
+
+# 11. P2-9：L4 Async Deep Learning v1
+
+## L4 的原则
+
+L4 不直接改 live state。
+L4 只产生候选：
+
+```text
+DailyInsightCandidate
+PolicyUpdateCandidate
+SkillCandidate
+SourceQualityUpdate
+GrowthChronicleCandidate
+LongTermModelWriteCandidate
+CommunityAggregateSignal
+```
+
+## 必须实现的 L4 Jobs
+
+### 1. DailyGoalReflectionJob
+
+输出：
+
+```text
+昨天最主要瓶颈
+明天最高收益节点
+策略是否需要修正
+是否建议 Aurora 校准
+```
+
+用户体验：
+
+```text
+我整理了你昨天的情况：
+你不是完全没学会 TCP，而是卡在窗口变化题迁移。
+所以今天我不会继续让你看完整课件，而是做 worked example。
+```
+
+### 2. PolicyEffectCompactionJob
+
+把 PolicyEffectLedger 压缩成 StrategyBelief。
+
+### 3. SkillCandidateJob
+
+把重复有效策略变成 SkillCandidate。
+
+### 4. SourceEffectivenessJob
+
+判断资料在什么场景有效。
+
+```text
+第 3 章课件适合概念压缩；
+往年题更适合 worked example；
+完整课件不适合考前 24h。
+```
+
+### 5. CommunityAggregationJob
+
+输出匿名共性错因和资源质量信号。
+
+### 6. StateDecayAndRetractionJob
+
+自动降低过期状态置信度，并发现反证。
+
+## 验收标准
+
+```text
+1. L4 输出候选，不直接污染 live；
+2. 候选必须有 evidence / confidence / scope / user_visible flag；
+3. 高影响长期候选需要用户确认；
+4. 第二天计划能消费 L4 输出；
+5. Timeline 显示“我为什么今天改变策略”。
+```
+
+---
+
+# 12. P3 开发总目标：General Goal OS
+
+P3 的目标是让 Sparkle 不再只是 Exam Sprint 系统，而是通用目标实现系统。
+
+注意：P3 不是抛弃 Exam Sprint。
+Exam Sprint 是第一证明场，但不是产品边界。此前愿景已经明确，Sparkle 的灵魂不是“备考 App”，而是 AI-native 成长操作系统，考试只是楔子和样板。
+
+---
+
+# 13. P3-1：GoalWorldGraph
+
+## 目标
+
+把 Knowledge Star Map 升级为更通用的 GoalWorldGraph。
+
+## 节点类型
+
+```text
+KnowledgeNode      知识点
+CapabilityNode     能力
+ArtifactNode       交付物
+MilestoneNode      里程碑
+HabitNode          习惯
+RiskNode           风险
+ConstraintNode     限制
+ResourceNode       资源
+FeedbackNode       反馈来源
+RelationshipNode   伙伴/导师/协作者
+```
+
+## Exam Sprint 示例
+
+```text
+KnowledgeNode: TCP 拥塞控制
+QuestionArchetype: 窗口变化题
+MistakeCluster: cwnd/ssthresh 混淆
+ResourceNode: 第 3 章课件 p32-p45
+```
+
+## 求职示例
+
+```text
+CapabilityNode: 系统设计表达能力
+ArtifactNode: 简历
+MilestoneNode: 下周模拟面试
+RiskNode: 回答太散
+FeedbackNode: 面试官反馈
+```
+
+## 项目交付示例
+
+```text
+ArtifactNode: MVP 原型
+MilestoneNode: 用户测试
+RiskNode: 范围膨胀
+ConstraintNode: 两周 deadline
+```
+
+## 验收标准
+
+```text
+1. Planner 不再只消费 knowledge_node；
+2. TaskCard 可以绑定 ArtifactNode / CapabilityNode / HabitNode；
+3. Outcome 能更新不同节点类型；
+4. CausalTrace 能显示节点类型；
+5. Exam Sprint 不被破坏。
+```
+
+---
+
+# 14. P3-2：DomainPack 系统
+
+SprintPack 是 Exam Sprint 的 DomainPack 子类型。
+
+## DomainPack
+
+```json
+{
+  "domain_pack_id": "job_search_interview_pack_v1",
+  "domain": "job_search",
+  "supported_goal_modes": [
+    "interview_sprint",
+    "resume_refinement",
+    "portfolio_building"
+  ],
+  "node_schema": [
+    "CapabilityNode",
+    "ArtifactNode",
+    "FeedbackNode",
+    "RiskNode"
+  ],
+  "task_templates": [],
+  "feedback_taxonomy": [],
+  "risk_patterns": [],
+  "checkpoint_rules": [],
+  "aurora_trigger_rules": [],
+  "skill_library": []
+}
+```
+
+## DomainPack 必须包含
+
+```text
+目标类型
+节点类型
+状态词汇映射
+任务模板
+反馈分类
+风险模式
+checkpoint
+Aurora 唤醒条件
+Skill 候选
+资料类型
+Outcome 指标
+```
+
+## P3 第一批 DomainPack
+
+建议只做三个：
+
+```text
+1. exam_sprint
+2. job_search_interview
+3. project_delivery
+```
+
+不要一开始做十几个领域。
+
+## 验收标准
+
+```text
+新目标领域不需要重写 Spine；
+只需新增 DomainPack + GoalWorldGraph adapter；
+PolicyEngine 仍使用同一套 State/Policy/Directive 机制。
+```
+
+---
+
+# 15. P3-3：MultiGoal Arbitration
+
+完全体用户不会只有一个目标。
+
+他可能同时有：
+
+```text
+计网考试
+简历投递
+健身恢复
+科研阅读
+项目交付
+```
+
+P3 必须支持目标冲突仲裁。
+
+## MultiGoalState
+
+```json
+{
+  "active_goals": [
+    {
+      "goal_id": "cn_exam",
+      "urgency": "high",
+      "importance": "high",
+      "recommended_time_today_min": 45
+    },
+    {
+      "goal_id": "resume",
+      "urgency": "medium",
+      "importance": "high",
+      "recommended_time_today_min": 30
+    }
+  ],
+  "available_time_min": 60,
+  "available_energy": "low",
+  "conflict": "not_enough_time",
+  "recommended_arbitration": "protect_exam_deadline_defer_resume"
+}
+```
+
+## 用户体验
+
+```text
+你今天大概只有 60 分钟。
+计网考试还剩 2 天，简历也重要，但没有考试紧急。
+
+我建议：
+- 45 分钟做计网高收益复盘；
+- 简历只做 10 分钟收尾；
+- 不开新任务。
+
+如果你今天必须投简历，我可以重新平衡。
+```
+
+## 验收标准
+
+```text
+1. 多目标状态有命名空间；
+2. 不同目标状态不互相污染；
+3. 用户可覆盖优先级；
+4. 取舍写入 CausalTrace；
+5. TaskCard 明确属于哪个 goal。
+```
+
+---
+
+# 16. P3-4：Long-term Growth Chronicle
+
+长期成长档案不是系统偷偷积累的人格画像。
+
+它应该是：
+
+> 用户和 Sparkle 共同维护的成长叙事。
+
+## GrowthChronicleEntry
+
+```json
+{
+  "entry_id": "",
+  "title": "我在高压冲刺中更适合短任务启动",
+  "claim": "在 deadline 高压下，25-40 分钟任务比 90 分钟任务更容易启动",
+  "evidence": [
+    "计网冲刺中短任务完成率更高",
+    "90 分钟任务连续两次超时"
+  ],
+  "scope": "exam_sprint_context",
+  "confidence": 0.72,
+  "user_status": "pending | confirmed | edited | rejected | hidden",
+  "recommended_future_use": [
+    "deadline_sprint_planning",
+    "task_granularity"
+  ],
+  "retract_if": []
+}
+```
+
+## 用户体验
+
+```text
+Sparkle 逐渐学到的一点：
+
+在高压考试中，你不是不能长时间学习，
+而是更容易从 25-40 分钟的明确任务开始。
+
+我以后可以在类似冲刺中默认这样安排。
+[同意]
+[不完全对，修改]
+[不要记这个]
+```
+
+## 验收标准
+
+```text
+1. 长期洞察必须用户可见；
+2. 用户能确认、修改、删除；
+3. 未确认洞察不能作为长期硬约束；
+4. 洞察必须有 scope；
+5. 老用户回归时可以用 Chronicle 生成 ReturnCaseFile。
+```
+
+---
+
+# 17. P3-5：Generalized Task Protocol
+
+任务卡现在已经是执行协议。P3 要让它跨领域。
+
+## 通用 TaskCardProtocol
+
+```json
+{
+  "task_id": "",
+  "goal_id": "",
+  "bound_nodes": [],
+  "task_type": "study | practice | artifact_build | habit_action | review | feedback_collection",
+  "why_this_task": {},
+  "materials_protocol": {},
+  "steps": [],
+  "stuck_protocol": {},
+  "success_criteria": [],
+  "minimum_output": "",
+  "updates_after_completion": [],
+  "fallback_if_failed": []
+}
+```
+
+## 不同领域示例
+
+### 考试
+
+```text
+25 分钟修复 TCP 窗口题
+```
+
+### 求职
+
+```text
+30 分钟重写项目经历 STAR 表达
+```
+
+### 项目
+
+```text
+45 分钟完成 MVP 登录页可测试版本
+```
+
+### 健身
+
+```text
+20 分钟低冲击训练 + 膝盖疼痛反馈
+```
+
+## 验收标准
+
+```text
+TaskCard 不再假设所有任务都是知识学习；
+它必须能绑定不同 GoalWorldGraph 节点，并回写不同 outcome。
+```
+
+---
+
+# 18. P3-6：External Integration v1
+
+外部集成不要早做重。但 P3 可以开始做 goal-bound integrations。
+
+## 第一批只做
+
+```text
+Calendar
+Files / Docs
+Email deadline extraction
+GitHub / project repo summary
+```
+
+## 原则
+
+```text
+最小权限
+目标绑定
+用户可见
+可撤销
+不可直接写长期模型
+所有外部事件先进入 RawEvent
+```
+
+## 示例
+
+```text
+Calendar 发现明天 9 点考试
+→ RawEvent
+→ deadline_pressure ↑
+→ D-1 policy
+→ 不推进新章节
+```
+
+## 验收标准
+
+```text
+1. 外部事件不能绕过 Spine；
+2. 用户能看到“这个提醒来自日历事件”；
+3. 用户能断开集成；
+4. 外部信号默认不写 long_term。
+```
+
+---
+
+# 19. P4 开发总目标：Research-grade Adaptive Intelligence
+
+P4 是护城河层，不是当前产品功能堆叠。
+
+P4 的目标：
+
+```text
+让 Sparkle 不只是能学习，
+而是能安全地评估策略、模拟用户路径、验证领域包、沉淀平台级知识资产。
+```
+
+---
+
+# 20. P4-1：Counterfactual Policy Evaluation
+
+## 目标
+
+回答：
+
+```text
+如果当时不是缩短任务，而是先用 worked example，会不会更好？
+```
+
+注意：不能对用户声称“已证明”。
+只能内部估计：
+
+```text
+在相似上下文下，策略 B 可能比策略 A 更有效。
+```
+
+## 对象
+
+```json
+{
+  "counterfactual_evaluation": {
+    "actual_policy": "shrink_duration",
+    "alternative_policy": "worked_example_first",
+    "matched_contexts": [],
+    "estimated_effect": {
+      "task_completion_delta": 0.12,
+      "confidence": 0.64
+    },
+    "limitations": [
+      "observational_data",
+      "small_sample"
+    ]
+  }
+}
+```
+
+## 验收标准
+
+```text
+1. 只能输出 PolicyUpdateCandidate；
+2. 不能直接改 live policy；
+3. 必须记录 uncertainty；
+4. 用户侧表达必须谦逊。
+```
+
+---
+
+# 21. P4-2：User Simulator / Goal Simulator
+
+## 目标
+
+在策略上线前模拟极端用户路径。
+
+## 模拟用户类型
+
+```text
+零基础 + 3 天考试
+高焦虑 + 高频使用
+长期失联后回归
+目标频繁漂移
+强自主用户
+希望被直接安排的用户
+资料混乱用户
+多目标冲突用户
+```
+
+## Simulator 输出
+
+```json
+{
+  "simulation_result": {
+    "scenario": "zero_base_3_day_exam",
+    "policy_under_test": "exam_crisis_zero_base",
+    "failure_points": [],
+    "user_visible_risks": [],
+    "regression_flags": []
+  }
+}
+```
+
+## 验收标准
+
+每次 PolicyEngine / DomainPack / Aurora Core 重大改动前，至少跑：
+
+```text
+12 条固定模拟场景
+```
+
+---
+
+# 22. P4-3：DomainPack / Skill Marketplace
+
+长期可以允许：
+
+```text
+专家贡献 DomainPack
+学长贡献 SprintPack
+教师贡献课程包
+社群贡献资源包
+用户共享个人有效 skill
+```
+
+但必须严格治理。
+
+## Pack 上架流程
+
+```text
+submitted
+→ parsed
+→ safety_review
+→ shadow_evaluation
+→ cohort_trial
+→ quality_score
+→ listed
+→ deprecated / retracted
+```
+
+## Skill 上架流程
+
+```text
+personal_skill
+→ anonymized_pattern
+→ cohort_candidate
+→ validated
+→ system_skill
+→ marketplace_entry
+```
+
+## 用户体验
+
+```text
+发现一个由同课程高分用户验证过的“计网 7 天先过 Sprint Pack”。
+它会影响知识节点权重和任务模板，但不会读取你的私人数据。
+[预览]
+[应用到当前目标]
+[不推荐这类包]
+```
+
+## 验收标准
+
+```text
+1. 市场包不能自动进入用户目标；
+2. 用户必须接受；
+3. 每个 Pack 有版本和来源；
+4. 每次影响任务都要可追踪；
+5. 可撤销。
+```
+
+---
+
+# 23. P4-4：Research-grade Experiment Platform
+
+## 目标
+
+让 Sparkle 的策略学习从工程规则升级为研究级评估。
+
+能力包括：
+
+```text
+safe bandit
+cohort matching
+counterfactual evaluation
+guardrail metrics
+subgroup harm detection
+longitudinal retention/effectiveness
+```
+
+## 不允许
+
+```text
+不允许为了实验牺牲用户目标；
+不允许在高压考试中试高风险策略；
+不允许不解释地改变关键路径；
+不允许没有 rollback 的 live experiment。
+```
+
+## 验收标准
+
+```text
+1. 所有实验都有 safety constraints；
+2. 所有实验都能被 kill switch 停止；
+3. 所有 live 实验都有 rollback；
+4. 高影响实验需要人工审核；
+5. 用户关键目标场景优先保守。
+```
+
+---
+
+# 24. P4-5：Privacy-preserving Community Intelligence
+
+## 目标
+
+让社群经验成为 Sparkle 的平台智能，但不泄露个人。
+
+## 机制
+
+```text
+cohort aggregate only
+k-anonymity threshold
+no raw personal trace sharing
+no partner explanation without user confirmation
+source quality aggregation
+mistake cluster aggregation
+skill effectiveness aggregation
+```
+
+## CommunityAggregateSignal
+
+```json
+{
+  "aggregate_id": "",
+  "cohort_scope": "same_course_exam_sprint",
+  "min_group_size_met": true,
+  "signal_type": "common_mistake | resource_quality | task_template_effectiveness",
+  "node_id": "",
+  "confidence": 0.76,
+  "privacy_level": "aggregate_only",
+  "recommended_effects": []
+}
+```
+
+## 验收标准
+
+```text
+1. 聚合信号必须达到最小群体阈值；
+2. 不能反推出个人；
+3. 只作为 soft bias；
+4. 用户能关闭社群智能；
+5. CommunityDirective 写入 trace。
+```
+
+---
+
+# 25. P4-6：Autonomous Product Quality Guard
+
+完全体 Sparkle 需要自我监控高级指标。
+
+## 指标
+
+```text
+Signal-to-State Rate
+State-to-Policy Rate
+Policy-to-Directive Rate
+Directive Application Rate
+Output Change Rate
+User-visible Receipt Rate
+Outcome Feedback Rate
+Retraction Rate
+Orphan Signal Count
+Skill-to-Improvement Rate
+Source-to-Outcome Rate
+Community-to-Task Rate
+AuroraWakeEffectiveness
+LongTermChronicleConfirmationRate
+```
+
+完全体文档已经强调，coding agent 不能把功能做成孤岛，而必须问每个功能如何接入 Causal Control Spine、如何影响 Directive、如何回流 Outcome。
+
+## 自动守卫
+
+如果出现：
+
+```text
+Orphan Signal Count 上升
+Directive Application Rate 下降
+Outcome Feedback Rate 下降
+User Correction Rate 异常升高
+AuroraWake 无效率升高
+```
+
+系统应生成：
+
+```text
+SystemHealthInsight
+```
+
+进入 admin / engineering dashboard。
+
+---
+
+# 26. P2/P3/P4 的开发顺序
+
+不要并行乱做。按这个顺序。
+
+---
+
+## Phase P2-A：学习闭环可用
+
+```text
+1. ModelWriteDirective 真实写入
+2. cognitive_load / affective_pressure
+3. PolicyEffectLedger + CounterEvidence
+4. StrategyBelief
+5. LearningBase 被 PolicyEngine 消费
+```
+
+成功标志：
+
+```text
+系统不只是记录 outcome，而是下一轮策略真的变。
+```
+
+---
+
+## Phase P2-B：策略沉淀可用
+
+```text
+1. SkillLifecycle
+2. SkillDirective
+3. SkillEffectiveness
+4. SourceEffectiveness
+5. PolicyExperiment shadow
+```
+
+成功标志：
+
+```text
+同类有效策略能被复用，但仍可撤销。
+```
+
+---
+
+## Phase P2-C：Aurora Core 可用
+
+```text
+1. AuroraCaseFile
+2. AuroraAgenda
+3. PredictedReplyOption
+4. SessionClosure
+5. Policy/Directive regeneration
+```
+
+成功标志：
+
+```text
+用户说“你没懂我”后，Aurora 能显性校准，并改变后续任务。
+```
+
+---
+
+## Phase P2-D：关系与社群可用
+
+```text
+1. RelationshipModel hybrid
+2. PartnerCommitmentLoop
+3. PartnerObservationCandidate
+4. Community privacy gates
+```
+
+成功标志：
+
+```text
+Sparkle 不只是理解用户，还能理解“怎么和这个用户协作”。
+```
+
+---
+
+## Phase P3-A：GoalWorldGraph
+
+```text
+1. Node type generalization
+2. DomainPack schema
+3. GoalTypeAdapter
+4. generalized TaskCard
+```
+
+成功标志：
+
+```text
+Sparkle 能支持非考试目标，但仍走同一根 Spine。
+```
+
+---
+
+## Phase P3-B：MultiGoal + Chronicle
+
+```text
+1. goal-scoped namespace
+2. MultiGoalArbitration
+3. GrowthChronicle user confirmation
+4. ReturnCaseFile
+```
+
+成功标志：
+
+```text
+老用户、多目标用户不会互相污染，也不会回归失忆。
+```
+
+---
+
+## Phase P4-A：Research Evaluation
+
+```text
+1. Counterfactual evaluation
+2. User simulator
+3. policy simulation
+4. subgroup risk checks
+```
+
+成功标志：
+
+```text
+策略上线前可评估，失败后可解释，长期可进化。
+```
+
+---
+
+## Phase P4-B：Platform Learning
+
+```text
+1. Skill marketplace
+2. DomainPack marketplace
+3. community aggregate intelligence
+4. governance and review flow
+```
+
+成功标志：
+
+```text
+Sparkle 的能力能从个人经验、社群经验、专家经验中安全沉淀。
+```
+
+---
+
+# 27. P2/P3/P4 端到端验收场景
+
+后续不要只看 628/628 单元测试。必须加高阶 E2E。
+
+---
+
+## P2 E2E：系统会学习
+
+场景：
+
+```text
+用户连续 3 次在 TCP 窗口题中失败。
+第一次系统缩短任务。
+用户反馈：不是任务太长，是不会做。
+第二次系统改 worked example。
+用户完成。
+第三次相似场景，系统自动复用 worked example 策略。
+```
+
+必须验证：
+
+```text
+PolicyEffectLedger
+CounterEvidence
+StrategyBelief
+SkillCandidate
+SkillDirective
+UserVisibleReceipt
+CausalTrace
+```
+
+---
+
+## P2 E2E：Aurora Core 校准
+
+场景：
+
+```text
+用户说“你没懂我”。
+```
+
+必须验证：
+
+```text
+AuroraWakeEligibility
+AuroraCaseFile
+AuroraAgenda
+PredictedReplyOption
+StatePatch
+PolicyDecision
+SessionClosure
+新任务卡改变
+```
+
+---
+
+## P2 E2E：伙伴反馈不越界
+
+场景：
+
+```text
+伙伴说用户长任务容易中断。
+```
+
+必须验证：
+
+```text
+只进入 candidate
+用户确认前不写模型
+用户拒绝后不再用于策略
+Timeline 可见
+```
+
+---
+
+## P3 E2E：新目标领域
+
+场景：
+
+```text
+用户创建“下周产品面试准备”目标。
+```
+
+必须验证：
+
+```text
+GoalWorldGraph 使用 CapabilityNode / ArtifactNode
+DomainPack 加载 interview_sprint
+TaskCard 生成模拟面试任务
+Outcome 更新表达能力节点
+Aurora 可校准策略
+```
+
+---
+
+## P3 E2E：多目标冲突
+
+场景：
+
+```text
+用户今天只有 60 分钟，同时有计网考试和简历任务。
+```
+
+必须验证：
+
+```text
+MultiGoalArbitration
+用户可覆盖
+任务分配写入 trace
+两个 goal state 不互相污染
+```
+
+---
+
+## P4 E2E：策略模拟与安全上线
+
+场景：
+
+```text
+新恢复策略想从 shadow 晋升 live。
+```
+
+必须验证：
+
+```text
+policy experiment evidence
+counterfactual estimate
+simulation regression pass
+negative feedback guard
+kill switch available
+promotion candidate generated
+```
+
+---
+
+# 28. 给 coding agent 的最终任务书
+
+下面这段可以直接给 coding agent。
+
+---
+
+## 任务名称
+
+```text
+Sparkle P2/P3/P4 High-Order Vision Implementation
+目标：把 Sparkle 从闭环系统升级为长期学习、跨目标迁移、研究级自我进化的 AI-native Goal OS。
+```
+
+## 总原则
+
+```text
+不要新增孤立模块。
+不要让高级能力绕过 Causal Spine。
+不要让 L4 直接改 live state。
+不要让 Full Aurora 变成普通聊天窗口。
+不要让长期模型变成用户画像监控。
+不要让实验系统牺牲用户目标。
+不要让社群信号越过隐私确认。
+```
+
+## P2 必做
+
+```text
+1. cognitive_load / affective_pressure 状态
+2. ModelWriteDirective 三层写入
+3. PolicyEffectLedger + CounterEvidence
+4. StrategyBelief + LearningBase consumption
+5. SkillLifecycle + SkillDirective
+6. Full Aurora Core Session v1
+7. RelationshipModel hybrid
+8. PartnerCommitmentLoop
+9. PolicyExperiment shadow
+10. L4 Async Learning jobs
+```
+
+## P3 必做
+
+```text
+1. GoalWorldGraph
+2. DomainPack
+3. Generalized TaskCard
+4. MultiGoalArbitration
+5. Long-term GrowthChronicle
+6. ReturnCaseFile
+7. goal-bound external integrations
+```
+
+## P4 必做
+
+```text
+1. Counterfactual Policy Evaluation
+2. User / Goal Simulator
+3. Research-grade Policy Experiment Platform
+4. Skill / DomainPack Marketplace
+5. Privacy-preserving Community Intelligence
+6. Autonomous Product Quality Guard
+```
+
+## Definition of Done
+
+任何任务完成都必须满足：
+
+```text
+1. 有 Spine Contract；
+2. 有 RawEvent / Signal / State / Policy / Directive / Outcome；
+3. 有 CausalTrace；
+4. 有用户可见或 admin 可见解释；
+5. 有反证和撤销机制；
+6. 有 scope 和 TTL；
+7. 有 kill switch 或 shadow mode；
+8. 有 E2E 测试；
+9. 不污染 long_term；
+10. 不绕过 Aurora-Spine runtime。
+```
+
+---
+
+# 29. 最终定稿
+
+P2/P3/P4 的本质分别是：
+
+```text
+P2：
+Sparkle 学会从自己和用户的共同经历中改进。
+
+P3：
+Sparkle 从考试冲刺系统进化成通用目标实现操作系统。
+
+P4：
+Sparkle 具备安全评估、策略实验、模拟验证和平台级知识沉淀能力。
+```
+
+最重要的一句话：
+
+> **P2 让 Sparkle 会学习。
+> P3 让 Sparkle 会迁移。
+> P4 让 Sparkle 会进化。**
+
+做到这三层，Sparkle 才不只是一个已经接好闭环的产品，而是真正开始具备长期生命力的 AI-native Goal OS。
