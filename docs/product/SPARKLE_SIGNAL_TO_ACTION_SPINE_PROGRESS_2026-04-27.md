@@ -1109,7 +1109,7 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-575/575 tests passing
+584/584 tests passing
 42 signal modules (excluding __init__.py)
 55 public API exports (incl. GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
 9/9 directive types active
@@ -1118,6 +1118,7 @@ types.py                    — 7 core data objects + all dataclasses
 12/12 E2E test scenarios verified
 8-layer architecture complete
 v2.7 E2E Test Matrix: all 12 required scenarios have integration test coverage
+v2.8 SignalRanker: 10 dimensions + 10 conflict rules + Iron Law compliance verified
 ```
 
 ---

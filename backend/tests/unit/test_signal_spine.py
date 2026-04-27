@@ -10,6 +10,7 @@ Stage: Signal-to-Action Spine M1 验收测试
 from __future__ import annotations
 
 import asyncio
+import itertools
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -10659,3 +10660,147 @@ class TestE2EMatrixScenario12_CrisisMode:
         )
         # 30 days with 50% mastery should not trigger crisis
         assert crisis is None or crisis.get("mode") is None
+
+
+# =============================================================================
+# v2.6: Enhanced SignalRanker — 10 dimensions + expanded conflict rules
+# =============================================================================
+
+
+_make_signal_counter = itertools.count()
+
+def _make_signal(state_key: str, priority: str = "medium", confidence: float = 0.8,
+                 scope: str = "sprint", possible_effects: list[str] | None = None) -> ActionableSignal:
+    return ActionableSignal(
+        signal_id=f"sig_{state_key}_{next(_make_signal_counter)}",
+        source_event_ids=["evt_1"],
+        source_system="test",
+        state_key=state_key,
+        claim=f"test_{state_key}",
+        confidence=confidence,
+        evidence_summary="test",
+        scope=scope,
+        ttl_hours=24,
+        possible_effects=possible_effects if possible_effects is not None else ["effect_1"],
+        priority=priority,
+    )
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_10_dimensions_populated():
+    """All 10 dimensions are computed and present in RankedSignal."""
+    ranker = SignalRanker()
+    signal = _make_signal("exam_rescue", priority="high", confidence=0.9)
+    result = ranker.rank([signal])
+    assert len(result.ranked) == 1
+    dims = result.ranked[0].dimension_scores
+    assert len(dims) == 10
+    for key in ("goal_impact", "decision_relevance", "urgency", "confidence",
+                "freshness", "cost_of_inaction", "reversibility", "user_visibility_need",
+                "privacy_sensitivity", "contradiction_level"):
+        assert key in dims, f"Missing dimension: {key}"
+        assert 0.0 <= dims[key] <= 1.0, f"{key}={dims[key]} not in [0,1]"
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_goal_impact_tier1_high():
+    """Tier 1 signals have higher goal_impact than tier 7."""
+    ranker = SignalRanker()
+    result = ranker.rank([
+        _make_signal("safety_boundary", priority="high"),
+        _make_signal("growth_momentum", priority="high"),
+    ])
+    safety = [r for r in result.ranked if r.signal.state_key == "safety_boundary"][0]
+    # growth_momentum is suppressed by safety_boundary (no direct conflict rule,
+    # but tier ordering keeps safety first; search all results)
+    _growth_list = [r for r in result.ranked + result.suppressed if r.signal.state_key == "growth_momentum"]
+    growth = _growth_list[0] if _growth_list else None
+    assert growth is not None, "growth signal should exist in ranked or suppressed"
+    assert safety.dimension_scores["goal_impact"] > growth.dimension_scores["goal_impact"]
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_privacy_sensitivity_community():
+    """Community signals have higher privacy_sensitivity."""
+    ranker = SignalRanker()
+    result = ranker.rank([
+        _make_signal("community_cohort_pattern"),
+        _make_signal("task_granularity_fit"),
+    ])
+    community = [r for r in result.ranked if r.signal.state_key == "community_cohort_pattern"][0]
+    task = [r for r in result.ranked if r.signal.state_key == "task_granularity_fit"][0]
+    assert community.dimension_scores["privacy_sensitivity"] > task.dimension_scores["privacy_sensitivity"]
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_reversibility_scope():
+    """Turn scope has higher reversibility than goal scope."""
+    ranker = SignalRanker()
+    result = ranker.rank([
+        _make_signal("exam_rescue", scope="turn"),
+        _make_signal("exam_rescue", scope="goal"),
+    ])
+    turn = [r for r in result.ranked if r.signal.scope == "turn"][0]
+    goal = [r for r in result.ranked if r.signal.scope == "goal"][0]
+    assert turn.dimension_scores["reversibility"] > goal.dimension_scores["reversibility"]
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_user_visibility_safety():
+    """Safety and deadline signals have high user_visibility_need."""
+    ranker = SignalRanker()
+    result = ranker.rank([
+        _make_signal("exam_rescue"),
+        _make_signal("material_utilization"),
+    ])
+    exam = [r for r in result.ranked if r.signal.state_key == "exam_rescue"][0]
+    material = [r for r in result.ranked if r.signal.state_key == "material_utilization"][0]
+    assert exam.dimension_scores["user_visibility_need"] == 1.0
+    assert material.dimension_scores["user_visibility_need"] == 0.3
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_decision_relevance_with_effects():
+    """Signals with many possible_effects have higher decision_relevance."""
+    ranker = SignalRanker()
+    result = ranker.rank([
+        _make_signal("exam_rescue", possible_effects=["a", "b", "c"]),
+        _make_signal("exam_rescue", possible_effects=[]),
+    ])
+    with_effects = [r for r in result.ranked if len(r.signal.possible_effects) > 0][0]
+    without = [r for r in result.ranked if len(r.signal.possible_effects) == 0][0]
+    assert with_effects.dimension_scores["decision_relevance"] > without.dimension_scores["decision_relevance"]
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_expanded_conflict_growth_vs_deadline():
+    """growth_momentum is suppressed by deadline_pressure (expanded conflict rule)."""
+    ranker = SignalRanker()
+    result = ranker.rank([
+        _make_signal("growth_momentum", priority="high"),
+        _make_signal("deadline_pressure", priority="high"),
+    ])
+    assert len(result.conflicts_resolved) >= 1
+    suppressed_keys = [r.signal.state_key for r in result.suppressed]
+    assert "growth_momentum" in suppressed_keys
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_expanded_conflict_community_vs_knowledge():
+    """community_cohort_pattern is suppressed by knowledge_transfer."""
+    ranker = SignalRanker()
+    result = ranker.rank([
+        _make_signal("community_cohort_pattern"),
+        _make_signal("knowledge_transfer", priority="high"),
+    ])
+    assert any(c["rule"] == "knowledge_transfer_wins" for c in result.conflicts_resolved)
+
+
+@pytest.mark.asyncio
+async def test_signal_ranker_dimension_scores_in_to_dict():
+    """dimension_scores appear in RankedSignal.to_dict()."""
+    ranker = SignalRanker()
+    result = ranker.rank([_make_signal("exam_rescue")])
+    d = result.ranked[0].to_dict()
+    assert "dimension_scores" in d
+    assert "goal_impact" in d["dimension_scores"]
