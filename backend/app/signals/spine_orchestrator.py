@@ -442,6 +442,117 @@ class SpineOrchestrator:
             "band_severity": band_severity,
         }
 
+    async def get_rendered_timeline(
+        self,
+        user_id: str,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        """
+        Demo Experience Point #11: 混合时间轴记录完整 causal trace。
+
+        Loads recent CausalTrace records and renders them into user-visible
+        TimelineCard dicts that Flutter can render as a mixed causal timeline.
+
+        Returns:
+            List of rendered TimelineCard dicts (may include card, trace_id,
+            signal, policy_decision, directives, receipt, outcome, event_summary).
+        """
+        import json
+        from app.signals.types import ActionableSignal, PolicyDecision, UserVisibleReceipt
+
+        traces = await self.trace_store.get_user_traces(user_id, limit=limit)
+        cards: list[dict[str, Any]] = []
+
+        for trace in traces:
+            # Load signal
+            signal_data = None
+            if trace.signal_ids:
+                raw = await self.redis.get(f"spine:signal:{trace.signal_ids[0]}")
+                if raw:
+                    try:
+                        signal_data = ActionableSignal.from_dict(
+                            json.loads(raw if isinstance(raw, str) else raw.decode())
+                        ).to_dict()
+                    except Exception:
+                        pass
+
+            # Load policy decision
+            policy_data = None
+            if trace.policy_decision_id:
+                raw = await self.redis.get(f"spine:policy:{trace.policy_decision_id}")
+                if raw:
+                    try:
+                        policy_data = PolicyDecision.from_dict(
+                            json.loads(raw if isinstance(raw, str) else raw.decode())
+                        ).to_dict()
+                    except Exception:
+                        pass
+
+            # Load directives
+            directives: list[dict[str, Any]] = []
+            for did in trace.directive_ids:
+                raw = await self.redis.get(f"spine:directive_by_id:{did}")
+                if raw:
+                    try:
+                        directives.append(
+                            json.loads(raw if isinstance(raw, str) else raw.decode())
+                        )
+                    except Exception:
+                        pass
+
+            # Load receipt
+            receipt_data = None
+            if trace.receipt_ids:
+                raw = await self.redis.get(f"spine:receipt_by_id:{trace.receipt_ids[0]}")
+                if not raw:
+                    raw = await self.redis.get(f"spine:receipt:{user_id}:latest")
+                if raw:
+                    try:
+                        receipt_data = UserVisibleReceipt.from_dict(
+                            json.loads(raw if isinstance(raw, str) else raw.decode())
+                        ).to_dict()
+                    except Exception:
+                        pass
+
+            # Build human-readable event summary
+            event_parts = []
+            if signal_data:
+                event_parts.append(f"信号: {signal_data.get('claim', '?')}")
+            if policy_data:
+                event_parts.append(f"策略: {policy_data.get('primary_strategy', '?')}")
+            event_summary = " → ".join(event_parts) if event_parts else "系统事件"
+
+            # Render TimelineCard
+            card_data = None
+            try:
+                card = self.timeline_renderer.render_card(
+                    trace_id=trace.trace_id,
+                    signal_data=signal_data,
+                    policy_data=policy_data,
+                    directives=directives,
+                    receipt_data=receipt_data,
+                    outcome_data=None,
+                    mode="compact",
+                    timestamp=trace.created_at,
+                )
+                if card:
+                    card_data = card.to_dict()
+            except Exception:
+                pass
+
+            cards.append({
+                "trace_id": trace.trace_id,
+                "created_at": trace.created_at,
+                "event_summary": event_summary,
+                "signal": signal_data,
+                "policy_decision": policy_data,
+                "directives": directives,
+                "receipt": receipt_data,
+                "card": card_data,
+            })
+
+        return cards
+
     async def apply_directive_to_task_spec(
         self,
         user_id: str,
@@ -2777,11 +2888,17 @@ class SpineOrchestrator:
             if comm_raw:
                 envelope["cards"].append(json.loads(comm_raw if isinstance(comm_raw, str) else comm_raw.decode()))
 
-            # Timeline updates from recent traces
-            recent_trace_ids = await self.redis.lrange(f"spine:user_traces:{user_id}", 0, 2)
-            for tid in recent_trace_ids:
-                tid_str = tid if isinstance(tid, str) else tid.decode()
-                envelope["timeline_updates"].append({"trace_id": tid_str})
+            # Timeline updates: rendered TimelineCards from recent CausalTraces
+            # P11 Demo Experience Point #11: 混合时间轴记录完整 causal trace
+            try:
+                rendered_cards = await self.get_rendered_timeline(user_id, limit=3)
+                envelope["timeline_updates"] = rendered_cards
+            except Exception:
+                # Fallback: bare trace IDs (previous behavior)
+                recent_trace_ids = await self.redis.lrange(f"spine:user_traces:{user_id}", 0, 2)
+                for tid in recent_trace_ids:
+                    tid_str = tid if isinstance(tid, str) else tid.decode()
+                    envelope["timeline_updates"].append({"trace_id": tid_str})
 
             # Predicted reply options from active receipt
             if envelope["receipts"]:
