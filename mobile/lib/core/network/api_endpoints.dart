@@ -210,6 +210,10 @@ class ApiEndpoints {
       '/aurora/spine/timeline/correct';
   static const String auroraSpineReceipt = '/aurora/spine/receipt';
   static const String auroraSpineState = '/aurora/spine/state';
+  static const String auroraSpineGoals = '/aurora/spine/goals';
+  static String auroraSpineGoalGraph(String goalId) =>
+      '/aurora/spine/goal-graph/$goalId';
+  static const String auroraSpineExternalEvent = '/aurora/spine/external-event';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

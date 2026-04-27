@@ -636,3 +636,133 @@ async def correct_timeline_card(
     return {"status": "ok", "action": request.action}
 
 
+@router.get("/spine/goals")
+async def get_spine_goals(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get all active goals + arbitration result (P3-3 MultiGoal).
+
+    Returns the user's active goals ranked by urgency, with conflict detection
+    and time-split recommendation. Used by Flutter goal overview UI.
+    """
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"goals": [], "arbitration": None, "active": False}
+
+    spine = SpineOrchestrator(redis)
+    try:
+        arbitration = await spine.arbitrate_goals(user_id=str(current_user.id))
+        if arbitration is None:
+            return {"goals": [], "arbitration": None, "active": False}
+        return {
+            "active": True,
+            "goals": [g.to_dict() for g in arbitration.prioritized_goals],
+            "arbitration": {
+                "primary_goal_id": arbitration.primary_goal_id,
+                "time_split": arbitration.recommended_time_split,
+                "conflicts": arbitration.conflicts,
+                "rationale": arbitration.rationale,
+            },
+        }
+    except Exception:
+        return {"goals": [], "arbitration": None, "active": False}
+
+
+@router.get("/spine/goal-graph/{goal_id}")
+async def get_goal_graph(
+    goal_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get the GoalWorldGraph for a specific goal (P3-1 GoalWorldGraph).
+
+    Returns nodes (knowledge/capability/artifact/habit/feedback/relationship),
+    edges (prerequisite/enables/blocks), bottleneck node if any, and focus suggestions.
+    """
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"active": False, "nodes": [], "edges": []}
+
+    spine = SpineOrchestrator(redis)
+    try:
+        graph = await spine.get_goal_graph(user_id=str(current_user.id), goal_id=goal_id)
+        if graph is None:
+            return {"active": False, "nodes": [], "edges": []}
+
+        bottleneck = graph.find_bottleneck()
+        suggestions = await spine.get_goal_focus_suggestions(
+            user_id=str(current_user.id), goal_id=goal_id
+        )
+        return {
+            "active": True,
+            "goal_id": goal_id,
+            "nodes": [
+                {
+                    "node_id": n.node_id,
+                    "node_type": n.node_type,
+                    "label": n.label,
+                    "mastery": n.mastery,
+                    "is_bottleneck": n.node_id == (bottleneck.node_id if bottleneck else ""),
+                }
+                for n in graph.nodes.values()
+            ],
+            "edges": [
+                {
+                    "from_node": e.from_node_id,
+                    "to_node": e.to_node_id,
+                    "edge_type": e.edge_type,
+                }
+                for e in graph.edges
+            ],
+            "bottleneck_node_id": bottleneck.node_id if bottleneck else None,
+            "focus_suggestions": suggestions or [],
+        }
+    except Exception:
+        return {"active": False, "nodes": [], "edges": []}
+
+
+@router.post("/spine/external-event")
+async def submit_external_event(
+    request: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Submit an external event to the Spine (P3-6 ExternalIntegrationGateway).
+
+    Accepts events from: calendar, file, email, github, tool.
+    All external data enters the Spine as a controlled ExternalRawEvent.
+    """
+    from app.signals.spine_orchestrator import SpineOrchestrator
+
+    redis = cache_service.redis
+    if redis is None:
+        return {"status": "error", "message": "service unavailable"}
+
+    source = str(request.get("source", ""))
+    source_detail = str(request.get("source_detail", ""))
+    raw_payload = request.get("payload", {})
+    goal_id = request.get("goal_id")
+    integration_id = str(request.get("integration_id", ""))
+
+    if not source:
+        return {"status": "error", "message": "source is required"}
+
+    spine = SpineOrchestrator(redis)
+    trace = await spine.on_external_event(
+        user_id=str(current_user.id),
+        source=source,
+        source_detail=source_detail,
+        raw_payload=raw_payload if isinstance(raw_payload, dict) else {},
+        goal_id=goal_id,
+        integration_id=integration_id,
+    )
+
+    return {
+        "status": "ok",
+        "trace_id": trace.trace_id if trace else None,
+        "signal_triggered": trace is not None,
+    }
+
+
