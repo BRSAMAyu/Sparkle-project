@@ -823,34 +823,47 @@
 
 ---
 
-## P7: Soft Difficulty Adjustment + Enhanced Stagnation Handling
+## P7: Closed Loop Completion (v1.1 Plan)
 
-**目标**: 为 stagnation 场景提供更细粒度的任务难度控制
+**目标**: 将 Causal Control Spine 从管道升级为活的闭环系统
 
-### 新增功能
+### P7-1: Achievement → Adaptive Behavior (DONE)
+- DirectiveApplier.apply_soft_difficulty() — soft_biases difficulty 微调
+- prefer_easy_wins constraint — momentum_stalled 时 difficulty ≤ 2
+- momentum_stalled hard constraints: max_task_duration_min=20, difficulty=low
 
-| 功能 | 文件 | 说明 |
-|------|------|------|
-| `DirectiveApplier.apply_soft_difficulty()` | `directive_applier.py` | 从 soft_biases.difficulty 微调任务难度（low→max 2, medium_low→max 3, slight_increase→+1） |
-| `prefer_easy_wins` constraint | `directive_applier.py` | momentum_stalled 时 difficulty 强制 ≤ 2 |
-| `momentum_stalled` 硬约束增强 | `policy_engine.py` | max_task_duration_min=20, prefer_easy_wins=true, difficulty=low |
-| `soft_biases` 参数 | `spine_orchestrator.py` | apply_directive_to_task_spec 支持无 directive 时也应用难度微调 |
+### P7-2: CommunityDirective + SkillDirective (DONE)
+- CommunityDirective — cohort_hint_shown / peer_context_mode / resource_quality_filter
+- SkillDirective — skill_action (none/inject/extract/recommend) / extraction_trigger
+- 9/9 directive types implemented, exported, pipeline-wired
+
+### P7-3: Outcome → PolicyEffectLedger + Shadow Learning (DONE)
+- PolicyEffectEntry — policy_key / attribution / user_feedback_signal / new_hypothesis
+- OutcomeRecorder._write_policy_effect() — 自动写入 ledger
+- _apply_shadow_learning() — 影子模式: 2次 insufficient + 看不懂 → switch_to_worked_example
+- Pipeline: evaluate() 传入 recent_policy_effects
 
 ### 验收标准
-
-- [x] difficulty=low → 任务难度上限 2
-- [x] difficulty=medium_low → 任务难度上限 3
-- [x] challenge=slight_increase → 难度 +1（上限 5）
-- [x] momentum_stalled → max_task_duration_min=20 + prefer_easy_wins
-- [x] 无 directive 但有 soft_biases 时也应用难度调整
-- [x] 248/248 tests passing
-
----
-
-## 最终状态: P0-P7 COMPLETE
-
-**248/248 tests passing** | **8 layers implemented** | **9 directive types (7 active)**
+- [x] Achievement momentum → task difficulty adjustment (soft + hard)
+- [x] CommunityDirective: cohort_mistake → anonymous hint, resource → quality filter
+- [x] SkillDirective: momentum_high → extract, transfer_failure → recommend
+- [x] 9/9 directive types active
+- [x] Outcome → PolicyEffectLedger auto-write
+- [x] Shadow learning: repeated failure → strategy switch
+- [x] Self-correction trace records outcome + hypothesis
 
 ---
 
-*（每次 stage 完成后更新此文档）*
+## 当前状态: Closed Loops v1.1 IN PROGRESS
+
+**272/272 tests passing** | **9/9 directive types active** | **Shadow learning loop active**
+
+### 剩余 v1.1 任务
+- [ ] P0-1b: Achievement quality cross-check (3-tier rules)
+- [ ] P0-3: Task card 8-field protocol
+- [ ] P0-6: ExamSprintPolicy + D-7→D-0
+- [ ] P0-7: Divine moments (admit misjudgment + remember time)
+
+---
+
+*(每次 stage 完成后更新此文档)*

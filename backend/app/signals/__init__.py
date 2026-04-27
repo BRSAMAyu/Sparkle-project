@@ -6,7 +6,7 @@ Stage: Signal-to-Action Spine
 Signal-to-Action Spine — causal control pipeline.
 
 Pipeline: RawEvent → ActionableSignal → SignalRanker → StateRegister → PolicyDecision
-          → Directive (7 types) → DirectiveApplicationAudit → UserVisibleReceipt → CausalTrace
+          → Directive (9 types) → DirectiveApplicationAudit → UserVisibleReceipt → CausalTrace
           → OutcomeRecord
 
 Layers:
@@ -15,7 +15,7 @@ Layers:
   3. SignalRanker (priority + conflict resolution)
   4. StateRegister (per-user persistent state)
   5. PolicyEngine (deterministic rule arbitration)
-  6. Directives (Response / Execution / Plan / Retrieval / Notification / ModelWrite / UX)
+  6. Directives (Response / Execution / Plan / Retrieval / Notification / ModelWrite / UX / Community / Skill)
   7. DirectiveAuditor + SpineOrchestrator (actuation + audit)
   8. OutcomeRecorder (causal attribution)
 """
@@ -24,6 +24,7 @@ from app.signals.types import (
     ActionableSignal,
     ActionableStatePacket,
     CausalTrace,
+    CommunityDirective,
     DirectiveApplicationAudit,
     ExecutionDirective,
     ModelWriteDirective,
@@ -33,6 +34,7 @@ from app.signals.types import (
     PolicyDecision,
     ResponseDirective,
     RetrievalDirective,
+    SkillDirective,
     StateEntry,
     UserVisibleReceipt,
     UXDirective,
@@ -42,6 +44,7 @@ __all__ = [
     "ActionableSignal",
     "ActionableStatePacket",
     "CausalTrace",
+    "CommunityDirective",
     "DirectiveApplicationAudit",
     "ExecutionDirective",
     "ModelWriteDirective",
@@ -51,6 +54,7 @@ __all__ = [
     "PolicyDecision",
     "ResponseDirective",
     "RetrievalDirective",
+    "SkillDirective",
     "StateEntry",
     "UserVisibleReceipt",
     "UXDirective",

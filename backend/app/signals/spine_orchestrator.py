@@ -32,6 +32,7 @@ from app.signals.spine_metrics import SpineMetricsCollector
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
+    CommunityDirective,
     DirectiveApplicationAudit,
     ModelWriteDirective,
     NotificationDirective,
@@ -40,6 +41,7 @@ from app.signals.types import (
     PolicyDecision,
     ResponseDirective,
     RetrievalDirective,
+    SkillDirective,
     UXDirective,
     UserVisibleReceipt,
     _uid,
@@ -124,9 +126,14 @@ class SpineOrchestrator:
         await self.state_register.upsert_from_signal(user_id, signal)
         await self.metrics.record_signal_entered_state()
 
-        # Step 3: PolicyEngine
+        # Step 3: PolicyEngine (with shadow learning from recent outcomes)
         consecutive = await self.timeout_detector._get_consecutive_timeouts(user_id)
-        result = await self.policy_engine.evaluate(signal, context={"consecutive": consecutive})
+        recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+        result = await self.policy_engine.evaluate(
+            signal,
+            context={"consecutive": consecutive},
+            recent_policy_effects=recent_effects,
+        )
         await self.metrics.record_policy_evaluated(matched=result is not None)
 
         if result is None:
@@ -177,6 +184,18 @@ class SpineOrchestrator:
         if ux_dir:
             await self._store_ux_directive(user_id, ux_dir)
             trace.directive_ids.append(ux_dir.directive_id)
+
+        # Step 4g: Build and store CommunityDirective
+        comm_dir = self.policy_engine.build_community_directive(decision, signal)
+        if comm_dir:
+            await self._store_community_directive(user_id, comm_dir)
+            trace.directive_ids.append(comm_dir.directive_id)
+
+        # Step 4h: Build and store SkillDirective
+        skill_dir = self.policy_engine.build_skill_directive(decision, signal)
+        if skill_dir:
+            await self._store_skill_directive(user_id, skill_dir)
+            trace.directive_ids.append(skill_dir.directive_id)
 
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":
@@ -438,7 +457,13 @@ class SpineOrchestrator:
         await self.state_register.upsert_from_signal(user_id, signal)
         await self.metrics.record_signal_entered_state()
 
-        result = await self.policy_engine.evaluate(signal)
+        # Fetch recent policy effects for shadow learning
+        recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+
+        result = await self.policy_engine.evaluate(
+            signal,
+            recent_policy_effects=recent_effects,
+        )
         await self.metrics.record_policy_evaluated(matched=result is not None)
         if result is None:
             trace.outcome_to_measure = ["signal_no_rule_match"]
@@ -486,6 +511,18 @@ class SpineOrchestrator:
         if ux_dir:
             await self._store_ux_directive(user_id, ux_dir)
             trace.directive_ids.append(ux_dir.directive_id)
+
+        # Build and store CommunityDirective
+        comm_dir = self.policy_engine.build_community_directive(decision, signal)
+        if comm_dir:
+            await self._store_community_directive(user_id, comm_dir)
+            trace.directive_ids.append(comm_dir.directive_id)
+
+        # Build and store SkillDirective
+        skill_dir = self.policy_engine.build_skill_directive(decision, signal)
+        if skill_dir:
+            await self._store_skill_directive(user_id, skill_dir)
+            trace.directive_ids.append(skill_dir.directive_id)
 
         if decision.visibility == "receipt":
             receipt = UserVisibleReceipt(
@@ -846,6 +883,36 @@ class SpineOrchestrator:
         if not raw:
             return None
         return UXDirective.from_dict(json.loads(raw))
+
+    # ── Layer 6: CommunityDirective ──────────────────────────────────────
+
+    async def _store_community_directive(self, user_id: str, cd: CommunityDirective) -> None:
+        import json
+        key = f"spine:community_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(cd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(cd.directive_id, cd.to_dict())
+
+    async def get_community_directive(self, user_id: str) -> CommunityDirective | None:
+        import json
+        raw = await self.redis.get(f"spine:community_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return CommunityDirective.from_dict(json.loads(raw))
+
+    # ── Layer 6: SkillDirective ──────────────────────────────────────────
+
+    async def _store_skill_directive(self, user_id: str, sd: SkillDirective) -> None:
+        import json
+        key = f"spine:skill_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(sd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(sd.directive_id, sd.to_dict())
+
+    async def get_skill_directive(self, user_id: str) -> SkillDirective | None:
+        import json
+        raw = await self.redis.get(f"spine:skill_directive:{user_id}:latest")
+        if not raw:
+            return None
+        return SkillDirective.from_dict(json.loads(raw))
 
     # ── Layer 8: Outcome Recording ────────────────────────────────────
 

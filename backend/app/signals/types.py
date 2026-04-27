@@ -409,6 +409,74 @@ class UXDirective:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
+# ── 4g. CommunityDirective ──────────────────────────────────────────────
+# 控制社群信号如何进入个人上下文（匿名化、频率、优先级）。
+# 用户可见变化：用户看到匿名同学的经验，但不暴露个人隐私。
+
+@dataclass
+class CommunityDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "community_service"
+    cohort_hint_shown: bool = False        # 是否展示同伴错因提示
+    resource_quality_filter: float = 0.5   # 最低推荐质量分
+    peer_context_mode: str = "anonymous"   # anonymous / identified / off
+    max_frequency: str = "3_per_week"      # 3_per_week / 1_per_day / 1_per_sprint
+    scope: str = "current_sprint"
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "cohort_hint_shown": self.cohort_hint_shown,
+            "resource_quality_filter": self.resource_quality_filter,
+            "peer_context_mode": self.peer_context_mode,
+            "max_frequency": self.max_frequency,
+            "scope": self.scope,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CommunityDirective:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ── 4h. SkillDirective ──────────────────────────────────────────────────
+# 控制技能系统何时注入/提取/推荐技能。
+# 用户可见变化：用户看到可复用的学习策略建议。
+
+@dataclass
+class SkillDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "skill_service"
+    skill_action: str = "none"             # none / inject / extract / recommend
+    skill_scope: str = "current_sprint"    # current_sprint / goal / subject
+    relevant_skill_ids: list[str] = field(default_factory=list)
+    extraction_trigger: str = ""           # explicit_phrase / feedback_opt_in / outcome_positive
+    scope: str = "turn"
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "skill_action": self.skill_action,
+            "skill_scope": self.skill_scope,
+            "relevant_skill_ids": self.relevant_skill_ids,
+            "extraction_trigger": self.extraction_trigger,
+            "scope": self.scope,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> SkillDirective:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
 # ── 5. DirectiveApplicationAudit ───────────────────────────────────────
 # 不是日志装饰。验证输出是否满足 directive。
 # 用户可见变化：团队/开发者能审计为什么变了。
@@ -535,4 +603,38 @@ class OutcomeRecord:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> OutcomeRecord:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ── 9. PolicyEffectLedger ────────────────────────────────────────────────
+# 记录策略执行效果，用于 PolicyEngine 影子模式规则偏置。
+# 不是直接改规则，而是记录+查询+影响下一次决策。
+
+@dataclass
+class PolicyEffectEntry:
+    entry_id: str
+    policy_key: str                          # e.g. "recover_execution_rhythm"
+    intervention_summary: str                # e.g. "max_task_duration_min=25, avoid_new_chapter"
+    attribution: str                         # effective / insufficient / inconclusive
+    attribution_confidence: float
+    user_feedback_signal: str | None = None  # "看不懂" / "too_short" / "completed" / None
+    new_hypothesis: str | None = None
+    scope: str = "current_sprint"
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "entry_id": self.entry_id,
+            "policy_key": self.policy_key,
+            "intervention_summary": self.intervention_summary,
+            "attribution": self.attribution,
+            "attribution_confidence": self.attribution_confidence,
+            "user_feedback_signal": self.user_feedback_signal,
+            "new_hypothesis": self.new_hypothesis,
+            "scope": self.scope,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> PolicyEffectEntry:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})

@@ -18,6 +18,7 @@ from loguru import logger
 
 from app.signals.types import (
     ActionableSignal,
+    CommunityDirective,
     ExecutionDirective,
     ModelWriteDirective,
     ModelWriteEntry,
@@ -26,6 +27,7 @@ from app.signals.types import (
     PolicyDecision,
     ResponseDirective,
     RetrievalDirective,
+    SkillDirective,
     UXDirective,
     _uid,
 )
@@ -224,13 +226,82 @@ class PolicyEngine:
     def __init__(self, reply_engine: Any | None = None):
         self._reply_engine = reply_engine
 
+    def _apply_shadow_learning(
+        self,
+        rule: dict[str, Any],
+        signal: ActionableSignal,
+        recent_policy_effects: list[Any] | None,
+    ) -> dict[str, Any]:
+        """
+        Shadow-mode learning: adjust rule output based on recent outcome history.
+
+        Does NOT modify the global _RULE_TABLE. Returns a copy with adjustments.
+        """
+        if not recent_policy_effects:
+            return rule
+
+        strategy = rule["primary_strategy"]
+        insufficient_count = sum(
+            1 for pe in recent_policy_effects
+            if getattr(pe, "policy_key", "") == strategy
+            and getattr(pe, "attribution", "") == "insufficient"
+        )
+
+        if insufficient_count < 2:
+            return rule
+
+        # Check if user gave "can't understand" feedback on repeated failures
+        has_understanding_issue = any(
+            getattr(pe, "user_feedback_signal", None) == "cant_understand"
+            for pe in recent_policy_effects
+            if getattr(pe, "policy_key", "") == strategy
+            and getattr(pe, "attribution", "") == "insufficient"
+        )
+
+        # Shadow adjustment: don't mechanically repeat the same intervention
+        adjusted_rule = dict(rule)
+
+        if has_understanding_issue:
+            # Problem is knowledge explanation, not task length
+            adjusted_rule["primary_strategy"] = "switch_to_worked_example"
+            adjusted_rule["hard_constraints"] = {
+                "avoid_new_chapter": True,
+                "required_task_type": "worked_example_then_drill",
+            }
+            adjusted_rule["soft_biases"] = {
+                "tone": "warm_direct",
+                "difficulty": "low",
+            }
+            adjusted_rule["reasoning_template"] = (
+                "之前的策略没解决问题。我之前判断是任务太长，"
+                "但更可能是题型迁移没建立。改用 worked example。"
+            )
+            logger.info(
+                "Shadow learning: switching strategy from {} to switch_to_worked_example "
+                "(insufficient_count={}, has_understanding_issue={})",
+                strategy, insufficient_count, has_understanding_issue,
+            )
+        elif insufficient_count >= 2:
+            # Repeated failure without specific feedback — try softer approach
+            adjusted_rule["soft_biases"] = dict(rule.get("soft_biases", {}))
+            adjusted_rule["soft_biases"]["tone"] = "warm_direct"
+            adjusted_rule["reasoning_template"] = (
+                "最近策略效果不理想，我调整一下方向。{consecutive}"
+            )
+
+        return adjusted_rule
+
     async def evaluate(
         self,
         signal: ActionableSignal,
         context: dict[str, Any] | None = None,
+        recent_policy_effects: list[Any] | None = None,
     ) -> tuple[PolicyDecision, ExecutionDirective] | None:
         """
         根据固定规则将 ActionableSignal 转为 PolicyDecision + ExecutionDirective。
+
+        Args:
+            recent_policy_effects: Optional PolicyEffectEntry list for shadow-mode bias.
 
         Returns:
             (PolicyDecision, ExecutionDirective) if rule matched, None otherwise.
@@ -245,6 +316,10 @@ class PolicyEngine:
         if signal.confidence < 0.5:
             logger.debug("signal confidence too low: {:.2f}", signal.confidence)
             return None
+
+        # Shadow-mode learning: if recent policy effects show repeated failure,
+        # adjust strategy instead of repeating the same intervention
+        rule = self._apply_shadow_learning(rule, signal, recent_policy_effects)
 
         consecutive = context.get("consecutive", 2) if context else 2
         try:
@@ -691,4 +766,72 @@ class PolicyEngine:
             show_strategy_receipt=params.get("show_strategy_receipt", False),
             allow_full_aurora_wake=params.get("allow_full_aurora_wake", False),
             predicted_reply_options=predicted_options,
+        )
+
+    # ── CommunityDirective ─────────────────────────────────────────────
+
+    _COMMUNITY_MAP: dict[str, dict[str, Any]] = {
+        "cohort_mistake_detected": {
+            "cohort_hint_shown": True,
+            "peer_context_mode": "anonymous",
+            "max_frequency": "3_per_week",
+            "resource_quality_filter": 0.5,
+        },
+        "shared_resource_relevant": {
+            "cohort_hint_shown": False,
+            "peer_context_mode": "anonymous",
+            "max_frequency": "1_per_day",
+            "resource_quality_filter": 0.7,
+        },
+    }
+
+    def build_community_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> CommunityDirective | None:
+        """从 PolicyDecision 构建 CommunityDirective — 控制社群信号如何进入个人上下文。"""
+        if signal.state_key not in ("community_cohort_pattern", "community_resource_recommendation"):
+            return None
+
+        params = self._COMMUNITY_MAP.get(signal.claim)
+        if not params:
+            return None
+
+        return CommunityDirective(
+            directive_id=_uid("cmd"),
+            policy_decision_id=decision.policy_decision_id,
+            cohort_hint_shown=params["cohort_hint_shown"],
+            resource_quality_filter=params["resource_quality_filter"],
+            peer_context_mode=params["peer_context_mode"],
+            max_frequency=params["max_frequency"],
+        )
+
+    # ── SkillDirective ─────────────────────────────────────────────────
+
+    _SKILL_MAP: dict[str, dict[str, Any]] = {
+        "momentum_high": {
+            "skill_action": "extract",
+            "extraction_trigger": "outcome_positive",
+        },
+        "transfer_failure": {
+            "skill_action": "recommend",
+        },
+    }
+
+    def build_skill_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> SkillDirective | None:
+        """从 PolicyDecision 构建 SkillDirective — 控制技能注入/提取/推荐。"""
+        params = self._SKILL_MAP.get(signal.claim)
+        if not params:
+            return None
+
+        return SkillDirective(
+            directive_id=_uid("skd"),
+            policy_decision_id=decision.policy_decision_id,
+            skill_action=params.get("skill_action", "none"),
+            extraction_trigger=params.get("extraction_trigger", ""),
         )

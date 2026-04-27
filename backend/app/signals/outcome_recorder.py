@@ -16,6 +16,7 @@ from loguru import logger
 from app.signals.types import (
     CausalTrace,
     OutcomeRecord,
+    PolicyEffectEntry,
     _uid,
 )
 
@@ -107,6 +108,10 @@ class OutcomeRecorder:
         key = f"spine:outcome:{record.outcome_id}"
         await self.redis.set(key, json.dumps(record.to_dict()), ex=720 * 3600)  # 30 days
 
+        # Write PolicyEffectLedger entry for learning loop
+        if record.attribution != "inconclusive":
+            await self._write_policy_effect(record)
+
         # Link to trace
         trace_key = f"spine:trace:{trace.trace_id}"
         raw = await self.redis.get(trace_key)
@@ -188,3 +193,92 @@ class OutcomeRecorder:
             if actual.get(key) != expected_value:
                 return False
         return True
+
+    async def _write_policy_effect(self, record: OutcomeRecord) -> None:
+        """Write a PolicyEffectLedger entry from an outcome record."""
+        import json
+
+        # Extract user feedback signal from actual_outcome
+        feedback_signal = None
+        feedback = record.actual_outcome.get("user_feedback", "")
+        if feedback:
+            # Normalize common Chinese feedback patterns
+            if "看不懂" in feedback or "不懂" in feedback:
+                feedback_signal = "cant_understand"
+            elif "太难" in feedback or "too_hard" in feedback:
+                feedback_signal = "too_hard"
+            elif "太短" in feedback or "too_short" in feedback:
+                feedback_signal = "too_short"
+            elif "完成" in feedback or "completed" in feedback:
+                feedback_signal = "completed"
+            else:
+                feedback_signal = feedback[:50]
+
+        entry = PolicyEffectEntry(
+            entry_id=_uid("pe"),
+            policy_key=record.reason,
+            intervention_summary=record.intervention,
+            attribution=record.attribution,
+            attribution_confidence=record.attribution_confidence,
+            user_feedback_signal=feedback_signal,
+            new_hypothesis=record.new_hypothesis,
+        )
+
+        # Store by entry ID
+        entry_key = f"spine:policy_effect:{entry.entry_id}"
+        await self.redis.set(entry_key, json.dumps(entry.to_dict()), ex=720 * 3600)
+
+        # Append to user's policy effect index (by trace's user)
+        # We look up the trace to find the user
+        trace_key = f"spine:trace:{record.causal_trace_id}"
+        raw = await self.redis.get(trace_key)
+        if raw:
+            # Find user from spine:user_traces reverse lookup
+            # Store in a global policy effect list for the trace's context
+            ledger_key = f"spine:policy_effect_ledger:{record.causal_trace_id}"
+            await self.redis.lpush(ledger_key, entry.entry_id)
+            await self.redis.ltrim(ledger_key, 0, 19)  # keep last 20
+            await self.redis.expire(ledger_key, 720 * 3600)
+
+        logger.info(
+            "PolicyEffectLedger: {} policy={} attribution={} feedback={}",
+            entry.entry_id, entry.policy_key, entry.attribution, feedback_signal,
+        )
+
+    async def get_recent_policy_effects(
+        self,
+        user_id: str,
+        limit: int = 5,
+    ) -> list[PolicyEffectEntry]:
+        """Get recent PolicyEffectEntries for a user's traces."""
+        import json
+
+        # Get user's recent traces
+        entries: list[PolicyEffectEntry] = []
+        trace_key_pattern = "spine:user_traces:{user_id}"
+
+        # Scan recent traces for policy effects
+        user_traces_key = f"spine:user_traces:{user_id}"
+        trace_ids = await self.redis.lrange(user_traces_key, 0, limit - 1)
+
+        for tid in trace_ids:
+            ledger_key = f"spine:policy_effect_ledger:{tid}"
+            effect_ids = await self.redis.lrange(ledger_key, 0, limit - 1)
+            for eid in effect_ids:
+                raw = await self.redis.get(f"spine:policy_effect:{eid}")
+                if raw:
+                    entries.append(PolicyEffectEntry.from_dict(json.loads(raw)))
+
+        return entries[:limit]
+
+    async def get_insufficient_count_for_policy(
+        self,
+        user_id: str,
+        policy_key: str,
+    ) -> int:
+        """Count how many times a policy was insufficient for a user."""
+        effects = await self.get_recent_policy_effects(user_id, limit=20)
+        return sum(
+            1 for e in effects
+            if e.policy_key == policy_key and e.attribution == "insufficient"
+        )

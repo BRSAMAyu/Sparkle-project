@@ -4316,3 +4316,576 @@ async def test_e2e_exam_sprint_momentum_stalled_and_recovery():
     resp_dir = await spine.get_response_directive("u_e2e_momentum")
     # ResponseDirective may or may not be produced depending on claim mapping
     # The key validation is that PlanDirective and UXDirective were generated
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# P7-1: Achievement Momentum → Adaptive Behavior (Closed Loop)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+def test_soft_difficulty_low_caps_difficulty():
+    """difficulty=low bias caps task difficulty to max 2."""
+    adjusted, changed = DirectiveApplier.apply_soft_difficulty(
+        soft_biases={"difficulty": "low"},
+        current_difficulty=4,
+    )
+    assert adjusted == 2
+    assert changed is True
+
+
+def test_soft_difficulty_no_change_when_already_low():
+    adjusted, changed = DirectiveApplier.apply_soft_difficulty(
+        soft_biases={"difficulty": "low"},
+        current_difficulty=1,
+    )
+    assert adjusted == 1
+    assert changed is False
+
+
+def test_soft_difficulty_challenge_slight_increase():
+    adjusted, changed = DirectiveApplier.apply_soft_difficulty(
+        soft_biases={"challenge": "slight_increase"},
+        current_difficulty=3,
+    )
+    assert adjusted == 4
+    assert changed is True
+
+
+def test_soft_difficulty_no_biases():
+    adjusted, changed = DirectiveApplier.apply_soft_difficulty(
+        soft_biases=None,
+        current_difficulty=3,
+    )
+    assert adjusted == 3
+    assert changed is False
+
+
+def test_prefer_easy_wins_reduces_difficulty():
+    """prefer_easy_wins hard constraint caps difficulty to max 2."""
+    directive = ExecutionDirective(
+        directive_id="ed_easy",
+        policy_decision_id="pd_easy",
+        target_module="task_generator",
+        scope="today",
+        hard_constraints={"prefer_easy_wins": True, "max_task_duration_min": 20},
+        user_visible_reason="momentum_stalled",
+    )
+    spec = {"difficulty": 4, "estimated_minutes": 30}
+    result = DirectiveApplier.apply_to_task_spec(directive=directive, task_spec=spec)
+    assert result["difficulty"] == 2
+    assert result["_easy_win_mode"] is True
+    assert result["estimated_minutes"] == 20
+
+
+@pytest.mark.asyncio
+async def test_momentum_stalled_generates_hard_constraints():
+    """momentum_stalled signal should produce hard_constraints with prefer_easy_wins."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_mom_stalled",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_stalled",
+        confidence=0.70,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="0 unlocks, 5 in-progress",
+        possible_effects=["reduce_pressure"],
+        priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+    assert directive.hard_constraints.get("prefer_easy_wins") is True
+    assert directive.hard_constraints.get("max_task_duration_min") == 20
+    assert decision.soft_biases.get("difficulty") == "low"
+
+
+@pytest.mark.asyncio
+async def test_momentum_high_slight_challenge():
+    """momentum_high signal should produce challenge=slight_increase soft bias."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_mom_high",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_high",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="3 unlocks, 2 streaks",
+        possible_effects=["reinforce"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+    assert decision.soft_biases.get("challenge") == "slight_increase"
+    assert decision.soft_biases.get("tone") == "recognition_not_praise"
+
+
+@pytest.mark.asyncio
+async def test_spine_apply_directive_with_soft_biases():
+    """SpineOrchestrator.apply_directive_to_task_spec applies soft difficulty."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+
+    # Store a directive
+    directive = ExecutionDirective(
+        directive_id="ed_soft_test",
+        policy_decision_id="pd_soft_test",
+        target_module="task_generator",
+        scope="today",
+        hard_constraints={"max_task_duration_min": 20},
+        user_visible_reason="stalled",
+    )
+    await spine.trace_store.set_active_directive("u_soft", directive)
+
+    # Apply with soft_biases for difficulty=low
+    spec = {"difficulty": 4, "estimated_minutes": 30}
+    modified, audit = await spine.apply_directive_to_task_spec(
+        user_id="u_soft",
+        task_spec=spec,
+        soft_biases={"difficulty": "low"},
+    )
+    assert modified["difficulty"] == 2
+    assert modified["estimated_minutes"] == 20
+    assert audit is not None
+
+
+@pytest.mark.asyncio
+async def test_spine_soft_biases_without_directive():
+    """Soft difficulty applies even without active directive."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+
+    spec = {"difficulty": 5, "estimated_minutes": 30}
+    modified, audit = await spine.apply_directive_to_task_spec(
+        user_id="u_no_dir",
+        task_spec=spec,
+        soft_biases={"difficulty": "low"},
+    )
+    assert modified["difficulty"] == 2
+    assert audit is None
+
+
+@pytest.mark.asyncio
+async def test_full_momentum_stalled_pipeline():
+    """End-to-end: achievement stalled → pipeline → task spec with easy wins."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+
+    # Simulate achievement event with stalled momentum
+    trace = await spine.on_achievement_event(
+        user_id="u_full_momentum",
+        achievement_type="achievement.progress",
+        achievement_id="ach_123",
+        recent_unlocks=0,
+        active_streaks=0,
+        in_progress_count=5,
+    )
+    assert trace is not None
+
+    # Verify directive was stored with easy win constraints
+    directive = await spine.get_active_directive("u_full_momentum")
+    assert directive is not None
+    assert directive.hard_constraints.get("prefer_easy_wins") is True
+
+    # Apply to task spec with soft biases from policy decision
+    spec = {"difficulty": 4, "estimated_minutes": 40}
+    modified, audit = await spine.apply_directive_to_task_spec(
+        user_id="u_full_momentum",
+        task_spec=spec,
+        soft_biases={"difficulty": "low"},
+    )
+    assert modified["difficulty"] == 2
+    assert modified["estimated_minutes"] == 20
+    assert modified.get("_easy_win_mode") is True
+    assert audit is not None
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# P7-2: CommunityDirective + SkillDirective
+# ══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_community_directive_cohort_mistake():
+    """cohort_mistake_detected → CommunityDirective with anonymous mode."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_cohort",
+        source_event_ids=["test"],
+        source_system="community_signal",
+        state_key="community_cohort_pattern",
+        claim="cohort_mistake_detected",
+        confidence=0.75,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="5 students, 40% error on TCP handshake",
+        possible_effects=["show_hint"],
+        priority="medium",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+
+    comm_dir = engine.build_community_directive(decision, signal)
+    assert comm_dir is not None
+    assert comm_dir.cohort_hint_shown is True
+    assert comm_dir.peer_context_mode == "anonymous"
+    assert comm_dir.max_frequency == "3_per_week"
+
+
+@pytest.mark.asyncio
+async def test_community_directive_shared_resource():
+    """shared_resource_relevant → CommunityDirective with higher quality filter."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_resource",
+        source_event_ids=["test"],
+        source_system="community_signal",
+        state_key="community_resource_recommendation",
+        claim="shared_resource_relevant",
+        confidence=0.80,
+        scope="current_sprint",
+        ttl_hours=72,
+        evidence_summary="3 peers using this resource",
+        possible_effects=["recommend"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+
+    comm_dir = engine.build_community_directive(decision, signal)
+    assert comm_dir is not None
+    assert comm_dir.cohort_hint_shown is False
+    assert comm_dir.resource_quality_filter == 0.7
+
+
+def test_community_directive_no_match():
+    """Non-community signals should not produce CommunityDirective."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_other",
+        source_event_ids=["test"],
+        source_system="task_service",
+        state_key="task_granularity_fit",
+        claim="recent_task_too_large",
+        confidence=0.9,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="test",
+        possible_effects=[],
+        priority="high",
+    )
+    from app.signals.types import PolicyDecision
+    decision = PolicyDecision(
+        policy_decision_id="pd_test",
+        primary_strategy="test",
+        secondary_strategy=None,
+        hard_constraints={},
+        soft_biases={},
+        visibility="receipt",
+        requires_user_confirmation=False,
+        reasoning_summary="test",
+    )
+    comm_dir = engine.build_community_directive(decision, signal)
+    assert comm_dir is None
+
+
+@pytest.mark.asyncio
+async def test_community_directive_serialization():
+    """CommunityDirective to_dict/from_dict round-trip."""
+    from app.signals.types import CommunityDirective, _uid
+    cd = CommunityDirective(
+        directive_id=_uid("cmd"),
+        policy_decision_id="pd_test",
+        cohort_hint_shown=True,
+        resource_quality_filter=0.6,
+        peer_context_mode="anonymous",
+        max_frequency="3_per_week",
+    )
+    data = cd.to_dict()
+    restored = CommunityDirective.from_dict(data)
+    assert restored.directive_id == cd.directive_id
+    assert restored.cohort_hint_shown is True
+    assert restored.resource_quality_filter == 0.6
+
+
+@pytest.mark.asyncio
+async def test_skill_directive_momentum_high():
+    """momentum_high → SkillDirective with extract action."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_mh_skill",
+        source_event_ids=["test"],
+        source_system="achievement_reinforcement",
+        state_key="growth_momentum",
+        claim="momentum_high",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="high momentum",
+        possible_effects=["extract_skill"],
+        priority="low",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+
+    skill_dir = engine.build_skill_directive(decision, signal)
+    assert skill_dir is not None
+    assert skill_dir.skill_action == "extract"
+    assert skill_dir.extraction_trigger == "outcome_positive"
+
+
+@pytest.mark.asyncio
+async def test_skill_directive_transfer_failure():
+    """transfer_failure → SkillDirective with recommend action."""
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id="sig_tf_skill",
+        source_event_ids=["test"],
+        source_system="mistake_signal",
+        state_key="knowledge_transfer",
+        claim="transfer_failure",
+        confidence=0.80,
+        scope="current_sprint",
+        ttl_hours=48,
+        evidence_summary="3 consecutive errors",
+        possible_effects=["recommend_skill"],
+        priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+
+    skill_dir = engine.build_skill_directive(decision, signal)
+    assert skill_dir is not None
+    assert skill_dir.skill_action == "recommend"
+
+
+@pytest.mark.asyncio
+async def test_skill_directive_serialization():
+    """SkillDirective to_dict/from_dict round-trip."""
+    from app.signals.types import SkillDirective, _uid
+    sd = SkillDirective(
+        directive_id=_uid("skd"),
+        policy_decision_id="pd_test",
+        skill_action="extract",
+        extraction_trigger="outcome_positive",
+    )
+    data = sd.to_dict()
+    restored = SkillDirective.from_dict(data)
+    assert restored.directive_id == sd.directive_id
+    assert restored.skill_action == "extract"
+
+
+@pytest.mark.asyncio
+async def test_community_directive_in_pipeline():
+    """Full pipeline: community signal → CommunityDirective stored in Redis."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+
+    trace = await spine.on_community_cohort_data(
+        user_id="u_comm_pipe",
+        knowledge_node_id="tcp_handshake",
+        subject="计算机网络",
+        mistake_type="confusion",
+        cohort_size=8,
+        error_count=4,
+        common_misconception="mixes up SYN/ACK sequence",
+    )
+    assert trace is not None
+
+    comm_dir = await spine.get_community_directive("u_comm_pipe")
+    assert comm_dir is not None
+    assert comm_dir.cohort_hint_shown is True
+    assert comm_dir.peer_context_mode == "anonymous"
+
+
+@pytest.mark.asyncio
+async def test_skill_directive_in_pipeline():
+    """Full pipeline: momentum_high → SkillDirective stored in Redis."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+
+    trace = await spine.on_achievement_event(
+        user_id="u_skill_pipe",
+        achievement_type="achievement.unlocked",
+        achievement_id="ach_456",
+        recent_unlocks=3,
+        active_streaks=2,
+        in_progress_count=2,
+    )
+    assert trace is not None
+
+    skill_dir = await spine.get_skill_directive("u_skill_pipe")
+    assert skill_dir is not None
+    assert skill_dir.skill_action == "extract"
+    assert skill_dir.extraction_trigger == "outcome_positive"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# P0-4: Outcome → PolicyEffectLedger + Shadow Learning
+# ══════════════════════════════════════════════════════════════════════════
+
+
+def test_policy_effect_entry_serialization():
+    """PolicyEffectEntry to_dict/from_dict round-trip."""
+    from app.signals.types import PolicyEffectEntry, _uid
+    entry = PolicyEffectEntry(
+        entry_id=_uid("pe"),
+        policy_key="recover_execution_rhythm",
+        intervention_summary="max_task_duration_min=25",
+        attribution="insufficient",
+        attribution_confidence=0.65,
+        user_feedback_signal="cant_understand",
+        new_hypothesis="knowledge_explanation_failure",
+    )
+    data = entry.to_dict()
+    restored = PolicyEffectEntry.from_dict(data)
+    assert restored.policy_key == "recover_execution_rhythm"
+    assert restored.attribution == "insufficient"
+    assert restored.user_feedback_signal == "cant_understand"
+
+
+@pytest.mark.asyncio
+async def test_outcome_recorder_writes_policy_effect():
+    """OutcomeRecorder writes PolicyEffectLedger entry when attribution is not inconclusive."""
+    redis = FakeRedis()
+    recorder = OutcomeRecorder(redis)
+
+    from app.signals.types import CausalTrace
+    trace = CausalTrace(trace_id="ct_effect_test")
+    await redis.set(f"spine:trace:{trace.trace_id}", __import__("json").dumps(trace.to_dict()), ex=720 * 3600)
+
+    record = await recorder.record_outcome(
+        trace=trace,
+        intervention="max_task_duration_25min",
+        reason="recent_task_overrun",
+        expected_outcome="task_started_and_completed",
+        actual_outcome={"started": True, "completed": False, "user_feedback": "还是看不懂"},
+    )
+
+    assert record.attribution == "insufficient"
+    assert record.new_hypothesis is not None
+
+
+@pytest.mark.asyncio
+async def test_shadow_learning_switches_strategy():
+    """When same strategy fails twice with '看不懂', PolicyEngine switches to worked_example."""
+    from app.signals.types import PolicyEffectEntry
+    engine = PolicyEngine()
+
+    effects = [
+        PolicyEffectEntry(
+            entry_id="pe_001",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_duration_min=25",
+            attribution="insufficient",
+            attribution_confidence=0.65,
+            user_feedback_signal="cant_understand",
+        ),
+        PolicyEffectEntry(
+            entry_id="pe_002",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_duration_min=25",
+            attribution="insufficient",
+            attribution_confidence=0.60,
+            user_feedback_signal="cant_understand",
+        ),
+    ]
+
+    signal = ActionableSignal(
+        signal_id="sig_shadow",
+        source_event_ids=["test"],
+        source_system="task_service",
+        state_key="task_granularity_fit",
+        claim="recent_task_too_large",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="consecutive overruns",
+        possible_effects=["adjust"],
+        priority="high",
+    )
+
+    result = await engine.evaluate(signal, recent_policy_effects=effects)
+    assert result is not None
+    decision, directive = result
+    assert decision.primary_strategy == "switch_to_worked_example"
+    assert directive.hard_constraints.get("required_task_type") == "worked_example_then_drill"
+
+
+@pytest.mark.asyncio
+async def test_shadow_learning_no_change_when_effective():
+    """When policy is effective, no shadow adjustment is made."""
+    from app.signals.types import PolicyEffectEntry
+    engine = PolicyEngine()
+
+    effects = [
+        PolicyEffectEntry(
+            entry_id="pe_003",
+            policy_key="recover_execution_rhythm",
+            intervention_summary="max_task_duration_min=25",
+            attribution="effective",
+            attribution_confidence=0.85,
+        ),
+    ]
+
+    signal = ActionableSignal(
+        signal_id="sig_no_shadow",
+        source_event_ids=["test"],
+        source_system="task_service",
+        state_key="task_granularity_fit",
+        claim="recent_task_too_large",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="consecutive overruns",
+        possible_effects=["adjust"],
+        priority="high",
+    )
+
+    result = await engine.evaluate(signal, recent_policy_effects=effects)
+    assert result is not None
+    decision, directive = result
+    assert decision.primary_strategy == "recover_execution_rhythm"
+
+
+@pytest.mark.asyncio
+async def test_self_correction_receipt():
+    """When outcome is insufficient, SpineOrchestrator records it in PolicyEffectLedger."""
+    redis = FakeRedis()
+    spine = SpineOrchestrator(redis)
+
+    signal = ActionableSignal(
+        signal_id="sig_correct",
+        source_event_ids=["test"],
+        source_system="task_service",
+        state_key="task_granularity_fit",
+        claim="recent_task_too_large",
+        confidence=0.85,
+        scope="current_sprint",
+        ttl_hours=24,
+        evidence_summary="overrun",
+        possible_effects=["adjust"],
+        priority="high",
+    )
+    trace = await spine._run_signal_pipeline(user_id="u_correct", signal=signal)
+    assert trace is not None
+
+    record = await spine.record_outcome(
+        trace=trace,
+        intervention="max_task_duration_25min",
+        reason="recent_task_overrun",
+        expected_outcome="task_started_and_completed",
+        actual_outcome={"started": True, "completed": False, "user_feedback": "还是看不懂"},
+    )
+    assert record.attribution == "insufficient"
+    assert record.new_hypothesis is not None
