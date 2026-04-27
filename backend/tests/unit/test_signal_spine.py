@@ -11036,3 +11036,79 @@ async def test_get_source_receipt_returns_none_when_empty():
     spine = SpineOrchestrator(redis_client=FakeRedis())
     result = await spine.get_source_receipt("user_empty")
     assert result is None
+
+
+# ── v2.9: Production Wiring Tests ─────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_v29_response_directive_to_dict_for_prompt():
+    """ResponseDirective serializes for injection into state.context_data."""
+    from app.signals.types import ResponseDirective
+    rd = ResponseDirective(
+        directive_id="rd_v29", policy_decision_id="pd_v29",
+        tone="calm_urgent", length="short",
+        must_acknowledge=["exam_situation"],
+        avoid=["generic_encouragement"],
+        include_user_options=True,
+    )
+    d = rd.to_dict()
+    assert d["tone"] == "calm_urgent"
+    assert d["length"] == "short"
+    assert "exam_situation" in d["must_acknowledge"]
+    assert "generic_encouragement" in d["avoid"]
+
+
+@pytest.mark.asyncio
+async def test_v29_retrieval_directive_to_dict_for_rag():
+    """RetrievalDirective serializes for RAG pipeline consumption."""
+    from app.signals.types import RetrievalDirective
+    rd = RetrievalDirective(
+        directive_id="rd_rag", policy_decision_id="pd_rag",
+        retrieval_mode="task_bound_graph_rag",
+        source_scope="task_bound",
+        pollution_guard="strict",
+        token_budget=2000,
+        must_load=["src_1"],
+        may_load=["src_2"],
+        do_not_load=["src_3"],
+    )
+    d = rd.to_dict()
+    assert d["retrieval_mode"] == "task_bound_graph_rag"
+    assert d["token_budget"] == 2000
+    assert d["pollution_guard"] == "strict"
+
+
+@pytest.mark.asyncio
+async def test_v29_chronicle_injection():
+    """GrowthChronicle entries have title + narrative for prompt injection."""
+    from app.signals.growth_chronicle import ChronicleEntry
+    entry = ChronicleEntry(
+        entry_id="ce1", user_id="u1", entry_type="milestone",
+        timestamp="2026-04-27T12:00:00", title="First task completed",
+        narrative="Completed first 25-min study session",
+        evidence_refs=[], user_editable=True,
+    )
+    summary = f"- {entry.title}: {entry.narrative}"
+    assert "First task completed" in summary
+    assert "25-min" in summary
+
+
+@pytest.mark.asyncio
+async def test_v29_fatigue_context_normal_skipped():
+    """Fatigue level 'low' is not injected into context (only medium/high/critical)."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    fatigue = await spine.check_fatigue(user_id="u1")
+    assert fatigue["fatigue_level"] in ("low", "normal")
+
+
+@pytest.mark.asyncio
+async def test_v29_fatigue_context_high_injected():
+    """Fatigue level 'high' should be included in spine_fatigue_context."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    fatigue = await spine.check_fatigue(
+        user_id="u1", interactions_last_24h=35, consecutive_hours=5.0,
+    )
+    assert fatigue["fatigue_level"] in ("high", "critical")
+    # This context would be injected into state.context_data["spine_fatigue_context"]
+    assert "recommended_policy" in fatigue

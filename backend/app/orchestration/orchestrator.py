@@ -2027,10 +2027,17 @@ class ChatOrchestrator(
                 for c in filtered_rag.chunks
                 if c.relevance_score >= 0.3
             ]
+            used_filenames = {c["filename"] for c in used_chunks}
+            all_filenames = {c.filename for c in filtered_rag.chunks}
+            excluded_names = sorted(all_filenames - used_filenames)
             excluded_count = filtered_rag.total_retrieved - len(used_chunks)
             context_receipt = {
                 "used": used_chunks,
+                "used_names": sorted(used_filenames),
                 "used_count": len(used_chunks),
+                "excluded_names": [
+                    f"{name}（相关度过低）" for name in excluded_names
+                ],
                 "excluded_count": excluded_count,
                 "total_retrieved": filtered_rag.total_retrieved,
                 "mode": mode,
@@ -2393,6 +2400,30 @@ class ChatOrchestrator(
                                 request_extra_context["spine_signals"] = _spine_context
                             else:
                                 request_extra_context = {"spine_signals": _spine_context}
+
+                        # v2.9: Fetch structured directives for prompt/RAG modulation
+                        _spine_resp_dir = await _spine.get_response_directive(user_id)
+                        if _spine_resp_dir:
+                            request_extra_context["spine_response_directive"] = _spine_resp_dir.to_dict()
+                        _spine_ret_dir = await _spine.get_retrieval_directive(user_id)
+                        if _spine_ret_dir:
+                            request_extra_context["spine_retrieval_directive"] = _spine_ret_dir.to_dict()
+                        try:
+                            from app.signals.growth_chronicle import GrowthChronicleService
+                            _chronicle_svc = GrowthChronicleService(self.redis)
+                            _chronicle_entries = await _chronicle_svc.get_chronicle(user_id, limit=3)
+                            if _chronicle_entries:
+                                request_extra_context["spine_chronicle_summary"] = "\n".join(
+                                    f"- {e.title}: {e.narrative}" for e in _chronicle_entries if e.narrative
+                                )
+                        except Exception:
+                            pass
+                        try:
+                            _fatigue = await _spine.check_fatigue(user_id)
+                            if _fatigue and _fatigue.get("fatigue_level") not in ("low", "normal"):
+                                request_extra_context["spine_fatigue_context"] = _fatigue
+                        except Exception:
+                            pass
                     except Exception as _spine_err:
                         logger.debug(f"Spine signal check skipped: {_spine_err}")
 
@@ -2459,6 +2490,12 @@ class ChatOrchestrator(
 
                 state = WorkflowState()
                 state.context_data.update(initial_document_context_state)
+                # v2.9: Inject spine directives into workflow state
+                for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
+                                   "spine_fatigue_context", "spine_retrieval_directive"):
+                    _spine_val = (request_extra_context or {}).get(_spine_key)
+                    if _spine_val:
+                        state.context_data[_spine_key] = _spine_val
                 if user_message:
                     state.append_message("user", user_message)
                 if session_feedback_signal is not None:

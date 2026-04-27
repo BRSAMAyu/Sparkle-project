@@ -1142,12 +1142,24 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
             and document_context_mode != "off"
         ):
             mode = str(decision.get("retrieval_mode") or "selective")
+            # v2.9: Spine RetrievalDirective may override retrieval depth
+            _spine_ret_dir = state.context_data.get("spine_retrieval_directive")
+            _rag_depth = 2 if mode == "aggressive" else 1
+            if isinstance(_spine_ret_dir, dict):
+                _spine_retrieval_mode = _spine_ret_dir.get("retrieval_mode")
+                if _spine_retrieval_mode == "task_bound_graph_rag":
+                    _rag_depth = 2
+                elif _spine_retrieval_mode == "off":
+                    mode = "off"
+                _spine_budget = _spine_ret_dir.get("token_budget")
+                if isinstance(_spine_budget, int) and _spine_budget > 0:
+                    state.context_data["spine_rag_token_budget"] = _spine_budget
             retriever = GraphRAGRetriever(ks)
             rag_result = await asyncio.wait_for(
                 retriever.retrieve(
                     query,
                     str(user_uuid),
-                    depth=2 if mode == "aggressive" else 1,
+                    depth=_rag_depth,
                     route_intent=str(route_intent) if route_intent else None,
                     include_group_documents=include_group_documents,
                     group_ids=group_ids,
@@ -1547,6 +1559,15 @@ Ask about their available time and current tasks if needed.
             "light" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else "full"
         ),
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
+        spine_response_directive=state.context_data.get("spine_response_directive"),
+        spine_chronicle_summary=(
+            str(state.context_data.get("spine_chronicle_summary") or "")
+            if not use_slim_standard_context else None
+        ),
+        spine_fatigue_context=(
+            state.context_data.get("spine_fatigue_context")
+            if not use_slim_standard_context else None
+        ),
     )
     if explicit_runtime and explicit_runtime.get("system_prompt"):
         system_prompt += f"\n\n## 自定义专家指令\n{explicit_runtime['system_prompt']}"
