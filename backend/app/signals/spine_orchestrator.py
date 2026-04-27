@@ -1387,6 +1387,42 @@ class SpineOrchestrator:
         except Exception:
             pass
 
+        # 6. fatigue check: detect if user is overworked
+        try:
+            interaction_count_raw = await self.redis.get(f"spine:interaction_count:{user_id}:24h")
+            interaction_count = int(interaction_count_raw) if interaction_count_raw else 0
+            fatigue = await self.check_fatigue(
+                user_id=user_id,
+                interactions_last_24h=interaction_count,
+            )
+            if fatigue["fatigue_level"] in ("high", "critical"):
+                await self.redis.set(
+                    f"spine:fatigue:{user_id}:latest",
+                    json.dumps(fatigue),
+                    ex=6 * 3600,
+                )
+        except Exception:
+            pass
+
+        # 7. crisis mode check for exam users
+        try:
+            goal_mode_raw = await self.redis.get(f"spine:exam_sprint:{user_id}:goal_mode")
+            deadline_raw = await self.redis.get(f"spine:exam_sprint:{user_id}:deadline_days")
+            if goal_mode_raw and deadline_raw:
+                crisis = await self.detect_crisis_mode(
+                    user_id=user_id,
+                    days_to_deadline=int(deadline_raw),
+                    baseline_mastery=0,  # unknown → triggers conservative
+                )
+                if crisis:
+                    await self.redis.set(
+                        f"spine:crisis:{user_id}:latest",
+                        json.dumps(crisis),
+                        ex=12 * 3600,
+                    )
+        except Exception:
+            pass
+
     # ── P1: Divine Moment Enrichers ──────────────────────────────────
 
     async def on_achievement_unlocked(
