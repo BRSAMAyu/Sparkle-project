@@ -519,11 +519,21 @@ class SpineOrchestrator:
         if signal is None:
             return None
 
-        return await self._run_signal_pipeline(
+        trace = await self._run_signal_pipeline(
             user_id=user_id,
             signal=signal,
             event_ids=[f"achievement_{achievement_id}"],
         )
+
+        # Goal checkpoint snapshot: achievement unlock is a milestone worth persisting
+        try:
+            await self.save_spine_snapshot(
+                user_id=user_id, snapshot_type="goal_checkpoint",
+            )
+        except Exception:
+            pass
+
+        return trace
 
     # ── P8: Mistake Event Integration ──────────────────────────────────
 
@@ -1130,6 +1140,15 @@ class SpineOrchestrator:
                     logger.info("Spine state recovered from snapshot for user={}", user_id)
         except Exception as exc:
             logger.debug("recover_from_snapshot skipped: {}", exc)
+
+        # Refresh snapshot on return (pre_ttl_expiry — extends the 90d window)
+        try:
+            snap_ttl = await self.redis.ttl(f"spine:snapshot:{user_id}:latest")
+            if snap_ttl is not None and snap_ttl < 7 * 24 * 3600:  # < 7 days left
+                await self.save_spine_snapshot(user_id=user_id, snapshot_type="pre_ttl_expiry")
+                logger.info("Spine snapshot refreshed for user={} (was TTL={}s)", user_id, snap_ttl)
+        except Exception:
+            pass
 
         return trace
 

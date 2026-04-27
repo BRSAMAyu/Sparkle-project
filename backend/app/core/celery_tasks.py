@@ -1946,6 +1946,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
     from app.models.achievement import UserAchievement, UserStreakStats, UserStreakDays
     from app.models.calendar_event import CalendarEvent
     from app.models.chat import ChatSession, ChatMessage
+    from app.models.cognitive import BehaviorPattern, CognitiveFragment
     from app.models.error_book import ErrorRecord
     from app.models.focus import FocusSession
     from app.models.galaxy import UserNodeStatus
@@ -1981,6 +1982,8 @@ def purge_deleted_account(self, user_id: str) -> dict:
                 (NotificationInteraction, "user_id"),
                 (UserNodeStatus, "user_id"),
                 (UserSettings, "user_id"),
+                (BehaviorPattern, "user_id"),
+                (CognitiveFragment, "user_id"),
             ]
             counts: dict[str, int] = {}
             for model, field in tables:

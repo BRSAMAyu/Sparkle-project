@@ -13,6 +13,21 @@ from typing import Any
 
 from loguru import logger
 
+try:
+    from prometheus_client import Counter as _Counter
+    _PROM_SIGNALS = _Counter("sparkle_spine_signals_generated_total", "Spine signals generated")
+    _PROM_POLICIES = _Counter("sparkle_spine_policies_evaluated_total", "Spine policies evaluated")
+    _PROM_DIRECTIVES = _Counter("sparkle_spine_directives_generated_total", "Spine directives generated")
+    _PROM_DIRECTIVES_APPLIED = _Counter("sparkle_spine_directives_applied_total", "Spine directives applied")
+    _PROM_OUTCOMES = _Counter("sparkle_spine_outcomes_recorded_total", "Spine outcomes recorded")
+    _PROM_EFFECTIVE = _Counter("sparkle_spine_effective_attributions_total", "Spine effective attributions")
+    _PROM_RECEIPTS = _Counter("sparkle_spine_receipts_shown_total", "Spine receipts shown")
+    _PROM_RETRACTIONS = _Counter("sparkle_spine_retractions_total", "Spine retractions")
+except Exception:
+    _PROM_SIGNALS = _PROM_POLICIES = _PROM_DIRECTIVES = None
+    _PROM_DIRECTIVES_APPLIED = _PROM_OUTCOMES = _PROM_EFFECTIVE = None
+    _PROM_RECEIPTS = _PROM_RETRACTIONS = None
+
 
 # ── 指标定义 ─────────────────────────────────────────────────────────
 # 每个指标有 name, description, numerator_key, denominator_key。
@@ -164,30 +179,46 @@ class SpineMetricsCollector:
 
     async def record_signal_generated(self) -> None:
         await self.increment("signals_generated")
+        if _PROM_SIGNALS:
+            _PROM_SIGNALS.inc()
 
     async def record_signal_entered_state(self) -> None:
         await self.increment("signals_entered_state")
 
     async def record_policy_evaluated(self, matched: bool) -> None:
         await self.increment("policies_evaluated")
+        if _PROM_POLICIES:
+            _PROM_POLICIES.inc()
         if not matched:
             await self.increment("orphan_signals")
 
     async def record_directive_generated(self) -> None:
         await self.increment("directives_generated")
+        if _PROM_DIRECTIVES:
+            _PROM_DIRECTIVES.inc()
 
     async def record_directive_applied(self, changed_output: bool) -> None:
         await self.increment("directives_applied")
+        if _PROM_DIRECTIVES_APPLIED:
+            _PROM_DIRECTIVES_APPLIED.inc()
         if changed_output:
             await self.increment("outputs_changed")
 
     async def record_receipt_shown(self) -> None:
         await self.increment("receipts_shown")
+        if _PROM_RECEIPTS:
+            _PROM_RECEIPTS.inc()
 
     async def record_outcome_recorded(self, effective: bool) -> None:
         await self.increment("outcomes_recorded")
+        if _PROM_OUTCOMES:
+            _PROM_OUTCOMES.inc()
         if effective:
             await self.increment("effective_attributions")
+            if _PROM_EFFECTIVE:
+                _PROM_EFFECTIVE.inc()
 
     async def record_retraction(self) -> None:
         await self.increment("retractions")
+        if _PROM_RETRACTIONS:
+            _PROM_RETRACTIONS.inc()
