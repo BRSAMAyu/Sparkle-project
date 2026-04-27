@@ -73,6 +73,15 @@ class ActionableStatePacketBuilder:
         # 确定下一步最佳行动
         next_action = self._determine_next_action(active_signals, active_directive)
 
+        # 构建时间上下文
+        tc = self._build_time_context(time_context, active_signals)
+
+        # 构建执行模式
+        ep = self._build_execution_pattern(active_signals)
+
+        # 构建上下文推荐
+        cr = self._build_context_recommendation(active_signals, active_directive)
+
         packet = ActionableStatePacket(
             user_id=user_id,
             goal_frame=self._fill_goal_frame(goal_frame, active_signals),
@@ -80,6 +89,9 @@ class ActionableStatePacketBuilder:
             risk_flags=risk_flags,
             current_bottleneck=bottleneck,
             next_best_action=next_action,
+            time_context=tc,
+            execution_pattern=ep,
+            context_recommendation=cr,
         )
 
         logger.debug(
@@ -209,3 +221,46 @@ class ActionableStatePacketBuilder:
         """Get which directive types a state_key can affect."""
         from app.signals.state_register import _CAN_AFFECT_MAP
         return _CAN_AFFECT_MAP.get(state_key, [])
+
+    def _build_time_context(
+        self,
+        time_context: dict[str, Any] | None,
+        signals: list[ActionableSignal],
+    ) -> dict[str, Any]:
+        """构建时间上下文字段 (P0-3 spec)。"""
+        tc = dict(time_context) if time_context else {}
+        for signal in signals:
+            if signal.state_key == "goal_mode" and "deadline_phase" not in tc:
+                tc.setdefault("deadline_phase", "urgent" if "rescue" in signal.claim else "normal")
+            if signal.state_key == "task_granularity_fit" and "task_stale_status" not in tc:
+                tc.setdefault("task_stale_status", "overrun")
+        return tc
+
+    def _build_execution_pattern(self, signals: list[ActionableSignal]) -> dict[str, Any]:
+        """构建执行模式字段 (P0-3 spec)。"""
+        pattern: dict[str, Any] = {}
+        for signal in signals:
+            if signal.state_key == "task_granularity_fit":
+                pattern["task_size_tendency"] = "oversized"
+            elif signal.state_key == "knowledge_transfer":
+                pattern["transfer_tendency"] = "failure"
+            elif signal.state_key == "growth_momentum":
+                pattern["momentum"] = signal.claim
+        if signals:
+            pattern["signal_density"] = len(signals)
+        return pattern
+
+    def _build_context_recommendation(
+        self,
+        signals: list[ActionableSignal],
+        directive: ExecutionDirective | None,
+    ) -> dict[str, Any]:
+        """构建上下文推荐字段 (P0-3 spec)。"""
+        rec: dict[str, Any] = {}
+        if directive:
+            rec["retrieval_hint"] = "targeted" if directive.hard_constraints.get("avoid_new_chapter") else "standard"
+            rec["tone_hint"] = directive.hard_constraints.get("tone", "neutral")
+        for signal in signals:
+            if signal.state_key == "material_utilization":
+                rec["material_mode"] = "underutilized"
+        return rec

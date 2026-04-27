@@ -1119,7 +1119,7 @@ types.py                    — 7 core data objects + all dataclasses
 ### Summary Statistics
 
 ```
-600/600 tests passing
+623/623 tests passing
 42 signal modules (excluding __init__.py)
 57 public API exports (incl. AuroraControlSignal, AuroraAgendaItem, GoalWorldGraph, MultiGoalArbitrator, SourceEffectivenessTracker)
 9/9 directive types active
@@ -1133,6 +1133,7 @@ v2.9 Production Wiring: ResponseDirective + RetrievalDirective + Chronicle + Fat
 v2.9 AuroraControlSignal: unified envelope + AuroraAgendaItem for structured Aurora sessions
 v3.0 Pipeline: which_directives gate + Aurora wake + all P1 tasks COMPLETE
 v3.1 AuroraControlSignal + AuroraAgenda: 15 dedicated tests (5 envelope + 10 session), 615/615 total
+v3.2 P0-3 complete: ActionableStatePacket 7/7 fields (time_context, execution_pattern, context_recommendation added), 8 new tests, 623/623 total
 ```
 
 ### P1 Status — ALL COMPLETE

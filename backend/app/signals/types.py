@@ -108,6 +108,9 @@ class ActionableStatePacket:
     risk_flags: list[str]
     current_bottleneck: dict[str, Any] | None = None
     next_best_action: dict[str, Any] | None = None
+    time_context: dict[str, Any] = field(default_factory=dict)
+    execution_pattern: dict[str, Any] = field(default_factory=dict)
+    context_recommendation: dict[str, Any] = field(default_factory=dict)
     updated_at: str = field(default_factory=_utcnow)
 
     def to_dict(self) -> dict[str, Any]:
@@ -118,6 +121,9 @@ class ActionableStatePacket:
             "risk_flags": self.risk_flags,
             "current_bottleneck": self.current_bottleneck,
             "next_best_action": self.next_best_action,
+            "time_context": self.time_context,
+            "execution_pattern": self.execution_pattern,
+            "context_recommendation": self.context_recommendation,
             "updated_at": self.updated_at,
         }
 

@@ -958,6 +958,140 @@ def test_state_packet_serialization():
     assert d["top_states"][0]["state_key"] == "test_key"
 
 
+# ── P0-3 v1.1: ActionableStatePacket 3 new fields ──────────────────
+
+def test_state_packet_time_context_from_signals():
+    """time_context populated from goal_mode and task_granularity_fit signals."""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id="sig_gm", source_event_ids=[], source_system="goal_service",
+            state_key="goal_mode", claim="exam_rescue_detected",
+            confidence=0.9, scope="current_sprint", ttl_hours=24,
+            evidence_summary="考试倒计时 < 7 天", possible_effects=[], priority="high",
+        ),
+        ActionableSignal(
+            signal_id="sig_tg", source_event_ids=[], source_system="task_service",
+            state_key="task_granularity_fit", claim="recent_task_too_large",
+            confidence=0.8, scope="current_sprint", ttl_hours=24,
+            evidence_summary="连续 2 次任务超时", possible_effects=[], priority="high",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+    assert packet.time_context["deadline_phase"] == "urgent"
+    assert packet.time_context["task_stale_status"] == "overrun"
+
+
+def test_state_packet_time_context_passthrough():
+    """time_context parameter passed through to packet."""
+    builder = ActionableStatePacketBuilder()
+    tc = {
+        "last_interaction_at": "2026-04-27T10:00:00Z",
+        "elapsed_since_last_interaction_min": 120,
+        "active_task_expected_end_at": "2026-04-27T09:00:00Z",
+        "quiet_hours_active": False,
+    }
+    packet = builder.build(user_id="u1", time_context=tc)
+    assert packet.time_context["last_interaction_at"] == "2026-04-27T10:00:00Z"
+    assert packet.time_context["elapsed_since_last_interaction_min"] == 120
+
+
+def test_state_packet_execution_pattern():
+    """execution_pattern populated from signal types."""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id="sig_tg", source_event_ids=[], source_system="task_service",
+            state_key="task_granularity_fit", claim="recent_task_too_large",
+            confidence=0.8, scope="current_sprint", ttl_hours=24,
+            evidence_summary="超时", possible_effects=[], priority="high",
+        ),
+        ActionableSignal(
+            signal_id="sig_kt", source_event_ids=[], source_system="knowledge_service",
+            state_key="knowledge_transfer", claim="transfer_failure",
+            confidence=0.7, scope="current_sprint", ttl_hours=24,
+            evidence_summary="迁移失败", possible_effects=[], priority="medium",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+    assert packet.execution_pattern["task_size_tendency"] == "oversized"
+    assert packet.execution_pattern["transfer_tendency"] == "failure"
+    assert packet.execution_pattern["signal_density"] == 2
+
+
+def test_state_packet_execution_pattern_momentum():
+    """execution_pattern captures momentum claim."""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id="sig_gm", source_event_ids=[], source_system="achievement",
+            state_key="growth_momentum", claim="momentum_high",
+            confidence=0.8, scope="current_sprint", ttl_hours=24,
+            evidence_summary="7连胜", possible_effects=[], priority="low",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+    assert packet.execution_pattern["momentum"] == "momentum_high"
+
+
+def test_state_packet_context_recommendation_with_directive():
+    """context_recommendation populated from directive constraints."""
+    builder = ActionableStatePacketBuilder()
+    directive = ExecutionDirective(
+        directive_id="ed_001",
+        policy_decision_id="pd_001",
+        target_module="task_generator",
+        scope="today",
+        hard_constraints={"avoid_new_chapter": True, "max_task_duration_min": 25},
+        user_visible_reason="任务超时",
+    )
+    packet = builder.build(user_id="u1", active_directive=directive)
+    assert packet.context_recommendation["retrieval_hint"] == "targeted"
+
+
+def test_state_packet_context_recommendation_material():
+    """context_recommendation detects material underutilization."""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id="sig_mu", source_event_ids=[], source_system="retrieval",
+            state_key="material_utilization", claim="material_underutilized",
+            confidence=0.7, scope="current_sprint", ttl_hours=24,
+            evidence_summary="课件未被使用", possible_effects=[], priority="medium",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+    assert packet.context_recommendation["material_mode"] == "underutilized"
+
+
+def test_state_packet_empty_fields_default_to_empty_dict():
+    """Empty packet has empty dict defaults for all 3 new fields."""
+    builder = ActionableStatePacketBuilder()
+    packet = builder.build(user_id="u1")
+    assert packet.time_context == {}
+    assert packet.execution_pattern == {}
+    assert packet.context_recommendation == {}
+
+
+def test_state_packet_to_dict_includes_new_fields():
+    """to_dict() includes all 3 new fields."""
+    builder = ActionableStatePacketBuilder()
+    signals = [
+        ActionableSignal(
+            signal_id="sig_gm", source_event_ids=[], source_system="goal_service",
+            state_key="goal_mode", claim="exam_rescue_detected",
+            confidence=0.9, scope="current_sprint", ttl_hours=24,
+            evidence_summary="考试", possible_effects=[], priority="high",
+        ),
+    ]
+    packet = builder.build(user_id="u1", active_signals=signals)
+    d = packet.to_dict()
+    assert "time_context" in d
+    assert "execution_pattern" in d
+    assert "context_recommendation" in d
+    assert d["time_context"]["deadline_phase"] == "urgent"
+
+
 # ── P1-3: PredictedReplyOption Engine Tests ────────────────────────
 
 from app.signals.predicted_reply_options import SpineReplyOptionEngine
@@ -11392,3 +11526,77 @@ def test_aurora_agenda_session_flow():
     restored = AuroraAgenda.from_dict(d)
     assert restored.status == "completed"
     assert all(i.status == "done" for i in restored.agenda_items)
+
+
+# ── v2.10: Full Directive Coverage Production Wiring ───────────────────
+
+
+@pytest.mark.asyncio
+async def test_v210_ux_directive_stored_and_retrievable():
+    """UXDirective is stored in Redis and retrievable for stream metadata."""
+    from app.signals.types import UXDirective
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = _make_signal("task_granularity_fit", confidence=0.9)
+    await spine._run_signal_pipeline(user_id="u_ux_test", signals=[signal])
+    ux = await spine.get_ux_directive("u_ux_test")
+    assert ux is not None
+    assert ux.status_band_state == "risk_detected"
+    assert ux.show_context_receipt is True
+
+
+@pytest.mark.asyncio
+async def test_v210_community_directive_stored_and_retrievable():
+    """CommunityDirective is stored and retrievable."""
+    from app.signals.types import CommunityDirective
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = _make_signal("community_cohort_pattern", confidence=0.8)
+    await spine._run_signal_pipeline(user_id="u_comm_test", signals=[signal])
+    comm = await spine.get_community_directive("u_comm_test")
+    assert comm is not None
+    assert comm.peer_context_mode == "anonymous"
+
+
+@pytest.mark.asyncio
+async def test_v210_skill_directive_stored_and_retrievable():
+    """SkillDirective is stored and retrievable."""
+    from app.signals.types import SkillDirective
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    signal = _make_signal("knowledge_transfer", claim="transfer_failure", confidence=0.9)
+    await spine._run_signal_pipeline(user_id="u_skill_test", signals=[signal])
+    skill = await spine.get_skill_directive("u_skill_test")
+    assert skill is not None
+    assert skill.skill_action in ("none", "inject", "recommend")
+
+
+@pytest.mark.asyncio
+async def test_v210_ux_directive_to_dict_for_metadata():
+    """UXDirective serializes correctly for stream metadata."""
+    from app.signals.types import UXDirective
+    ux = UXDirective(
+        directive_id="ux1", policy_decision_id="pd1",
+        status_band_state="strategy_active",
+        show_context_receipt=True,
+        show_strategy_receipt=True,
+        predicted_reply_options=["option_a", "option_b"],
+        allow_full_aurora_wake=True,
+    )
+    d = ux.to_dict()
+    assert d["status_band_state"] == "strategy_active"
+    assert d["allow_full_aurora_wake"] is True
+    assert len(d["predicted_reply_options"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_v210_all_directive_types_fetched():
+    """All 9 directive types can be fetched without error (null-safe)."""
+    spine = SpineOrchestrator(redis_client=FakeRedis())
+    # No pipeline run — all should return None gracefully
+    assert await spine.get_response_directive("u_none") is None
+    assert await spine.get_retrieval_directive("u_none") is None
+    assert await spine.get_plan_directive("u_none") is None
+    assert await spine.get_ux_directive("u_none") is None
+    assert await spine.get_community_directive("u_none") is None
+    assert await spine.get_skill_directive("u_none") is None
+    assert await spine.get_model_write_directive("u_none") is None
+    assert await spine.get_notification_directive("u_none") is None
+    assert await spine.get_execution_directive("u_none") is None
