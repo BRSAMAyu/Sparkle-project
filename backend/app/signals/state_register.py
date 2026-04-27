@@ -257,6 +257,34 @@ class StateRegister:
         except (ValueError, TypeError):
             return False
 
+    async def check_retractions(
+        self,
+        user_id: str,
+        active_events: list[str] | None = None,
+    ) -> list[str]:
+        """Check all states for retract_if conditions. Returns list of retracted state_keys.
+
+        A state is retracted if any of its retract_if conditions match an active event.
+        """
+        active_events = active_events or []
+        states = await self.get_active_states(user_id)
+        retracted = []
+
+        for state in states:
+            if not state.retract_if:
+                continue
+            for condition in state.retract_if:
+                if condition in active_events:
+                    await self.remove_state(user_id, state.state_key)
+                    retracted.append(state.state_key)
+                    logger.info(
+                        "StateRegister: retracted state={} user={} condition={}",
+                        state.state_key, user_id, condition,
+                    )
+                    break
+
+        return retracted
+
     async def _save_state(self, user_id: str, entry: StateEntry) -> None:
         """Persist a state entry to Redis."""
         key = f"spine:state:{user_id}:{entry.state_key}"

@@ -241,3 +241,53 @@ class LearningBase:
             rule_overrides=rule_overrides or {},
             cold_start_strategies=cold_start,
         )
+
+    async def persist_beliefs(
+        self, redis_client: Any, user_id: str, beliefs: list[StrategyBelief],
+    ) -> None:
+        """Persist beliefs to Redis for cross-session durability."""
+        import json
+        key = f"spine:learning_beliefs:{user_id}"
+        data = json.dumps([b.to_dict() for b in beliefs])
+        await redis_client.set(key, data, ex=7 * 86400)  # 7-day TTL
+
+    async def load_beliefs(
+        self, redis_client: Any, user_id: str,
+    ) -> list[StrategyBelief]:
+        """Load beliefs from Redis. Returns empty list on miss."""
+        import json
+        key = f"spine:learning_beliefs:{user_id}"
+        raw = await redis_client.get(key)
+        if not raw:
+            return []
+        try:
+            items = json.loads(raw)
+            return [StrategyBelief.from_dict(d) for d in items]
+        except Exception:
+            return []
+
+    def check_skill_promotion_eligibility(
+        self, beliefs: list[StrategyBelief], skill: "SkillEntry",
+    ) -> dict[str, Any]:
+        """Check if a skill's underlying strategy belief supports promotion."""
+        from app.signals.types import SkillEntry as SE
+        belief_map = {b.strategy_key: b for b in beliefs}
+        source_key = skill.source_policy_key
+        belief = belief_map.get(source_key)
+
+        if belief is None:
+            return {"eligible": False, "reason": "no_belief_data"}
+
+        if belief.evidence_count < self.COLD_START_THRESHOLD:
+            return {"eligible": False, "reason": "insufficient_evidence"}
+
+        eff = belief.expected_effectiveness
+        if eff < 0.7:
+            return {"eligible": False, "reason": "low_effectiveness", "value": round(eff, 3)}
+
+        return {
+            "eligible": True,
+            "strategy_key": source_key,
+            "effectiveness": round(eff, 3),
+            "evidence_count": belief.evidence_count,
+        }

@@ -79,6 +79,7 @@ class StateEntry:
     can_affect: list[str] = field(default_factory=list)
     user_visible: bool = True
     requires_confirmation_if_high_impact: bool = False
+    retract_if: list[str] = field(default_factory=list)  # conditions under which this state should be retracted
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -93,6 +94,7 @@ class StateEntry:
             "can_affect": self.can_affect,
             "user_visible": self.user_visible,
             "requires_confirmation_if_high_impact": self.requires_confirmation_if_high_impact,
+            "retract_if": self.retract_if,
         }
 
     @classmethod

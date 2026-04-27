@@ -11770,6 +11770,242 @@ async def test_model_write_needs_confirmation_skipped():
     assert len(claims) == 0
 
 
+# ── P2-3: Learning Base long-term belief + skill promotion ──────────
+
+from app.signals.learning_base import LearningBase, StrategyBelief
+
+
+def test_learning_base_update_belief_effective():
+    """Updating with effective outcome increases alpha."""
+    lb = LearningBase()
+    belief = StrategyBelief(strategy_key="recover_execution_rhythm")
+    updated = lb.update_belief(belief, "effective")
+    assert updated.alpha == 2.0
+    assert updated.beta == 1.0
+    assert updated.evidence_count == 1
+
+
+def test_learning_base_update_belief_insufficient():
+    """Updating with insufficient outcome increases beta."""
+    lb = LearningBase()
+    belief = StrategyBelief(strategy_key="recover_execution_rhythm")
+    updated = lb.update_belief(belief, "insufficient")
+    assert updated.alpha == 1.0
+    assert updated.beta == 2.0
+
+
+def test_learning_base_batch_update():
+    """Batch update processes multiple outcomes."""
+    lb = LearningBase()
+    beliefs = [StrategyBelief(strategy_key="s1"), StrategyBelief(strategy_key="s2")]
+    outcomes = [
+        {"strategy_key": "s1", "attribution": "effective", "weight": 1.0},
+        {"strategy_key": "s1", "attribution": "effective", "weight": 1.0},
+        {"strategy_key": "s2", "attribution": "insufficient", "weight": 1.0},
+    ]
+    updated = lb.batch_update(beliefs, outcomes)
+    b_map = {b.strategy_key: b for b in updated}
+    assert b_map["s1"].alpha == 3.0
+    assert b_map["s2"].beta == 2.0
+
+
+def test_learning_base_select_strategy_bayesian():
+    """After enough evidence, Bayesian selection picks the best."""
+    lb = LearningBase()
+    beliefs = [
+        StrategyBelief(strategy_key="good", alpha=8, beta=2, evidence_count=10),
+        StrategyBelief(strategy_key="bad", alpha=2, beta=8, evidence_count=10),
+    ]
+    result = lb.select_strategy(beliefs, ["good", "bad"])
+    assert result["strategy"] == "good"
+    assert result["source"] == "bayesian"
+
+
+def test_learning_base_select_strategy_cold_start():
+    """With no evidence, rule fallback is used."""
+    lb = LearningBase()
+    beliefs = [StrategyBelief(strategy_key="a"), StrategyBelief(strategy_key="b")]
+    result = lb.select_strategy(
+        beliefs, ["a", "b"],
+        prefer_rules=True, rule_ranking=["b", "a"],
+    )
+    assert result["strategy"] == "b"
+    assert result["source"] == "rule_fallback"
+
+
+def test_learning_base_persist_and_load():
+    """Beliefs persist to Redis and load back correctly."""
+    lb = LearningBase()
+    redis = FakeRedis()
+    beliefs = [
+        StrategyBelief(strategy_key="s1", alpha=5, beta=3, evidence_count=8, last_updated="2026-04-27"),
+        StrategyBelief(strategy_key="s2", alpha=2, beta=7, evidence_count=9),
+    ]
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(lb.persist_beliefs(redis, "u1", beliefs))
+
+    loaded = asyncio.get_event_loop().run_until_complete(lb.load_beliefs(redis, "u1"))
+    assert len(loaded) == 2
+    assert loaded[0].strategy_key == "s1"
+    assert loaded[0].alpha == 5
+    assert loaded[1].beta == 7
+
+
+def test_learning_base_load_empty():
+    """Loading from empty Redis returns empty list."""
+    lb = LearningBase()
+    redis = FakeRedis()
+    import asyncio
+    loaded = asyncio.get_event_loop().run_until_complete(lb.load_beliefs(redis, "u_noone"))
+    assert loaded == []
+
+
+def test_learning_base_skill_promotion_eligible():
+    """Skill with high-effectiveness belief is promotion-eligible."""
+    lb = LearningBase()
+    from app.signals.types import SkillEntry
+    beliefs = [
+        StrategyBelief(strategy_key="exam_tcp_repair", alpha=8, beta=2, evidence_count=10),
+    ]
+    skill = SkillEntry(
+        skill_id="skill_001", scope="personal",
+        source_policy_key="exam_tcp_repair",
+        strategy={}, applicable_when={}, evidence={},
+    )
+    result = lb.check_skill_promotion_eligibility(beliefs, skill)
+    assert result["eligible"] is True
+    assert result["effectiveness"] >= 0.7
+
+
+def test_learning_base_skill_promotion_not_eligible():
+    """Skill with low-effectiveness belief is not promotion-eligible."""
+    lb = LearningBase()
+    from app.signals.types import SkillEntry
+    beliefs = [
+        StrategyBelief(strategy_key="bad_strat", alpha=2, beta=8, evidence_count=10),
+    ]
+    skill = SkillEntry(
+        skill_id="skill_002", scope="personal",
+        source_policy_key="bad_strat",
+        strategy={}, applicable_when={}, evidence={},
+    )
+    result = lb.check_skill_promotion_eligibility(beliefs, skill)
+    assert result["eligible"] is False
+
+
+def test_learning_base_skill_promotion_no_data():
+    """Skill with no belief data is not promotion-eligible."""
+    lb = LearningBase()
+    from app.signals.types import SkillEntry
+    skill = SkillEntry(
+        skill_id="skill_003", scope="personal",
+        source_policy_key="unknown",
+        strategy={}, applicable_when={}, evidence={},
+    )
+    result = lb.check_skill_promotion_eligibility([], skill)
+    assert result["eligible"] is False
+    assert result["reason"] == "no_belief_data"
+
+
+# ── P2-4: Confidence counter-evidence + retract_if ──────────────────
+
+@pytest.mark.asyncio
+async def test_state_entry_retract_if_field():
+    """StateEntry supports retract_if field."""
+    entry = StateEntry(
+        state_key="prefers_short_tasks",
+        value="true",
+        confidence=0.7,
+        scope="current_sprint",
+        retract_if=["completed_long_task", "user_dislikes_fragments"],
+    )
+    d = entry.to_dict()
+    restored = StateEntry.from_dict(d)
+    assert len(restored.retract_if) == 2
+    assert "completed_long_task" in restored.retract_if
+
+
+@pytest.mark.asyncio
+async def test_state_retraction_on_matching_event():
+    """State with matching retract_if condition is removed."""
+    from app.signals.state_register import StateRegister
+    redis = FakeRedis()
+    register = StateRegister(redis)
+
+    entry = StateEntry(
+        state_key="prefers_short_tasks",
+        value="true",
+        confidence=0.7,
+        scope="current_sprint",
+        retract_if=["completed_long_task", "user_dislikes_fragments"],
+    )
+    await register._save_state("u1", entry)
+    assert await register.get_state("u1", "prefers_short_tasks") is not None
+
+    retracted = await register.check_retractions("u1", ["completed_long_task"])
+    assert "prefers_short_tasks" in retracted
+    assert await register.get_state("u1", "prefers_short_tasks") is None
+
+
+@pytest.mark.asyncio
+async def test_state_no_retraction_without_match():
+    """State is NOT retracted when events don't match retract_if."""
+    from app.signals.state_register import StateRegister
+    redis = FakeRedis()
+    register = StateRegister(redis)
+
+    entry = StateEntry(
+        state_key="prefers_short_tasks",
+        value="true",
+        confidence=0.7,
+        scope="current_sprint",
+        retract_if=["completed_long_task"],
+    )
+    await register._save_state("u1", entry)
+    retracted = await register.check_retractions("u1", ["unrelated_event"])
+    assert len(retracted) == 0
+    assert await register.get_state("u1", "prefers_short_tasks") is not None
+
+
+@pytest.mark.asyncio
+async def test_state_no_retraction_without_retract_if():
+    """State without retract_if is never retracted by check_retractions."""
+    from app.signals.state_register import StateRegister
+    redis = FakeRedis()
+    register = StateRegister(redis)
+
+    entry = StateEntry(
+        state_key="task_granularity_fit",
+        value="too_large",
+        confidence=0.8,
+        scope="current_sprint",
+    )
+    await register._save_state("u1", entry)
+    retracted = await register.check_retractions("u1", ["anything"])
+    assert len(retracted) == 0
+
+
+@pytest.mark.asyncio
+async def test_counter_evidence_lowers_confidence_perception():
+    """Adding counter-evidence to a state tracks opposition."""
+    from app.signals.state_register import StateRegister
+    redis = FakeRedis()
+    register = StateRegister(redis)
+
+    entry = StateEntry(
+        state_key="task_granularity_fit",
+        value="too_large",
+        confidence=0.8,
+        scope="current_sprint",
+        supporting_evidence=["连续 2 次超时"],
+    )
+    await register._save_state("u1", entry)
+    await register.add_counter_evidence("u1", "task_granularity_fit", "用户完成了长任务")
+
+    updated = await register.get_state("u1", "task_granularity_fit")
+    assert "用户完成了长任务" in updated.counter_evidence
+
+
 # ── v2.10: Full Directive Coverage Production Wiring ───────────────────
 
 
