@@ -13762,3 +13762,115 @@ async def test_v215_graph_project_delivery_example():
     # Should suggest user_test since MVP is done
     suggested_ids = [s["node_id"] for s in suggestions]
     assert "user_test" in suggested_ids
+
+
+# ── P3-2: DomainPack System Tests ────────────────────────────────────
+
+def test_v216_exam_sprint_pack_node_schema():
+    """P3-2: Exam sprint pack requires knowledge nodes."""
+    from app.signals.domain_pack import get_domain_pack
+    pack = get_domain_pack("exam_sprint")
+    assert pack.domain == "exam_sprint"
+    required_types = [e.node_type for e in pack.node_schema if e.required]
+    assert "knowledge" in required_types
+    assert len(pack.feedback_taxonomy) >= 3
+    assert len(pack.risk_patterns) >= 3
+    assert len(pack.checkpoint_rules) >= 2
+    assert len(pack.aurora_trigger_rules) >= 2
+
+
+def test_v216_job_search_pack_schema():
+    """P3-2: Job search pack has capability + artifact nodes."""
+    from app.signals.domain_pack import get_domain_pack
+    pack = get_domain_pack("job_search_interview")
+    assert pack.domain == "job_search_interview"
+    required = [e.node_type for e in pack.node_schema if e.required]
+    assert "capability" in required
+    assert "artifact" in required
+    assert "feedback" in required
+    assert pack.supported_goal_modes == ["interview_sprint", "resume_refinement", "portfolio_building"]
+
+
+def test_v216_project_delivery_pack():
+    """P3-2: Project delivery pack has artifact + milestone + risk."""
+    from app.signals.domain_pack import get_domain_pack
+    pack = get_domain_pack("project_delivery")
+    required = [e.node_type for e in pack.node_schema if e.required]
+    assert "artifact" in required
+    assert "milestone" in required
+    assert "risk" in required
+
+
+def test_v216_domain_pack_serialization():
+    """P3-2: DomainPack serializes to dict with all fields."""
+    from app.signals.domain_pack import get_domain_pack
+    pack = get_domain_pack("exam_sprint")
+    d = pack.to_dict()
+    assert "domain_pack_id" in d
+    assert "node_schema" in d
+    assert "feedback_taxonomy" in d
+    assert "risk_patterns" in d
+    assert "checkpoint_rules" in d
+    assert "aurora_trigger_rules" in d
+    assert "skill_library" in d
+    assert "source_types" in d
+    assert "outcome_metrics" in d
+    assert len(d["node_schema"]) > 0
+
+
+def test_v216_domain_pack_fallback():
+    """P3-2: Unknown goal type falls back to exam_sprint."""
+    from app.signals.domain_pack import get_domain_pack
+    pack = get_domain_pack("unknown_goal")
+    assert pack.domain == "exam_sprint"
+
+
+def test_v216_list_domain_packs():
+    """P3-2: list_domain_packs returns 3 unique packs."""
+    from app.signals.domain_pack import list_domain_packs
+    packs = list_domain_packs()
+    assert len(packs) == 3
+    domains = {p.domain for p in packs}
+    assert domains == {"exam_sprint", "job_search_interview", "project_delivery"}
+
+
+def test_v216_get_node_schema_for_goal():
+    """P3-2: get_node_schema_for_goal returns required types."""
+    from app.signals.domain_pack import get_node_schema_for_goal
+    exam_types = get_node_schema_for_goal("exam_sprint")
+    assert "knowledge" in exam_types
+
+    job_types = get_node_schema_for_goal("job_search_interview")
+    assert "capability" in job_types
+    assert "artifact" in job_types
+
+
+def test_v216_goal_mode_aliases():
+    """P3-2: Goal mode aliases map to correct pack."""
+    from app.signals.domain_pack import get_domain_pack
+    assert get_domain_pack("exam_rescue").domain == "exam_sprint"
+    assert get_domain_pack("interview_sprint").domain == "job_search_interview"
+    assert get_domain_pack("mvp_sprint").domain == "project_delivery"
+    assert get_domain_pack("resume_refinement").domain == "job_search_interview"
+
+
+def test_v216_aurora_trigger_rules():
+    """P3-2: Aurora trigger rules have proper structure."""
+    from app.signals.domain_pack import get_domain_pack
+    pack = get_domain_pack("exam_sprint")
+    for rule in pack.aurora_trigger_rules:
+        assert rule.condition
+        assert rule.trigger_id
+        d = rule.to_dict()
+        assert "condition" in d
+        assert "quota_override" in d
+
+
+def test_v216_risk_patterns():
+    """P3-2: Risk patterns have detection signals and mitigations."""
+    from app.signals.domain_pack import get_domain_pack
+    pack = get_domain_pack("project_delivery")
+    for risk in pack.risk_patterns:
+        assert risk.detection_signal
+        assert risk.mitigation_strategy
+        assert risk.severity in ("low", "medium", "high")
