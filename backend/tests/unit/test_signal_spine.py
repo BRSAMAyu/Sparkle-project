@@ -13588,3 +13588,177 @@ async def test_v214_aurora_close_applies_state_patches():
     state_map = {s.state_key: s for s in active_states}
     assert "knowledge_bottleneck" in state_map
     assert state_map["knowledge_bottleneck"].value == "subnet_masking"
+
+
+# ── P3-1: GoalWorldGraph Node Type Generalization Tests ──────────────
+
+@pytest.mark.asyncio
+async def test_v215_graph_node_knowledge_type():
+    """P3-1: KnowledgeNode tracks mastery (default, backward compat)."""
+    from app.signals.goal_world_graph import GoalWorldGraphService, GraphNode
+    redis = FakeRedis()
+    svc = GoalWorldGraphService(redis)
+
+    graph = await svc.create_graph(
+        user_id="u1",
+        goal_id="exam",
+        goal_type="exam_sprint",
+        node_specs=[
+            {"node_id": "tcp", "label": "TCP", "node_type": "knowledge"},
+            {"node_id": "ip", "label": "IP", "node_type": "knowledge"},
+        ],
+    )
+    assert len(graph.nodes) == 2
+    assert graph.nodes[0].node_type == "knowledge"
+    assert graph.nodes[0].tracks_mastery is True
+
+
+@pytest.mark.asyncio
+async def test_v215_graph_node_artifact_binary():
+    """P3-1: ArtifactNode is binary (done/not-done)."""
+    from app.signals.goal_world_graph import GoalWorldGraphService
+    redis = FakeRedis()
+    svc = GoalWorldGraphService(redis)
+
+    graph = await svc.create_graph(
+        user_id="u2",
+        goal_id="job",
+        goal_type="job_search",
+        node_specs=[
+            {"node_id": "resume", "label": "简历", "node_type": "artifact"},
+            {"node_id": "portfolio", "label": "作品集", "node_type": "artifact"},
+        ],
+    )
+
+    # Update to 0.4 → not done yet
+    graph = await svc.update_node_mastery("u2", "job", "resume", 0.4)
+    assert graph is not None
+    resume = next(n for n in graph.nodes if n.node_id == "resume")
+    assert resume.status == "pending"
+    assert resume.mastery == 0.0
+
+    # Update to 0.7 → done
+    graph = await svc.update_node_mastery("u2", "job", "resume", 0.7)
+    resume = next(n for n in graph.nodes if n.node_id == "resume")
+    assert resume.status == "done"
+    assert resume.mastery == 1.0
+
+
+@pytest.mark.asyncio
+async def test_v215_graph_node_capability_tracks_mastery():
+    """P3-1: CapabilityNode tracks mastery like knowledge."""
+    from app.signals.goal_world_graph import GoalWorldGraphService
+    redis = FakeRedis()
+    svc = GoalWorldGraphService(redis)
+
+    graph = await svc.create_graph(
+        user_id="u3",
+        goal_id="project",
+        goal_type="project_delivery",
+        node_specs=[
+            {"node_id": "sysdesign", "label": "系统设计能力", "node_type": "capability"},
+        ],
+    )
+
+    graph = await svc.update_node_mastery("u3", "project", "sysdesign", 0.85)
+    cap = graph.nodes[0]
+    assert cap.status == "mastered"
+    assert cap.mastery == 0.85
+    assert cap.tracks_mastery is True
+
+
+@pytest.mark.asyncio
+async def test_v215_graph_node_risk_informational():
+    """P3-1: RiskNode is informational (no mastery tracking)."""
+    from app.signals.goal_world_graph import GraphNode
+    node = GraphNode(node_id="r1", label="范围膨胀", node_type="risk")
+    assert node.is_informational is True
+    assert node.tracks_mastery is False
+    assert node.is_binary is False
+
+
+@pytest.mark.asyncio
+async def test_v215_graph_mixed_node_types():
+    """P3-1: GoalWorldGraph with mixed node types (job search example)."""
+    from app.signals.goal_world_graph import GoalWorldGraphService
+    redis = FakeRedis()
+    svc = GoalWorldGraphService(redis)
+
+    graph = await svc.create_graph(
+        user_id="u4",
+        goal_id="job_interview",
+        goal_type="job_search_interview",
+        node_specs=[
+            {"node_id": "sysdesign_cap", "label": "系统设计表达", "node_type": "capability"},
+            {"node_id": "resume_art", "label": "简历", "node_type": "artifact"},
+            {"node_id": "mock_ms", "label": "模拟面试", "node_type": "milestone"},
+            {"node_id": "scatter_risk", "label": "回答太散", "node_type": "risk"},
+            {"node_id": "interviewer_fb", "label": "面试官反馈", "node_type": "feedback"},
+        ],
+    )
+
+    assert len(graph.nodes) == 5
+    types = {n.node_type for n in graph.nodes}
+    assert types == {"capability", "artifact", "milestone", "risk", "feedback"}
+
+
+@pytest.mark.asyncio
+async def test_v215_graph_suggest_includes_node_type():
+    """P3-1: Focus suggestions include node_type field."""
+    from app.signals.goal_world_graph import GoalWorldGraphService
+    redis = FakeRedis()
+    svc = GoalWorldGraphService(redis)
+
+    graph = await svc.create_graph(
+        user_id="u5",
+        goal_id="proj",
+        goal_type="project_delivery",
+        node_specs=[
+            {"node_id": "mvp", "label": "MVP 原型", "node_type": "artifact"},
+            {"node_id": "test_ms", "label": "用户测试", "node_type": "milestone", "dependency_ids": ["mvp"]},
+            {"node_id": "scope_risk", "label": "范围膨胀", "node_type": "risk"},
+        ],
+    )
+
+    suggestions = svc.suggest_focus_nodes(graph)
+    assert len(suggestions) >= 1
+    assert "node_type" in suggestions[0]
+
+
+@pytest.mark.asyncio
+async def test_v215_graph_backward_compat_no_type():
+    """P3-1: GraphNode without node_type defaults to knowledge (backward compat)."""
+    from app.signals.goal_world_graph import GraphNode
+    node = GraphNode(node_id="old_1", label="Old style node")
+    assert node.node_type == "knowledge"
+    assert node.tracks_mastery is True
+
+
+@pytest.mark.asyncio
+async def test_v215_graph_project_delivery_example():
+    """P3-1: Project delivery example from ruling."""
+    from app.signals.goal_world_graph import GoalWorldGraphService
+    redis = FakeRedis()
+    svc = GoalWorldGraphService(redis)
+
+    graph = await svc.create_graph(
+        user_id="u6",
+        goal_id="proj_deliver",
+        goal_type="project_delivery",
+        node_specs=[
+            {"node_id": "mvp", "label": "MVP 原型", "node_type": "artifact"},
+            {"node_id": "user_test", "label": "用户测试", "node_type": "milestone", "dependency_ids": ["mvp"]},
+            {"node_id": "scope_bloat", "label": "范围膨胀", "node_type": "risk"},
+            {"node_id": "two_weeks", "label": "两周 deadline", "node_type": "constraint"},
+        ],
+    )
+
+    # Complete MVP → user_test becomes unblocked
+    graph = await svc.update_node_mastery("u6", "proj_deliver", "mvp", 1.0)
+    user_test = next(n for n in graph.nodes if n.node_id == "user_test")
+    assert user_test.status != "blocked"
+
+    suggestions = svc.suggest_focus_nodes(graph)
+    # Should suggest user_test since MVP is done
+    suggested_ids = [s["node_id"] for s in suggestions]
+    assert "user_test" in suggested_ids

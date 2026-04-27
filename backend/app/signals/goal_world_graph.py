@@ -1,14 +1,14 @@
 """
 Core: execution
 Phase: plan→adapt
-Stage: v2.5 Goal World Graph — per-goal dependency and prerequisite tracking
+Stage: Signal-to-Action Spine P3-1 GoalWorldGraph — generalized node types
 
-Lightweight graph structure for tracking prerequisite relationships between
-knowledge nodes within a goal scope. Identifies bottlenecks and suggests
-focus areas based on dependency coverage.
+Per ruling Section 13: upgrade Knowledge Star Map to general GoalWorldGraph.
+10 node types: Knowledge, Capability, Artifact, Milestone, Habit,
+Risk, Constraint, Resource, Feedback, Relationship.
 
-NOT a replacement for the full Galaxy knowledge graph. This is goal-scoped
-and optimized for sprint-level planning decisions.
+Each goal_type gets its own node_schema via DomainPack.
+Exam Sprint backward-compatible — defaults to KnowledgeNode.
 """
 
 from __future__ import annotations
@@ -25,22 +25,59 @@ from app.signals.types import _uid
 _GRAPH_KEY = "spine:goal_graph:{user_id}:{goal_id}"
 _GRAPH_TTL = 90 * 24 * 3600  # 90 days
 
+# P3-1: Generalized node types per ruling
+NODE_TYPES = frozenset({
+    "knowledge",    # 知识点 (default for exam_sprint)
+    "capability",   # 能力
+    "artifact",     # 交付物
+    "milestone",    # 里程碑
+    "habit",        # 习惯
+    "risk",         # 风险
+    "constraint",   # 限制
+    "resource",     # 资源
+    "feedback",     # 反馈来源
+    "relationship", # 伙伴/导师/协作者
+})
+
+# Node types that track mastery (0-1 progress)
+_MASTERY_TRACKED_TYPES = frozenset({"knowledge", "capability", "habit"})
+# Node types that are binary (done/not-done)
+_BINARY_TYPES = frozenset({"artifact", "milestone", "resource"})
+# Node types that are informational (no mastery)
+_INFORMATIONAL_TYPES = frozenset({"risk", "constraint", "feedback", "relationship"})
+
 
 @dataclass
 class GraphNode:
     node_id: str
     label: str
-    mastery: float = 0.0  # 0-1
+    node_type: str = "knowledge"  # P3-1: one of NODE_TYPES
+    mastery: float = 0.0  # 0-1 (meaningful for _MASTERY_TRACKED_TYPES)
     dependency_ids: list[str] = field(default_factory=list)
-    status: str = "pending"  # "pending" | "in_progress" | "mastered" | "blocked"
+    status: str = "pending"  # "pending" | "in_progress" | "mastered" | "blocked" | "done"
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def tracks_mastery(self) -> bool:
+        return self.node_type in _MASTERY_TRACKED_TYPES
+
+    @property
+    def is_binary(self) -> bool:
+        return self.node_type in _BINARY_TYPES
+
+    @property
+    def is_informational(self) -> bool:
+        return self.node_type in _INFORMATIONAL_TYPES
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "node_id": self.node_id,
             "label": self.label,
+            "node_type": self.node_type,
             "mastery": self.mastery,
             "dependency_ids": self.dependency_ids,
             "status": self.status,
+            "metadata": self.metadata,
         }
 
     @classmethod
@@ -128,11 +165,19 @@ class GoalWorldGraphService:
 
         for node in graph.nodes:
             if node.node_id == node_id:
-                node.mastery = max(0.0, min(1.0, mastery))
-                if mastery >= 0.8:
-                    node.status = "mastered"
-                elif mastery > 0.0:
-                    node.status = "in_progress"
+                mastery = max(0.0, min(1.0, mastery))
+                if node.is_binary:
+                    # Binary nodes: mastery >= 0.5 means done
+                    node.mastery = 1.0 if mastery >= 0.5 else 0.0
+                    node.status = "done" if mastery >= 0.5 else "pending"
+                elif node.tracks_mastery:
+                    node.mastery = mastery
+                    if mastery >= 0.8:
+                        node.status = "mastered"
+                    elif mastery > 0.0:
+                        node.status = "in_progress"
+                else:
+                    node.mastery = mastery
                 break
 
         self._recompute(graph)
@@ -160,16 +205,16 @@ class GoalWorldGraphService:
         return graph
 
     def find_bottleneck(self, graph: GoalWorldGraph) -> GraphNode | None:
-        """Find the node that blocks the most other nodes and isn't mastered."""
+        """Find the node that blocks the most other nodes and isn't completed."""
         blocked_by: dict[str, int] = {}
         node_map = {n.node_id: n for n in graph.nodes}
 
         for node in graph.nodes:
-            if node.status == "mastered":
+            if node.status in ("mastered", "done"):
                 continue
             for dep_id in node.dependency_ids:
                 dep = node_map.get(dep_id)
-                if dep and dep.status != "mastered":
+                if dep and dep.status not in ("mastered", "done"):
                     blocked_by[dep_id] = blocked_by.get(dep_id, 0) + 1
 
         if not blocked_by:
@@ -183,7 +228,10 @@ class GoalWorldGraphService:
 
         Priority: bottleneck > unblocked in-progress > unblocked pending.
         """
-        mastered_ids = {n.node_id for n in graph.nodes if n.status == "mastered"}
+        completed_ids = {
+            n.node_id for n in graph.nodes
+            if n.status in ("mastered", "done")
+        }
         node_map = {n.node_id: n for n in graph.nodes}
         suggestions: list[dict[str, Any]] = []
 
@@ -193,21 +241,22 @@ class GoalWorldGraphService:
             suggestions.append({
                 "node_id": bottleneck.node_id,
                 "label": bottleneck.label,
+                "node_type": bottleneck.node_type,
                 "reason": "bottleneck",
                 "blocks_count": sum(
                     1 for n in graph.nodes
-                    if bottleneck.node_id in n.dependency_ids and n.status != "mastered"
+                    if bottleneck.node_id in n.dependency_ids and n.status not in ("mastered", "done")
                 ),
             })
 
-        # 2. Unblocked nodes (all deps mastered), by mastery (lowest first)
+        # 2. Unblocked nodes (all deps completed), by mastery (lowest first)
         unblocked = []
         for node in graph.nodes:
-            if node.status == "mastered":
+            if node.status in ("mastered", "done"):
                 continue
             if suggestions and node.node_id == suggestions[0]["node_id"]:
                 continue
-            deps_ok = all(d in mastered_ids for d in node.dependency_ids)
+            deps_ok = all(d in completed_ids for d in node.dependency_ids)
             if deps_ok:
                 unblocked.append(node)
 
@@ -216,6 +265,7 @@ class GoalWorldGraphService:
             suggestions.append({
                 "node_id": node.node_id,
                 "label": node.label,
+                "node_type": node.node_type,
                 "reason": "ready_to_advance" if node.mastery > 0 else "ready_to_start",
                 "current_mastery": round(node.mastery, 2),
             })
@@ -224,17 +274,23 @@ class GoalWorldGraphService:
 
     def _recompute(self, graph: GoalWorldGraph) -> None:
         """Recompute derived fields: coverage, bottleneck, blocked status."""
-        mastered = [n for n in graph.nodes if n.status == "mastered"]
-        mastered_ids = {n.node_id for n in mastered}
-        graph.coverage = round(len(mastered) / max(len(graph.nodes), 1), 3)
+        completed = [
+            n for n in graph.nodes
+            if n.status in ("mastered", "done")
+        ]
+        completed_ids = {n.node_id for n in completed}
+        graph.coverage = round(len(completed) / max(len(graph.nodes), 1), 3)
 
-        # Mark nodes as blocked if they have unmet deps
+        # Mark nodes as blocked if they have unmet deps, or unblock if deps resolved
         for node in graph.nodes:
-            if node.status == "mastered":
+            if node.status in ("mastered", "done"):
                 continue
-            unmet = [d for d in node.dependency_ids if d not in mastered_ids]
-            if unmet and node.status not in ("in_progress",):
-                node.status = "blocked"
+            unmet = [d for d in node.dependency_ids if d not in completed_ids]
+            if unmet:
+                if node.status not in ("in_progress",):
+                    node.status = "blocked"
+            elif node.status == "blocked":
+                node.status = "pending"
 
         graph.bottleneck_node_id = None
         bn = self.find_bottleneck(graph)
