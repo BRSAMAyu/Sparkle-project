@@ -1759,6 +1759,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Spine: multi-goal conflict surface
           state = state.copyWith(pendingGoalArbitration: event);
           flushPending();
+        } else if (event is SpineDegradedEvent) {
+          // STAB-012: Spine pipeline degraded — show subtle indicator
+          state = state.copyWith(spineDegraded: true);
+          flushPending();
         } else if (event is NotificationEvent) {
           // Notification Event - 实时通知推送
           _handleNotificationEvent(event);

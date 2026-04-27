@@ -159,6 +159,7 @@ class ChatState {
     this.pendingUXWarning,
     this.pendingGrowthCard,
     this.pendingGoalArbitration,
+    this.spineDegraded = false,
   });
 
   static const int maxRetainedMessages = 500;
@@ -232,6 +233,9 @@ class ChatState {
 
   /// Spine: pending multi-goal arbitration card — surfaces when ≥2 goals conflict.
   final GoalArbitrationEvent? pendingGoalArbitration;
+
+  /// Spine: degraded mode flag — true when Spine pipeline failed.
+  final bool spineDegraded;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -331,6 +335,7 @@ class ChatState {
     bool clearGrowthCard = false,
     GoalArbitrationEvent? pendingGoalArbitration,
     bool clearGoalArbitration = false,
+    bool? spineDegraded,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -435,5 +440,6 @@ class ChatState {
         pendingGoalArbitration: clearGoalArbitration
             ? null
             : pendingGoalArbitration ?? this.pendingGoalArbitration,
+        spineDegraded: spineDegraded ?? this.spineDegraded,
       );
 }

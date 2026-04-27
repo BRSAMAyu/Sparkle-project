@@ -1348,6 +1348,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             .read(chatProvider.notifier)
                             .dismissUXWarning(),
                       ),
+                    // STAB-012: Spine degraded indicator
+                    if (chatState.spineDegraded)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: Chip(
+                          avatar: Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: DS.textTertiary,
+                          ),
+                          label: Text(
+                            '智能调节暂不可用',
+                            style: DS.labelSmall.copyWith(
+                              color: DS.textTertiary,
+                            ),
+                          ),
+                          backgroundColor: DS.surfaceMedium,
+                          side: BorderSide.none,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
                     // Spine: Growth Card — divine moment #1 看见坚持
                     if (chatState.pendingGrowthCard != null)
                       GrowthCard(

@@ -1837,3 +1837,15 @@ class GoalArbitrationEvent extends ChatStreamEvent {
     return [];
   }
 }
+
+/// Spine Degraded Event — STAB-012 graceful degradation indicator.
+/// Emitted when the Spine pipeline fails and falls back to safe defaults.
+/// Backend key: response_metadata['spine_degraded']
+class SpineDegradedEvent extends ChatStreamEvent {
+  SpineDegradedEvent({
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+}

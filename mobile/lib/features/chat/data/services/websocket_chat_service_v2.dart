@@ -492,6 +492,16 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Spine: Degraded mode indicator (STAB-012)
+        if (metadata != null && metadata['spine_degraded'] == 'true') {
+          return SpineDegradedEvent(
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         return TextEvent(
           content: deltaContent,
           responseId: responseId,
