@@ -826,3 +826,102 @@ class SkillEntry:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> SkillEntry:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ── 12. AuroraControlSignal — Layer 6 envelope ────────────────────────
+# Final Spec Section 6: Aurora outputs a control envelope wrapping all directives.
+
+@dataclass
+class AuroraControlSignal:
+    """总控 envelope — Aurora 的结构化输出，不是自然语言 prompt。"""
+    control_id: str
+    energy: str                              # "light" | "medium" | "full"
+    policy_decision_id: str
+    response_policy: str                     # e.g. "task_recovery_support"
+    directive_ids: dict[str, str]            # directive_type → directive_id
+    risk_level: str = "medium"               # from PolicyDecision
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "control_id": self.control_id,
+            "energy": self.energy,
+            "policy_decision_id": self.policy_decision_id,
+            "response_policy": self.response_policy,
+            "directive_ids": self.directive_ids,
+            "risk_level": self.risk_level,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> AuroraControlSignal:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ── 13. AuroraAgenda — multi-message session management ────────────────
+# Final Spec Section 9: Aurora Core Session needs structured agenda management.
+
+@dataclass
+class AuroraAgendaItem:
+    """Single agenda item in an Aurora Core Session."""
+    item_id: str
+    item_type: str               # explain_conflict | confirm_available_time | update_strategy |
+                                  # confirm_hypothesis | relationship_check | motivation_check
+    status: str                  # pending | in_progress | waiting_user | done | interrupted
+    payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "item_id": self.item_id,
+            "item_type": self.item_type,
+            "status": self.status,
+            "payload": self.payload,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> AuroraAgendaItem:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class AuroraAgenda:
+    """Aurora Core Session agenda — tracks what Aurora needs to accomplish."""
+    session_id: str
+    scope: str                                    # Human-readable scope description
+    agenda_items: list[AuroraAgendaItem] = field(default_factory=list)
+    interruption_policy: str = "answer_then_resume"  # answer_then_resume | defer
+    status: str = "active"                         # active | paused | completed | abandoned
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "scope": self.scope,
+            "agenda_items": [item.to_dict() for item in self.agenda_items],
+            "interruption_policy": self.interruption_policy,
+            "status": self.status,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> AuroraAgenda:
+        items = [AuroraAgendaItem.from_dict(i) for i in d.get("agenda_items", [])]
+        return cls(
+            session_id=d["session_id"],
+            scope=d["scope"],
+            agenda_items=items,
+            interruption_policy=d.get("interruption_policy", "answer_then_resume"),
+            status=d.get("status", "active"),
+            created_at=d.get("created_at", ""),
+        )
+
+    def current_item(self) -> AuroraAgendaItem | None:
+        """Return the first non-done agenda item."""
+        return next((i for i in self.agenda_items if i.status not in ("done", "interrupted")), None)
+
+    def advance(self, item_id: str, new_status: str) -> None:
+        """Update an agenda item's status."""
+        for item in self.agenda_items:
+            if item.item_id == item_id:
+                item.status = new_status
+                return

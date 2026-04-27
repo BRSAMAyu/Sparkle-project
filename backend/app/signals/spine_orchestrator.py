@@ -193,28 +193,38 @@ class SpineOrchestrator:
 
         # Step 4b: Build and store directives (only those flagged in which_directives)
         wd = decision.which_directives
+        _collected_directive_ids: dict[str, str | None] = {
+            "execution": directive.directive_id,
+            "response": None, "notification": None, "retrieval": None,
+            "plan": None, "model_write": None, "ux": None,
+            "community": None, "skill": None,
+        }
 
         if wd.get("response"):
             response_dir = self.policy_engine.build_response_directive(decision, signal)
             if response_dir:
                 await self._store_response_directive(user_id, response_dir)
+                _collected_directive_ids["response"] = response_dir.directive_id
 
         if wd.get("notification"):
             notif_dir = self.policy_engine.build_notification_directive(decision, signal)
             if notif_dir:
                 await self._store_notification_directive(user_id, notif_dir)
+                _collected_directive_ids["notification"] = notif_dir.directive_id
 
         if wd.get("retrieval"):
             ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
             if ret_dir:
                 await self._enrich_retrieval_with_source_tray(user_id, ret_dir)
                 await self._store_retrieval_directive(user_id, ret_dir)
+                _collected_directive_ids["retrieval"] = ret_dir.directive_id
 
         if wd.get("plan"):
             plan_dir = self.policy_engine.build_plan_directive(decision, signal)
             if plan_dir:
                 await self._store_plan_directive(user_id, plan_dir)
                 trace.directive_ids.append(plan_dir.directive_id)
+                _collected_directive_ids["plan"] = plan_dir.directive_id
 
         if wd.get("model_write"):
             mw_dir = self.policy_engine.build_model_write_directive(decision, signal)
@@ -222,24 +232,47 @@ class SpineOrchestrator:
                 await self._store_model_write_directive(user_id, mw_dir)
                 trace.directive_ids.append(mw_dir.directive_id)
                 await self._apply_model_writes(user_id, mw_dir)
+                _collected_directive_ids["model_write"] = mw_dir.directive_id
 
         if wd.get("ux"):
             ux_dir = self.policy_engine.build_ux_directive(decision, signal)
             if ux_dir:
                 await self._store_ux_directive(user_id, ux_dir)
                 trace.directive_ids.append(ux_dir.directive_id)
+                _collected_directive_ids["ux"] = ux_dir.directive_id
 
         if wd.get("community"):
             comm_dir = self.policy_engine.build_community_directive(decision, signal)
             if comm_dir:
                 await self._store_community_directive(user_id, comm_dir)
                 trace.directive_ids.append(comm_dir.directive_id)
+                _collected_directive_ids["community"] = comm_dir.directive_id
 
         if wd.get("skill"):
             skill_dir = self.policy_engine.build_skill_directive(decision, signal)
             if skill_dir:
                 await self._store_skill_directive(user_id, skill_dir)
                 trace.directive_ids.append(skill_dir.directive_id)
+                _collected_directive_ids["skill"] = skill_dir.directive_id
+
+        # Step 4i: Build AuroraControlSignal envelope (Final Spec Section 6)
+        from app.signals.types import AuroraControlSignal
+        energy = "light" if decision.risk_level == "low" else "medium" if decision.risk_level == "medium" else "full"
+        directive_ids = {dt: did for dt, did in _collected_directive_ids.items() if did}
+        acs = AuroraControlSignal(
+            control_id=_uid("acs"),
+            energy=energy,
+            policy_decision_id=decision.policy_decision_id,
+            response_policy=decision.primary_strategy,
+            directive_ids=directive_ids,
+            risk_level=decision.risk_level,
+        )
+        import json
+        await self.redis.set(
+            f"spine:aurora_control_signal:{user_id}:latest",
+            json.dumps(acs.to_dict()),
+            ex=72 * 3600,
+        )
 
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":

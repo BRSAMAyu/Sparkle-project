@@ -23,6 +23,8 @@ Layers:
 from app.signals.types import (
     ActionableSignal,
     ActionableStatePacket,
+    AuroraAgendaItem,
+    AuroraControlSignal,
     CausalTrace,
     CommunityDirective,
     DirectiveApplicationAudit,
@@ -71,6 +73,8 @@ from app.signals.spine_aurora_bridge import SpineAuroraBridge
 __all__ = [
     "ActionableSignal",
     "ActionableStatePacket",
+    "AuroraAgendaItem",
+    "AuroraControlSignal",
     "CausalTrace",
     "ChronicleEntry",
     "CoreSession",
