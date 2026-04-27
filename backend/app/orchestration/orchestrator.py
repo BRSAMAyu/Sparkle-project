@@ -2609,12 +2609,6 @@ class ChatOrchestrator(
                 # v2.11: Emit growth card metadata for Flutter (divine moment #1 看见坚持)
                 if stream_callback:
                     try:
-                        _spine = SpineOrchestrator(self.redis) if '_spine' not in dir() else None
-                        if _spine is None:
-                            from app.signals.spine_orchestrator import SpineOrchestrator
-                            _spine_instance = SpineOrchestrator(self.redis)
-                        else:
-                            _spine_instance = _spine
                         _growth_raw = await self.redis.get(f"spine:card:growth:{user_id}:latest")
                         if _growth_raw:
                             _growth_data = json.loads(_growth_raw if isinstance(_growth_raw, str) else _growth_raw.decode())
