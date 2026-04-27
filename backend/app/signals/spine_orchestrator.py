@@ -43,6 +43,7 @@ from app.signals.skill_extraction import SkillExtractionService
 from app.signals.goal_type_adapter import GoalTypeAdapter
 from app.signals.material_signal import MaterialSignalDetector
 from app.signals.timeline_card_renderer import TimelineCardRenderer
+from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -109,6 +110,7 @@ class SpineOrchestrator:
         self.goal_type_adapter = GoalTypeAdapter()
         self.material_signal_detector = MaterialSignalDetector(redis_client)
         self.timeline_renderer = TimelineCardRenderer()
+        self.source_effectiveness = SourceEffectivenessTracker(redis_client)
 
     async def on_task_completed(
         self,
@@ -596,10 +598,18 @@ class SpineOrchestrator:
             fallback=[],
         )
 
+        # v2.4: Fetch strategy beliefs from LearningBase
+        strategy_beliefs = await resilient_redis_call(
+            "spine_pipeline",
+            self._load_strategy_beliefs(user_id),
+            fallback=[],
+        )
+
         result = await self.policy_engine.evaluate(
             signal,
             context={"source": "pipeline"},
             recent_policy_effects=recent_effects,
+            strategy_beliefs=strategy_beliefs,
         )
         await self.metrics.record_policy_evaluated(matched=result is not None)
         if result is None:
@@ -1348,6 +1358,67 @@ class SpineOrchestrator:
                     pass
         return None
 
+    async def get_ux_risk_warning(self, user_id: str) -> dict[str, Any] | None:
+        """Return a proactive risk warning payload for Flutter to render (divine moment #5 阻止低收益).
+
+        Returns a dict with risk_level, reason, and suggested_action when the current
+        UXDirective flags risk_detected — combining it with the active ExecutionDirective's
+        user_visible_reason. Returns None if no risk is active.
+        """
+        import json
+
+        _CLAIM_TO_LABEL: dict[str, str] = {
+            "recent_task_too_large": "任务拆解风险",
+            "transfer_failure": "知识迁移受阻",
+            "momentum_stalled": "学习势头放缓",
+            "task_missed": "任务遗漏",
+            "pre_exam_silence": "考前节奏异常",
+        }
+        _RISK_REASONS: dict[str, str] = {
+            "recent_task_too_large": "当前任务颗粒度过大，建议先拆解再行动",
+            "transfer_failure": "检测到知识迁移困难，换一种切入角度可能更有效",
+            "momentum_stalled": "最近几天完成率下降，可能需要调整策略",
+            "task_missed": "有已安排的任务未完成，建议先回顾再推进",
+            "pre_exam_silence": "考前静默期——减少新内容，专注复盘",
+        }
+
+        try:
+            ux_dir = await self.get_ux_directive(user_id)
+            if not ux_dir or ux_dir.status_band_state != "risk_detected":
+                return None
+
+            active_dir = await self.get_active_directive(user_id)
+            user_visible_reason = (
+                active_dir.user_visible_reason if active_dir else ""
+            )
+
+            # Resolve the signal claim from the active directive's policy_decision_id to get human label
+            claim_label = "策略风险"
+            risk_reason = user_visible_reason
+            if active_dir:
+                # Try to match known claim labels from primary_strategy
+                for claim, label in _CLAIM_TO_LABEL.items():
+                    if claim in (active_dir.primary_strategy or ""):
+                        claim_label = label
+                        if not risk_reason:
+                            risk_reason = _RISK_REASONS.get(claim, "")
+                        break
+
+            if not risk_reason:
+                risk_reason = "Aurora 检测到当前路径存在效率风险"
+
+            return {
+                "risk_level": "medium",
+                "label": claim_label,
+                "reason": risk_reason,
+                "suggested_action": "帮我调整策略",
+                "predicted_reply_options": ux_dir.predicted_reply_options or [],
+                "status_band_state": ux_dir.status_band_state,
+                "directive_id": ux_dir.directive_id,
+            }
+        except Exception:
+            return None
+
     # ── Layer 6: SkillDirective ──────────────────────────────────────────
 
     async def _store_skill_directive(self, user_id: str, sd: SkillDirective) -> None:
@@ -1424,6 +1495,7 @@ class SpineOrchestrator:
         reason: str,
         expected_outcome: str,
         actual_outcome: dict[str, Any],
+        user_id: str = "",
     ):
         """记录干预结果并执行因果归因。"""
         record = await self.outcome_recorder.record_outcome(
@@ -1434,6 +1506,40 @@ class SpineOrchestrator:
             actual_outcome=actual_outcome,
         )
         await self.metrics.record_outcome_recorded(effective=record.attribution == "effective")
+
+        # v2.4: Record experiment trial with real outcome
+        try:
+            if user_id:
+                experiments = await self.policy_experiments.get_user_experiments(user_id)
+                for exp in experiments:
+                    if exp.status == "running":
+                        shadow_hyp = self.policy_experiments.evaluate_shadow_outcome(
+                            primary_outcome=record.attribution,
+                            primary_strategy=exp.primary_strategy,
+                            context=actual_outcome,
+                        )
+                        await self.policy_experiments.record_trial(
+                            exp.experiment_id,
+                            primary_outcome=record.attribution,
+                            shadow_hypothesis=shadow_hyp,
+                        )
+                        break  # Only record for the most relevant running experiment
+        except Exception:
+            pass
+
+        # v2.4: Record source effectiveness if sources were involved
+        try:
+            source_ids = actual_outcome.get("source_ids", [])
+            if user_id and source_ids:
+                for sid in source_ids:
+                    await self.source_effectiveness.record_source_outcome(
+                        user_id=user_id,
+                        source_id=sid,
+                        outcome=record.attribution,
+                    )
+        except Exception:
+            pass
+
         return record
 
     async def get_outcome_for_trace(self, trace_id: str):
@@ -1462,20 +1568,28 @@ class SpineOrchestrator:
         # 1. policy_experiments: shadow A/B evaluation
         try:
             strategy_key = getattr(directive, "strategy_key", None) or decision.primary_strategy
-            experiments = await self.policy_experiments.get_user_experiments(user_id)
-            if not experiments:
+            active_exp = await self.policy_experiments.get_active_experiment_for_strategy(
+                user_id, strategy_key,
+            )
+            if not active_exp:
                 await self.policy_experiments.create_experiment(
                     user_id=user_id,
                     signal_state_key=signal.state_key,
+                    signal_claim=signal.claim,
                     primary_strategy=strategy_key,
                 )
-            else:
-                await self.policy_experiments.record_trial(
-                    user_id=user_id,
-                    signal_state_key=signal.state_key,
-                    primary_strategy=strategy_key,
-                    primary_outcome="pending",
-                    context={"claim": signal.claim},
+        except Exception:
+            pass
+
+        # 1b. policy_experiments: check for promotion suggestions
+        try:
+            experiments = await self.policy_experiments.get_user_experiments(user_id)
+            promotions = self.policy_experiments.suggest_promotions(experiments)
+            if promotions:
+                await self.redis.set(
+                    f"spine:experiment:promotions:{user_id}",
+                    json.dumps(promotions),
+                    ex=24 * 3600,
                 )
         except Exception:
             pass
@@ -1518,19 +1632,22 @@ class SpineOrchestrator:
         except Exception:
             pass
 
-        # 5. learning_base: update strategy belief
+        # 5. learning_base: update + persist strategy beliefs
         try:
+            beliefs = await self._load_strategy_beliefs(user_id)
             recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
             if recent_effects:
+                from app.signals.learning_base import StrategyBelief
+                belief_map = {b.strategy_key: b for b in beliefs}
                 for effect in recent_effects:
                     strategy = getattr(effect, "strategy_key", None) or effect.get("strategy_key")
-                    outcome = getattr(effect, "effectiveness", None) or effect.get("effectiveness")
+                    outcome = getattr(effect, "attribution", None) or effect.get("attribution")
                     if strategy and outcome:
-                        self.learning_base.update_belief(
-                            strategy_key=strategy,
-                            outcome=outcome,
-                            context={"signal_state_key": signal.state_key},
-                        )
+                        if strategy not in belief_map:
+                            belief_map[strategy] = StrategyBelief(strategy_key=strategy)
+                        self.learning_base.update_belief(belief_map[strategy], outcome)
+                beliefs = list(belief_map.values())
+                await self._persist_strategy_beliefs(user_id, beliefs)
         except Exception:
             pass
 
@@ -2103,3 +2220,57 @@ class SpineOrchestrator:
         except Exception:
             pass
         return await self.metrics.snapshot()
+
+    # ── v2.4: Learning Layer ────────────────────────────────────────────
+
+    async def _load_strategy_beliefs(self, user_id: str) -> list[Any]:
+        """Load persisted strategy beliefs from Redis."""
+        import json
+        from app.signals.learning_base import StrategyBelief
+
+        key = f"spine:beliefs:{user_id}"
+        raw = await self.redis.get(key)
+        if not raw:
+            return []
+        data = json.loads(raw if isinstance(raw, str) else raw.decode())
+        return [StrategyBelief.from_dict(b) for b in data]
+
+    async def _persist_strategy_beliefs(self, user_id: str, beliefs: list[Any]) -> None:
+        """Persist strategy beliefs to Redis."""
+        import json
+
+        key = f"spine:beliefs:{user_id}"
+        await self.redis.set(
+            key,
+            json.dumps([b.to_dict() for b in beliefs]),
+            ex=90 * 24 * 3600,  # 90 days
+        )
+
+    async def run_auto_deprecation(self, user_id: str) -> list[str]:
+        """v2.4: Run auto-deprecation check for stale skills."""
+        try:
+            deprecated = await self.skill_lifecycle_manager.auto_deprecate_check(user_id)
+            if deprecated:
+                logger.info("SkillAutoDeprecation: user={} deprecated={}", user_id, deprecated)
+            return deprecated
+        except Exception:
+            return []
+
+    async def record_source_outcome(
+        self,
+        *,
+        user_id: str,
+        source_id: str,
+        outcome: str,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        """v2.4: Record source effectiveness after an outcome."""
+        try:
+            return await self.source_effectiveness.record_source_outcome(
+                user_id=user_id,
+                source_id=source_id,
+                outcome=outcome,
+                context=context,
+            )
+        except Exception:
+            return None

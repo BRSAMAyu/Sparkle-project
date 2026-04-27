@@ -9718,3 +9718,390 @@ async def test_degraded_circuit_breaker_blocks_pipeline():
     # Reset
     _spine_pipeline_breaker._failure_count = 0
     _spine_pipeline_breaker._state = "closed"
+
+
+# ══════════════════════════════════════════════════════════════════════
+# v2.4: Learning Layer Tests
+# ══════════════════════════════════════════════════════════════════════
+
+
+class TestV24SourceEffectiveness:
+    """v2.4 SourceEffectiveness — track which sources help learning."""
+
+    @pytest.fixture
+    def redis(self):
+        return FakeRedis()
+
+    @pytest.fixture
+    def tracker(self, redis):
+        from app.signals.source_tray_integration import SourceEffectivenessTracker
+        return SourceEffectivenessTracker(redis)
+
+    @pytest.mark.asyncio
+    async def test_record_effective_source(self, tracker, redis):
+        result = await tracker.record_source_outcome(
+            user_id="u1", source_id="src_tcp_notes", outcome="effective",
+        )
+        assert result["effective"] == 1
+        assert result["total"] == 1
+        assert result["effectiveness_rate"] == 1.0
+
+    @pytest.mark.asyncio
+    async def test_record_insufficient_source(self, tracker, redis):
+        await tracker.record_source_outcome(
+            user_id="u1", source_id="src_bad_ppt", outcome="insufficient",
+        )
+        result = await tracker.get_source_effectiveness("u1", "src_bad_ppt")
+        assert result["insufficient"] == 1
+        assert result["effectiveness_rate"] == 0.0
+
+    @pytest.mark.asyncio
+    async def test_mixed_outcomes_rate(self, tracker, redis):
+        for _ in range(3):
+            await tracker.record_source_outcome(
+                user_id="u1", source_id="src_mixed", outcome="effective",
+            )
+        for _ in range(2):
+            await tracker.record_source_outcome(
+                user_id="u1", source_id="src_mixed", outcome="insufficient",
+            )
+        result = await tracker.get_source_effectiveness("u1", "src_mixed")
+        assert result["total"] == 5
+        assert result["effectiveness_rate"] == 0.6
+
+    @pytest.mark.asyncio
+    async def test_get_all_source_effectiveness_sorted(self, tracker, redis):
+        # Create 3 sources with different rates
+        for _ in range(4):
+            await tracker.record_source_outcome(
+                user_id="u1", source_id="good", outcome="effective",
+            )
+        await tracker.record_source_outcome(
+            user_id="u1", source_id="bad", outcome="insufficient",
+        )
+        for _ in range(2):
+            await tracker.record_source_outcome(
+                user_id="u1", source_id="mid", outcome="effective",
+            )
+        for _ in range(2):
+            await tracker.record_source_outcome(
+                user_id="u1", source_id="mid", outcome="insufficient",
+            )
+
+        all_effects = await tracker.get_all_source_effectiveness("u1")
+        assert len(all_effects) == 3
+        assert all_effects[0]["source_id"] == "good"
+        assert all_effects[-1]["source_id"] == "bad"
+
+    @pytest.mark.asyncio
+    async def test_low_effectiveness_filter(self, tracker, redis):
+        for _ in range(5):
+            await tracker.record_source_outcome(
+                user_id="u1", source_id="low_src", outcome="insufficient",
+            )
+        low = await tracker.get_low_effectiveness_sources("u1", min_trials=3, max_rate=0.3)
+        assert "low_src" in low
+
+    @pytest.mark.asyncio
+    async def test_not_enough_trials_excluded(self, tracker, redis):
+        await tracker.record_source_outcome(
+            user_id="u1", source_id="few_src", outcome="insufficient",
+        )
+        low = await tracker.get_low_effectiveness_sources("u1", min_trials=3, max_rate=0.3)
+        assert "few_src" not in low
+
+
+class TestV24StrategyBeliefConsumption:
+    """v2.4: PolicyEngine.consume strategy_beliefs to bias decisions."""
+
+    @pytest.fixture
+    def engine(self):
+        from app.signals.policy_engine import PolicyEngine
+        return PolicyEngine()
+
+    @pytest.mark.asyncio
+    async def test_belief_bias_applied_for_low_effectiveness(self, engine):
+        signal = ActionableSignal(
+            signal_id="s1", source_event_ids=["e1"], source_system="test",
+            state_key="task_granularity_fit",
+            claim="recent_task_too_large", confidence=0.8,
+            scope="current_sprint", ttl_hours=24,
+            evidence_summary="test", possible_effects=["test"],
+            priority="high",
+        )
+        from app.signals.learning_base import StrategyBelief
+        beliefs = [
+            StrategyBelief(strategy_key="recover_execution_rhythm", alpha=2, beta=8, evidence_count=10),
+            StrategyBelief(strategy_key="repair_knowledge_gap", alpha=8, beta=2, evidence_count=10),
+        ]
+        result = await engine.evaluate(signal, strategy_beliefs=beliefs)
+        assert result is not None
+        decision, directive = result
+        # Should have belief_bias in soft_biases
+        assert decision.soft_biases.get("belief_biased_to") == "repair_knowledge_gap"
+
+    @pytest.mark.asyncio
+    async def test_belief_not_applied_when_strategy_effective(self, engine):
+        signal = ActionableSignal(
+            signal_id="s1", source_event_ids=["e1"], source_system="test",
+            state_key="task_granularity_fit",
+            claim="recent_task_too_large", confidence=0.8,
+            scope="current_sprint", ttl_hours=24,
+            evidence_summary="test", possible_effects=["test"],
+            priority="high",
+        )
+        from app.signals.learning_base import StrategyBelief
+        beliefs = [
+            StrategyBelief(strategy_key="recover_execution_rhythm", alpha=8, beta=2, evidence_count=10),
+        ]
+        result = await engine.evaluate(signal, strategy_beliefs=beliefs)
+        assert result is not None
+        decision, directive = result
+        # Strategy is effective, no bias needed
+        assert "belief_biased_to" not in decision.soft_biases
+
+    @pytest.mark.asyncio
+    async def test_belief_not_applied_with_low_evidence(self, engine):
+        signal = ActionableSignal(
+            signal_id="s1", source_event_ids=["e1"], source_system="test",
+            state_key="task_granularity_fit",
+            claim="recent_task_too_large", confidence=0.8,
+            scope="current_sprint", ttl_hours=24,
+            evidence_summary="test", possible_effects=["test"],
+            priority="high",
+        )
+        from app.signals.learning_base import StrategyBelief
+        beliefs = [
+            StrategyBelief(strategy_key="recover_execution_rhythm", alpha=1, beta=3, evidence_count=2),
+        ]
+        result = await engine.evaluate(signal, strategy_beliefs=beliefs)
+        assert result is not None
+        decision, directive = result
+        assert "belief_biased_to" not in decision.soft_biases
+
+    @pytest.mark.asyncio
+    async def test_no_beliefs_no_change(self, engine):
+        signal = ActionableSignal(
+            signal_id="s1", source_event_ids=["e1"], source_system="test",
+            state_key="task_granularity_fit",
+            claim="recent_task_too_large", confidence=0.8,
+            scope="current_sprint", ttl_hours=24,
+            evidence_summary="test", possible_effects=["test"],
+            priority="high",
+        )
+        result = await engine.evaluate(signal, strategy_beliefs=None)
+        assert result is not None
+        decision, _ = result
+        assert "belief_biased_to" not in decision.soft_biases
+
+
+class TestV24PolicyExperimentFullLoop:
+    """v2.4: Experiment creation → outcome recording → promotion suggestion."""
+
+    @pytest.fixture
+    def redis(self):
+        return FakeRedis()
+
+    @pytest.fixture
+    def manager(self, redis):
+        from app.signals.policy_experiments import PolicyExperimentManager
+        return PolicyExperimentManager(redis)
+
+    @pytest.mark.asyncio
+    async def test_create_and_record_trial(self, manager):
+        exp = await manager.create_experiment(
+            user_id="u1",
+            signal_state_key="task_granularity_fit",
+            signal_claim="recent_task_too_large",
+            primary_strategy="recover_execution_rhythm",
+        )
+        assert exp is not None
+        assert exp.shadow_strategy == "recover_execution_rhythm_gentle"
+
+        # Record a trial
+        updated = await manager.record_trial(
+            exp.experiment_id,
+            primary_outcome="effective",
+            shadow_hypothesis="effective",
+        )
+        assert updated is not None
+        assert updated.primary_wins == 1
+        assert updated.total_trials == 1
+
+    @pytest.mark.asyncio
+    async def test_promotion_suggestion_after_conclusion(self, manager):
+        exp = await manager.create_experiment(
+            user_id="u1",
+            signal_state_key="task_granularity_fit",
+            signal_claim="recent_task_too_large",
+            primary_strategy="recover_execution_rhythm",
+        )
+        # Shadow outperforms: 8 wins for shadow vs 2 for primary
+        for _ in range(8):
+            await manager.record_trial(
+                exp.experiment_id,
+                primary_outcome="insufficient",
+                shadow_hypothesis="effective",
+            )
+        for _ in range(2):
+            await manager.record_trial(
+                exp.experiment_id,
+                primary_outcome="effective",
+                shadow_hypothesis="effective",
+            )
+
+        experiments = await manager.get_user_experiments("u1")
+        promotions = manager.suggest_promotions(experiments)
+        assert len(promotions) >= 1
+        assert promotions[0]["suggested_strategy"] == "recover_execution_rhythm_gentle"
+        assert promotions[0]["action"] == "promote_shadow_to_primary"
+
+    @pytest.mark.asyncio
+    async def test_shadow_outcome_heuristic(self, manager):
+        result = manager.evaluate_shadow_outcome(
+            primary_outcome="insufficient",
+            primary_strategy="repair_knowledge_gap",
+            context={"new_hypothesis": "user lacks understanding of core concepts"},
+        )
+        # Shadow "guided" should win when understanding is the issue
+        assert result == "effective"
+
+
+class TestV24SkillAutoDeprecation:
+    """v2.4: Skill lifecycle auto-deprecation."""
+
+    @pytest.fixture
+    def redis(self):
+        return FakeRedis()
+
+    @pytest.fixture
+    def spine(self, redis):
+        return SpineOrchestrator(redis_client=redis)
+
+    @pytest.mark.asyncio
+    async def test_auto_deprecation_no_stale_skills(self, spine, redis):
+        deprecated = await spine.run_auto_deprecation("u1")
+        assert deprecated == []
+
+    @pytest.mark.asyncio
+    async def test_auto_deprecation_with_stale_skill(self, spine, redis):
+        import json
+        # Seed a stale skill — last 5 outcomes all insufficient
+        skill_data = {
+            "skill_id": "stale_skill",
+            "scope": "personal",
+            "source_policy_key": "test_policy",
+            "strategy": {},
+            "applicable_when": {},
+            "evidence": {
+                "deprecated": False,
+                "recent_outcomes": [
+                    {"outcome": "insufficient"} for _ in range(5)
+                ],
+            },
+            "effective_count": 0,
+            "sample_size": 5,
+        }
+        await redis.set(
+            "spine:skills:u1",
+            json.dumps([skill_data]),
+            ex=30 * 24 * 3600,
+        )
+        deprecated = await spine.run_auto_deprecation("u1")
+        assert "stale_skill" in deprecated
+
+
+class TestV24PipelineBeliefPersistence:
+    """v2.4: Strategy beliefs persist across pipeline calls."""
+
+    @pytest.fixture
+    def redis(self):
+        return FakeRedis()
+
+    @pytest.fixture
+    def spine(self, redis):
+        return SpineOrchestrator(redis_client=redis)
+
+    @pytest.mark.asyncio
+    async def test_beliefs_persisted_after_pipeline(self, spine, redis):
+        import json
+        from app.signals.learning_base import StrategyBelief
+
+        beliefs = [
+            StrategyBelief(strategy_key="test_strategy", alpha=5, beta=3, evidence_count=8),
+        ]
+        await spine._persist_strategy_beliefs("u1", beliefs)
+
+        loaded = await spine._load_strategy_beliefs("u1")
+        assert len(loaded) == 1
+        assert loaded[0].strategy_key == "test_strategy"
+        assert loaded[0].alpha == 5
+
+    @pytest.mark.asyncio
+    async def test_beliefs_empty_on_new_user(self, spine, redis):
+        loaded = await spine._load_strategy_beliefs("new_user")
+        assert loaded == []
+
+
+class TestV24OutcomeTriggersExperimentAndSource:
+    """v2.4: record_outcome triggers experiment trial + source effectiveness."""
+
+    @pytest.fixture
+    def redis(self):
+        return FakeRedis()
+
+    @pytest.fixture
+    def spine(self, redis):
+        return SpineOrchestrator(redis_client=redis)
+
+    @pytest.mark.asyncio
+    async def test_outcome_records_source_effectiveness(self, spine, redis):
+        trace = CausalTrace(trace_id="t1")
+
+        # Create a running experiment first
+        await spine.policy_experiments.create_experiment(
+            user_id="u1",
+            signal_state_key="task_granularity_fit",
+            signal_claim="recent_task_too_large",
+            primary_strategy="recover_execution_rhythm",
+        )
+
+        record = await spine.record_outcome(
+            trace=trace,
+            intervention="test",
+            reason="test",
+            expected_outcome="task_started_and_completed",
+            actual_outcome={"completed": True, "source_ids": ["src_tcp_notes"]},
+            user_id="u1",
+        )
+        assert record is not None
+
+        # Check source effectiveness was recorded
+        source_eff = await spine.source_effectiveness.get_source_effectiveness("u1", "src_tcp_notes")
+        assert source_eff is not None
+        assert source_eff["effective"] == 1
+
+    @pytest.mark.asyncio
+    async def test_outcome_updates_experiment_trial(self, spine, redis):
+        trace = CausalTrace(trace_id="t1")
+
+        exp = await spine.policy_experiments.create_experiment(
+            user_id="u1",
+            signal_state_key="task_granularity_fit",
+            signal_claim="recent_task_too_large",
+            primary_strategy="recover_execution_rhythm",
+        )
+        assert exp is not None
+
+        await spine.record_outcome(
+            trace=trace,
+            intervention="test",
+            reason="test",
+            expected_outcome="task_started_and_completed",
+            actual_outcome={"completed": True},
+            user_id="u1",
+        )
+
+        updated_exp = await spine.policy_experiments.get_experiment(exp.experiment_id)
+        assert updated_exp is not None
+        assert updated_exp.total_trials >= 1

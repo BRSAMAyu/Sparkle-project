@@ -362,6 +362,57 @@ class PolicyEngine:
         return adjusted_rule
 
     @staticmethod
+    def _apply_belief_bias(
+        rule: dict[str, Any],
+        strategy_beliefs: list[Any] | None,
+    ) -> dict[str, Any]:
+        """
+        v2.4: Adjust rule output based on Bayesian strategy beliefs.
+
+        If the current strategy has low expected effectiveness and an alternative
+        has high expected effectiveness, bias soft_biases toward the alternative's
+        approach. Does NOT override hard constraints.
+        """
+        if not strategy_beliefs:
+            return rule
+
+        belief_map = {}
+        for b in strategy_beliefs:
+            key = getattr(b, "strategy_key", None)
+            if key:
+                eff = getattr(b, "expected_effectiveness", 0.5)
+                evidence = getattr(b, "evidence_count", 0)
+                belief_map[key] = {"effectiveness": eff, "evidence": evidence}
+
+        current_strategy = rule.get("primary_strategy", "")
+        current_info = belief_map.get(current_strategy)
+
+        # Only bias if we have enough evidence that current strategy is weak
+        if not current_info or current_info["evidence"] < 5:
+            return rule
+
+        if current_info["effectiveness"] >= 0.4:
+            return rule  # Strategy is working well enough
+
+        # Find best alternative from beliefs
+        best_alt = None
+        best_eff = 0.0
+        for key, info in belief_map.items():
+            if key != current_strategy and info["effectiveness"] > best_eff and info["evidence"] >= 3:
+                best_alt = key
+                best_eff = info["effectiveness"]
+
+        if best_alt and best_eff > current_info["effectiveness"] + 0.15:
+            adjusted_rule = dict(rule)
+            adjusted_rule["soft_biases"] = dict(rule.get("soft_biases", {}))
+            adjusted_rule["soft_biases"]["belief_biased_from"] = current_strategy
+            adjusted_rule["soft_biases"]["belief_biased_to"] = best_alt
+            adjusted_rule["soft_biases"]["tone"] = "warm_direct"
+            return adjusted_rule
+
+        return rule
+
+    @staticmethod
     def _apply_quality_cross_check(
         rule: dict[str, Any],
         context: dict[str, Any] | None,
@@ -420,12 +471,14 @@ class PolicyEngine:
         signal: ActionableSignal,
         context: dict[str, Any] | None = None,
         recent_policy_effects: list[Any] | None = None,
+        strategy_beliefs: list[Any] | None = None,
     ) -> tuple[PolicyDecision, ExecutionDirective] | None:
         """
         根据固定规则将 ActionableSignal 转为 PolicyDecision + ExecutionDirective。
 
         Args:
             recent_policy_effects: Optional PolicyEffectEntry list for shadow-mode bias.
+            strategy_beliefs: Optional StrategyBelief list for Bayesian bias.
 
         Returns:
             (PolicyDecision, ExecutionDirective) if rule matched, None otherwise.
@@ -444,6 +497,9 @@ class PolicyEngine:
         # Shadow-mode learning: if recent policy effects show repeated failure,
         # adjust strategy instead of repeating the same intervention
         rule = self._apply_shadow_learning(rule, signal, recent_policy_effects)
+
+        # v2.4: Bayesian strategy belief bias
+        rule = self._apply_belief_bias(rule, strategy_beliefs)
 
         # P0-1b: Achievement quality cross-check (3-tier rules for momentum_high)
         if signal.state_key == "growth_momentum" and signal.claim == "momentum_high":

@@ -63,6 +63,7 @@ from app.signals.research_grade import (
     UserSimulator,
 )
 from app.signals.skill_lifecycle import SkillLifecycleManager
+from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.spine_aurora_bridge import SpineAuroraBridge
 
 __all__ = [
@@ -102,6 +103,7 @@ __all__ = [
     "SkillDirective",
     "SkillEntry",
     "SkillLifecycleManager",
+    "SourceEffectivenessTracker",
     "SourceAsset",
     "SourceSlice",
     "SourceTraySelection",

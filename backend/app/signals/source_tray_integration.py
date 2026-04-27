@@ -267,6 +267,105 @@ def _receipt_skip_reason(source_id: str, sources_by_id: dict[str, SourceAsset]) 
     return "not_loaded"
 
 
+# ── SourceEffectiveness Tracking ───────────────────────────────────
+
+_SOURCE_EFFECT_KEY = "spine:source_effect:{user_id}:{source_id}"
+_SOURCE_EFFECT_INDEX = "spine:source_effects:{user_id}"
+_SOURCE_EFFECT_TTL = 90 * 24 * 3600  # 90 days
+
+
+class SourceEffectivenessTracker:
+    """Track how effectively each source contributes to learning outcomes.
+
+    Records a (source_id → effectiveness) mapping per user, updated
+    when an outcome is recorded after a source was used in retrieval.
+    """
+
+    def __init__(self, redis_client: Any):
+        self.redis = redis_client
+
+    async def record_source_outcome(
+        self,
+        *,
+        user_id: str,
+        source_id: str,
+        outcome: str,  # "effective" | "insufficient"
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        key = _SOURCE_EFFECT_KEY.format(user_id=user_id, source_id=source_id)
+        import json
+
+        raw = await self.redis.get(key)
+        if raw:
+            data = json.loads(raw if isinstance(raw, str) else raw.decode())
+        else:
+            data = {"source_id": source_id, "effective": 0, "insufficient": 0, "total": 0}
+
+        data["total"] = data.get("total", 0) + 1
+        if outcome == "effective":
+            data["effective"] = data.get("effective", 0) + 1
+        else:
+            data["insufficient"] = data.get("insufficient", 0) + 1
+
+        data["effectiveness_rate"] = round(data["effective"] / max(data["total"], 1), 3)
+        if context:
+            data["last_context"] = context
+
+        from datetime import UTC, datetime
+
+        data["last_updated"] = datetime.now(UTC).isoformat()
+
+        await self.redis.set(key, json.dumps(data), ex=_SOURCE_EFFECT_TTL)
+        # Index for enumeration
+        idx_key = _SOURCE_EFFECT_INDEX.format(user_id=user_id)
+        await self.redis.sadd(idx_key, source_id)
+        await self.redis.expire(idx_key, _SOURCE_EFFECT_TTL)
+        return data
+
+    async def get_source_effectiveness(
+        self,
+        user_id: str,
+        source_id: str,
+    ) -> dict[str, Any] | None:
+        import json
+
+        key = _SOURCE_EFFECT_KEY.format(user_id=user_id, source_id=source_id)
+        raw = await self.redis.get(key)
+        if not raw:
+            return None
+        return json.loads(raw if isinstance(raw, str) else raw.decode())
+
+    async def get_all_source_effectiveness(
+        self,
+        user_id: str,
+    ) -> list[dict[str, Any]]:
+        import json
+
+        idx_key = _SOURCE_EFFECT_INDEX.format(user_id=user_id)
+        source_ids = await self.redis.smembers(idx_key)
+        results = []
+        for sid in source_ids:
+            sid_str = sid if isinstance(sid, str) else sid.decode()
+            data = await self.get_source_effectiveness(user_id, sid_str)
+            if data:
+                results.append(data)
+        return sorted(results, key=lambda x: x.get("effectiveness_rate", 0), reverse=True)
+
+    async def get_low_effectiveness_sources(
+        self,
+        user_id: str,
+        *,
+        min_trials: int = 3,
+        max_rate: float = 0.3,
+    ) -> list[str]:
+        all_effects = await self.get_all_source_effectiveness(user_id)
+        return [
+            e["source_id"]
+            for e in all_effects
+            if e.get("total", 0) >= min_trials and e.get("effectiveness_rate", 1.0) <= max_rate
+        ]
+
+
 def _build_receipt_reason(loaded_count: int, skipped: list[dict[str, Any]]) -> str:
     skipped_count = len(skipped)
     if loaded_count == 0 and skipped_count == 0:
