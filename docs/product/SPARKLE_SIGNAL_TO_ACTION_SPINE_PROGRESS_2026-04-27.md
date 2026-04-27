@@ -858,7 +858,7 @@
 
 ## 当前状态: v2.0 Source Layer IN PROGRESS
 
-**321/321 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **2 divine moments implemented**
+**330/330 tests passing** | **9/9 directive types active** | **Shadow learning loop active** | **2 divine moments implemented**
 
 ### v1.1 完成任务
 - [x] P0-1: Achievement → PolicyEngine (3-tier rules + soft difficulty + shadow learning)
@@ -871,12 +871,13 @@
 - [x] Opus review fixes (C-1, C-3, W-1, W-2)
 
 ### v2.0 进展
-- [x] P0-5: SourceAsset / SourceSlice / SourceTray wrapper types (8 tests)
+- [x] P0-5: SourceAsset / SourceSlice / SourceTray wrapper types (10 tests)
+- [x] Skill extraction triggers — auto-extract effective strategies (7 tests)
 
 ### v2.0 剩余
 - [ ] SourceAsset ↔ RetrievalDirective integration
 - [ ] Community commitment loop (Divine Moment 6 completion)
-- [ ] Skill extraction triggers
+- [ ] Notification service integration (recall activation)
 
 ---
 
