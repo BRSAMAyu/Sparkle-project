@@ -827,6 +827,7 @@ class SelfHealingAction:
     result: str = ""                   # Outcome of the action
     reversible: bool = True
     reverted: bool = False
+    incident_trace_id: str = ""
 
     def __post_init__(self):
         if not self.action_id:
@@ -844,6 +845,7 @@ class SelfHealingAction:
             "result": self.result,
             "reversible": self.reversible,
             "reverted": self.reverted,
+            "incident_trace_id": self.incident_trace_id,
         }
 
 
@@ -919,6 +921,13 @@ class SelfHealingController:
         action.executed = True
         action.executed_at = _utcnow()
         action.result = f"{action.action_type} applied to {action.target}"
+
+        # P4-QG-010: Generate incident trace for high/critical actions
+        if action.severity in ("high", "critical"):
+            import uuid as _uuid
+            incident_trace_id = f"incident_{action.action_type}_{_uuid.uuid4().hex[:12]}"
+            action.incident_trace_id = incident_trace_id
+
         self._actions.append(action)
 
         return {"executed": True, "action": action.to_dict()}

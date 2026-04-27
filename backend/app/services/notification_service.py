@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -9,7 +9,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
-from app.models.notification_interaction import NotificationPreferences
+from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.models.user import PushPreference
 from app.schemas.notification import NotificationCreate
 
@@ -149,6 +149,46 @@ class NotificationService:
 
         if not prefs or not prefs.quiet_hours_enabled:
             return True, None
+
+        # NUDGE-007: Consecutive ignore backoff
+        try:
+            from app.core.cache import cache_service
+            if cache_service.redis:
+                _ignore_key = f"nudge:consecutive_ignore:{user_id}"
+                _ignore_raw = await cache_service.redis.get(_ignore_key)
+                consecutive_ignores = int(_ignore_raw) if _ignore_raw else 0
+                # Check recent dismissal count from DB to keep counter accurate
+                if consecutive_ignores == 0:
+                    _recent_result = await db.execute(
+                        select(NotificationInteraction)
+                        .where(
+                            NotificationInteraction.user_id == user_id,
+                            NotificationInteraction.action_type == "dismissed",
+                            NotificationInteraction.action_time
+                            >= datetime.now(UTC) - timedelta(days=7),
+                        )
+                        .order_by(desc(NotificationInteraction.action_time))
+                        .limit(5)
+                    )
+                    _recent_dismissals = _recent_result.scalars().all()
+                    if len(_recent_dismissals) >= 3:
+                        consecutive_ignores = len(_recent_dismissals)
+                        await cache_service.redis.setex(
+                            _ignore_key, 7 * 24 * 3600, str(consecutive_ignores)
+                        )
+                if consecutive_ignores >= 5:
+                    return False, "consecutive_ignore_backoff_critical"
+                if consecutive_ignores >= 3:
+                    _cooldown_key = f"nudge:cooldown:{user_id}"
+                    if await cache_service.redis.exists(_cooldown_key):
+                        return False, "consecutive_ignore_cooldown"
+                    await cache_service.redis.setex(
+                        _cooldown_key,
+                        int(timedelta(hours=6 + (consecutive_ignores - 3) * 12).total_seconds()),
+                        "1",
+                    )
+        except Exception:
+            pass
 
         timezone_result = await db.execute(
             select(PushPreference.timezone).where(PushPreference.user_id == user_id)

@@ -2444,6 +2444,7 @@ class ChatOrchestrator(
                             request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
                     except Exception as _spine_err:
                         logger.debug(f"Spine signal check skipped: {_spine_err}")
+                        request_extra_context["spine_degraded"] = True
 
                 expert_routing_decision = None
                 requested_experts: list[str] = []
@@ -2621,6 +2622,18 @@ class ChatOrchestrator(
                             )
                     except Exception:
                         pass
+
+                # STAB-012: Emit spine degraded flag when Spine pipeline failed
+                if request_extra_context and request_extra_context.get("spine_degraded"):
+                    if stream_callback:
+                        try:
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    metadata={"spine_degraded": "true"},
+                                ),
+                            )
+                        except Exception:
+                            pass
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
 
