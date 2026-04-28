@@ -42,9 +42,16 @@ async def test_build_dual_core_input_uses_active_plan_from_user_context(orchestr
     active_plan_id = uuid.uuid4()
     fake_report = SimpleNamespace(severity="warning")
 
-    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls:
+    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls, \
+         patch("app.orchestration.routing_engine.RoutingProfileService") as profile_service_cls, \
+         patch("app.orchestration.routing_engine.CognitiveService") as cognitive_service_cls:
         progress_service = progress_service_cls.return_value
         progress_service.evaluate_progress = AsyncMock(return_value=fake_report)
+        profile_service_cls.return_value.get_profile = AsyncMock(return_value={})
+        cognitive_service_cls.return_value.get_user_patterns = AsyncMock(return_value=[])
+        orchestrator._get_recent_sentiment_distribution = AsyncMock(return_value={"anxious": 2, "calm": 1})
+        orchestrator._get_recent_task_feedback_distribution = AsyncMock(return_value={"too_long": 2, "too_difficult": 1})
+        orchestrator._build_metacognition_hint = AsyncMock(return_value={})
 
         routing_input = await orchestrator._build_dual_core_input(
             active_db=object(),
@@ -78,9 +85,16 @@ async def test_build_dual_core_input_uses_active_plan_from_user_context(orchestr
 
 @pytest.mark.asyncio
 async def test_build_dual_core_input_tolerates_plan_progress_failures(orchestrator):
-    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls:
+    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls, \
+         patch("app.orchestration.routing_engine.RoutingProfileService") as profile_service_cls, \
+         patch("app.orchestration.routing_engine.CognitiveService") as cognitive_service_cls:
         progress_service = progress_service_cls.return_value
         progress_service.evaluate_progress = AsyncMock(side_effect=RuntimeError("redis down"))
+        profile_service_cls.return_value.get_profile = AsyncMock(return_value={})
+        cognitive_service_cls.return_value.get_user_patterns = AsyncMock(return_value=[])
+        orchestrator._get_recent_sentiment_distribution = AsyncMock(return_value={"anxious": 2, "calm": 1})
+        orchestrator._get_recent_task_feedback_distribution = AsyncMock(return_value={"too_long": 2, "too_difficult": 1})
+        orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
 
         routing_input = await orchestrator._build_dual_core_input(
             active_db=object(),
@@ -88,7 +102,10 @@ async def test_build_dual_core_input_tolerates_plan_progress_failures(orchestrat
             plan_id=uuid.uuid4(),
             user_context_payload=None,
             plan_context=None,
-            unified_routing_result=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="chat"),
+                confidence=0.5,
+            ),
             information_sufficient=True,
         )
 
@@ -132,6 +149,7 @@ async def test_build_dual_core_input_includes_cognitive_patterns_and_routing_pro
             }
         )
         cognitive_service_cls.return_value.get_user_patterns = AsyncMock(return_value=fake_patterns)
+        orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
 
         routing_input = await orchestrator._build_dual_core_input(
             active_db=object(),
