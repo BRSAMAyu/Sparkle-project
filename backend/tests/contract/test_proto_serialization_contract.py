@@ -4,7 +4,7 @@ import hashlib
 
 from google.protobuf import struct_pb2
 
-from app.gen import agent_service_pb2
+from app.gen.agent.v1 import agent_service_pb2
 
 
 def _struct(data: dict) -> struct_pb2.Struct:
