@@ -2914,6 +2914,10 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         "social_signals_summary",
         "srl_phase",
         "working_memory_snapshot",
+        "engagement_state",
+        "learning_state",
+        "traits_prior",
+        "metacognition_profile",
     )
     field_status: dict[str, Any] = {}
     for key in tracked_fields:
