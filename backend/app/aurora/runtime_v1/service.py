@@ -167,6 +167,8 @@ class AuroraRuntimeTurnPlan:
     hard_boundaries: dict[str, Any] = field(default_factory=dict)
     informational_tensions: list[dict[str, Any]] = field(default_factory=list)
     wake_policy: dict[str, Any] = field(default_factory=dict)
+    action: str = "emit_message"
+    chat_directive: dict[str, Any] = field(default_factory=dict)
 
 
 class AuroraRuntimeV1Service:
@@ -578,6 +580,8 @@ class AuroraRuntimeV1Service:
             hard_boundaries=control_surface_reading.hard_bounds.model_dump(mode="json"),
             informational_tensions=informational_tensions,
             wake_policy=wake_decision.to_payload(),
+            action=decision.action,
+            chat_directive=decision.chat_directive,
         )
         if self.redis is not None:
             claims = self._extract_inference_claims_from_decision(decision, readout)

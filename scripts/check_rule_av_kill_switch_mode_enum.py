@@ -27,6 +27,7 @@ SERVICE_PATHS = [
     REPO_ROOT / "backend/app/services/aurora_stage35_kill_switch_service.py",
     REPO_ROOT / "backend/app/services/aurora_stage40_calendar_kill_switch_service.py",
     REPO_ROOT / "backend/app/services/aurora_doc_context_kill_switch_service.py",
+    REPO_ROOT / "backend/app/services/aurora_stage38_kill_switch_service.py",
 ]
 MODE_SETTINGS = {
     "AURORA_STAGE18_AGGREGATOR_MODE",
@@ -69,6 +70,8 @@ MODE_SETTINGS = {
     "AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED",
     "AURORA_STAGE35_MODE",
     "AURORA_STAGE35_METACOG_ROUTER_MODE",
+    "AURORA_STAGE38_ERR_REPLAN_MODE",
+    "AURORA_STAGE38_PUSH_SCHEDULER_MODE",
     "AURORA_STAGE40_CALENDAR_MODE",
     "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE",
 }

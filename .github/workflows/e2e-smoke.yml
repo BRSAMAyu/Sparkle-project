@@ -61,6 +61,12 @@ jobs:
           pip install pytest pytest-asyncio pytest-timeout
           (cd mobile && flutter pub get)
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.0'
+          cache-dependency-path: backend/gateway/go.sum
+
       - name: Start Compose Stack
         timeout-minutes: 10
         run: scripts/run_e2e_smoke.sh up
@@ -81,6 +87,28 @@ jobs:
         timeout-minutes: 15
         run: scripts/run_e2e_smoke.sh multiturn
 
+      - name: Full-Stack Integration Tests (5 suites)
+        timeout-minutes: 20
+        run: scripts/run_e2e_smoke.sh full-stack
+
+      - name: Go Integration Tests
+        timeout-minutes: 10
+        run: scripts/run_e2e_smoke.sh go
+
+      - name: Populate Performance Baselines
+        timeout-minutes: 5
+        run: python3 scripts/populate_performance_baselines.py --write --ci
+
+      - name: Celery Stress Tests
+        timeout-minutes: 15
+        continue-on-error: true
+        run: |
+          FULL_STACK_TESTS=1 \
+          DATABASE_URL="${{ env.POSTGRES_DB }}" \
+          REDIS_URL="redis://:${{ env.REDIS_PASSWORD }}@127.0.0.1:6379/0" \
+          PYTHONPATH="${{ github.workspace }}/backend" \
+          python3 -m pytest backend/tests/performance/test_celery_stress.py -v --timeout=300 || true
+
       - name: Seed Live Smoke User
         timeout-minutes: 10
         run: scripts/run_e2e_smoke.sh seed-user
@@ -88,6 +116,9 @@ jobs:
       - name: Flutter E2E Smoke
         timeout-minutes: 10
         run: scripts/run_e2e_smoke.sh flutter
+
+      # integration_test/app_test.dart requires a simulator (macOS runner)
+      # and is covered by e2e-tests.yml (scheduled + manual)
 
       - name: Dump Compose Logs
         if: failure()

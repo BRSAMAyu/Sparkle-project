@@ -2676,6 +2676,8 @@ class PlanningWorkflowManager:
         session: PlanningSession,
         strategy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        if db is None:
+            return {}
         preferred_file_ids = [
             raw
             for raw in (

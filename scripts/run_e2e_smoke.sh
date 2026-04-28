@@ -227,6 +227,17 @@ run_full_stack_pytest() {
 }
 
 
+run_go_integration() {
+  cd "${ROOT_DIR}/backend/gateway"
+  go test -v -tags=integration -count=1 -timeout=120s ./internal/handler/...
+  go test -v -tags=integration -count=1 -timeout=60s \
+    -run "TestRedis|TestCache" ./internal/service/... || true
+  TEST_DATABASE_URL="${PYTHON_DATABASE_URL}" \
+    go test -v -tags=integration -count=1 -timeout=60s \
+    -run "TestTransaction|TestConnection|TestConcurrent" ./internal/db/... || true
+}
+
+
 seed_smoke_user() {
   LOCAL_SMOKE_USERNAME="${LOCAL_SMOKE_USERNAME}" \
   LOCAL_SMOKE_PASSWORD="${LOCAL_SMOKE_PASSWORD}" \
@@ -286,6 +297,7 @@ Commands:
   websocket  Run WebSocket smoke tests
   multiturn  Run E2E multi-turn chat test (WS→Go→Python→LLM, 4 turns)
   full-stack Run all FULL_STACK_TESTS=1 pytest suites (5 files)
+  go         Run Go integration tests (-tags=integration)
   flutter    Run Flutter full-stack smoke tests
   seed-user  Ensure the live smoke login user exists
   logs       Print last 50 lines from core service logs
@@ -315,6 +327,9 @@ case "${1:-}" in
     ;;
   full-stack)
     run_full_stack_pytest
+    ;;
+  go)
+    run_go_integration
     ;;
   seed-user)
     seed_smoke_user
