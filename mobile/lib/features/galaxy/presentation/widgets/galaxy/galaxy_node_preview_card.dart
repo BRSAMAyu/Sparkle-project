@@ -199,7 +199,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: _CardActionButton(
-                      label: isChinese ? '立刻学习' : 'Start Review',
+                      label: context.l10n.galaxyStartReview,
                       icon: Icons.bolt_rounded,
                       color: glowColor,
                       onPressed: onStartReview,
@@ -364,7 +364,7 @@ class _ReviewUrgencyCallout extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isChinese ? '推荐复习' : 'Best Review Window',
+                  context.l10n.galaxyBestReviewWindow,
                   style: TextStyle(
                     color: sectorColor,
                     fontSize: 12,

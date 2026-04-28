@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
@@ -56,7 +57,6 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               _TaskBoardHeader(
                 summary: summaryLabel,
                 isCollapsed: _isCollapsed,
-                isChinese: isChinese,
                 onToggle: _toggleCollapsed,
                 onOpenTasks: () => context.push('/tasks'),
               ),
@@ -65,7 +65,6 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
                 _CollapsedWorkspacePreview(
                   summary: summaryLabel,
                   view: boardState.currentView,
-                  isChinese: isChinese,
                 ),
               ],
               ClipRect(
@@ -200,32 +199,32 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _panelTitle(mode, isChinese: isChinese),
+              _panelTitle(context, mode),
               style: context.sparkleTypography.labelLarge.copyWith(
                 color: DS.textSecondary,
                 fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: DS.spacing12),
-            _buildPanelContent(mode, isChinese: isChinese),
+            _buildPanelContent(context, mode, isChinese: isChinese),
           ],
         ),
       );
 
-  String _panelTitle(TaskViewMode mode, {required bool isChinese}) =>
+  String _panelTitle(BuildContext context, TaskViewMode mode) =>
       switch (mode) {
-        TaskViewMode.plan => isChinese ? '计划管理' : 'Plan Management',
-        _ => isChinese ? '提示' : 'Helpful Notes',
+        TaskViewMode.plan => context.l10n.taskBoardPlanManagement,
+        _ => context.l10n.taskBoardHelpfulNotes,
       };
 
-  Widget _buildPanelContent(TaskViewMode mode, {required bool isChinese}) =>
+  Widget _buildPanelContent(BuildContext context, TaskViewMode mode, {required bool isChinese}) =>
       switch (mode) {
         TaskViewMode.schedule => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _PanelItem(
                 icon: Icons.calendar_today_rounded,
-                title: isChinese ? '按日期查看' : 'Browse by Date',
+                title: context.l10n.taskBoardBrowseByDate,
                 description: isChinese
                     ? '任务按到期日期分组显示'
                     : 'Tasks are grouped by due date.',
@@ -233,7 +232,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               const SizedBox(height: DS.spacing12),
               _PanelItem(
                 icon: Icons.warning_rounded,
-                title: isChinese ? '逾期任务' : 'Overdue Tasks',
+                title: context.l10n.taskBoardOverdueTasks,
                 description: isChinese
                     ? '红色高亮显示已逾期的任务'
                     : 'Overdue tasks are highlighted in red.',
@@ -246,7 +245,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
             children: [
               _PanelItem(
                 icon: Icons.flag_rounded,
-                title: isChinese ? '优先级排序' : 'Priority Order',
+                title: context.l10n.taskBoardPriorityOrder,
                 description: isChinese
                     ? '高优先级任务显示在前面'
                     : 'Higher-priority tasks rise to the top.',
@@ -254,7 +253,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               const SizedBox(height: DS.spacing12),
               _PanelItem(
                 icon: Icons.tune_rounded,
-                title: isChinese ? '自定义优先级' : 'Custom Priority',
+                title: context.l10n.taskBoardCustomPriority,
                 description: isChinese
                     ? '在任务编辑中调整优先级'
                     : 'Adjust task priority from the editor.',
@@ -267,7 +266,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
             children: [
               _PanelItem(
                 icon: Icons.flash_on_rounded,
-                title: isChinese ? '冲刺专注模式' : 'Sprint Focus Mode',
+                title: context.l10n.taskBoardSprintFocus,
                 description: isChinese
                     ? '只显示当前冲刺的任务'
                     : 'Only tasks from the active sprint are shown.',
@@ -275,7 +274,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               const SizedBox(height: DS.spacing12),
               _PanelItem(
                 icon: Icons.timer_rounded,
-                title: isChinese ? '冲刺计时' : 'Sprint Timing',
+                title: context.l10n.taskBoardSprintTiming,
                 description: isChinese
                     ? '关注剩余天数和进度'
                     : 'Keep an eye on remaining days and progress.',
@@ -289,7 +288,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
     required bool isChinese,
   }) {
     if (summary.totalCount == 0) {
-      return isChinese ? '今日无任务' : 'No tasks due today';
+      return context.l10n.taskBoardNoTasksToday;
     }
     return isChinese
         ? '今日${summary.totalCount}项·已完成${summary.completedCount}'
@@ -301,14 +300,12 @@ class _TaskBoardHeader extends StatelessWidget {
   const _TaskBoardHeader({
     required this.summary,
     required this.isCollapsed,
-    required this.isChinese,
     required this.onToggle,
     required this.onOpenTasks,
   });
 
   final String summary;
   final bool isCollapsed;
-  final bool isChinese;
   final VoidCallback onToggle;
   final VoidCallback onOpenTasks;
 
@@ -319,12 +316,11 @@ class _TaskBoardHeader extends StatelessWidget {
         child: DashboardSectionHeader(
           icon: Icons.dashboard_customize_rounded,
           accentColor: DS.brandPrimary,
-          title: isChinese ? '任务看板' : 'Task Board',
+          title: context.l10n.taskBoardTitle,
           summary: summary,
           trailing: _HeaderToggleButton(
             isCollapsed: isCollapsed,
             onTap: onToggle,
-            isChinese: isChinese,
           ),
         ),
       );
@@ -333,12 +329,10 @@ class _TaskBoardHeader extends StatelessWidget {
 class _HeaderToggleButton extends StatelessWidget {
   const _HeaderToggleButton({
     required this.isCollapsed,
-    required this.isChinese,
     required this.onTap,
   });
 
   final bool isCollapsed;
-  final bool isChinese;
   final VoidCallback onTap;
 
   @override
@@ -360,8 +354,8 @@ class _HeaderToggleButton extends StatelessWidget {
         ),
         label: Text(
           isCollapsed
-              ? (isChinese ? '展开' : 'Expand')
-              : (isChinese ? '收起' : 'Collapse'),
+              ? context.l10n.taskBoardExpand
+              : context.l10n.taskBoardCollapse,
         ),
       );
 }
@@ -370,12 +364,10 @@ class _CollapsedWorkspacePreview extends StatelessWidget {
   const _CollapsedWorkspacePreview({
     required this.summary,
     required this.view,
-    required this.isChinese,
   });
 
   final String summary;
   final TaskViewMode view;
-  final bool isChinese;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -393,7 +385,7 @@ class _CollapsedWorkspacePreview extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isChinese ? '工作区摘要' : 'Workspace Summary',
+                    context.l10n.taskBoardWorkspaceSummary,
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
@@ -421,7 +413,7 @@ class _CollapsedWorkspacePreview extends StatelessWidget {
                 border: Border.all(color: DS.borderSubtle),
               ),
               child: Text(
-                _viewLabel(view, isChinese: isChinese),
+                _viewLabel(context, view),
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                   fontWeight: DS.fontWeightBold,
@@ -432,12 +424,12 @@ class _CollapsedWorkspacePreview extends StatelessWidget {
         ),
       );
 
-  String _viewLabel(TaskViewMode view, {required bool isChinese}) =>
+  String _viewLabel(BuildContext context, TaskViewMode view) =>
       switch (view) {
-        TaskViewMode.schedule => isChinese ? '日程视图' : 'Schedule',
-        TaskViewMode.priority => isChinese ? '优先级' : 'Priority',
-        TaskViewMode.plan => isChinese ? '计划视图' : 'Plan',
-        TaskViewMode.sprint => isChinese ? '冲刺视图' : 'Sprint',
+        TaskViewMode.schedule => context.l10n.taskBoardScheduleView,
+        TaskViewMode.priority => context.l10n.taskBoardPriorityView,
+        TaskViewMode.plan => context.l10n.taskBoardPlanView,
+        TaskViewMode.sprint => context.l10n.taskBoardSprintView,
       };
 }
 

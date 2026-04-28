@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/materials.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -140,7 +141,7 @@ class _HeatmapContent extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isChinese ? '学习热力图' : 'Learning Heatmap',
+                context.l10n.heatmapTitle,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: DS.fontWeightSemibold,
@@ -148,7 +149,7 @@ class _HeatmapContent extends StatelessWidget {
                 ),
               ),
               Text(
-                '$days ${isChinese ? '天' : 'days'}',
+                context.l10n.heatmapDays(days),
                 style: TextStyle(
                   fontSize: 11,
                   color: DS.textTertiary,
@@ -356,7 +357,7 @@ class _HeatmapEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            isChinese ? '学习热力图尚未开始' : 'Heatmap not started yet',
+            context.l10n.heatmapNotStarted,
             style: TextStyle(
               fontSize: DS.fontSizeBase,
               fontWeight: DS.fontWeightBold,
@@ -380,7 +381,7 @@ class _HeatmapEmptyState extends StatelessWidget {
           FilledButton.icon(
             onPressed: () => context.push(TaskRoutes.taskCreate),
             icon: const Icon(Icons.add_task_rounded),
-            label: Text(isChinese ? '去创建今日任务' : 'Create task'),
+            label: Text(context.l10n.heatmapCreateTask),
           ),
         ],
       ),
@@ -403,7 +404,7 @@ class _HeatmapLegend extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          isChinese ? '少' : 'Less',
+          context.l10n.heatmapLess,
           style: TextStyle(fontSize: 9, color: DS.textTertiary),
         ),
         const SizedBox(width: 3),
@@ -430,12 +431,12 @@ class _HeatmapLegend extends StatelessWidget {
           ),
         const SizedBox(width: 3),
         Text(
-          isChinese ? '多' : 'More',
+          context.l10n.heatmapMore,
           style: TextStyle(fontSize: 9, color: DS.textTertiary),
         ),
         const SizedBox(width: DS.spacing12),
         Text(
-          isChinese ? '(分钟)' : '(minutes)',
+          context.l10n.heatmapMinutes,
           style: TextStyle(fontSize: 8, color: DS.textTertiary),
         ),
       ],

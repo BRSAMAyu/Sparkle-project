@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class ExamSprintDashboardCard extends StatefulWidget {
   const ExamSprintDashboardCard({
@@ -109,25 +111,23 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                 runSpacing: DS.spacing10,
                 children: [
                   _MetricPill(
-                    label: isChinese ? '高频考点覆盖率' : 'High-Freq Coverage',
+                    label: context.l10n.examHighFreqCoverage,
                     value: _formatPercent(data.highFreqCoverage),
                     detail:
                         '${data.highFreqCoveredCount}/${data.highFreqTotalCount}',
                     accentColor: DS.brandPrimary,
                   ),
                   _MetricPill(
-                    label: isChinese ? '错题修复率' : 'Mistake Repair',
+                    label: context.l10n.examMistakeRepair,
                     value: _formatPercent(data.mistakeFixRate),
                     detail:
                         '${data.fixedMistakeCount}/${data.totalMistakeCount}',
                     accentColor: DS.success,
                   ),
                   _MetricPill(
-                    label: isChinese ? '连续学习天数' : 'Study Streak',
-                    value: isChinese
-                        ? '${data.streakDays} 天'
-                        : '${data.streakDays} d',
-                    detail: isChinese ? '保持节奏' : 'Keep the rhythm',
+                    label: context.l10n.examStudyStreak,
+                    value: context.l10n.examStreakDays(data.streakDays),
+                    detail: context.l10n.examKeepRhythm,
                     accentColor: DS.warning,
                   ),
                 ],
@@ -135,9 +135,7 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
               if (data.highYieldLowMasteryTopics.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing12),
                 Text(
-                  isChinese
-                      ? '高收益低掌握：${data.highYieldLowMasteryTopics.join(' · ')}'
-                      : 'High-yield weak spots: ${data.highYieldLowMasteryTopics.join(' · ')}',
+                  context.l10n.examHighYieldWeakSpots(data.highYieldLowMasteryTopics.join(' · ')),
                   style: context.sparkleTypography.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.35,
@@ -166,9 +164,7 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                 )
               else
                 Text(
-                  isChinese
-                      ? '今天还没有排入冲刺任务。'
-                      : 'No sprint tasks scheduled today.',
+                  context.l10n.examNoSprintScheduled,
                   style: context.sparkleTypography.bodySmall.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -276,9 +272,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              isChinese
-                  ? '今天考试 · 你已经准备好了 🎓'
-                  : 'Exam Day · You\'re Ready 🎓',
+              context.l10n.examDayReady,
               style: context.sparkleTypography.headingLarge.copyWith(
                 color: Colors.white,
                 fontWeight: DS.fontWeightBold,
@@ -313,7 +307,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isChinese ? '考场建议' : 'Exam Tips',
+                      context.l10n.examTips,
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: Colors.white.withValues(alpha: 0.65),
                         fontWeight: DS.fontWeightBold,
@@ -348,7 +342,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                   ),
                 ),
                 child: Text(
-                  isChinese ? '记录考试结果' : 'Record Exam Result',
+                  context.l10n.examRecordResult,
                   style: context.sparkleTypography.labelLarge.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -375,7 +369,7 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = isChinese ? '考试冲刺仪表盘' : 'Exam Sprint Dashboard';
+    final title = context.l10n.examSprintDashboard;
     return Row(
       children: [
         Container(
@@ -405,7 +399,7 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         _ModePill(
-          label: _modeLabel(targetMode, isChinese: isChinese),
+          label: _modeLabel(targetMode, l: context.l10n),
           accentColor: accentColor,
         ),
       ],
@@ -427,13 +421,9 @@ class _HeadlineBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final countdown = data.daysLeft == 0
-        ? (isChinese ? '今天考试' : 'Exam day')
-        : (isChinese
-            ? '距考试还有 ${data.daysLeft} 天'
-            : '${data.daysLeft} days until exam');
-    final progress = isChinese
-        ? '今天已完成 ${data.todayProgress.completed}/${data.todayProgress.total} 项任务'
-        : 'Today: ${data.todayProgress.completed}/${data.todayProgress.total} tasks';
+        ? context.l10n.examDay
+        : context.l10n.examDaysUntil(data.daysLeft);
+    final progress = context.l10n.examTodayProgress(data.todayProgress.completed, data.todayProgress.total);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,9 +458,7 @@ class _HeadlineBlock extends StatelessWidget {
             ),
           ),
           child: Text(
-            isChinese
-                ? '${data.planName}${data.subject.isNotEmpty ? ' · ${data.subject}' : ''}'
-                : '${data.planName}${data.subject.isNotEmpty ? ' · ${data.subject}' : ''}',
+            '${data.planName}${data.subject.isNotEmpty ? ' · ${data.subject}' : ''}',
             style: context.sparkleTypography.bodySmall.copyWith(
               color: DS.textPrimary,
               height: 1.35,
@@ -580,10 +568,8 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
               children: [
                 Text(
                   widget.data.daysLeft == 0
-                      ? (widget.isChinese ? '今天考试' : 'Exam day')
-                      : (widget.isChinese
-                          ? '还有 ${widget.data.daysLeft} 天'
-                          : '${widget.data.daysLeft} days left'),
+                      ? context.l10n.examDay
+                      : context.l10n.examDaysLeft(widget.data.daysLeft),
                   style: context.sparkleTypography.labelLarge.copyWith(
                     color: DS.textSecondary,
                     fontWeight: DS.fontWeightMedium,
@@ -591,9 +577,7 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                 ),
                 const SizedBox(height: DS.spacing6),
                 Text(
-                  widget.isChinese
-                      ? '今日 ${widget.data.todayProgress.completed}/${widget.data.todayProgress.total} 完成'
-                      : 'Today ${widget.data.todayProgress.completed}/${widget.data.todayProgress.total} done',
+                  context.l10n.examTodayCompleted(widget.data.todayProgress.completed, widget.data.todayProgress.total),
                   style: context.sparkleTypography.bodySmall.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -728,7 +712,7 @@ class _TaskSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = isChinese ? '今日冲刺任务' : 'Today Sprint Tasks';
+    final title = context.l10n.examTodaySprintTasks;
     return Row(
       children: [
         Text(
@@ -749,10 +733,8 @@ class _TaskSectionHeader extends StatelessWidget {
             ),
             label: Text(
               isExpanded
-                  ? (isChinese ? '收起后续天' : 'Hide later days')
-                  : (isChinese
-                      ? '展开后续 $futureGroupCount 天'
-                      : 'Show next $futureGroupCount days'),
+                  ? context.l10n.examHideLaterDays
+                  : context.l10n.examShowNextDays(futureGroupCount),
             ),
           ),
       ],
@@ -774,13 +756,11 @@ class _TaskGroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = group.isToday
-        ? (isChinese ? '今天' : 'Today')
-        : (isChinese ? '第 ${group.dayIndex} 天' : 'Day ${group.dayIndex}');
+        ? context.l10n.examDay
+        : context.l10n.examDayIndex(group.dayIndex);
     final subtitle = group.date == null
         ? null
-        : (isChinese
-            ? '${group.date!.month}月${group.date!.day}日'
-            : '${group.date!.month}/${group.date!.day}');
+        : '${group.date!.month}/${group.date!.day}';
 
     return Container(
       width: double.infinity,
@@ -826,7 +806,7 @@ class _TaskGroupCard extends StatelessWidget {
           const SizedBox(height: DS.spacing10),
           if (group.tasks.isEmpty)
             Text(
-              isChinese ? '今天还没有排入任务' : 'No sprint tasks yet',
+              context.l10n.examNoSprintTasks,
               style: context.sparkleTypography.bodySmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -908,9 +888,7 @@ class _TaskRow extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing4),
               Text(
-                isChinese
-                    ? '${task.estimatedMinutes} 分钟 · ${_statusLabel(task, isChinese: isChinese)}'
-                    : '${task.estimatedMinutes} min · ${_statusLabel(task, isChinese: isChinese)}',
+                '${context.l10n.examTaskMinutes(task.estimatedMinutes)} · ${_statusLabel(task, l: context.l10n)}',
                 style: context.sparkleTypography.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -922,11 +900,11 @@ class _TaskRow extends StatelessWidget {
     );
   }
 
-  String _statusLabel(ExamSprintTaskItem task, {required bool isChinese}) =>
+  String _statusLabel(ExamSprintTaskItem task, {required AppLocalizations l}) =>
       switch (task.status) {
-        'COMPLETED' => isChinese ? '已完成' : 'Done',
-        'IN_PROGRESS' => isChinese ? '进行中' : 'In progress',
-        _ => isChinese ? '待开始' : 'Pending',
+        'COMPLETED' => l.examStatusCompleted,
+        'IN_PROGRESS' => l.examStatusInProgress,
+        _ => l.examStatusPending,
       };
 }
 
@@ -962,16 +940,16 @@ class _ModePill extends StatelessWidget {
       );
 }
 
-String _modeLabel(String? mode, {required bool isChinese}) {
+String _modeLabel(String? mode, {required AppLocalizations l}) {
   switch (mode) {
     case 'high_score':
-      return isChinese ? '冲高模式' : 'High Score';
+      return l.examModeHighScore;
     case 'hold':
-      return isChinese ? '稳分模式' : 'Hold';
+      return l.examModeHold;
     case 'pass':
-      return isChinese ? '保过模式' : 'Pass';
+      return l.examModePass;
     default:
-      return isChinese ? '冲刺模式' : 'Sprint';
+      return l.examModeSprint;
   }
 }
 
