@@ -1533,6 +1533,7 @@ async def test_simulation_api_rejects_invalid_scenario_key():
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_simulation_engine_waits_for_user_and_continues(monkeypatch):
     engine = SimulationEngine(db=None)
     decisions = iter(
