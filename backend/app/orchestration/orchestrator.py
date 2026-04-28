@@ -974,7 +974,7 @@ class ChatOrchestrator(
             try:
                 meta["modeling_output_json"] = json.dumps(modeling_snapshot, ensure_ascii=False, default=str)
             except Exception:
-                pass
+                logger.warning("Failed to serialize modeling_snapshot to JSON", exc_info=True)
         return meta
 
     @staticmethod
@@ -1465,7 +1465,10 @@ class ChatOrchestrator(
                 chat_directive=plan.chat_directive if hasattr(plan, "chat_directive") else None,
             )
         except Exception:
-            pass
+            logger.warning(
+                "feed_aurora_decision failed for user=%s action=%s",
+                user_id, plan.action or "emit_message", exc_info=True,
+            )
 
     async def _emit_early_ack_progress(
         self,
@@ -1518,6 +1521,7 @@ class ChatOrchestrator(
         try:
             return uuid.UUID(raw)
         except Exception:
+            logger.debug("Non-standard session_id format, using uuid5 fallback: %s", raw[:50])
             return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
 
     def _response_priority(self, resp: agent_service_pb2.ChatResponse) -> str:
@@ -1964,6 +1968,7 @@ class ChatOrchestrator(
         try:
             injection_mode = (await AuroraDocContextKillSwitchService().get_mode()).strip().lower()
         except Exception:
+            logger.warning("AuroraDocContextKillSwitchService.get_mode failed, falling back to settings", exc_info=True)
             injection_mode = (
                 str(getattr(settings, "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE", "live") or "live")
                 .strip()
@@ -2417,7 +2422,9 @@ class ChatOrchestrator(
                                     f"- {e.title}: {e.narrative}" for e in _chronicle_entries if e.narrative
                                 )
                         except Exception:
-                            pass
+                            logger.warning(
+                                "GrowthChronicleService.get_chronicle failed for user=%s", user_id, exc_info=True,
+                            )
                         try:
                             # Track interaction count for fatigue detection
                             _inter_key = f"spine:interaction_count:{user_id}:24h"
@@ -2432,7 +2439,9 @@ class ChatOrchestrator(
                             if _fatigue and _fatigue.get("fatigue_level") not in ("low", "normal"):
                                 request_extra_context["spine_fatigue_context"] = _fatigue
                         except Exception:
-                            pass
+                            logger.warning(
+                                "Spine fatigue check failed for user=%s", user_id, exc_info=True,
+                            )
                         _spine_ux = await _spine.get_ux_directive(user_id)
                         if _spine_ux:
                             request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
@@ -2621,7 +2630,7 @@ class ChatOrchestrator(
                                 ),
                             )
                     except Exception:
-                        pass
+                        logger.debug("stream_callback failed for spine_growth_card, stream may be closed")
 
                 # STAB-012: Emit spine degraded flag when Spine pipeline failed
                 if request_extra_context and request_extra_context.get("spine_degraded"):
@@ -2633,7 +2642,7 @@ class ChatOrchestrator(
                                 ),
                             )
                         except Exception:
-                            pass
+                            logger.debug("stream_callback failed for spine_degraded, stream may be closed")
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
 
