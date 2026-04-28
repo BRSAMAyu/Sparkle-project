@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/providers/tool_preferences_provider.dart';
@@ -63,7 +64,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
       final contentPadding = widget.dense ? DS.spacing8 : DS.spacing10;
       final topSpacing = widget.dense ? DS.spacing6 : DS.spacing8;
       final compactPages = _chunkTools(pinnedTools, 4);
-      const title = '工具快捷';
+      final title = context.l10n.cognitiveToolHubQuickTools;
 
       return ClipRRect(
         borderRadius: DS.borderRadius20,
@@ -122,7 +123,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                       size: 18,
                       color: DS.prismPurple,
                     ),
-                    tooltip: '工具设置',
+                    tooltip: context.l10n.cognitiveToolHubToolSettings,
                   ),
                   if (!widget.dense && weeklyPattern != null) ...[
                     const SizedBox(width: DS.spacing8),
@@ -191,7 +192,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   Row(
                     children: [
                       Text(
-                        '快捷工具',
+                        context.l10n.cognitiveToolHubQuickToolsSection,
                         style: context.sparkleTypography.labelLarge.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
@@ -200,7 +201,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                       TextButton(
                         onPressed: () =>
                             context.push('/tools/library?tab=manage'),
-                        child: const Text('管理工具'),
+                        child: Text(context.l10n.cognitiveToolHubManageTools),
                       ),
                     ],
                   ),
@@ -216,15 +217,18 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                     children: [
                       Text(
                         _isExpanded
-                            ? '已展开 ${math.min(pinnedTools.length, 8)} 个工具${pinnedTools.length > 8 ? '，可左右滑动查看更多' : ''}'
-                            : '首屏展示前 4 个固定工具',
+                            ? context.l10n.cognitiveToolHubExpandedTools(
+                                math.min(pinnedTools.length, 8),
+                                pinnedTools.length > 8 ? context.l10n.cognitiveToolHubExpandedMore : '',
+                              )
+                            : context.l10n.cognitiveToolHubCollapsedTools,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                             ),
                       ),
                       const Spacer(),
                       SparkleButton.ghost(
-                        label: _isExpanded ? '收起' : '展开',
+                        label: _isExpanded ? context.l10n.cognitiveToolHubCollapse : context.l10n.cognitiveToolHubExpand,
                         onPressed: () {
                           setState(() {
                             _isExpanded = !_isExpanded;
@@ -266,7 +270,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   ),
                   const SizedBox(width: DS.spacing8),
                   Text(
-                    '认知棱镜',
+                    context.l10n.cognitiveToolCognitivePrism,
                     style: context.sparkleTypography.labelSmall.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -285,7 +289,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                weeklyPattern ?? '认知核心摘要已就位',
+                weeklyPattern ?? context.l10n.cognitiveToolPrismReady,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                       color: DS.textPrimary,
@@ -296,8 +300,8 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
               const SizedBox(height: DS.spacing8),
               Text(
                 weeklyPattern != null
-                    ? '行为定式分析已更新，下方保留你常用的独立工具入口。'
-                    : '点击同步闪念与错题数据，快速查看最近的模式变化。',
+                    ? context.l10n.cognitiveToolPatternUpdated
+                    : context.l10n.cognitiveToolSyncPrompt,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -310,7 +314,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                 children: [
                   if (weeklyPattern != null)
                     _buildTag(context, '#$weeklyPattern'),
-                  _buildTag(context, '#认知核心'),
+                  _buildTag(context, context.l10n.cognitiveToolCoreTag),
                   InkWell(
                     onTap: () => context.push('/review-plan'),
                     borderRadius: BorderRadius.circular(999),
@@ -327,7 +331,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                         ),
                       ),
                       child: Text(
-                        '复习弱项: 分析',
+                        context.l10n.cognitiveToolReviewWeakness,
                         style: context.sparkleTypography.labelSmall.copyWith(
                           fontWeight: DS.fontWeightSemiBold,
                         ),
@@ -506,14 +510,14 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
               Icon(Icons.extension_outlined, color: DS.textSecondary),
               const SizedBox(height: DS.spacing8),
               Text(
-                '还没有固定工具',
+                context.l10n.cognitiveToolNoPinnedTools,
                 style: context.sparkleTypography.labelLarge.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing4),
               Text(
-                '去工具库选择你想放到首页的能力入口。',
+                context.l10n.cognitiveToolGoToLibrary,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                     ),

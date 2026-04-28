@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -35,7 +36,7 @@ class GrowthScreen extends ConsumerWidget {
         title: const Text('Growth Plans'),
         actions: [
           Tooltip(
-            message: '历史计划',
+            message: context.l10n.planHistoryPlans,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.archive_outlined),
@@ -141,7 +142,7 @@ class _GrowthPlanCard extends StatelessWidget {
                         _InfoChip(
                           icon: Icons.timelapse_rounded,
                           label:
-                              '${plan.totalEstimatedHours!.toStringAsFixed(0)} 小时',
+                              context.l10n.planHoursUnit(plan.totalEstimatedHours!.toStringAsFixed(0)),
                         ),
                     ],
                   ),

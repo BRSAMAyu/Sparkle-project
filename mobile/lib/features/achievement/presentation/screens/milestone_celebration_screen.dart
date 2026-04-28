@@ -7,6 +7,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -21,7 +23,7 @@ class MilestoneCelebrationPayload {
     required this.masteredNodes,
     required this.completedSprints,
     required this.errorCount,
-    this.shareHashtag = '#Sparkle里程碑',
+    this.shareHashtag = '',
   });
 
   factory MilestoneCelebrationPayload.fromQueryParameters(
@@ -82,21 +84,21 @@ class MilestoneCelebrationPayload {
   final String shareHashtag;
 
   String get unitLabel => switch (milestoneId) {
-        'knowledge_explorer_50' => '个节点',
-        'sprint_veteran' => '次冲刺',
-        _ => '天',
+        'knowledge_explorer_50' => S.current.achievementMilestoneUnitNodes,
+        'sprint_veteran' => S.current.achievementMilestoneUnitSprints,
+        _ => S.current.achievementMilestoneUnitDays,
       };
 
   String get headline => switch (milestoneId) {
-        'knowledge_explorer_50' => '你已经点亮 50 个知识节点了',
-        'sprint_veteran' => '你已经完成 2 次冲刺备考了',
-        _ => '你已经坚持学习 30 天了',
+        'knowledge_explorer_50' => S.current.achievementMilestoneHeadlineNodes,
+        'sprint_veteran' => S.current.achievementMilestoneHeadlineSprints,
+        _ => S.current.achievementMilestoneHeadlineDefault,
       };
 
   String get subheadline => switch (milestoneId) {
-        'knowledge_explorer_50' => '你的知识星图，已经亮到可以被自己看见。',
-        'sprint_veteran' => '两次冲刺不是偶然，是你真的把节奏稳住了。',
-        _ => '这一个月的坚持，已经长成了看得见的成长曲线。',
+        'knowledge_explorer_50' => S.current.achievementMilestoneSubheadlineNodes,
+        'sprint_veteran' => S.current.achievementMilestoneSubheadlineSprints,
+        _ => S.current.achievementMilestoneSubheadlineDefault,
       };
 
   String get badgeLabel => switch (milestoneId) {
@@ -113,7 +115,7 @@ class MilestoneCelebrationPayload {
       };
 
   static String _defaultShareHashtag(String milestoneId) =>
-      milestoneId == '30_day_learner' ? '#30天打卡' : '#Sparkle里程碑';
+      milestoneId == '30_day_learner' ? S.current.achievementMilestoneHashtag30Day : S.current.achievementMilestoneHashtagDefault;
 }
 
 class MilestoneCelebrationScreen extends ConsumerStatefulWidget {
@@ -178,7 +180,7 @@ class _MilestoneCelebrationScreenState
             .shareToSystem(imageFile: imageFile, text: shareText);
         if (!mounted) return;
         if (result.isSuccess) {
-          AppFeedback.success(context, '分享已打开');
+          AppFeedback.success(context, context.l10n.achievementMilestoneShareOpened);
         } else if (result.error != null) {
           AppFeedback.error(context, result.error!);
         }
@@ -210,9 +212,14 @@ class _MilestoneCelebrationScreenState
   }
 
   String _buildShareText(MilestoneCelebrationPayload payload) =>
-      '${payload.shareHashtag} 我在 Sparkle 达成了「${payload.headline}」里程碑。'
-      '累计学习 ${payload.studyDays} 天，掌握 ${payload.masteredNodes} 个知识节点，'
-      '完成 ${payload.completedSprints} 次冲刺，记录 ${payload.errorCount} 道错题。';
+      context.l10n.achievementMilestoneShareText(
+        payload.shareHashtag,
+        payload.headline,
+        '${payload.studyDays}',
+        '${payload.masteredNodes}',
+        '${payload.completedSprints}',
+        '${payload.errorCount}',
+      );
 
   void _dismissToAchievements() {
     RouteResilience.popOrGo(
@@ -284,12 +291,12 @@ class _MilestoneCelebrationScreenState
                                           ),
                                         )
                                       : const Icon(Icons.ios_share_rounded),
-                                  label: Text(_isSharing ? '分享中...' : '分享这一刻'),
+                                  label: Text(_isSharing ? context.l10n.achievementMilestoneShareInProgress : context.l10n.achievementMilestoneShareNow),
                                 ),
                                 OutlinedButton.icon(
                                   onPressed: _continueLearning,
                                   icon: const Icon(Icons.check_circle_outline),
-                                  label: const Text('继续学习'),
+                                  label: Text(context.l10n.achievementMilestoneContinueLearning),
                                 ),
                               ],
                             ),
@@ -455,22 +462,22 @@ class _MilestoneHeroCard extends StatelessWidget {
             children: [
               _StatChip(
                 key: const ValueKey('milestone-stat-study-days'),
-                label: '学习天数',
+                label: context.l10n.achievementMilestoneStatStudyDays,
                 value: '${payload.studyDays}',
               ),
               _StatChip(
                 key: const ValueKey('milestone-stat-mastered-nodes'),
-                label: '掌握节点',
+                label: context.l10n.achievementMilestoneStatMasteredNodes,
                 value: '${payload.masteredNodes}',
               ),
               _StatChip(
                 key: const ValueKey('milestone-stat-completed-sprints'),
-                label: '完成冲刺',
+                label: context.l10n.achievementMilestoneStatCompletedSprints,
                 value: '${payload.completedSprints}',
               ),
               _StatChip(
                 key: const ValueKey('milestone-stat-error-count'),
-                label: '错题记录',
+                label: context.l10n.achievementMilestoneStatErrorCount,
                 value: '${payload.errorCount}',
               ),
             ],
@@ -485,7 +492,7 @@ class _MilestoneHeroCard extends StatelessWidget {
               border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Text(
-              '你已经成为 Sparkle 的核心用户。把这段成长分享出去，也把它认真留给现在的自己。',
+              context.l10n.achievementMilestoneCoreUserMessage,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.white.withValues(alpha: 0.84),
                     height: 1.5,

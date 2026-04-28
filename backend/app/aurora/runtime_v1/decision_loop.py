@@ -1031,6 +1031,39 @@ class AuroraDecisionLoop:
         )
         if _aurora_hint:
             system = f"{system} Sprint Pack自适应提示：{_aurora_hint}"
+        # Spine signal awareness: if Spine has active directives or risk flags, inform the decision loop
+        _spine = readout.spine_signals
+        if isinstance(_spine, dict) and _spine:
+            _spine_active = _spine.get("active_directive")
+            _spine_risks = _spine.get("risk_flags", [])
+            _spine_outcomes = _spine.get("recent_outcomes_summary")
+            _spine_trust = _spine.get("relationship_trust")
+            _spine_rules: list[str] = []
+            if _spine_active:
+                _spine_rules.append(
+                    f"Spine active directive: strategy={_spine_active.get('strategy')}, "
+                    f"reason={_spine_active.get('reason')}. "
+                    "Honor this directive in your response — adjust tone, content scope, or task suggestions accordingly."
+                )
+            if _spine_risks:
+                _spine_rules.append(
+                    f"Spine risk flags detected: {', '.join(_spine_risks)}. "
+                    "Consider these risks when calibrating difficulty and pacing."
+                )
+            if _spine_outcomes:
+                _recent_effective = sum(1 for o in _spine_outcomes if o.get("effectiveness") == "effective")
+                _recent_total = len(_spine_outcomes)
+                if _recent_total >= 3 and _recent_effective / _recent_total < 0.4:
+                    _spine_rules.append(
+                        "Spine outcome history shows low intervention effectiveness. "
+                        "Prefer lighter interventions and avoid repeating recently failed strategies."
+                    )
+            if _spine_trust is not None and _spine_trust < 0.3:
+                _spine_rules.append(
+                    "User-AI relationship trust is low. Reduce proactive suggestions, increase user choice, and avoid prescriptive framing."
+                )
+            if _spine_rules:
+                user["rules"].extend(_spine_rules)
         return [
             {"role": "system", "content": system},
             {"role": "user", "content": json.dumps(user, ensure_ascii=False, default=str)},

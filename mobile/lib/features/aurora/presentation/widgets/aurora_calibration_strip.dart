@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_calibration_card.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_calibration_repository.dart';
 import 'package:sparkle/features/aurora/presentation/providers/aurora_calibration_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AuroraCalibrationStrip extends ConsumerStatefulWidget {
   const AuroraCalibrationStrip({
@@ -45,7 +46,7 @@ class _AuroraCalibrationStripState
       AppFeedback.success(context, _successMessage(response));
     } catch (error) {
       if (!mounted) return;
-      AppFeedback.error(context, '提交校准反馈失败：$error');
+      AppFeedback.error(context, context.l10n.auroraFeedbackFailed(error.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -290,7 +291,7 @@ class _CalibrationCardTile extends StatelessWidget {
             runSpacing: DS.spacing8,
             children: [
               SparkleButton(
-                label: '确认',
+                label: context.l10n.auroraConfirm,
                 variant: ButtonVariant.outline,
                 size: ButtonSize.small,
                 loading: pendingResponse == AuroraCalibrationResponse.confirm,
@@ -300,7 +301,7 @@ class _CalibrationCardTile extends StatelessWidget {
                 ),
               ),
               SparkleButton(
-                label: '不对',
+                label: context.l10n.auroraNotRight,
                 variant: ButtonVariant.ghost,
                 size: ButtonSize.small,
                 loading: pendingResponse == AuroraCalibrationResponse.incorrect,
@@ -310,7 +311,7 @@ class _CalibrationCardTile extends StatelessWidget {
                 ),
               ),
               SparkleButton(
-                label: '以后别这样判断',
+                label: context.l10n.auroraDontJudge,
                 variant: ButtonVariant.ghost,
                 size: ButtonSize.small,
                 loading: pendingResponse == AuroraCalibrationResponse.mute,

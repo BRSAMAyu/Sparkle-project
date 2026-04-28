@@ -308,20 +308,20 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                               ),
                             ),
                             _InfoRow(
-                              label: '影响场景',
+                              label: context.l10n.visualAffectedScenes,
                               value: widget.element.affectedSurfaceLabels
                                   .join(' · '),
                             ),
                             if (widget.element.isBundle &&
                                 widget.element.bundlePieceIds.isNotEmpty)
                               _InfoRow(
-                                label: '收藏进度',
+                                label: context.l10n.visualCollectionProgress,
                                 value: _bundleCompletionText(),
                               ),
                             if (widget.element.isBundle &&
                                 widget.element.bundlePieceIds.isNotEmpty)
                               _InfoRow(
-                                label: '套装部件',
+                                label: context.l10n.visualSetParts,
                                 value: _bundlePieceLabels().join(' · '),
                               ),
 
@@ -1209,7 +1209,7 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                   icon: widget.isPreviewing
                       ? Icons.auto_awesome_rounded
                       : Icons.dashboard_customize_outlined,
-                  label: widget.isPreviewing ? '正在体验' : '当前外观',
+                  label: widget.isPreviewing ? context.l10n.visualPreviewing : context.l10n.visualCurrentLook,
                   color: widget.isPreviewing
                       ? widget.colors.border
                       : _InkStagePalette.textSecondary,
@@ -1217,7 +1217,7 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                 const Spacer(),
                 _StageChip(
                   icon: Icons.touch_app_rounded,
-                  label: '点按切换',
+                  label: context.l10n.visualTapToggle,
                   color: _InkStagePalette.gold,
                 ),
               ],

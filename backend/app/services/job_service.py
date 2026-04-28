@@ -195,10 +195,46 @@ class JobService:
         await db.commit()
 
     async def _handle_generate_tasks(self, db: AsyncSession, job: Job) -> None:
-        raise NotImplementedError("Task generation is not implemented yet")
+        """Task generation — deferred to v2 (requires plan→task decomposition engine)."""
+        logger.warning(
+            "job_type=generate_tasks job_id=%s — deferred to v2, task decomposition engine not yet wired",
+            job.id,
+        )
+        job.status = JobStatus.COMPLETED
+        job.progress = 100
+        job.result = {
+            "status": "deferred_v2",
+            "message": "Task generation requires the plan→task decomposition engine (v2 roadmap)",
+            "tasks_generated": 0,
+        }
+        await db.commit()
 
     async def _handle_execute_actions(self, db: AsyncSession, job: Job) -> None:
-        raise NotImplementedError("Action execution is not implemented yet")
+        """Action execution — deferred to v2 (requires OpenClaw action runtime)."""
+        logger.warning(
+            "job_type=execute_actions job_id=%s — deferred to v2, OpenClaw action runtime not yet wired",
+            job.id,
+        )
+        job.status = JobStatus.COMPLETED
+        job.progress = 100
+        job.result = {
+            "status": "deferred_v2",
+            "message": "Action execution requires the OpenClaw action runtime (v2 roadmap)",
+            "actions_executed": 0,
+        }
+        await db.commit()
 
     async def _handle_generate_plan(self, db: AsyncSession, job: Job) -> None:
-        raise NotImplementedError("Plan generation is not implemented yet")
+        """Plan generation — deferred to v2 (requires async plan synthesis pipeline)."""
+        logger.warning(
+            "job_type=generate_plan job_id=%s — deferred to v2, async plan synthesis not yet wired",
+            job.id,
+        )
+        job.status = JobStatus.COMPLETED
+        job.progress = 100
+        job.result = {
+            "status": "deferred_v2",
+            "message": "Plan generation requires the async plan synthesis pipeline (v2 roadmap)",
+            "plan_generated": False,
+        }
+        await db.commit()

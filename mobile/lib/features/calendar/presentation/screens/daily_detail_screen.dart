@@ -789,31 +789,31 @@ class DailyDetailScreen extends ConsumerWidget {
                     TextField(
                       controller: titleController,
                       decoration: const InputDecoration(
-                        labelText: '标题',
+                        labelText: context.l10n.calTitle,
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: DS.spacing12),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('全天'),
+                      title: Text(context.l10n.calAllDay),
                       value: isAllDay,
                       onChanged: (value) => setModalState(() => isAllDay = value),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('开始时间'),
+                      title: Text(context.l10n.calStartTime),
                       subtitle: Text(Formatters.formatDateTime(startTime)),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('结束时间'),
+                      title: Text(context.l10n.calEndTime),
                       subtitle: Text(Formatters.formatDateTime(endTime)),
                     ),
                     TextField(
                       controller: locationController,
                       decoration: const InputDecoration(
-                        labelText: '地点',
+                        labelText: context.l10n.calLocation,
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -822,7 +822,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       controller: descController,
                       maxLines: 3,
                       decoration: const InputDecoration(
-                        labelText: '描述',
+                        labelText: context.l10n.calDescription,
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -830,15 +830,15 @@ class DailyDetailScreen extends ConsumerWidget {
                     DropdownButtonFormField<int>(
                       initialValue: reminderMinutes,
                       decoration: const InputDecoration(
-                        labelText: '提醒',
+                        labelText: context.l10n.calReminderLabel,
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 0, child: Text('开始时')),
-                        DropdownMenuItem(value: 5, child: Text('提前 5 分钟')),
-                        DropdownMenuItem(value: 15, child: Text('提前 15 分钟')),
-                        DropdownMenuItem(value: 30, child: Text('提前 30 分钟')),
-                        DropdownMenuItem(value: 60, child: Text('提前 1 小时')),
+                        DropdownMenuItem(value: 0, child: Text(context.l10n.calAtStart)),
+                        DropdownMenuItem(value: 5, child: Text(context.l10n.cal5MinBefore)),
+                        DropdownMenuItem(value: 15, child: Text(context.l10n.cal15MinBefore)),
+                        DropdownMenuItem(value: 30, child: Text(context.l10n.cal30MinBefore)),
+                        DropdownMenuItem(value: 60, child: Text(context.l10n.cal1HourBefore)),
                       ],
                       onChanged: (value) {
                         if (value != null) {
@@ -851,14 +851,14 @@ class DailyDetailScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: SparkleButton.ghost(
-                            label: '取消',
+                            label: context.l10n.calCancel,
                             onPressed: () => Navigator.of(sheetContext).pop(),
                           ),
                         ),
                         const SizedBox(width: DS.spacing12),
                         Expanded(
                           child: SparkleButton(
-                            label: '保存',
+                            label: context.l10n.calSave,
                             onPressed: () async {
                               final updated = event.copyWith(
                                 title: titleController.text.trim().isEmpty

@@ -862,28 +862,28 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             runSpacing: DS.spacing10,
             children: [
               _buildInsightMetric(
-                label: '连续天数',
+                label: context.l10n.calStreakDays,
                 value: '${streakStats.currentStreak}',
                 detail: '保持你的成就节奏',
                 icon: Icons.local_fire_department_rounded,
                 color: DS.warningAccent,
               ),
               _buildInsightMetric(
-                label: '活跃天数',
+                label: context.l10n.calActiveDays,
                 value: '${aggregate.activeDays}',
                 detail: '本月有行动的日期',
                 icon: Icons.calendar_month_rounded,
                 color: DS.info,
               ),
               _buildInsightMetric(
-                label: '完成任务',
+                label: context.l10n.calCompletedTasks,
                 value: '${aggregate.totalCompletedTasks}',
                 detail: '本月完成的任务数',
                 icon: Icons.task_alt_rounded,
                 color: DS.success,
               ),
               _buildInsightMetric(
-                label: '专注时长',
+                label: context.l10n.calFocusDuration,
                 value:
                     '${(aggregate.totalFocusMinutes / 60).toStringAsFixed(1)}h',
                 detail: '本月累计专注',
@@ -963,19 +963,19 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 const SizedBox(height: DS.spacing10),
                 _buildInsightLine(
                   icon: Icons.trending_up_rounded,
-                  title: '最热的一天',
+                  title: context.l10n.calHottestDay,
                   value: peakDay == null
                       ? '暂无'
                       : '${peakDay.date.month}/${peakDay.date.day} · ${peakDay.summaryText}',
                 ),
                 _buildInsightLine(
                   icon: Icons.flag_rounded,
-                  title: '当前主线',
+                  title: context.l10n.calCurrentMainGoal,
                   value: aggregate.activePlan?.name ?? '本月暂无活跃计划',
                 ),
                 _buildInsightLine(
                   icon: Icons.emoji_events_rounded,
-                  title: '成就势能',
+                  title: context.l10n.calAchievementMomentum,
                   value: streakStats.currentStreak >= 7
                       ? '连续状态很好，适合冲刺里程碑'
                       : '先把连续性拉起来，会更容易触发成就闭环',
@@ -1654,7 +1654,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
 
     if (!_endTime.isAfter(_startTime)) {
       setState(() {
-        _saveError = '结束时间需要晚于开始时间';
+        _saveError = context.l10n.calEndAfterStart;
       });
       return;
     }
@@ -1706,7 +1706,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _saveError = '创建日程失败：$e';
+        _saveError = context.l10n.calCreateEventFailed(e.toString());
       });
     } finally {
       if (mounted) {

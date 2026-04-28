@@ -17,6 +17,7 @@ import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 enum TaskGuidanceAudience { human, ai }
 
@@ -206,9 +207,9 @@ class TaskRepository {
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
-      errorMessage = '网络超时，请检查网络连接';
+      errorMessage = S.errorConnectionTimeout;
     } else if (e.type == DioExceptionType.connectionError) {
-      errorMessage = '网络连接失败，请检查网络设置';
+      errorMessage = S.errorConnectionFailed;
     } else if (e.response != null) {
       // Try to extract error message from response
       final data = e.response!.data;
@@ -216,14 +217,14 @@ class TaskRepository {
         errorMessage = (data['detail'] as String?) ??
             (data['message'] as String?) ??
             (data['error'] as String?) ??
-            '服务器返回错误 (HTTP ${e.response!.statusCode})';
+            S.errorServerIssue;
       } else if (data is String) {
         errorMessage = data;
       } else {
-        errorMessage = '服务器返回错误 (HTTP ${e.response!.statusCode})';
+        errorMessage = S.errorServerIssue;
       }
     } else {
-      errorMessage = '未知错误: ${e.message ?? "无法连接到服务器"}';
+      errorMessage = '${S.errorServerIssue}: ${e.message ?? ''}';
     }
 
     throw Exception(errorMessage);

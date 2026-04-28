@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
@@ -521,7 +522,7 @@ class _ActivePlanSlot extends ConsumerWidget {
             children: [
               _PlanTag(label: plan.isPrimary ? '主计划' : '活跃中'),
               if (isChatContext)
-                const _PlanTag(label: '当前对话', highlighted: true),
+                _PlanTag(label: context.l10n.planViewCurrentSession, highlighted: true),
               if (isSelected) const _PlanTag(label: '任务已聚焦'),
             ],
           ),

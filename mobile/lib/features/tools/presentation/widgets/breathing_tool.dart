@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class _BreathingPattern {
   const _BreathingPattern({
@@ -87,23 +88,23 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   static const List<_BreathingPattern> _patterns = [
     _BreathingPattern(
       label: '4-7-8',
-      description: '快速降噪，适合焦躁和睡前收束。',
+      description: context.l10n.toolsBreathQuickDesc,
       inhale: 4,
       hold: 7,
       exhale: 8,
       rest: 0,
     ),
     _BreathingPattern(
-      label: '方块呼吸',
-      description: '均衡稳定，适合进入专注前校准节奏。',
+      label: context.l10n.toolsBreathBox,
+      description: context.l10n.toolsBreathBoxDesc,
       inhale: 4,
       hold: 4,
       exhale: 4,
       rest: 4,
     ),
     _BreathingPattern(
-      label: '舒缓呼吸',
-      description: '呼长于吸，适合紧张后的恢复。',
+      label: context.l10n.toolsBreathRelax,
+      description: context.l10n.toolsBreathRelaxDesc,
       inhale: 4,
       hold: 2,
       exhale: 6,
@@ -139,22 +140,22 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
 
   List<_BreathingPhase> get _phases => <_BreathingPhase>[
         _BreathingPhase(
-          label: '吸气',
+          label: context.l10n.toolsBreathInhale,
           seconds: _pattern.inhale,
           kind: _BreathingPhaseKind.inhale,
         ),
         _BreathingPhase(
-          label: '停留',
+          label: context.l10n.toolsBreathHold,
           seconds: _pattern.hold,
           kind: _BreathingPhaseKind.holdExpanded,
         ),
         _BreathingPhase(
-          label: '呼气',
+          label: context.l10n.toolsBreathExhale,
           seconds: _pattern.exhale,
           kind: _BreathingPhaseKind.exhale,
         ),
         _BreathingPhase(
-          label: '停留',
+          label: context.l10n.toolsBreathHold,
           seconds: _pattern.rest,
           kind: _BreathingPhaseKind.holdCollapsed,
         ),
@@ -381,7 +382,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     final notificationService = ref.read(notificationServiceProvider);
     await notificationService.scheduleNotification(
       id: _completionNotificationId,
-      title: '呼吸练习完成',
+      title: context.l10n.toolsBreathComplete,
       body: '本轮呼吸练习已经结束，回来感受一下身体状态。',
       scheduledDate: DateTime.now().add(Duration(seconds: remainingSeconds)),
       payload: <String, dynamic>{
@@ -676,8 +677,8 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     return ToolShell(
       surface: widget.surface,
       icon: Icons.air_rounded,
-      title: '呼吸练习',
-      subtitle: '把呼吸节奏做成可执行工具，而不是一次性动画。支持多种模式和不同练习时长，适合在任务间切换状态。',
+      title: context.l10n.toolsBreathTitle,
+      subtitle: context.l10n.toolsBreathSubtitle,
       accentColor: accent,
       compactHeader: true,
       heroChips: [
@@ -701,7 +702,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '呼吸舞台',
+            title: context.l10n.toolsBreathStage,
             subtitle:
                 _isPaused ? '练习已暂停，恢复后会从当前阶段继续，并继续语音提示。' : '跟着中央指令吸气、停留和呼气。',
             child: LayoutBuilder(
@@ -785,7 +786,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           ToolMetricRow(
             children: [
               ToolMetricCard(
-                label: '当前节律',
+                label: context.l10n.toolsBreathCurrentRhythm,
                 value:
                     '${_pattern.inhale}-${_pattern.hold}-${_pattern.exhale}-${_pattern.rest}',
                 accentColor: accent,
@@ -793,7 +794,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                 caption: '吸 / 停 / 呼 / 停',
               ),
               ToolMetricCard(
-                label: '目标轮数',
+                label: context.l10n.toolsBreathTargetRounds,
                 value: '$_totalRounds',
                 accentColor: accent,
                 icon: Icons.repeat_rounded,
@@ -804,7 +805,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '练习配置',
+            title: context.l10n.toolsBreathConfig,
             subtitle: _isPlaying
                 ? (_isPaused ? '练习已暂停，恢复后会从当前阶段继续。' : '练习进行中，配置会在本轮结束后可调整。')
                 : '先选模式，再选练习时长。',
@@ -831,7 +832,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                   children: List.generate(
                     _durations.length,
                     (index) => ToolChoiceChip(
-                      label: '${_durations[index]} 分钟',
+                      label: context.l10n.toolsBreathDurationMin,
                       selected: _selectedDurationIndex == index,
                       onTap: () => unawaited(_updateDuration(index)),
                       accentColor: accent,
@@ -848,7 +849,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
           final primaryButton = SparkleButton(
-            label: _isPlaying ? (_isPaused ? '继续练习' : '暂停练习') : '开始练习',
+            label: _isPlaying ? (_isPaused ? context.l10n.toolsBreathContinue : context.l10n.toolsBreathPause) : context.l10n.toolsBreathStart,
             onPressed: _isPlaying
                 ? (_isPaused ? _resumeBreathing : _pauseBreathing)
                 : _startBreathing,
@@ -860,7 +861,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
             expand: true,
           );
           final secondaryButton = SparkleButton(
-            label: _isPlaying ? '停止练习' : '重置',
+            label: _isPlaying ? context.l10n.toolsBreathStop : context.l10n.toolsBreathReset,
             variant: ButtonVariant.ghost,
             onPressed: _stopBreathing,
             icon: Icon(

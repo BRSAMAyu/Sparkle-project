@@ -117,7 +117,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                                   .where((e) => e.enabled)
                                   .isNotEmpty) ...[
                                 Text(
-                                  '已保存团队',
+                                  context.l10n.chatTeamSaved,
                                   style: TextStyle(
                                     fontSize: DS.fontSizeSm,
                                     fontWeight: DS.fontWeightSemibold,
@@ -178,7 +178,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '最终回答参与专家',
+                            context.l10n.chatTeamFinalExperts,
                             style: TextStyle(
                               fontSize: DS.fontSizeSm,
                               fontWeight: DS.fontWeightSemibold,
@@ -200,7 +200,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                   child: TextButton.icon(
                     onPressed: () => _showSaveTeamDialog(context),
                     icon: const Icon(Icons.bookmark_add_outlined),
-                    label: const Text('保存团队'),
+                    label: Text(context.l10n.chatTeamSaveTeam),
                   ),
                 ),
 
@@ -257,7 +257,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             label: Text(
               expert.official
                   ? expert.displayName
-                  : '${expert.displayName} · 自定义',
+                  : context.l10n.chatTeamExpertCustom(expert.displayName),
             ),
             avatar: isSelected
                 ? null
@@ -477,7 +477,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
         return l10n.chatAgentLearningBuddy;
       default:
         if (agentId.startsWith('custom_expert:')) {
-          return '我的专家';
+          return context.l10n.chatTeamMyExperts;
         }
         return agentId.replaceAll('_', ' ');
     }
@@ -517,14 +517,14 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
-          title: const Text('创建自定义专家'),
+          title: Text(context.l10n.chatTeamCreateCustomExpert),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: '专家名称'),
+                  decoration: InputDecoration(labelText: context.l10n.chatTeamExpertName),
                 ),
                 TextField(
                   controller: descriptionController,
@@ -532,7 +532,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedBaseExpert,
-                  decoration: const InputDecoration(labelText: '基底专家'),
+                  decoration: InputDecoration(labelText: context.l10n.chatTeamBaseExpert),
                   items: enabledExperts
                       .map(
                         (expert) => DropdownMenuItem<String>(
@@ -573,7 +573,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 TextField(
                   controller: promptController,
                   decoration: const InputDecoration(
-                    labelText: '系统提示词',
+                    labelText: context.l10n.chatTeamSystemPrompt,
                     alignLabelWithHint: true,
                   ),
                   minLines: 4,
@@ -623,13 +623,13 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
     final saved = await showSensoryDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('保存专家团队'),
+        title: Text(context.l10n.chatTeamSaveExpertTeam),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: '团队名称'),
+              decoration: InputDecoration(labelText: context.l10n.chatTeamTeamName),
             ),
             TextField(
               controller: descriptionController,

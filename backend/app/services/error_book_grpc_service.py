@@ -8,7 +8,7 @@ import grpc
 from loguru import logger
 
 from app.core.task_manager import task_manager
-from app.gen.proto.error_book import error_book_pb2, error_book_pb2_grpc
+from app.gen import error_book_pb2, error_book_pb2_grpc
 from app.schemas.error_book import (
     ErrorQueryParams,
     ErrorRecordCreate,

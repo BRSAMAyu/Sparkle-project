@@ -524,7 +524,7 @@ class _RecommendationsPanel extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('为你推荐', style: Theme.of(context).textTheme.titleMedium),
+        Text(context.l10n.communityRecommendedForYou, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         SizedBox(
           height: 218,

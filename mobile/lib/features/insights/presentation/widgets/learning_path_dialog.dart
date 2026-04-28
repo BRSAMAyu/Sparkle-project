@@ -12,6 +12,7 @@ import 'package:sparkle/features/insights/presentation/providers/learning_path_p
 import 'package:sparkle/features/knowledge/presentation/providers/knowledge_detail_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class LearningPathDialog extends ConsumerStatefulWidget {
   const LearningPathDialog({
@@ -105,7 +106,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
 
                 if (coreNodes.isEmpty && optionalNodes.isEmpty) {
                   return const Center(
-                    child: Text('无需前置知识，可以直接开始学习！'),
+                    child: Text(context.l10n.insNoPrereq),
                   );
                 }
 
@@ -167,7 +168,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                   builder: (context, constraints) {
                     final compact = constraints.maxWidth < 420;
                     final taskButton = SparkleButton(
-                      label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
+                      label: _isGeneratingTaskPath ? '正在生成...' : context.l10n.insQuickPath,
                       icon: _isGeneratingTaskPath
                           ? const SizedBox(
                               width: 16,
@@ -181,7 +182,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                       loading: _isGeneratingTaskPath,
                     );
                     final planButton = SparkleButton(
-                      label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
+                      label: _isGeneratingFullPlan ? '正在生成...' : context.l10n.insFullPlan,
                       icon: _isGeneratingFullPlan
                           ? const SizedBox(
                               width: 16,
@@ -384,7 +385,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               ),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: '查看详情',
+                label: context.l10n.insViewDetail,
                 icon: const Icon(Icons.open_in_new),
                 expand: true,
                 onPressed: () => _handleOpenNode(
@@ -395,7 +396,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               ),
               const SizedBox(height: DS.sm),
               SparkleButton.secondary(
-                label: '生成任务卡',
+                label: context.l10n.insGenTaskCard,
                 icon: const Icon(Icons.task_alt),
                 expand: true,
                 onPressed: () => _handleCreateTask(
@@ -406,7 +407,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               ),
               const SizedBox(height: DS.sm),
               SparkleButton.ghost(
-                label: '生成学习计划',
+                label: context.l10n.insGenPlan,
                 icon: const Icon(Icons.event_note),
                 expand: true,
                 onPressed: () => _handleCreatePlan(
@@ -454,7 +455,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     try {
       final task = await ref.read(taskRepositoryProvider).createTask(
             TaskCreate(
-              title: '学习：${node.name}',
+              title: context.l10n.insLearnNode,
               type: TaskType.learning,
               estimatedMinutes: 25,
               difficulty: 2,
@@ -470,7 +471,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('创建失败：$e');
+      _setInlineError(context.l10n.insCreateFailed(e.toString()));
     }
   }
 
@@ -507,7 +508,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -541,7 +542,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -588,7 +589,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -694,12 +695,12 @@ class _LearningPathNodeSummary extends StatelessWidget {
                 if (node.isTarget)
                   const _MetaChip(
                     icon: Icons.flag_rounded,
-                    label: '目标节点',
+                    label: context.l10n.insTargetNode,
                   ),
                 if (node.isOptional)
                   const _MetaChip(
                     icon: Icons.extension_rounded,
-                    label: '可选拓展',
+                    label: context.l10n.insOptionalExtend,
                   ),
                 if (_LearningPathDialogState._relationLabel(
                       node.relationType,
@@ -903,7 +904,7 @@ class _LearningPathLoadError extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.md),
                 SparkleButton.secondary(
-                  label: '重试加载',
+                  label: context.l10n.insRetryLoad,
                   icon: const Icon(Icons.refresh_rounded),
                   onPressed: onRetry,
                 ),

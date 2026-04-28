@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 科目定义
 class Subject {
@@ -17,43 +18,43 @@ class Subject {
   static final List<Subject> all = [
     Subject(
       code: 'math',
-      label: '数学',
+      label: context.l10n.ebMath,
       icon: Icons.calculate,
       color: DS.info,
     ),
     Subject(
       code: 'physics',
-      label: '物理',
+      label: context.l10n.ebPhysics,
       icon: Icons.science,
       color: DS.brandSecondary,
     ),
     Subject(
       code: 'chemistry',
-      label: '化学',
+      label: context.l10n.ebChemistry,
       icon: Icons.science_outlined,
       color: DS.warningLight,
     ),
     Subject(
       code: 'biology',
-      label: '生物',
+      label: context.l10n.ebBiology,
       icon: Icons.park,
       color: DS.success,
     ),
     Subject(
       code: 'english',
-      label: '英语',
+      label: context.l10n.ebEnglish,
       icon: Icons.language,
       color: DS.error,
     ),
     Subject(
       code: 'chinese',
-      label: '语文',
+      label: context.l10n.ebChinese,
       icon: Icons.menu_book,
       color: DS.warning,
     ),
     Subject(
       code: 'other',
-      label: '其他',
+      label: context.l10n.ebOther,
       icon: Icons.more_horiz,
       color: DS.textSecondary,
     ),
@@ -90,7 +91,7 @@ class SubjectFilterChips extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: DS.spacing8),
               child: FilterChip(
-                label: const Text('全部'),
+                label: Text(context.l10n.ebAll),
                 selected: selectedSubject == null,
                 onSelected: (_) => onSelected(null),
               ),

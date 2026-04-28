@@ -974,7 +974,7 @@ class ChatOrchestrator(
             try:
                 meta["modeling_output_json"] = json.dumps(modeling_snapshot, ensure_ascii=False, default=str)
             except Exception:
-                pass
+                logger.warning("Failed to serialize modeling_snapshot to JSON", exc_info=True)
         return meta
 
     @staticmethod
@@ -1454,6 +1454,22 @@ class ChatOrchestrator(
                 modeling_snapshot=modeling_snapshot,
             )
 
+        # Feed Aurora decision back to Spine for attribution tracking
+        try:
+            from app.signals.spine_aurora_bridge import SpineAuroraBridge
+            _bridge = SpineAuroraBridge(self.redis)
+            await _bridge.feed_aurora_decision(
+                user_id=user_id,
+                action=plan.action or "emit_message",
+                surface=surface or "",
+                chat_directive=plan.chat_directive if hasattr(plan, "chat_directive") else None,
+            )
+        except Exception:
+            logger.warning(
+                "feed_aurora_decision failed for user=%s action=%s",
+                user_id, plan.action or "emit_message", exc_info=True,
+            )
+
     async def _emit_early_ack_progress(
         self,
         *,
@@ -1505,6 +1521,7 @@ class ChatOrchestrator(
         try:
             return uuid.UUID(raw)
         except Exception:
+            logger.debug("Non-standard session_id format, using uuid5 fallback: %s", raw[:50])
             return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
 
     def _response_priority(self, resp: agent_service_pb2.ChatResponse) -> str:
@@ -1951,6 +1968,7 @@ class ChatOrchestrator(
         try:
             injection_mode = (await AuroraDocContextKillSwitchService().get_mode()).strip().lower()
         except Exception:
+            logger.warning("AuroraDocContextKillSwitchService.get_mode failed, falling back to settings", exc_info=True)
             injection_mode = (
                 str(getattr(settings, "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE", "live") or "live")
                 .strip()
@@ -2014,10 +2032,17 @@ class ChatOrchestrator(
                 for c in filtered_rag.chunks
                 if c.relevance_score >= 0.3
             ]
+            used_filenames = {c["filename"] for c in used_chunks}
+            all_filenames = {c.filename for c in filtered_rag.chunks}
+            excluded_names = sorted(all_filenames - used_filenames)
             excluded_count = filtered_rag.total_retrieved - len(used_chunks)
             context_receipt = {
                 "used": used_chunks,
+                "used_names": sorted(used_filenames),
                 "used_count": len(used_chunks),
+                "excluded_names": [
+                    f"{name}（相关度过低）" for name in excluded_names
+                ],
                 "excluded_count": excluded_count,
                 "total_retrieved": filtered_rag.total_retrieved,
                 "mode": mode,
@@ -2336,6 +2361,100 @@ class ChatOrchestrator(
                     ),
                 )
 
+                # P3: Signal-to-Action Spine — exam rescue & stale state + Aurora bridge
+                _spine_context: dict[str, Any] = {}
+                if not request.HasField("tool_result") and user_message:
+                    try:
+                        from app.signals.spine_orchestrator import SpineOrchestrator
+                        from app.signals.spine_aurora_bridge import SpineAuroraBridge
+                        _spine = SpineOrchestrator(self.redis)
+                        _spine_bridge = SpineAuroraBridge(self.redis)
+
+                        # First-message exam rescue detection
+                        _conv_msgs = (conversation_context or {}).get("messages") or []
+                        if len(_conv_msgs) == 0:
+                            await _spine.on_first_message(
+                                user_id=user_id,
+                                message=user_message,
+                            )
+
+                        # Stale-state guard on user return
+                        _analytics = (user_context_payload or {}).get("analytics_summary") or {}
+                        _last_active = _analytics.get("last_activity_time") or _analytics.get("last_login")
+                        if _last_active:
+                            from datetime import datetime as _dt
+                            if isinstance(_last_active, str):
+                                with contextlib.suppress(ValueError):
+                                    _last_active = _dt.fromisoformat(_last_active)
+                            if isinstance(_last_active, _dt):
+                                _elapsed_min = (_utcnow().replace(tzinfo=None) - _last_active.replace(tzinfo=None)).total_seconds() / 60
+                                if _elapsed_min >= 60:
+                                    await _spine.on_user_return(
+                                        user_id=user_id,
+                                        time_context={
+                                            "now": _utcnow().isoformat(),
+                                            "elapsed_since_last_interaction_min": _elapsed_min,
+                                            "active_task_id": None,
+                                        },
+                                    )
+
+                        # Aurora ↔ Spine bridge: fetch Spine context for Aurora
+                        _spine_context = await _spine_bridge.get_context_for_aurora(user_id)
+                        if _spine_context:
+                            if isinstance(request_extra_context, dict):
+                                request_extra_context["spine_signals"] = _spine_context
+                            else:
+                                request_extra_context = {"spine_signals": _spine_context}
+
+                        # v2.9: Fetch structured directives for prompt/RAG modulation
+                        _spine_resp_dir = await _spine.get_response_directive(user_id)
+                        if _spine_resp_dir:
+                            request_extra_context["spine_response_directive"] = _spine_resp_dir.to_dict()
+                        _spine_ret_dir = await _spine.get_retrieval_directive(user_id)
+                        if _spine_ret_dir:
+                            request_extra_context["spine_retrieval_directive"] = _spine_ret_dir.to_dict()
+                        try:
+                            from app.signals.growth_chronicle import GrowthChronicleService
+                            _chronicle_svc = GrowthChronicleService(self.redis)
+                            _chronicle_entries = await _chronicle_svc.get_chronicle(user_id, limit=3)
+                            if _chronicle_entries:
+                                request_extra_context["spine_chronicle_summary"] = "\n".join(
+                                    f"- {e.title}: {e.narrative}" for e in _chronicle_entries if e.narrative
+                                )
+                        except Exception:
+                            logger.warning(
+                                "GrowthChronicleService.get_chronicle failed for user=%s", user_id, exc_info=True,
+                            )
+                        try:
+                            # Track interaction count for fatigue detection
+                            _inter_key = f"spine:interaction_count:{user_id}:24h"
+                            await self.redis.incr(_inter_key)
+                            await self.redis.expire(_inter_key, 24 * 3600)
+                            _inter_count_raw = await self.redis.get(_inter_key)
+                            _inter_count = int(_inter_count_raw) if _inter_count_raw else 0
+                            _fatigue = await _spine.check_fatigue(
+                                user_id=user_id,
+                                interactions_last_24h=_inter_count,
+                            )
+                            if _fatigue and _fatigue.get("fatigue_level") not in ("low", "normal"):
+                                request_extra_context["spine_fatigue_context"] = _fatigue
+                        except Exception:
+                            logger.warning(
+                                "Spine fatigue check failed for user=%s", user_id, exc_info=True,
+                            )
+                        _spine_ux = await _spine.get_ux_directive(user_id)
+                        if _spine_ux:
+                            request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
+                        _spine_comm = await _spine.get_community_directive(user_id)
+                        if _spine_comm:
+                            request_extra_context["spine_community_directive"] = _spine_comm.to_dict()
+                        _spine_skill = await _spine.get_skill_directive(user_id)
+                        if _spine_skill:
+                            request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
+                    except Exception as _spine_err:
+                        logger.debug(f"Spine signal check skipped: {_spine_err}")
+                        request_extra_context["spine_degraded"] = True
+
                 expert_routing_decision = None
                 requested_experts: list[str] = []
                 answer_experts: list[str] = []
@@ -2399,6 +2518,14 @@ class ChatOrchestrator(
 
                 state = WorkflowState()
                 state.context_data.update(initial_document_context_state)
+                # v2.9/v2.10: Inject spine directives into workflow state
+                for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
+                                   "spine_fatigue_context", "spine_retrieval_directive",
+                                   "spine_ux_directive", "spine_community_directive",
+                                   "spine_skill_directive"):
+                    _spine_val = (request_extra_context or {}).get(_spine_key)
+                    if _spine_val:
+                        state.context_data[_spine_key] = _spine_val
                 if user_message:
                     state.append_message("user", user_message)
                 if session_feedback_signal is not None:
@@ -2474,6 +2601,48 @@ class ChatOrchestrator(
                     stream_callback=stream_callback,
                     chat_mode=chat_mode,
                 )
+
+                # v2.10: Emit UXDirective metadata for Flutter status band + receipt display
+                _spine_ux_data = (request_extra_context or {}).get("spine_ux_directive")
+                if _spine_ux_data and stream_callback:
+                    try:
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                metadata={
+                                    "spine_ux": json.dumps(_spine_ux_data, ensure_ascii=False),
+                                },
+                            )
+                        )
+                    except Exception as _ux_err:
+                        logger.debug(f"Spine UX directive emission skipped: {_ux_err}")
+
+                # v2.11: Emit growth card metadata for Flutter (divine moment #1 看见坚持)
+                if stream_callback:
+                    try:
+                        _growth_raw = await self.redis.get(f"spine:card:growth:{user_id}:latest")
+                        if _growth_raw:
+                            _growth_data = json.loads(_growth_raw if isinstance(_growth_raw, str) else _growth_raw.decode())
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    metadata={
+                                        "spine_growth_card": json.dumps(_growth_data, ensure_ascii=False),
+                                    },
+                                ),
+                            )
+                    except Exception:
+                        logger.debug("stream_callback failed for spine_growth_card, stream may be closed")
+
+                # STAB-012: Emit spine degraded flag when Spine pipeline failed
+                if request_extra_context and request_extra_context.get("spine_degraded"):
+                    if stream_callback:
+                        try:
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    metadata={"spine_degraded": "true"},
+                                ),
+                            )
+                        except Exception:
+                            logger.debug("stream_callback failed for spine_degraded, stream may be closed")
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
 

@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class NotesTool extends ConsumerStatefulWidget {
   const NotesTool({
@@ -121,7 +122,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
 
     if (fragment == null) {
       setState(() => _isSyncing = false);
-      AppFeedback.error(context, '同步失败，请稍后再试');
+      AppFeedback.error(context, context.l10n.toolsNotesSyncFailed);
       return;
     }
 
@@ -153,8 +154,8 @@ class _NotesToolState extends ConsumerState<NotesTool> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.edit_note_rounded,
-      title: '闪念笔记',
-      subtitle: '用于快速承接灵感、会议碎片和任务切片。内容会自动保存，适合做短时外脑。',
+      title: context.l10n.toolsNotesTitle,
+      subtitle: context.l10n.toolsNotesSubtitle,
       accentColor: accent,
       compactHeader: true,
       heroChips: [
@@ -166,7 +167,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
           icon: Icons.cloud_done_rounded,
         ),
         ToolHeroChip(
-          label: _charCount == 0 ? '等待记录' : '$_charCount 字',
+          label: _charCount == 0 ? context.l10n.toolsNotesWaiting : '$_charCount 字',
           accentColor: accent,
           icon: Icons.notes_rounded,
         ),
@@ -190,13 +191,13 @@ class _NotesToolState extends ConsumerState<NotesTool> {
                     ToolMetricRow(
                       children: [
                         ToolMetricCard(
-                          label: '字数',
+                          label: context.l10n.toolsNotesCharLabel,
                           value: '$_charCount',
                           accentColor: accent,
                           icon: Icons.text_fields_rounded,
                         ),
                         ToolMetricCard(
-                          label: '行数',
+                          label: context.l10n.toolsNotesLineLabel,
                           value: '$_lineCount',
                           accentColor: accent,
                           icon: Icons.subject_rounded,
@@ -206,8 +207,8 @@ class _NotesToolState extends ConsumerState<NotesTool> {
                     const SizedBox(height: DS.spacing16),
                     ToolSectionCard(
                       accentColor: accent,
-                      title: '笔记内容',
-                      subtitle: '输入时会自动保存，不需要手动提交。',
+                      title: context.l10n.toolsNotesContent,
+                      subtitle: context.l10n.toolsNotesContentDesc,
                       child: SizedBox(
                         height: editorHeight,
                         child: TextField(
@@ -216,7 +217,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
                           expands: true,
                           textAlignVertical: TextAlignVertical.top,
                           decoration: const InputDecoration(
-                            hintText: '把刚刚闪过的想法先放进来...',
+                            hintText: context.l10n.toolsNotesHint,
                             border: InputBorder.none,
                           ),
                           style:
@@ -237,27 +238,27 @@ class _NotesToolState extends ConsumerState<NotesTool> {
           final compact = constraints.maxWidth < 620;
           final actions = <Widget>[
             SparkleButton(
-              label: '清空',
+              label: context.l10n.toolsNotesClear,
               variant: ButtonVariant.ghost,
               onPressed: _clearNotes,
               icon: const Icon(Icons.delete_outline_rounded),
               expand: true,
             ),
             SparkleButton(
-              label: '复制内容',
+              label: context.l10n.toolsNotesCopy,
               variant: ButtonVariant.ghost,
               onPressed: _copyNotes,
               icon: const Icon(Icons.copy_rounded),
               expand: true,
             ),
             SparkleButton(
-              label: '立即保存',
+              label: context.l10n.toolsNotesSaveNow,
               onPressed: _saveNotes,
               icon: const Icon(Icons.check_rounded),
               expand: true,
             ),
             SparkleButton(
-              label: _isSyncing ? '同步中...' : '同步到棱镜',
+              label: _isSyncing ? context.l10n.toolsNotesSyncing : context.l10n.toolsNotesSyncToPrism,
               onPressed: _isSyncing ? null : _syncToPrism,
               icon: const Icon(Icons.psychology_alt_rounded),
               loading: _isSyncing,

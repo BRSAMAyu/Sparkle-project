@@ -316,7 +316,7 @@ class _HistoryContent extends StatelessWidget {
           Row(
             children: [
               Text(
-                '掌握度',
+                context.l10n.galaxyNodeMastery,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: DS.textSecondary,
                       fontWeight: FontWeight.w600,
@@ -324,7 +324,7 @@ class _HistoryContent extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                history.mastery <= 0 ? '尚未学习' : '$percent%',
+                history.mastery <= 0 ? context.l10n.galaxyNodeNotLearned : '$percent%',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: history.mastery <= 0 ? DS.textSecondary : DS.info,
                       fontWeight: FontWeight.w800,
@@ -352,18 +352,18 @@ class _HistoryContent extends StatelessWidget {
               _MetricChip(
                 icon: Icons.history_rounded,
                 label: history.studyCount > 0
-                    ? '已学习 ${history.studyCount} 次'
-                    : '尚未学习',
+                    ? context.l10n.galaxyNodeStudiedCount(history.studyCount)
+                    : context.l10n.galaxyNodeNotLearned,
               ),
               _MetricChip(
                 icon: Icons.schedule_rounded,
                 label: history.lastStudiedAt == null
-                    ? '暂无记录'
-                    : '上次学习 ${_relativeTime(history.lastStudiedAt!)}',
+                    ? context.l10n.galaxyNodeNoRecord
+                    : context.l10n.galaxyNodeLastStudy(_relativeTime(history.lastStudiedAt!)),
               ),
               _MetricChip(
                 icon: Icons.assignment_late_rounded,
-                label: '相关错题 ${history.relatedErrors.length} 道',
+                label: context.l10n.galaxyNodeRelatedErrors(history.relatedErrors.length),
               ),
             ],
           ),
@@ -371,7 +371,7 @@ class _HistoryContent extends StatelessWidget {
           _SourceMaterialsSection(nodeId: nodeId, nodeLabel: label),
           const SizedBox(height: DS.spacing20),
           Text(
-            '最近错题',
+            context.l10n.galaxyNodeRecentErrors,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -380,7 +380,7 @@ class _HistoryContent extends StatelessWidget {
           const SizedBox(height: DS.spacing10),
           if (relatedErrors.isEmpty)
             Text(
-              '暂无相关错题',
+              context.l10n.galaxyNodeNoRelatedErrors,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -400,7 +400,7 @@ class _HistoryContent extends StatelessWidget {
                         ? Icons.school_rounded
                         : Icons.play_arrow_rounded,
                   ),
-                  label: Text(history.mastery <= 0 ? '开始学习' : '开始复习'),
+                  label: Text(history.mastery <= 0 ? context.l10n.galaxyNodeStartLearn : context.l10n.galaxyNodeStartReview),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -408,7 +408,7 @@ class _HistoryContent extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => onViewErrors(history),
                   icon: const Icon(Icons.assignment_rounded),
-                  label: const Text('查看错题'),
+                  label: Text(context.l10n.galaxyNodeViewErrors),
                 ),
               ),
             ],
@@ -430,15 +430,15 @@ class _HistoryContent extends StatelessWidget {
   static String _relativeTime(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inDays >= 1) {
-      return '${diff.inDays} 天前';
+      return context.l10n.galaxyNodeDaysAgo(diff.inDays);
     }
     if (diff.inHours >= 1) {
-      return '${diff.inHours} 小时前';
+      return context.l10n.galaxyNodeHoursAgo(diff.inHours);
     }
     if (diff.inMinutes >= 1) {
-      return '${diff.inMinutes} 分钟前';
+      return context.l10n.galaxyNodeMinutesAgo(diff.inMinutes);
     }
-    return '刚刚';
+    return context.l10n.galaxyNodeJustNow;
   }
 }
 
@@ -1267,7 +1267,7 @@ class _ErrorPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = (error.questionText?.trim().isNotEmpty ?? false)
         ? error.questionText!.trim()
-        : '图片错题';
+        : context.l10n.galaxyNodeImageError;
     final subtitle = error.analysisSummary?.trim();
     return Container(
       width: double.infinity,
@@ -1331,14 +1331,14 @@ class _HistoryErrorState extends StatelessWidget {
             Icon(Icons.error_outline_rounded, color: DS.warning),
             const SizedBox(height: DS.spacing12),
             Text(
-              '节点历史加载失败',
+              context.l10n.galaxyNodeHistoryFailed,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: DS.spacing12),
             TextButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('重试'),
+              label: Text(context.l10n.galaxyNodeRetry),
             ),
           ],
         ),
@@ -1391,23 +1391,23 @@ class _SourceMaterialsCopy {
       );
     }
     return const _SourceMaterialsCopy._(
-      title: '来源资料',
-      personalBadge: '我的上传',
-      systemBadge: '暂未附带个人笔记',
-      chunkUnit: '片段',
-      emptyTitle: '让这个节点回到你的真实资料里',
-      readMore: '阅读更多',
-      noPreview: '这份资料暂时还没有可展示的片段。',
-      openFailed: '暂时无法打开来源资料。',
-      retry: '重试',
-      pageLabel: '第',
-      pagesLabel: '第',
-      excerptLabel: '片段',
-      summaryLabel: '份文档 · 个知识片段',
-      uploadDateLabel: '上传于',
-      emptyBodyLabel: '为这个主题补充自己的讲义或笔记，让知识真正可追溯。',
-      addNotesLabel: '添加关于',
-      uploadSavedLabel: '已上传，处理并挂接后会显示在这里。',
+      title: context.l10n.galaxyNodeSourceAssets,
+      personalBadge: context.l10n.galaxyNodePersonalBadge,
+      systemBadge: context.l10n.galaxyNodeNoPersonalNote,
+      chunkUnit: context.l10n.galaxyNodeChunkUnit,
+      emptyTitle: context.l10n.galaxyNodeEmptySourceTitle,
+      readMore: context.l10n.galaxyNodeReadMore,
+      noPreview: context.l10n.galaxyNodeNoPreview,
+      openFailed: context.l10n.galaxyNodeOpenFailed,
+      retry: context.l10n.galaxyNodeRetry,
+      pageLabel: context.l10n.galaxyNodePageLabel,
+      pagesLabel: context.l10n.galaxyNodePagesLabel,
+      excerptLabel: context.l10n.galaxyNodeExcerptLabel,
+      summaryLabel: context.l10n.galaxyNodeUploadDateLabel,  // TODO: check this mapping
+      uploadDateLabel: context.l10n.galaxyNodeUploadDateLabel,
+      emptyBodyLabel: context.l10n.galaxyNodeEmptySourceBody,
+      addNotesLabel: context.l10n.galaxyNodeAddNotesLabel,
+      uploadSavedLabel: context.l10n.galaxyNodeUploadSaved,
     );
   }
 

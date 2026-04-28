@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -25,10 +26,10 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('AI 运营分析'),
+        title: Text(context.l10n.userAiOpsAnalysis),
         actions: [
           SparkleButton(
-            label: '复制导出',
+            label: context.l10n.userAiOpsCopyExport,
             onPressed: exportAsync.hasValue
                 ? () => _copyExport(context, exportAsync.value!)
                 : null,
@@ -52,7 +53,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                   child: LinearProgressIndicator(minHeight: 3),
                 ),
                 error: (error, _) => _buildErrorCard(
-                  'AI 运营分析加载失败',
+                  context.l10n.userAiOpsLoadFailed,
                   '$error',
                 ),
               ),
@@ -66,7 +67,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                   child: LinearProgressIndicator(minHeight: 3),
                 ),
                 error: (error, _) => _buildErrorCard(
-                  '预测转化分析加载失败',
+                  context.l10n.userAiOpsPredictFailed,
                   '$error',
                 ),
               ),
@@ -83,14 +84,14 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '分析窗口',
+              context.l10n.userAiOpsAnalysisWindow,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '切换 7 / 14 / 30 天窗口，观察速度、成本、fallback 和执行转化的趋势变化。',
+              context.l10n.userAiOpsWindowHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -132,14 +133,14 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '开发运营视角',
+                context.l10n.userAiOpsDevOps,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '重点看模型链路是否稳定、是否值得继续烧成本，以及哪些模式正在真正产生执行结果。',
+                context.l10n.userAiOpsDevOpsHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -150,17 +151,17 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                 runSpacing: DS.spacing8,
                 children: [
                   _MetricChip(
-                    label: '成功率',
+                    label: context.l10n.userAiOpsSuccessRate,
                     value:
                         '${((overview['success_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
                   ),
                   _MetricChip(
-                    label: '平均首包',
+                    label: context.l10n.userAiOpsAvgFirstToken,
                     value:
                         '${((overview['avg_first_token_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}ms',
                   ),
                   _MetricChip(
-                    label: '平均总耗时',
+                    label: context.l10n.userAiOpsAvgTotalTime,
                     value:
                         '${((overview['avg_total_duration_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}ms',
                   ),
@@ -170,22 +171,22 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                         '${((overview['fallback_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
                   ),
                   _MetricChip(
-                    label: '总成本',
+                    label: context.l10n.userAiOpsTotalCost,
                     value:
                         '\$${((overview['total_cost_usd'] as num?)?.toDouble() ?? 0).toStringAsFixed(4)}',
                   ),
                   _MetricChip(
-                    label: '执行转化',
+                    label: context.l10n.userAiOpsExecutionConversion,
                     value:
                         '${((overview['execution_conversion_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
                   ),
                   _MetricChip(
-                    label: 'prompt 命中',
+                    label: context.l10n.userAiOpsPromptHit,
                     value:
                         '${((overview['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
                   ),
                   _MetricChip(
-                    label: '推理命中',
+                    label: context.l10n.userAiOpsInferenceHit,
                     value:
                         '${((overview['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
                   ),
@@ -208,7 +209,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '模式明细',
+                  context.l10n.userAiOpsPatternDetails,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -244,7 +245,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '预测转化闭环',
+            context.l10n.userAiOpsPredictConversion,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -254,16 +255,16 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _MetricChip(label: '曝光', value: '${funnel['impressions'] ?? 0}'),
-              _MetricChip(label: '接受', value: '${funnel['accepts'] ?? 0}'),
-              _MetricChip(label: '执行', value: '${funnel['executions'] ?? 0}'),
+              _MetricChip(label: context.l10n.userAiOpsExposures, value: '${funnel['impressions'] ?? 0}'),
+              _MetricChip(label: context.l10n.userAiOpsAccepts, value: '${funnel['accepts'] ?? 0}'),
+              _MetricChip(label: context.l10n.userAiOpsExecutions, value: '${funnel['executions'] ?? 0}'),
               _MetricChip(
                 label: 'CTR',
                 value:
                     '${((funnel['ctr_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
               ),
               _MetricChip(
-                label: '接受后执行',
+                label: context.l10n.userAiOpsAcceptToExec,
                 value:
                     '${((funnel['accept_to_execution_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
               ),
@@ -272,7 +273,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
           if (bySurface.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '按入口看效果',
+              context.l10n.userAiOpsBySurface,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -293,7 +294,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
           if (topActions.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '最值得优化的动作',
+              context.l10n.userAiOpsWorthOptimizing,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -343,18 +344,18 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
     await Clipboard.setData(ClipboardData(text: pretty));
     if (!mounted) return;
     messenger.showSnackBar(
-      SparkleSnackBar.success('AI 运营导出已复制到剪贴板'),
+      SparkleSnackBar.success(context.l10n.userAiOpsExportCopied),
     );
   }
 
   String _surfaceLabel(String surface) {
     switch (surface) {
       case 'dashboard':
-        return '驾驶舱';
+        return context.l10n.userAiOpsDashboard;
       case 'chat_input':
-        return '聊天输入';
+        return context.l10n.userAiOpsChatInput;
       case 'chat':
-        return '聊天';
+        return context.l10n.userAiOpsChat;
       default:
         return surface;
     }
@@ -401,7 +402,7 @@ class _TrendSeriesCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing10),
           _TrendBarRow(
-            label: '成功率',
+            label: context.l10n.userAiOpsSuccessRate,
             points: points,
             valueKey: 'success_rate_percent',
             valueFormatter: (value) => '${value.toStringAsFixed(1)}%',
@@ -409,7 +410,7 @@ class _TrendSeriesCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing10),
           _TrendBarRow(
-            label: '执行转化',
+            label: context.l10n.userAiOpsExecutionConversion,
             points: points,
             valueKey: 'execution_conversion_rate_percent',
             valueFormatter: (value) => '${value.toStringAsFixed(1)}%',
@@ -444,15 +445,15 @@ class _TrendSeriesCard extends StatelessWidget {
   String _chatModeLabel(String value) {
     switch (value) {
       case 'standard':
-        return '标准对话';
+        return context.l10n.userAiOpsStandardChat;
       case 'study_plan':
-        return '学习规划';
+        return context.l10n.userAiOpsStudyPlanning;
       case 'deep_analysis':
-        return '深度分析';
+        return context.l10n.userAiOpsDeepAnalysis;
       case 'error_diagnosis':
-        return '诊断纠错';
+        return context.l10n.userAiOpsDiagnosisCorrection;
       case 'expert_auto':
-        return '专家协作';
+        return context.l10n.userAiOpsExpertCollaboration;
       default:
         return value;
     }
@@ -622,15 +623,15 @@ class _ModeBreakdownRow extends StatelessWidget {
   String _chatModeLabel(String value) {
     switch (value) {
       case 'standard':
-        return '标准对话';
+        return context.l10n.userAiOpsStandardChat;
       case 'study_plan':
-        return '学习规划';
+        return context.l10n.userAiOpsStudyPlanning;
       case 'deep_analysis':
-        return '深度分析';
+        return context.l10n.userAiOpsDeepAnalysis;
       case 'error_diagnosis':
-        return '诊断纠错';
+        return context.l10n.userAiOpsDiagnosisCorrection;
       case 'expert_auto':
-        return '专家协作';
+        return context.l10n.userAiOpsExpertCollaboration;
       default:
         return value;
     }

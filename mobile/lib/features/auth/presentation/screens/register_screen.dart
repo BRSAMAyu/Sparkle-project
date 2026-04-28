@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -235,7 +236,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             );
                             setState(() => _acceptedTos = value ?? false);
                           },
-                          title: const Text('我已阅读并同意《用户协议》'),
+                          title: Text(context.l10n.authAgreeTerms),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                         ),
@@ -243,7 +244,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           alignment: Alignment.centerLeft,
                           child: TextButton(
                             onPressed: () => context.push('/legal/terms'),
-                            child: const Text('查看用户协议'),
+                            child: Text(context.l10n.authViewTerms),
                           ),
                         ),
                         SparkleStaggerItem(
@@ -259,7 +260,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             );
                             setState(() => _acceptedPrivacy = value ?? false);
                           },
-                          title: const Text('我已阅读并同意《隐私政策》'),
+                          title: Text(context.l10n.authAgreePrivacy),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                         ),
@@ -267,7 +268,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           alignment: Alignment.centerLeft,
                           child: TextButton(
                             onPressed: () => context.push('/legal/privacy'),
-                            child: const Text('查看隐私政策'),
+                            child: Text(context.l10n.authViewPrivacy),
                           ),
                         ),
                         const SizedBox(height: DS.xl),

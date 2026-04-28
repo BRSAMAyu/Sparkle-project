@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
@@ -649,7 +650,7 @@ class AchievementCard extends StatelessWidget {
                                   false) &&
                               !ultraCompact)
                             _buildToneChip(
-                              label: '首解者',
+                              label: context.l10n.achievementCardFirstUnlocker,
                               color: DS.semanticWarning,
                               icon: Icons.workspace_premium_rounded,
                               maxWidth: 78,
@@ -708,7 +709,7 @@ class AchievementCard extends StatelessWidget {
                 if (rewardPreview.isNotEmpty) ...[
                   if (!compact)
                     Text(
-                      '荣耀奖励',
+                      context.l10n.achievementCardGloryReward,
                       style: TextStyle(
                         fontSize: DS.fontSizeXs,
                         fontWeight: DS.fontWeightSemibold,
@@ -741,10 +742,10 @@ class AchievementCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         isUnlocked
-                            ? '已完成并可展示'
+                            ? context.l10n.achievementCardCompleted
                             : progressValue != null && progressTarget != null
                                 ? '$progressValue / $progressTarget'
-                                : '继续冲刺解锁',
+                                : context.l10n.achievementCardKeepPursuing,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: DS.textSecondary,
@@ -765,7 +766,7 @@ class AchievementCard extends StatelessWidget {
                       ),
                       child: Text(
                         isUnlocked
-                            ? '已达成'
+                            ? context.l10n.achievementCardAchieved
                             : '${achievement.progressPercentage}%',
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
@@ -1082,17 +1083,17 @@ class AchievementCard extends StatelessWidget {
       final type = reward['type']?.toString() ?? '';
       switch (type) {
         case 'title':
-          labels.add(reward['display']?.toString() ?? '新称号');
+          labels.add(reward['display']?.toString() ?? context.l10n.achievementCardNewTitle);
         case 'visual_element':
-          labels.add('荣耀装扮');
+          labels.add(context.l10n.achievementCardVisualElement);
         case 'galaxy_skin':
-          labels.add('星图皮肤');
+          labels.add(context.l10n.achievementCardGalaxySkin);
         case 'avatar_border':
-          labels.add('头像边框');
+          labels.add(context.l10n.achievementCardAvatarBorder);
         case 'profile_badge':
-          labels.add('主页徽章');
+          labels.add(context.l10n.achievementCardProfileBadge);
         case 'banner':
-          labels.add('个人横幅');
+          labels.add(context.l10n.achievementCardBanner);
       }
     }
 
@@ -1102,25 +1103,25 @@ class AchievementCard extends StatelessWidget {
   String _categoryLabel() {
     switch (achievement.achievement.type) {
       case AchievementType.streak:
-        return '连胜';
+        return context.l10n.achievementCardCategoryStreak;
       case AchievementType.mastery:
-        return '精通';
+        return context.l10n.achievementCardCategoryMastery;
       case AchievementType.taskComplete:
-        return '任务';
+        return context.l10n.achievementCardCategoryTask;
       case AchievementType.nodeExplore:
-        return '探索';
+        return context.l10n.achievementCardCategoryExploration;
       case AchievementType.studyTime:
-        return '时长';
+        return context.l10n.achievementCardCategoryStudyTime;
       case AchievementType.hidden:
-        return '隐藏';
+        return context.l10n.achievementCardCategoryHidden;
       case AchievementType.milestone:
-        return '里程碑';
+        return context.l10n.achievementCardCategoryMilestone;
       case AchievementType.social:
-        return '社交';
+        return context.l10n.achievementCardCategorySocial;
       case AchievementType.contract:
-        return '契约';
+        return context.l10n.achievementCardCategoryContract;
       case AchievementType.sprint:
-        return '冲刺';
+        return context.l10n.achievementCardCategorySprint;
     }
   }
 

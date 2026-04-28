@@ -174,7 +174,7 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
                         borderRadius: DS.borderRadius12,
                       ),
                       child: Text(
-                        '下一枚高价值目标',
+                        context.l10n.achievementMapNextHighValue,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           fontWeight: DS.fontWeightSemibold,
@@ -210,7 +210,7 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
               if (node.rewardPreview.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing16),
                 Text(
-                  '解锁后你会获得',
+                  context.l10n.achievementMapUnlockReward,
                   style: TextStyle(
                     fontSize: DS.fontSizeSm,
                     fontWeight: DS.fontWeightBold,
@@ -245,14 +245,14 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SparkleButton.outline(
-                      label: '关闭',
+                      label: context.l10n.achievementMapClose,
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
                   Expanded(
                     child: SparkleButton.primary(
-                      label: '查看详情',
+                      label: context.l10n.achievementMapViewDetails,
                       onPressed: () {
                         Navigator.of(context).pop();
                         context.push('/achievements/${node.id}');
@@ -269,17 +269,18 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
   }
 
   String _displayStateLabel(String state) {
+    final l10n = context.l10n;
     switch (state) {
       case 'unlocked':
-        return '已解锁';
+        return l10n.achievementMapStateUnlocked;
       case 'ready_to_pursue':
-        return '可冲刺';
+        return l10n.achievementMapStateReady;
       case 'close_to_unlock':
-        return '接近解锁';
+        return l10n.achievementMapStateClose;
       case 'hidden_unrevealed':
-        return '隐藏中';
+        return l10n.achievementMapStateHidden;
       default:
-        return '前置阻塞';
+        return l10n.achievementMapStateBlocked;
     }
   }
 }
@@ -779,7 +780,7 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '征服路径图',
+                    context.l10n.achievementMapOverlayTitle,
                     style: TextStyle(
                       fontSize: DS.fontSizeBase,
                       fontWeight: DS.fontWeightBold,
@@ -788,7 +789,7 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
                   ),
                   const SizedBox(height: DS.spacing6),
                   Text(
-                    '双指缩放或用右侧控件查看不同赛道，推荐目标会被重点高亮。',
+                    context.l10n.achievementMapOverlayHint,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       height: 1.45,
@@ -838,19 +839,19 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
             children: [
               _MapControlButton(
                 icon: Icons.add,
-                tooltip: '放大',
+                tooltip: context.l10n.achievementMapZoomIn,
                 onTap: () => _zoomBy(1.2),
               ),
               const SizedBox(height: DS.spacing10),
               _MapControlButton(
                 icon: Icons.remove,
-                tooltip: '缩小',
+                tooltip: context.l10n.achievementMapZoomOut,
                 onTap: () => _zoomBy(0.84),
               ),
               const SizedBox(height: DS.spacing10),
               _MapControlButton(
                 icon: Icons.center_focus_strong,
-                tooltip: '重置视角',
+                tooltip: context.l10n.achievementMapResetView,
                 onTap: _resetViewport,
               ),
             ],

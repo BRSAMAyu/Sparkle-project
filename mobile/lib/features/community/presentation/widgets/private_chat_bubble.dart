@@ -244,7 +244,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
     if (deepLink.isNotEmpty) {
       if (!DeepLinkService.handleDeepLink(context, deepLink)) {
         unawaited(UniversalShareService().copyDeepLink(deepLink));
-        AppFeedback.info(context, '链接已复制');
+        AppFeedback.info(context, context.l10n.communityLinkCopied);
       }
     }
   }
@@ -261,7 +261,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
       if (!context.mounted) {
         return;
       }
-      AppFeedback.success(context, '已采纳，跳转中...');
+      AppFeedback.success(context, context.l10n.communityAdoptedRedirecting);
       final resourceType =
           result['resource_type']?.toString() ?? fallbackResourceType;
       final entityCard = result['entity_card'] is Map<String, dynamic>

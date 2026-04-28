@@ -423,7 +423,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            setName.isNotEmpty ? setName.first.key : '自由搭配',
+            setName.isNotEmpty ? setName.first.key : context.l10n.visualMixMatch,
             style: TextStyle(
               fontSize: DS.fontSizeLg,
               fontWeight: DS.fontWeightBold,
@@ -541,7 +541,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        element.description ?? '高曝光荣耀装扮套组',
+                        element.description ?? context.l10n.visualHighExposure,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: _VisualInk.textSecondary,
@@ -870,7 +870,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       if (success) {
         AppFeedback.success(context, '已装备荣耀套装');
       } else {
-        AppFeedback.error(context, '装备套装时出现问题');
+        AppFeedback.error(context, context.l10n.visualEquipFailed);
       }
     }
   }
@@ -896,7 +896,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       if (success) {
         AppFeedback.info(context, '已卸下整套荣耀装扮');
       } else {
-        AppFeedback.error(context, '卸下套装时出现问题');
+        AppFeedback.error(context, context.l10n.visualUnequipFailed);
       }
     }
   }
@@ -1533,7 +1533,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           );
           final clearButton = TextButton(
             onPressed: _clearDisplaySlotFilter,
-            child: const Text('清除筛选'),
+            child: Text(context.l10n.visualClearFilter),
           );
 
           if (stack) {

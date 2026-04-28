@@ -1,4 +1,5 @@
 class GalaxyContributionNodeItem {
+import 'package:sparkle/core/services/i18n_service.dart';
   const GalaxyContributionNodeItem({
     required this.nodeId,
     required this.nodeName,
@@ -10,7 +11,7 @@ class GalaxyContributionNodeItem {
   factory GalaxyContributionNodeItem.fromJson(Map<String, dynamic> json) =>
       GalaxyContributionNodeItem(
         nodeId: (json['node_id'] ?? '').toString(),
-        nodeName: (json['node_name'] ?? '未命名节点').toString(),
+        nodeName: (json['node_name'] ?? S.galaxyUnnamedNode).toString(),
         reason: json['reason']?.toString(),
         masteryDelta: (json['mastery_delta'] as num?)?.toInt() ?? 0,
         updatedAt: json['updated_at'] == null

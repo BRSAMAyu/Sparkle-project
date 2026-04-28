@@ -448,21 +448,21 @@ class _VoiceGestureHints extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildHint(
-            label: '上滑撤回',
+            label: context.l10n.chatVoiceSwipeUndo,
             icon: Icons.undo_rounded,
             active: activeAction == VoiceReleaseAction.cancel,
             color: DS.error,
           ),
           const SizedBox(width: DS.spacing8),
           _buildHint(
-            label: '松开发到输入框',
+            label: context.l10n.chatVoiceReleaseToInput,
             icon: Icons.keyboard_arrow_down_rounded,
             active: activeAction == VoiceReleaseAction.commit,
             color: DS.info,
           ),
           const SizedBox(width: DS.spacing8),
           _buildHint(
-            label: '上滑发送',
+            label: context.l10n.chatVoiceSwipeSend,
             icon: Icons.send_rounded,
             active: activeAction == VoiceReleaseAction.send,
             color: DS.semanticSuccess,

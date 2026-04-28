@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -32,7 +33,7 @@ class SprintScreen extends ConsumerWidget {
         title: const Text('My Sprint'),
         actions: [
           Tooltip(
-            message: '历史计划',
+            message: context.l10n.planHistoryPlans,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.archive_outlined),
@@ -112,7 +113,7 @@ class _NoActiveSprintView extends StatelessWidget {
                     unawaited(context.push('/exam-sprint/setup'));
                   },
                   icon: const Icon(Icons.add),
-                  label: '开始考试冲刺',
+                  label: context.l10n.planStartExamSprint,
                 ),
               ],
             ),
@@ -171,7 +172,7 @@ class _ActiveSprintView extends ConsumerWidget {
           children: [
             Icon(Icons.error_outline, size: 48, color: DS.textSecondary),
             const SizedBox(height: DS.spacing12),
-            Text('加载冲刺计划失败', style: TextStyle(color: DS.textSecondary)),
+            Text(context.l10n.planLoadSprintFailed, style: TextStyle(color: DS.textSecondary)),
           ],
         ),
       ),
@@ -435,7 +436,7 @@ class _CloseToUnlockBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '即将解锁！',
+                  context.l10n.planSoonUnlock,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
                         color: DS.textPrimary,
@@ -466,7 +467,7 @@ class _CloseToUnlockBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '再$remaining',
+                context.l10n.planDaysMore(remaining),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral500,
                     ),
@@ -565,7 +566,7 @@ class _SprintAchievementTile extends StatelessWidget {
           // Progress percentage
           Text(
             achievement.isUnlocked
-                ? '完成!'
+                ? context.l10n.planCompletedExclaim
                 : '${achievement.progressPercentage}%',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: _getRarityColor(rarity),

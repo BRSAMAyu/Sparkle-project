@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 const Map<String, String> _modeLabels = <String, String>{
   'cautious': '谨慎模式',
@@ -25,7 +26,7 @@ const Map<String, String> _ruleLabels = <String, String>{
 
 const Map<String, String> _ruleOptionLabels = <String, String>{
   'auto': '自动',
-  'confirm': '确认',
+  'confirm': context.l10n.settingsConfirm,
   'skip': '跳过',
   'reject': '拒绝',
 };
@@ -181,7 +182,7 @@ class _OpenClawExecutionPreferencesCardState
           SwitchListTile.adaptive(
             value: draft.autoExtendTimeout,
             contentPadding: EdgeInsets.zero,
-            title: const Text('自动延长长任务超时'),
+            title: Text(context.l10n.settingsAutoExtend),
             subtitle: Text(
               '长耗时任务接近超时时，优先尝试自动续期。',
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
@@ -196,7 +197,7 @@ class _OpenClawExecutionPreferencesCardState
           SwitchListTile.adaptive(
             value: draft.trustAutoUpgrade,
             contentPadding: EdgeInsets.zero,
-            title: const Text('允许系统基于历史自动建议升级信任'),
+            title: Text(context.l10n.settingsAutoSuggestTrust),
             subtitle: Text(
               '当某类动作长期稳定成功时，Sparkle 会建议减少确认频率。',
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
@@ -227,9 +228,9 @@ class _OpenClawExecutionPreferencesCardState
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'all', child: Text('全部通知')),
-              DropdownMenuItem(value: 'essential', child: Text('仅关键节点')),
-              DropdownMenuItem(value: 'silent', child: Text('安静模式')),
+              DropdownMenuItem(value: 'all', child: Text(context.l10n.settingsAllNotifications)),
+              DropdownMenuItem(value: 'essential', child: Text(context.l10n.settingsCriticalOnly)),
+              DropdownMenuItem(value: 'silent', child: Text(context.l10n.settingsQuietMode)),
             ],
             onChanged: (value) {
               if (value == null) {
@@ -269,7 +270,7 @@ class _OpenClawExecutionPreferencesCardState
                       draft.executionBudget.dailyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: '每日上限',
+                    labelText: context.l10n.settingsDailyLimit,
                     helperText:
                         '已用 ${draft.executionBudget.dailyUsed} tokens',
                   ),
@@ -295,7 +296,7 @@ class _OpenClawExecutionPreferencesCardState
                       draft.executionBudget.monthlyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: '每月上限',
+                    labelText: context.l10n.settingsMonthlyLimit,
                     helperText:
                         '已用 ${draft.executionBudget.monthlyUsed} tokens',
                   ),
@@ -364,11 +365,11 @@ class _OpenClawExecutionPreferencesCardState
                           _dirty = false;
                         });
                         messenger.showSnackBar(
-                          SparkleSnackBar.success('执行偏好已保存'),
+                          SparkleSnackBar.success(context.l10n.settingsPreferencesSaved),
                         );
                       }
                     },
-              child: Text(_dirty ? '保存执行偏好' : '当前已同步'),
+              child: Text(_dirty ? context.l10n.settingsSavePreferences : '当前已同步'),
             ),
           ),
         ],

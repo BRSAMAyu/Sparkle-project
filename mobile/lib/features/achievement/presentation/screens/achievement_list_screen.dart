@@ -759,11 +759,11 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
 
     return EmptyState(
       icon: Icons.emoji_events_outlined,
-      title: hasFilters ? l10n.achievementNoMatch : '还没有解锁任何成就',
+      title: hasFilters ? l10n.achievementNoMatch : l10n.achievementListEmptyNoUnlock,
       description: hasFilters
           ? l10n.achievementAdjustFilter
-          : '先完成一个任务、坚持一次学习或点亮一个知识节点，这里就会开始记录你的里程碑。',
-      actionText: hasFilters ? '清空筛选' : '去创建今日任务',
+          : l10n.achievementListEmptyDescription,
+      actionText: hasFilters ? l10n.achievementListClearFilter : l10n.achievementListCreateTask,
       onAction: () {
         if (hasFilters) {
           _searchController.clear();

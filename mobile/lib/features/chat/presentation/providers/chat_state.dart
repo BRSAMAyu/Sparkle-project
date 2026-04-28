@@ -152,6 +152,14 @@ class ChatState {
     this.runPhase = ChatRunPhase.idle,
     this.activeRunSummary,
     this.transparencyPresentationState = const TransparencyPresentationState(),
+    this.dualCoreMode,
+    this.pendingStaleCard,
+    this.pendingSpineReceipt,
+    this.pendingCommunityHint,
+    this.pendingUXWarning,
+    this.pendingGrowthCard,
+    this.pendingGoalArbitration,
+    this.spineDegraded = false,
   });
 
   static const int maxRetainedMessages = 500;
@@ -203,6 +211,31 @@ class ChatState {
   final ChatRunPhase runPhase;
   final ActiveRunSummary? activeRunSummary;
   final TransparencyPresentationState transparencyPresentationState;
+
+  /// Current dual-core routing mode: "execution" | "cognitive" | "balanced"
+  /// Set from backend ux_turn.dual_core_mode on each AgentTurnEvent.
+  final String? dualCoreMode;
+
+  /// Spine: pending Time-Aware Recovery Card from StaleStateGuard.
+  final StaleRecoveryEvent? pendingStaleCard;
+
+  /// Spine: pending UserVisibleReceipt card from orchestrator.
+  final SpineReceiptEvent? pendingSpineReceipt;
+
+  /// Spine: pending community hint card — divine moment #6 "社群经验转策略".
+  final CommunityHintEvent? pendingCommunityHint;
+
+  /// Spine: pending UX risk warning card — divine moment #5 "阻止低收益".
+  final UXWarningEvent? pendingUXWarning;
+
+  /// Spine: pending growth card — divine moment #1 "看见坚持".
+  final GrowthCardEvent? pendingGrowthCard;
+
+  /// Spine: pending multi-goal arbitration card — surfaces when ≥2 goals conflict.
+  final GoalArbitrationEvent? pendingGoalArbitration;
+
+  /// Spine: degraded mode flag — true when Spine pipeline failed.
+  final bool spineDegraded;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -288,6 +321,21 @@ class ChatState {
     bool clearActiveRunSummary = false,
     TransparencyPresentationState? transparencyPresentationState,
     bool clearRoundtable = false,
+    String? dualCoreMode,
+    bool clearDualCoreMode = false,
+    StaleRecoveryEvent? pendingStaleCard,
+    bool clearStaleCard = false,
+    SpineReceiptEvent? pendingSpineReceipt,
+    bool clearSpineReceipt = false,
+    CommunityHintEvent? pendingCommunityHint,
+    bool clearCommunityHint = false,
+    UXWarningEvent? pendingUXWarning,
+    bool clearUXWarning = false,
+    GrowthCardEvent? pendingGrowthCard,
+    bool clearGrowthCard = false,
+    GoalArbitrationEvent? pendingGoalArbitration,
+    bool clearGoalArbitration = false,
+    bool? spineDegraded,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -373,5 +421,25 @@ class ChatState {
             : activeRunSummary ?? this.activeRunSummary,
         transparencyPresentationState:
             transparencyPresentationState ?? this.transparencyPresentationState,
+        dualCoreMode:
+            clearDualCoreMode ? null : dualCoreMode ?? this.dualCoreMode,
+        pendingStaleCard:
+            clearStaleCard ? null : pendingStaleCard ?? this.pendingStaleCard,
+        pendingSpineReceipt: clearSpineReceipt
+            ? null
+            : pendingSpineReceipt ?? this.pendingSpineReceipt,
+        pendingCommunityHint: clearCommunityHint
+            ? null
+            : pendingCommunityHint ?? this.pendingCommunityHint,
+        pendingUXWarning: clearUXWarning
+            ? null
+            : pendingUXWarning ?? this.pendingUXWarning,
+        pendingGrowthCard: clearGrowthCard
+            ? null
+            : pendingGrowthCard ?? this.pendingGrowthCard,
+        pendingGoalArbitration: clearGoalArbitration
+            ? null
+            : pendingGoalArbitration ?? this.pendingGoalArbitration,
+        spineDegraded: spineDegraded ?? this.spineDegraded,
       );
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class PlanProgressStrip extends StatelessWidget {
   const PlanProgressStrip({required this.data, super.key});
@@ -17,7 +18,7 @@ class PlanProgressStrip extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '规划进度',
+          context.l10n.chatPlanProgress,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),

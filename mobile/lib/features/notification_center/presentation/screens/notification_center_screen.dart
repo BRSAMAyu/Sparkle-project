@@ -335,7 +335,7 @@ class _NotificationCenterScreenState
       case SourceTypeFilter.intervention:
         return context.l10n.notificationSourceIntervention;
       case SourceTypeFilter.push:
-        return '主动提醒';
+        return context.l10n.notificationPushReminder;
     }
   }
 
@@ -433,7 +433,7 @@ class _NotificationCenterScreenState
     if (!mounted) {
       return;
     }
-    AppFeedback.success(context, '这条主动提醒已收起');
+    AppFeedback.success(context, context.l10n.notificationPushDismissed);
   }
 
   Future<void> _disablePushCategory(UnifiedNotification notification) async {
@@ -443,7 +443,7 @@ class _NotificationCenterScreenState
     if (!mounted) {
       return;
     }
-    AppFeedback.success(context, '这类主动提醒已关闭');
+    AppFeedback.success(context, context.l10n.notificationPushCategoryDisabled);
   }
 
   Future<void> _sendAccountabilityEncouragement(
@@ -455,7 +455,7 @@ class _NotificationCenterScreenState
     if (!mounted) {
       return;
     }
-    final message = result['message'] as String? ?? '他收到了你的鼓励';
+    final message = result['message'] as String? ?? context.l10n.notificationEncouragementSentFallback;
     AppFeedback.success(context, message);
     unawaited(
       SensoryFeedbackService.emit(SensoryFeedbackEvent.success),

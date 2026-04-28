@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
@@ -106,7 +107,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       setState(() {});
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '加载任务失败：$e');
+        AppFeedback.error(context, context.l10n.taskLoadFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -221,7 +222,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               ),
             );
         if (mounted) {
-          AppFeedback.success(_feedbackContext, '任务已更新');
+          AppFeedback.success(_feedbackContext, S.taskUpdated);
           _closeAfterSubmit();
         }
         return;
@@ -307,7 +308,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: Text(_isEditMode ? '编辑任务' : l10n.taskCreateTitle),
+        title: Text(_isEditMode ? context.l10n.taskEditTitle : l10n.taskCreateTitle),
       ),
       child: ContentConstraint(
         child: _isLoadingExistingTask
@@ -334,7 +335,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           ),
                         ),
                         child: Text(
-                          '这里调整的是已有任务的安排信息，例如预计时长、难度、截止时间和标签。',
+                          context.l10n.taskEditHint,
                           style:
                               TextStyle(color: DS.textSecondary, height: 1.4),
                         ),
@@ -360,7 +361,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                             const SizedBox(width: DS.spacing10),
                             Expanded(
                               child: Text(
-                                '这个任务会加入计划：${_selectedPlanName ?? _selectedPlanId}',
+                                context.l10n.taskJoinPlan(_selectedPlanName ?? _selectedPlanId ?? ''),
                                 style: TextStyle(
                                   color: DS.textPrimary,
                                   height: 1.4,
@@ -849,8 +850,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           : const Icon(Icons.check),
                       label: Text(
                         _isSubmitting
-                            ? (_isEditMode ? '保存中...' : l10n.taskCreating)
-                            : (_isEditMode ? '保存修改' : l10n.taskCreateAction),
+                            ? Text(_isEditMode ? context.l10n.taskSaving : l10n.taskCreating)
+                            : Text(_isEditMode ? context.l10n.taskSaveChanges : l10n.taskCreateAction),
                       ),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),

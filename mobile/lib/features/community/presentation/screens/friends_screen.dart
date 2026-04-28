@@ -447,7 +447,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                         ? NetworkImage(partner!.avatarUrl!)
                         : null,
                     child: partner?.avatarUrl == null
-                        ? Text((partner?.displayName ?? '伙')[0])
+                        ? Text((partner?.displayName ?? context.l10n.communityPartnerFallback)[0])
                         : null,
                   ),
                   title: Text(partner?.displayName ?? '责任伙伴邀请'),
@@ -893,7 +893,7 @@ class _RecommendationsTab extends ConsumerWidget {
                 controller: goalController,
                 decoration: const InputDecoration(
                   labelText: '我的目标',
-                  hintText: '例如：每天学习英语 30 分钟',
+                  hintText: context.l10n.communityFriendGoalHint,
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,

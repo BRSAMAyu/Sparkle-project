@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class IdiographicSummaryCard extends StatelessWidget {
@@ -47,7 +48,7 @@ class IdiographicSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '近期关联观察',
+              context.l10n.userIdiographicObservations,
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,

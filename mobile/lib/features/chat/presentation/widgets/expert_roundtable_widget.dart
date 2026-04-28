@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AssistantAgentBadge extends StatelessWidget {
   const AssistantAgentBadge({
@@ -192,7 +193,7 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
       children: [
         ChatAccessoryPill(
           icon: Icons.forum_rounded,
-          label: experts.isEmpty ? '专家协作' : '专家协作 ${experts.length}位',
+          label: experts.isEmpty ? context.l10n.chatRoundtableExpertCollab : '专家协作 ${experts.length}位',
           emphasize: true,
           onTap: onExpand,
           trailing: Icon(
@@ -213,13 +214,13 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
         if (remainingExperts > 0)
           ChatAccessoryPill(
             icon: Icons.add_rounded,
-            label: '$remainingExperts 位',
+            label: context.l10n.chatRoundtableMoreExperts(remainingExperts),
             onTap: onExpand,
           ),
         if (turnCount > 0)
           ChatAccessoryPill(
             icon: Icons.notes_rounded,
-            label: '$turnCount 条观点',
+            label: context.l10n.chatRoundtableTurnCount(turnCount),
             onTap: onExpand,
           ),
         if (complexityTier != null && complexityTier!.isNotEmpty)
@@ -280,7 +281,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
             children: [
               const ChatAccessoryPill(
                 icon: Icons.forum_rounded,
-                label: '专家协作',
+                label: context.l10n.chatRoundtableExpertCollab,
                 selected: true,
                 padding: EdgeInsets.symmetric(
                   horizontal: DS.spacing10,
@@ -353,7 +354,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
             if (hiddenTurns > 0)
               ChatAccessoryPill(
                 icon: Icons.more_horiz_rounded,
-                label: '还有 $hiddenTurns 条观点',
+                label: context.l10n.chatRoundtableHiddenTurns(hiddenTurns),
               ),
           ],
         ],
@@ -411,50 +412,50 @@ class _TurnCard extends StatelessWidget {
 String _etaLabel(int? etaMin, int? etaMax) {
   final low = etaMin ?? etaMax;
   final high = etaMax ?? etaMin;
-  if (low == null || high == null) return '预计处理中';
-  if (low == high) return '约 ${low}s';
+  if (low == null || high == null) return context.l10n.chatRoundtableEstimatedProcessing;
+  if (low == high) return context.l10n.chatRoundtableAboutSeconds(low);
   return '$low-$high s';
 }
 
 String _complexityLabel(String tier) {
   switch (tier) {
     case 'high':
-      return '高复杂度';
+      return context.l10n.chatRoundtableHighComplexity;
     case 'medium':
-      return '中等复杂度';
+      return context.l10n.chatRoundtableMediumComplexity;
     default:
-      return '低复杂度';
+      return context.l10n.chatRoundtableLowComplexity;
   }
 }
 
 String _labelForAgent(String raw) {
   switch (raw) {
     case 'galaxy_guide':
-      return '星图导航';
+      return context.l10n.chatRoundtableGalaxyNavigator;
     case 'exam_oracle':
-      return '考试策略师';
+      return context.l10n.chatRoundtableExamStrategist;
     case 'time_tutor':
-      return '时间教练';
+      return context.l10n.chatRoundtableTimeCoach;
     case 'deep_analyst':
-      return '深度分析师';
+      return context.l10n.chatExpertDeepAnalyst;
     case 'error_analyst':
-      return '纠错专家';
+      return context.l10n.chatRoundtableErrorSpecialist;
     case 'study_buddy':
       return '学伴';
     case 'math_agent':
-      return '数学专家';
+      return context.l10n.chatExpertMath;
     case 'code_agent':
-      return '编程专家';
+      return context.l10n.chatExpertCoding;
     case 'writing_agent':
-      return '写作专家';
+      return context.l10n.chatExpertWriting;
     case 'science_agent':
-      return '理科专家';
+      return context.l10n.chatRoundtableScienceExpert;
     case 'search_agent':
-      return '搜索专家';
+      return context.l10n.chatExpertSearch;
     case 'orchestrator':
-      return '协调器';
+      return context.l10n.chatRoundtableCoordinator;
     case 'synthesis':
-      return '综合结论';
+      return context.l10n.chatRoundtableConclusion;
     default:
       return raw.replaceAll('_', ' ').trim();
   }

@@ -1,4 +1,5 @@
 class ExamSprintScopeContext {
+import 'package:sparkle/core/services/i18n_service.dart';
   ExamSprintScopeContext({
     this.text,
     this.fileIds = const <String>[],
@@ -188,7 +189,7 @@ class ExamSprintAssessment {
         passProbability: (json['pass_probability'] as num?)?.toDouble() ?? 0.0,
         recommendedMode: json['recommended_mode']?.toString() ?? 'pass',
         recommendedModeLabel:
-            json['recommended_mode_label']?.toString() ?? '先过',
+            json['recommended_mode_label']?.toString() ?? S.planSprintTargetPass,
         summary: json['summary']?.toString() ?? '',
       );
 

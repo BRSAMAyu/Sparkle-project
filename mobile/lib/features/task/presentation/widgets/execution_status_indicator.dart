@@ -268,7 +268,7 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
         (_isActiveStatus(widget.status) || _elapsed > Duration.zero);
 
     return Semantics(
-      label: '执行状态: ${_statusLabel()}',
+      label: context.l10n.taskExecutionStatusLabel(_statusLabel()),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

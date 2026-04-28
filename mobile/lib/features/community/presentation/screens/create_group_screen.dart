@@ -63,15 +63,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
         ),
-        title: const Text('放弃创建社群？'),
-        content: const Text('你有未保存的内容，确定要放弃这次创建吗？'),
+        title: Text('Discard group creation?'),
+        content: Text('You have unsaved changes. Discard?'),
         actions: [
           SparkleButton.ghost(
-            label: '继续编辑',
+            label: 'Keep Editing',
             onPressed: () => Navigator.of(context).pop(false),
           ),
           SparkleButton.destructive(
-            label: '放弃',
+            label: 'Discard',
             onPressed: () => Navigator.of(context).pop(true),
           ),
         ],
@@ -163,7 +163,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
               onPressed: () =>
                   context.canPop() ? context.pop() : context.go('/community'),
             ),
-            title: const Text('创建社群'),
+            title: Text('Create Group'),
           ),
           body: ContentConstraint(
             child: SingleChildScrollView(
@@ -177,7 +177,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       controller: _nameController,
                       decoration: const InputDecoration(
                         labelText: '社群名称',
-                        hintText: '例如：每日算法冲刺队',
+                        hintText: 'e.g. Daily Algorithm Sprint',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
@@ -306,7 +306,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                         controller: _goalController,
                         decoration: const InputDecoration(
                           labelText: '冲刺目标',
-                          hintText: '例如：两周内完成 50 道 LeetCode',
+                          hintText: context.l10n.communityCreateGroupGoalHint,
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {

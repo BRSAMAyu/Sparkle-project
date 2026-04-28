@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -118,18 +119,18 @@ void _openTaskHelpChat(BuildContext context, TaskModel task) {
 
 String _buildTaskHelpPrompt(TaskModel task) {
   final parts = <String>[
-    '我在做这张任务卡时需要帮助，请带着任务上下文和我一起拆一下。',
-    '任务：${task.title}',
-    '类型：${task.type.name}',
-    '预估时间：${task.estimatedMinutes}分钟',
-    '难度：${task.difficulty}/5',
+    S.taskHelpPromptPrefix,
+    S.taskHelpPromptTitle(task.title),
+    S.taskHelpPromptType(task.type.name),
+    S.taskHelpPromptEstimate(task.estimatedMinutes),
+    S.taskHelpPromptDifficulty(task.difficulty),
     if (task.dueDate != null)
-      '计划日期：${task.dueDate!.toIso8601String().split('T').first}',
+      S.taskHelpPromptDueDate(task.dueDate!.toIso8601String().split('T').first),
     if ((task.successCriteria ?? '').trim().isNotEmpty)
-      '完成标准：${task.successCriteria!.trim()}',
+      S.taskHelpPromptCriteria(task.successCriteria!.trim()),
     if ((task.guideContent ?? '').trim().isNotEmpty)
-      '任务指南：${task.guideContent!.trim()}',
-    '请先问我一个最关键的澄清问题，然后给我一个5分钟内能开始的下一步。',
+      S.taskHelpPromptGuide(task.guideContent!.trim()),
+    S.taskHelpPromptSuffix,
   ];
   return parts.join('\n');
 }

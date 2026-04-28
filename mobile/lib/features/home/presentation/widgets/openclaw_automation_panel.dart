@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -61,14 +62,14 @@ class _OpenClawAutomationPanelState
           children: [
             OpenClawMetricPill(
               icon: Icons.schedule_rounded,
-              label: '${automation.schedules.length} 条自动化',
+              label: context.l10n.openclawAutomationScheduleCount(automation.schedules.length),
               tone: automation.schedules.isNotEmpty
                   ? OpenClawVisualTone.active
                   : OpenClawVisualTone.offline,
             ),
             OpenClawMetricPill(
               icon: Icons.playlist_play_rounded,
-              label: '${_selectedTaskIds.length} 个批量候选',
+              label: context.l10n.openclawBatchCandidateCount(_selectedTaskIds.length),
               tone: _selectedTaskIds.isNotEmpty
                   ? OpenClawVisualTone.connected
                   : OpenClawVisualTone.active,
@@ -78,7 +79,7 @@ class _OpenClawAutomationPanelState
         ),
         const SizedBox(height: DS.spacing12),
         Text(
-          '把一次性的批量委派和长期的定时执行都集中到这里。你不需要离开 OpenClaw Hub，就能把“现在做”与“之后自动做”都安排好。',
+          context.l10n.openclawAutomationIntro,
           style: DS.bodySmall.copyWith(
             color: DS.textSecondary,
             height: 1.45,
@@ -90,14 +91,14 @@ class _OpenClawAutomationPanelState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '批量委派',
+                context.l10n.openclawBatchDelegation,
                 style: DS.bodyMedium.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '从最近任务里挑选多个可执行项，一次性发给 OpenClaw，并在同一张摘要里查看完成、失败和排队情况。',
+                context.l10n.openclawBatchDelegationDesc,
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,
@@ -106,14 +107,14 @@ class _OpenClawAutomationPanelState
               const SizedBox(height: DS.spacing12),
               DropdownButtonFormField<String>(
                 initialValue: _batchStrategy,
-                decoration: const InputDecoration(
-                  labelText: '编排策略',
-                  helperText: '自动模式会根据任务差异选择串行或并行。',
+                decoration: InputDecoration(
+                  labelText: context.l10n.openclawOrchestrationStrategy,
+                  helperText: context.l10n.openclawOrchestrationStrategyHelper,
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'auto', child: Text('自动')),
-                  DropdownMenuItem(value: 'sequential', child: Text('串行')),
-                  DropdownMenuItem(value: 'parallel', child: Text('并行')),
+                items: [
+                  DropdownMenuItem(value: 'auto', child: Text(context.l10n.openclawModeAuto)),
+                  DropdownMenuItem(value: 'sequential', child: Text(context.l10n.openclawModeSequential)),
+                  DropdownMenuItem(value: 'parallel', child: Text(context.l10n.openclawModeParallel)),
                 ],
                 onChanged: (value) {
                   if (value == null) return;
@@ -123,7 +124,7 @@ class _OpenClawAutomationPanelState
               const SizedBox(height: DS.spacing10),
               if (tasks.isEmpty)
                 Text(
-                  '先让任务列表加载出来，或回到任务页创建几个正式任务，这里就会出现可批量委派的候选。',
+                  context.l10n.openclawBatchEmptyHint,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -165,7 +166,7 @@ class _OpenClawAutomationPanelState
                           ),
                         )
                       : const Icon(Icons.playlist_add_check_circle_rounded),
-                  label: const Text('开始批量委派'),
+                  label: Text(context.l10n.openclawStartBatchDelegation),
                 ),
               ],
               if (automation.latestBatch != null) ...[
@@ -181,14 +182,14 @@ class _OpenClawAutomationPanelState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '定时 / 条件执行',
+                context.l10n.openclawScheduledConditionExecution,
                 style: DS.bodyMedium.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '给常规任务设一个节奏，或监听外部事件与条件。创建后 Sparkle 会按计划自动把它交给 OpenClaw。',
+                context.l10n.openclawScheduledConditionDesc,
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,
@@ -197,13 +198,13 @@ class _OpenClawAutomationPanelState
               const SizedBox(height: DS.spacing12),
               if (tasks.isEmpty)
                 Text(
-                  '需要先有正式任务，才能创建自动化执行。',
+                  context.l10n.openclawNeedTaskFirst,
                   style: DS.bodySmall.copyWith(color: DS.textSecondary),
                 )
               else ...[
                 DropdownButtonFormField<String>(
                   initialValue: _selectedScheduleTaskId,
-                  decoration: const InputDecoration(labelText: '绑定任务'),
+                  decoration: InputDecoration(labelText: context.l10n.openclawBindTask),
                   items: tasks
                       .map(
                         (task) => DropdownMenuItem<String>(
@@ -219,11 +220,11 @@ class _OpenClawAutomationPanelState
                 const SizedBox(height: DS.spacing10),
                 DropdownButtonFormField<String>(
                   initialValue: _triggerType,
-                  decoration: const InputDecoration(labelText: '触发方式'),
-                  items: const [
-                    DropdownMenuItem(value: 'cron', child: Text('每天定时')),
-                    DropdownMenuItem(value: 'event', child: Text('事件触发')),
-                    DropdownMenuItem(value: 'condition', child: Text('条件轮询')),
+                  decoration: InputDecoration(labelText: context.l10n.openclawTriggerMethod),
+                  items: [
+                    DropdownMenuItem(value: 'cron', child: Text(context.l10n.openclawTriggerDaily)),
+                    DropdownMenuItem(value: 'event', child: Text(context.l10n.openclawTriggerEvent)),
+                    DropdownMenuItem(value: 'condition', child: Text(context.l10n.openclawTriggerCondition)),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
@@ -237,7 +238,7 @@ class _OpenClawAutomationPanelState
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           initialValue: _selectedHour,
-                          decoration: const InputDecoration(labelText: '小时'),
+                          decoration: InputDecoration(labelText: context.l10n.openclawHour),
                           items: List<DropdownMenuItem<int>>.generate(
                             24,
                             (index) => DropdownMenuItem(
@@ -256,7 +257,7 @@ class _OpenClawAutomationPanelState
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           initialValue: _selectedMinute,
-                          decoration: const InputDecoration(labelText: '分钟'),
+                          decoration: InputDecoration(labelText: context.l10n.openclawMinute),
                           items: List<DropdownMenuItem<int>>.generate(
                             12,
                             (index) {
@@ -279,32 +280,32 @@ class _OpenClawAutomationPanelState
                 if (_triggerType == 'event')
                   TextFormField(
                     controller: _eventTypeController,
-                    decoration: const InputDecoration(
-                      labelText: '事件类型',
-                      helperText: '例如 pr_merged / inbox_arrived',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.openclawEventType,
+                      helperText: context.l10n.openclawEventTypeHelper,
                     ),
                   ),
                 if (_triggerType == 'condition') ...[
                   TextFormField(
                     controller: _checkUrlController,
-                    decoration: const InputDecoration(
-                      labelText: '检查地址',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.openclawCheckUrl,
                     ),
                   ),
                   const SizedBox(height: DS.spacing10),
                   TextFormField(
                     controller: _conditionController,
-                    decoration: const InputDecoration(
-                      labelText: '条件表达式',
-                      helperText: "例如 contains('merged') 或 equals('ok')",
+                    decoration: InputDecoration(
+                      labelText: context.l10n.openclawConditionExpression,
+                      helperText: context.l10n.openclawConditionHelper,
                     ),
                   ),
                   const SizedBox(height: DS.spacing10),
                   TextFormField(
                     controller: _intervalController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '轮询间隔（分钟）',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.openclawPollingInterval,
                     ),
                   ),
                 ],
@@ -325,7 +326,7 @@ class _OpenClawAutomationPanelState
                           ),
                         )
                       : const Icon(Icons.add_alarm_rounded),
-                  label: const Text('创建自动化'),
+                  label: Text(context.l10n.openclawCreateAutomation),
                 ),
               ],
               if (automation.error != null &&
@@ -341,7 +342,7 @@ class _OpenClawAutomationPanelState
                 const Center(child: CircularProgressIndicator())
               else if (automation.schedules.isEmpty)
                 Text(
-                  '还没有任何自动化。先创建一个“每天定时”或“条件轮询”，这里就会显示后续运行计划。',
+                  context.l10n.openclawNoAutomationHint,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -388,8 +389,8 @@ class _OpenClawAutomationPanelState
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       ok
-          ? SparkleSnackBar.success('批量委派已提交')
-          : SparkleSnackBar.error(service.error ?? '批量委派失败'),
+          ? SparkleSnackBar.success(context.l10n.openclawBatchSubmitted)
+          : SparkleSnackBar.error(service.error ?? context.l10n.openclawBatchFailed),
     );
   }
 
@@ -421,7 +422,7 @@ class _OpenClawAutomationPanelState
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ok ? '自动化已创建' : (service.error ?? '自动化创建失败')),
+        content: Text(ok ? context.l10n.openclawAutomationCreated : (service.error ?? context.l10n.openclawAutomationCreateFailed)),
         backgroundColor: ok ? DS.semanticSuccess : DS.semanticError,
       ),
     );
@@ -466,19 +467,19 @@ class _BatchSummaryCard extends StatelessWidget {
                 ),
                 OpenClawMetricPill(
                   icon: Icons.check_circle_rounded,
-                  label: '${summary.completedCount} 完成',
+                  label: context.l10n.openclawCompletedCount(summary.completedCount),
                   tone: OpenClawVisualTone.connected,
                 ),
                 OpenClawMetricPill(
                   icon: Icons.error_outline_rounded,
-                  label: '${summary.failedCount} 失败',
+                  label: context.l10n.openclawFailedCount(summary.failedCount),
                   tone: summary.failedCount > 0
                       ? OpenClawVisualTone.offline
                       : OpenClawVisualTone.active,
                 ),
                 OpenClawMetricPill(
                   icon: Icons.schedule_rounded,
-                  label: '${summary.queuedCount} 排队',
+                  label: context.l10n.openclawQueuedCount(summary.queuedCount),
                   tone: summary.queuedCount > 0
                       ? OpenClawVisualTone.attention
                       : OpenClawVisualTone.active,
@@ -549,7 +550,7 @@ class _ScheduleCard extends StatelessWidget {
                   icon: schedule.isActive
                       ? Icons.play_circle_rounded
                       : Icons.pause_circle_rounded,
-                  label: schedule.isActive ? '运行中' : '已暂停',
+                  label: schedule.isActive ? context.l10n.openclawRunning : context.l10n.openclawPaused,
                   tone: schedule.isActive
                       ? OpenClawVisualTone.connected
                       : OpenClawVisualTone.offline,
@@ -558,7 +559,7 @@ class _ScheduleCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              _describeTrigger(schedule),
+              _describeTrigger(context, schedule),
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.45,
@@ -566,7 +567,10 @@ class _ScheduleCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '下次：${_formatDate(schedule.nextRunAt)} · 上次：${_formatDate(schedule.lastRunAt)}',
+              context.l10n.openclawNextRunLastRun(
+                _formatDate(schedule.lastRunAt),
+                _formatDate(schedule.nextRunAt),
+              ),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing10),
@@ -576,20 +580,20 @@ class _ScheduleCard extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: onPause,
                     icon: const Icon(Icons.pause_rounded),
-                    label: const Text('暂停'),
+                    label: Text(context.l10n.openclawPause),
                   )
                 else
                   OutlinedButton.icon(
                     onPressed: onResume,
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('恢复'),
+                    label: Text(context.l10n.openclawResume),
                   ),
                 const SizedBox(width: DS.spacing12),
                 TextButton.icon(
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete_outline_rounded),
                   label: Text(
-                    '删除',
+                    context.l10n.openclawDelete,
                     style: DS.bodyMedium.copyWith(color: DS.semanticError),
                   ),
                 ),
@@ -599,18 +603,24 @@ class _ScheduleCard extends StatelessWidget {
         ),
       );
 
-  static String _describeTrigger(OpenClawExecutionSchedule schedule) {
+  static String _describeTrigger(BuildContext context, OpenClawExecutionSchedule schedule) {
     if (schedule.triggerType == 'event') {
-      return '事件触发：${schedule.triggerConfig['event_type'] ?? '未填写'}';
+      return context.l10n.openclawEventTriggerLabel(
+        '${schedule.triggerConfig['event_type'] ?? context.l10n.openclawNotFilled}',
+      );
     }
     if (schedule.triggerType == 'condition') {
-      return '条件轮询：${schedule.triggerConfig['condition'] ?? '未填写'}';
+      return context.l10n.openclawConditionTriggerLabel(
+        '${schedule.triggerConfig['condition'] ?? context.l10n.openclawNotFilled}',
+      );
     }
-    return '每天定时：${schedule.triggerConfig['cron'] ?? '未填写'}';
+    return context.l10n.openclawCronTriggerLabel(
+      '${schedule.triggerConfig['cron'] ?? context.l10n.openclawNotFilled}',
+    );
   }
 
   static String _formatDate(DateTime? value) {
-    if (value == null) return '暂无';
+    if (value == null) return '';
     final hour = value.hour.toString().padLeft(2, '0');
     final minute = value.minute.toString().padLeft(2, '0');
     return '${value.month}/${value.day} $hour:$minute';

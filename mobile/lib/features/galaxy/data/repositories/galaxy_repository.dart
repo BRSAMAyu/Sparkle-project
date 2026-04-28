@@ -7,6 +7,7 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/galaxy/data/models/node_expansion_models.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 final galaxyRepositoryProvider = Provider<GalaxyRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -186,24 +187,24 @@ class GalaxyRepository {
           candidates: <NodeExpansionCandidate>[
             NodeExpansionCandidate(
               candidateId: 'demo-1',
-              name: '相关基础概念',
-              description: '补充当前节点的基础前置知识，帮助建立更稳的理解框架。',
+              name: S.galaxyBasicConcepts,
+              description: S.galaxyBasicConceptsDesc,
               importanceLevel: 3,
               relationToTrigger: 'prerequisite',
               relationStrength: 0.78,
             ),
             NodeExpansionCandidate(
               candidateId: 'demo-2',
-              name: '常见应用场景',
-              description: '围绕当前节点生成一个贴近日常使用的应用知识点。',
+              name: S.galaxyAppScenarios,
+              description: S.galaxyAppScenariosDesc,
               importanceLevel: 3,
               relationToTrigger: 'application',
               relationStrength: 0.72,
             ),
             NodeExpansionCandidate(
               candidateId: 'demo-3',
-              name: '进阶延伸主题',
-              description: '从当前节点继续向上延展一个更值得深入学习的方向。',
+              name: S.galaxyAdvancedTopics,
+              description: S.galaxyAdvancedTopicsDesc,
               importanceLevel: 4,
               relationToTrigger: 'evolution',
               relationStrength: 0.7,
@@ -313,7 +314,7 @@ class GalaxyRepository {
     required String defaultMessage,
   }) {
     if (exception.response?.statusCode == 404) {
-      return '当前节点不存在或已被清理，请返回星图后重试';
+      return S.galaxyNodeNotExist;
     }
     final data = exception.response?.data;
     if (data is Map<String, dynamic>) {

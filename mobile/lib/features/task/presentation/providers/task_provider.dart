@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
+import 'package:sparkle/core/services/i18n_service.dart';
     show
         TaskNotificationScheduler,
         taskNotificationSchedulerProvider,
@@ -483,9 +484,9 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       return result;
     } catch (e) {
       // 4. 🆕 失败：标记为失败状态（不直接回滚）
-      var errorMsg = '操作失败';
+      var errorMsg = S.taskOpFailed;
       if (e is DioException) {
-        errorMsg = e.message ?? '网络错误';
+        errorMsg = e.message ?? S.taskNetworkError;
       }
 
       _updateTask(
@@ -579,9 +580,9 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         },
       );
     } catch (e) {
-      var errorMsg = '重试失败';
+      var errorMsg = S.taskRetryFailed;
       if (e is DioException) {
-        errorMsg = e.message ?? '网络错误';
+        errorMsg = e.message ?? S.taskNetworkError;
       }
       _updateTask(
         id,
@@ -792,7 +793,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     String? source,
   }) async {
     if (!isServerTaskId(taskId)) {
-      state = state.copyWith(error: '本地任务暂不支持 AI 执行');
+      state = state.copyWith(error: S.taskLocalNoAiExec);
       return null;
     }
 
@@ -1156,14 +1157,14 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     final intent =
         state.taskExecutions[taskId] ?? await loadTaskExecutionState(taskId);
     if (intent == null) {
-      state = state.copyWith(error: '没有可处理的 AI 执行记录');
+      state = state.copyWith(error: S.taskNoExecRecord);
       return null;
     }
 
     var record = state.taskExecutionRecords[taskId];
     record ??= await _taskRepository.getExecutionRecord(intent.id);
     if (record == null) {
-      state = state.copyWith(error: '执行记录暂不可用');
+      state = state.copyWith(error: S.taskExecRecordUnavailable);
       return null;
     }
 
@@ -1274,7 +1275,7 @@ final taskDetailProvider =
       return TaskModel(
         id: id,
         userId: 'demo_user',
-        title: '自由专注',
+        title: S.taskFreeFocus,
         type: TaskType.learning,
         tags: [],
         estimatedMinutes: 25,

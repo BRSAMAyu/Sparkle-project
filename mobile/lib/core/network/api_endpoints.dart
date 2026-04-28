@@ -205,6 +205,21 @@ class ApiEndpoints {
   static String auroraCoreSessionClose(String id) =>
       '/aurora/core-session/$id/close';
   static const String auroraChipTelemetry = '/aurora/telemetry/chip-selected';
+  static const String auroraSpineTimeline = '/aurora/spine/timeline';
+  static const String auroraSpineTimelineCorrect =
+      '/aurora/spine/timeline/correct';
+  static const String auroraSpineReceipt = '/aurora/spine/receipt';
+  static const String auroraSpineState = '/aurora/spine/state';
+  static const String auroraSpineGoals = '/aurora/spine/goals';
+  static String auroraSpineGoalGraph(String goalId) =>
+      '/aurora/spine/goal-graph/$goalId';
+  static const String auroraSpineExternalEvent = '/aurora/spine/external-event';
+  // P10: Demo Experience Point #10 — Aurora status band (策略风险 / 资料感知)
+  static const String auroraSpineStatusBand = '/aurora/spine/status-band';
+  // P12: Demo Experience Point #5 — SourceTray user material selection override
+  static const String auroraSpineSourceTray = '/aurora/spine/source-tray';
+  static const String auroraSpineSourceTraySelect =
+      '/aurora/spine/source-tray/select';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

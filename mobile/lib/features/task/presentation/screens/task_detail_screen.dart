@@ -610,7 +610,7 @@ class _TaskDetailView extends ConsumerWidget {
               ),
               const SizedBox(width: DS.spacing12),
               Text(
-                '正在加载所属计划...',
+                context.l10n.taskLoadingPlan,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                     ),

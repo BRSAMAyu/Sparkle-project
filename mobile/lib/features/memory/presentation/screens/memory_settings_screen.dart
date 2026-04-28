@@ -7,6 +7,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class MemorySettingsScreen extends ConsumerStatefulWidget {
   const MemorySettingsScreen({super.key});
@@ -97,7 +98,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     if (!AppFeatureFlags.enableUserMemoryControls) {
       setState(() {
         _loading = false;
-        _error = '记忆控制未启用';
+        _error = context.l10n.memNotEnabled;
       });
       return;
     }
@@ -165,7 +166,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         return;
       }
       setState(() {
-        _error = '加载记忆设置失败: $e';
+        _error = context.l10n.memLoadSettingsFailed(e.toString());
         _loading = false;
       });
     }
@@ -230,7 +231,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
       }
       setState(() {
         _saving = false;
-        _error = '保存失败: $e';
+        _error = context.l10n.memSaveFailed(e.toString());
       });
     }
   }
@@ -244,7 +245,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: _goBack,
             variant: ButtonVariant.ghost,
-            semanticLabel: '返回',
+            semanticLabel: context.l10n.memBack,
           ),
           title: Text(
             '记忆控制',
@@ -278,7 +279,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 ),
                 const SizedBox(height: DS.spacing12),
                 Text(
-                  _error ?? '记忆控制不可用',
+                  _error ?? context.l10n.memUnavailable,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -287,7 +288,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 ),
                 const SizedBox(height: DS.md),
                 SparkleButton.primary(
-                  label: '重试',
+                  label: context.l10n.memRetry,
                   onPressed: _loadSettings,
                 ),
               ],
@@ -313,12 +314,12 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       children: [
                         _buildStatusChip(
                           icon: Icons.auto_awesome_outlined,
-                          label: _enabled ? '记忆已启用' : '记忆已暂停',
+                          label: _enabled ? context.l10n.memEnabled : context.l10n.memPaused,
                           color: _enabled ? DS.primaryBase : DS.textSecondary,
                         ),
                         _buildStatusChip(
                           icon: Icons.privacy_tip_outlined,
-                          label: '偏好可控',
+                          label: context.l10n.memPrefControlled,
                           color: const Color(0xFF71917D),
                         ),
                       ],
@@ -342,8 +343,8 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 child: Column(
                   children: [
                     _buildToggleRow(
-                      title: '启用长期记忆',
-                      description: '关闭后会暂停新的记忆写入，但不会删除历史记录。',
+                      title: context.l10n.memEnableLongTerm,
+                      description: context.l10n.memDisableDesc,
                       value: _enabled,
                       onChanged: (value) => setState(() => _enabled = value),
                     ),
@@ -375,14 +376,14 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                     ),
                     const SizedBox(height: DS.md),
                     _buildToggleRow(
-                      title: '自我记忆',
+                      title: context.l10n.memSelfMemory,
                       description: 'self',
                       value: _socialTypeEnabled['self'] ?? true,
                       onChanged: (value) =>
                           setState(() => _socialTypeEnabled['self'] = value),
                     ),
                     _buildToggleRow(
-                      title: '人物提及',
+                      title: context.l10n.memPeopleMention,
                       description: 'person_mention',
                       value: _socialTypeEnabled['person_mention'] ?? true,
                       onChanged: (value) => setState(
@@ -390,7 +391,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       ),
                     ),
                     _buildToggleRow(
-                      title: '关系动态',
+                      title: context.l10n.memRelationshipDynamics,
                       description: 'relationship',
                       value: _socialTypeEnabled['relationship'] ?? true,
                       onChanged: (value) => setState(
@@ -398,7 +399,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       ),
                     ),
                     _buildToggleRow(
-                      title: '承诺事项',
+                      title: context.l10n.memCommitments,
                       description: 'commitment',
                       value: _socialTypeEnabled['commitment'] ?? true,
                       onChanged: (value) => setState(
@@ -418,26 +419,26 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   children: [
                     _buildSectionTitle(
                       '主动提醒',
-                      subtitle: 'Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。',
+                      subtitle: context.l10n.memCommitmentStageNote,
                     ),
                     _buildToggleRow(
-                      title: '启用主动提醒',
-                      description: '总开关。关闭后 Stage 18 主动提醒会全部停用。',
+                      title: context.l10n.memEnableProactive,
+                      description: context.l10n.memProactiveMaster,
                       value: _pushEnabled,
                       onChanged: (value) =>
                           setState(() => _pushEnabled = value),
                     ),
                     _buildToggleRow(
-                      title: '承诺跟进',
-                      description: '只针对你明确表达过、且已经逾期的承诺事项。',
+                      title: context.l10n.memCommitmentFollowup,
+                      description: context.l10n.memCommitmentFollowupDesc,
                       value: _allowCommitmentFollowUp,
                       enabled: _pushEnabled,
                       onChanged: (value) =>
                           setState(() => _allowCommitmentFollowUp = value),
                     ),
                     _buildToggleRow(
-                      title: '活跃恢复',
-                      description: '只针对曾经连续活跃、且 72 小时未活跃的情况。',
+                      title: context.l10n.memActivityRecovery,
+                      description: context.l10n.memActivityRecoveryDesc,
                       value: _allowEngagementRecovery,
                       enabled: _pushEnabled,
                       isLast: true,
@@ -447,10 +448,10 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                     const SizedBox(height: DS.md),
                     _buildSectionTitle(
                       '静默时段',
-                      subtitle: '你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。',
+                      subtitle: context.l10n.memQuietHoursNote,
                     ),
                     _buildChoiceGroup(
-                      title: '开始时间',
+                      title: context.l10n.memStartTime,
                       values: const ['22:00', '22:30', '23:00'],
                       selected: _pushQuietStart,
                       enabled: _pushEnabled,
@@ -459,7 +460,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                     ),
                     const SizedBox(height: DS.spacing12),
                     _buildChoiceGroup(
-                      title: '结束时间',
+                      title: context.l10n.memEndTime,
                       values: const ['07:00', '07:30', '08:00'],
                       selected: _pushQuietEnd,
                       enabled: _pushEnabled,
@@ -478,7 +479,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                           ),
                         ),
                         SparkleButton.ghost(
-                          label: '查看提醒收件箱',
+                          label: context.l10n.memViewInbox,
                           onPressed: () => context.push('/notification-center'),
                         ),
                       ],
@@ -496,34 +497,34 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   children: [
                     _buildSectionTitle(
                       '记忆类型',
-                      subtitle: '决定哪些内容会被长期记住。',
+                      subtitle: context.l10n.memDecideWhat,
                     ),
                     _buildToggleRow(
-                      title: '偏好',
-                      description: '记录回答风格、学习节奏和常见偏好。',
+                      title: context.l10n.memPreference,
+                      description: context.l10n.memPreferenceDesc,
                       value: _allowPreferences,
                       enabled: _enabled,
                       onChanged: (value) =>
                           setState(() => _allowPreferences = value),
                     ),
                     _buildToggleRow(
-                      title: '目标',
-                      description: '记录已确认的长期目标和阶段意图。',
+                      title: context.l10n.memGoals,
+                      description: context.l10n.memGoalsDesc,
                       value: _allowGoals,
                       enabled: _enabled,
                       onChanged: (value) => setState(() => _allowGoals = value),
                     ),
                     _buildToggleRow(
-                      title: '经历',
-                      description: '记录对后续决策有帮助的关键事件与反馈。',
+                      title: context.l10n.memExperience,
+                      description: context.l10n.memExperienceDesc,
                       value: _allowEpisodic,
                       enabled: _enabled,
                       onChanged: (value) =>
                           setState(() => _allowEpisodic = value),
                     ),
                     _buildToggleRow(
-                      title: 'AI 自动记忆',
-                      description: '允许系统从聊天中推断短期经历；每条都必须可见、可撤销。',
+                      title: context.l10n.memAiAutoMemory,
+                      description: context.l10n.memAiAutoMemoryDesc,
                       value: _allowInferredEpisodic,
                       enabled: _enabled && _allowEpisodic,
                       isLast: true,
@@ -543,7 +544,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   children: [
                     _buildSectionTitle(
                       '捕获强度',
-                      subtitle: '越高越积极，但也会记录更多上下文。',
+                      subtitle: context.l10n.memSensitivityNote,
                     ),
                     Wrap(
                       spacing: DS.spacing8,
@@ -581,7 +582,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   children: [
                     _buildSectionTitle(
                       '屏蔽偏好',
-                      subtitle: '不希望长期存储的偏好项可以在这里关闭。',
+                      subtitle: context.l10n.memExcludeNote,
                     ),
                     Wrap(
                       spacing: DS.sm,
@@ -611,7 +612,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   children: [
                     _buildSectionTitle(
                       '屏蔽来源',
-                      subtitle: '限制哪些入口不会写入长期记忆。',
+                      subtitle: context.l10n.memSourceLimit,
                     ),
                     Wrap(
                       spacing: DS.sm,
@@ -636,7 +637,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             SparkleStaggerItem(
               index: 8,
               child: SparkleButton.primary(
-                label: _saving ? '保存中...' : '保存设置',
+                label: _saving ? context.l10n.memSaving : context.l10n.memSaveSettings,
                 onPressed: _saving ? () {} : _saveSettings,
               ),
             ),

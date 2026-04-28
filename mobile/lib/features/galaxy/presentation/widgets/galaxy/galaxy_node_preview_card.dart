@@ -199,7 +199,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: _CardActionButton(
-                      label: isChinese ? '立刻学习' : 'Start Review',
+                      label: context.l10n.galaxyStartReview,
                       icon: Icons.bolt_rounded,
                       color: glowColor,
                       onPressed: onStartReview,
@@ -364,7 +364,7 @@ class _ReviewUrgencyCallout extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isChinese ? '推荐复习' : 'Best Review Window',
+                  context.l10n.galaxyBestReviewWindow,
                   style: TextStyle(
                     color: sectorColor,
                     fontSize: 12,
@@ -409,7 +409,7 @@ class _ReviewUrgencyCallout extends StatelessWidget {
 
   String _buildReviewMessage() {
     if (isChinese) {
-      return '这个知识点你上次掌握度 ${node.masteryScore} 分，基于你的学习频率，现在是强化它的好时机。';
+      return context.l10n.galaxyPreviewHighMastery(node.masteryScore);
     }
     return 'Your last mastery here was ${node.masteryScore}/100. Based on your study rhythm, now is a good time to reinforce it.';
   }
@@ -418,15 +418,15 @@ class _ReviewUrgencyCallout extends StatelessWidget {
     if (isChinese) {
       switch (node.reviewUrgencyReason) {
         case 'recent_errors':
-          return '最近相关错题有回流，趁现在补一轮更容易稳住。';
+          return context.l10n.galaxyPreviewErrorReturn;
         case 'review_window':
           return daysSince > 0
-              ? '距离上次强化已经约 $daysSince 天，正好卡在复习窗口。'
-              : '它已经进入复习窗口，补一轮会更划算。';
+              ? context.l10n.galaxyPreviewReviewWindow(daysSince)
+              : context.l10n.galaxyPreviewReviewReady;
         case 'low_mastery':
-          return '当前掌握度还不稳，趁记忆还在时再加固一次。';
+          return context.l10n.galaxyPreviewUnstable;
         default:
-          return '现在补一次，能更顺手地把它重新点亮。';
+          return context.l10n.galaxyPreviewReLight;
       }
     }
 

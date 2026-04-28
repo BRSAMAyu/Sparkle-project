@@ -90,6 +90,20 @@ class TaskEventConsumer:
                 await MetacognitionService(db, cache_service.redis, self.event_bus).refresh_snapshot(user_id)
                 await bridge.handle_group_task_completed(event)
 
+                # Signal-to-Action Spine: task.completed → signal detection
+                try:
+                    from app.signals.spine_orchestrator import SpineOrchestrator
+                    spine = SpineOrchestrator(cache_service.redis)
+                    await spine.on_task_completed(
+                        user_id=str(user_id),
+                        task_id=str(task_id),
+                        estimated_minutes=estimated,
+                        actual_minutes=actual,
+                        plan_id=event.get("plan_id"),
+                    )
+                except Exception as spine_exc:
+                    logger.warning("Spine pipeline error for task {}: {}", task_id, spine_exc)
+
                 try:
                     auto_collector = AutoFragmentCollector(db)
                     await auto_collector.collect_from_task_completion(
@@ -170,6 +184,21 @@ class TaskEventConsumer:
                     difficulty_delta=event.get("difficulty_delta"),
                     feedback_text=event.get("feedback_text") or event.get("feedback"),
                 )
+
+                # Signal-to-Action Spine: quiz accuracy check on feedback
+                try:
+                    quiz_accuracy = event.get("quiz_accuracy")
+                    if quiz_accuracy is not None:
+                        from app.signals.spine_orchestrator import SpineOrchestrator
+                        spine = SpineOrchestrator(cache_service.redis)
+                        await spine.on_quiz_result(
+                            user_id=str(user_id),
+                            task_id=str(task_id),
+                            quiz_accuracy=float(quiz_accuracy),
+                            linked_node_ids=event.get("linked_node_ids"),
+                        )
+                except Exception as spine_exc:
+                    logger.debug("Spine on_quiz_result skipped: {}", spine_exc)
         except Exception as e:
             logger.error(f"Failed to handle task.feedback_submitted: {e}")
 

@@ -9,6 +9,7 @@ import 'package:sparkle/features/settings/presentation/widgets/openclaw_connecti
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_execution_preferences_card.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class OpenClawSettingsScreen extends ConsumerStatefulWidget {
   const OpenClawSettingsScreen({super.key});
@@ -47,7 +48,7 @@ class _OpenClawSettingsScreenState
   Future<void> _clearQueuedRequests(OpenClawConnectionService service) async {
     await service.clearQueuedRequests();
     if (!mounted) return;
-    _showSnackBar('等待队列已清空');
+    _showSnackBar(context.l10n.settingsQueueCleared);
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -197,7 +198,7 @@ class _OpenClawSettingsScreenState
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Text('重试队列'),
+                                  : Text(context.l10n.settingsRetryQueue),
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),

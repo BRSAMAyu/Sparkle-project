@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 
 @immutable
@@ -171,7 +172,7 @@ class ExamSprintTaskItem {
   factory ExamSprintTaskItem.fromJson(Map<String, dynamic> json) =>
       ExamSprintTaskItem(
         id: _asString(json['id']),
-        title: _asString(json['title'], fallback: '未命名任务'),
+        title: _asString(json['title'], fallback: S.unnamedTask),
         status: _asString(json['status'], fallback: 'PENDING').toUpperCase(),
         estimatedMinutes: _asInt(json['estimated_minutes']),
         isCompleted: _asBool(

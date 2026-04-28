@@ -286,7 +286,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                 controller: goalController,
                 decoration: const InputDecoration(
                   labelText: '我的目标',
-                  hintText: '例如：每天学习英语 30 分钟',
+                  hintText: context.l10n.communityFriendGoalHint,
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,

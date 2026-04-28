@@ -164,6 +164,22 @@ class GalaxyEventConsumer:
                     )
             await db.commit()
 
+        # P8: Signal-to-Action Spine — mistake detection
+        # Iron Rule: GalaxyService mastery is updated separately (ErrorBookMasterySyncService).
+        # This call only generates control signals (transfer_failure) for task strategy.
+        try:
+            from app.core.cache import cache_service
+            from app.signals.spine_orchestrator import SpineOrchestrator
+            spine = SpineOrchestrator(cache_service.redis)
+            await spine.on_mistake_event(
+                user_id=str(user_id),
+                error_id=str(error_id) if error_id else "",
+                linked_node_ids=[str(n) for n in linked_node_uuids],
+                error_type=event.get("error_type"),
+            )
+        except Exception as spine_err:
+            logger.debug(f"Spine on_mistake_event skipped: {spine_err}")
+
         logger.info(f"Processed error_created for user {user_id}")
 
     async def _handle_node_updated(self, event: dict):

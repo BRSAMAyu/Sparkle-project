@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AttachmentPickerSheet extends StatelessWidget {
   const AttachmentPickerSheet({
@@ -67,7 +68,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  title ?? '附件与文档',
+                  title ?? context.l10n.chatAttachTitle,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
@@ -79,8 +80,8 @@ class AttachmentPickerSheet extends StatelessWidget {
             _AttachmentOption(
               icon: Icons.upload_file_rounded,
               iconColor: DS.brandPrimary,
-              title: primaryTitle ?? '直接上传文件',
-              subtitle: primarySubtitle ?? '上传文档或图片到对话中',
+              title: primaryTitle ?? context.l10n.chatAttachDirectUpload,
+              subtitle: primarySubtitle ?? context.l10n.chatAttachUploadDesc,
               onTap: () {
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 Navigator.pop(context);
@@ -90,8 +91,8 @@ class AttachmentPickerSheet extends StatelessWidget {
             _AttachmentOption(
               icon: Icons.auto_fix_high_rounded,
               iconColor: DS.prismPurple,
-              title: 'AI 文档清洗',
-              subtitle: '提取文本、OCR 识别和整理',
+              title: context.l10n.chatAttachAiDocClean,
+              subtitle: context.l10n.chatAttachAiDocCleanDesc,
               onTap: () {
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
                 Navigator.pop(context);

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 错题档案 Repository
 ///
@@ -51,7 +52,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '创建错题失败');
+      throw _handleError(e, context.l10n.ebCreateFailed);
     }
   }
 
@@ -98,7 +99,7 @@ class ErrorBookRepository {
 
       return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '获取错题列表失败');
+      throw _handleError(e, context.l10n.ebListFailed);
     }
   }
 
@@ -112,7 +113,7 @@ class ErrorBookRepository {
           await _dio.get<Map<String, dynamic>>('$_basePath/$errorId');
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '获取错题详情失败');
+      throw _handleError(e, context.l10n.ebDetailFailed);
     }
   }
 
@@ -146,7 +147,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '更新错题失败');
+      throw _handleError(e, context.l10n.ebUpdateFailed);
     }
   }
 
@@ -158,7 +159,7 @@ class ErrorBookRepository {
     try {
       await _dio.delete<void>('$_basePath/$errorId');
     } on DioException catch (e) {
-      throw _handleError(e, '删除错题失败');
+      throw _handleError(e, context.l10n.ebDeleteFailed);
     }
   }
 
@@ -170,7 +171,7 @@ class ErrorBookRepository {
     try {
       await _dio.post<void>('$_basePath/$errorId/analyze');
     } on DioException catch (e) {
-      throw _handleError(e, '重新分析失败');
+      throw _handleError(e, context.l10n.ebAnalysisFailed);
     }
   }
 
@@ -202,7 +203,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '提交复习记录失败');
+      throw _handleError(e, context.l10n.ebReviewFailed);
     }
   }
 
@@ -225,7 +226,7 @@ class ErrorBookRepository {
 
       return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '获取今日复习列表失败');
+      throw _handleError(e, context.l10n.ebTodayReviewFailed);
     }
   }
 
@@ -243,7 +244,7 @@ class ErrorBookRepository {
       final response = await _dio.get<Map<String, dynamic>>('$_basePath/stats');
       return ReviewStats.fromJson(response.data ?? <String, dynamic>{});
     } on DioException catch (e) {
-      throw _handleError(e, '获取统计数据失败');
+      throw _handleError(e, context.l10n.ebStatsFailed);
     }
   }
 
@@ -258,7 +259,7 @@ class ErrorBookRepository {
         response.data ?? <String, dynamic>{},
       );
     } on DioException catch (e) {
-      throw _handleError(e, '获取语义摘要失败');
+      throw _handleError(e, context.l10n.ebSummaryFailed);
     }
   }
 
@@ -275,7 +276,7 @@ class ErrorBookRepository {
       final data = e.response?.data;
       final errorDetail =
           data is Map<String, dynamic> ? data['detail'] as String? : null;
-      return Exception(errorDetail ?? '请求参数错误');
+      return Exception(errorDetail ?? context.l10n.ebBadParams);
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
       return Exception('网络超时，请检查网络连接');

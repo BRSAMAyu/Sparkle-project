@@ -10,6 +10,7 @@ import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.d
 import 'package:sparkle/features/translation/data/services/knowledge_integration_service.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Lightweight popover for word/phrase translation
 ///
@@ -144,7 +145,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
             _isSaving = false;
           });
 
-          AppFeedback.error(context, '保存失败，请重试');
+          AppFeedback.error(context, context.l10n.transSaveFailed);
         }
       }
     } on ServiceUnavailableException catch (e) {
@@ -177,7 +178,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         setState(() {
           _isSaving = false;
         });
-        AppFeedback.error(context, '未知错误: $e');
+        AppFeedback.error(context, context.l10n.transUnknownError(e.toString()));
       }
     }
   }
@@ -229,7 +230,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton(
-                    label: _saved ? '已保存' : (_isSaving ? '保存中...' : '生词卡'),
+                    label: _saved ? context.l10n.transSaved : (_isSaving ? context.l10n.transSaving : context.l10n.transWordCard),
                     icon: Icon(
                       _saved ? Icons.bookmark : Icons.bookmark_add_outlined,
                       size: DS.iconSizeXs,
@@ -256,7 +257,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           SizedBox(width: DS.sm),
-          Text('翻译中...', style: TextStyle(fontSize: 14)),
+          Text(context.l10n.transTranslating, style: TextStyle(fontSize: 14)),
         ],
       );
 

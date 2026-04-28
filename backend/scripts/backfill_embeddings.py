@@ -25,9 +25,10 @@ from app.config import settings
 class EmbeddingBackfill:
     """Embedding 回填器"""
 
-    def __init__(self, batch_size: int = 10, delay: float = 0.2):  # DashScope limit: ≤10 per batch
+    def __init__(self, batch_size: int = 10, delay: float = 0.2, force: bool = False):  # DashScope limit: ≤10 per batch
         self.batch_size = batch_size
         self.delay = delay
+        self.force = force
         self.stats = {
             "total_nodes": 0,
             "nodes_without_embedding": 0,
@@ -39,8 +40,10 @@ class EmbeddingBackfill:
         }
 
     async def get_nodes_without_embedding(self, session, limit: int = None) -> List[KnowledgeNode]:
-        """获取没有 embedding 的节点"""
-        stmt = select(KnowledgeNode).where(KnowledgeNode.embedding.is_(None))
+        """获取没有 embedding 的节点（force=True 时获取所有节点）"""
+        stmt = select(KnowledgeNode)
+        if not self.force:
+            stmt = stmt.where(KnowledgeNode.embedding.is_(None))
         if limit:
             stmt = stmt.limit(limit)
         stmt = stmt.order_by(KnowledgeNode.id)
@@ -90,14 +93,20 @@ class EmbeddingBackfill:
             result = await session.execute(select(func.count(KnowledgeNode.id)))
             self.stats["total_nodes"] = result.scalar()
 
-            result = await session.execute(
-                select(func.count(KnowledgeNode.id)).where(KnowledgeNode.embedding.is_(None))
-            )
-            self.stats["nodes_without_embedding"] = result.scalar()
+            if self.force:
+                self.stats["nodes_without_embedding"] = self.stats["total_nodes"]
+            else:
+                result = await session.execute(
+                    select(func.count(KnowledgeNode.id)).where(KnowledgeNode.embedding.is_(None))
+                )
+                self.stats["nodes_without_embedding"] = result.scalar()
 
         print(f"\n📊 节点统计:")
         print(f"   总节点数: {self.stats['total_nodes']}")
-        print(f"   需要 embedding: {self.stats['nodes_without_embedding']}")
+        if self.force:
+            print(f"   强制重新嵌入: {self.stats['nodes_without_embedding']}")
+        else:
+            print(f"   需要 embedding: {self.stats['nodes_without_embedding']}")
 
         if self.stats["nodes_without_embedding"] == 0:
             print("\n✅ 所有节点都已有 embedding，无需回填")
@@ -163,6 +172,7 @@ async def main():
     parser.add_argument("--batch-size", type=int, default=10, help="批量大小 (DashScope API 限制 ≤10)")
     parser.add_argument("--delay", type=float, default=0.2, help="API 调用延迟（秒）")
     parser.add_argument("--dry-run", action="store_true", help="仅统计，不实际更新")
+    parser.add_argument("--force", action="store_true", help="重新嵌入所有节点（包括已有 embedding 的节点）")
 
     args = parser.parse_args()
 
@@ -185,7 +195,7 @@ async def main():
         print("\n使用 --batch-size 和 --delay 参数控制处理速度")
         return
 
-    backfill = EmbeddingBackfill(batch_size=args.batch_size, delay=args.delay)
+    backfill = EmbeddingBackfill(batch_size=args.batch_size, delay=args.delay, force=args.force)
     await backfill.run()
 
 

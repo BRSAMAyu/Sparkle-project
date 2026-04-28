@@ -886,7 +886,7 @@ class EventBus:
 
     def __init__(self, redis_url: str | None = None):
         # We delay connection until needed or explicitly initialized
-        self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url or os.getenv("REDIS_URL") or settings.REDIS_URL
         self.redis: redis.Redis | None = None
         self._consumers = []
         self._consumer_tasks: list[asyncio.Task] = []
@@ -1288,7 +1288,8 @@ class EventBus:
         if not self.redis:
             return []
         try:
-            next_id, messages = await self.redis.xautoclaim(
+            # redis-py 7.0+ returns (next_id, messages, deleted_ids)
+            result = await self.redis.xautoclaim(
                 stream,
                 group_name,
                 consumer_name,
@@ -1296,6 +1297,7 @@ class EventBus:
                 start_id="0-0",
                 count=10,
             )
+            next_id, messages = result[0], result[1]
             if next_id:
                 _ = next_id
             return list(messages or [])

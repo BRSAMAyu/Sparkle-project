@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCompletionCelebration extends StatefulWidget {
@@ -80,7 +81,7 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '今天完成了！',
+                      context.l10n.taskCompletedToday,
                       textAlign: TextAlign.center,
                       style: DS.titleLarge.copyWith(
                         color: DS.textPrimary,
@@ -89,7 +90,7 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                     ),
                     const SizedBox(height: DS.spacing8),
                     Text(
-                      '✓ 做到了！',
+                      context.l10n.taskDone,
                       textAlign: TextAlign.center,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -112,7 +113,7 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                       )
                     else
                       Text(
-                        '你完成了今天给自己的这一小步。',
+                        context.l10n.taskCompletedOneStep,
                         textAlign: TextAlign.center,
                         style: DS.bodyMedium.copyWith(
                           color: DS.textSecondary,
@@ -121,7 +122,7 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                       ),
                     const SizedBox(height: DS.spacing20),
                     SparkleButton(
-                      label: '继续下一个',
+                      label: context.l10n.taskContinueNext,
                       icon: const Icon(Icons.arrow_forward_rounded),
                       onPressed: widget.onContinue,
                     ),

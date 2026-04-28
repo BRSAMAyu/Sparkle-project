@@ -358,7 +358,7 @@ class _LinkListBlock extends StatelessWidget {
             await Clipboard.setData(ClipboardData(text: link['url'] ?? ''));
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('链接已复制')),
+                SnackBar(content: Text(context.l10n.taskLinkCopied)),
               );
             }
           },
@@ -641,7 +641,7 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
                   unawaited(Clipboard.setData(ClipboardData(text: imageUrl)));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('附件链接已复制')),
+                      SnackBar(content: Text(context.l10n.taskAttachmentLinkCopied)),
                     );
                   }
                 },
@@ -739,7 +739,7 @@ class _ArtifactPreviewSheet extends StatelessWidget {
                       unawaited(Clipboard.setData(ClipboardData(text: url)));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('附件链接已复制')),
+                          SnackBar(content: Text(context.l10n.taskAttachmentLinkCopied)),
                         );
                       }
                     },

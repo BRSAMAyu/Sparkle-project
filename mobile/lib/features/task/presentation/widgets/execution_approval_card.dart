@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
@@ -34,7 +35,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
   String _parsedOutputSummary() {
     final parsed = widget.record.parsedOutput;
     if (parsed == null || parsed.isEmpty) {
-      return 'AI 已准备好结果，等待你确认。';
+      return context.l10n.taskAiReadyConfirm;
     }
     return parsed.entries
         .map((entry) => '${entry.key}: ${entry.value}')
@@ -44,14 +45,14 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
 
   String _formatDuration(int? durationMs) {
     if (durationMs == null || durationMs <= 0) {
-      return '未记录';
+      return context.l10n.taskNotRecorded;
     }
     final duration = Duration(milliseconds: durationMs);
     if (duration.inMinutes >= 1) {
       final seconds = duration.inSeconds % 60;
-      return '${duration.inMinutes}分${seconds > 0 ? '$seconds秒' : ''}';
+      return seconds > 0 ? context.l10n.taskDurationMinSec(duration.inMinutes, seconds) : context.l10n.taskDurationMin(duration.inMinutes);
     }
-    return '${(duration.inMilliseconds / 1000).toStringAsFixed(1)}秒';
+    return context.l10n.taskDurationSec((duration.inMilliseconds / 1000).toStringAsFixed(1));
   }
 
   Color _trustColor() {
@@ -123,7 +124,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                 Expanded(
                   child: _MetricChip(
                     icon: Icons.construction_outlined,
-                    label: '工具 ${widget.record.toolCallsCount} 次',
+                    label: context.l10n.taskToolCallsCount(widget.record.toolCallsCount),
                   ),
                 ),
                 const SizedBox(width: DS.spacing8),
@@ -170,7 +171,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                     _InfoPanel(
                       title: widget.record.comparisonSummary!['headline']
                               ?.toString() ??
-                          '结果对比',
+                          context.l10n.taskResultComparison,
                       message: widget.record.comparisonSummary!['summary']
                               ?.toString() ??
                           '',
@@ -407,7 +408,7 @@ class _ReplayStepTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  step['label']?.toString() ?? '执行步骤',
+                  step['label']?.toString() ?? context.l10n.taskExecutionStep,
                   style: DS.bodyMedium.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -459,7 +460,7 @@ class _ChecklistTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                item['label']?.toString() ?? '检查项',
+                item['label']?.toString() ?? context.l10n.taskCheckItem,
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
@@ -500,7 +501,7 @@ class _FieldChangeTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            field['field']?.toString() ?? '字段变化',
+            field['field']?.toString() ?? context.l10n.taskFieldChange,
             style: DS.bodySmall.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
@@ -509,14 +510,14 @@ class _FieldChangeTile extends StatelessWidget {
           if ((field['previous']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing4),
             Text(
-              '上次：${field['previous']}',
+              context.l10n.taskPreviousValue(field['previous']),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
           ],
           if ((field['current']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing2),
             Text(
-              '这次：${field['current']}',
+              context.l10n.taskCurrentValue(field['current']),
               style: DS.bodySmall.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightMedium,
@@ -550,7 +551,7 @@ class _TargetComparison extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: _CompareBlock(label: '目标', content: goal),
+            child: _CompareBlock(label: context.l10n.taskTargetLabel, content: goal),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
@@ -560,7 +561,7 @@ class _TargetComparison extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: _CompareBlock(label: 'AI结果', content: resultSummary),
+            child: _CompareBlock(label: context.l10n.taskAiResultLabel, content: resultSummary),
           ),
         ],
       ),

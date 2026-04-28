@@ -10,6 +10,7 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/insights/presentation/widgets/predictive_insights_card.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 学习预测洞察屏幕 - 展示AI预测的学习趋势
 ///
@@ -66,7 +67,7 @@ class _LearningForecastScreenState
       }
       setState(() {
         _isLoading = false;
-        _errorMessage = '加载失败: $e';
+        _errorMessage = context.l10n.insLoadFailed(e.toString());
       });
     }
   }
@@ -98,7 +99,7 @@ class _LearningForecastScreenState
           ),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text('学习预测洞察', style: TextStyle(color: DS.textPrimary)),
+          title: Text(context.l10n.insForecastTitle, style: TextStyle(color: DS.textPrimary)),
           iconTheme: IconThemeData(color: DS.textPrimary),
           actions: [
             SparkleIconButton(
@@ -125,7 +126,7 @@ class _LearningForecastScreenState
                             ),
                             const SizedBox(height: DS.md),
                             Text(
-                              _errorMessage ?? '预测数据暂时还没准备好',
+                              _errorMessage ?? context.l10n.insForecastEmpty,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: DS.textPrimary,
@@ -146,7 +147,7 @@ class _LearningForecastScreenState
                             FilledButton.icon(
                               onPressed: _loadDashboard,
                               icon: const Icon(Icons.refresh),
-                              label: const Text('重新加载'),
+                              label: Text(context.l10n.insReload),
                             ),
                           ],
                         ),
@@ -187,13 +188,13 @@ class _LearningForecastScreenState
                             const SizedBox(height: DS.xl),
 
                             // Nightly Review
-                            _buildSectionTitle('夜间复盘'),
+                            _buildSectionTitle(context.l10n.insNightReview),
                             const SizedBox(height: DS.md),
                             const NightlyReviewPanel(compact: true),
                             const SizedBox(height: DS.xl),
 
                             // Engagement Heatmap
-                            _buildSectionTitle('学习活跃度分析'),
+                            _buildSectionTitle(context.l10n.insActivityAnalysis),
                             const SizedBox(height: DS.md),
                             EngagementHeatmap(
                               data: _heatmapData,
@@ -204,7 +205,7 @@ class _LearningForecastScreenState
                             const SizedBox(height: DS.xl),
 
                             // Insights Cards
-                            _buildSectionTitle('AI 洞察'),
+                            _buildSectionTitle(context.l10n.insAiInsights),
                             const SizedBox(height: DS.md),
 
                             // Engagement Forecast
@@ -334,7 +335,7 @@ class _LearningForecastScreenState
             Text(
               hasRecommendations
                   ? '基于 $sampleSize 条学习记录，当前推荐置信度 ${(confidence * 100).round()}%。'
-                  : (reason.isEmpty ? '还没有足够数据生成稳定推荐。' : reason),
+                  : (reason.isEmpty ? context.l10n.insNotEnoughData : reason),
               style: TextStyle(
                 color: DS.textSecondary,
                 fontSize: 13,

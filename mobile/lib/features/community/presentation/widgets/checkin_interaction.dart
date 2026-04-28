@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -72,7 +73,7 @@ class CheckinInteraction extends StatelessWidget {
               ),
               if (isMyCheckin)
                 Text(
-                  '我的打卡',
+                  context.l10n.communityMyCheckin,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.primary,
                       ),
@@ -135,7 +136,7 @@ class CheckinInteraction extends StatelessWidget {
         const Icon(Icons.favorite, size: 16, color: Colors.red),
         const SizedBox(width: 4),
         Text(
-          '$likes 点赞',
+          context.l10n.communityLikesCount(likes),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -161,7 +162,7 @@ class CheckinInteraction extends StatelessWidget {
             const Icon(Icons.chat_bubble_outline, size: 16),
             const SizedBox(width: 4),
             Text(
-              '鼓励',
+              context.l10n.communityEncourage,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -175,7 +176,7 @@ class CheckinInteraction extends StatelessWidget {
         const Icon(Icons.chat_bubble_outline, size: 16),
         const SizedBox(width: 4),
         Text(
-          '${encouragements.length} 条鼓励',
+          context.l10n.communityEncouragementsCount(encouragements.length),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -187,7 +188,7 @@ class CheckinInteraction extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '鼓励消息',
+          context.l10n.communityEncouragementMessages,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -247,7 +248,7 @@ class CheckinInteraction extends StatelessWidget {
     if (encouragement.authorName.isNotEmpty) {
       return encouragement.authorName;
     }
-    return '伙伴';
+    return context.l10n.communityPartnerFallback;
   }
 
   void _showEncourageDialog(BuildContext context) {
@@ -256,20 +257,20 @@ class CheckinInteraction extends StatelessWidget {
     showSensoryDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('发送鼓励'),
+        title: Text(context.l10n.communitySendEncouragement),
         content: TextField(
           controller: controller,
           maxLines: 3,
           maxLength: 500,
           decoration: const InputDecoration(
-            hintText: '写下你的鼓励...',
+            hintText: context.l10n.communityWriteEncouragement,
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -279,7 +280,7 @@ class CheckinInteraction extends StatelessWidget {
                 Navigator.of(context).pop();
               }
             },
-            child: const Text('发送'),
+            child: Text(context.l10n.communitySendEncouragement),
           ),
         ],
       ),
@@ -291,13 +292,13 @@ class CheckinInteraction extends StatelessWidget {
     final difference = now.difference(time);
 
     if (difference.inMinutes < 1) {
-      return '刚刚';
+      return context.l10n.communityJustNow;
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}分钟前';
+      return context.l10n.communityMinutesAgo(difference.inMinutes);
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}小时前';
+      return context.l10n.communityHoursAgo(difference.inHours);
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
+      return context.l10n.communityDaysAgo(difference.inDays);
     } else {
       return '${time.month}-${time.day}';
     }
@@ -323,7 +324,7 @@ class EncouragementMessage {
   factory EncouragementMessage.fromJson(Map<String, dynamic> json) => EncouragementMessage(
       id: json['id'] as String,
       authorId: json['user_id'] as String,
-      authorName: json['author_name'] as String? ?? '伙伴',
+      authorName: json['author_name'] as String? ?? context.l10n.communityPartnerFallback,
       message: json['message'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -466,7 +467,7 @@ class CheckinInteractionList extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无打卡记录',
+              context.l10n.communityNoCheckinYet,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -500,7 +501,7 @@ class CheckinWithInteraction {
   factory CheckinWithInteraction.fromJson(Map<String, dynamic> json) => CheckinWithInteraction(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      authorName: json['author_name'] as String? ?? '用户',
+      authorName: json['author_name'] as String? ?? context.l10n.communityUserFallback,
       content: json['content'] as String,
       likes: json['likes'] as int? ?? 0,
       encouragements: (json['encouragements'] as List? ?? [])

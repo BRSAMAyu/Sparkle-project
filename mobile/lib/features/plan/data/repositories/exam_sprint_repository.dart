@@ -4,6 +4,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 final examSprintRepositoryProvider = Provider<ExamSprintRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -36,7 +37,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '考试冲刺设置提交失败');
+      throw Exception(e.message ?? S.planSprintSubmitFailed);
     }
   }
 
@@ -54,7 +55,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '考试复盘提交失败');
+      throw Exception(e.message ?? S.planSprintSubmitFailed);
     }
   }
 
@@ -79,7 +80,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '冲刺完成检测失败');
+      throw Exception(e.message ?? S.planSprintSubmitFailed);
     }
   }
 
@@ -110,7 +111,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '学习档案加载失败');
+      throw Exception(e.message ?? S.planPortfolioLoadFailedMsg);
     }
   }
 }

@@ -407,6 +407,101 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           );
         }
 
+        // Spine: StaleStateGuard recovery card
+        if (metadata != null && metadata['spine_stale_card'] != null) {
+          final staleData = _decodeMapOrString(metadata['spine_stale_card']);
+          if (staleData != null) {
+            return StaleRecoveryEvent(
+              staleData: staleData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: UserVisibleReceipt card
+        if (metadata != null && metadata['spine_receipt'] != null) {
+          final receiptData = _decodeMapOrString(metadata['spine_receipt']);
+          if (receiptData != null) {
+            return SpineReceiptEvent(
+              receiptData: receiptData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: UX risk warning (divine moment #5 阻止低收益)
+        if (metadata != null && metadata['spine_ux_warning'] != null) {
+          final warningData = _decodeMapOrString(metadata['spine_ux_warning']);
+          if (warningData != null) {
+            return UXWarningEvent(
+              warningData: warningData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Community hint card (divine moment #6 社群经验转策略)
+        if (metadata != null && metadata['spine_community_hint'] != null) {
+          final hintData = _decodeMapOrString(metadata['spine_community_hint']);
+          if (hintData != null) {
+            return CommunityHintEvent(
+              hintData: hintData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Growth card (divine moment #1 看见坚持)
+        if (metadata != null && metadata['spine_growth_card'] != null) {
+          final growthData = _decodeMapOrString(metadata['spine_growth_card']);
+          if (growthData != null) {
+            return GrowthCardEvent(
+              cardData: growthData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Goal Arbitration Card — multi-goal conflict surface
+        if (metadata != null && metadata['spine_goal_arbitration'] != null) {
+          final arbData =
+              _decodeMapOrString(metadata['spine_goal_arbitration']);
+          if (arbData != null) {
+            return GoalArbitrationEvent(
+              arbData: arbData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Degraded mode indicator (STAB-012)
+        if (metadata != null && metadata['spine_degraded'] == 'true') {
+          return SpineDegradedEvent(
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         return TextEvent(
           content: deltaContent,
           responseId: responseId,
@@ -591,7 +686,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           final code = (error['error_code'] as String?) ?? 'UNKNOWN';
           return ErrorEvent(
             code: code,
-            message: error['message'] as String? ?? '未知错误',
+            message: error['message'] as String? ?? S.chatWsUnknownError,
             retryable: error['retryable'] as bool? ?? false,
             responseId: responseId,
             traceId: traceId,
@@ -601,7 +696,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
         return ErrorEvent(
           code: 'UNKNOWN',
-          message: '未知错误',
+          message: S.chatWsUnknownError,
           retryable: false,
           responseId: responseId,
           traceId: traceId,
@@ -689,7 +784,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'nack':
         final messageId = data['message_id'] as String?;
         final errorCode = data['error_code'] as String? ?? 'unknown';
-        final errorMessage = data['error_message'] as String? ?? '未知错误';
+        final errorMessage = data['error_message'] as String? ?? S.chatWsUnknownError;
         final retryAfterMs = data['retry_after_ms'] as int?;
         if (messageId != null) {
           return NackEvent(

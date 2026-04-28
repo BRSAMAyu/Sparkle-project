@@ -89,8 +89,13 @@ class ErrorReplanBridge:
         "knowledge_transfer_fail",
         "prerequisite_missing",
         "careless_error",
+        "memory_lapse",
+        "calculation_error",
+        "method_wrong",
+        "logic_error",
+        "reading_careless",
     }
-    REPLAN_ELIGIBLE_ERROR_TYPES = TRIGGERING_ERROR_TYPES - {"careless_error"}
+    REPLAN_ELIGIBLE_ERROR_TYPES = TRIGGERING_ERROR_TYPES - {"careless_error", "reading_careless"}
     HIGH_SEVERITY_VALUES = {"high", "critical", "severe", "urgent", "error", "3", "4", "5"}
     SPECIALIZED_REPAIR_DURATION_MINUTES = 30
     SPECIALIZED_REPAIR_SCHEDULE_OPTIONS = ("today", "tomorrow")

@@ -52,11 +52,11 @@ class AgentMessageRenderer extends ConsumerWidget {
       icon: Icons.check_circle_outline,
     ),
     'knowledge_card': _WidgetTypeConfig(
-      label: '知识卡',
+      label: context.l10n.chatWidgetKnowledge,
       icon: Icons.auto_stories,
     ),
     'task_list': _WidgetTypeConfig(
-      label: '任务列表',
+      label: context.l10n.chatActionTaskList,
       icon: Icons.list_alt,
     ),
     'plan_card': _WidgetTypeConfig(
@@ -64,15 +64,15 @@ class AgentMessageRenderer extends ConsumerWidget {
       icon: Icons.map_outlined,
     ),
     'plan_context_summary': _WidgetTypeConfig(
-      label: '计划摘要',
+      label: context.l10n.chatWidgetPlanSummary,
       icon: Icons.summarize_outlined,
     ),
     'plan_state': _WidgetTypeConfig(
-      label: '计划状态',
+      label: context.l10n.chatWidgetPlanStatus,
       icon: Icons.flag_outlined,
     ),
     'prism_card': _WidgetTypeConfig(
-      label: '认知分析',
+      label: context.l10n.chatWidgetCognitiveAnalysis,
       icon: Icons.psychology_outlined,
     ),
     'achievement_card': _WidgetTypeConfig(
@@ -87,12 +87,12 @@ class AgentMessageRenderer extends ConsumerWidget {
   };
 
   static const _collaborationConfig = _WidgetTypeConfig(
-    label: '协作过程',
+    label: context.l10n.chatWidgetCollaborationProcess,
     icon: Icons.hub_outlined,
   );
 
   static const _errorInfoConfig = _WidgetTypeConfig(
-    label: '错误提示',
+    label: context.l10n.chatWidgetErrorHint,
     icon: Icons.warning_amber,
     accentColor: Colors.redAccent,
   );
@@ -258,7 +258,7 @@ class AgentMessageRenderer extends ConsumerWidget {
       );
 
   Widget _buildAchievementCard(BuildContext context, Map<String, dynamic> data) {
-    final name = (data['name'] ?? data['title'] ?? '成就解锁').toString();
+    final name = (data['name'] ?? data['title'] ?? context.l10n.chatWidgetAchievementUnlock).toString();
     final desc = (data['description'] ?? '').toString();
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),

@@ -62,31 +62,31 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     'study_group': '学习小组',
     'knowledge_debate': '知识辩论',
     'historical_roleplay': '历史角色扮演',
-    'socratic_dialogue': '苏格拉底对话',
+    'socratic_dialogue': context.l10n.simSocratic,
     'case_analysis': '案例分析',
     'what_if_path': '如果路径',
     'concept_map_build': '概念图构建',
-    'error_diagnosis': '错误诊断',
+    'error_diagnosis': context.l10n.simErrorDiag,
   };
   static const Map<String, List<String>> _scenarioParticipantOptions = {
     'study_group': ['优等生', '中等生', '提问者', '总结者', '练习教练'],
     'knowledge_debate': ['正方专家', '反方专家', '主持人', '证据审查员', '追问者'],
     'historical_roleplay': ['历史导师', '关键人物', '时代观察者', '策略顾问', '记录官'],
-    'socratic_dialogue': ['苏格拉底', '怀疑者', '拆解者', '应用者'],
+    'socratic_dialogue': [context.l10n.simSocraticShort, context.l10n.simSkeptic, context.l10n.simBreakdown, context.l10n.simApplicator],
     'case_analysis': ['案例导师', '诊断官', '实践派', '反例提出者', '决策记录官'],
-    'what_if_path': ['当前路线', '激进路线', '风险观察者', '资源调度者', '验证者'],
+    'what_if_path': ['当前路线', '激进路线', '风险观察者', '资源调度者', context.l10n.simValidator],
     'concept_map_build': ['结构师', '连接者', '提问者', '反例检查员', '桥梁构建者'],
-    'error_diagnosis': ['错因分析师', '纠偏教练', '验证者', '题面解构者', '迁移教练'],
+    'error_diagnosis': [context.l10n.simErrorAnalyst, context.l10n.simCorrectCoach, context.l10n.simValidator, context.l10n.simDeconstructor, context.l10n.simTransferCoach],
   };
   static const Map<String, String> _scenarioDescriptions = {
     'study_group': '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。',
     'knowledge_debate': '让不同立场直接碰撞，适合验证观点、证据和边界条件。',
     'historical_roleplay': '带入人物与时代约束，让讨论像真实历史现场一样推进。',
-    'socratic_dialogue': '通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。',
+    'socratic_dialogue': context.l10n.simSocraticDesc,
     'case_analysis': '围绕具体案例做拆解、诊断和决策，适合实务型主题。',
     'what_if_path': '比较不同学习或行动路线，适合规划、取舍与资源分配。',
     'concept_map_build': '把知识点织成结构图，适合建立全局框架与连接关系。',
-    'error_diagnosis': '专注识别错因、纠偏路径与验证方式，适合查漏补缺。',
+    'error_diagnosis': context.l10n.simErrorDiagDesc,
   };
   static const Map<String, String> _facilitationLabels = {
     'balanced': '平衡推进',
@@ -1565,7 +1565,7 @@ class _RecommendedSeedStrip extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onRefresh,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: Text(seeds.isEmpty ? '生成' : '刷新'),
+                    label: Text(seeds.isEmpty ? context.l10n.simGenerate : context.l10n.simRefresh),
                   ),
                 ],
               ),

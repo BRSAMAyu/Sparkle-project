@@ -4,16 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/services/openclaw_node_inventory_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 
-const _affinityTargets = <(String, String)>[
-  ('browser', '浏览器任务'),
-  ('shell', '终端任务'),
-  ('document', '文档任务'),
-  ('api', '接口任务'),
+const _affinityTargetKeys = <(String, String)>[
+  ('browser', 'openclawBrowserTask'),
+  ('shell', 'openclawShellTask'),
+  ('document', 'openclawDocumentTask'),
+  ('api', 'openclawApiTask'),
 ];
 
 class OpenClawNodeManagementPanel extends ConsumerStatefulWidget {
@@ -29,6 +30,21 @@ class _OpenClawNodeManagementPanelState
   Map<String, String> _draftAffinity = <String, String>{};
   bool _hydrated = false;
   bool _dirty = false;
+
+  static String _resolveTargetLabel(BuildContext context, String l10nKey) {
+    switch (l10nKey) {
+      case 'openclawBrowserTask':
+        return context.l10n.openclawBrowserTask;
+      case 'openclawShellTask':
+        return context.l10n.openclawShellTask;
+      case 'openclawDocumentTask':
+        return context.l10n.openclawDocumentTask;
+      case 'openclawApiTask':
+        return context.l10n.openclawApiTask;
+      default:
+        return l10nKey;
+    }
+  }
 
   void _syncDraft(OpenClawExecutionPreferences preferences) {
     if (_hydrated && _dirty) return;
@@ -60,8 +76,8 @@ class _OpenClawNodeManagementPanelState
     );
     ScaffoldMessenger.of(context).showSnackBar(
       ok
-          ? SparkleSnackBar.success('设备亲和性已保存')
-          : SparkleSnackBar.error(service.error ?? '保存设备亲和性失败'),
+          ? SparkleSnackBar.success(context.l10n.openclawDeviceAffinitySaved)
+          : SparkleSnackBar.error(service.error ?? context.l10n.openclawSaveDeviceAffinityFailed),
     );
   }
 
@@ -85,23 +101,23 @@ class _OpenClawNodeManagementPanelState
           children: [
             OpenClawMetricPill(
               icon: Icons.hub_rounded,
-              label: '${nodes.length} 台设备',
+              label: context.l10n.openclawNodeCount(nodes.length),
               tone: nodes.isNotEmpty
                   ? OpenClawVisualTone.active
                   : OpenClawVisualTone.offline,
             ),
             OpenClawMetricPill(
               icon: Icons.sensors_rounded,
-              label: '${onlineNodes.length} 台在线',
+              label: context.l10n.openclawOnlineCount(onlineNodes.length),
               tone: onlineNodes.isNotEmpty
                   ? OpenClawVisualTone.connected
                   : OpenClawVisualTone.offline,
               emphasized: onlineNodes.isNotEmpty,
             ),
             if (_dirty)
-              const OpenClawMetricPill(
+              OpenClawMetricPill(
                 icon: Icons.tune_rounded,
-                label: '有未保存设备偏好',
+                label: context.l10n.openclawUnsavedPreference,
                 tone: OpenClawVisualTone.attention,
                 emphasized: true,
               ),
@@ -109,7 +125,7 @@ class _OpenClawNodeManagementPanelState
         ),
         const SizedBox(height: DS.spacing12),
         Text(
-          '为不同类型的委派指定偏好设备。未指定时，Sparkle 会按在线状态、能力和负载自动挑选。',
+          context.l10n.openclawNodeIntro,
           style: DS.bodySmall.copyWith(
             color: DS.textSecondary,
             height: 1.45,
@@ -135,7 +151,7 @@ class _OpenClawNodeManagementPanelState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  nodeService.error ?? '当前还没有发现任何已配对节点。',
+                  nodeService.error ?? context.l10n.openclawNoPairedNodes,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -147,15 +163,16 @@ class _OpenClawNodeManagementPanelState
                     ref.read(openClawNodeInventoryProvider).refresh(),
                   ),
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('重新获取设备列表'),
+                  label: Text(context.l10n.openclawRefreshDeviceList),
                 ),
               ],
             ),
           )
         else ...[
-          ..._affinityTargets.map((target) {
+          ..._affinityTargetKeys.map((target) {
             final key = target.$1;
-            final label = target.$2;
+            final l10nKey = target.$2;
+            final label = _resolveTargetLabel(context, l10nKey);
             final currentValue = _draftAffinity[key] ?? '';
             return Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing12),
@@ -163,18 +180,18 @@ class _OpenClawNodeManagementPanelState
                 initialValue: currentValue.isEmpty ? '' : currentValue,
                 decoration: InputDecoration(
                   labelText: label,
-                  helperText: '选择固定设备，或保留“自动选择”交给 Sparkle 调度。',
+                  helperText: context.l10n.openclawAffinityHelper,
                 ),
                 items: [
-                  const DropdownMenuItem<String>(
+                  DropdownMenuItem<String>(
                     value: '',
-                    child: Text('自动选择'),
+                    child: Text(context.l10n.openclawAutoSelect),
                   ),
                   ...nodes.map(
                     (node) => DropdownMenuItem<String>(
                       value: node.nodeId,
                       child: Text(
-                        '${node.name} · ${node.connected ? '在线' : '离线'}',
+                        '${node.name} · ${node.connected ? context.l10n.openclawNodeOnline : context.l10n.openclawNodeOffline}',
                       ),
                     ),
                   ),
@@ -205,7 +222,7 @@ class _OpenClawNodeManagementPanelState
                           ),
                         )
                       : const Icon(Icons.save_rounded),
-                  label: const Text('保存设备亲和性'),
+                  label: Text(context.l10n.openclawSaveDeviceAffinity),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -214,7 +231,7 @@ class _OpenClawNodeManagementPanelState
                   ref.read(openClawNodeInventoryProvider).refresh(),
                 ),
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('刷新设备'),
+                label: Text(context.l10n.openclawRefreshDevice),
               ),
             ],
           ),
@@ -266,7 +283,7 @@ class _OpenClawNodeCard extends StatelessWidget {
                   icon: node.connected
                       ? Icons.check_circle_rounded
                       : Icons.cloud_off_rounded,
-                  label: node.connected ? '在线' : '离线',
+                  label: node.connected ? context.l10n.openclawNodeOnline : context.l10n.openclawNodeOffline,
                   tone: node.connected
                       ? OpenClawVisualTone.connected
                       : OpenClawVisualTone.offline,
@@ -285,7 +302,7 @@ class _OpenClawNodeCard extends StatelessWidget {
                 ),
                 OpenClawMetricPill(
                   icon: Icons.timelapse_rounded,
-                  label: '${node.activeRuns} 个运行中',
+                  label: context.l10n.openclawRunningCount(node.activeRuns),
                   tone: node.activeRuns > 0
                       ? OpenClawVisualTone.attention
                       : OpenClawVisualTone.active,
@@ -304,9 +321,9 @@ class _OpenClawNodeCard extends StatelessWidget {
               Text(
                 [
                   if (node.caps.isNotEmpty)
-                    '能力 ${node.caps.take(4).join(' / ')}',
+                    context.l10n.openclawCapsLabel(node.caps.take(4).join(' / ')),
                   if (node.commands.isNotEmpty)
-                    '命令 ${node.commands.take(3).join(' / ')}',
+                    context.l10n.openclawCommandsLabel(node.commands.take(3).join(' / ')),
                 ].join(' · '),
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,

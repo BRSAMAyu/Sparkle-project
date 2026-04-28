@@ -41,6 +41,12 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/growth_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
@@ -813,7 +819,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () =>
                 context.push('${HomeRoutes.openClawHub}?section=delegate'),
             semanticLabel: showOpenClawAttention
-                ? 'OpenClaw Hub，有 ${openClawConnection.queuedRequestCount} 个排队任务'
+                ? context.l10n.chatOpenclawHubQueued(openClawConnection.queuedRequestCount)
                 : 'OpenClaw Hub',
             variant: ButtonVariant.ghost,
           ),
@@ -830,7 +836,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             variant: ButtonVariant.ghost,
           ),
           PopupMenuButton<_ChatShortcutAction>(
-            tooltip: '更多对话操作',
+            tooltip: context.l10n.chatMoreActions,
             color: DS.surfacePrimary,
             surfaceTintColor: DS.surfacePrimary,
             icon: Icon(Icons.more_horiz_rounded, color: DS.textSecondary),
@@ -839,14 +845,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ref.read(chatProvider.notifier).startNewSession();
               }
             },
-            itemBuilder: (context) => const [
+            itemBuilder: (context) => [
               PopupMenuItem<_ChatShortcutAction>(
                 value: _ChatShortcutAction.newSession,
                 child: Row(
                   children: [
                     Icon(Icons.add_comment_outlined, size: 18),
                     SizedBox(width: DS.spacing12),
-                    Text('新对话'),
+                    Text(context.l10n.chatNewConversation),
                   ],
                 ),
               ),
@@ -911,6 +917,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       conversationId: chatState.conversationId,
                       hasActiveRun: chatState.hasActiveRun,
                     ),
+                    if (chatState.dualCoreMode != null)
+                      _DualCoreModeChip(mode: chatState.dualCoreMode!),
                     if (_reviewNodeLabel != null)
                       _ReviewNodeBanner(
                         nodeLabel: _reviewNodeLabel!,
@@ -1152,9 +1160,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                             confirmQuestion: context.l10n
                                                 .auroraCalibrationConfirm,
                                             confirmOptions: const [
-                                              '30 分钟',
-                                              '45 分钟',
-                                              '60 分钟',
+                                              context.l10n.chatMinutes30,
+                                              context.l10n.chatMinutes45,
+                                              context.l10n.chatMinutes60,
                                             ],
                                             onConfirm: (option) {
                                               ref
@@ -1255,6 +1263,157 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               ),
                       ),
                     ),
+                    // Spine: Time-Aware Recovery Card (divine moment #4 记得时间)
+                    if (chatState.pendingStaleCard != null)
+                      StaleRecoveryCard(
+                        elapsedMinutes:
+                            chatState.pendingStaleCard!.elapsedMinutes,
+                        pendingTaskStatus:
+                            chatState.pendingStaleCard!.pendingTaskStatus,
+                        resumeOptions:
+                            chatState.pendingStaleCard!.resumeOptions,
+                        onOptionSelected: (option) {
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissStaleCard();
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage(option);
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissStaleCard(),
+                      ),
+                    // Spine: Aurora Judgment-Correction Card (divine moment #2 承认误判)
+                    if (chatState.pendingSpineReceipt != null)
+                      SpineReceiptCard(
+                        trigger: chatState.pendingSpineReceipt!.trigger,
+                        summary: chatState.pendingSpineReceipt!.summary,
+                        correctable: chatState.pendingSpineReceipt!.correctable,
+                        correctionOptions:
+                            chatState.pendingSpineReceipt!.correctionOptions,
+                        onCorrect: (correction) {
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissSpineReceipt();
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage(correction);
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissSpineReceipt(),
+                      ),
+                    // Spine: Community Insight Card (divine moment #6 社群经验转策略)
+                    if (chatState.pendingCommunityHint != null)
+                      CommunityInsightCard(
+                        hintType:
+                            chatState.pendingCommunityHint!.hintType,
+                        title: chatState.pendingCommunityHint!.title,
+                        anonymousSummary:
+                            chatState.pendingCommunityHint!.anonymousSummary,
+                        tip: chatState.pendingCommunityHint!.tip,
+                        onApply: () {
+                          final hint = chatState.pendingCommunityHint!;
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissCommunityHint();
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage(
+                                context.l10n.chatCommunitySuggestion(hint.anonymousSummary, hint.tip),
+                              );
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissCommunityHint(),
+                      ),
+                    // Spine: Strategy Intervention Card (divine moment #5 阻止低收益)
+                    if (chatState.pendingUXWarning != null)
+                      StrategyInterventionCard(
+                        label: chatState.pendingUXWarning!.label,
+                        reason: chatState.pendingUXWarning!.reason,
+                        suggestedAction:
+                            chatState.pendingUXWarning!.suggestedAction,
+                        onAdjust: () {
+                          final warning = chatState.pendingUXWarning!;
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissUXWarning();
+                          ref.read(chatProvider.notifier).sendMessage(
+                                context.l10n.chatWarningAction(warning.suggestedAction, warning.reason),
+                              );
+                        },
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissUXWarning(),
+                      ),
+                    // STAB-012: Spine degraded indicator
+                    if (chatState.spineDegraded)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: Chip(
+                          avatar: Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: DS.textTertiary,
+                          ),
+                          label: Text(
+                            context.l10n.chatSmartAdjustUnavailable,
+                            style: DS.labelSmall.copyWith(
+                              color: DS.textTertiary,
+                            ),
+                          ),
+                          backgroundColor: DS.surfaceMedium,
+                          side: BorderSide.none,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    // Spine: Growth Card — divine moment #1 看见坚持
+                    if (chatState.pendingGrowthCard != null)
+                      GrowthCard(
+                        title: chatState.pendingGrowthCard!.title,
+                        narrative: chatState.pendingGrowthCard!.narrative,
+                        streakDays: chatState.pendingGrowthCard!.streakDays,
+                        strategyEffect:
+                            chatState.pendingGrowthCard!.strategyEffect,
+                        isMilestone: chatState.pendingGrowthCard!.isMilestone,
+                        actions: chatState.pendingGrowthCard!.actions,
+                        onAction: (action) {
+                          ref.read(chatProvider.notifier).dismissGrowthCard();
+                          if (action.contains('累') || action.contains(context.l10n.chatNotNeeded)) {
+                            ref.read(chatProvider.notifier).sendMessage(action);
+                          }
+                        },
+                      ),
+                    // Spine: Goal Arbitration Card — multi-goal conflict surface
+                    if (chatState.pendingGoalArbitration != null)
+                      GoalArbitrationCard(
+                        primaryGoalTitle: chatState
+                            .pendingGoalArbitration!.primaryGoalTitle,
+                        reason: chatState.pendingGoalArbitration!.reason,
+                        goals: chatState.pendingGoalArbitration!.goals,
+                        conflicts:
+                            chatState.pendingGoalArbitration!.conflicts,
+                        onFocusPrimary: () {
+                          final arb = chatState.pendingGoalArbitration!;
+                          ref
+                              .read(chatProvider.notifier)
+                              .dismissGoalArbitration();
+                          ref.read(chatProvider.notifier).sendMessage(
+                                context.l10n.chatFocusOnGoal(arb.primaryGoalTitle),
+                              );
+                        },
+                        onContinueMulti: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissGoalArbitration(),
+                        onDismiss: () => ref
+                            .read(chatProvider.notifier)
+                            .dismissGoalArbitration(),
+                      ),
                     SparkleExitTransition(
                       visible: chatState.pendingPlanReview != null,
                       maintainSize: false,
@@ -1418,7 +1577,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .loadConversationHistory(sessionId)
           .timeout(const Duration(seconds: 12));
     } on TimeoutException {
-      return l10n.chatHistoryLoadFailed('打开历史会话超时，请重试');
+      return l10n.chatHistoryLoadFailed(context.l10n.chatHistoryOpenTimeout);
     }
     if (mounted && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
@@ -1428,7 +1587,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     if (ref.read(chatProvider).conversationId != sessionId) {
-      return l10n.chatHistoryLoadFailed('历史会话未能成功切换，请重试');
+      return l10n.chatHistoryLoadFailed(context.l10n.chatHistorySwitchFailed);
     }
 
     final loadError = ref.read(chatProvider).error;
@@ -1449,7 +1608,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final matched =
         messages.where((message) => message.id == evidenceToken).toList();
     if (matched.isEmpty) {
-      AppFeedback.info(context, '原始 turn 暂时不可见');
+      AppFeedback.info(context, context.l10n.chatOriginalTurnUnavailable);
       return;
     }
     final message = matched.first;
@@ -1465,7 +1624,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '原始 turn',
+                  context.l10n.chatOriginalTurn,
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
@@ -1572,8 +1731,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         _QuickActionChip(
                           icon: Icons.cloud_sync_rounded,
-                          label: '交给 OpenClaw',
-                          subtitle: '适合网页调研、整理、抓取类任务',
+                          label: context.l10n.chatDelegateToOpenclaw,
+                          subtitle: context.l10n.chatOpenclawSuitable,
                           color: DS.info,
                           isNarrow: isNarrow,
                           onTap: () => context.push(
@@ -1868,7 +2027,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     observation: aurora.summary,
                     judgment: aurora.summary,
                     confirmQuestion: context.l10n.auroraCalibrationConfirm,
-                    confirmOptions: const ['30 分钟', '45 分钟', '60 分钟'],
+                    confirmOptions: [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
                     onConfirm: (option) {
                       ref.read(chatProvider.notifier).sendMessage(
                             '${context.l10n.auroraCorrectRecalibrate}: $option',
@@ -1908,7 +2067,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (status.isNotEmpty && status != 'processed') {
                 AppFeedback.info(
                   context,
-                  '${file.fileName} 已添加，当前状态：${_attachmentStatusText(file.status)}',
+                  context.l10n.chatFileAdded(file.fileName, _attachmentStatusText(file.status)),
                 );
               }
             },
@@ -1960,6 +2119,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       state.streamingContent.isEmpty;
 
   void _showStudyMaterialsSheet(bool retrievalEnabled) {
+    final chatState = ref.read(chatProvider);
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -1967,6 +2127,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         backgroundColor: Colors.transparent,
         builder: (_) => StudyMaterialsSheet(
           retrievalEnabled: retrievalEnabled,
+          documentContextMode: chatState.documentContextMode,
+          onModeChanged: (mode) {
+            ref.read(chatProvider.notifier).setDocumentContextMode(mode);
+          },
         ),
       ),
     );
@@ -1983,10 +2147,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _attachmentStatusText(String status) {
     switch (status.trim().toLowerCase()) {
       case 'processed':
-        return '已就绪';
+        return context.l10n.chatReady;
       case 'uploaded':
       case 'processing':
-        return '处理中';
+        return context.l10n.chatProcessing;
       case 'failed':
         return '失败';
       default:
@@ -2143,7 +2307,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
     final notifier = ref.read(chatProvider.notifier);
     return notifier.getRecentConversations().timeout(
           const Duration(seconds: 8),
-          onTimeout: () => throw Exception('加载对话历史超时，请稍后重试'),
+          onTimeout: () => throw Exception(context.l10n.chatLoadHistoryTimeout),
         );
   }
 
@@ -2171,7 +2335,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
     final error = await widget.onSelectSession(sessionId).timeout(
           const Duration(seconds: 12),
           onTimeout: () => I18nService.instance.l10n.chatHistoryLoadFailed(
-            '打开历史会话超时，请重试',
+            context.l10n.chatHistoryOpenTimeout,
           ),
         );
     if (!mounted) {
@@ -2572,7 +2736,7 @@ class _DailyStartupRetryBanner extends StatelessWidget {
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
-                '加载今日概览中…',
+                context.l10n.chatLoadingDailyOverview,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -2585,7 +2749,7 @@ class _DailyStartupRetryBanner extends StatelessWidget {
             const SizedBox(width: DS.spacing4),
             IconButton(
               visualDensity: VisualDensity.compact,
-              tooltip: '重试今日概览',
+              tooltip: context.l10n.chatRetryDailyOverview,
               onPressed: isRetrying ? null : onRetry,
               icon: Icon(
                 Icons.refresh_rounded,
@@ -2712,7 +2876,7 @@ class _ReviewNodeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final masteryText = mastery != null
-        ? ' · 当前掌握 ${(mastery! * 100).round().clamp(0, 100)}%'
+        ? context.l10n.chatCurrentMastery((mastery! * 100).round().clamp(0, 100).toString())
         : '';
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -2734,7 +2898,7 @@ class _ReviewNodeBanner extends StatelessWidget {
           const SizedBox(width: DS.spacing8),
           Expanded(
             child: Text(
-              '正在复习: $nodeLabel$masteryText',
+              context.l10n.chatReviewingNode(nodeLabel, masteryText),
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: DS.info,
@@ -3042,6 +3206,64 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
           ),
         );
       },
+    );
+  }
+}
+
+/// Lightweight chip that shows the current dual-core routing mode sent by
+/// the backend in the `ux_turn.dual_core_mode` field of every agent_turn event.
+///
+/// Modes: "execution" → 执行模式 (amber), "cognitive" → 认知模式 (indigo),
+///        "balanced" → 均衡模式 (teal / primary)
+class _DualCoreModeChip extends StatelessWidget {
+  const _DualCoreModeChip({required this.mode});
+
+  final String mode;
+
+  (String label, Color color, IconData icon) _resolve(BuildContext context) {
+    return switch (mode) {
+      'execution' => (context.l10n.chatExecutionMode, const Color(0xFFD97706), Icons.bolt_rounded),
+      'cognitive' => (context.l10n.chatCognitiveMode, const Color(0xFF6366F1), Icons.psychology_rounded),
+      _ => (context.l10n.chatBalancedMode, DS.primaryBase, Icons.balance_rounded),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = _resolve(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 12, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: DS.fontWeightMedium,
+                    color: color,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

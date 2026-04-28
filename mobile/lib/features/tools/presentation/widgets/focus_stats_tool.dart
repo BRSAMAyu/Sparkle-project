@@ -9,6 +9,7 @@ import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.da
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_list.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class FocusStatsTool extends ConsumerStatefulWidget {
   const FocusStatsTool({
@@ -59,8 +60,8 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.bar_chart_rounded,
-      title: '专注统计',
-      subtitle: '把计时和专注行为沉淀成结构化洞察，方便你判断节奏是否稳定、是否需要调整工作块长度。',
+      title: context.l10n.toolsStatsTitle,
+      subtitle: context.l10n.toolsStatsSubtitle,
       accentColor: accent,
       compactHeader: true,
       headerAction: SparkleIconButton(
@@ -70,12 +71,12 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
       ),
       heroChips: [
         ToolHeroChip(
-          label: '${state.streakDays} 天连续专注',
+          label: context.l10n.toolsStatsStreak,
           accentColor: accent,
           icon: Icons.local_fire_department_rounded,
         ),
         ToolHeroChip(
-          label: totalSessions == 0 ? '等待数据' : '$totalSessions 条最近记录',
+          label: totalSessions == 0 ? context.l10n.toolsStatsWaitingData : '$totalSessions 条最近记录',
           accentColor: accent,
           icon: Icons.history_rounded,
         ),
@@ -88,19 +89,19 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   ToolMetricRow(
                     children: [
                       ToolMetricCard(
-                        label: '今日专注',
+                        label: context.l10n.toolsStatsTodayFocus,
                         value: state.todayFormatted,
                         accentColor: accent,
                         icon: Icons.today_rounded,
                       ),
                       ToolMetricCard(
-                        label: '本周累计',
+                        label: context.l10n.toolsStatsWeekTotal,
                         value: state.weekTotalFormatted,
                         accentColor: accent,
                         icon: Icons.calendar_view_week_rounded,
                       ),
                       ToolMetricCard(
-                        label: '日均专注',
+                        label: context.l10n.toolsStatsDailyAvg,
                         value: '$averageDaily 分',
                         accentColor: accent,
                         icon: Icons.stacked_line_chart_rounded,
@@ -110,13 +111,13 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   const SizedBox(height: DS.spacing16),
                   ToolSectionCard(
                     accentColor: accent,
-                    title: '本周趋势',
-                    subtitle: '最近 7 天的专注时长变化。',
+                    title: context.l10n.toolsStatsWeekTrend,
+                    subtitle: context.l10n.toolsStatsWeekTrendDesc,
                     child: state.dailyBreakdown.isEmpty
                         ? ToolEmptyState(
                             icon: Icons.insights_rounded,
-                            title: '还没有趋势数据',
-                            description: '完成几次专注会话后，这里会形成有参考价值的趋势图。',
+                            title: context.l10n.toolsStatsNoTrend,
+                            description: context.l10n.toolsStatsNoTrendDesc,
                             accentColor: accent,
                           )
                         : SizedBox(
@@ -130,8 +131,8 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   const SizedBox(height: DS.spacing16),
                   ToolSectionCard(
                     accentColor: accent,
-                    title: '最近会话',
-                    subtitle: '帮助你回看最近的专注节奏和时长结构。',
+                    title: context.l10n.toolsStatsRecentSessions,
+                    subtitle: context.l10n.toolsStatsRecentDesc,
                     child: FocusStatsSessionList(
                       sessions: state.sessionHistory.take(5).toList(),
                     ),

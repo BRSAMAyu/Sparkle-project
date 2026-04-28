@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 
 class OpenClawConnectionDiagnosticsSheet extends StatefulWidget {
@@ -69,7 +70,7 @@ class _OpenClawConnectionDiagnosticsSheetState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '连接诊断',
+                                context.l10n.openclawConnectionDiagnostics,
                                 style: DS.titleMedium.copyWith(
                                   fontWeight: DS.fontWeightBold,
                                 ),
@@ -87,7 +88,7 @@ class _OpenClawConnectionDiagnosticsSheetState
                         ),
                         IconButton(
                           onPressed: _reload,
-                          tooltip: '重新诊断',
+                          tooltip: context.l10n.openclawRediagnose,
                           icon: const Icon(Icons.refresh_rounded),
                         ),
                       ],
@@ -99,7 +100,7 @@ class _OpenClawConnectionDiagnosticsSheetState
                       children: [
                         _DiagnosticPill(
                           icon: _statusIcon(report.overallStatus),
-                          label: _statusLabel(report.overallStatus),
+                          label: _statusLabel(context, report.overallStatus),
                           color: _statusColor(report.overallStatus),
                         ),
                         if ((report.transport ?? '').isNotEmpty)
@@ -140,7 +141,7 @@ class _OpenClawConnectionDiagnosticsSheetState
                           ],
                           const SizedBox(height: DS.spacing6),
                           Text(
-                            '生成时间：${_formatDateTime(report.generatedAt)}',
+                            context.l10n.openclawGeneratedAt(_formatDateTime(report.generatedAt)),
                             style: DS.bodySmall.copyWith(
                               color: DS.textSecondary,
                             ),
@@ -186,16 +187,16 @@ class _OpenClawConnectionDiagnosticsSheetState
     }
   }
 
-  static String _statusLabel(OpenClawDiagnosticCheckStatus status) {
+  static String _statusLabel(BuildContext context, OpenClawDiagnosticCheckStatus status) {
     switch (status) {
       case OpenClawDiagnosticCheckStatus.passed:
-        return '连接正常';
+        return context.l10n.openclawConnectionNormal;
       case OpenClawDiagnosticCheckStatus.warning:
-        return '有待确认';
+        return context.l10n.openclawConnectionWarning;
       case OpenClawDiagnosticCheckStatus.skipped:
-        return '部分跳过';
+        return context.l10n.openclawConnectionSkipped;
       case OpenClawDiagnosticCheckStatus.failed:
-        return '需要修复';
+        return context.l10n.openclawConnectionFixNeeded;
     }
   }
 
@@ -304,7 +305,7 @@ class _DiagnosticCheckCard extends StatelessWidget {
           if ((check.suggestion ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing10),
             Text(
-              '建议：${check.suggestion}',
+              context.l10n.openclawSuggestion(check.suggestion!),
               style: DS.bodySmall.copyWith(
                 color: color,
                 fontWeight: DS.fontWeightSemiBold,
@@ -351,7 +352,7 @@ class _DiagnosticsErrorState extends StatelessWidget {
               Icon(Icons.error_outline_rounded, color: DS.semanticError),
               const SizedBox(height: DS.spacing12),
               Text(
-                '暂时无法完成连接诊断',
+                context.l10n.openclawDiagnoseFailed,
                 style: DS.titleMedium.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -369,7 +370,7 @@ class _DiagnosticsErrorState extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('重新诊断'),
+                label: Text(context.l10n.openclawRediagnose),
               ),
             ],
           ),

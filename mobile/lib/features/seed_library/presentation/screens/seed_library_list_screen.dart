@@ -185,7 +185,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                       ),
                     if (_showOfficialOnly)
                       Chip(
-                        label: const Text('仅官方'),
+                        label: Text(context.l10n.seedOfficialOnly),
                         deleteIcon: const Icon(Icons.close, size: 18),
                         onDeleted: () {
                           setState(() {
@@ -196,7 +196,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                       ),
                     if (_showFeaturedOnly)
                       Chip(
-                        label: const Text('仅精选'),
+                        label: Text(context.l10n.seedFeaturedOnly),
                         deleteIcon: const Icon(Icons.close, size: 18),
                         onDeleted: () {
                           setState(() {
@@ -363,8 +363,8 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               CheckboxListTile(
                 value: _showOfficialOnly,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('仅看官方'),
-                subtitle: const Text('优先查看系统维护或官方推荐的种子库'),
+                title: Text(context.l10n.seedOfficialFilter),
+                subtitle: Text(context.l10n.seedOfficialFilterDesc),
                 onChanged: (value) {
                   setState(() {
                     _showOfficialOnly = value ?? false;
@@ -374,8 +374,8 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               CheckboxListTile(
                 value: _showFeaturedOnly,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('仅看精选'),
-                subtitle: const Text('筛出被标记为优先推荐的优质种子库'),
+                title: Text(context.l10n.seedFeaturedFilter),
+                subtitle: Text(context.l10n.seedFeaturedFilterDesc),
                 onChanged: (value) {
                   setState(() {
                     _showFeaturedOnly = value ?? false;

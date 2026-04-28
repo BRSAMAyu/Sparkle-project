@@ -122,7 +122,7 @@ class _TaskReminderSettingsScreenState
               if (!context.mounted) return;
               AppFeedback.error(
                 context,
-                '提醒设置更新失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+                context.l10n.taskReminderUpdateFailed(e.toString().replaceFirst('Exception: ', '').trim()),
               );
             }
           },
@@ -176,7 +176,7 @@ class _TaskReminderSettingsScreenState
                           if (!context.mounted) return;
                           AppFeedback.error(
                             context,
-                            '提醒时间更新失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+                            context.l10n.taskReminderTimeFailed(e.toString().replaceFirst('Exception: ', '').trim()),
                           );
                         }
                       }
@@ -211,7 +211,7 @@ class _TaskReminderSettingsScreenState
               if (mounted) {
                 AppFeedback.error(
                   context,
-                  '刷新提醒失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+                  context.l10n.taskReminderRefreshFailed(e.toString().replaceFirst('Exception: ', '').trim()),
                 );
               }
             }

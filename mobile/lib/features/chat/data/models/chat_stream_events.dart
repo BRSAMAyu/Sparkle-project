@@ -1655,3 +1655,197 @@ class TimelineStep {
     return '${(durationMs! / 1000).toStringAsFixed(1)}s';
   }
 }
+
+// ============================================
+// Spine Directive UI Events
+// ============================================
+
+/// Time-Aware Recovery Card Event
+/// Emitted when StaleStateGuard detects user return after >60 min absence.
+/// Backend key: response_metadata['spine_stale_card']
+class StaleRecoveryEvent extends ChatStreamEvent {
+  StaleRecoveryEvent({
+    required this.staleData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> staleData;
+
+  int get elapsedMinutes =>
+      staleData['elapsed_since_last_seen_min'] as int? ?? 0;
+
+  String get pendingTaskStatus =>
+      staleData['pending_task_status'] as String? ?? 'unknown';
+
+  List<String> get resumeOptions {
+    final raw = staleData['resume_options'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [S.chatCompleted, S.chatStreamStuck, S.chatStreamNotStarted, S.chatStreamSwitchTask];
+  }
+
+  String get formattedElapsed {
+    if (elapsedMinutes < 60) return S.chatStreamMinutes(elapsedMinutes);
+    final hours = elapsedMinutes ~/ 60;
+    final mins = elapsedMinutes % 60;
+    return mins > 0 ? S.chatStreamHoursMins(hours, mins) : S.chatStreamHoursOnly(hours);
+  }
+}
+
+/// UX Risk Warning Event — divine moment #5 "阻止低收益"
+/// Proactive intervention when Aurora detects a risk in the user's current path.
+/// Backend key: response_metadata['spine_ux_warning']
+class UXWarningEvent extends ChatStreamEvent {
+  UXWarningEvent({
+    required this.warningData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> warningData;
+
+  String get label => warningData['label'] as String? ?? S.chatStreamStrategyRisk;
+  String get reason => warningData['reason'] as String? ?? '';
+  String get suggestedAction =>
+      warningData['suggested_action'] as String? ?? S.chatStreamAdjustStrategy;
+  String get riskLevel => warningData['risk_level'] as String? ?? 'medium';
+  List<String> get predictedReplyOptions {
+    final raw = warningData['predicted_reply_options'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}
+
+/// Community Insight Event — divine moment #6 "社群经验转策略"
+/// Emitted when backend returns a privacy-safe community hint in metadata.
+/// Backend key: response_metadata['spine_community_hint']
+class CommunityHintEvent extends ChatStreamEvent {
+  CommunityHintEvent({
+    required this.hintData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> hintData;
+
+  String get hintType => hintData['hint_type'] as String? ?? 'cohort_mistake';
+  String get title => hintData['title'] as String? ?? S.chatStreamCommunityInsight;
+  String get anonymousSummary => hintData['anonymous_summary'] as String? ?? '';
+  String get tip => hintData['tip'] as String? ?? '';
+
+  List<String> get affectedNodes {
+    final raw = hintData['affected_nodes'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}
+
+/// Spine Receipt Event
+/// Emitted when orchestrator returns a UserVisibleReceipt in metadata.
+/// Backend key: response_metadata['spine_receipt']
+class SpineReceiptEvent extends ChatStreamEvent {
+  SpineReceiptEvent({
+    required this.receiptData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> receiptData;
+
+  String get receiptId => receiptData['receipt_id'] as String? ?? '';
+  String get trigger => receiptData['trigger'] as String? ?? '';
+  String get summary => receiptData['summary'] as String? ?? '';
+  bool get correctable => receiptData['correctable'] as bool? ?? false;
+  List<String> get correctionOptions {
+    final raw = receiptData['correction_options'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}
+
+/// Growth Card Event — divine moment #1 "看见坚持"
+/// Emitted when backend detects a significant streak or growth milestone.
+/// Backend key: response_metadata['spine_growth_card']
+class GrowthCardEvent extends ChatStreamEvent {
+  GrowthCardEvent({
+    required this.cardData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> cardData;
+
+  String get title => cardData['title'] as String? ?? S.chatStreamSeePersistence;
+  String get narrative => cardData['narrative'] as String? ?? '';
+  int get streakDays => cardData['streak_days'] as int? ?? 0;
+  String get strategyEffect => cardData['strategy_effect'] as String? ?? '';
+  bool get isMilestone => cardData['is_milestone'] as bool? ?? false;
+
+  List<String> get actions {
+    final raw = cardData['actions'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return ['收到', S.chatStreamReallyTired];
+  }
+}
+
+/// Goal Arbitration Event — multi-goal conflict surface
+/// Emitted when Aurora detects ≥2 active goals with priority tension.
+/// Backend key: response_metadata['spine_goal_arbitration']
+class GoalArbitrationEvent extends ChatStreamEvent {
+  GoalArbitrationEvent({
+    required this.arbData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> arbData;
+
+  String get primaryGoalId =>
+      arbData['primary_goal_id'] as String? ?? '';
+
+  String get primaryGoalTitle =>
+      arbData['primary_goal_title'] as String? ?? '';
+
+  String get reason => arbData['reason'] as String? ?? '';
+
+  List<Map<String, dynamic>> get goals {
+    final raw = arbData['goals'];
+    if (raw is List) {
+      return raw
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+    }
+    return [];
+  }
+
+  List<String> get conflicts {
+    final raw = arbData['conflicts'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return [];
+  }
+}
+
+/// Spine Degraded Event — STAB-012 graceful degradation indicator.
+/// Emitted when the Spine pipeline fails and falls back to safe defaults.
+/// Backend key: response_metadata['spine_degraded']
+class SpineDegradedEvent extends ChatStreamEvent {
+  SpineDegradedEvent({
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+}

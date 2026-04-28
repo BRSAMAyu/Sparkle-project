@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class WeeklyGrowthNarrativeCard extends ConsumerStatefulWidget {
   const WeeklyGrowthNarrativeCard({
@@ -112,7 +113,7 @@ class _NarrativeSurface extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: expanded ? '收起' : '展开',
+                tooltip: expanded ? context.l10n.insCollapse : context.l10n.insExpand,
                 onPressed: onToggleExpanded,
                 icon: Icon(
                   expanded
@@ -222,7 +223,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.calendar_today_rounded,
-          label: '${narrative.studyDays} 天学习',
+          label: context.l10n.insStudyDays,
         ),
       );
     }
@@ -230,7 +231,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.task_alt_rounded,
-          label: '${narrative.tasksCompleted} 个任务',
+          label: context.l10n.insTasksDone,
         ),
       );
     }
@@ -238,7 +239,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.psychology_alt_rounded,
-          label: '修复 ${narrative.errorsFixed} 个错误',
+          label: context.l10n.insErrorsFixed,
         ),
       );
     }
@@ -246,7 +247,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.rate_review_rounded,
-          label: '${narrative.reflectionRecords} 次复盘',
+          label: context.l10n.insReflections,
         ),
       );
     }
@@ -254,7 +255,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.trending_up_rounded,
-          label: '掌握 +${narrative.masteryDelta.toStringAsFixed(1)}',
+          label: context.l10n.insMasteryGain,
         ),
       );
     }
@@ -262,7 +263,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         const _MetricPill(
           icon: Icons.flag_rounded,
-          label: '第一周',
+          label: context.l10n.insFirstWeek,
         ),
       );
     }
@@ -363,7 +364,7 @@ class _NarrativeErrorSurface extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: '重试',
+              tooltip: context.l10n.insRetry,
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
             ),

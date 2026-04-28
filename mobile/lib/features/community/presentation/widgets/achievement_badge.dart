@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 
 /// 责任伙伴成就徽章组件
@@ -191,9 +192,9 @@ class AchievementBadge extends StatelessWidget {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return '今天';
+      return context.l10n.communityShareTodayDate;
     } else if (difference.inDays == 1) {
-      return '昨天';
+      return context.l10n.communityShareYesterday;
     } else if (difference.inDays < 7) {
       return '${difference.inDays}天前';
     } else if (difference.inDays < 30) {
@@ -271,14 +272,14 @@ class AchievementGrid extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无成就',
+              context.l10n.communityShareNoAchievements,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 8),
             Text(
-              '开始打卡解锁成就吧！',
+              context.l10n.communityShareStartCheckin,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -462,7 +463,7 @@ class AchievementDetailDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('关闭'),
+          child: Text(context.l10n.communityShareClose),
         ),
       ],
     );

@@ -60,7 +60,7 @@ class FavoritesScreen extends ConsumerWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/community'),
         ),
-        title: const Text('我的收藏'),
+        title: Text('My Favorites'),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -78,7 +78,7 @@ class FavoritesScreen extends ConsumerWidget {
               Text('加载失败: $e', style: TextStyle(color: DS.error)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: '重试',
+                label: 'Retry',
                 onPressed: () => ref.read(favoritesProvider.notifier).load(),
               ),
             ],
@@ -88,7 +88,7 @@ class FavoritesScreen extends ConsumerWidget {
           if (favorites.isEmpty) {
             return const Center(
               child: CompactEmptyState(
-                message: '暂无收藏消息',
+                message: 'No favorites yet',
                 icon: Icons.bookmark_border,
               ),
             );
@@ -143,15 +143,15 @@ class _FavoriteTile extends ConsumerWidget {
             final confirmed = await showSensoryDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('取消收藏'),
-                content: const Text('确定要取消收藏这条消息吗？'),
+                title: Text('Remove Favorite'),
+                content: Text('Are you sure you want to remove this favorite?'),
                 actions: [
                   SparkleButton.ghost(
-                    label: '取消',
+                    label: 'Cancel',
                     onPressed: () => Navigator.pop(ctx, false),
                   ),
                   SparkleButton.primary(
-                    label: '确定',
+                    label: 'Confirm',
                     onPressed: () => Navigator.pop(ctx, true),
                   ),
                 ],
@@ -164,7 +164,7 @@ class _FavoriteTile extends ConsumerWidget {
                     .remove(favorite.id)
                     .then((_) {
                   if (!context.mounted) return;
-                  AppFeedback.success(context, '已取消收藏');
+                  AppFeedback.success(context, 'Favorite removed');
                 }).catchError((Object e) {
                   if (!context.mounted) return;
                   AppFeedback.error(context, '操作失败: $e');
@@ -178,11 +178,11 @@ class _FavoriteTile extends ConsumerWidget {
             showSensoryDialog<void>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('收藏备注'),
+                title: Text('Favorite Note'),
                 content: Text(favorite.note!),
                 actions: [
                   SparkleButton.ghost(
-                    label: '关闭',
+                    label: 'Close',
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 @immutable
@@ -95,7 +96,7 @@ class HomeGrowthTask {
 
     return HomeGrowthTask(
       id: _asString(json['id'] ?? json['task_id']),
-      title: _asString(json['title'] ?? json['name'], fallback: '未命名任务'),
+      title: _asString(json['title'] ?? json['name'], fallback: S.unnamedTask),
       priority: _asInt(json['priority']),
       isCompleted: completed,
       dueDate: _asDateTime(json['due_date'] ?? json['dueDate']),

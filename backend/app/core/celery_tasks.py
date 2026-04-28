@@ -1946,6 +1946,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
     from app.models.achievement import UserAchievement, UserStreakStats, UserStreakDays
     from app.models.calendar_event import CalendarEvent
     from app.models.chat import ChatSession, ChatMessage
+    from app.models.cognitive import BehaviorPattern, CognitiveFragment
     from app.models.error_book import ErrorRecord
     from app.models.focus import FocusSession
     from app.models.galaxy import UserNodeStatus
@@ -1981,6 +1982,8 @@ def purge_deleted_account(self, user_id: str) -> dict:
                 (NotificationInteraction, "user_id"),
                 (UserNodeStatus, "user_id"),
                 (UserSettings, "user_id"),
+                (BehaviorPattern, "user_id"),
+                (CognitiveFragment, "user_id"),
             ]
             counts: dict[str, int] = {}
             for model, field in tables:
@@ -2107,6 +2110,153 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recall_notification_task")
+def recall_notification_task(self, user_id: str, trigger_type: str, context: str = "{}"):
+    """
+    Spine v2.0 Recall: Build and push a recall notification for a single user.
+
+    Uses SpineOrchestrator.build_recall_notification() which:
+    1. Checks cooldown
+    2. Runs through PolicyEngine
+    3. Builds NotificationDirective + RecallMessage
+    4. Stores in Redis for frontend consumption
+
+    Then pushes via NotificationPushService if a message was produced.
+    """
+    import json
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationCreate
+
+    parsed_context = json.loads(context) if isinstance(context, str) else context
+
+    async def _run():
+        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        spine = SpineOrchestrator(redis=redis)
+
+        message = await spine.build_recall_notification(
+            user_id=user_id,
+            trigger_type=trigger_type,
+            context=parsed_context,
+        )
+        if message is None:
+            return {"status": "skipped", "reason": "cooldown_or_policy_blocked"}
+
+        async with AsyncSessionLocal() as session:
+            deep_link = message.deep_link or "/chat?source=recall"
+            await NotificationService.create(
+                session,
+                UUID(user_id),
+                NotificationCreate(
+                    title=message.title,
+                    content=message.body,
+                    type="recall_notification",
+                    data={
+                        "trigger_type": message.trigger_type,
+                        "strategy": message.strategy,
+                        "message_id": message.message_id,
+                        "cooldown_until": message.cooldown_until,
+                        "frequency_tag": message.frequency_tag,
+                        "deep_link": deep_link,
+                    },
+                ),
+                push_via_websocket=True,
+            )
+
+        logger.info(
+            "Recall notification sent: user=%s trigger=%s strategy=%s",
+            user_id, trigger_type, message.strategy,
+        )
+        return {"status": "sent", "user_id": user_id, "trigger_type": trigger_type}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("recall_notification_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_recall_notifications")
+def scan_recall_notifications(self, limit: int = 500):
+    """
+    Spine v2.0 Recall: Scan active users and dispatch recall_notification_task
+    for each applicable trigger type.
+
+    Trigger detection uses data from Redis/DB:
+    - undigested_material: uploaded but not diagnosed files
+    - task_not_started: assigned tasks not started after 1h
+    - task_missed: overdue tasks
+    - pre_exam_silence: exam within 48h + no activity for 5h
+
+    Runs every 30 minutes via Celery beat.
+    """
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import and_, select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.plan import Plan
+    from app.models.user import User
+
+    TRIGGER_TYPES = ["undigested_material", "task_not_started", "task_missed", "pre_exam_silence"]
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+            active_plan_users = (
+                select(Plan.user_id)
+                .where(
+                    and_(
+                        Plan.is_active.is_(True),
+                        Plan.target_date.isnot(None),
+                        Plan.not_deleted_filter(),
+                    )
+                )
+                .distinct()
+            )
+            stmt = (
+                select(User.id)
+                .where(
+                    and_(
+                        User.is_active.is_(True),
+                        User.last_login_at >= cutoff,
+                        User.id.in_(active_plan_users),
+                    )
+                )
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            user_ids = [str(row[0]) for row in result.all()]
+
+        dispatched = 0
+        for uid in user_ids:
+            for trigger_type in TRIGGER_TYPES:
+                celery_app.send_task(
+                    "app.core.celery_tasks.recall_notification_task",
+                    args=(uid, trigger_type, json.dumps({})),
+                    queue="default",
+                )
+                dispatched += 1
+
+        logger.info(
+            "Recall scan: %d users × %d triggers = %d tasks dispatched",
+            len(user_ids), len(TRIGGER_TYPES), dispatched,
+        )
+        return {"users": len(user_ids), "dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_recall_notifications failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300)
+
+
 @celery_app.task(bind=True, max_retries=2, name="aggregate_community_error_patterns")
 def aggregate_community_error_patterns(self):
     """Periodically aggregate anonymous community error patterns onto knowledge nodes."""
@@ -2126,3 +2276,268 @@ def aggregate_community_error_patterns(self):
     except Exception as exc:
         logger.error(f"aggregate_community_error_patterns failed: {exc}")
         raise self.retry(exc=exc, countdown=300)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_snapshot_task")
+def spine_snapshot_task(self, user_id: str):
+    """
+    Spine v2.1: Save a snapshot of the user's Spine state for recovery after TTL expiry.
+
+    Snapshots persist for 90 days in Redis and include:
+    - Active states from StateRegister
+    - Relationship model state
+    - Growth chronicle summary
+    - Recent policy effects
+    - Known skills
+    """
+    async def _run():
+        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        spine = SpineOrchestrator(redis_client=redis)
+        snapshot = await spine.save_spine_snapshot(user_id=user_id)
+        return {"status": "saved", "snapshot_id": snapshot.get("snapshot_id")}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("spine_snapshot_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_spine_snapshots")
+def scan_spine_snapshots(self, limit: int = 500):
+    """
+    Spine v2.1: Daily scan — save snapshots for all active users with plans.
+
+    Runs daily via Celery beat to ensure long-term stability.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import and_, select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.plan import Plan
+    from app.models.user import User
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+            active_plan_users = (
+                select(Plan.user_id)
+                .where(
+                    and_(
+                        Plan.is_active.is_(True),
+                        Plan.target_date.isnot(None),
+                        Plan.not_deleted_filter(),
+                    )
+                )
+                .distinct()
+            )
+            stmt = (
+                select(User.id)
+                .where(
+                    and_(
+                        User.is_active.is_(True),
+                        User.last_login_at >= cutoff,
+                        User.id.in_(active_plan_users),
+                    )
+                )
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            user_ids = [str(row[0]) for row in result.all()]
+
+        dispatched = 0
+        for uid in user_ids:
+            celery_app.send_task(
+                "app.core.celery_tasks.spine_snapshot_task",
+                args=(uid,),
+                queue="default",
+            )
+            dispatched += 1
+
+        logger.info("Spine snapshot scan: %d users, %d tasks dispatched", len(user_ids), dispatched)
+        return {"users": len(user_ids), "dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_spine_snapshots failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.compact_user_traces")
+def compact_user_traces(self, user_id: str):
+    """
+    Spine v2.2: Compact old traces beyond the 50-trace retention window.
+
+    Aggregates signal types, directive types, and outcome stats into a
+    compact summary. Individual traces are deleted to free Redis memory.
+    """
+    async def _run():
+        from app.signals.causal_trace_store import CausalTraceStore
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        store = CausalTraceStore(redis)
+        result = await store.compact_old_traces(user_id)
+        if result is None:
+            return {"status": "skipped", "reason": "below_threshold"}
+        return {"status": "compacted", "traces": result["traces_compacted"]}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("compact_user_traces failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+# =============================================================================
+# Spine v2.5: Community Cohort Signal Injection
+# =============================================================================
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.community_cohort_signal_task")
+def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
+    """Inject community error patterns into Spine for a specific user+node."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.signals.spine_orchestrator import SpineOrchestrator
+        import json
+
+        redis = get_redis()
+        spine = SpineOrchestrator(redis_client=redis)
+
+        # Load community_signal from knowledge node metadata
+        sig_raw = await redis.get(f"galaxy:community_signal:{knowledge_node_id}")
+        if not sig_raw:
+            return {"status": "no_data"}
+        sig = json.loads(sig_raw if isinstance(sig_raw, str) else sig_raw.decode())
+        patterns = sig.get("common_mistake_patterns", [])
+        if not patterns:
+            return {"status": "no_patterns"}
+
+        top = max(patterns, key=lambda p: p.get("count", 0))
+        trace = await spine.on_community_cohort_data(
+            user_id=user_id,
+            knowledge_node_id=knowledge_node_id,
+            subject=sig.get("subject", ""),
+            mistake_type=top.get("error_type", "unknown"),
+            cohort_size=top.get("user_count", 0),
+            error_count=top.get("count", 0),
+            common_misconception=top.get("error_category", ""),
+        )
+        return {"status": "injected" if trace else "skipped"}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("community_cohort_signal_task failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_community_cohort_signals")
+def scan_community_cohort_signals(self, limit: int = 200):
+    """Scan active users and dispatch community cohort signal tasks."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        import json
+
+        redis = get_redis()
+        # Find users with active Spine state (recently interacted)
+        cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
+        dispatched = 0
+        for key in keys:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            # Check if user has knowledge nodes with community_signal
+            node_cursor = "0"
+            while True:
+                node_cursor, node_keys = await redis.scan(
+                    cursor=node_cursor, match=f"galaxy:user_nodes:{user_id}:*", count=50,
+                )
+                for nk in node_keys:
+                    nk_str = nk if isinstance(nk, str) else nk.decode()
+                    node_id = nk_str.split(":")[-1]
+                    # Check for community signal on this node
+                    has_signal = await redis.get(f"galaxy:community_signal:{node_id}")
+                    if has_signal:
+                        celery_app.send_task(
+                            "app.core.celery_tasks.community_cohort_signal_task",
+                            args=(user_id, node_id),
+                            queue="low_priority",
+                        )
+                        dispatched += 1
+                if node_cursor in (0, "0"):
+                    break
+            if dispatched >= limit:
+                break
+
+        return {"dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_community_cohort_signals failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+# =============================================================================
+# Spine v2.5: StateRegister expiry + Skill auto-deprecation
+# =============================================================================
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_expire_stale_states")
+def spine_expire_stale_states(self, limit: int = 500):
+    """Expire stale state entries for active users."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.signals.state_register import StateRegister
+
+        redis = get_redis()
+        register = StateRegister(redis)
+        cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
+        expired_total = 0
+        for key in keys:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            expired = await register.expire_stale(user_id)
+            expired_total += expired
+        return {"users_scanned": len(keys), "states_expired": expired_total}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("spine_expire_stale_states failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_auto_deprecate_skills")
+def spine_auto_deprecate_skills(self, limit: int = 500):
+    """Auto-deprecate stale skills for active users."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.signals.skill_lifecycle import SkillLifecycleManager
+
+        redis = get_redis()
+        manager = SkillLifecycleManager(redis)
+        cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
+        total_deprecated = 0
+        for key in keys:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            deprecated = await manager.auto_deprecate_check(user_id)
+            total_deprecated += len(deprecated)
+        return {"users_scanned": len(keys), "skills_deprecated": total_deprecated}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("spine_auto_deprecate_skills failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)

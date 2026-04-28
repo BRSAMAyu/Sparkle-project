@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, this.initialToken});
@@ -70,7 +71,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
         ),
-        title: const Text('重置密码'),
+        title: Text(context.l10n.authResetPassword),
         centerTitle: true,
       ),
       child: ContentConstraint(
@@ -95,7 +96,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     child: TextFormField(
                     controller: _tokenController,
                     decoration: const InputDecoration(
-                      labelText: '重置码',
+                      labelText: context.l10n.authResetCode,
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.mark_email_read_outlined),
                     ),
@@ -112,7 +113,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: '新密码',
+                      labelText: context.l10n.authNewPassword,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: SparkleIconButton(
@@ -147,7 +148,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
-                      labelText: '确认新密码',
+                      labelText: context.l10n.authConfirmNewPassword,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_person_outlined),
                       suffixIcon: SparkleIconButton(
@@ -182,7 +183,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   SparkleStaggerItem(
                     index: 4,
                     child: SparkleButton(
-                      label: '确认重置',
+                      label: context.l10n.authConfirmReset,
                       onPressed: authState.isLoading ? null : _submit,
                       loading: authState.isLoading,
                       disabled: authState.isLoading,

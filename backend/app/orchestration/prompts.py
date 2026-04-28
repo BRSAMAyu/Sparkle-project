@@ -882,6 +882,9 @@ def build_system_prompt(
     context_level: str = "full",  # full | light
     chat_mode: str = "standard",
     model_key: str | None = None,  # P2: model-aware prompt budget
+    spine_response_directive: dict | None = None,  # Signal-to-Action Spine ResponseDirective
+    spine_chronicle_summary: str | None = None,  # Growth chronicle narrative
+    spine_fatigue_context: dict | None = None,  # Fatigue/crisis state for tone modulation
 ) -> str:
     """
 
@@ -1295,7 +1298,7 @@ def build_system_prompt(
             if _mc and hasattr(_mc, "tier"):
                 _model_tier_str = _mc.tier.value
         except Exception:
-            pass
+            logger.debug("Failed to resolve model tier for key=%s", model_key, exc_info=True)
     _prompt_budget = _TIER_PROMPT_BUDGET.get(_model_tier_str or "", PROMPT_SECTION_SOFT_LIMIT_TOKENS)
 
     pre_budget_section_map = dict(section_map)
@@ -1556,6 +1559,64 @@ def build_system_prompt(
     if prompt_version == "v2":
 
         prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
+
+    # Signal-to-Action Spine: inject ResponseDirective constraints
+    if spine_response_directive:
+        tone = spine_response_directive.get("tone", "calm_direct")
+        length = spine_response_directive.get("length", "medium")
+        avoid_list = spine_response_directive.get("avoid", [])
+        must_acknowledge = spine_response_directive.get("must_acknowledge", [])
+        include_options = spine_response_directive.get("include_user_options", True)
+
+        tone_map = {
+            "calm_direct": "稳定、直接",
+            "calm_urgent": "稳定但紧迫",
+            "direct_but_reassuring": "直接但让人安心",
+            "encouraging_diagnostic": "鼓励性诊断",
+            "encouraging_low_pressure": "鼓励、低压",
+            "recognition_not_praise": "认可但不空洞赞美",
+            "helpful_suggestion": "有帮助的建议",
+        }
+        length_map = {"short": "简短（1-3句）", "medium": "适中", "long": "详细"}
+
+        spine_section = "\n\n## 策略调整指令\n"
+        spine_section += f"- 语气：{tone_map.get(tone, tone)}\n"
+        spine_section += f"- 长度：{length_map.get(length, length)}\n"
+        if avoid_list:
+            spine_section += f"- 避免：{', '.join(avoid_list)}\n"
+        if must_acknowledge:
+            spine_section += f"- 必须承认：{', '.join(must_acknowledge)}\n"
+        if include_options:
+            spine_section += "- 提供可操作选项\n"
+        prompt += spine_section
+
+    # Signal-to-Action Spine: inject growth chronicle summary
+    if spine_chronicle_summary:
+        prompt += (
+            f"\n\n## 用户成长叙事\n"
+            f"{spine_chronicle_summary}\n"
+            f"- 参考这些叙事来校准鼓励的力度和方向\n"
+            f"- 不要逐条重复，而是内化后自然融入回复\n"
+        )
+
+    # Signal-to-Action Spine: inject fatigue/crisis context
+    if spine_fatigue_context:
+        level = spine_fatigue_context.get("fatigue_level", "")
+        if level in ("high", "critical"):
+            prompt += (
+                "\n\n## 用户疲劳状态\n"
+                "- 用户当前处于高疲劳状态，主动减轻负担\n"
+                "- 缩短回复，降低任务密度建议\n"
+                "- 优先关注健康节奏，而非学习效率\n"
+            )
+        crisis = spine_fatigue_context.get("crisis_mode")
+        if crisis:
+            prompt += (
+                "\n\n## 考前高压状态\n"
+                "- 用户处于考前高压，避免增加焦虑\n"
+                "- 聚焦「已经掌握的」和「最可能拿分的」\n"
+                "- 不建议大幅调整计划，微调为主\n"
+            )
 
     prompt += (
         "\n\n## 输出格式约束\n"
@@ -2615,7 +2676,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
         try:
             return UserInsightState(**candidate)
         except Exception:
-            pass
+            logger.debug("Failed to construct UserInsightState from candidate dict", exc_info=True)
 
     # 2. Attribute on profile_context object
     profile_ctx = context.get("profile_context")
@@ -2627,7 +2688,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
             try:
                 return UserInsightState(**attr)
             except Exception:
-                pass
+                logger.debug("Failed to construct UserInsightState from profile_ctx attr", exc_info=True)
 
     # 3. Dict form inside profile_context
     if isinstance(profile_ctx, dict):
@@ -2638,7 +2699,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
             try:
                 return UserInsightState(**inner)
             except Exception:
-                pass
+                logger.debug("Failed to construct UserInsightState from profile_ctx dict inner", exc_info=True)
 
     return None
 
@@ -2853,6 +2914,10 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         "social_signals_summary",
         "srl_phase",
         "working_memory_snapshot",
+        "engagement_state",
+        "learning_state",
+        "traits_prior",
+        "metacognition_profile",
     )
     field_status: dict[str, Any] = {}
     for key in tracked_fields:

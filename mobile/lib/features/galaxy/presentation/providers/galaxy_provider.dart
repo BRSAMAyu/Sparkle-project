@@ -14,6 +14,7 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/models/compact_knowledge_node.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Aggregation level based on zoom scale (5 levels)
 enum AggregationLevel {
@@ -634,7 +635,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       if (!mounted || requestId != _layoutRequestId) return;
 
       if (result.isFailure || result.data == null) {
-        final error = result.error ?? '未知错误';
+        final error = result.error ?? S.galaxyUnknownError;
         final galaxyError = error is GalaxyError
             ? error
             : GalaxyError.unknown(error.toString());

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class WorkingMemoryBadge extends StatelessWidget {
   const WorkingMemoryBadge({
@@ -11,7 +12,7 @@ class WorkingMemoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = consolidated ? '已归档到长期记忆' : '当前 session';
+    final label = consolidated ? context.l10n.chatMemoryArchivedToLongTerm : context.l10n.chatMemoryCurrentSession;
     final color = consolidated ? DS.success : DS.info;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: 4),

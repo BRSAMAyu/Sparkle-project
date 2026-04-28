@@ -382,7 +382,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: DS.spacing8),
                     child: SparkleButton.ghost(
-                      label: _isLoadingMore ? '加载中…' : '加载更多记录',
+                      label: _isLoadingMore ? context.l10n.userLoading : context.l10n.userLoadMoreRecords,
                       onPressed: _isLoadingMore ? () {} : _loadMoreLogs,
                       expand: true,
                     ),

@@ -774,13 +774,27 @@ class ProductionChatOrchestrator:
                 try:
                     if active_db and user_id:
                         with TRACER.start_as_current_span("rag.graphrag"):
+                            # Signal-to-Action Spine: apply RetrievalDirective
+                            _retrieval_top_k = 5
+                            _retrieval_depth = 2
+                            try:
+                                from app.signals.spine_orchestrator import SpineOrchestrator
+                                _spine_rag = SpineOrchestrator(self.redis)
+                                _ret_dir = await _spine_rag.get_retrieval_directive(str(user_id))
+                                if _ret_dir:
+                                    _retrieval_top_k = max(1, min(20, _ret_dir.token_budget // 600))
+                                    if _ret_dir.pollution_guard == "strict":
+                                        _retrieval_depth = 1
+                            except Exception:
+                                pass
+
                             # 使用 GraphKnowledgeService 进行增强的 GraphRAG 检索
                             graph_ks = GraphKnowledgeService(active_db)
                             rag_result = await graph_ks.graph_rag_search(
                                 query=request.message if request.HasField("message") else "",
                                 user_id=uuid.UUID(user_id),
-                                depth=2,
-                                top_k=5
+                                depth=_retrieval_depth,
+                                top_k=_retrieval_top_k
                             )
                         knowledge_context = rag_result.get("context", "")
 
@@ -999,12 +1013,150 @@ class ProductionChatOrchestrator:
                     if runtime_context_data.get(key) is not None:
                         user_context_data[key] = runtime_context_data[key]
             context_data = runtime_context_data
+
+            # Signal-to-Action Spine: fetch all relevant directives for prompt modulation
+            spine_response_directive = None
+            _spine_exec_section = ""  # Extra prompt section for ExamSprint phase context
+            _spine_receipt_payload = None  # Latest UserVisibleReceipt for response metadata
+            _spine_stale_card = None  # StaleStateGuard comeback card
+            _spine_chronicle_summary = None  # Growth chronicle narrative
+            _spine_fatigue_context = None  # Fatigue/crisis state
+            try:
+                from app.signals.spine_orchestrator import SpineOrchestrator
+                _spine = SpineOrchestrator(self.redis)
+
+                # ResponseDirective → tone/length/avoid/acknowledge
+                _resp_dir = await _spine.get_response_directive(str(user_id))
+                if _resp_dir:
+                    spine_response_directive = {
+                        "tone": _resp_dir.tone,
+                        "length": _resp_dir.length,
+                        "avoid": list(_resp_dir.avoid or []),
+                        "must_acknowledge": list(_resp_dir.must_acknowledge or []),
+                        "include_user_options": _resp_dir.include_user_options,
+                    }
+
+                # ExecutionDirective → exam sprint phase constraints injected into prompt
+                _exec_dir = await _spine.get_active_directive(str(user_id))
+                if _exec_dir:
+                    hc = _exec_dir.hard_constraints or {}
+                    phase_id = hc.get("exam_sprint_phase_id")
+                    if phase_id:
+                        days = None
+                        raw_days = await self.redis.get(f"spine:exam_sprint:{user_id}:deadline_days")
+                        if raw_days:
+                            try:
+                                days = int(raw_days.decode() if isinstance(raw_days, bytes) else raw_days)
+                            except (ValueError, AttributeError):
+                                pass
+                        phase_label = {
+                            "build_path": "建立最小通过路径",
+                            "bottleneck_training": "主瓶颈训练",
+                            "error_repair": "高频错因修复",
+                            "survival": "考前生存策略",
+                            "final_review": "最后复盘，不开新坑",
+                        }.get(phase_id, phase_id)
+                        dur_cap = hc.get("max_task_duration_min", 45)
+                        no_new = hc.get("avoid_new_chapter", False)
+                        task_type = hc.get("exam_sprint_task_type_bias", "mixed")
+                        _spine_exec_section = (
+                            f"\n\n## 考试冲刺策略约束"
+                            f"\n- 当前阶段：{phase_label}"
+                            + (f"（距考试 {days} 天）" if days is not None else "")
+                            + f"\n- 单任务时长上限：{dur_cap} 分钟"
+                            f"\n- 推荐任务类型：{task_type}"
+                            + ("\n- 禁止推进新章节" if no_new else "")
+                            + ("\n- 优先高收益复盘内容" if hc.get("prefer_high_yield") else "")
+                        )
+                    elif _exec_dir.user_visible_reason:
+                        _spine_exec_section = (
+                            f"\n\n## 当前策略调整\n{_exec_dir.user_visible_reason}"
+                        )
+
+                # UserVisibleReceipt → include in streaming metadata so Flutter can render it
+                _latest_receipt = await _spine.get_latest_receipt(str(user_id))
+                if _latest_receipt:
+                    _receipt_actions = list(_latest_receipt.actions or [])
+                    _correctable = "correct" in _receipt_actions
+                    _correction_options = (
+                        ["这个判断不准确", "我不同意这个调整", "继续，先看看效果"]
+                        if _correctable else []
+                    )
+                    _spine_receipt_payload = {
+                        "receipt_id": _latest_receipt.receipt_id,
+                        "trigger": _latest_receipt.receipt_type,
+                        "summary": _latest_receipt.message,
+                        "correctable": _correctable,
+                        "correction_options": _correction_options,
+                    }
+
+                # StaleStateGuard → check if user returned after extended absence
+                from datetime import datetime, UTC
+                from app.signals.stale_state_guard import TimeContext
+                _last_seen_raw = await self.redis.get(f"spine:last_seen:{user_id}")
+                if _last_seen_raw:
+                    try:
+                        import json as _json
+                        _last_ctx = _json.loads(_last_seen_raw)
+                        _tc = TimeContext(
+                            now=datetime.now(UTC).isoformat(),
+                            last_user_interaction_at=_last_ctx.get("last_seen"),
+                        )
+                        _stale_packet = _spine.stale_guard.check(_tc)
+                        if _stale_packet and _stale_packet.elapsed_since_last_seen_min > 60:
+                            _stale_card = _spine.stale_guard.build_recovery_card(_stale_packet, _tc)
+                            if _stale_card:
+                                _spine_stale_card = _stale_card
+                    except Exception:
+                        pass
+
+                # Growth chronicle → inject recent narrative for AI awareness
+                try:
+                    _chronicle_entries = await _spine.growth_chronicle.get_chronicle(
+                        str(user_id), limit=3,
+                    )
+                    if _chronicle_entries:
+                        _spine_chronicle_summary = "；".join(
+                            f"{e.title}（{e.narrative[:60]}）"
+                            for e in _chronicle_entries
+                        )
+                except Exception:
+                    pass
+
+                # Fatigue + crisis → inject tone modulation
+                try:
+                    _fatigue_raw = await self.redis.get(f"spine:fatigue:{user_id}:latest")
+                    _crisis_raw = await self.redis.get(f"spine:crisis:{user_id}:latest")
+                    if _fatigue_raw or _crisis_raw:
+                        _spine_fatigue_context = {}
+                        if _fatigue_raw:
+                            _spine_fatigue_context["fatigue_level"] = _json.loads(
+                                _fatigue_raw if isinstance(_fatigue_raw, str) else _fatigue_raw.decode()
+                            ).get("fatigue_level")
+                        if _crisis_raw:
+                            _spine_fatigue_context["crisis_mode"] = True
+                except Exception:
+                    pass
+
+                # Record current timestamp for next stale check
+                import json as _json
+                await self.redis.set(
+                    f"spine:last_seen:{user_id}",
+                    _json.dumps({"last_seen": datetime.now(UTC).isoformat()}),
+                    ex=7 * 24 * 3600,
+                )
+            except Exception as _spine_exc:
+                logger.debug("Spine directive fetch skipped: {}", _spine_exc)
+
             base_system_prompt = build_system_prompt(
                 user_context_data,
                 conversation_history=conversation_context,
                 plan_context=plan_context,
                 session_feedback_instruction=str((context_data or {}).get("session_feedback_instruction") or ""),
                 dual_core_instruction=str((context_data or {}).get("dual_core_prompt_instruction") or ""),
+                spine_response_directive=spine_response_directive,
+                spine_chronicle_summary=_spine_chronicle_summary,
+                spine_fatigue_context=_spine_fatigue_context,
             )
 
             if preferred_tools_hint:
@@ -1012,6 +1164,18 @@ class ProductionChatOrchestrator:
 
             if knowledge_context:
                 base_system_prompt += f"\n\n## 检索到的知识背景\n{knowledge_context}"
+
+            # Inject ExamSprint phase constraints from ExecutionDirective
+            if _spine_exec_section:
+                base_system_prompt += _spine_exec_section
+
+            # Inject stale state recovery card as user-facing context
+            if _spine_stale_card:
+                base_system_prompt += (
+                    f"\n\n## 用户返回感知\n"
+                    f"用户刚刚回来。{_spine_stale_card.get('message_template', '')} "
+                    f"优先用简短消息确认用户当前状态，不要直接继续上次话题。"
+                )
 
             # ------------------------------------------------------------------
 
@@ -1128,6 +1292,14 @@ class ProductionChatOrchestrator:
                 "preference_version": (user_context_data or {}).get("preference_version", 0),
                 "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
             }
+            # Inject spine UserVisibleReceipt for Flutter to render "因为X我调整了Y" card
+            if _spine_receipt_payload:
+                import json as _json
+                response_metadata["spine_receipt"] = _json.dumps(_spine_receipt_payload)
+            # Inject stale state card for Flutter recovery UX
+            if _spine_stale_card:
+                import json as _json
+                response_metadata["spine_stale_card"] = _json.dumps(_spine_stale_card)
             final_response_data["metadata"] = response_metadata
 
             try:

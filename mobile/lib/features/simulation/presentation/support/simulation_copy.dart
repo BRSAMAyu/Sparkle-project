@@ -1,4 +1,5 @@
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 String localizeSimulationScenario(String key, [AppLocalizations? l10n]) {
   if (l10n != null) {
@@ -98,11 +99,11 @@ String _localizeExact(String text) {
     case 'study_group': return '虚拟学习小组';
     case 'knowledge_debate': return '知识辩论';
     case 'historical_roleplay': return '历史角色扮演';
-    case 'socratic_dialogue': return '苏格拉底式对话';
+    case 'socratic_dialogue': return context.l10n.simSocraticCopy;
     case 'case_analysis': return '案例拆解';
     case 'what_if_path': return '假设分支推演';
     case 'concept_map_build': return '概念图共建';
-    case 'error_diagnosis': return '错因诊断';
+    case 'error_diagnosis': return context.l10n.simErrorDiagCopy;
     case 'analyst': return '分析者';
     case 'expert': return '专家';
     case 'coach': return '教练';

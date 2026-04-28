@@ -155,7 +155,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             children: [
               Icon(Icons.bookmark_outline, size: 18),
               SizedBox(width: DS.spacing10),
-              Expanded(child: Text('我的收藏')),
+              Expanded(child: Text('Favorites')),
             ],
           ),
         ),
@@ -266,7 +266,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
           ),
           Tooltip(
-            message: '更多',
+            message: 'More',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(

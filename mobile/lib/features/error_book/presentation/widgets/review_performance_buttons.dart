@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 复习性能评价按钮组
 ///
@@ -39,10 +40,10 @@ class ReviewPerformanceButtons extends StatelessWidget {
                   index: 1,
                   child: _PerformanceButton(
                   performance: 'forgotten',
-                  label: '忘记了',
+                  label: context.l10n.ebForgot,
                   icon: Icons.close,
                   color: DS.error,
-                  description: '下次会提前复习',
+                  description: context.l10n.ebForgotHint,
                   isLoading: isLoading,
                   onTap: () {
                     unawaited(
@@ -61,10 +62,10 @@ class ReviewPerformanceButtons extends StatelessWidget {
                   index: 2,
                   child: _PerformanceButton(
                   performance: 'fuzzy',
-                  label: '有点模糊',
+                  label: context.l10n.ebFuzzy,
                   icon: Icons.remove,
                   color: DS.warningLight,
-                  description: '保持复习间隔',
+                  description: context.l10n.ebFuzzyHint,
                   isLoading: isLoading,
                   onTap: () {
                     unawaited(
@@ -83,10 +84,10 @@ class ReviewPerformanceButtons extends StatelessWidget {
                   index: 3,
                   child: _PerformanceButton(
                   performance: 'remembered',
-                  label: '记住了',
+                  label: context.l10n.ebRemembered,
                   icon: Icons.check,
                   color: DS.success,
-                  description: '延长复习间隔',
+                  description: context.l10n.ebRememberedHint,
                   isLoading: isLoading,
                   onTap: () {
                     unawaited(
@@ -228,31 +229,31 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
             const SizedBox(height: DS.spacing24),
             _PerformanceOption(
               performance: 'remembered',
-              label: '完全记住了 ✓',
-              description: '能准确回忆并理解解题思路',
+              label: context.l10n.ebPerfectRecall,
+              description: context.l10n.ebPerfectRecallHint,
               color: DS.success,
               onTap: () => onPerformanceSelected('remembered'),
             ),
             const SizedBox(height: DS.spacing12),
             _PerformanceOption(
               performance: 'fuzzy',
-              label: '有点模糊 ≈',
-              description: '大致记得，但细节不够清晰',
+              label: context.l10n.ebFuzzyRecall,
+              description: context.l10n.ebFuzzyRecallHint,
               color: DS.warningLight,
               onTap: () => onPerformanceSelected('fuzzy'),
             ),
             const SizedBox(height: DS.spacing12),
             _PerformanceOption(
               performance: 'forgotten',
-              label: '完全忘记了 ✗',
-              description: '想不起来或记错了',
+              label: context.l10n.ebCompleteForgot,
+              description: context.l10n.ebCompleteForgotHint,
               color: DS.error,
               onTap: () => onPerformanceSelected('forgotten'),
             ),
             const SizedBox(height: DS.spacing16),
             SparkleButton.ghost(
               onPressed: () => Navigator.of(context).pop(),
-              label: '取消',
+              label: context.l10n.toolsWbCancel,
             ),
           ],
         ),

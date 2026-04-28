@@ -9,6 +9,7 @@ import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.d
 import 'package:sparkle/features/error_book/presentation/widgets/error_question_image.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/review_performance_buttons.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 复习模式枚举
 enum ReviewMode {
@@ -109,7 +110,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           final filteredErrors = _filterErrors(errors);
 
           if (filteredErrors.isEmpty) {
-            return _buildEmptyState(context, customMessage: '没有符合条件的错题');
+            return _buildEmptyState(context, customMessage: context.l10n.ebNoMatchingErrors);
           }
 
           // 复习完成
@@ -404,7 +405,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   });
                 },
                 icon: const Icon(Icons.visibility_off, size: 16),
-                label: const Text('隐藏'),
+                label: Text(context.l10n.ebHide),
               ),
             ],
           ),
@@ -436,7 +437,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   });
                 },
                 icon: const Icon(Icons.visibility),
-                label: const Text('查看答案'),
+                label: Text(context.l10n.ebViewAnswer),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
                   minimumSize: const Size(double.infinity, 0),
@@ -490,7 +491,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   });
                 },
                 icon: const Icon(Icons.psychology_outlined, size: 18),
-                label: const Text('查看 AI 分析'),
+                label: Text(context.l10n.ebViewAnalysis),
               ),
             if (_showAnalysis) const SizedBox(height: DS.spacing12),
 
@@ -541,7 +542,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.error('提交失败: $e'),
+        SparkleSnackBar.error(context.l10n.ebSubmitFailed(e.toString())),
       );
     }
   }
@@ -577,7 +578,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back),
-              label: const Text('返回'),
+              label: Text(context.l10n.ebBack),
             ),
           ],
         ),
@@ -695,7 +696,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back),
-                    label: const Text('返回列表'),
+                    label: Text(context.l10n.ebBackToList),
                     style: OutlinedButton.styleFrom(
                       padding:
                           const EdgeInsets.symmetric(vertical: DS.spacing16),
@@ -718,7 +719,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                       ref.invalidate(todayReviewListProvider);
                     },
                     icon: const Icon(Icons.replay),
-                    label: const Text('再来一轮'),
+                    label: Text(context.l10n.ebAnotherRound),
                     style: FilledButton.styleFrom(
                       padding:
                           const EdgeInsets.symmetric(vertical: DS.spacing16),
@@ -811,7 +812,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 ref.invalidate(todayReviewListProvider);
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
+              label: Text(context.l10n.ebRetry),
             ),
           ],
         ),
@@ -826,16 +827,16 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认退出'),
-        content: const Text('复习还未完成，确定要退出吗？'),
+        title: Text(context.l10n.ebConfirmExit),
+        content: Text(context.l10n.ebConfirmExitDesc),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            label: '继续复习',
+            label: context.l10n.ebContinueReview,
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('退出'),
+            child: Text(context.l10n.ebExit),
           ),
         ],
       ),

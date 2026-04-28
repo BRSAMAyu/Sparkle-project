@@ -1153,6 +1153,37 @@ celery_app.conf.beat_schedule = {
         "args": (500,),
         "options": {"queue": "default"},
     },
+    # ========== Signal-to-Action Spine Maintenance ==========
+    "spine-snapshot-daily": {
+        "task": "app.core.celery_tasks.scan_spine_snapshots",
+        "schedule": crontab(hour=3, minute=30),
+        "args": (500,),
+        "options": {"queue": "low_priority"},
+    },
+    "spine-recall-notification-scan": {
+        "task": "app.core.celery_tasks.scan_recall_notifications",
+        "schedule": crontab(minute=0, hour="*/4"),
+        "args": (500,),
+        "options": {"queue": "default"},
+    },
+    "spine-expire-stale-states": {
+        "task": "app.core.celery_tasks.spine_expire_stale_states",
+        "schedule": crontab(minute=30, hour="*/6"),
+        "args": (500,),
+        "options": {"queue": "low_priority"},
+    },
+    "spine-auto-deprecate-skills": {
+        "task": "app.core.celery_tasks.spine_auto_deprecate_skills",
+        "schedule": crontab(hour=4, minute=0),
+        "args": (500,),
+        "options": {"queue": "low_priority"},
+    },
+    "spine-community-cohort-scan": {
+        "task": "app.core.celery_tasks.scan_community_cohort_signals",
+        "schedule": crontab(minute=0, hour="*/8"),
+        "args": (200,),
+        "options": {"queue": "low_priority"},
+    },
 }
 
 

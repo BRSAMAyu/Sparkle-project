@@ -629,6 +629,43 @@ class ResponseBuilderMixin:
                 except Exception as e:
                     logger.debug(f"Cognitive feedback loop flush skipped: {e}")
 
+        # Spine: inject UserVisibleReceipt and StaleStateGuard card for Flutter UI
+        if getattr(self, "redis", None) is not None:
+            try:
+                from app.signals.spine_orchestrator import SpineOrchestrator
+                _spine = SpineOrchestrator(self.redis)
+                _latest_receipt = await _spine.get_latest_receipt(user_id)
+                if _latest_receipt:
+                    _receipt_actions = list(_latest_receipt.actions or [])
+                    _correctable = "correct" in _receipt_actions
+                    response_metadata["spine_receipt"] = json.dumps({
+                        "receipt_id": _latest_receipt.receipt_id,
+                        "trigger": _latest_receipt.receipt_type,
+                        "summary": _latest_receipt.message,
+                        "correctable": _correctable,
+                        "correction_options": (
+                            ["这个判断不准确", "我不同意这个调整", "继续，先看看效果"]
+                            if _correctable else []
+                        ),
+                    }, ensure_ascii=False)
+                _community_hint = await _spine.get_latest_community_hint(user_id)
+                if _community_hint:
+                    response_metadata["spine_community_hint"] = json.dumps(
+                        _community_hint, ensure_ascii=False
+                    )
+                _ux_warning = await _spine.get_ux_risk_warning(user_id)
+                if _ux_warning:
+                    response_metadata["spine_ux_warning"] = json.dumps(
+                        _ux_warning, ensure_ascii=False
+                    )
+                _goal_arb = await _spine.get_goal_arbitration_summary(user_id)
+                if _goal_arb:
+                    response_metadata["spine_goal_arbitration"] = json.dumps(
+                        _goal_arb, ensure_ascii=False
+                    )
+            except Exception:
+                pass
+
         final_response = agent_service_pb2.ChatResponse(
             response_id=response_id,
             created_at=int(datetime.now().timestamp()),

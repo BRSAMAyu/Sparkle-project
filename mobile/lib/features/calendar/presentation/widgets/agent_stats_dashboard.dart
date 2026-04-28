@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_avatar_switcher.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Agent协作统计面板
 ///
@@ -85,7 +86,7 @@ class AgentStatsDashboard extends StatelessWidget {
           Expanded(
             child: _buildStatCard(
               theme,
-              title: '总执行次数',
+              title: context.l10n.calTotalExecutions,
               value: '${overall['total_executions'] ?? 0}',
               icon: Icons.sync_alt,
               color: DS.brandPrimaryConst,
@@ -95,7 +96,7 @@ class AgentStatsDashboard extends StatelessWidget {
           Expanded(
             child: _buildStatCard(
               theme,
-              title: '平均耗时',
+              title: context.l10n.calAvgDuration,
               value: '${overall['avg_duration_ms'] ?? 0}ms',
               icon: Icons.timer,
               color: DS.brandPrimaryConst,
@@ -105,7 +106,7 @@ class AgentStatsDashboard extends StatelessWidget {
           Expanded(
             child: _buildStatCard(
               theme,
-              title: '会话数',
+              title: context.l10n.calSessionCount,
               value: '${overall['total_sessions'] ?? 0}',
               icon: Icons.chat_bubble_outline,
               color: DS.success,
@@ -165,7 +166,7 @@ class AgentStatsDashboard extends StatelessWidget {
 
               return PieChartSectionData(
                 value: count.toDouble(),
-                title: '${agent['count']}次',
+                title: '${agent['count']}x',
                 color: config.color,
                 radius: 100,
                 titleStyle: TextStyle(

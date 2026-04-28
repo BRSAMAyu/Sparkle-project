@@ -976,6 +976,67 @@ class PlanningWorkflowManager:
         created_tasks: list[Task] = []
         galaxy_weak_nodes = list(session.collected.get("galaxy_weak_nodes") or [])
         phases = list(strategy.get("phases") or [])
+
+        # Signal-to-Action Spine: fetch active directives for this user
+        spine = None
+        plan_directive = None
+        try:
+            from app.signals.spine_orchestrator import SpineOrchestrator
+            spine = SpineOrchestrator(cache_service.redis)
+            plan_directive = await spine.get_plan_directive(str(user_id))
+            if plan_directive:
+                logger.info("Spine plan_directive active for user {}: action={} constraints={}", user_id, plan_directive.plan_action, list(plan_directive.constraints.keys()))
+        except Exception as _spine_exc:
+            logger.debug("Spine directive fetch skipped: {}", _spine_exc)
+
+        # Apply PlanDirective constraints to the planning flow
+        if plan_directive is not None:
+            constraints = plan_directive.constraints
+            if constraints.get("do_not_rebuild_entire_plan") and phases:
+                # local_replan: only adjust recent days, preserve existing structure
+                logger.info("PlanDirective: local_replan — preserving existing plan structure")
+            if constraints.get("insert_recovery_task") and phases:
+                # Insert a recovery task as day 1 of first phase
+                recovery_task = {
+                    "day": 1,
+                    "focus": "恢复节奏",
+                    "task_kind": "recovery_review",
+                    "estimated_minutes": 25,
+                    "difficulty": 2,
+                }
+                phases[0]["tasks"] = [recovery_task] + list(phases[0].get("tasks") or [])
+                logger.info("PlanDirective: inserted recovery task at day 1")
+            if constraints.get("insert_practice_task") and phases:
+                practice_task = {
+                    "day": 1,
+                    "focus": "巩固练习",
+                    "task_kind": "worked_example_then_drill",
+                    "estimated_minutes": 25,
+                    "difficulty": 2,
+                }
+                phases[0]["tasks"] = [practice_task] + list(phases[0].get("tasks") or [])
+                logger.info("PlanDirective: inserted practice task at day 1")
+            if constraints.get("insert_easy_win") and phases:
+                easy_task = {
+                    "day": 1,
+                    "focus": "轻松切入",
+                    "task_kind": "light_review",
+                    "estimated_minutes": 15,
+                    "difficulty": 1,
+                }
+                phases[0]["tasks"] = [easy_task] + list(phases[0].get("tasks") or [])
+                logger.info("PlanDirective: inserted easy-win task at day 1")
+            if constraints.get("recovery_task") and phases:
+                rec_task = {
+                    "day": 1,
+                    "focus": "任务恢复",
+                    "task_kind": "recovery_review",
+                    "estimated_minutes": 20,
+                    "difficulty": 2,
+                }
+                phases[0]["tasks"] = [rec_task] + list(phases[0].get("tasks") or [])
+                logger.info("PlanDirective: inserted missed-task recovery")
+
         for index, phase in enumerate(phases, start=1):
             for day_spec in self._daily_task_specs(
                 phase,
@@ -984,6 +1045,18 @@ class PlanningWorkflowManager:
                 error_clusters=last_24h_error_clusters,
                 galaxy_weak_nodes=galaxy_weak_nodes or None,
             ):
+                # Signal-to-Action Spine: apply directive constraints + audit
+                if spine is not None:
+                    try:
+                        day_spec, _spine_audit = await spine.apply_directive_to_task_spec(
+                            str(user_id), day_spec,
+                        )
+                        if _spine_audit and not _spine_audit.applied:
+                            logger.warning("Spine audit violation: {}", _spine_audit.violations)
+                        spine = None  # directive consumed once
+                    except Exception as _spine_exc:
+                        logger.debug("Spine apply_directive skipped: {}", _spine_exc)
+
                 guide_json = self._build_task_guide_json(
                     session=session,
                     phase=phase,
@@ -2146,6 +2219,71 @@ class PlanningWorkflowManager:
             return f"{title_focus}（{material_label}）"
         return title_focus
 
+    @staticmethod
+    def _build_why_this_task(
+        *,
+        node_labels: list[str],
+        error_clusters: list[dict[str, Any]],
+        pack_why_now: str | None,
+        sprint_mode: str,
+        focus: str | None,
+        subject: str,
+    ) -> str:
+        why_parts: list[str] = []
+        if node_labels:
+            why_parts.append(f"直接针对考试高频节点：{'、'.join(node_labels[:4])}")
+        if error_clusters:
+            cluster_names = "、".join(_strip(e.get("label", "")) for e in error_clusters[:2] if _strip(e.get("label", "")))
+            if cluster_names:
+                why_parts.append(f"修复已发现的错因：{cluster_names}")
+        if pack_why_now:
+            why_parts.append(pack_why_now)
+        if sprint_mode == "seven_day_survival":
+            why_parts.append("七天冲刺模式，按收益/掌握度/可训练性排任务")
+        elif sprint_mode == "fourteen_day_build_and_retrieve":
+            why_parts.append("14天建基+检索模式，先建再测")
+        if not why_parts:
+            why_parts.append(f"推进 {(focus or subject)} 的阶段目标")
+        return "；".join(why_parts)
+
+    @staticmethod
+    def _build_materials_protocol(
+        *,
+        primary_material: dict[str, Any],
+        material_label: str,
+        material_anchors: list[dict[str, Any]],
+        materials: list[str],
+        material_gap_note: str | None,
+    ) -> dict[str, Any]:
+        protocol: dict[str, Any] = {}
+        if primary_material:
+            protocol["primary"] = {"label": material_label, "anchor": primary_material}
+        if material_anchors:
+            protocol["anchors"] = material_anchors
+        if materials:
+            protocol["available"] = materials
+        if material_gap_note:
+            protocol["gap_note"] = material_gap_note
+        return protocol
+
+    @staticmethod
+    def _build_updates_after_completion(
+        *,
+        sprint_mode: str,
+        node_labels: list[str],
+    ) -> list[str]:
+        updates = [
+            "knowledge_node_mastery",
+            "error_cluster_counts",
+            "achievement_streak",
+            "galaxy_node_coverage",
+        ]
+        if sprint_mode == "seven_day_survival":
+            updates.append("sprint_pack_progress")
+        if node_labels:
+            updates.append("node_mastery_scores")
+        return updates
+
     def _build_task_guide_json(
         self,
         *,
@@ -2331,6 +2469,53 @@ class PlanningWorkflowManager:
             "micro_contract": contract["micro_contract"],
             "success_checklist": contract["success_checklist"],
             "fail_safe_rule": _strip((day_spec or {}).get("fail_safe_rule")) or contract["fail_safe_rule"],
+            # ── P0-3: Task card 8-field protocol ──────────────────────
+            "why_this_task": self._build_why_this_task(
+                node_labels=node_labels,
+                error_clusters=error_clusters,
+                pack_why_now=pack_why_now,
+                sprint_mode=sprint_mode,
+                focus=focus,
+                subject=subject,
+            ),
+            "materials_protocol": self._build_materials_protocol(
+                primary_material=primary_material,
+                material_label=material_label,
+                material_anchors=material_anchors,
+                materials=materials,
+                material_gap_note=material_gap_note,
+            ),
+            "stuck_protocol": {
+                "cant_understand_rules": {
+                    "trigger": "用户反馈看不懂规则/概念",
+                    "action": "graph_only",
+                    "retrieval": "source_slice_definition",
+                },
+                "knows_rules_cant_solve": {
+                    "trigger": "会规则但不会做题",
+                    "action": "worked_example",
+                    "retrieval": "mistake_cluster",
+                },
+                "cant_follow_steps": {
+                    "trigger": "步骤跟不上",
+                    "action": "step_by_step_trace",
+                    "retrieval": None,
+                },
+                "not_enough_time": {
+                    "trigger": "时间不够",
+                    "action": "shrink_task",
+                    "retrieval": None,
+                },
+                "low_state": {
+                    "trigger": "状态不行/情绪低落",
+                    "action": "recovery_task",
+                    "retrieval": "affective_support",
+                },
+            },
+            "updates_after_completion": self._build_updates_after_completion(
+                sprint_mode=sprint_mode,
+                node_labels=node_labels,
+            ),
             "daily_spec": {
                 key: value
                 for key, value in dict(day_spec or {}).items()
@@ -4625,6 +4810,7 @@ class PlanningWorkflowManager:
         task_kind: str,
         sprint_mode: str,
         base_minutes: int,
+        max_duration_min: int | None = None,
     ) -> int:
         caps = {
             "diagnostic_triage": 55,
@@ -4645,7 +4831,10 @@ class PlanningWorkflowManager:
         }
         floor = floors.get(sprint_mode, 30)
         cap = caps.get(task_kind, base_minutes)
-        return max(floor, min(base_minutes, cap))
+        result = max(floor, min(base_minutes, cap))
+        if max_duration_min is not None:
+            result = min(result, max_duration_min)
+        return result
 
     def _progress_data(self, state: str) -> dict[str, Any]:
         current = {

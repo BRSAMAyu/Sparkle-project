@@ -155,7 +155,7 @@ class FeedPostCard extends StatelessWidget {
                 ),
                 const _ActionButton(
                   icon: Icons.chat_bubble_outline,
-                  label: 'Comment',
+                  label: context.l10n.communityTabPlans,
                 ),
                 if (post.topic != null)
                   Container(

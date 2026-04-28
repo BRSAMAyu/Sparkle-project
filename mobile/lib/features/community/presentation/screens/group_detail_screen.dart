@@ -45,7 +45,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => context.pop(),
                 ),
-                title: const Text('社群详情'),
+                title: Text('Group Details'),
               ),
               Expanded(
                 child: Center(
@@ -402,7 +402,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                       .read(groupDetailProvider(widget.groupId).notifier)
                       .joinGroup();
                   if (context.mounted) {
-                    AppFeedback.success(context, '欢迎加入群组!');
+                    AppFeedback.success(context, 'Welcome to the group!');
                   }
                 } catch (e) {
                   if (context.mounted) {

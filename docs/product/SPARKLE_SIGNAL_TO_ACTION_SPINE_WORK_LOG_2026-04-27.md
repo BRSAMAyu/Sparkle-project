@@ -1,0 +1,135 @@
+# Signal-to-Action Spine — 工作日志
+
+> **文档类型**: 按时间顺序的工作记录
+> **起始日期**: 2026-04-27
+> **分支**: `gpt_pro方案推进`
+> **方案文档**: `SPARKLE_SIGNAL_TO_ACTION_SPINE_2026-04-27.md`
+
+---
+
+## 日志格式
+
+每条记录包含：
+- **时间**: 工作时间
+- **阶段**: M1-Step1 / M1-Step2 / ...
+- **动作**: 做了什么
+- **文件**: 改动/创建了哪些文件
+- **审查**: 自我审查结果
+- **差距**: 距离方案完全体的差距
+- **决策**: 关键设计决策及其原因
+
+---
+
+## 2026-04-27
+
+### Phase: 项目启动 + 文档体系建立
+
+**动作**:
+- 保存完整方案至 `docs/product/SPARKLE_SIGNAL_TO_ACTION_SPINE_2026-04-27.md`
+- 建立三文档体系：方案文档（已存在）、工作日志（本文件）、进度追踪
+- 确认所有服务运行中 (API:8000, gRPC:50051, Gateway:8080, DB, Redis, MinIO)
+- Flutter 构建通过，零编译错误
+- 分支 `gpt_pro方案推进` 工作区干净
+
+**差距**:
+- 全部 3 个 Milestone 未开始
+- 需要先探索现有代码结构，确定信号接入点
+
+---
+
+### Phase: M1 实现 (Steps 1-5)
+
+**动作**:
+- 创建 `backend/app/signals/` 模块（6个文件）
+  - `types.py` — 7 个核心数据对象（dataclass）
+  - `causal_trace_store.py` — Redis 持久化（trace/signal/directive）
+  - `task_timeout_detector.py` — 固定规则：连续2次超时 → ActionableSignal
+  - `policy_engine.py` — 规则表映射：signal → PolicyDecision + ExecutionDirective
+  - `directive_applier.py` — 硬约束注入 + DirectiveApplicationAudit
+  - `spine_orchestrator.py` — 全链路编排
+- 修改 `backend/app/services/task_event_consumer.py` — 在 task.completed 处理中接入 Spine 管道
+- 修改 `backend/app/orchestration/planning_workflow.py` — 消费 directive 约束 + audit
+- 修改 `backend/app/api/v1/aurora.py` — 添加 Receipt GET/POST 端点
+- 编写 12 个单元测试全部通过
+
+**审查: Opus Agent 独立审查**
+- 发现 4 个 CRITICAL 问题：
+  1. C1: `_estimated_minutes_for_task` 未传递 `max_duration_min` → 改为直接使用 `apply_directive_to_task_spec`
+  2. C2: `avoid_new_chapter` 和 `required_task_type` 从未强制执行 → 现在通过 `DirectiveApplier.apply_to_task_spec` 统一执行
+  3. C3: `apply_directive_to_task_spec` 从未在真实代码路径调用（audit 从不触发）→ 已修复：planning_workflow 现在通过 SpineOrchestrator 走完整路径
+  4. C4: GET receipt 返回 None 导致 Flutter 崩溃 → 改为返回 `{"active": false}`
+- 修复后重测：12/12 通过
+- WARNING 级别：W1 ActionableStatePacket 定义但未使用（后续 Milestone 填充）；W6 读取-修改-写入竞态（当前顺序执行安全）；W7 方法级 import 已移至模块顶部
+
+**关键设计决策**:
+- 第一版用固定规则而非 LLM 推断（符合方案 Step 2 指引）
+- Directive 通过 `SpineOrchestrator.apply_directive_to_task_spec()` 消费，不是 prompt 片段（符合 C4）
+- Audit 真实验证输出是否满足约束，不满足则记录 violation（符合 C5）
+- Receipt 短、具体、可纠正，三个 action 按钮（符合 C6）
+- 所有 spine 错误不阻塞主流程（try/except 包裹）
+
+**差距**:
+- M2 (资料闭环) 和 M3 (错因驱动) 未开始
+- E2-E5 验收用例未覆盖
+- ActionableStatePacket 在类型中定义但未在管道中使用
+- 缺少 Prometheus 可观测性指标
+- Receipt 消息可以更具产品感（当前是 reasoning 模板输出）
+
+---
+
+### Phase: v2.8 SignalRanker 10维扩展 + StopIteration 修复
+
+**动作**:
+- SignalRanker 从 3 维扩展到 10 维评分（goal_impact, decision_relevance, urgency, freshness, cost_of_inaction, reversibility, user_visibility_need, privacy_sensitivity + 原有 confidence, tier_inverse）
+- 10 条冲突规则扩展（deadline_pressure > growth_momentum, knowledge_transfer > community_cohort 等）
+- 8 个新 ranker 维度测试（goal_impact_tier1, privacy_sensitivity, reversibility, user_visibility, decision_relevance, expanded_conflict_growth_vs_deadline, expanded_conflict_community_vs_knowledge, dimensions_count）
+- 修复 StopIteration bug：async test 中 `next(generator)` 替换为 list comprehension 索引
+
+**审查**:
+- 590/590 tests passing
+- commit `3d1a51f6` 已包含所有修复
+
+**关键设计决策**:
+- 10 维评分权重通过 _DIMENSION_WEIGHTS 配置，保持可调节
+- 高隐私信号（community_cohort）自动提升 privacy_sensitivity 维度分数
+- 不可逆操作（goal scope）降低 reversibility 分数，降低排序权重
+- 安全/Deadline 信号 user_visibility_need=1.0 确保必须告知用户
+
+**差距**:
+- P0-P4 规划全部完成
+- Spec 定义的 10 铁律、6 神性时刻、9 类 Directive 全部实现并测试
+- 8 层架构完整，12/12 E2E 场景覆盖
+- **Signal-to-Action Spine v2.8 COMPLETE — 规划内所有任务已完成**
+
+---
+
+### Phase: v2.9 Production Wiring — 接通真实生产路径
+
+**动作**:
+- 发现 ProductionChatOrchestrator 是遗留死代码，真正的生产路径是 orchestrator.py → standard_workflow.py
+- 在 orchestrator.py::process_stream() 中增加 ResponseDirective / RetrievalDirective / GrowthChronicle / FatigueGuard 的 fetch
+- 在 standard_workflow.py 中将 spine 参数传递给 build_system_prompt() 和 RAG retrieval
+- 新增 AuroraControlSignal envelope 和 AuroraAgendaItem 数据类型
+- 修复 linter 添加的类型和 pipeline 变更（directive_id 收集 + control signal 存储）
+- 5 个新 production wiring tests
+
+**审查**:
+- 600/600 tests passing
+- 4 个 commits: v2.9 wiring, AuroraControlSignal, test imports, dashboard
+
+**关键设计决策**:
+- 在 orchestrator.py 已有的 spine block 中扩展 fetch，不新建 spine 块
+- ResponseDirective 通过 build_system_prompt() 的 spine_response_directive 参数注入
+- RetrievalDirective 通过覆盖 RAG depth/mode 在 graph retrieval 中注入
+- Chronicle 和 Fatigue 只在 level >= medium 时注入（避免噪声）
+- 所有 spine fetch 保持在 try/except 中，spine 故障不影响主流程
+- AuroraControlSignal 存储 spine:aurora_control_signal:{user_id}:latest (72h TTL)
+
+**差距**:
+- Production path 现在接通了 4/7 directive types (Response, Retrieval, Plan via planning_workflow, Execution via exam_sprint)
+- NotificationDirective, ModelWriteDirective, UXDirective, CommunityDirective, SkillDirective 仍通过 Redis 存储 + 独立 consumer
+- AuroraAgendaItem 数据类型已定义但 Core Session 多消息流程未实现
+
+---
+
+*（后续日志按时间追加）*

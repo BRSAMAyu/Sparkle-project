@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
@@ -59,8 +60,8 @@ class OpenClawHubCard extends ConsumerWidget {
                         ? '已有任务在等待恢复'
                         : 'Queued work is waiting for the connection to return')
                     : isConnected && !hasRecentExecution
-                        ? (isChinese ? '已准备好接手' : 'Ready to take over')
-                        : (isChinese ? '最近一次做了什么' : 'Most recent execution');
+                        ? context.l10n.openclawReadyTakeOver
+                        : context.l10n.openclawRecentExecution;
     final summary = hasExecutionPermissionIssue
         ? (isChinese
             ? '当前令牌能访问 OpenClaw，但执行会被权限拦住。补齐权限或切到已配对连接后，排队任务就能继续跑。'
@@ -81,7 +82,7 @@ class OpenClawHubCard extends ConsumerWidget {
                         ? (isChinese
                             ? '引擎状态正常，现在最适合回到聊天或任务页发起第一次委派。'
                             : 'The engine looks healthy. This is a good moment to kick off your first delegation from chat or tasks.')
-                        : '${isChinese ? '最近执行' : 'Latest run'}: ${latestIntent?.statusLabel ?? (isChinese ? '已记录' : 'Recorded')}'
+                        : '${context.l10n.openclawLatestRun}: ${latestIntent?.statusLabel ?? context.l10n.openclawRecorded}'
                             '${(latestIntent?.goal.trim().isNotEmpty ?? false) ? ' · ${latestIntent?.goal}' : ''}';
     final actionLabel = hasExecutionPermissionIssue
         ? (isChinese
@@ -95,7 +96,7 @@ class OpenClawHubCard extends ConsumerWidget {
                 ? (isChinese
                     ? '打开执行中心，处理等待队列'
                     : 'Open Execution Center to manage the queue')
-                : (isChinese ? '打开执行中心' : 'Open Execution Center');
+                : context.l10n.openclawOpenCenter;
     final queueTone =
         hasQueue ? OpenClawVisualTone.offline : OpenClawVisualTone.active;
     final connectionTone =
@@ -199,8 +200,8 @@ class OpenClawHubCard extends ConsumerWidget {
                               ? '已连接但执行入口异常'
                               : 'Connected, execution endpoint unhealthy')
                           : isGatewayReachable
-                              ? (isChinese ? '已连接' : 'Connected')
-                              : (isChinese ? '未连接' : 'Disconnected'),
+                              ? context.l10n.openclawConnected
+                              : context.l10n.openclawDisconnected,
                   tone: connectionTone,
                   emphasized: isGatewayReachable || hasExecutionPermissionIssue,
                 ),
