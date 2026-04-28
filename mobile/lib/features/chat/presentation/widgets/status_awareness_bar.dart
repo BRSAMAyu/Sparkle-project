@@ -433,7 +433,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       observation: primaryFacet?.summary ?? snapshot.summary,
       judgment: snapshot.summary,
       confirmQuestion: context.l10n.auroraCalibrationConfirm,
-      confirmOptions: const [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
+      confirmOptions: [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
       onConfirm: (option) {
         unawaited(ref.read(auroraStatusProvider.notifier).refresh(
               conversationId: widget.conversationId,

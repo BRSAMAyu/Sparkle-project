@@ -1687,10 +1687,10 @@ class StaleRecoveryEvent extends ChatStreamEvent {
   }
 
   String get formattedElapsed {
-    if (elapsedMinutes < 60) return S.chatStreamMinutes(minutes: elapsedMinutes);
+    if (elapsedMinutes < 60) return S.chatStreamMinutes(elapsedMinutes);
     final hours = elapsedMinutes ~/ 60;
     final mins = elapsedMinutes % 60;
-    return mins > 0 ? S.chatStreamHoursMins(hours: hours, mins: mins) : S.chatStreamHoursOnly(hours: hours);
+    return mins > 0 ? S.chatStreamHoursMins(hours, mins) : S.chatStreamHoursOnly(hours);
   }
 }
 

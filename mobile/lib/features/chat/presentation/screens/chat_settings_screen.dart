@@ -54,20 +54,20 @@ class ChatSettingsScreen extends ConsumerWidget {
     )) {
       (true, _, _) => context.l10n.chatSettingsSyncingSeeds,
       (_, false, _) => context.l10n.chatSettingsSeedsDefaultOff,
-      (_, true, > 0) => context.l10n.chatSettingsSeedsEnabledCount(count: enabledSeedCount),
+      (_, true, > 0) => context.l10n.chatSettingsSeedsEnabledCount(enabledSeedCount),
       _ => context.l10n.chatSettingsSeedsEnabledNone,
     };
 
     final seedSubtitle = seedLibraryEnabled
         ? enabledSeedNames.isEmpty
             ? context.l10n.chatSettingsSeedEnableHint
-            : context.l10n.chatSettingsCurrentSeeds(names: enabledSeedNames.join('、'))
+            : context.l10n.chatSettingsCurrentSeeds(enabledSeedNames.join('、'))
         : context.l10n.chatSettingsSeedDisableHint;
 
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
-        title: const Text(context.l10n.chatSettingsTitle),
+        title: Text(context.l10n.chatSettingsTitle),
       ),
       child: ContentConstraint(
         child: ListView(
@@ -133,8 +133,8 @@ class ChatSettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   SwitchListTile(
-                    title: const Text(context.l10n.chatSettingsEnableSeedEnhancement),
-                    subtitle: const Text(context.l10n.chatSettingsEnableSeedDesc),
+                    title: Text(context.l10n.chatSettingsEnableSeedEnhancement),
+                    subtitle: Text(context.l10n.chatSettingsEnableSeedDesc),
                     value: seedLibraryEnabled,
                     onChanged: (value) {
                       unawaited(
@@ -269,8 +269,8 @@ class ChatSettingsScreen extends ConsumerWidget {
               surfaceRole: SparkleSurfaceRole.card,
               child: ListTile(
                 leading: const Icon(Icons.settings_outlined),
-                title: const Text(context.l10n.chatSettingsOpenAdvanced),
-                subtitle: const Text(context.l10n.chatSettingsOpenAdvancedDesc),
+                title: Text(context.l10n.chatSettingsOpenAdvanced),
+                subtitle: Text(context.l10n.chatSettingsOpenAdvancedDesc),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () {
                   unawaited(

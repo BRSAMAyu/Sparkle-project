@@ -116,7 +116,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text(context.l10n.toolsWbSetImportance),
+          title: Text(context.l10n.toolsWbSetImportance),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -134,7 +134,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   (index) {
                     final starValue = index + 1;
                     return ToolChoiceChip(
-                      label: context.l10n.toolsWbStarCount,
+                      label: context.l10n.toolsWbStarCount(starValue),
                       selected: selectedImportance == starValue,
                       onTap: () {
                         setDialogState(() {
@@ -365,7 +365,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             final confirmed = await showSensoryDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text(context.l10n.toolsWbDeleteTitle),
+                title: Text(context.l10n.toolsWbDeleteTitle),
                 content: Text('${context.l10n.toolsWbDeleteConfirm} "${word['word']}"${context.l10n.toolsWbDeleteSuffix}'),
                 actions: [
                   SparkleButton.ghost(
@@ -632,7 +632,7 @@ class _WordCard extends StatelessWidget {
                             icon: Icons.schedule_rounded,
                           ),
                           ToolHeroChip(
-                            label: '重要度 ${word['importance'] ?? 3}',
+                            label: '${context.l10n.toolsWbStarCount} ${word['importance'] ?? 3}',
                             accentColor: DS.warning,
                             icon: Icons.star_rounded,
                           ),

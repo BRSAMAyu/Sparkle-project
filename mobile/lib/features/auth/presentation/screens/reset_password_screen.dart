@@ -71,7 +71,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
         ),
-        title: const Text(context.l10n.authResetPassword),
+        title: Text(context.l10n.authResetPassword),
         centerTitle: true,
       ),
       child: ContentConstraint(

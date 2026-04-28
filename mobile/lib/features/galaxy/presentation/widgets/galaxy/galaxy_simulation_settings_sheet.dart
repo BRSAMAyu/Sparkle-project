@@ -123,7 +123,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                         TextButton.icon(
                           onPressed: onReset,
                           icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                          label: const Text(context.l10n.galaxySimResetDefault),
+                          label: Text(context.l10n.galaxySimResetDefault),
                         ),
                       ],
                     ),

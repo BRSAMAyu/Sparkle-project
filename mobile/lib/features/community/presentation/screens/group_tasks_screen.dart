@@ -29,7 +29,7 @@ class GroupTasksScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('群组任务'),
+        title: Text('Group Tasks'),
       ),
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.add),
@@ -43,7 +43,7 @@ class GroupTasksScreen extends ConsumerWidget {
           if (tasks.isEmpty) {
             return const Center(
               child: CompactEmptyState(
-                message: '暂无任务',
+                message: 'No tasks yet',
                 icon: Icons.assignment_outlined,
               ),
             );
@@ -85,7 +85,7 @@ class GroupTasksScreen extends ConsumerWidget {
                                   .completeTask(entry.$2.id);
                               ref.invalidate(groupTasksProvider(groupId));
                               if (context.mounted) {
-                                AppFeedback.success(context, '任务已完成！');
+                                AppFeedback.success(context, 'Task completed!');
                               }
                             } catch (e) {
                               if (context.mounted) {
@@ -254,12 +254,12 @@ class _TaskCard extends StatelessWidget {
               const Spacer(),
               if (onClaim != null)
                 SparkleButton.primary(
-                  label: '认领',
+                  label: 'Claim',
                   onPressed: onClaim!,
                 )
               else if (onComplete != null)
                 SparkleButton.primary(
-                  label: '完成',
+                  label: 'Complete',
                   onPressed: onComplete!,
                 ),
             ],
@@ -283,7 +283,7 @@ extension on GroupTasksScreen {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('创建群组任务'),
+          title: Text('Create Group Task'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -293,7 +293,7 @@ extension on GroupTasksScreen {
                   controller: titleController,
                   decoration: const InputDecoration(
                     labelText: '任务标题',
-                    hintText: '例如：完成第三章练习',
+                    hintText: 'e.g. Complete Chapter 3 exercises',
                     border: OutlineInputBorder(),
                   ),
                   autofocus: true,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -83,13 +84,13 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
         child: SparklePageScaffold(
           role: SparklePageRole.content,
           appBar: AppBar(
-            title: const Text('让我更了解你（约2分钟）'),
+            title: Text(context.l10n.userModelingChatTitle),
             actions: [
               TextButton(
                 onPressed: (_skipInFlight || _planningInFlight)
                     ? null
                     : () => unawaited(_skip()),
-                child: const Text('跳过'),
+                child: Text(context.l10n.userSkip),
               ),
             ],
           ),
@@ -104,7 +105,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                     itemBuilder: (context, index) {
                       final message = _messages[index];
                       final isUser = message.isUser;
-                      final label = isUser ? '你' : 'Aurora';
+                      final label = isUser ? context.l10n.userYou : context.l10n.userAurora;
                       return Align(
                         alignment: isUser
                             ? Alignment.centerRight
@@ -163,7 +164,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                         top: DS.spacing8,
                                       ),
                                       child: Text(
-                                        '输入中…',
+                                        context.l10n.userTyping,
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelSmall
@@ -218,7 +219,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                 borderRadius: DS.borderRadius12,
                               ),
                               child: Text(
-                                'Aurora 可能会连续发几条，你也可以直接插话。',
+                                context.l10n.userAuroraMultiHint,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -233,7 +234,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                   enabled: !_skipInFlight,
                                   onSubmitted: (_) => _handleSubmit(),
                                   decoration: const InputDecoration(
-                                    hintText: '输入你的回答…',
+                                    hintText: context.l10n.userInputPlaceholder,
                                   ),
                                 ),
                               ),
@@ -688,7 +689,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       String? resolvedPlanRoute;
 
       final stream = ref.read(chatRepositoryProvider).chatStream(
-        '开始规划',
+        context.l10n.userStartPlanning,
         _conversationId,
         userId: userId,
         requestId: _nextRequestId(),
@@ -704,7 +705,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
             ..add(
               ErrorEvent(
                 code: 'PLANNING_TIMEOUT',
-                message: '计划生成超时了，请重试一次。',
+                message: context.l10n.userPlanTimeoutMessage,,
                 retryable: true,
               ),
             )
@@ -737,7 +738,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       resolvedPlanRoute ??=
           await _resolveFallbackPlanRoute(preferredPlanId: resolvedPlanId);
       if (resolvedPlanRoute == null || resolvedPlanRoute.isEmpty) {
-        throw Exception('计划还在准备入口，请稍后重试一次。');
+        throw Exception(context.l10n.userPlanNotReady);
       }
 
       if (!mounted) return;
@@ -899,14 +900,14 @@ class _PlanningBridgeStatus extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '正在生成你的第一份冲刺计划',
+                    context.l10n.userGeneratingSprintPlan,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    '马上就会带你进入任务页，不需要再点下一步。',
+                    context.l10n.userSprintPlanHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -925,14 +926,14 @@ class _PlanningBridgeStatus extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '计划生成没成功',
+            context.l10n.userPlanGenerationFailed,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            errorMessage ?? '暂时没能把计划拉起来，请再试一次。',
+            errorMessage ?? context.l10n.userPlanRetryMessage,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,
@@ -940,14 +941,14 @@ class _PlanningBridgeStatus extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing16),
           SparkleButton(
-            label: '重试生成计划',
+            label: context.l10n.userRetryGeneratePlan,
             onPressed: onRetry,
           ),
           const SizedBox(height: DS.spacing8),
           TextButton(
             onPressed: onSkip,
             child: Text(
-              '稍后再说',
+              context.l10n.userLater,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),

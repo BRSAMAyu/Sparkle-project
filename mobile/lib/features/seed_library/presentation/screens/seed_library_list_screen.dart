@@ -185,7 +185,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                       ),
                     if (_showOfficialOnly)
                       Chip(
-                        label: const Text(context.l10n.seedOfficialOnly),
+                        label: Text(context.l10n.seedOfficialOnly),
                         deleteIcon: const Icon(Icons.close, size: 18),
                         onDeleted: () {
                           setState(() {
@@ -196,7 +196,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                       ),
                     if (_showFeaturedOnly)
                       Chip(
-                        label: const Text(context.l10n.seedFeaturedOnly),
+                        label: Text(context.l10n.seedFeaturedOnly),
                         deleteIcon: const Icon(Icons.close, size: 18),
                         onDeleted: () {
                           setState(() {
@@ -363,8 +363,8 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               CheckboxListTile(
                 value: _showOfficialOnly,
                 contentPadding: EdgeInsets.zero,
-                title: const Text(context.l10n.seedOfficialFilter),
-                subtitle: const Text(context.l10n.seedOfficialFilterDesc),
+                title: Text(context.l10n.seedOfficialFilter),
+                subtitle: Text(context.l10n.seedOfficialFilterDesc),
                 onChanged: (value) {
                   setState(() {
                     _showOfficialOnly = value ?? false;
@@ -374,8 +374,8 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               CheckboxListTile(
                 value: _showFeaturedOnly,
                 contentPadding: EdgeInsets.zero,
-                title: const Text(context.l10n.seedFeaturedFilter),
-                subtitle: const Text(context.l10n.seedFeaturedFilterDesc),
+                title: Text(context.l10n.seedFeaturedFilter),
+                subtitle: Text(context.l10n.seedFeaturedFilterDesc),
                 onChanged: (value) {
                   setState(() {
                     _showFeaturedOnly = value ?? false;

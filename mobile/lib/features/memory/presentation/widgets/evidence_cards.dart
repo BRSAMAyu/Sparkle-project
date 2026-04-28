@@ -119,7 +119,7 @@ class EvidenceCard extends StatelessWidget {
         'Sprint': state['sprint_mode']?.toString() ?? '-',
       },);
     }
-    return const Text(context.l10n.memEvidenceRecord);
+    return Text(context.l10n.memEvidenceRecord);
   }
 
   _EvidenceRouteAction? _buildRouteAction() {

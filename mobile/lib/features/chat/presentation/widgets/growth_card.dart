@@ -118,7 +118,7 @@ class _GrowthCardState extends State<GrowthCard>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          context.l10n.chatGrowthStreakDays(days: widget.streakDays),
+                          context.l10n.chatGrowthStreakDays(widget.streakDays),
                           style: DS.labelSmall.copyWith(
                             color: DS.success,
                             fontWeight: FontWeight.w600,

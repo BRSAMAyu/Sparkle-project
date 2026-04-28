@@ -23,7 +23,7 @@ class TaskBoardTodaySummary {
   final int completedCount;
 
   String get label =>
-      totalCount == 0 ? S.taskBoardTodayNoTasks : S.taskBoardTodaySummary(totalCount, completedCount);
+      totalCount == 0 ? S.taskBoardTodayNoTasks : S.taskBoardTodaySummary(completedCount, totalCount);
 }
 
 /// Task board state

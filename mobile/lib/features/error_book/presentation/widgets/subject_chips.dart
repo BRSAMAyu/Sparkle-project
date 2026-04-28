@@ -91,7 +91,7 @@ class SubjectFilterChips extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: DS.spacing8),
               child: FilterChip(
-                label: const Text(context.l10n.ebAll),
+                label: Text(context.l10n.ebAll),
                 selected: selectedSubject == null,
                 onSelected: (_) => onSelected(null),
               ),

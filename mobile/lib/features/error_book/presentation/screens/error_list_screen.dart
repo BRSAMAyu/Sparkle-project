@@ -573,8 +573,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 SwitchListTile.adaptive(
                   value: needReviewOnly,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text(context.l10n.ebShowDueOnly),
-                  subtitle: const Text(context.l10n.ebShowDueDesc),
+                  title: Text(context.l10n.ebShowDueOnly),
+                  subtitle: Text(context.l10n.ebShowDueDesc),
                   onChanged: (value) {
                     setDialogState(() {
                       needReviewOnly = value;
@@ -594,7 +594,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                   runSpacing: DS.spacing8,
                   children: [
                     FilterChip(
-                      label: const Text(context.l10n.ebAll),
+                      label: Text(context.l10n.ebAll),
                       selected: cognitiveDimension == null,
                       onSelected: (_) {
                         setDialogState(() {

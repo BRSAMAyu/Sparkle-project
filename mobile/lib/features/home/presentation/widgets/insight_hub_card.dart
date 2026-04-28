@@ -262,6 +262,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contentPadding = dense ? DS.spacing10 : DS.spacing12;
     final summary = _heroSummary(
+      context,
       latestTheater,
       latestReportPayload,
       simulationState,
@@ -487,6 +488,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
   }
 
   String _heroSummary(
+    BuildContext context,
     Map<String, dynamic>? latestTheater,
     LearningReport? report,
     SimulationState simulationState,

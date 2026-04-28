@@ -268,7 +268,7 @@ class _InlineTranslationBlockState
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: const Text(context.l10n.transSaveToWordCard, style: TextStyle(fontSize: 13)),
+                label: Text(context.l10n.transSaveToWordCard, style: TextStyle(fontSize: 13)),
                 onPressed: widget.onSaveToKnowledge,
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(

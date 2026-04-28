@@ -10427,5 +10427,245 @@
   "userAdminTotalCount": "总量 {count}",
   "userAdminErrorsCrashes": "错误 {errors} / 崩溃 {crashes}",
   "userAdminSuccessRate": "成功率 {rate}%",
-  "userAdminAvgDurationMs": "平均耗时 {duration}ms"
+  "userAdminAvgDurationMs": "平均耗时 {duration}ms",
+  "@flashCapsuleSubjectCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupSizeBytes": {
+    "placeholders": {
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupOfflineCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupAddedToWordbook": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@visualElementUnlockSubtitle": {
+    "description": "Subtitle displayed when a visual element is unlocked"
+  },
+  "@fileUploadProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "@entityCardTaskListFallback": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@achievementMapFocusHint": {
+    "description": "Hint message showing which achievement to focus on",
+    "placeholders": {
+      "name": {
+        "type": "Object",
+        "example": "First Steps"
+      }
+    }
+  },
+  "@statisticsExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleReplyTo": {
+    "placeholders": {
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleStance": {
+    "placeholders": {
+      "stance": {
+        "type": "Object"
+      }
+    }
+  },
+  "@achievementMapFocusTooltip": {
+    "description": "Tooltip for the focus button on the achievement map"
+  },
+  "@weatherGuideConditionPrefix": {
+    "placeholders": {
+      "condition": {
+        "type": "Object"
+      }
+    }
+  },
+  "@statisticsDateFormat": {
+    "placeholders": {
+      "year": {
+        "type": "Object"
+      },
+      "month": {
+        "type": "Object"
+      },
+      "day": {
+        "type": "Object"
+      }
+    }
+  },
+  "@weatherGuideTriggerPrefix": {
+    "placeholders": {
+      "trigger": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fileUploadFormat": {
+    "placeholders": {
+      "type": {
+        "type": "Object"
+      },
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupRemovedFromWordbook": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@loadingFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@visualElementViewCollection": {
+    "description": "Button text to view the visual element collection"
+  },
+  "@vocabularyLookupEntryCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleReply": {
+    "placeholders": {
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleRound": {
+    "placeholders": {
+      "round": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@intentPredictionContinue": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fileUploadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@visualElementUnlockTitle": {
+    "description": "Title displayed when a visual element is unlocked"
+  },
+  "@vocabularyLookupAssocCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleHint": {
+    "placeholders": {
+      "hint": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupInstalledAt": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupLoadFailed": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupPos": {
+    "placeholders": {
+      "pos": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupRemoveFailed": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupAddFailed": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  }
 }

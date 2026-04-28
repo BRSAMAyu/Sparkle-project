@@ -508,7 +508,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -542,7 +542,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -589,7 +589,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {

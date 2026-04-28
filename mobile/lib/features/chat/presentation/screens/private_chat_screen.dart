@@ -360,7 +360,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             ),
                             TextButton(
                               onPressed: _restoreOriginalDraft,
-                              child: const Text(context.l10n.chatPrivateRestoreOriginal),
+                              child: Text(context.l10n.chatPrivateRestoreOriginal),
                             ),
                           ],
                         ),
@@ -504,11 +504,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     }
     return switch (preset) {
       'polish_reply' =>
-        context.l10n.chatPrivatePolishPrompt(base: base, composerText: composerText),
+        context.l10n.chatPrivatePolishPrompt(base, composerText),
       'gentle_reminder' =>
-        context.l10n.chatPrivateGentlePrompt(base: base, composerText: composerText),
+        context.l10n.chatPrivateGentlePrompt(base, composerText),
       'schedule_sync' =>
-        context.l10n.chatPrivateSchedulePrompt(base: base, composerText: composerText),
+        context.l10n.chatPrivateSchedulePrompt(base, composerText),
       _ => base,
     };
   }

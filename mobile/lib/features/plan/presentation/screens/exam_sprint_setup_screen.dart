@@ -167,7 +167,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               const SizedBox(height: DS.spacing12),
               _buildSection(
                 context,
-                title: '3. 目标是通过、保分还是冲高分？',
+                title: context.l10n.planSprintStep3Title,
                 child: Wrap(
                   spacing: DS.spacing8,
                   runSpacing: DS.spacing8,
@@ -252,7 +252,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               const SizedBox(height: DS.spacing12),
               _buildSection(
                 context,
-                title: '5. 你现在大概会多少？最怕哪几章？',
+                title: context.l10n.planSprintStep5Title,
                 subtitle: _baselineLabel(_currentLevel.round()),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +315,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               const SizedBox(height: DS.spacing12),
               _buildSection(
                 context,
-                title: '6. 每天真实能学多久？',
+                title: context.l10n.planSprintStep6Title,
                 subtitle: probabilityLabel,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +622,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               ),
               const SizedBox(height: DS.spacing16),
               SparkleButton(
-                label: canOpenTask ? '开始第一天任务' : '查看计划',
+                label: canOpenTask ? context.l10n.planSprintStartFirstDay : context.l10n.planSprintViewPlanAction,
                 icon: Icon(
                   canOpenTask
                       ? Icons.play_circle_outline_rounded
@@ -637,7 +637,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               if (canOpenTask) ...[
                 const SizedBox(height: DS.spacing8),
                 SparkleButton.outline(
-                  label: '查看整个计划',
+                  label: context.l10n.planSprintViewWholePlan,
                   expand: true,
                   onPressed: () {
                     Navigator.of(sheetContext).pop();
@@ -678,15 +678,15 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
 
   String _baselineLabel(int score) {
     if (score <= 25) {
-      return '几乎要从零开始';
+      return context.l10n.planSprintLevelZero;
     }
     if (score <= 50) {
-      return '上过课，但基础还不稳';
+      return context.l10n.planSprintLevelBasic;
     }
     if (score <= 75) {
-      return '有一部分基础，可以边补边冲';
+      return context.l10n.planSprintLevelSome;
     }
-    return '基础不错，重点是提分校准';
+    return context.l10n.planSprintLevelGood;
   }
 
   String _daysLeftLabel(DateTime examDate) {

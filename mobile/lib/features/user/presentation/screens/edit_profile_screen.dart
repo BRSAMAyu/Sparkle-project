@@ -97,21 +97,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             _AvatarSourceTile(
               icon: Icons.face_retouching_natural_rounded,
               title: l10n.editProfileChooseFromPresets,
-              subtitle: '从更丰富的风格头像里快速选择。',
+              subtitle: context.l10n.userAvatarFromGallery,
               onTap: () => Navigator.pop(sheetContext, 'preset'),
             ),
             const SizedBox(height: DS.spacing8),
             _AvatarSourceTile(
               icon: Icons.camera_alt_rounded,
               title: l10n.editProfileTakePhoto,
-              subtitle: '直接拍摄一张新头像用于上传。',
+              subtitle: context.l10n.userAvatarFromCamera,
               onTap: () => Navigator.pop(sheetContext, 'camera'),
             ),
             const SizedBox(height: DS.spacing8),
             _AvatarSourceTile(
               icon: Icons.photo_library_rounded,
               title: l10n.editProfileChooseFromGallery,
-              subtitle: '从相册里挑选你已经准备好的图片。',
+              subtitle: context.l10n.userAvatarFromPhotos,
               onTap: () => Navigator.pop(sheetContext, 'gallery'),
             ),
           ],
@@ -247,7 +247,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '输入邮件里的验证码即可完成验证，验证通过后你的安全与通知能力会更完整。',
+                context.l10n.userVerifyEmailHint,
                 style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -376,17 +376,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         children: [
                           _buildMetaChip(
                             icon: Icons.auto_awesome_outlined,
-                            label: '头像与资料',
+                            label: context.l10n.userAvatarAndProfile,
                           ),
                           _buildMetaChip(
                             icon: Icons.verified_user_outlined,
-                            label: '安全同步',
+                            label: context.l10n.userSecuritySync,
                           ),
                         ],
                       ),
                       const SizedBox(height: DS.spacing10),
                       Text(
-                        '把头像、昵称和邮箱整理成一致的个人形象，同时保留安全验证与账号信息的清晰层次。',
+                        context.l10n.userProfileSectionHint,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: DS.textSecondary,
                               height: 1.45,

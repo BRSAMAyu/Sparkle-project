@@ -200,7 +200,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                   child: TextButton.icon(
                     onPressed: () => _showSaveTeamDialog(context),
                     icon: const Icon(Icons.bookmark_add_outlined),
-                    label: const Text(context.l10n.chatTeamSaveTeam),
+                    label: Text(context.l10n.chatTeamSaveTeam),
                   ),
                 ),
 
@@ -257,7 +257,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             label: Text(
               expert.official
                   ? expert.displayName
-                  : context.l10n.chatTeamExpertCustom(name: expert.displayName),
+                  : context.l10n.chatTeamExpertCustom(expert.displayName),
             ),
             avatar: isSelected
                 ? null
@@ -517,14 +517,14 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
-          title: const Text(context.l10n.chatTeamCreateCustomExpert),
+          title: Text(context.l10n.chatTeamCreateCustomExpert),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: context.l10n.chatTeamExpertName),
+                  decoration: InputDecoration(labelText: context.l10n.chatTeamExpertName),
                 ),
                 TextField(
                   controller: descriptionController,
@@ -532,7 +532,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedBaseExpert,
-                  decoration: const InputDecoration(labelText: context.l10n.chatTeamBaseExpert),
+                  decoration: InputDecoration(labelText: context.l10n.chatTeamBaseExpert),
                   items: enabledExperts
                       .map(
                         (expert) => DropdownMenuItem<String>(
@@ -623,13 +623,13 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
     final saved = await showSensoryDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text(context.l10n.chatTeamSaveExpertTeam),
+        title: Text(context.l10n.chatTeamSaveExpertTeam),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: context.l10n.chatTeamTeamName),
+              decoration: InputDecoration(labelText: context.l10n.chatTeamTeamName),
             ),
             TextField(
               controller: descriptionController,

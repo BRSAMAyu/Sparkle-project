@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/user/user_routes.dart';
@@ -87,7 +88,7 @@ class AccountSecurityScreen extends StatelessWidget {
                       context,
                       icon: Icons.link_rounded,
                       title: l10n.profileLinkedAccounts,
-                      subtitle: '统一管理 Google、Apple、微信等绑定方式。',
+                      subtitle: context.l10n.userBindSocialHint,
                       accentColor: const Color(0xFF7A8C64),
                       onTap: () => context.push(UserRoutes.socialAccounts),
                     ),

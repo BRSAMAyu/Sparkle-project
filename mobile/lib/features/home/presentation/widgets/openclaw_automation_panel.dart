@@ -288,14 +288,14 @@ class _OpenClawAutomationPanelState
                 if (_triggerType == 'condition') ...[
                   TextFormField(
                     controller: _checkUrlController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.openclawCheckUrl,
                     ),
                   ),
                   const SizedBox(height: DS.spacing10),
                   TextFormField(
                     controller: _conditionController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.openclawConditionExpression,
                       helperText: context.l10n.openclawConditionHelper,
                     ),
@@ -304,7 +304,7 @@ class _OpenClawAutomationPanelState
                   TextFormField(
                     controller: _intervalController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.openclawPollingInterval,
                     ),
                   ),
@@ -568,8 +568,8 @@ class _ScheduleCard extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.openclawNextRunLastRun(
-                next: _formatDate(schedule.nextRunAt),
-                last: _formatDate(schedule.lastRunAt),
+                _formatDate(schedule.lastRunAt),
+                _formatDate(schedule.nextRunAt),
               ),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
@@ -606,16 +606,16 @@ class _ScheduleCard extends StatelessWidget {
   static String _describeTrigger(BuildContext context, OpenClawExecutionSchedule schedule) {
     if (schedule.triggerType == 'event') {
       return context.l10n.openclawEventTriggerLabel(
-        eventType: '${schedule.triggerConfig['event_type'] ?? context.l10n.openclawNotFilled}',
+        '${schedule.triggerConfig['event_type'] ?? context.l10n.openclawNotFilled}',
       );
     }
     if (schedule.triggerType == 'condition') {
       return context.l10n.openclawConditionTriggerLabel(
-        condition: '${schedule.triggerConfig['condition'] ?? context.l10n.openclawNotFilled}',
+        '${schedule.triggerConfig['condition'] ?? context.l10n.openclawNotFilled}',
       );
     }
     return context.l10n.openclawCronTriggerLabel(
-      cron: '${schedule.triggerConfig['cron'] ?? context.l10n.openclawNotFilled}',
+      '${schedule.triggerConfig['cron'] ?? context.l10n.openclawNotFilled}',
     );
   }
 

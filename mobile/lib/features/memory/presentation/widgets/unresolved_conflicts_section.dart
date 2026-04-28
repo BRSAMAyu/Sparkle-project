@@ -70,7 +70,7 @@ class UnresolvedConflictsSection extends StatelessWidget {
                         ),
                         TextButton(
                           onPressed: () => onSelectNone?.call(c),
-                          child: const Text(context.l10n.memSkip),
+                          child: Text(context.l10n.memSkip),
                         ),
                       ],
                     ),

@@ -147,7 +147,7 @@ class _LearningForecastScreenState
                             FilledButton.icon(
                               onPressed: _loadDashboard,
                               icon: const Icon(Icons.refresh),
-                              label: const Text(context.l10n.insReload),
+                              label: Text(context.l10n.insReload),
                             ),
                           ],
                         ),

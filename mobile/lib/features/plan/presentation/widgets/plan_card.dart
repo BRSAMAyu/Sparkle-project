@@ -171,7 +171,7 @@ class _PlanCardState extends State<PlanCard> {
                   if (payload.taskCount != null)
                     _buildInfoPill(
                       Icons.task_alt_outlined,
-                      '${payload.taskCount} 个任务',
+                      context.l10n.planTaskCount(payload.taskCount),
                     ),
                 ],
               ),
@@ -183,7 +183,7 @@ class _PlanCardState extends State<PlanCard> {
                 children: [
                   Expanded(
                     child: SparkleButton.ghost(
-                      label: '分享卡片',
+                      label: context.l10n.planShareCard,
                       icon: const Icon(Icons.share_outlined),
                       onPressed: () => widget.onShare?.call(),
                     ),
@@ -191,7 +191,7 @@ class _PlanCardState extends State<PlanCard> {
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: SparkleButton(
-                      label: '查看详情',
+                      label: context.l10n.planViewDetails,
                       icon: const Icon(Icons.arrow_forward_rounded),
                       onPressed: _handleTap,
                     ),

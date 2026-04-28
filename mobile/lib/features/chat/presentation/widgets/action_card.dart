@@ -1503,7 +1503,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               if (ragQuality != null)
                 _buildMetaChip(
                   icon: Icons.psychology_alt_outlined,
-                  label: context.l10n.chatActionPlanQuality(quality: ragQuality),
+                  label: context.l10n.chatActionPlanQuality(ragQuality),
                 ),
             ],
           ),
@@ -2000,19 +2000,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               if (validationTotal > 0)
                 _buildMetaChip(
                   icon: Icons.rule_rounded,
-                  label: context.l10n.chatActionValidationSteps(passed: validationPassed, total: validationTotal),
+                  label: context.l10n.chatActionValidationSteps(validationPassed, validationTotal),
                 ),
               if (qualityScore > 0)
                 _buildMetaChip(
                   icon: Icons.fact_check_rounded,
-                  label: context.l10n.chatActionQualityScore(percent: (qualityScore * 100).round().toString()),
+                  label: context.l10n.chatActionQualityScore((qualityScore * 100).round().toString()),
                 ),
               if (selfVerification != null &&
                   (selfVerification['score'] as num?) != null)
                 _buildMetaChip(
                   icon: Icons.verified_user_rounded,
                   label:
-                      context.l10n.chatActionSelfCheck(percent: (((selfVerification['score'] as num?) ?? 0) * 100).round().toString()),
+                      context.l10n.chatActionSelfCheck((((selfVerification['score'] as num?) ?? 0) * 100).round().toString()),
                 ),
             ],
           ),
@@ -2360,13 +2360,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
             _buildMetaChip(
               icon: Icons.hub_outlined,
-              label: context.l10n.chatActionEnvironment(env: targetEnv.toUpperCase()),
+              label: context.l10n.chatActionEnvironment(targetEnv.toUpperCase()),
             ),
             if (delegatePreference != null)
               _buildMetaChip(
                 icon: Icons.favorite_border_rounded,
                 label:
-                    context.l10n.chatActionTrust(score: (double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)),
+                    context.l10n.chatActionTrust((double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)),
               ),
           ],
         ),

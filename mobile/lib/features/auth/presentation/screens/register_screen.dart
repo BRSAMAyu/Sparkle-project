@@ -236,7 +236,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             );
                             setState(() => _acceptedTos = value ?? false);
                           },
-                          title: const Text(context.l10n.authAgreeTerms),
+                          title: Text(context.l10n.authAgreeTerms),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                         ),
@@ -244,7 +244,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           alignment: Alignment.centerLeft,
                           child: TextButton(
                             onPressed: () => context.push('/legal/terms'),
-                            child: const Text(context.l10n.authViewTerms),
+                            child: Text(context.l10n.authViewTerms),
                           ),
                         ),
                         SparkleStaggerItem(
@@ -260,7 +260,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             );
                             setState(() => _acceptedPrivacy = value ?? false);
                           },
-                          title: const Text(context.l10n.authAgreePrivacy),
+                          title: Text(context.l10n.authAgreePrivacy),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                         ),
@@ -268,7 +268,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           alignment: Alignment.centerLeft,
                           child: TextButton(
                             onPressed: () => context.push('/legal/privacy'),
-                            child: const Text(context.l10n.authViewPrivacy),
+                            child: Text(context.l10n.authViewPrivacy),
                           ),
                         ),
                         const SizedBox(height: DS.xl),

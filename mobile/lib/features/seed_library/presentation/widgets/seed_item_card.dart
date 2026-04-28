@@ -272,8 +272,8 @@ class SeedItemCard extends StatelessWidget {
       showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text(context.l10n.seedDeleteContent),
-          content: const Text(context.l10n.seedDeleteConfirm),
+          title: Text(context.l10n.seedDeleteContent),
+          content: Text(context.l10n.seedDeleteConfirm),
           actions: [
             SparkleButton.ghost(
               onPressed: () => Navigator.pop(context),

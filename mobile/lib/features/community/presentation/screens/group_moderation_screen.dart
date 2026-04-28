@@ -87,7 +87,7 @@ class _GroupModerationScreenState
             ),
           );
       if (!mounted) return;
-      AppFeedback.success(context, '调节设置已保存');
+      AppFeedback.success(context, 'Settings saved');
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, '保存失败: $e');
@@ -107,7 +107,7 @@ class _GroupModerationScreenState
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('群调节设置'),
+        title: Text('Group Moderation'),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -125,7 +125,7 @@ class _GroupModerationScreenState
               Text('加载失败: $e', style: TextStyle(color: DS.error)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: '重试',
+                label: 'Retry',
                 onPressed: () => ref
                     .read(groupModerationProvider(widget.groupId).notifier)
                     .load(),
@@ -154,8 +154,8 @@ class _GroupModerationScreenState
                     child: Column(
                       children: [
                         SwitchListTile(
-                          title: const Text('全体禁言'),
-                          subtitle: const Text('开启后只有管理员可以发言'),
+                          title: Text('Mute All'),
+                          subtitle: Text('Only admins can speak when enabled'),
                           value: _muteAll,
                           onChanged: (v) {
                             unawaited(
@@ -184,7 +184,7 @@ class _GroupModerationScreenState
                         children: [
                         Row(
                           children: [
-                            const Text('慢速模式',
+                            Text('Slow Mode',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: DS.fontSizeBase,),),
@@ -237,7 +237,7 @@ class _GroupModerationScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        const Text('关键词过滤',
+                        Text('Keyword Filter',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: DS.fontSizeBase,),),
@@ -269,7 +269,7 @@ class _GroupModerationScreenState
                               child: TextField(
                                 controller: _keywordController,
                                 decoration: const InputDecoration(
-                                  hintText: '添加关键词',
+                                  hintText: 'Add keyword',
                                   border: OutlineInputBorder(),
                                 ),
                                 onSubmitted: (_) => _addKeyword(),
@@ -296,7 +296,7 @@ class _GroupModerationScreenState
                 ),
                 const SizedBox(height: DS.spacing24),
                 SparkleButton.primary(
-                  label: '保存设置',
+                  label: 'Save',
                   onPressed: _save,
                 ),
               ],

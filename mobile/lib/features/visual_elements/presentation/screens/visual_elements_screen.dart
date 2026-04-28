@@ -1533,7 +1533,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           );
           final clearButton = TextButton(
             onPressed: _clearDisplaySlotFilter,
-            child: const Text(context.l10n.visualClearFilter),
+            child: Text(context.l10n.visualClearFilter),
           );
 
           if (stack) {

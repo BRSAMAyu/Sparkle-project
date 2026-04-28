@@ -95,8 +95,8 @@ class _ThemeModeSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _SectionIntro(
-            title: '主题模式',
-            description: '控制页面亮暗模式，让视觉节奏和使用环境保持一致。',
+            title: context.l10n.userThemeMode,
+            description: context.l10n.userThemeModeHint,
           ),
           const SizedBox(height: DS.md),
           DecoratedBox(
@@ -195,8 +195,8 @@ class _BrandPresetSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _SectionIntro(
-            title: '品牌预设',
-            description: '切换整套色彩底调，让整体气质更贴近你的使用习惯。',
+            title: context.l10n.userBrandPresets,
+            description: context.l10n.userBrandPresetsHint,
           ),
           const SizedBox(height: DS.md),
           Wrap(
@@ -308,8 +308,8 @@ class _ColorPreviewSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionIntro(
-          title: '颜色预览',
-          description: '快速确认品牌色、语义色和任务色彩在当前主题下的表现。',
+          title: context.l10n.userColorPreview,
+          description: context.l10n.userColorPreviewHint,
         ),
         const SizedBox(height: DS.md),
         Row(

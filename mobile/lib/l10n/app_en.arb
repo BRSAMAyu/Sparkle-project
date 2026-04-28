@@ -10653,5 +10653,19 @@
   "chatWidgetPlanStatus": "Plan status",
   "chatWidgetPlanSummary": "Plan summary",
   "chatWidgetTaskList": "Task list",
-  "chatWsUnknownError": "Unknown error"
+  "chatWsUnknownError": "Unknown error",
+  "@seedLibraryItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@seedLibraryLastUpdated": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  }
 }

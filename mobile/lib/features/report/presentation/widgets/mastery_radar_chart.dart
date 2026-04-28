@@ -30,7 +30,7 @@ class MasteryRadarChart extends StatelessWidget {
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text(context.l10n.reportRadarMinNodes),
+        child: Text(context.l10n.reportRadarMinNodes),
       );
     }
 

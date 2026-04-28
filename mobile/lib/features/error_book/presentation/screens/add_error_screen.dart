@@ -262,7 +262,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 TextButton.icon(
                   onPressed: _isUploadingImage ? null : _removeQuestionImage,
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text(context.l10n.ebRemove),
+                  label: Text(context.l10n.ebRemove),
                 ),
             ],
           ),
@@ -374,7 +374,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
             ),
-            title: const Text(context.l10n.ebEditError),
+            title: Text(context.l10n.ebEditError),
           ),
           child: Center(
             child: Text(context.l10n.ebLoadError(error.toString())),

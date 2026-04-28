@@ -166,7 +166,7 @@ class AgentStatsDashboard extends StatelessWidget {
 
               return PieChartSectionData(
                 value: count.toDouble(),
-                title: '${agent['count']}次',
+                title: '${agent['count']}x',
                 color: config.color,
                 radius: 100,
                 titleStyle: TextStyle(

@@ -478,7 +478,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.l10n.chatInputQuoting(name: widget.quotedMessage!.sender.displayName),
+                    context.l10n.chatInputQuoting(widget.quotedMessage!.sender.displayName),
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,

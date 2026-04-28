@@ -61,7 +61,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
               GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.card,
                 child: SwitchListTile(
-                  title: const Text(context.l10n.settingsPureMode),
+                  title: Text(context.l10n.settingsPureMode),
                   subtitle: Text(
                     '聊天中仅保留文字消息，隐藏消息下方的附加信息卡片、任务卡和反馈组件。',
                     style: Theme.of(context).textTheme.bodySmall,
@@ -126,7 +126,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: const Text(context.l10n.settingsAutoCollapse),
+                        title: Text(context.l10n.settingsAutoCollapse),
                         subtitle: Text(
                           '回答完成后，将透明模式收起成轻量摘要',
                           style: Theme.of(context).textTheme.bodySmall,
@@ -145,7 +145,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: const Text(context.l10n.settingsAllowSingleClose),
+                        title: Text(context.l10n.settingsAllowSingleClose),
                         subtitle: Text(
                           '本轮生成时可手动关闭透明模式，不影响回答继续生成',
                           style: Theme.of(context).textTheme.bodySmall,

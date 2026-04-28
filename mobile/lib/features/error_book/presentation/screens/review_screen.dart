@@ -405,7 +405,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   });
                 },
                 icon: const Icon(Icons.visibility_off, size: 16),
-                label: const Text(context.l10n.ebHide),
+                label: Text(context.l10n.ebHide),
               ),
             ],
           ),
@@ -437,7 +437,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   });
                 },
                 icon: const Icon(Icons.visibility),
-                label: const Text(context.l10n.ebViewAnswer),
+                label: Text(context.l10n.ebViewAnswer),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
                   minimumSize: const Size(double.infinity, 0),
@@ -491,7 +491,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   });
                 },
                 icon: const Icon(Icons.psychology_outlined, size: 18),
-                label: const Text(context.l10n.ebViewAnalysis),
+                label: Text(context.l10n.ebViewAnalysis),
               ),
             if (_showAnalysis) const SizedBox(height: DS.spacing12),
 
@@ -578,7 +578,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back),
-              label: const Text(context.l10n.ebBack),
+              label: Text(context.l10n.ebBack),
             ),
           ],
         ),
@@ -696,7 +696,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back),
-                    label: const Text(context.l10n.ebBackToList),
+                    label: Text(context.l10n.ebBackToList),
                     style: OutlinedButton.styleFrom(
                       padding:
                           const EdgeInsets.symmetric(vertical: DS.spacing16),
@@ -719,7 +719,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                       ref.invalidate(todayReviewListProvider);
                     },
                     icon: const Icon(Icons.replay),
-                    label: const Text(context.l10n.ebAnotherRound),
+                    label: Text(context.l10n.ebAnotherRound),
                     style: FilledButton.styleFrom(
                       padding:
                           const EdgeInsets.symmetric(vertical: DS.spacing16),
@@ -812,7 +812,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 ref.invalidate(todayReviewListProvider);
               },
               icon: const Icon(Icons.refresh),
-              label: const Text(context.l10n.ebRetry),
+              label: Text(context.l10n.ebRetry),
             ),
           ],
         ),
@@ -827,8 +827,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(context.l10n.ebConfirmExit),
-        content: const Text(context.l10n.ebConfirmExitDesc),
+        title: Text(context.l10n.ebConfirmExit),
+        content: Text(context.l10n.ebConfirmExitDesc),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
@@ -836,7 +836,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(context.l10n.ebExit),
+            child: Text(context.l10n.ebExit),
           ),
         ],
       ),

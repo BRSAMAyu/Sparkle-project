@@ -152,12 +152,12 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                       _buildMetaChip(
                         context,
                         icon: Icons.upgrade_rounded,
-                        label: '升级完整账号',
+                        label: context.l10n.userUpgradeFullAccount,
                       ),
                       _buildMetaChip(
                         context,
                         icon: Icons.verified_user_outlined,
-                        label: '保留当前数据',
+                        label: context.l10n.userKeepCurrentData,
                       ),
                     ],
                   ),
@@ -329,7 +329,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    '你也可以直接绑定社交账号，减少后续重复登录和验证成本。',
+                    context.l10n.userBindSocialHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                           height: 1.4,

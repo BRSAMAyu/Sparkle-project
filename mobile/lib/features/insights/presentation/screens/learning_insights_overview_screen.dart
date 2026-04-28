@@ -80,7 +80,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(context.l10n.insOverviewTitle),
+        title: Text(context.l10n.insOverviewTitle),
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
@@ -201,7 +201,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                           const SizedBox(height: DS.spacing10),
                           TextButton(
                             onPressed: () => context.go('/home'),
-                            child: const Text(context.l10n.insBackToCockpit),
+                            child: Text(context.l10n.insBackToCockpit),
                           ),
                         ],
                       );
@@ -228,7 +228,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                         const SizedBox(width: DS.spacing8),
                         TextButton(
                           onPressed: () => context.go('/home'),
-                          child: const Text(context.l10n.insBackToCockpit),
+                          child: Text(context.l10n.insBackToCockpit),
                         ),
                       ],
                     );

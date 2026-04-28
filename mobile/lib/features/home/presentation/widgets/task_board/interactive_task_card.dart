@@ -71,7 +71,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                           const SizedBox(height: DS.spacing4),
                           Row(
                             children: [
-                              _buildTaskTypeChip(task.type),
+                              _buildTaskTypeChip(context, task.type),
                               const SizedBox(width: DS.spacing6),
                               Text(
                                 '${task.estimatedMinutes}m',
@@ -152,8 +152,8 @@ class InteractiveTaskCard extends ConsumerWidget {
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
               children: [
-                _buildTaskTypeChip(task.type),
-                _buildPriorityChip(task.priority),
+                _buildTaskTypeChip(context, task.type),
+                _buildPriorityChip(context, task.priority),
                 Text(
                   context.l10n.taskEstimatedMinutes(task.estimatedMinutes),
                   style: context.sparkleTypography.labelSmall.copyWith(
@@ -247,7 +247,7 @@ class InteractiveTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaskTypeChip(TaskType type) {
+  Widget _buildTaskTypeChip(BuildContext context, TaskType type) {
     final (label, color) = switch (type) {
       TaskType.learning => (context.l10n.taskTypeLearning, DS.brandPrimary),
       TaskType.training => (context.l10n.taskTypeTraining, DS.success),
@@ -275,7 +275,7 @@ class InteractiveTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildPriorityChip(int priority) {
+  Widget _buildPriorityChip(BuildContext context, int priority) {
     final (label, color) = switch (priority) {
       >= 8 => (context.l10n.taskPriorityHigh, DS.error),
       >= 5 => (context.l10n.taskPriorityMedium, DS.warning),
@@ -315,7 +315,7 @@ class InteractiveTaskCard extends ConsumerWidget {
       if (dueDay == tomorrow) {
         label = context.l10n.taskDueTomorrow;
       } else {
-        label = context.l10n.taskDueDateLabel(dueDate.month, dueDate.day);
+        label = context.l10n.taskDueDateLabel(dueDate.day, dueDate.month);
       }
     }
 

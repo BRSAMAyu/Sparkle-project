@@ -115,7 +115,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
       );
     } catch (error) {
       if (!mounted) return;
-      AppFeedback.error(context, '$label生成失败：$error');
+      AppFeedback.error(context, context.l10n.taskGuidanceFailed(label, error.toString()));
     }
   }
 

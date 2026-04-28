@@ -50,7 +50,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
     final duration = Duration(milliseconds: durationMs);
     if (duration.inMinutes >= 1) {
       final seconds = duration.inSeconds % 60;
-      return '${duration.inMinutes}分${seconds > 0 ? '$seconds秒' : ''}';
+      return seconds > 0 ? context.l10n.taskDurationMinSec(duration.inMinutes, seconds) : context.l10n.taskDurationMin(duration.inMinutes);
     }
     return context.l10n.taskDurationSec((duration.inMilliseconds / 1000).toStringAsFixed(1));
   }

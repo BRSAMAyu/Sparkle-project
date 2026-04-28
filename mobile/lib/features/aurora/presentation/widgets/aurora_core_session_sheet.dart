@@ -354,7 +354,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             const SizedBox(height: DS.spacing12),
             Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: DS.textSecondary)),
             const SizedBox(height: DS.spacing16),
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text(context.l10n.auroraClose)),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.auroraClose)),
           ],
         ),
       );
@@ -450,7 +450,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text(context.l10n.auroraClose),
+              child: Text(context.l10n.auroraClose),
             ),
           ),
         ],
@@ -579,7 +579,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
                   _showFreeformInput = false;
                   _freeformController.clear();
                 }),
-                child: const Text(context.l10n.toolsWbCancel),
+                child: Text(context.l10n.toolsWbCancel),
               ),
               const SizedBox(width: DS.spacing8),
               FilledButton(
@@ -602,7 +602,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
                     borderRadius: BorderRadius.circular(DS.radius8),
                   ),
                 ),
-                child: const Text(context.l10n.auroraSend),
+                child: Text(context.l10n.auroraSend),
               ),
             ],
           ),

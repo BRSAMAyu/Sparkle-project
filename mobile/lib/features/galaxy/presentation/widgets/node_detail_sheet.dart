@@ -408,7 +408,7 @@ class _HistoryContent extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => onViewErrors(history),
                   icon: const Icon(Icons.assignment_rounded),
-                  label: const Text(context.l10n.galaxyNodeViewErrors),
+                  label: Text(context.l10n.galaxyNodeViewErrors),
                 ),
               ),
             ],
@@ -1338,7 +1338,7 @@ class _HistoryErrorState extends StatelessWidget {
             TextButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text(context.l10n.galaxyNodeRetry),
+              label: Text(context.l10n.galaxyNodeRetry),
             ),
           ],
         ),

@@ -162,7 +162,7 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                               ? context.l10n.chatMemorySyncing
                               : _error != null
                                   ? context.l10n.chatMemoryUnavailable
-                                  : context.l10n.chatMemorySessionCount(count: _session.items.length),
+                                  : context.l10n.chatMemorySessionCount(_session.items.length),
                           style: TextStyle(
                             color: DS.textSecondary,
                             fontSize: DS.fontSizeXs,
@@ -246,7 +246,7 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    context.l10n.chatMemoryMentionCount(count: item.mentionCount, type: item.subjectType),
+                    context.l10n.chatMemoryMentionCount(item.mentionCount, item.subjectType),
                     style: TextStyle(
                       color: DS.textSecondary,
                       fontSize: DS.fontSizeXs,
@@ -261,15 +261,15 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                         onPressed: item.evidenceToken.isEmpty
                             ? null
                             : () => widget.onViewSource(item.evidenceToken),
-                        child: const Text(context.l10n.chatMemoryOriginalTurn),
+                        child: Text(context.l10n.chatMemoryOriginalTurn),
                       ),
                       TextButton(
                         onPressed: () => _forget(item.id),
-                        child: const Text(context.l10n.chatMemoryManualForget),
+                        child: Text(context.l10n.chatMemoryManualForget),
                       ),
                       TextButton(
                         onPressed: item.rejected ? null : () => _markCorrect(item.id),
-                        child: const Text(context.l10n.chatMemoryMarkCorrect),
+                        child: Text(context.l10n.chatMemoryMarkCorrect),
                       ),
                     ],
                   ),

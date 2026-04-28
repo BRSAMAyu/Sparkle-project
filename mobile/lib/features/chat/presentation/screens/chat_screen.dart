@@ -819,7 +819,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () =>
                 context.push('${HomeRoutes.openClawHub}?section=delegate'),
             semanticLabel: showOpenClawAttention
-                ? context.l10n.chatOpenclawHubQueued(count: openClawConnection.queuedRequestCount)
+                ? context.l10n.chatOpenclawHubQueued(openClawConnection.queuedRequestCount)
                 : 'OpenClaw Hub',
             variant: ButtonVariant.ghost,
           ),
@@ -845,7 +845,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ref.read(chatProvider.notifier).startNewSession();
               }
             },
-            itemBuilder: (context) => const [
+            itemBuilder: (context) => [
               PopupMenuItem<_ChatShortcutAction>(
                 value: _ChatShortcutAction.newSession,
                 child: Row(
@@ -1321,7 +1321,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ref
                               .read(chatProvider.notifier)
                               .sendMessage(
-                                context.l10n.chatCommunitySuggestion(summary: hint.anonymousSummary, tip: hint.tip),
+                                context.l10n.chatCommunitySuggestion(hint.anonymousSummary, hint.tip),
                               );
                         },
                         onDismiss: () => ref
@@ -1341,7 +1341,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               .read(chatProvider.notifier)
                               .dismissUXWarning();
                           ref.read(chatProvider.notifier).sendMessage(
-                                context.l10n.chatWarningAction(action: warning.suggestedAction, reason: warning.reason),
+                                context.l10n.chatWarningAction(warning.suggestedAction, warning.reason),
                               );
                         },
                         onDismiss: () => ref
@@ -1404,7 +1404,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               .read(chatProvider.notifier)
                               .dismissGoalArbitration();
                           ref.read(chatProvider.notifier).sendMessage(
-                                context.l10n.chatFocusOnGoal(title: arb.primaryGoalTitle),
+                                context.l10n.chatFocusOnGoal(arb.primaryGoalTitle),
                               );
                         },
                         onContinueMulti: () => ref
@@ -2027,7 +2027,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     observation: aurora.summary,
                     judgment: aurora.summary,
                     confirmQuestion: context.l10n.auroraCalibrationConfirm,
-                    confirmOptions: const [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
+                    confirmOptions: [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
                     onConfirm: (option) {
                       ref.read(chatProvider.notifier).sendMessage(
                             '${context.l10n.auroraCorrectRecalibrate}: $option',
@@ -2067,7 +2067,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (status.isNotEmpty && status != 'processed') {
                 AppFeedback.info(
                   context,
-                  context.l10n.chatFileAdded(fileName: file.fileName, status: _attachmentStatusText(file.status)),
+                  context.l10n.chatFileAdded(file.fileName, _attachmentStatusText(file.status)),
                 );
               }
             },
@@ -2876,7 +2876,7 @@ class _ReviewNodeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final masteryText = mastery != null
-        ? context.l10n.chatCurrentMastery(percent: (mastery! * 100).round().clamp(0, 100).toString())
+        ? context.l10n.chatCurrentMastery((mastery! * 100).round().clamp(0, 100).toString())
         : '';
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -2898,7 +2898,7 @@ class _ReviewNodeBanner extends StatelessWidget {
           const SizedBox(width: DS.spacing8),
           Expanded(
             child: Text(
-              context.l10n.chatReviewingNode(label: nodeLabel, mastery: masteryText),
+              context.l10n.chatReviewingNode(nodeLabel, masteryText),
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: DS.info,

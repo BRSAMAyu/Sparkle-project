@@ -560,7 +560,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('「${node.name}」当前掌握度 ${node.masteryScore}%$deltaText'),
+          content: Text(context.l10n.galaxyNodeMasteryToast(node.name, node.masteryScore, deltaText)),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
         ),
@@ -2789,7 +2789,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       Icons.auto_graph_rounded,
                       size: 18,
                     ),
-                    label: const Text(context.l10n.galaxySimMode),
+                    label: Text(context.l10n.galaxySimMode),
                     onPressed: () => _openPredictionOverlay(null),
                   ),
                 ),

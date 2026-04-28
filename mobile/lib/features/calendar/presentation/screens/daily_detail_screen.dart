@@ -796,18 +796,18 @@ class DailyDetailScreen extends ConsumerWidget {
                     const SizedBox(height: DS.spacing12),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(context.l10n.calAllDay),
+                      title: Text(context.l10n.calAllDay),
                       value: isAllDay,
                       onChanged: (value) => setModalState(() => isAllDay = value),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(context.l10n.calStartTime),
+                      title: Text(context.l10n.calStartTime),
                       subtitle: Text(Formatters.formatDateTime(startTime)),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(context.l10n.calEndTime),
+                      title: Text(context.l10n.calEndTime),
                       subtitle: Text(Formatters.formatDateTime(endTime)),
                     ),
                     TextField(

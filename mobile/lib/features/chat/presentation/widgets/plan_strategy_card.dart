@@ -81,7 +81,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                           ),
                           const SizedBox(height: DS.spacing4),
                           Text(
-                            context.l10n.chatStrategyDailyHours(hours: phase['daily_hours'] ?? '-'} 小时 · ${phase['focus'] ?? ''}',
+                            context.l10n.chatStrategyDailyHours("${phase['daily_hours'] ?? '-'}", "${phase['focus'] ?? ''}"),
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -107,7 +107,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                 if (isExpanded) ...[
                   const SizedBox(height: DS.spacing10),
                   Text(
-                    context.l10n.chatStrategyMethod(method: phase['method'] ?? ''}',
+                    context.l10n.chatStrategyMethod(phase['method'] ?? ''}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textPrimary,
                           height: 1.45,
@@ -115,7 +115,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    context.l10n.chatStrategyPhaseOutput(output: phase['output'] ?? ''}',
+                    context.l10n.chatStrategyPhaseOutput(phase['output'] ?? ''}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,

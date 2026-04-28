@@ -540,7 +540,7 @@ class _SubjectDropdown extends StatelessWidget {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              hint: const Text(context.l10n.toolsFlashSelectSubject),
+              hint: Text(context.l10n.toolsFlashSelectSubject),
               items: subjects
                   .map(
                     (subject) => DropdownMenuItem<String>(

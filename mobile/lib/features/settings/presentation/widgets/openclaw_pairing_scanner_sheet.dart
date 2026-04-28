@@ -115,7 +115,7 @@ class _OpenClawPairingScannerSheetState
                     child: OutlinedButton.icon(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
-                      label: const Text(context.l10n.toolsWbCancel),
+                      label: Text(context.l10n.toolsWbCancel),
                     ),
                   ),
                 ],

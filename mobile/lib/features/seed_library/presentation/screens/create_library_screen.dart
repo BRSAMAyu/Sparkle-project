@@ -105,7 +105,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
   Widget build(BuildContext context) => SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
-          title: const Text(context.l10n.seedCreateTitle),
+          title: Text(context.l10n.seedCreateTitle),
         ),
         bottomNavigationBar: SafeArea(
           child: Padding(

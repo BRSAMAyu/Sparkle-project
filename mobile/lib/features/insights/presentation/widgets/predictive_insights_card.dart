@@ -113,7 +113,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(context.l10n.insPredictNext, style: TextStyle(fontSize: 12)),
+                    Text(context.l10n.insPredictNext, style: TextStyle(fontSize: 12)),
                     Text(
                       _formatDateTime(nextActiveTime),
                       style: TextStyle(

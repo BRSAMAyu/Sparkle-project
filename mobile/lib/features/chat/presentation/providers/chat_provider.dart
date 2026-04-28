@@ -599,10 +599,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
             : 'success';
 
     final affectedObjects = <String>[
-      if (stepsTotal > 0) S.chatValidationSteps(passed: stepsPassed, total: stepsTotal),
-      if (toolsTotal > 0) S.chatValidationTools(passed: toolsSuccessful, total: toolsTotal),
+      if (stepsTotal > 0) S.chatValidationSteps(stepsPassed, stepsTotal),
+      if (toolsTotal > 0) S.chatValidationTools(toolsSuccessful, toolsTotal),
       if (qualityScore != null)
-        S.chatValidationQuality(percent: (qualityScore * 100).toStringAsFixed(0)),
+        S.chatValidationQuality((qualityScore * 100).toStringAsFixed(0)),
     ];
 
     _upsertWidget(target, 'execution_summary', {

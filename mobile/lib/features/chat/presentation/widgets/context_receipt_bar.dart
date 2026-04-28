@@ -207,7 +207,7 @@ class _ReceiptDetailSheet extends StatelessWidget {
             const SizedBox(height: 14),
             _SectionHeader(
               icon: Icons.check_circle_outline,
-              label: context.l10n.chatContextUsed(count: usedNames.length),
+              label: context.l10n.chatContextUsed(usedNames.length),
               color: DS.success,
             ),
             const SizedBox(height: 6),
@@ -219,7 +219,7 @@ class _ReceiptDetailSheet extends StatelessWidget {
             const SizedBox(height: 14),
             _SectionHeader(
               icon: Icons.cancel_outlined,
-              label: context.l10n.chatContextUnused(count: excludedNames.length),
+              label: context.l10n.chatContextUnused(excludedNames.length),
               color: DS.textTertiary,
             ),
             const SizedBox(height: 6),

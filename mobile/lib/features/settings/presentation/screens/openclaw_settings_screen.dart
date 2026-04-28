@@ -198,7 +198,7 @@ class _OpenClawSettingsScreenState
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Text(context.l10n.settingsRetryQueue),
+                                  : Text(context.l10n.settingsRetryQueue),
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),

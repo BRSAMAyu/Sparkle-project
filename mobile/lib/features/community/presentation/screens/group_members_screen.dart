@@ -74,7 +74,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.person_add),
               onPressed: () {
-                AppFeedback.info(context, '邀请成员功能即将上线');
+                AppFeedback.info(context, 'Invite feature coming soon');
               },
             ),
         ],
@@ -91,7 +91,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: '搜索成员...',
+                      hintText: 'Search members...',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? SparkleIconButton(
@@ -206,7 +206,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           ),
                           const SizedBox(height: DS.md),
                           SparkleButton(
-                            label: '重试',
+                            label: 'Retry',
                             onPressed: () => ref
                                 .read(
                                   groupMembersProvider(widget.groupId).notifier,

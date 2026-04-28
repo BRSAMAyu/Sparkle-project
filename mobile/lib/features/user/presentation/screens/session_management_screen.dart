@@ -68,8 +68,8 @@ class _SessionManagementScreenState
     final confirmed = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('确认注销其他设备'),
-            content: const Text('这会让你在所有其他设备上退出登录，是否继续？'),
+            title: Text(context.l10n.userSignOutOtherDevices),
+            content: Text(context.l10n.userSignOutOtherConfirm),
             actions: [
               SparkleButton.ghost(
                 onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -155,7 +155,7 @@ class _SessionManagementScreenState
                             _buildPill(
                               context,
                               icon: Icons.verified_user_outlined,
-                              label: '当前设备已保护',
+                              label: context.l10n.userCurrentDeviceProtected,
                             ),
                           ],
                         ),

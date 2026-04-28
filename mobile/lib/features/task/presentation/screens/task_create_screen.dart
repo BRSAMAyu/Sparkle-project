@@ -107,7 +107,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       setState(() {});
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '加载任务失败：$e');
+        AppFeedback.error(context, context.l10n.taskLoadFailed(e.toString()));
       }
     } finally {
       if (mounted) {
