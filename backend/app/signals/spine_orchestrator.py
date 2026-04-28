@@ -1134,6 +1134,15 @@ class SpineOrchestrator:
         except Exception:
             pass
 
+        # STAB-006: Auto-increment 24h interaction counter for FatigueGuard
+        try:
+            _ik = f"spine:interaction_count:{user_id}:24h"
+            _ic = await self.redis.incr(_ik)
+            if _ic == 1:
+                await self.redis.expire(_ik, 24 * 3600)
+        except Exception:
+            pass
+
         trace = await resilient_redis_call(
             "spine_pipeline", self.trace_store.create_trace(),
             fallback=None,
@@ -1411,6 +1420,18 @@ class SpineOrchestrator:
                 logger.info("Spine snapshot refreshed for user={} (was TTL={}s)", user_id, snap_ttl)
         except Exception:
             pass
+
+        # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
+        try:
+            return_case = await self.growth_chronicle.build_return_case_file(user_id)
+            if return_case and return_case.get("confirmed_insights"):
+                await self.redis.set(
+                    f"spine:return_case_file:{user_id}:latest",
+                    json.dumps(return_case),
+                    ex=7 * 24 * 3600,
+                )
+        except Exception as exc:
+            logger.debug("build_return_case_file skipped: {}", exc)
 
         return trace
 
