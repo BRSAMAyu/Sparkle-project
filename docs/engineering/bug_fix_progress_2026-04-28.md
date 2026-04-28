@@ -93,7 +93,14 @@
 
 - `test_theater_seed_and_accuracy.py::test_simulation_engine_waits_for_user_and_continues`: Timeout (60s may still be tight)
 - `test_load/test_performance_load.py::test_latency_percentiles`: Load test timeout (not a real bug)
-- Collection errors (3): Pre-existing proto import issues in `test_grpc_streaming_integration.py`, `test_agent_grpc_service_chat_modes.py`, `test_exam_sprint_api.py`
+
+### 16. Proto Descriptor Pool Conflicts (Session 2 Fix)
+**Root Cause**: Flat `app/gen/agent_service_pb2.py` and `app/gen/websocket_pb2.py` registered protos in the descriptor pool, conflicting with the structured `app/gen/agent/v1/` versions loaded by other tests.
+**Fix**:
+- Contract tests changed to import from structured path (`app.gen.agent.v1`)
+- Flat proto files converted to re-export stubs (local-only, gitignored)
+- `tests/unit/test_exam_sprint_api.py` renamed to `test_exam_sprint_diagnose_api.py` to resolve module name collision with `tests/api/test_exam_sprint_api.py`
+- ChatRequest contract updated for new `use_document_context` (14) and `document_filter` (15) fields
 
 ## Root Cause Categories of All 51 Fixed Failures
 
