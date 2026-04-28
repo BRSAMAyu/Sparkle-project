@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
 /// Variant type for the share trigger button
@@ -180,7 +181,7 @@ class ShareTriggerButton extends StatelessWidget {
         icon ?? Icons.share,
         size: fontSize + 2,
       ),
-      label: showLabel ? Text(label ?? '分享') : const SizedBox.shrink(),
+      label: showLabel ? Text(label ?? context.l10n.share) : const SizedBox.shrink(),
       style: OutlinedButton.styleFrom(
         foregroundColor: DS.brandPrimary,
         side: BorderSide(color: DS.brandPrimary),
@@ -203,7 +204,7 @@ class ShareTriggerButton extends StatelessWidget {
         icon ?? Icons.share,
         size: fontSize + 2,
       ),
-      label: showLabel ? Text(label ?? '分享') : const SizedBox.shrink(),
+      label: showLabel ? Text(label ?? context.l10n.share) : const SizedBox.shrink(),
       style: FilledButton.styleFrom(
         backgroundColor: DS.brandPrimary,
         padding: EdgeInsets.symmetric(
