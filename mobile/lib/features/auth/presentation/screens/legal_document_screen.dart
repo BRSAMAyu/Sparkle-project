@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class LegalDocumentScreen extends StatelessWidget {
   const LegalDocumentScreen({
@@ -14,7 +15,7 @@ class LegalDocumentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = _isTerms ? '用户协议' : '隐私政策';
+    final title = _isTerms ? context.l10n.authTermsOfService : context.l10n.authPrivacyPolicy;
     final sections = _isTerms ? _termsSections : _privacySections;
 
     return SparklePageScaffold(

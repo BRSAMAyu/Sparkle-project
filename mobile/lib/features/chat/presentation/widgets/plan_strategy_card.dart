@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class PlanStrategyCard extends StatefulWidget {
   const PlanStrategyCard({
@@ -43,7 +44,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '我建议先按这个节奏推进',
+          context.l10n.chatStrategySuggestPace,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
@@ -128,7 +129,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
         if (checkpoints.isNotEmpty) ...[
           const SizedBox(height: DS.spacing4),
           Text(
-            '检查点',
+            context.l10n.chatStrategyCheckpoint,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),

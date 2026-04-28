@@ -8,6 +8,7 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_badge.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ChatWorkingMemoryPanel extends ConsumerStatefulWidget {
   const ChatWorkingMemoryPanel({
@@ -115,7 +116,7 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
     }
     await _load();
     if (mounted) {
-      AppFeedback.success(context, '已标记为正确');
+      AppFeedback.success(context, context.l10n.chatMemoryMarkedCorrect);
     }
   }
 
@@ -149,7 +150,7 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'AI 当前记住',
+                          context.l10n.chatMemoryAiRemembers,
                           style: TextStyle(
                             color: DS.textPrimary,
                             fontWeight: DS.fontWeightSemibold,
@@ -158,9 +159,9 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                         ),
                         Text(
                           _loading
-                              ? '正在同步当前 session 记忆'
+                              ? context.l10n.chatMemorySyncing
                               : _error != null
-                                  ? '记忆抽屉暂时不可用'
+                                  ? context.l10n.chatMemoryUnavailable
                                   : '${_session.items.length} 条当前 session 记忆',
                           style: TextStyle(
                             color: DS.textSecondary,
@@ -208,7 +209,7 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
     }
     if (_session.items.isEmpty) {
       return Text(
-        '当前 session 里还没有可见的工作记忆。',
+        context.l10n.chatMemoryEmptyHint,
         style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
       );
     }
@@ -260,15 +261,15 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                         onPressed: item.evidenceToken.isEmpty
                             ? null
                             : () => widget.onViewSource(item.evidenceToken),
-                        child: const Text('原 turn'),
+                        child: const Text(context.l10n.chatMemoryOriginalTurn),
                       ),
                       TextButton(
                         onPressed: () => _forget(item.id),
-                        child: const Text('手动忘记'),
+                        child: const Text(context.l10n.chatMemoryManualForget),
                       ),
                       TextButton(
                         onPressed: item.rejected ? null : () => _markCorrect(item.id),
-                        child: const Text('标记为正确'),
+                        child: const Text(context.l10n.chatMemoryMarkCorrect),
                       ),
                     ],
                   ),

@@ -1683,7 +1683,7 @@ class StaleRecoveryEvent extends ChatStreamEvent {
   List<String> get resumeOptions {
     final raw = staleData['resume_options'];
     if (raw is List) return raw.map((e) => e.toString()).toList();
-    return ['已完成', '卡住了', '没开始', '换小任务'];
+    return [S.chatCompleted, S.chatStreamStuck, S.chatStreamNotStarted, S.chatStreamSwitchTask];
   }
 
   String get formattedElapsed {
@@ -1708,10 +1708,10 @@ class UXWarningEvent extends ChatStreamEvent {
 
   final Map<String, dynamic> warningData;
 
-  String get label => warningData['label'] as String? ?? '策略风险';
+  String get label => warningData['label'] as String? ?? S.chatStreamStrategyRisk;
   String get reason => warningData['reason'] as String? ?? '';
   String get suggestedAction =>
-      warningData['suggested_action'] as String? ?? '帮我调整策略';
+      warningData['suggested_action'] as String? ?? S.chatStreamAdjustStrategy;
   String get riskLevel => warningData['risk_level'] as String? ?? 'medium';
   List<String> get predictedReplyOptions {
     final raw = warningData['predicted_reply_options'];
@@ -1735,7 +1735,7 @@ class CommunityHintEvent extends ChatStreamEvent {
   final Map<String, dynamic> hintData;
 
   String get hintType => hintData['hint_type'] as String? ?? 'cohort_mistake';
-  String get title => hintData['title'] as String? ?? '社群洞察';
+  String get title => hintData['title'] as String? ?? S.chatStreamCommunityInsight;
   String get anonymousSummary => hintData['anonymous_summary'] as String? ?? '';
   String get tip => hintData['tip'] as String? ?? '';
 
@@ -1785,7 +1785,7 @@ class GrowthCardEvent extends ChatStreamEvent {
 
   final Map<String, dynamic> cardData;
 
-  String get title => cardData['title'] as String? ?? '看见你的坚持';
+  String get title => cardData['title'] as String? ?? S.chatStreamSeePersistence;
   String get narrative => cardData['narrative'] as String? ?? '';
   int get streakDays => cardData['streak_days'] as int? ?? 0;
   String get strategyEffect => cardData['strategy_effect'] as String? ?? '';
@@ -1794,7 +1794,7 @@ class GrowthCardEvent extends ChatStreamEvent {
   List<String> get actions {
     final raw = cardData['actions'];
     if (raw is List) return raw.map((e) => e.toString()).toList();
-    return ['收到', '我其实很累'];
+    return ['收到', S.chatStreamReallyTired];
   }
 }
 

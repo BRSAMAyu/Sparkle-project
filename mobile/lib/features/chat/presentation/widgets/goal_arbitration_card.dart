@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Goal Arbitration Card — multi-goal conflict surface
 ///
@@ -119,7 +120,7 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '推荐时间分配',
+                        context.l10n.chatGoalTimeAllocation,
                         style: DS.labelSmall.copyWith(
                           color: DS.textTertiary,
                           fontWeight: FontWeight.w500,
@@ -143,7 +144,7 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
                   children: [
                     Expanded(
                       child: _ActionButton(
-                        label: '专注主目标',
+                        label: context.l10n.chatGoalFocusPrimary,
                         color: DS.warning,
                         onTap: () {
                           SensoryFeedbackService.emit(
@@ -156,7 +157,7 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
                     const SizedBox(width: 8),
                     Expanded(
                       child: _ActionButton(
-                        label: '继续多线推进',
+                        label: context.l10n.chatGoalContinueParallel,
                         color: DS.textTertiary,
                         outlined: true,
                         onTap: () {
@@ -191,11 +192,11 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
   String _conflictLabel(String key) {
     switch (key) {
       case 'multiple_urgent_deadlines':
-        return '多个紧急截止';
+        return context.l10n.chatGoalMultipleDeadlines;
       case 'bottleneck_goals_exist':
-        return '存在瓶颈目标';
+        return context.l10n.chatGoalBottleneckGoal;
       case 'stalled_goals_exist':
-        return '存在停滞目标';
+        return context.l10n.chatGoalStagnantGoal;
       default:
         return key.replaceAll('_', ' ');
     }
@@ -226,7 +227,7 @@ class _Header extends StatelessWidget {
             const SizedBox(width: 9),
             Expanded(
               child: Text(
-                '多目标冲突检测',
+                context.l10n.chatGoalConflictDetection,
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w600,

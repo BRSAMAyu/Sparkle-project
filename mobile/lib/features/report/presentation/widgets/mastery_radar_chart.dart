@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class MasteryRadarChart extends StatelessWidget {
   const MasteryRadarChart({
@@ -29,7 +30,7 @@ class MasteryRadarChart extends StatelessWidget {
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text('至少需要 3 个知识点才能绘制雷达图。'),
+        child: const Text(context.l10n.reportRadarMinNodes),
       );
     }
 

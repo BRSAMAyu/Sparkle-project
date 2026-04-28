@@ -86,7 +86,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     unawaited(
       ref.read(communityRepositoryProvider).addFavorite(msg.id, null).then((_) {
         if (!mounted) return;
-        AppFeedback.success(context, '已收藏');
+        AppFeedback.success(context, context.l10n.chatGroupFavorited);
       }).catchError((Object e) {
         if (!mounted) return;
         AppFeedback.error(context, '收藏失败: $e');
@@ -120,7 +120,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '转发到群组',
+                  context.l10n.chatGroupForwardToGroup,
                   style: TextStyle(
                       fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
                 ),
@@ -195,7 +195,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '举报消息',
+                    context.l10n.chatGroupReportMessage,
                     style: TextStyle(
                         fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
                   ),
@@ -208,11 +208,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     child: Column(
                       children: [
                         ...[
-                          (ReportReason.spam, '垃圾信息'),
+                          (ReportReason.spam, context.l10n.chatGroupReportSpam),
                           (ReportReason.harassment, '骚扰'),
                           (ReportReason.violence, '暴力'),
-                          (ReportReason.hateSpeech, '仇恨言论'),
-                          (ReportReason.misinformation, '虚假信息'),
+                          (ReportReason.hateSpeech, context.l10n.chatGroupReportHate),
+                          (ReportReason.misinformation, context.l10n.chatGroupReportMisinfo),
                           (ReportReason.other, '其他'),
                         ].map(
                           (entry) => RadioListTile<ReportReason>(
@@ -227,7 +227,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   TextField(
                     controller: descController,
                     decoration: const InputDecoration(
-                      hintText: '补充说明（可选）',
+                      hintText: context.l10n.chatGroupReportAdditionalNote,
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 2,
@@ -236,7 +236,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: SparkleButton.primary(
-                      label: '提交举报',
+                      label: context.l10n.chatGroupReportSubmit,
                       onPressed: () async {
                         Navigator.pop(ctx);
                         try {
@@ -250,7 +250,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                     : descController.text.trim(),
                               );
                           if (!mounted) return;
-                          AppFeedback.success(context, '举报已提交，感谢反馈');
+                          AppFeedback.success(context, context.l10n.chatGroupReportSubmitted);
                         } catch (e) {
                           if (!mounted) return;
                           AppFeedback.error(context, '举报失败: $e');
@@ -397,7 +397,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 CommunityRoutes.groupTasks.replaceFirst(':id', widget.groupId),
               ),
             ),
-            semanticLabel: '群组任务',
+            semanticLabel: context.l10n.chatGroupTasks,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(

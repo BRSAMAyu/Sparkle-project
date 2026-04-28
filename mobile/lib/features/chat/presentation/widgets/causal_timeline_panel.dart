@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 // ── Data models ──────────────────────────────────────────────────────────────
 
@@ -226,7 +227,7 @@ class _Header extends StatelessWidget {
             Icon(Icons.timeline, size: 18, color: DS.brandPrimary),
             const SizedBox(width: 10),
             Text(
-              '为什么给我这些决策',
+              context.l10n.chatCausalWhyDecisions,
               style: DS.bodySmall.copyWith(
                 color: DS.textPrimary,
                 fontWeight: FontWeight.w700,
@@ -269,7 +270,7 @@ class _ErrorState extends StatelessWidget {
             Icon(Icons.error_outline, color: DS.textTertiary, size: 32),
             const SizedBox(height: 12),
             Text(
-              '加载失败',
+              context.l10n.chatCausalLoadFailed,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: 12),
@@ -291,12 +292,12 @@ class _EmptyState extends StatelessWidget {
             Icon(Icons.history_toggle_off, color: DS.textTertiary, size: 36),
             const SizedBox(height: 12),
             Text(
-              '还没有决策记录',
+              context.l10n.chatCausalNoRecords,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: 4),
             Text(
-              '和 AI 对话后，系统会在这里展示决策原因',
+              context.l10n.chatCausalNoRecordsHint,
               style: DS.labelSmall.copyWith(color: DS.textTertiary),
               textAlign: TextAlign.center,
             ),
@@ -432,7 +433,7 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
                   ],
                   if (evidenceChain.isNotEmpty) ...[
                     Text(
-                      '决策链路',
+                      context.l10n.chatCausalDecisionChain,
                       style: DS.labelSmall.copyWith(
                         color: DS.textTertiary,
                         fontWeight: FontWeight.w600,
@@ -486,13 +487,13 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
       builder: (ctx) => AlertDialog(
         backgroundColor: DS.surfacePanel,
         title: Text(
-          '告诉我哪里不对',
+          context.l10n.chatCausalTellMeWrong,
           style: DS.bodySmall.copyWith(color: DS.textPrimary),
         ),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            hintText: '描述你认为正确的情况...',
+            hintText: context.l10n.chatCausalDescribeCorrect,
             hintStyle: DS.labelSmall.copyWith(color: DS.textTertiary),
           ),
           style: DS.bodySmall.copyWith(color: DS.textPrimary),

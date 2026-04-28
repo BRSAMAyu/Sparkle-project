@@ -80,7 +80,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         data: (c) {
           if (c == null) {
             return const EmptyState(
-              title: '这枚胶囊暂时不可用',
+              title: context.l10n.cogCapsuleUnavailable,
               description: '它可能已经被移除，或者还没有完成生成。',
               icon: Icons.auto_awesome_outlined,
             );
@@ -94,7 +94,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         error: (err, _) => CustomErrorWidget.page(
           context: context,
           message: l10n.capsuleLoadFailed('$err'),
-          title: '胶囊打开失败',
+          title: context.l10n.cogCapsuleOpenFailed,
           onRetry: () => ref
               .read(capsuleDetailProvider(widget.capsuleId).notifier)
               .fetchDetail(widget.capsuleId),

@@ -13,6 +13,7 @@ import 'package:sparkle/features/error_book/data/providers/error_book_provider.d
 import 'package:sparkle/features/error_book/presentation/widgets/error_question_image.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 import 'package:sparkle/features/file/data/services/file_upload_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AddErrorScreen extends ConsumerStatefulWidget {
   const AddErrorScreen({
@@ -261,7 +262,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 TextButton.icon(
                   onPressed: _isUploadingImage ? null : _removeQuestionImage,
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text('移除'),
+                  label: const Text(context.l10n.ebRemove),
                 ),
             ],
           ),
@@ -405,7 +406,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               onPressed: _isSubmitting ? null : _submit,
               loading: _isSubmitting,
               icon: const Icon(Icons.check),
-              label: _isSubmitting ? '保存中...' : '保存',
+              label: _isSubmitting ? context.l10n.ebSaving : context.l10n.ebSave,
             ),
           ),
         ],
@@ -442,7 +443,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               TextFormField(
                 controller: _chapterController,
                 decoration: const InputDecoration(
-                  labelText: '章节（可选）',
+                  labelText: context.l10n.ebChapterOptional,
                   hintText: '例如：第三章 牛顿运动定律',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.folder_outlined),
@@ -456,7 +457,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               TextFormField(
                 controller: _questionController,
                 decoration: const InputDecoration(
-                  labelText: '题目内容',
+                  labelText: context.l10n.ebQuestionContent,
                   hintText: '请输入完整的题目内容，或仅上传题目图片...',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.quiz_outlined),
@@ -471,7 +472,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               TextFormField(
                 controller: _userAnswerController,
                 decoration: const InputDecoration(
-                  labelText: '你的答案 *',
+                  labelText: context.l10n.ebYourAnswer,
                   hintText: '你当时写的错误答案...',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.edit_outlined),
@@ -493,7 +494,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               TextFormField(
                 controller: _correctAnswerController,
                 decoration: const InputDecoration(
-                  labelText: '正确答案 *',
+                  labelText: context.l10n.ebCorrectAnswer,
                   hintText: '标准答案或正确的解题过程...',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.check_circle_outline),

@@ -76,9 +76,9 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (sheetContext) => AttachmentPickerSheet(
-          title: '群组资料分享',
-          primaryTitle: '分享学习资料',
-          primarySubtitle: '上传后会同步发到群聊，并进入群知识库',
+          title: context.l10n.chatCommunityShareMaterial,
+          primaryTitle: context.l10n.chatCommunityShareDesc,
+          primarySubtitle: context.l10n.chatCommunityShareUploadHint,
           onDirectUpload: _openFileUpload,
           onDocumentClean: _openDocumentCleaner,
         ),
@@ -736,8 +736,8 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
   Widget _buildVoicePreview(BuildContext context, bool isDark) {
     final text = _voiceDraftText.trim();
     final helper = _voiceMode == _CommunityVoiceMode.tapToggle
-        ? (_isVoiceRecording ? '点击麦克风结束录音' : '录音结束后文字会进入输入框')
-        : (_isVoiceRecording ? '按住录音，上滑发送 / 左上滑撤回，松手进入输入框' : '长按开始语音输入');
+        ? (_isVoiceRecording ? context.l10n.chatVoiceTapToEnd : context.l10n.chatVoiceEndToInput)
+        : (_isVoiceRecording ? context.l10n.chatVoiceHoldHint : context.l10n.chatVoiceLongPressStart);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         DS.spacing12,

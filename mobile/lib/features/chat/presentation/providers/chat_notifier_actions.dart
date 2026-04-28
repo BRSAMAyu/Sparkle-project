@@ -90,7 +90,7 @@ extension ChatNotifierActions on ChatNotifier {
         }
         return;
       case 'checkpoint_debrief_start':
-        final prompt = payload['prompt']?.toString() ?? '我来复盘一下';
+        final prompt = payload['prompt']?.toString() ?? S.chatReviewStart;
         final rawContext = payload['debrief_context'];
         final debriefContext = rawContext is Map<String, dynamic>
             ? rawContext
@@ -151,8 +151,8 @@ extension ChatNotifierActions on ChatNotifier {
                       : null,
                 );
         if (intent == null) {
-          final message = _ref.read(taskListProvider).error ?? 'AI 执行发起失败';
-          if (message.contains('等待队列')) {
+          final message = _ref.read(taskListProvider).error ?? S.chatExecutionLaunchFailed;
+          if (message.contains(S.chatWaitingInQueue)) {
             state = state.copyWith(
               lastActionStatus: 'queued',
               lastActionMessage: message,
@@ -174,7 +174,7 @@ extension ChatNotifierActions on ChatNotifier {
           _actionString(payload, 'route').isNotEmpty
               ? _actionString(payload, 'route')
               : '${TaskRoutes.home}/$taskId/execute?origin=chat',
-          successMessage: '已开始委派执行',
+          successMessage: S.chatDelegationStarted,
         );
         return;
       case 'open_task_execution':
@@ -199,7 +199,7 @@ extension ChatNotifierActions on ChatNotifier {
         if (retried == null) {
           state = state.copyWith(
             lastActionStatus: 'failed',
-            lastActionMessage: '重试没有成功发起',
+            lastActionMessage: S.chatRetryLaunchFailed,
           );
           return;
         }
@@ -515,7 +515,7 @@ extension ChatNotifierActions on ChatNotifier {
       message: message,
       feedbackType: feedbackType,
       successMessage:
-          feedbackType == 'up' ? '已收到你的反馈，这条回复已标记为有帮助' : '已收到你的反馈，我们会继续改进这类回复',
+          feedbackType == 'up' ? S.chatFeedbackHelpful : S.chatFeedbackImprove,
     );
   }
 
@@ -536,7 +536,7 @@ extension ChatNotifierActions on ChatNotifier {
         'citation_chunk_index': citation.chunkIndex,
         'citation_page_number': citation.pageNumber,
       },
-      successMessage: helpful ? '已收到这条引用的正向反馈' : '已记录这条引用的改进反馈',
+      successMessage: helpful ? S.chatCitationPositive : S.chatCitationImprove,
     );
   }
 

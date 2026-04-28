@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/utils/ai_status_mapper.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// AI 状态指示器
 /// 显示 AI 的当前状态（THINKING, GENERATING, EXECUTING_TOOL 等）
@@ -154,7 +155,7 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasDetails ? '系统正在持续处理当前请求' : '实时思考中',
+                      hasDetails ? context.l10n.chatStatusSystemProcessing : context.l10n.chatStatusRealtimeThinking,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.sparkleTypography.labelSmall.copyWith(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Aurora Judgment-Correction Card — divine moment #2 "承认误判"
 ///
@@ -133,7 +134,7 @@ class _Header extends StatelessWidget {
             const SizedBox(width: 9),
             Expanded(
               child: Text(
-                '抱歉，我之前判断有误',
+                context.l10n.chatSpineSorryMistake,
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -182,7 +183,7 @@ class _CorrectionRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '这个判断准确吗？',
+              context.l10n.chatSpineAccurateAsk,
               style: DS.labelSmall.copyWith(color: DS.textTertiary),
             ),
             const SizedBox(height: 6),

@@ -487,7 +487,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                         const SizedBox(width: DS.spacing8),
                                         Expanded(
                                           child: Text(
-                                            '已坚持 ${_streakDays ?? 0} 天，你真的很厉害',
+                                            context.l10n.taskStreakDaysPraise(_streakDays ?? 0),
                                             style: theme.textTheme.bodyMedium
                                                 ?.copyWith(
                                               fontWeight: DS.fontWeightBold,
@@ -526,7 +526,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                             ),
                                             const SizedBox(width: DS.spacing8),
                                             Text(
-                                              '已解锁成就',
+                                              context.l10n.taskUnlockedAchievements,
                                               style: theme.textTheme.titleSmall
                                                   ?.copyWith(
                                                 fontWeight: DS.fontWeightBold,
@@ -569,7 +569,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                                                         String,
                                                                         dynamic>)[
                                                                     'name'] ??
-                                                                '新成就')
+                                                                context.l10n.taskNewAchievement)
                                                             .toString(),
                                                         style: theme.textTheme
                                                             .bodyMedium,
@@ -625,7 +625,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                                     ?.toDouble() ??
                                                 0,
                                             suffix: 'm',
-                                            label: '今日累计',
+                                            label: context.l10n.taskTodayTotal,
                                           ),
                                         if (widget.result.statsUpdate != null)
                                           _StatItem(
@@ -635,7 +635,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                                         'streak_days'] as num?)
                                                     ?.toDouble() ??
                                                 0,
-                                            suffix: '天',
+                                            suffix: context.l10n.taskDaysUnit,
                                             label: l10n.taskFeedbackStreak,
                                           ),
                                       ],

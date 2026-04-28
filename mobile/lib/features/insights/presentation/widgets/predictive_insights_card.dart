@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 预测洞察卡片 - 显示AI预测的学习建议
 ///
@@ -112,7 +113,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('预测下次学习时间', style: TextStyle(fontSize: 12)),
+                    const Text(context.l10n.insPredictNext, style: TextStyle(fontSize: 12)),
                     Text(
                       _formatDateTime(nextActiveTime),
                       style: TextStyle(

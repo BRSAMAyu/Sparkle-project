@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Community Insight Card — divine moment #6 "社群经验转策略"
 ///
@@ -158,7 +159,7 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                           ),
                           child: Center(
                             child: Text(
-                              '参考这个建议',
+                              context.l10n.chatCommunityInsightRefer,
                               style: DS.labelSmall.copyWith(
                                 color: DS.info,
                                 fontWeight: FontWeight.w500,

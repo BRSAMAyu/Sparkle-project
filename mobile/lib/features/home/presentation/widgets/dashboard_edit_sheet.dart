@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 
 class DashboardEditSheet extends ConsumerWidget {
@@ -12,14 +13,14 @@ class DashboardEditSheet extends ConsumerWidget {
     final notifier = ref.read(dashboardCardConfigProvider.notifier);
 
     return GraphiteModalSurface(
-      title: '编辑卡片区',
+      title: context.l10n.dashboardEditTitle,
       child: SizedBox(
         height: 520,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '布局方式',
+              context.l10n.dashboardLayoutMode,
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
@@ -29,7 +30,7 @@ class DashboardEditSheet extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _LayoutModeButton(
-                    label: '横滑卡组',
+                    label: context.l10n.dashboardLayoutSwipe,
                     selected:
                         config.layoutMode == DashboardCardLayoutMode.swipe,
                     onTap: () => notifier.setLayoutMode(
@@ -40,7 +41,7 @@ class DashboardEditSheet extends ConsumerWidget {
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: _LayoutModeButton(
-                    label: '双列网格',
+                    label: context.l10n.dashboardLayoutGrid,
                     selected: config.layoutMode == DashboardCardLayoutMode.grid,
                     onTap: () => notifier.setLayoutMode(
                       DashboardCardLayoutMode.grid,
@@ -53,7 +54,7 @@ class DashboardEditSheet extends ConsumerWidget {
             Row(
               children: [
                 Text(
-                  '显示与排序',
+                  context.l10n.dashboardDisplayAndSort,
                   style: context.sparkleTypography.labelLarge.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -61,7 +62,7 @@ class DashboardEditSheet extends ConsumerWidget {
                 const Spacer(),
                 TextButton(
                   onPressed: notifier.restoreDefaults,
-                  child: const Text('恢复默认'),
+                  child: Text(context.l10n.dashboardRestoreDefaults),
                 ),
               ],
             ),
@@ -163,13 +164,13 @@ class _EditableCardTile extends StatelessWidget {
             onChanged: (_) => onToggle(),
           ),
           title: Text(
-            _titleForCard(cardId),
+            _titleForCard(context, cardId),
             style: context.sparkleTypography.labelLarge.copyWith(
               fontWeight: DS.fontWeightSemiBold,
             ),
           ),
           subtitle: Text(
-            _subtitleForCard(cardId),
+            _subtitleForCard(context, cardId),
             style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
@@ -188,55 +189,55 @@ class _EditableCardTile extends StatelessWidget {
         ),
       );
 
-  String _titleForCard(String cardId) {
+  String _titleForCard(BuildContext context, String cardId) {
     switch (cardId) {
       case DashboardCardIds.insights:
-        return '学习洞察';
+        return context.l10n.dashboardCardInsights;
       case DashboardCardIds.focus:
-        return '专注核心';
+        return context.l10n.dashboardCardFocus;
       case DashboardCardIds.calendar:
-        return '日历热力图';
+        return context.l10n.dashboardCardCalendar;
       case DashboardCardIds.tools:
-        return '工具快捷';
+        return context.l10n.dashboardCardTools;
       case DashboardCardIds.openClaw:
-        return 'OpenClaw';
+        return context.l10n.dashboardCardOpenclaw;
       case DashboardCardIds.streak:
-        return '连胜卡';
+        return context.l10n.dashboardCardStreak;
       case DashboardCardIds.nextActions:
-        return '下一步';
+        return context.l10n.dashboardCardNextActions;
       case DashboardCardIds.curiosity:
-        return '好奇心胶囊';
+        return context.l10n.dashboardCardCuriosity;
       case DashboardCardIds.longTermPlan:
-        return '长期计划';
+        return context.l10n.dashboardCardLongTermPlan;
       case DashboardCardIds.seedLibrary:
-        return '种子库';
+        return context.l10n.dashboardCardSeedLibrary;
       default:
         return cardId;
     }
   }
 
-  String _subtitleForCard(String cardId) {
+  String _subtitleForCard(BuildContext context, String cardId) {
     switch (cardId) {
       case DashboardCardIds.insights:
-        return '学习仿真、推演和报告的统一入口';
+        return context.l10n.dashboardCardInsightsSubtitle;
       case DashboardCardIds.focus:
-        return '专注时长与火焰状态';
+        return context.l10n.dashboardCardFocusSubtitle;
       case DashboardCardIds.calendar:
-        return '查看当月任务热力图';
+        return context.l10n.dashboardCardCalendarSubtitle;
       case DashboardCardIds.tools:
-        return '固定工具快捷入口';
+        return context.l10n.dashboardCardToolsSubtitle;
       case DashboardCardIds.openClaw:
-        return '独立的 AI 执行中心、连接与队列入口';
+        return context.l10n.dashboardCardOpenclawSubtitle;
       case DashboardCardIds.streak:
-        return '连续学习成就状态';
+        return context.l10n.dashboardCardStreakSubtitle;
       case DashboardCardIds.nextActions:
-        return '待推进的关键行动';
+        return context.l10n.dashboardCardNextActionsSubtitle;
       case DashboardCardIds.curiosity:
-        return '最近认知与探索摘要';
+        return context.l10n.dashboardCardCuriositySubtitle;
       case DashboardCardIds.longTermPlan:
-        return '长期成长目标进展';
+        return context.l10n.dashboardCardLongTermPlanSubtitle;
       case DashboardCardIds.seedLibrary:
-        return '查看常用知识种子与灵感入口';
+        return context.l10n.dashboardCardSeedLibrarySubtitle;
       default:
         return '';
     }

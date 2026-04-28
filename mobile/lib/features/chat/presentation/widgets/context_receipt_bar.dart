@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ContextReceiptBar extends StatelessWidget {
   const ContextReceiptBar({required this.rawMetadata, super.key});
@@ -171,7 +172,7 @@ class _ReceiptDetailSheet extends StatelessWidget {
               Icon(Icons.auto_awesome, size: 16, color: DS.brandPrimary),
               const SizedBox(width: 8),
               Text(
-                '上下文资料详情',
+                context.l10n.chatContextDetail,
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -251,7 +252,7 @@ class _ReceiptDetailSheet extends StatelessWidget {
                 Icon(Icons.timeline, size: 13, color: DS.brandPrimary),
                 const SizedBox(width: 4),
                 Text(
-                  '查看完整决策链路',
+                  context.l10n.chatContextViewDecisionChain,
                   style: DS.labelSmall.copyWith(color: DS.brandPrimary),
                 ),
               ],

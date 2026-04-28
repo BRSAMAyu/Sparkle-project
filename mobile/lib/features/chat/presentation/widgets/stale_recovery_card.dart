@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Time-Aware Recovery Card — divine moment #4 "记得时间"
 ///
@@ -104,7 +105,7 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                   child: Text(
-                    '上次任务进展到哪了？',
+                    context.l10n.chatStaleLastTaskProgress,
                     style: DS.labelSmall.copyWith(color: DS.textSecondary),
                   ),
                 ),

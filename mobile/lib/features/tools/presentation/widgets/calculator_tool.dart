@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class CalculatorTool extends ConsumerStatefulWidget {
   const CalculatorTool({
@@ -127,18 +128,18 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.calculate_outlined,
-      title: '计算器',
-      subtitle: '适合任务执行中的快算、表达式验算和连贯多步推导，结果会保留最近记录。',
+      title: context.l10n.toolsCalcTitle,
+      subtitle: context.l10n.toolsCalcSubtitle,
       accentColor: accent,
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: _history.isEmpty ? '无历史' : '${_history.length} 条历史',
+          label: _history.isEmpty ? context.l10n.toolsCalcNoHistory : '${_history.length} 条历史',
           accentColor: accent,
           icon: Icons.history_rounded,
         ),
         ToolHeroChip(
-          label: _result.isEmpty ? '等待计算' : '结果已就绪',
+          label: _result.isEmpty ? context.l10n.toolsCalcWaiting : context.l10n.toolsCalcResultReady,
           accentColor: accent,
           icon: Icons.auto_graph_rounded,
         ),
@@ -147,8 +148,8 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '表达式',
-            subtitle: '支持括号和连续输入，`ANS` 会回填上一轮计算结果。',
+            title: context.l10n.toolsCalcExpression,
+            subtitle: context.l10n.toolsCalcExpressionDesc,
             child: Column(
               children: [
                 Container(
@@ -175,7 +176,7 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
                       ),
                       const SizedBox(height: DS.spacing12),
                       Text(
-                        _result.isEmpty ? '准备计算' : _result,
+                        _result.isEmpty ? context.l10n.toolsCalcReady : _result,
                         textAlign: TextAlign.right,
                         style:
                             Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -193,7 +194,7 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
                   children: [
                     Expanded(
                       child: SparkleButton(
-                        label: '复制结果',
+                        label: context.l10n.toolsCalcCopyResult,
                         variant: ButtonVariant.ghost,
                         onPressed: _copyResult,
                         icon: const Icon(Icons.copy_rounded),
@@ -202,7 +203,7 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
                     const SizedBox(width: DS.spacing12),
                     Expanded(
                       child: SparkleButton(
-                        label: '计算',
+                        label: context.l10n.toolsCalcCompute,
                         onPressed: _evaluate,
                         icon: const Icon(Icons.play_arrow_rounded),
                       ),
@@ -215,8 +216,8 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '键盘',
-            subtitle: '数字键和运算键分层展示，减少高频误触。',
+            title: context.l10n.toolsCalcKeyboard,
+            subtitle: context.l10n.toolsCalcKeyboardDesc,
             child: Column(
               children: [
                 LayoutBuilder(
@@ -275,13 +276,13 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '最近记录',
-            subtitle: '轻量保留最近 6 次，方便回填和核对。',
+            title: context.l10n.toolsCalcRecentHistory,
+            subtitle: context.l10n.toolsCalcRecentHistoryDesc,
             child: _history.isEmpty
                 ? ToolEmptyState(
                     icon: Icons.receipt_long_rounded,
-                    title: '还没有计算历史',
-                    description: '完成一次表达式计算后，最近记录会显示在这里。',
+                    title: context.l10n.toolsCalcNoHistoryLabel,
+                    description: context.l10n.toolsCalcNoHistoryDesc,
                     accentColor: accent,
                   )
                 : Column(

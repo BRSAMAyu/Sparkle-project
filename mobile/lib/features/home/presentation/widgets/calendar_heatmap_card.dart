@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
@@ -140,8 +141,8 @@ class CalendarHeatmapCard extends ConsumerWidget {
     final selectedLabel = selectedDate == null
         ? null
         : selectedSummary != null && selectedSummary.hasTasks
-            ? '${selectedDate.day}日 · ${selectedSummary.total}项'
-            : '${selectedDate.day}日 · 暂无任务';
+            ? context.l10n.heatmapSelectedDayTasks(selectedDate.day, selectedSummary.total)
+            : context.l10n.heatmapSelectedDayNoTasks(selectedDate.day);
 
     return GestureDetector(
       onTap: () => context.push('/calendar-stats'),
@@ -249,7 +250,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: DS.spacing4),
                   Text(
-                    '今日',
+                    context.l10n.heatmapToday,
                     style: TextStyle(
                       fontSize: dense ? 10 : 11,
                       fontWeight: DS.fontWeightSemibold,
@@ -292,7 +293,12 @@ class CalendarHeatmapCard extends ConsumerWidget {
       );
 
   Widget _buildWeekdayStrip(BuildContext context) {
-    const labels = ['一', '二', '三', '四', '五', '六', '日'];
+    final l10n = context.l10n;
+    final labels = [
+      l10n.heatmapWeekdayMon, l10n.heatmapWeekdayTue, l10n.heatmapWeekdayWed,
+      l10n.heatmapWeekdayThu, l10n.heatmapWeekdayFri, l10n.heatmapWeekdaySat,
+      l10n.heatmapWeekdaySun,
+    ];
     return Row(
       children: labels
           .map(
@@ -449,7 +455,7 @@ class _CompactCalendarSidebar extends ConsumerWidget {
         children: [
           // Header row
           Text(
-            '概览',
+            context.l10n.heatmapOverview,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: DS.textSecondary,
                   fontWeight: DS.fontWeightBold,
@@ -479,7 +485,7 @@ class _CompactCalendarSidebar extends ConsumerWidget {
               child: Text(
                 hasActivity
                     ? todayAggregate.summaryText
-                    : '今天还没有密集安排',
+                    : context.l10n.heatmapTodayNoSchedule,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: DS.fontWeightMedium,
@@ -493,11 +499,11 @@ class _CompactCalendarSidebar extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing4),
           // Stat chips — each is a compact row
-          _StatChip(label: '总量', value: '$totalTasks'),
+          _StatChip(label: context.l10n.heatmapStatTotal, value: '$totalTasks'),
           const SizedBox(height: DS.spacing4),
-          _StatChip(label: '待办', value: '$pendingTasks'),
+          _StatChip(label: context.l10n.heatmapStatPending, value: '$pendingTasks'),
           const SizedBox(height: DS.spacing4),
-          _StatChip(label: '完成', value: '$completedTasks'),
+          _StatChip(label: context.l10n.heatmapStatDone, value: '$completedTasks'),
           // Bottom dynamic label
           if (selectedLabel != null) ...[
             const Spacer(),

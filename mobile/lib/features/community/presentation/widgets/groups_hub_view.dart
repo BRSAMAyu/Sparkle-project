@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -120,15 +121,15 @@ class _CommunityHeroState extends State<_CommunityHero> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '社群入口',
+                      context.l10n.communityGroupEntry,
                       style: theme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
                       directory == null
-                          ? '浏览或创建你的学习社群'
-                          : '当前可浏览 ${directory.totalCount} 个公开社群',
+                          ? context.l10n.communityBrowseOrCreate
+                          : context.l10n.communityPublicGroupsCount(directory.totalCount),
                       style: theme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -137,7 +138,7 @@ class _CommunityHeroState extends State<_CommunityHero> {
                 ),
               ),
               SparkleButton(
-                label: _collapsed ? '展开' : '收起',
+                label: _collapsed ? context.l10n.communityExpand : context.l10n.communityCollapse,
                 variant: ButtonVariant.ghost,
                 size: ButtonSize.small,
                 onPressed: _toggleCollapsed,
@@ -147,14 +148,14 @@ class _CommunityHeroState extends State<_CommunityHero> {
           if (!_collapsed) ...[
             const SizedBox(height: 12),
             Text(
-              '像逛校园社团一样发现社群',
+              context.l10n.communityDiscoverCampusGroups,
               style: theme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
               directory == null
-                  ? '浏览公开社群、按兴趣筛选，也能随时创建属于自己的学习社区。'
-                  : '支持热度、最新、随机发现。这块可以长期收起，不再占用大段空间。',
+                  ? context.l10n.communityDiscoverBrowseHint
+                  : context.l10n.communityDiscoverFilterHint,
               style: theme.bodyMedium?.copyWith(color: DS.textSecondary),
             ),
             if (tags.isNotEmpty) ...[
@@ -180,7 +181,7 @@ class _CommunityHeroState extends State<_CommunityHero> {
             children: [
               Expanded(
                 child: SparkleButton.primary(
-                  label: '浏览社群',
+                  label: context.l10n.communityBrowseGroups,
                   icon: const Icon(Icons.travel_explore_outlined),
                   onPressed: () => context.push('/community/groups/discover'),
                 ),
@@ -188,7 +189,7 @@ class _CommunityHeroState extends State<_CommunityHero> {
               const SizedBox(width: 12),
               Expanded(
                 child: SparkleButton(
-                  label: '创建社群',
+                  label: context.l10n.communityCreateGroup,
                   variant: ButtonVariant.secondary,
                   icon: const Icon(Icons.add_circle_outline),
                   onPressed: () => context.push('/community/groups/create'),
@@ -213,10 +214,10 @@ class _RecommendationsSection extends ConsumerWidget {
       children: [
         Row(
           children: [
-            Text('为你推荐', style: Theme.of(context).textTheme.titleMedium),
+            Text(context.l10n.communityRecommendedForYou, style: Theme.of(context).textTheme.titleMedium),
             const Spacer(),
             SparkleButton(
-              label: '看全部',
+              label: context.l10n.communityViewAll,
               variant: ButtonVariant.ghost,
               size: ButtonSize.small,
               onPressed: () => context.push('/community/groups/discover'),
@@ -280,7 +281,7 @@ class _RecommendationsSection extends ConsumerWidget {
             ),
           ),
           error: (_, __) => Text(
-            '推荐暂时加载失败，稍后下拉刷新即可。',
+            context.l10n.communityRecommendLoadError,
             style: TextStyle(color: DS.textSecondary),
           ),
         ),
@@ -298,9 +299,9 @@ class _MyGroupsSection extends StatelessWidget {
       data: (groups) {
         if (groups.isEmpty) {
           return CompactEmptyState(
-            message: '你还没有加入社群，先去逛一逛公开社群广场吧。',
+            message: context.l10n.communityNoGroupsYet,
             icon: Icons.groups_outlined,
-            actionText: '去发现社群',
+            actionText: context.l10n.communityDiscoverGroups,
             onAction: () => context.push('/community/groups/discover'),
           );
         }
@@ -309,10 +310,10 @@ class _MyGroupsSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('我的社群', style: Theme.of(context).textTheme.titleMedium),
+                Text(context.l10n.communityMyGroups, style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
                 SparkleButton(
-                  label: '查看全部',
+                  label: context.l10n.communityViewAllGroups,
                   variant: ButtonVariant.ghost,
                   size: ButtonSize.small,
                   onPressed: () => context.push('/community/groups'),
@@ -334,7 +335,7 @@ class _MyGroupsSection extends StatelessWidget {
             if (groups.length > 4) ...[
               const SizedBox(height: 12),
               Text(
-                '还有 ${groups.length - 4} 个社群已折叠，避免占用过长空间。',
+                context.l10n.communityMoreGroupsFolded(groups.length - 4),
                 style: TextStyle(
                   color: DS.textSecondary,
                   fontSize: DS.fontSizeSm,
@@ -346,7 +347,7 @@ class _MyGroupsSection extends StatelessWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Text(
-        '我的社群加载失败: $error',
+        context.l10n.communityMyGroupsLoadError(error.toString()),
         style: TextStyle(color: DS.textSecondary),
       ),
     );
@@ -360,10 +361,10 @@ class _JoinedGroupTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roleLabel = switch (group.myRole) {
-      GroupRole.owner => '群主',
-      GroupRole.admin => '管理员',
-      GroupRole.member => '成员',
-      null => '公开社群',
+      GroupRole.owner => context.l10n.communityRoleOwner,
+      GroupRole.admin => context.l10n.communityRoleAdmin,
+      GroupRole.member => context.l10n.communityRoleMember,
+      null => context.l10n.communityRolePublic,
     };
 
     return GraphiteCardSurface(
@@ -403,7 +404,7 @@ class _JoinedGroupTile extends StatelessWidget {
               ),
             const SizedBox(height: 6),
             Text(
-              '$roleLabel · ${group.memberCount} 人 · 今日 ${group.todayCheckinCount} 次打卡',
+              context.l10n.communityGroupSubtitle(roleLabel, group.memberCount, group.todayCheckinCount),
               style: TextStyle(color: DS.textSecondary, fontSize: 12),
             ),
           ],

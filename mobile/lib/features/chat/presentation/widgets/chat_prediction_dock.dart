@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ChatPredictionDock extends ConsumerStatefulWidget {
   const ChatPredictionDock({
@@ -215,7 +216,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
               promptStarters.isEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '预测更新中...',
+              context.l10n.chatPredictionUpdating,
               style: DS.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -232,7 +233,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
     required bool isLoading,
   }) {
     if (isLoading) {
-      return isTyping ? '正在理解你的输入' : '正在根据最近行为更新建议';
+      return isTyping ? context.l10n.chatPredictionUnderstandingInput : context.l10n.chatPredictionUpdatingByBehavior;
     }
     if (insight != null) {
       if (!isTyping) {
@@ -246,19 +247,19 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
           return '你现在可以先做：$actionLabel';
         }
         if (insight.summary.trim().isNotEmpty) {
-          return '为你整理了下一步预测';
+          return context.l10n.chatPredictionNextStepsReady;
         }
-        return '预测你接下来最可能的动作';
+        return context.l10n.chatPredictionMostLikelyAction;
       }
 
       final raw = insight.summary.trim().isNotEmpty
           ? insight.summary.trim()
           : insight.title.trim();
       final compact = raw
-          .replaceFirst(RegExp('^系统预测'), '')
-          .replaceFirst(RegExp('^你接下来'), '')
-          .replaceFirst(RegExp('^最适合'), '')
-          .replaceFirst(RegExp('^更适合'), '')
+          .replaceFirst(RegExp(context.l10n.chatPredictionSystemLabel), '')
+          .replaceFirst(RegExp(context.l10n.chatPredictionNextLabel), '')
+          .replaceFirst(RegExp(context.l10n.chatPredictionBestFit), '')
+          .replaceFirst(RegExp(context.l10n.chatPredictionMoreSuitable), '')
           .replaceFirst(RegExp('^会'), '')
           .replaceFirst(RegExp('^想'), '')
           .trim();
@@ -266,7 +267,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
         return compact;
       }
     }
-    return isTyping ? '我在判断你接下来想做什么' : '预测你接下来最可能的动作';
+    return isTyping ? context.l10n.chatPredictionGuessingNext : context.l10n.chatPredictionMostLikelyAction;
   }
 
   String? _sourceBadge(PredictionInsightData? insight,

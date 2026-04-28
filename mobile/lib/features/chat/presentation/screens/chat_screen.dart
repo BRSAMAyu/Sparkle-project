@@ -836,7 +836,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             variant: ButtonVariant.ghost,
           ),
           PopupMenuButton<_ChatShortcutAction>(
-            tooltip: '更多对话操作',
+            tooltip: context.l10n.chatMoreActions,
             color: DS.surfacePrimary,
             surfaceTintColor: DS.surfacePrimary,
             icon: Icon(Icons.more_horiz_rounded, color: DS.textSecondary),
@@ -852,7 +852,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   children: [
                     Icon(Icons.add_comment_outlined, size: 18),
                     SizedBox(width: DS.spacing12),
-                    Text('新对话'),
+                    Text(context.l10n.chatNewConversation),
                   ],
                 ),
               ),
@@ -1160,9 +1160,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                             confirmQuestion: context.l10n
                                                 .auroraCalibrationConfirm,
                                             confirmOptions: const [
-                                              '30 分钟',
-                                              '45 分钟',
-                                              '60 分钟',
+                                              context.l10n.chatMinutes30,
+                                              context.l10n.chatMinutes45,
+                                              context.l10n.chatMinutes60,
                                             ],
                                             onConfirm: (option) {
                                               ref
@@ -1362,7 +1362,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             color: DS.textTertiary,
                           ),
                           label: Text(
-                            '智能调节暂不可用',
+                            context.l10n.chatSmartAdjustUnavailable,
                             style: DS.labelSmall.copyWith(
                               color: DS.textTertiary,
                             ),
@@ -1384,7 +1384,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         actions: chatState.pendingGrowthCard!.actions,
                         onAction: (action) {
                           ref.read(chatProvider.notifier).dismissGrowthCard();
-                          if (action.contains('累') || action.contains('不需要')) {
+                          if (action.contains('累') || action.contains(context.l10n.chatNotNeeded)) {
                             ref.read(chatProvider.notifier).sendMessage(action);
                           }
                         },
@@ -1577,7 +1577,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .loadConversationHistory(sessionId)
           .timeout(const Duration(seconds: 12));
     } on TimeoutException {
-      return l10n.chatHistoryLoadFailed('打开历史会话超时，请重试');
+      return l10n.chatHistoryLoadFailed(context.l10n.chatHistoryOpenTimeout);
     }
     if (mounted && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
@@ -1587,7 +1587,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     if (ref.read(chatProvider).conversationId != sessionId) {
-      return l10n.chatHistoryLoadFailed('历史会话未能成功切换，请重试');
+      return l10n.chatHistoryLoadFailed(context.l10n.chatHistorySwitchFailed);
     }
 
     final loadError = ref.read(chatProvider).error;
@@ -1608,7 +1608,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final matched =
         messages.where((message) => message.id == evidenceToken).toList();
     if (matched.isEmpty) {
-      AppFeedback.info(context, '原始 turn 暂时不可见');
+      AppFeedback.info(context, context.l10n.chatOriginalTurnUnavailable);
       return;
     }
     final message = matched.first;
@@ -1624,7 +1624,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '原始 turn',
+                  context.l10n.chatOriginalTurn,
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
@@ -1731,8 +1731,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         _QuickActionChip(
                           icon: Icons.cloud_sync_rounded,
-                          label: '交给 OpenClaw',
-                          subtitle: '适合网页调研、整理、抓取类任务',
+                          label: context.l10n.chatDelegateToOpenclaw,
+                          subtitle: context.l10n.chatOpenclawSuitable,
                           color: DS.info,
                           isNarrow: isNarrow,
                           onTap: () => context.push(
@@ -2027,7 +2027,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     observation: aurora.summary,
                     judgment: aurora.summary,
                     confirmQuestion: context.l10n.auroraCalibrationConfirm,
-                    confirmOptions: const ['30 分钟', '45 分钟', '60 分钟'],
+                    confirmOptions: const [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
                     onConfirm: (option) {
                       ref.read(chatProvider.notifier).sendMessage(
                             '${context.l10n.auroraCorrectRecalibrate}: $option',
@@ -2147,10 +2147,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _attachmentStatusText(String status) {
     switch (status.trim().toLowerCase()) {
       case 'processed':
-        return '已就绪';
+        return context.l10n.chatReady;
       case 'uploaded':
       case 'processing':
-        return '处理中';
+        return context.l10n.chatProcessing;
       case 'failed':
         return '失败';
       default:
@@ -2307,7 +2307,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
     final notifier = ref.read(chatProvider.notifier);
     return notifier.getRecentConversations().timeout(
           const Duration(seconds: 8),
-          onTimeout: () => throw Exception('加载对话历史超时，请稍后重试'),
+          onTimeout: () => throw Exception(context.l10n.chatLoadHistoryTimeout),
         );
   }
 
@@ -2335,7 +2335,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
     final error = await widget.onSelectSession(sessionId).timeout(
           const Duration(seconds: 12),
           onTimeout: () => I18nService.instance.l10n.chatHistoryLoadFailed(
-            '打开历史会话超时，请重试',
+            context.l10n.chatHistoryOpenTimeout,
           ),
         );
     if (!mounted) {
@@ -2736,7 +2736,7 @@ class _DailyStartupRetryBanner extends StatelessWidget {
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
-                '加载今日概览中…',
+                context.l10n.chatLoadingDailyOverview,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -2749,7 +2749,7 @@ class _DailyStartupRetryBanner extends StatelessWidget {
             const SizedBox(width: DS.spacing4),
             IconButton(
               visualDensity: VisualDensity.compact,
-              tooltip: '重试今日概览',
+              tooltip: context.l10n.chatRetryDailyOverview,
               onPressed: isRetrying ? null : onRetry,
               icon: Icon(
                 Icons.refresh_rounded,
@@ -3222,9 +3222,9 @@ class _DualCoreModeChip extends StatelessWidget {
 
   (String label, Color color, IconData icon) _resolve(BuildContext context) {
     return switch (mode) {
-      'execution' => ('执行模式', const Color(0xFFD97706), Icons.bolt_rounded),
-      'cognitive' => ('认知模式', const Color(0xFF6366F1), Icons.psychology_rounded),
-      _ => ('均衡模式', DS.primaryBase, Icons.balance_rounded),
+      'execution' => (context.l10n.chatExecutionMode, const Color(0xFFD97706), Icons.bolt_rounded),
+      'cognitive' => (context.l10n.chatCognitiveMode, const Color(0xFF6366F1), Icons.psychology_rounded),
+      _ => (context.l10n.chatBalancedMode, DS.primaryBase, Icons.balance_rounded),
     };
   }
 

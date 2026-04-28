@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 const Map<String, String> _modeLabels = <String, String>{
   'cautious': '谨慎模式',
@@ -25,7 +26,7 @@ const Map<String, String> _ruleLabels = <String, String>{
 
 const Map<String, String> _ruleOptionLabels = <String, String>{
   'auto': '自动',
-  'confirm': '确认',
+  'confirm': context.l10n.settingsConfirm,
   'skip': '跳过',
   'reject': '拒绝',
 };
@@ -227,9 +228,9 @@ class _OpenClawExecutionPreferencesCardState
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'all', child: Text('全部通知')),
-              DropdownMenuItem(value: 'essential', child: Text('仅关键节点')),
-              DropdownMenuItem(value: 'silent', child: Text('安静模式')),
+              DropdownMenuItem(value: 'all', child: Text(context.l10n.settingsAllNotifications)),
+              DropdownMenuItem(value: 'essential', child: Text(context.l10n.settingsCriticalOnly)),
+              DropdownMenuItem(value: 'silent', child: Text(context.l10n.settingsQuietMode)),
             ],
             onChanged: (value) {
               if (value == null) {
@@ -269,7 +270,7 @@ class _OpenClawExecutionPreferencesCardState
                       draft.executionBudget.dailyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: '每日上限',
+                    labelText: context.l10n.settingsDailyLimit,
                     helperText:
                         '已用 ${draft.executionBudget.dailyUsed} tokens',
                   ),
@@ -295,7 +296,7 @@ class _OpenClawExecutionPreferencesCardState
                       draft.executionBudget.monthlyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: '每月上限',
+                    labelText: context.l10n.settingsMonthlyLimit,
                     helperText:
                         '已用 ${draft.executionBudget.monthlyUsed} tokens',
                   ),
@@ -368,7 +369,7 @@ class _OpenClawExecutionPreferencesCardState
                         );
                       }
                     },
-              child: Text(_dirty ? '保存执行偏好' : '当前已同步'),
+              child: Text(_dirty ? context.l10n.settingsSavePreferences : '当前已同步'),
             ),
           ),
         ],

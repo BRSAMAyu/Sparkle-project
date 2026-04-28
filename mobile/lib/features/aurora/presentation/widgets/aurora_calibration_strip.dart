@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_calibration_card.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_calibration_repository.dart';
 import 'package:sparkle/features/aurora/presentation/providers/aurora_calibration_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AuroraCalibrationStrip extends ConsumerStatefulWidget {
   const AuroraCalibrationStrip({
@@ -290,7 +291,7 @@ class _CalibrationCardTile extends StatelessWidget {
             runSpacing: DS.spacing8,
             children: [
               SparkleButton(
-                label: '确认',
+                label: context.l10n.auroraConfirm,
                 variant: ButtonVariant.outline,
                 size: ButtonSize.small,
                 loading: pendingResponse == AuroraCalibrationResponse.confirm,

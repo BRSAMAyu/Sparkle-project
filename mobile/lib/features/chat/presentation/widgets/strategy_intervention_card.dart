@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Strategy Intervention Card — divine moment #5 "阻止低收益"
 ///
@@ -164,7 +165,7 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                           border: Border.all(color: DS.borderSubtle),
                         ),
                         child: Text(
-                          '暂时忽略',
+                          context.l10n.chatInterventionIgnore,
                           style: DS.labelSmall.copyWith(
                             color: DS.textTertiary,
                           ),

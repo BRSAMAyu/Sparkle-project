@@ -13,6 +13,7 @@ import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class LearningInsightsOverviewScreen extends ConsumerWidget {
   const LearningInsightsOverviewScreen({
@@ -79,7 +80,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('学习洞察'),
+        title: const Text(context.l10n.insOverviewTitle),
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
@@ -108,7 +109,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
               _OverviewHero(activePanel: initialPanel),
               const SizedBox(height: DS.spacing16),
               _InsightModuleCard(
-                title: '学习仿真',
+                title: context.l10n.insSimLabel,
                 subtitle: _simulationTitle(
                   latestSimulation,
                   fallbackSeed: topSeed,
@@ -136,20 +137,20 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DS.spacing12),
               _InsightModuleCard(
-                title: '推演剧场',
+                title: context.l10n.insTheaterLabel,
                 subtitle: _theaterTitle(latestTheater),
                 status: _theaterStatus(latestTheater),
                 accent: DS.info,
                 icon: Icons.auto_graph_rounded,
                 highlighted: initialPanel == panelTheater,
-                buttonLabel: '打开推演',
+                buttonLabel: context.l10n.insOpenSim,
                 onPressed: () => context.push(
                   _theaterLocation(latestTheater),
                 ),
               ),
               const SizedBox(height: DS.spacing12),
               _InsightModuleCard(
-                title: '学习报告',
+                title: context.l10n.insReportLabel,
                 subtitle: latestReportPayload?.mastery.isNotEmpty ?? false
                     ? '最近一次共分析 ${latestReportPayload!.mastery.length} 个知识点'
                     : '沉淀一轮学习后的关键结论',
@@ -157,7 +158,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                 accent: DS.success,
                 icon: Icons.article_outlined,
                 highlighted: initialPanel == panelReport,
-                buttonLabel: '查看报告',
+                buttonLabel: context.l10n.insViewReport,
                 onPressed: () => context.push(
                   ReportRoutes.learningReport,
                   extra: latestReportPayload,

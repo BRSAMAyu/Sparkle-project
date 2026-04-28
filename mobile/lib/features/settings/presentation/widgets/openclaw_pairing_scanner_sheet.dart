@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class OpenClawPairingScannerSheet extends StatefulWidget {
   const OpenClawPairingScannerSheet({super.key});
@@ -114,7 +115,7 @@ class _OpenClawPairingScannerSheetState
                     child: OutlinedButton.icon(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
-                      label: const Text('取消'),
+                      label: const Text(context.l10n.toolsWbCancel),
                     ),
                   ),
                 ],

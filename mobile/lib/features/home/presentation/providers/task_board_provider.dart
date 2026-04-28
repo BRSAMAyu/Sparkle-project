@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -22,7 +23,7 @@ class TaskBoardTodaySummary {
   final int completedCount;
 
   String get label =>
-      totalCount == 0 ? '今日无任务' : '今日$totalCount项·已完成$completedCount';
+      totalCount == 0 ? S.taskBoardTodayNoTasks : S.taskBoardTodaySummary(totalCount, completedCount);
 }
 
 /// Task board state
@@ -288,13 +289,13 @@ final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
   noDate.sort(sortByPriority);
 
   return [
-    if (overDue.isNotEmpty) ScheduleGroup(title: '已逾期', tasks: overDue),
-    if (todayTasks.isNotEmpty) ScheduleGroup(title: '今天', tasks: todayTasks),
+    if (overDue.isNotEmpty) ScheduleGroup(title: S.taskBoardOverdue, tasks: overDue),
+    if (todayTasks.isNotEmpty) ScheduleGroup(title: S.taskBoardToday, tasks: todayTasks),
     if (tomorrowTasks.isNotEmpty)
-      ScheduleGroup(title: '明天', tasks: tomorrowTasks),
-    if (thisWeek.isNotEmpty) ScheduleGroup(title: '本周', tasks: thisWeek),
-    if (later.isNotEmpty) ScheduleGroup(title: '更晚', tasks: later),
-    if (noDate.isNotEmpty) ScheduleGroup(title: '无日期', tasks: noDate),
+      ScheduleGroup(title: S.taskBoardTomorrow, tasks: tomorrowTasks),
+    if (thisWeek.isNotEmpty) ScheduleGroup(title: S.taskBoardThisWeek, tasks: thisWeek),
+    if (later.isNotEmpty) ScheduleGroup(title: S.taskBoardLater, tasks: later),
+    if (noDate.isNotEmpty) ScheduleGroup(title: S.taskBoardNoDate, tasks: noDate),
     if (tasks.isEmpty) ScheduleGroup(title: '', tasks: [], isEmpty: true),
   ];
 });

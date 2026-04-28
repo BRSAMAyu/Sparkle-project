@@ -334,7 +334,7 @@ class SubtaskItemWidget extends StatelessWidget {
                     Icon(Icons.schedule, size: 12, color: DS.brandPrimary54),
                     const SizedBox(width: 4),
                     Text(
-                      '${subtask.estimatedMinutes} 分钟',
+                      context.l10n.taskMinutesUnit(subtask.estimatedMinutes),
                       style: TextStyle(
                         color: DS.brandPrimary54,
                         fontSize: 11,

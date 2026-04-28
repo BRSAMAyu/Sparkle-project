@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AiReasoningModePill extends ConsumerWidget {
   const AiReasoningModePill({super.key});
@@ -118,7 +119,7 @@ class _AiReasoningModeSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'AI 档位',
+            context.l10n.chatModeAiGear,
             style: (Theme.of(context).textTheme.titleMedium ?? DS.bodyLarge)
                 .copyWith(
               color: DS.textPrimary,
@@ -127,7 +128,7 @@ class _AiReasoningModeSheet extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            '切换当前对话的调度策略',
+            context.l10n.chatModeSwitchStrategy,
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing16),
@@ -253,14 +254,14 @@ class _ReasoningModeVisuals {
       case 'fast':
         return _ReasoningModeVisuals(
           label: '敏捷',
-          caption: '更快，更省，适合即时来回',
+          caption: context.l10n.chatModeFastDesc,
           icon: Icons.flash_on_rounded,
           color: DS.warning,
         );
       case 'deep':
         return _ReasoningModeVisuals(
           label: '深思',
-          caption: '更强分析，适合复杂拆解',
+          caption: context.l10n.chatModeStrongAnalysisDesc,
           icon: Icons.psychology_alt_rounded,
           color: DS.info,
         );
@@ -268,7 +269,7 @@ class _ReasoningModeVisuals {
       default:
         return _ReasoningModeVisuals(
           label: '均衡',
-          caption: '默认推荐，速度和质量更平衡',
+          caption: context.l10n.chatModeBalancedDesc,
           icon: Icons.tune_rounded,
           color: DS.success,
         );

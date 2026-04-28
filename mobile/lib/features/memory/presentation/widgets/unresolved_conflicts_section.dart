@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class UnresolvedConflictsSection extends StatelessWidget {
   const UnresolvedConflictsSection({
@@ -69,7 +70,7 @@ class UnresolvedConflictsSection extends StatelessWidget {
                         ),
                         TextButton(
                           onPressed: () => onSelectNone?.call(c),
-                          child: const Text('跳过'),
+                          child: const Text(context.l10n.memSkip),
                         ),
                       ],
                     ),

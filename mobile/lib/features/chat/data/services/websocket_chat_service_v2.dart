@@ -686,7 +686,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           final code = (error['error_code'] as String?) ?? 'UNKNOWN';
           return ErrorEvent(
             code: code,
-            message: error['message'] as String? ?? '未知错误',
+            message: error['message'] as String? ?? S.chatWsUnknownError,
             retryable: error['retryable'] as bool? ?? false,
             responseId: responseId,
             traceId: traceId,
@@ -696,7 +696,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
         return ErrorEvent(
           code: 'UNKNOWN',
-          message: '未知错误',
+          message: S.chatWsUnknownError,
           retryable: false,
           responseId: responseId,
           traceId: traceId,
@@ -784,7 +784,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'nack':
         final messageId = data['message_id'] as String?;
         final errorCode = data['error_code'] as String? ?? 'unknown';
-        final errorMessage = data['error_message'] as String? ?? '未知错误';
+        final errorMessage = data['error_message'] as String? ?? S.chatWsUnknownError;
         final retryAfterMs = data['retry_after_ms'] as int?;
         if (messageId != null) {
           return NackEvent(

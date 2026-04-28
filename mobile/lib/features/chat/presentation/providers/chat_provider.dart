@@ -569,9 +569,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'reason': reason,
         'source': suggestion['source']?.toString() ?? 'execution_suggestion',
         'delegate_preference': suggestion['delegate_preference'],
-        'title': tone == 'detailed_guidance' ? '这一步适合交给 AI 执行' : '我可以直接替你执行这一步',
+        'title': tone == 'detailed_guidance' ? S.chatAiExecutionSuitable : S.chatAiExecutionDirect,
         'summary':
-            reason.isNotEmpty ? reason : '这个任务已经具备可委派的结构，Sparkle 可以直接进入执行链路。',
+            reason.isNotEmpty ? reason : S.chatExecutionDelegatable,
         'route': '${TaskRoutes.home}/$taskId/execute?origin=chat',
       });
     }
@@ -608,11 +608,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _upsertWidget(target, 'execution_summary', {
       'status': status,
       'impact_summary': status == 'success'
-          ? '这次对话内的执行链路已经完成验证，可以直接把结果嵌回聊天上下文。'
+          ? S.chatExecutionSuccessSummary
           : status == 'partial'
-              ? '执行链路部分通过验证，建议先查看结果摘要，再决定是否继续委派。'
-              : '执行链路没有完全达标，Sparkle 会保留人工接管的空间。',
-      'next_action': status == 'success' ? '查看结果摘要' : '人工复核',
+              ? S.chatExecutionPartialSummary
+              : S.chatExecutionFailedSummary,
+      'next_action': status == 'success' ? S.chatViewResults : S.chatManualReview,
       'affected_objects': affectedObjects,
       if (_parseJsonMap(validation['result_preview']) != null)
         'result_preview': _parseJsonMap(validation['result_preview']),
@@ -1010,9 +1010,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         var resolvedContent = accumulatedContent;
         if (resolvedContent.trim().isEmpty && phase == ChatRunPhase.completed) {
           if (accumulatedWidgets.isNotEmpty || accumulatedUxEnvelope != null) {
-            resolvedContent = '已为你整理好下一步操作。';
+            resolvedContent = S.chatNextStepsReady;
           } else if (accumulatedCollaboration != null) {
-            resolvedContent = '本轮协作结果已准备好。';
+            resolvedContent = S.chatCollaborationResultReady;
           }
         }
         String? reasoningSummary;
@@ -1083,7 +1083,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             state.transparencyPresentationState.copyWith(
           isExpanded: false,
           isDismissed: false,
-          lastCompletedLabel: phase == ChatRunPhase.completed ? '已完成' : null,
+          lastCompletedLabel: phase == ChatRunPhase.completed ? S.chatCompleted : null,
           clearLastCompletedLabel: phase != ChatRunPhase.completed,
         ),
         error: errorMessage,

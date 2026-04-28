@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class GraphDiagnosticCard extends StatelessWidget {
   const GraphDiagnosticCard({
@@ -37,8 +38,8 @@ class GraphDiagnosticCard extends StatelessWidget {
         ],
         if (weakNodes.isNotEmpty) ...[
           _SectionTitle(
-            title: '最弱点',
-            subtitle: '这些点最可能拖慢你后面的路径。',
+            title: context.l10n.chatGraphWeakestPoints,
+            subtitle: context.l10n.chatGraphWeakestDesc,
           ),
           const SizedBox(height: DS.spacing8),
           ...weakNodes.map(
@@ -55,8 +56,8 @@ class GraphDiagnosticCard extends StatelessWidget {
         if (atRiskNodes.isNotEmpty) ...[
           const SizedBox(height: DS.spacing8),
           _SectionTitle(
-            title: '风险区',
-            subtitle: '还没掉到底，但已经值得提前补一下。',
+            title: context.l10n.chatGraphRiskZone,
+            subtitle: context.l10n.chatGraphRiskDesc,
           ),
           const SizedBox(height: DS.spacing8),
           ...atRiskNodes.map(
@@ -73,8 +74,8 @@ class GraphDiagnosticCard extends StatelessWidget {
         if (recommended.isNotEmpty) ...[
           const SizedBox(height: DS.spacing8),
           _SectionTitle(
-            title: '下一步建议',
-            subtitle: '先从这些点里挑一个最小复习入口。',
+            title: context.l10n.chatGraphNextStepSuggestion,
+            subtitle: context.l10n.chatGraphNextStepDesc,
           ),
           const SizedBox(height: DS.spacing6),
           ...recommended.map(
@@ -156,7 +157,7 @@ class _NodeTile extends StatelessWidget {
     if (route.isNotEmpty && onAction != null) {
       actions.add(
         CustomButton.secondary(
-          text: '去星图看',
+          text: context.l10n.chatGraphGoToGalaxy,
           onPressed: () => unawaited(onAction!(
             'route',
             {'route': route},
@@ -168,7 +169,7 @@ class _NodeTile extends StatelessWidget {
     if (prompt.isNotEmpty && onAction != null) {
       actions.add(
         CustomButton.secondary(
-          text: '继续解释',
+          text: context.l10n.chatGraphContinueExplain,
           onPressed: () => unawaited(onAction!(
             'prompt',
             {'prompt': prompt},

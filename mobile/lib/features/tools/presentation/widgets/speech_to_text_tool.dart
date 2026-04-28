@@ -4,6 +4,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class SpeechToTextTool extends StatefulWidget {
   const SpeechToTextTool({
@@ -47,8 +48,8 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.mic_rounded,
-      title: '语音转文字',
-      subtitle: '面向真实记录场景的轻量转写台。单次录音最长 30 秒，直接调用当前已接通的 GLM ASR 链路。',
+      title: context.l10n.toolsSttTitle,
+      subtitle: context.l10n.toolsSttSubtitle,
       accentColor: accent,
       compactHeader: true,
       heroChips: [
@@ -70,14 +71,14 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
           ToolMetricRow(
             children: [
               ToolMetricCard(
-                label: '字数',
+                label: context.l10n.toolsSttCharCountLabel,
                 value: '$_charCount',
                 accentColor: accent,
                 icon: Icons.notes_rounded,
                 caption: '适合直接发送或整理',
               ),
               ToolMetricCard(
-                label: '词数',
+                label: context.l10n.toolsSttWordCountLabel,
                 value: '$_wordCount',
                 accentColor: accent,
                 icon: Icons.subject_rounded,
@@ -88,8 +89,8 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '录音控制',
-            subtitle: '点击麦克风开始录音，再次点击结束转写。',
+            title: context.l10n.toolsSttRecordControl,
+            subtitle: context.l10n.toolsSttRecordDesc,
             child: Center(
               child: VoiceInputButton(
                 onTranscription: (text) {
@@ -109,8 +110,8 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
             constraints: const BoxConstraints(minHeight: 200),
             child: ToolSectionCard(
               accentColor: accent,
-              title: '转写结果',
-              subtitle: '结果区支持直接复制，可作为后续写作和总结的原文底稿。',
+              title: context.l10n.toolsSttResult,
+              subtitle: context.l10n.toolsSttResultDesc,
               child: hasText
                   ? SingleChildScrollView(
                       child: SelectableText(
@@ -124,7 +125,7 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
                   : SingleChildScrollView(
                       child: ToolEmptyState(
                         icon: Icons.hearing_rounded,
-                        title: '还没有转写内容',
+                        title: context.l10n.toolsSttEmpty,
                         description: '开始一次录音后，文本会实时显示在这里。适合课堂摘录、灵感捕捉和会议补记。',
                         accentColor: accent,
                       ),
@@ -138,21 +139,21 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
           final compact = constraints.maxWidth < 620;
           final actions = <Widget>[
             SparkleButton(
-              label: '清空',
+              label: context.l10n.toolsSttClear,
               variant: ButtonVariant.ghost,
               onPressed:
                   hasText ? () => setState(() => _transcript = '') : null,
               expand: true,
             ),
             SparkleButton(
-              label: '复制文本',
+              label: context.l10n.toolsSttCopy,
               onPressed: hasText ? _copyTranscript : null,
               icon: const Icon(Icons.copy_rounded),
               expand: true,
             ),
             if (widget.onTextResult != null)
               SparkleButton(
-                label: '插入内容',
+                label: context.l10n.toolsSttInsert,
                 onPressed: hasText
                     ? () => widget.onTextResult!.call(_transcript.trim())
                     : null,

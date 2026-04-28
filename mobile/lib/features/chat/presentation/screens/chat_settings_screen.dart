@@ -8,6 +8,7 @@ import 'package:sparkle/features/seed_library/presentation/providers/seed_librar
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 const _defaultAiSystemPreferences = TransparencyPreferences(
   enabled: true,
@@ -51,22 +52,22 @@ class ChatSettingsScreen extends ConsumerWidget {
       seedLibraryEnabled,
       enabledSeedCount,
     )) {
-      (true, _, _) => '正在同步种子库状态',
-      (_, false, _) => '种子库增强默认关闭',
+      (true, _, _) => context.l10n.chatSettingsSyncingSeeds,
+      (_, false, _) => context.l10n.chatSettingsSeedsDefaultOff,
       (_, true, > 0) => '当前接入 $enabledSeedCount 个已启用种子库',
-      _ => '已开启种子库增强，但还没有可用种子库',
+      _ => context.l10n.chatSettingsSeedsEnabledNone,
     };
 
     final seedSubtitle = seedLibraryEnabled
         ? enabledSeedNames.isEmpty
-            ? '开启后会从下一条消息开始按种子库增强。'
+            ? context.l10n.chatSettingsSeedEnableHint
             : '当前生效：${enabledSeedNames.join('、')}'
-        : '关闭时所有对话都不会注入种子库，避免上下文污染。';
+        : context.l10n.chatSettingsSeedDisableHint;
 
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
-        title: const Text('对话设置'),
+        title: const Text(context.l10n.chatSettingsTitle),
       ),
       child: ContentConstraint(
         child: ListView(
@@ -98,7 +99,7 @@ class ChatSettingsScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '对话体验',
+                            context.l10n.chatSettingsExperience,
                             style: DS.titleLarge.copyWith(
                               color: DS.textPrimary,
                               fontWeight: DS.fontWeightBold,
@@ -106,7 +107,7 @@ class ChatSettingsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: DS.spacing4),
                           Text(
-                            '集中调整聊天页的展示方式、预测组件和种子库增强能力。',
+                            context.l10n.chatSettingsExperienceDesc,
                             style: DS.bodySmall.copyWith(
                               color: DS.textSecondary,
                             ),
@@ -120,7 +121,7 @@ class ChatSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.md),
             Text(
-              '种子库',
+              context.l10n.chatSettingsSeedLibrary,
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -132,8 +133,8 @@ class ChatSettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   SwitchListTile(
-                    title: const Text('开启种子库增强'),
-                    subtitle: const Text('为当前聊天注入已启用的种子库内容与回答风格。'),
+                    title: const Text(context.l10n.chatSettingsEnableSeedEnhancement),
+                    subtitle: const Text(context.l10n.chatSettingsEnableSeedDesc),
                     value: seedLibraryEnabled,
                     onChanged: (value) {
                       unawaited(
@@ -184,7 +185,7 @@ class ChatSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '界面与能力',
+              context.l10n.chatSettingsUiCapabilities,
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -193,22 +194,22 @@ class ChatSettingsScreen extends ConsumerWidget {
             const SizedBox(height: DS.sm),
             _SettingsToggleCard(
               title: '显示 AI 系统面板',
-              subtitle: '默认开启，在聊天页直接展示协作与推理能力。',
+              subtitle: context.l10n.chatSettingsShowAiPanelDesc,
               value: preferences.enabled,
               onChanged: notifier.setEnabled,
             ),
             const SizedBox(height: DS.sm),
             _SettingsToggleCard(
-              title: '纯净模式',
-              subtitle: '聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。',
+              title: context.l10n.chatSettingsPureMode,
+              subtitle: context.l10n.chatSettingsPureModeDesc,
               value: chatPureMode,
               onChanged: (value) =>
                   ref.read(chatPureModeProvider.notifier).setEnabled(value),
             ),
             const SizedBox(height: DS.sm),
             _SettingsToggleCard(
-              title: '显示顶部选择条',
-              subtitle: '控制聊天页收起/展开的计划、模式和档位入口。',
+              title: context.l10n.chatSettingsShowTopBar,
+              subtitle: context.l10n.chatSettingsShowTopBarDesc,
               value: showChatContextToggle,
               onChanged: (value) => ref
                   .read(showChatContextToggleProvider.notifier)
@@ -216,8 +217,8 @@ class ChatSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.sm),
             _SettingsToggleCard(
-              title: '显示预测组件',
-              subtitle: '控制输入框上方的行为预测与快捷建议。',
+              title: context.l10n.chatSettingsShowPrediction,
+              subtitle: context.l10n.chatSettingsShowPredictionDesc,
               value: showChatPredictionDock,
               onChanged: (value) => ref
                   .read(showChatPredictionDockProvider.notifier)
@@ -225,7 +226,7 @@ class ChatSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.sm),
             _SettingsToggleCard(
-              title: '显示透明胶囊',
+              title: context.l10n.chatSettingsShowTransparencyCapsule,
               subtitle: '控制底部悬浮的 AI 完成情况与透明化信息。',
               value: showChatTransparencyCapsule,
               onChanged: (value) => ref
@@ -235,7 +236,7 @@ class ChatSettingsScreen extends ConsumerWidget {
             if (preferences.enabled) ...[
               const SizedBox(height: DS.lg),
               Text(
-                '透明化细项',
+                context.l10n.chatSettingsTransparencyDetails,
                 style: DS.titleMedium.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
@@ -244,21 +245,21 @@ class ChatSettingsScreen extends ConsumerWidget {
               const SizedBox(height: DS.sm),
               _SettingsToggleCard(
                 title: '显示 Token 与成本',
-                subtitle: '展示本轮用量、成本估算和系统资源消耗。',
+                subtitle: context.l10n.chatSettingsShowTokenCostDesc,
                 value: preferences.showTokenUsage,
                 onChanged: notifier.setShowTokenUsage,
               ),
               const SizedBox(height: DS.sm),
               _SettingsToggleCard(
                 title: '显示 Agent 协作',
-                subtitle: '展示参与的专家、职责分工和模型协同。',
+                subtitle: context.l10n.chatSettingsShowAgentCollabDesc,
                 value: preferences.showAgentSwitching,
                 onChanged: notifier.setShowAgentSwitching,
               ),
               const SizedBox(height: DS.sm),
               _SettingsToggleCard(
-                title: '显示推理时间线',
-                subtitle: '展示关键步骤、审查与反思过程。',
+                title: context.l10n.chatSettingsShowReasoningTimeline,
+                subtitle: context.l10n.chatSettingsShowReasoningDesc,
                 value: preferences.showReasoningSteps,
                 onChanged: notifier.setShowReasoningSteps,
               ),
@@ -268,8 +269,8 @@ class ChatSettingsScreen extends ConsumerWidget {
               surfaceRole: SparkleSurfaceRole.card,
               child: ListTile(
                 leading: const Icon(Icons.settings_outlined),
-                title: const Text('打开高级设置'),
-                subtitle: const Text('进入透明模式的详细配置页面。'),
+                title: const Text(context.l10n.chatSettingsOpenAdvanced),
+                subtitle: const Text(context.l10n.chatSettingsOpenAdvancedDesc),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () {
                   unawaited(

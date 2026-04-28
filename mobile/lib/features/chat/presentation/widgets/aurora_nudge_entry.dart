@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AuroraNudgeEntry extends StatelessWidget {
   const AuroraNudgeEntry({
@@ -19,7 +20,7 @@ class AuroraNudgeEntry extends StatelessWidget {
     final description = data['checkpoint_description']?.toString() ??
         data['message']?.toString() ??
         '';
-    final ctaLabel = data['cta_label']?.toString() ?? '开始复盘';
+    final ctaLabel = data['cta_label']?.toString() ?? context.l10n.chatNudgeStartReview;
     final debriefContext = Map<String, dynamic>.from(
       data['debrief_context'] as Map? ?? const {},
     );
@@ -51,7 +52,7 @@ class AuroraNudgeEntry extends StatelessWidget {
                         onWidgetAction!(
                           'checkpoint_debrief_start',
                           {
-                            'prompt': '我来复盘一下',
+                            'prompt': context.l10n.chatReviewStart,
                             'debrief_context': debriefContext,
                           },
                         ),

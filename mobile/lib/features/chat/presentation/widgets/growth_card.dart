@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Growth Card — divine moment #1 "看见坚持"
 ///
@@ -166,7 +167,7 @@ class _GrowthCardState extends State<GrowthCard>
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                 child: Row(
                   children: widget.actions.map((action) {
-                    final isDismiss = action.contains('累') || action.contains('不需要');
+                    final isDismiss = action.contains('累') || action.contains(context.l10n.chatNotNeeded);
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(

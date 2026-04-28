@@ -12,6 +12,7 @@ import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.d
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 enum _AchievementUnlockActionState {
@@ -98,7 +99,7 @@ class AchievementUnlockDialog extends StatefulWidget {
       showSensoryGeneralDialog(
         context: context,
         barrierDismissible: barrierDismissible,
-        barrierLabel: '成就解锁',
+        barrierLabel: context.l10n.achievementUnlockBarrierLabel,
         barrierColor: DS.textPrimary.withValues(alpha: 0.7),
         transitionDuration: const Duration(milliseconds: 600),
         pageBuilder: (context, animation, secondaryAnimation) =>
@@ -470,7 +471,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                             color: DS.warning,
                           ),
                           Text(
-                            '首位解锁者！',
+                            context.l10n.achievementUnlockFirstUnlocker,
                             style: TextStyle(
                               fontSize: DS.fontSizeXs,
                               fontWeight: DS.fontWeightBold,
@@ -517,7 +518,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                         if (widget.onViewRewards != null) ...[
                           _buildActionButton(
                             icon: Icons.workspace_premium_outlined,
-                            label: '查看奖励',
+                            label: context.l10n.achievementUnlockViewRewards,
                             isPrimary: true,
                             onPressed: _handleViewRewards,
                           ),
@@ -525,7 +526,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                         ],
                         _buildActionButton(
                           icon: Icons.close,
-                          label: '关闭',
+                          label: context.l10n.achievementUnlockClose,
                           isPrimary: false,
                           onPressed: _handleClose,
                         ),
@@ -545,7 +546,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                           Expanded(
                           child: _buildActionButton(
                             icon: Icons.workspace_premium_outlined,
-                            label: '查看奖励',
+                            label: context.l10n.achievementUnlockViewRewards,
                             isPrimary: true,
                             onPressed: _handleViewRewards,
                           ),
@@ -555,7 +556,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                         Expanded(
                           child: _buildActionButton(
                             icon: Icons.close,
-                            label: '关闭',
+                            label: context.l10n.achievementUnlockClose,
                             isPrimary: false,
                             onPressed: _handleClose,
                           ),

@@ -423,7 +423,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            setName.isNotEmpty ? setName.first.key : '自由搭配',
+            setName.isNotEmpty ? setName.first.key : context.l10n.visualMixMatch,
             style: TextStyle(
               fontSize: DS.fontSizeLg,
               fontWeight: DS.fontWeightBold,
@@ -1533,7 +1533,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           );
           final clearButton = TextButton(
             onPressed: _clearDisplaySlotFilter,
-            child: const Text('清除筛选'),
+            child: const Text(context.l10n.visualClearFilter),
           );
 
           if (stack) {

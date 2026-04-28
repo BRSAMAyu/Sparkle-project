@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ProfileFrontDoorCard extends StatelessWidget {
   const ProfileFrontDoorCard({
@@ -47,7 +48,7 @@ class ProfileFrontDoorCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  confirmation['title']?.toString() ?? '画像已更新',
+                  confirmation['title']?.toString() ?? context.l10n.chatProfileUpdated,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color: DS.neutral900,
@@ -70,8 +71,8 @@ class ProfileFrontDoorCard extends StatelessWidget {
         ],
         if (claims.isNotEmpty) ...[
           _SectionTitle(
-            title: '当前判断',
-            subtitle: '这些是当前 canonical 画像里最靠前的结论。',
+            title: context.l10n.chatProfileCurrentJudgment,
+            subtitle: context.l10n.chatProfileCurrentJudgmentDesc,
           ),
           const SizedBox(height: DS.spacing8),
           ...claims.map(
@@ -87,8 +88,8 @@ class ProfileFrontDoorCard extends StatelessWidget {
         if (predictions.isNotEmpty) ...[
           const SizedBox(height: DS.spacing8),
           _SectionTitle(
-            title: '趋势判断',
-            subtitle: '这些是推断/预测，不是既成事实。',
+            title: context.l10n.chatProfileTrendJudgment,
+            subtitle: context.l10n.chatProfileTrendDesc,
           ),
           const SizedBox(height: DS.spacing8),
           ...predictions.map(
@@ -126,8 +127,8 @@ class ProfileFrontDoorCard extends StatelessWidget {
         if (unknowns.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           _SectionTitle(
-            title: '当前未知项',
-            subtitle: '这些部分我还没有足够把握。',
+            title: context.l10n.chatProfileUnknownItems,
+            subtitle: context.l10n.chatProfileUnknownDesc,
           ),
           const SizedBox(height: DS.spacing6),
           ...unknowns.map(
@@ -253,7 +254,7 @@ class _ClaimTile extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing8),
               _Badge(
-                label: claim['evidence_label']?.toString() ?? '编译结论',
+                label: claim['evidence_label']?.toString() ?? context.l10n.chatProfileCompileConclusion,
                 color: const Color(0xFF0F766E),
                 background: const Color(0xFFE7F6F4),
               ),
@@ -342,7 +343,7 @@ class _ClaimTile extends StatelessWidget {
                       child: Text(
                         claim['evidence_cta']?.toString().isNotEmpty == true
                             ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
-                            : claim['evidence_summary']?.toString() ?? '查看依据',
+                            : claim['evidence_summary']?.toString() ?? context.l10n.chatProfileViewEvidence,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.info,
                               fontWeight: DS.fontWeightMedium,
@@ -400,7 +401,7 @@ class _PredictionTile extends StatelessWidget {
                 ),
               ),
               _Badge(
-                label: item['evidence_label']?.toString() ?? '推断/预测',
+                label: item['evidence_label']?.toString() ?? context.l10n.chatProfileInferencePrediction,
                 color: const Color(0xFF7C3AED),
                 background: const Color(0xFFF2EAFE),
               ),
@@ -455,7 +456,7 @@ class _PredictionTile extends StatelessWidget {
                       child: Text(
                         item['evidence_cta']?.toString().isNotEmpty == true
                             ? '${item['evidence_cta']} · ${item['evidence_summary']}'
-                            : item['evidence_summary']?.toString() ?? '查看依据',
+                            : item['evidence_summary']?.toString() ?? context.l10n.chatProfileViewEvidence,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.info,
                               fontWeight: DS.fontWeightMedium,

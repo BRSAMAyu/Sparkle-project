@@ -10,6 +10,7 @@ import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.d
 import 'package:sparkle/features/translation/data/services/knowledge_integration_service.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Lightweight popover for word/phrase translation
 ///
@@ -229,7 +230,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton(
-                    label: _saved ? '已保存' : (_isSaving ? '保存中...' : '生词卡'),
+                    label: _saved ? context.l10n.transSaved : (_isSaving ? '保存中...' : context.l10n.transWordCard),
                     icon: Icon(
                       _saved ? Icons.bookmark : Icons.bookmark_add_outlined,
                       size: DS.iconSizeXs,

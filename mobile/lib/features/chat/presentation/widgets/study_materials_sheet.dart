@@ -267,7 +267,7 @@ class _ModeSelector extends StatelessWidget {
             onTap: () => onModeChanged(DocumentContextMode.auto),
           ),
           _ModeChip(
-            label: '我选的',
+            label: context.l10n.chatStudyMySelection,
             selected: currentMode == DocumentContextMode.userSelected,
             onTap: () => onModeChanged(DocumentContextMode.userSelected),
           ),
@@ -277,7 +277,7 @@ class _ModeSelector extends StatelessWidget {
             onTap: () => onModeChanged(DocumentContextMode.taskScope),
           ),
           _ModeChip(
-            label: '不用资料',
+            label: context.l10n.chatStudyNoMaterial,
             selected: currentMode == DocumentContextMode.off,
             onTap: () => onModeChanged(DocumentContextMode.off),
           ),
@@ -338,11 +338,11 @@ class _RelevanceLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          _LegendDot(color: DS.success, label: '高相关'),
+          _LegendDot(color: DS.success, label: context.l10n.chatStudyHighRelevance),
           const SizedBox(width: 12),
-          _LegendDot(color: DS.warning, label: '中相关'),
+          _LegendDot(color: DS.warning, label: context.l10n.chatStudyMediumRelevance),
           const SizedBox(width: 12),
-          _LegendDot(color: DS.textTertiary, label: '未分析'),
+          _LegendDot(color: DS.textTertiary, label: context.l10n.chatStudyNotAnalyzed),
         ],
       );
 }
@@ -399,14 +399,14 @@ class _SourceRow extends StatelessWidget {
   }
 
   String get _relevanceLabel {
-    if (!isEnabled) return '已关闭';
+    if (!isEnabled) return context.l10n.chatStudyClosed;
     switch (relevance) {
       case _SourceRelevance.high:
-        return '高相关';
+        return context.l10n.chatStudyHighRelevance;
       case _SourceRelevance.medium:
-        return '中相关';
+        return context.l10n.chatStudyMediumRelevance;
       case _SourceRelevance.low:
-        return '未分析';
+        return context.l10n.chatStudyNotAnalyzed;
     }
   }
 

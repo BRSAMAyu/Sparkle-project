@@ -1565,7 +1565,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final hints = <String>{};
     final tagSignals = <String, List<String>>{
       '考试': ['考试', '考点', '测验', '刷题'],
-      '面试': ['面试', '答辩', '自我介绍'],
+      '面试': ['面试', '答辩', context.l10n.chatBubbleSelfIntro],
       '复盘': ['复盘', '总结', '回顾', '反思'],
       '计划': ['计划', '安排', '排期', '日程', '路线'],
       '错题': ['错题', '报错', '错误', '卡点', '诊断'],

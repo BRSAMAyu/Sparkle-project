@@ -366,7 +366,7 @@ class _AchievementDetailScreenState
           if (achievement.isUnlocked && contextStory != null) ...[
             _AnimatedSection(
               index: sectionIndex++,
-              child: _buildSectionTitle('解锁时刻'),
+              child: _buildSectionTitle(context.l10n.achievementDetailUnlockMoment),
             ),
             const SizedBox(height: DS.spacing12),
             _AnimatedSection(
@@ -673,7 +673,7 @@ class _AchievementDetailScreenState
 
     final unlockedAt = progress?.unlockedAt;
     if (unlockedAt == null) return null;
-    return '${_formatDate(unlockedAt)}，你解锁了「${achievement.achievement.name}」。';
+    return context.l10n.achievementDetailUnlockStory(_formatDate(unlockedAt), achievement.achievement.name);
   }
 
   List<Widget> _contextStoryChips(AchievementWithProgress achievement) {
@@ -690,8 +690,8 @@ class _AchievementDetailScreenState
       final label = daysToTarget == null
           ? planName
           : daysToTarget >= 0
-              ? '$planName · 目标日前 $daysToTarget 天'
-              : '$planName · 目标日后 ${daysToTarget.abs()} 天';
+              ? context.l10n.achievementDetailDaysBeforeTarget(planName, daysToTarget)
+              : context.l10n.achievementDetailDaysAfterTarget(planName, daysToTarget.abs());
       chips.add(_ContextChip(icon: Icons.flag_rounded, label: label));
     }
 

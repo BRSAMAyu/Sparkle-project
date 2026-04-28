@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Seed Item Card Widget
 /// Displays a seed item in a card format
@@ -185,7 +186,7 @@ class SeedItemCard extends StatelessWidget {
                             children: [
                               Icon(Icons.share_outlined, size: 18),
                               SizedBox(width: DS.spacing12),
-                              Text('分享'),
+                              Text(context.l10n.seedShare),
                             ],
                           ),
                         ),
@@ -196,7 +197,7 @@ class SeedItemCard extends StatelessWidget {
                             children: [
                               Icon(Icons.edit, size: 18),
                               SizedBox(width: DS.spacing12),
-                              Text('编辑'),
+                              Text(context.l10n.seedEdit),
                             ],
                           ),
                         ),
@@ -207,7 +208,7 @@ class SeedItemCard extends StatelessWidget {
                             children: [
                               Icon(Icons.delete, size: 18, color: DS.error),
                               const SizedBox(width: DS.spacing12),
-                              Text('删除', style: TextStyle(color: DS.error)),
+                              Text(context.l10n.seedDelete, style: TextStyle(color: DS.error)),
                             ],
                           ),
                         ),
@@ -276,14 +277,14 @@ class SeedItemCard extends StatelessWidget {
           actions: [
             SparkleButton.ghost(
               onPressed: () => Navigator.pop(context),
-              label: '取消',
+              label: context.l10n.toolsWbCancel,
             ),
             SparkleButton.destructive(
               onPressed: () {
                 Navigator.pop(context);
                 onDelete?.call();
               },
-              label: '删除',
+              label: context.l10n.seedDelete,
             ),
           ],
         ),

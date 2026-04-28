@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 从protobuf的int值映射到前端AgentType枚举
 /// 与 proto/agent_service.proto 中的 AgentType 枚举保持一致
@@ -54,7 +55,7 @@ class AgentConfig {
           icon: Icons.psychology, // 大脑图标
           color: DS.prismPurple,
           displayName: 'Orchestrator',
-          animation: '呼吸脉冲', // 思考中
+          animation: context.l10n.chatAnimBreathPulse, // 思考中
         );
 
       case AgentType.knowledge:
@@ -62,7 +63,7 @@ class AgentConfig {
           icon: Icons.auto_awesome, // 星光图标
           color: DS.info, // 蓝色 (Science Blue)
           displayName: 'KnowledgeAgent',
-          animation: '旋转扫描', // 检索中
+          animation: context.l10n.chatAnimRotatingScan, // 检索中
         );
 
       case AgentType.math:
@@ -70,7 +71,7 @@ class AgentConfig {
           icon: Icons.calculate, // 计算器图标
           color: DS.warning,
           displayName: 'MathAgent',
-          animation: '数字跳动', // 计算中
+          animation: context.l10n.chatAnimNumberBounce, // 计算中
         );
 
       case AgentType.code:
@@ -78,7 +79,7 @@ class AgentConfig {
           icon: Icons.terminal, // 终端图标
           color: DS.success, // 绿色 (Matrix Green)
           displayName: 'CodeAgent',
-          animation: '光标闪烁', // 编码中
+          animation: context.l10n.chatAnimCursorBlink, // 编码中
         );
 
       case AgentType.writing:
@@ -86,7 +87,7 @@ class AgentConfig {
           icon: Icons.edit, // 笔图标
           color: DS.warning,
           displayName: 'WritingAgent',
-          animation: '文字流动',
+          animation: context.l10n.chatAnimTextFlow,
         );
 
       case AgentType.science:
@@ -94,7 +95,7 @@ class AgentConfig {
           icon: Icons.science, // 科学图标
           color: DS.success,
           displayName: 'ScienceAgent',
-          animation: '实验分析',
+          animation: context.l10n.chatAnimExperimentAnalysis,
         );
 
       case AgentType.search:
@@ -102,7 +103,7 @@ class AgentConfig {
           icon: Icons.search, // 搜索图标
           color: DS.info,
           displayName: 'SearchAgent',
-          animation: '扫描搜索',
+          animation: context.l10n.chatAnimScanningSearch,
         );
 
       case AgentType.dataAnalysis:
@@ -110,7 +111,7 @@ class AgentConfig {
           icon: Icons.analytics, // 数据分析图标
           color: DS.capsuleAccent,
           displayName: 'DataAnalyst',
-          animation: '数据流动',
+          animation: context.l10n.chatAnimDataFlow,
         );
 
       case AgentType.translation:
@@ -118,7 +119,7 @@ class AgentConfig {
           icon: Icons.translate, // 翻译图标
           color: DS.infoLight,
           displayName: 'Translator',
-          animation: '语言转换',
+          animation: context.l10n.chatAnimLanguageTransform,
         );
 
       case AgentType.image:
@@ -126,7 +127,7 @@ class AgentConfig {
           icon: Icons.image, // 图像图标
           color: DS.brandSecondary,
           displayName: 'ImageAgent',
-          animation: '像素渲染',
+          animation: context.l10n.chatAnimPixelRender,
         );
 
       case AgentType.audio:
@@ -134,7 +135,7 @@ class AgentConfig {
           icon: Icons.audiotrack, // 音频图标
           color: DS.warning,
           displayName: 'AudioAgent',
-          animation: '音波震动',
+          animation: context.l10n.chatAnimWaveVibration,
         );
 
       case AgentType.reasoning:
@@ -142,7 +143,7 @@ class AgentConfig {
           icon: Icons.lightbulb, // 灯泡图标
           color: DS.warningLight,
           displayName: 'ReasoningAgent',
-          animation: '逻辑推演',
+          animation: context.l10n.chatAnimLogicDeduction,
         );
     }
   }
