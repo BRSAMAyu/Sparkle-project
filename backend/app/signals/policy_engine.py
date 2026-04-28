@@ -601,8 +601,9 @@ class PolicyEngine:
             logger.debug("no rule for state_key={} claim={}", signal.state_key, signal.claim)
             return None
 
-        # 检查置信度门槛
-        if signal.confidence < 0.5:
+        # GOV-016: Allow high-priority signals through confidence gate, forcing receipt
+        force_receipt = signal.confidence < 0.5 and signal.priority == "high"
+        if signal.confidence < 0.5 and not force_receipt:
             logger.debug("signal confidence too low: {:.2f}", signal.confidence)
             return None
 
@@ -629,8 +630,8 @@ class PolicyEngine:
             secondary_strategy=rule.get("secondary_strategy"),
             hard_constraints=dict(rule["hard_constraints"]),
             soft_biases=dict(rule.get("soft_biases", {})),
-            visibility=rule.get("visibility", "receipt"),
-            requires_user_confirmation=rule.get("requires_user_confirmation", False),
+            visibility="receipt" if force_receipt else rule.get("visibility", "receipt"),
+            requires_user_confirmation=force_receipt or rule.get("requires_user_confirmation", False),
             reasoning_summary=reasoning,
             risk_level=_RISK_LEVEL_MAP.get(signal.state_key, "medium"),
             which_directives=dict(_WHICH_DIRECTIVES.get(signal.state_key, {"response": True, "execution": True})),
