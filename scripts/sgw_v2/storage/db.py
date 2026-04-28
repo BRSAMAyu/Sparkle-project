@@ -131,6 +131,30 @@ CREATE INDEX IF NOT EXISTS idx_audits_type ON audits(audit_type);
 CREATE INDEX IF NOT EXISTS idx_audits_target ON audits(target_id);
 CREATE INDEX IF NOT EXISTS idx_violations_run ON violations(run_id);
 CREATE INDEX IF NOT EXISTS idx_violations_code ON violations(code);
+
+CREATE TABLE IF NOT EXISTS preference_pairs (
+    pair_id             TEXT PRIMARY KEY,
+    run_id              TEXT NOT NULL REFERENCES runs(run_id),
+    session_id          TEXT REFERENCES sessions(session_id),
+    context_vector      TEXT NOT NULL DEFAULT '[]',
+    chosen_response     TEXT NOT NULL,
+    rejected_response   TEXT NOT NULL,
+    chosen_score        REAL NOT NULL,
+    rejected_score      REAL NOT NULL,
+    chosen_behavior     TEXT,
+    rejected_behavior   TEXT,
+    chosen_turn_id      TEXT REFERENCES turns(turn_id),
+    rejected_turn_id    TEXT REFERENCES turns(turn_id),
+    persona_id          TEXT,
+    margin              REAL NOT NULL,
+    dpo_trained         INTEGER NOT NULL DEFAULT 0,
+    created_at          TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pref_pairs_run ON preference_pairs(run_id);
+CREATE INDEX IF NOT EXISTS idx_pref_pairs_session ON preference_pairs(session_id);
+CREATE INDEX IF NOT EXISTS idx_pref_pairs_trained ON preference_pairs(dpo_trained);
+CREATE INDEX IF NOT EXISTS idx_pref_pairs_margin ON preference_pairs(margin);
 """
 
 
@@ -388,6 +412,98 @@ class RunDB:
         self.conn.commit()
         return violation_id
 
+    # ── Preference Pairs (DPO) ────────────────────────
+
+    def insert_preference_pair(
+        self,
+        *,
+        pair_id: str,
+        run_id: str,
+        context_vector: list[float],
+        chosen_response: str,
+        rejected_response: str,
+        chosen_score: float,
+        rejected_score: float,
+        session_id: str | None = None,
+        chosen_behavior: str | None = None,
+        rejected_behavior: str | None = None,
+        chosen_turn_id: str | None = None,
+        rejected_turn_id: str | None = None,
+        persona_id: str | None = None,
+    ) -> str:
+        margin = chosen_score - rejected_score
+        self.conn.execute(
+            """INSERT INTO preference_pairs
+               (pair_id, run_id, session_id, context_vector, chosen_response,
+                rejected_response, chosen_score, rejected_score, chosen_behavior,
+                rejected_behavior, chosen_turn_id, rejected_turn_id, persona_id,
+                margin, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                pair_id,
+                run_id,
+                session_id,
+                json.dumps(context_vector, ensure_ascii=False),
+                chosen_response,
+                rejected_response,
+                chosen_score,
+                rejected_score,
+                chosen_behavior,
+                rejected_behavior,
+                chosen_turn_id,
+                rejected_turn_id,
+                persona_id,
+                round(margin, 4),
+                _utcnow_iso(),
+            ),
+        )
+        self.conn.commit()
+        return pair_id
+
+    def get_preference_pairs(
+        self,
+        *,
+        run_id: str | None = None,
+        limit: int = 1000,
+        untrained_only: bool = False,
+        min_margin: float = 0.0,
+    ) -> list[dict[str, Any]]:
+        query = "SELECT * FROM preference_pairs WHERE 1=1"
+        params: list[Any] = []
+        if run_id:
+            query += " AND run_id = ?"
+            params.append(run_id)
+        if untrained_only:
+            query += " AND dpo_trained = 0"
+        if min_margin > 0:
+            query += " AND margin >= ?"
+            params.append(min_margin)
+        query += " ORDER BY margin DESC LIMIT ?"
+        params.append(limit)
+        rows = self.conn.execute(query, params).fetchall()
+        cols = [desc[0] for desc in self.conn.execute("SELECT * FROM preference_pairs LIMIT 0").description]
+        return [dict(zip(cols, row)) for row in rows]
+
+    def mark_pairs_trained(self, pair_ids: list[str]) -> None:
+        self.conn.executemany(
+            "UPDATE preference_pairs SET dpo_trained = 1 WHERE pair_id = ?",
+            [(pid,) for pid in pair_ids],
+        )
+        self.conn.commit()
+
+    def count_preference_pairs(
+        self, *, run_id: str | None = None, untrained_only: bool = False
+    ) -> int:
+        query = "SELECT COUNT(*) FROM preference_pairs WHERE 1=1"
+        params: list[Any] = []
+        if run_id:
+            query += " AND run_id = ?"
+            params.append(run_id)
+        if untrained_only:
+            query += " AND dpo_trained = 0"
+        row = self.conn.execute(query, params).fetchone()
+        return row[0] if row else 0
+
     # ── Query helpers ─────────────────────────────────
 
     def run_summary(self, run_id: str) -> dict[str, Any]:
@@ -426,6 +542,19 @@ class RunDB:
         soft_rate = soft_violations / audits_total if audits_total > 0 else 0.0
         auth_mean = round(auth_mean_row, 4) if auth_mean_row is not None else 0.0
 
+        resp_quality_row = self.conn.execute(
+            "SELECT AVG(chosen_score) FROM preference_pairs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()[0]
+        response_quality_mean = round(resp_quality_row, 4) if resp_quality_row is not None else 0.0
+
+        dpo_pairs_total = self.conn.execute(
+            "SELECT COUNT(*) FROM preference_pairs WHERE run_id = ?", (run_id,)
+        ).fetchone()[0]
+        dpo_pairs_trained = self.conn.execute(
+            "SELECT COUNT(*) FROM preference_pairs WHERE run_id = ? AND dpo_trained = 1", (run_id,)
+        ).fetchone()[0]
+
         return {
             "sessions_total": sessions_total,
             "sessions_completed": sessions_completed,
@@ -437,6 +566,9 @@ class RunDB:
             "authenticity_total": auth_total,
             "authenticity_failures": auth_failures,
             "authenticity_mean": auth_mean,
+            "response_quality_mean": response_quality_mean,
+            "dpo_pairs_total": dpo_pairs_total,
+            "dpo_pairs_trained": dpo_pairs_trained,
         }
 
     def compare_runs(self, run_id_a: str, run_id_b: str) -> dict[str, Any]:

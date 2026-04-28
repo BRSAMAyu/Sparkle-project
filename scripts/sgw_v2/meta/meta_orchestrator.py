@@ -493,3 +493,124 @@ class MetaOrchestrator:
         ).fetchall()
         cols = [desc[0] for desc in self.run_db.conn.execute("SELECT * FROM experiments LIMIT 0").description]
         return [dict(zip(cols, row)) for row in rows]
+
+    # ── DPO Cycle ───────────────────────────────────────
+
+    def run_dpo_cycle(
+        self,
+        run_id: str,
+        *,
+        min_pairs: int = 50,
+        dpo_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Execute full DPO cycle: evaluate responses → extract pairs → train.
+
+        Returns a summary dict with keys:
+          - pairs_created, pairs_trained, model_trained, response_quality_mean,
+            best_val_loss, training_time_seconds
+        """
+        from ..rl.response_evaluator import ResponseEvaluator
+        from ..rl.preference_extractor import PreferenceExtractor
+        from ..rl.dpo_trainer import DPOTrainer, DPOTrainingConfig
+        from ..rl.dpo_policy import DPOPolicy
+        import json
+
+        result: dict[str, Any] = {
+            "run_id": run_id,
+            "pairs_created": 0,
+            "pairs_trained": 0,
+            "model_trained": False,
+            "response_quality_mean": 0.0,
+        }
+
+        # Step 1: Evaluate responses for all turns in all sessions
+        evaluator = ResponseEvaluator()
+        extractor = PreferenceExtractor(evaluator=evaluator)
+
+        sessions = self._get_sessions_for_run(run_id)
+        if not sessions:
+            return result
+
+        turns_by_session: dict[str, list[dict[str, Any]]] = {}
+        all_qualities: list[float] = []
+        for sess in sessions:
+            sid = sess["session_id"]
+            turns = self._get_turns_for_session(sid)
+            turns_by_session[sid] = turns
+            for turn in turns:
+                q = evaluator.evaluate(turn)
+                all_qualities.append(q.overall_score)
+
+        if all_qualities:
+            result["response_quality_mean"] = round(
+                sum(all_qualities) / len(all_qualities), 4
+            )
+
+        # Step 2: Extract preference pairs
+        extraction = extractor.extract_from_run(run_id, sessions, turns_by_session)
+        result["pairs_created"] = extraction.pairs_created
+        result["sessions_scanned"] = extraction.sessions_scanned
+        result["turns_evaluated"] = extraction.turns_evaluated
+
+        if extraction.pairs:
+            extractor.persist_pairs(extraction.pairs, self.run_db)
+
+        # Step 3: Train DPO model if enough pairs
+        untrained_pairs = self.run_db.get_preference_pairs(untrained_only=True, min_margin=0.15)
+        if len(untrained_pairs) < min_pairs:
+            result["pairs_trained"] = 0
+            return result
+
+        cfg = DPOTrainingConfig(**(dpo_config or {}))
+        trainer = DPOTrainer(cfg)
+        training_result = trainer.train(untrained_pairs)
+
+        result["pairs_trained"] = training_result.n_pairs_trained
+        result["best_val_loss"] = training_result.best_val_loss
+        result["training_time_seconds"] = training_result.training_time_seconds
+        result["converged"] = training_result.converged
+
+        if training_result.n_pairs_trained > 0:
+            result["model_trained"] = True
+
+            # Save model
+            model_path = self.run_db.db_path.parent / "policy" / "dpo_model.npz"
+            training_result.model.save(model_path)
+
+            # Mark pairs as trained
+            pair_ids = [p.get("pair_id", "") for p in untrained_pairs]
+            self.run_db.mark_pairs_trained(pair_ids)
+
+        return result
+
+    def update_dpo_policy(
+        self, policy_router: Any
+    ) -> bool:
+        """Load trained DPO model into a PolicyRouter. Returns True on success."""
+        from ..rl.dpo_policy import DPOPolicy
+
+        model_path = self.run_db.db_path.parent / "policy" / "dpo_model.npz"
+        if not model_path.exists():
+            return False
+
+        dpo = DPOPolicy()
+        if dpo.load_model(model_path):
+            policy_router.dpo = dpo
+            return True
+        return False
+
+    def _get_sessions_for_run(self, run_id: str) -> list[dict[str, Any]]:
+        rows = self.run_db.conn.execute(
+            "SELECT * FROM sessions WHERE run_id = ? AND status = 'completed'",
+            (run_id,),
+        ).fetchall()
+        cols = [desc[0] for desc in self.run_db.conn.execute("SELECT * FROM sessions LIMIT 0").description]
+        return [dict(zip(cols, row)) for row in rows]
+
+    def _get_turns_for_session(self, session_id: str) -> list[dict[str, Any]]:
+        rows = self.run_db.conn.execute(
+            "SELECT * FROM turns WHERE session_id = ? ORDER BY turn_index",
+            (session_id,),
+        ).fetchall()
+        cols = [desc[0] for desc in self.run_db.conn.execute("SELECT * FROM turns LIMIT 0").description]
+        return [dict(zip(cols, row)) for row in rows]

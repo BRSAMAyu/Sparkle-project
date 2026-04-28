@@ -249,6 +249,8 @@ def run_meta_loop(
     rl_mode: str = "rl",
     rl_recipe: str = "default",
     dashboard: bool = False,
+    dpo_enabled: bool = False,
+    dpo_min_pairs: int = 50,
 ) -> int:
     """Run the full meta-orchestration loop.
 
@@ -422,12 +424,22 @@ def run_meta_loop(
                 + (f" snapshot={snapshot_id}" if snapshot_id else "")
             )
 
-        # Step 5: Random exploration injection (rl mode only)
+        # Step 5: DPO Cycle (evaluate responses → extract pairs → train model)
+        if dpo_enabled and rl_mode == "rl":
+            dpo_result = meta.run_dpo_cycle(latest_run_id, min_pairs=dpo_min_pairs)
+            print(
+                f"[meta-loop] DPO cycle: pairs_created={dpo_result.get('pairs_created', 0)}, "
+                f"pairs_trained={dpo_result.get('pairs_trained', 0)}, "
+                f"model_trained={dpo_result.get('model_trained', False)}, "
+                f"quality_mean={dpo_result.get('response_quality_mean', 0)}"
+            )
+
+        # Step 6: Random exploration injection (rl mode only)
         if rl_mode == "rl" and iteration % exploration_every_n == 0:
             print("[meta-loop] Injecting random exploration...")
             current_config = _inject_random_exploration(current_config, rng)
 
-        # Step 6: Check convergence
+        # Step 7: Check convergence
         if consecutive_neutral >= convergence_window:
             print(f"[meta-loop] {consecutive_neutral} consecutive neutral iterations, checking convergence...")
             if _check_convergence(db, convergence_window):
@@ -477,6 +489,17 @@ def main() -> int:
         action="store_true",
         help="Emit one-line iteration dashboard summaries to stdout.",
     )
+    parser.add_argument(
+        "--dpo-enabled",
+        action="store_true",
+        help="Enable DPO cycle: evaluate responses, extract preference pairs, train DPO model.",
+    )
+    parser.add_argument(
+        "--dpo-min-pairs",
+        type=int,
+        default=50,
+        help="Minimum preference pairs required before DPO training (default: 50).",
+    )
     args = parser.parse_args()
 
     return run_meta_loop(
@@ -490,6 +513,8 @@ def main() -> int:
         rl_mode=args.rl_mode,
         rl_recipe=args.rl_recipe,
         dashboard=args.dashboard,
+        dpo_enabled=args.dpo_enabled,
+        dpo_min_pairs=args.dpo_min_pairs,
     )
 
 

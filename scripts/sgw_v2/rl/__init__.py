@@ -1,4 +1,4 @@
-"""SGW v2 RL module — MDP formalization, policy, reward, guardrails.
+"""SGW v2 RL module — MDP formalization, policy, reward, guardrails, DPO.
 
 Public surface used by meta-loop integrations and tests.
 """
@@ -22,6 +22,7 @@ from .spec import (
     REWARD_SCALE,
     RunContext,
     StateVector,
+    StrategyRecommendation,
     check_config_novelty,
     check_direction_history,
     clamp_amplitude,
@@ -63,6 +64,25 @@ from .changepoint import CUSUMDetector, VarianceShiftDetector, Changepoint
 from .causal import CausalAttributor, CausalEffect
 from .pattern_miner import MinedPattern, PatternMiner
 from .dashboard import generate_dashboard
+from .response_evaluator import (
+    DIMENSIONS,
+    DIMENSION_WEIGHTS,
+    QualityDim,
+    ResponseEvaluator,
+    ResponseQuality,
+)
+from .preference_extractor import (
+    ExtractionResult,
+    PreferenceExtractor,
+    PreferencePair,
+)
+from .dpo_trainer import (
+    DPOModel,
+    DPOTrainer,
+    DPOTrainingConfig,
+    DPOTrainingResult,
+)
+from .dpo_policy import DPOPolicy, StrategyPreference
 
 __all__ = [
     # spec
@@ -71,7 +91,7 @@ __all__ = [
     "EpisodeTerminationReason", "FailureSignal", "GuardrailId",
     "IterationOutcome", "PolicyStage", "PopulationStats",
     "RewardSignal", "RewardWeights", "DEFAULT_REWARD_WEIGHTS", "REWARD_SCALE",
-    "RunContext", "StateVector",
+    "RunContext", "StateVector", "StrategyRecommendation",
     "check_config_novelty", "check_direction_history", "clamp_amplitude",
     "compute_config_hash", "should_explore", "state_from_summary",
     "validate_action",
@@ -91,4 +111,10 @@ __all__ = [
     "CausalAttributor", "CausalEffect",
     "MinedPattern", "PatternMiner",
     "generate_dashboard",
+    # DPO pipeline
+    "DIMENSIONS", "DIMENSION_WEIGHTS", "QualityDim",
+    "ResponseEvaluator", "ResponseQuality",
+    "ExtractionResult", "PreferenceExtractor", "PreferencePair",
+    "DPOModel", "DPOTrainer", "DPOTrainingConfig", "DPOTrainingResult",
+    "DPOPolicy", "StrategyPreference",
 ]
