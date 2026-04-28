@@ -695,15 +695,16 @@ class AuroraEnergyStore:
     async def record_l3_session(self, user_id: UUID | str, *, sprint_mode: str = "default") -> AuroraEnergyState:
         energy = await self.load_energy(user_id)
         now = _utcnow()
-        energy.current_level = "L3"
-        energy.last_l3_session_at = now
-        energy.l3_session_count_today += 1
-
-        cooldown_min = self.COOLDOWN_TEMPLATES.get(sprint_mode, 360)
         from datetime import timedelta
 
-        energy.cooldown_until = now + timedelta(minutes=cooldown_min)
-        energy.updated_at = now
+        cooldown_min = self.COOLDOWN_TEMPLATES.get(sprint_mode, 360)
+        energy = energy.model_copy(update={
+            "current_level": "L3",
+            "last_l3_session_at": now,
+            "l3_session_count_today": energy.l3_session_count_today + 1,
+            "cooldown_until": now + timedelta(minutes=cooldown_min),
+            "updated_at": now,
+        })
         await self.save_energy(energy)
         return energy
 
@@ -720,24 +721,23 @@ class AuroraEnergyStore:
         energy = await self.load_energy(user_id)
 
         if energy.is_cooling_down:
-            energy.current_level = "L0"
+            level, score = "L0", energy.wake_score
         elif not aurora_active:
-            energy.current_level = "L0"
-            energy.wake_score = 0.0
+            level, score = "L0", 0.0
         elif has_risk or overall_status == "recalibrating":
-            energy.current_level = "L2"
-            energy.wake_score = min(1.0, 0.5 + ready_count * 0.1)
+            level, score = "L2", min(1.0, 0.5 + ready_count * 0.1)
         elif overall_status == "ready" and ready_count == total_count:
-            energy.current_level = "L1"
-            energy.wake_score = min(1.0, 0.7 + ready_count * 0.05)
+            level, score = "L1", min(1.0, 0.7 + ready_count * 0.05)
         elif overall_status in ("partial", "missing"):
-            energy.current_level = "L1"
-            energy.wake_score = min(1.0, 0.3 + ready_count * 0.1)
+            level, score = "L1", min(1.0, 0.3 + ready_count * 0.1)
         else:
-            energy.current_level = "L1"
-            energy.wake_score = 0.5
+            level, score = "L1", 0.5
 
-        energy.updated_at = _utcnow()
+        energy = energy.model_copy(update={
+            "current_level": level,
+            "wake_score": score,
+            "updated_at": _utcnow(),
+        })
         await self.save_energy(energy)
         return energy
 

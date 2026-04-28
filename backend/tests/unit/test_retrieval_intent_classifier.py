@@ -14,34 +14,34 @@ from app.orchestration.statechart_engine import WorkflowState
 @pytest.mark.parametrize(
     ("message", "expected_mode"),
     [
-        ("I'm really stressed about my exam", "skip"),
-        ("I feel anxious and overwhelmed tonight", "skip"),
-        ("hello!", "skip"),
-        ("thanks, that helps", "skip"),
-        ("add a task to review chapter 3", "skip"),
-        ("mark my calculus homework done", "skip"),
-        ("把操作系统第三章加入任务", "skip"),
-        ("explain virtual memory", "aggressive"),
-        ("how does TCP congestion control work?", "aggressive"),
-        ("help me understand dynamic programming", "aggressive"),
-        ("what is a page table?", "aggressive"),
-        ("compare paging and segmentation", "aggressive"),
-        ("derive the Bayes theorem formula", "aggressive"),
-        ("解释一下虚拟内存的原理", "aggressive"),
-        ("make me a study plan for OS finals", "selective"),
-        ("can you plan my revision schedule?", "selective"),
-        ("break down my database exam prep", "selective"),
-        ("help me with chapter 4", "selective"),
-        ("I'm stuck on this topic", "selective"),
-        ("can you help with my lecture notes?", "selective"),
+        ("I'm really stressed about my exam", "no_retrieval"),
+        ("I feel anxious and overwhelmed tonight", "no_retrieval"),
+        ("hello!", "no_retrieval"),
+        ("thanks, that helps", "no_retrieval"),
+        ("add a task to review chapter 3", "no_retrieval"),
+        ("mark my calculus homework done", "no_retrieval"),
+        ("把操作系统第三章加入任务", "no_retrieval"),
+        ("explain virtual memory", "targeted_source_rag"),
+        ("how does TCP congestion control work?", "targeted_source_rag"),
+        ("help me understand dynamic programming", "targeted_source_rag"),
+        ("what is a page table?", "targeted_source_rag"),
+        ("compare paging and segmentation", "targeted_source_rag"),
+        ("derive the Bayes theorem formula", "targeted_source_rag"),
+        ("解释一下虚拟内存的原理", "targeted_source_rag"),
+        ("make me a study plan for OS finals", "graph_only"),
+        ("can you plan my revision schedule?", "graph_only"),
+        ("break down my database exam prep", "graph_only"),
+        ("help me with chapter 4", "graph_only"),
+        ("I'm stuck on this topic", "graph_only"),
+        ("can you help with my lecture notes?", "graph_only"),
     ],
 )
 def test_retrieval_intent_classifier_diverse_messages(message: str, expected_mode: str) -> None:
     decision = RetrievalIntentClassifier().classify(message)
 
     assert decision.retrieval_mode == expected_mode
-    assert decision.should_retrieve is (expected_mode != "skip")
-    assert decision.budget_tokens == 0 if expected_mode == "skip" else decision.budget_tokens > 0
+    assert decision.should_retrieve is (expected_mode != "no_retrieval")
+    assert decision.budget_tokens == 0 if expected_mode == "no_retrieval" else decision.budget_tokens > 0
 
 
 @pytest.mark.parametrize(
@@ -67,7 +67,7 @@ def test_session_toggle_disables_document_context() -> None:
     )
 
     assert decision.should_retrieve is False
-    assert decision.retrieval_mode == "skip"
+    assert decision.retrieval_mode == "no_retrieval"
     assert decision.reason == "session_use_document_context_false"
 
 
@@ -79,9 +79,9 @@ def test_aurora_mode_can_skip_or_cap_positive_decisions() -> None:
     capped = classifier.classify("explain virtual memory", aurora_doc_context_mode="selective", budgets=budgets)
 
     assert skipped.should_retrieve is False
-    assert skipped.retrieval_mode == "skip"
+    assert skipped.retrieval_mode == "no_retrieval"
     assert capped.should_retrieve is True
-    assert capped.retrieval_mode == "selective"
+    assert capped.retrieval_mode == "graph_only"
     assert capped.budget_tokens == 800
 
 
@@ -96,6 +96,6 @@ def test_session_state_overlay_attaches_retrieval_decision() -> None:
     )
 
     assert payload is not None
-    assert payload["retrieval_decision"]["retrieval_mode"] == "aggressive"
+    assert payload["retrieval_decision"]["retrieval_mode"] == "targeted_source_rag"
     assert payload["document_retrieval_decision"] == payload["retrieval_decision"]
     assert state.context_data["retrieval_decision"] == payload["retrieval_decision"]

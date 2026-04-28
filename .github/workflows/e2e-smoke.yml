@@ -2,9 +2,11 @@ name: E2E Smoke
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     tags:
       - 'v*'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '23 4 * * *'
@@ -74,6 +76,10 @@ jobs:
       - name: WebSocket E2E Smoke
         timeout-minutes: 10
         run: scripts/run_e2e_smoke.sh websocket
+
+      - name: E2E Multi-Turn Chat Test (WS→Go→Python→LLM)
+        timeout-minutes: 15
+        run: scripts/run_e2e_smoke.sh multiturn
 
       - name: Seed Live Smoke User
         timeout-minutes: 10

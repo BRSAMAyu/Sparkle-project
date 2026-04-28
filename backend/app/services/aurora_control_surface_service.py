@@ -644,7 +644,11 @@ class AuroraControlSurfaceService:
                 _as_dict(getattr(insight, "current_state", None)).get("available_time")
             ),
             "goal_type_confirmed": bool(
-                _as_list(getattr(profile_context.goal_context, "goals", None))
+                _as_list(
+                    profile_context.user_insight_state.goals
+                    if profile_context.user_insight_state
+                    else None
+                )
             ),
         }
 

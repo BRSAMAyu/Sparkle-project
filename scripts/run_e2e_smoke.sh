@@ -196,6 +196,37 @@ run_flutter_smoke() {
 }
 
 
+run_multiturn_e2e() {
+  LIVE_API_BASE_URL="http://127.0.0.1:8000/api/v1" \
+  LIVE_GATEWAY_BASE_URL="http://127.0.0.1:8080/api/v1" \
+  LIVE_WS_BASE_URL="ws://127.0.0.1:8080" \
+  python3 "${ROOT_DIR}/backend/scripts/e2e_multiturn_test.py"
+}
+
+
+run_full_stack_pytest() {
+  FULL_STACK_TESTS=1 \
+  JWT_SECRET="${JWT_SECRET}" \
+  DATABASE_URL="${PYTHON_DATABASE_URL}" \
+  REDIS_URL="${PYTHON_REDIS_URL}" \
+  GRPC_HOST="${GRPC_HOST}" \
+  GRPC_PORT="${GRPC_PORT}" \
+  GATEWAY_HOST="${GATEWAY_HOST}" \
+  GATEWAY_PORT="${GATEWAY_PORT}" \
+  LIVE_API_BASE_URL="http://127.0.0.1:8000/api/v1" \
+  LIVE_GATEWAY_BASE_URL="http://127.0.0.1:8080/api/v1" \
+  LIVE_WS_BASE_URL="ws://127.0.0.1:8080" \
+  PYTHONPATH="${ROOT_DIR}/backend" \
+  python3 -m pytest \
+    backend/tests/integration/test_websocket_full_stack.py \
+    backend/tests/integration/test_grpc_streaming_integration.py \
+    backend/tests/integration/test_auto_seeding_workflow.py \
+    backend/tests/integration/test_memory_evolution_workflow.py \
+    backend/tests/integration/test_ab_test_lifecycle.py \
+    -v --timeout=120
+}
+
+
 seed_smoke_user() {
   LOCAL_SMOKE_USERNAME="${LOCAL_SMOKE_USERNAME}" \
   LOCAL_SMOKE_PASSWORD="${LOCAL_SMOKE_PASSWORD}" \
@@ -253,6 +284,8 @@ Commands:
   migrate    Run Alembic upgrade head inside sparkle_api
   grpc       Run gRPC smoke tests
   websocket  Run WebSocket smoke tests
+  multiturn  Run E2E multi-turn chat test (WS→Go→Python→LLM, 4 turns)
+  full-stack Run all FULL_STACK_TESTS=1 pytest suites (5 files)
   flutter    Run Flutter full-stack smoke tests
   seed-user  Ensure the live smoke login user exists
   logs       Print last 50 lines from core service logs
@@ -276,6 +309,12 @@ case "${1:-}" in
     ;;
   flutter)
     run_flutter_smoke
+    ;;
+  multiturn)
+    run_multiturn_e2e
+    ;;
+  full-stack)
+    run_full_stack_pytest
     ;;
   seed-user)
     seed_smoke_user

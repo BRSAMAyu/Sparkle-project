@@ -28,6 +28,11 @@ from app.services.aurora_stage28_traits_kill_switch_service import AuroraStage28
 from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRLKillSwitchService
 from app.services.aurora_stage30_metacognition_kill_switch_service import AuroraStage30MetacognitionKillSwitchService
 from app.services.aurora_stage31_idiographic_kill_switch_service import AuroraStage31IdiographicKillSwitchService
+from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
+from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
+from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
+from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
+from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage40CalendarKillSwitchService
 
 
@@ -45,6 +50,11 @@ DEFAULT_SPECS = (
     "stage29",
     "stage30",
     "stage31",
+    "stage33",
+    "stage34",
+    "stage35",
+    "stage38",
+    "doc_context",
     "stage40-calendar",
 )
 
@@ -155,6 +165,48 @@ async def _stage31_apply(mode: str) -> dict[str, str]:
     return {"mode": await service.get_mode()}
 
 
+async def _stage33_apply(mode: str) -> dict[str, str]:
+    service = AuroraStage33KillSwitchService()
+    await service.set_mode(mode)
+    for feature in service.FEATURE_BINDINGS:
+        await service.set_feature_mode(feature, mode)
+    return await service.summary()
+
+
+async def _stage34_apply(mode: str) -> dict[str, str]:
+    service = AuroraStage34KillSwitchService()
+    if mode == "off":
+        await service.set_mode("off")
+        for feature in service.FEATURE_BINDINGS:
+            await service.set_feature_mode(feature, "off")
+    else:
+        await service.set_mode(mode)
+        for feature in service.FEATURE_BINDINGS:
+            await service.set_feature_mode(feature, mode)
+    return await service.summary()
+
+
+async def _stage35_apply(mode: str) -> dict[str, str]:
+    service = AuroraStage35KillSwitchService()
+    await service.set_mode(mode)
+    for feature in service.FEATURE_BINDINGS:
+        await service.set_feature_mode(feature, mode)
+    return await service.summary()
+
+
+async def _stage38_apply(mode: str) -> dict[str, str]:
+    service = AuroraStage38KillSwitchService()
+    await service.set_feature_mode("err_replan", mode)
+    await service.set_feature_mode("push_scheduler", mode)
+    return await service.summary()
+
+
+async def _doc_context_apply(mode: str) -> dict[str, str]:
+    service = AuroraDocContextKillSwitchService()
+    await service.set_mode(mode)
+    return {"mode": await service.get_mode()}
+
+
 async def _stage40_apply(mode: str) -> dict[str, str]:
     service = AuroraStage40CalendarKillSwitchService()
     await service.set_mode(mode)
@@ -245,6 +297,41 @@ SPECS = {
         description="Idiographic mode",
         mode_keys=("mode",),
         apply_mode=_stage31_apply,
+    ),
+    "stage33": DrillSpec(
+        name="stage33",
+        stage="33",
+        description="Stage 33 master + social/srl/wm_prompt/events",
+        mode_keys=("mode", "social", "srl", "wm_prompt", "events"),
+        apply_mode=_stage33_apply,
+    ),
+    "stage34": DrillSpec(
+        name="stage34",
+        stage="34",
+        description="Stage 34 master + error_bridge/capsule/journey_subscribers",
+        mode_keys=("mode", "error_bridge_mode", "capsule_mode", "journey_subscribers_enabled"),
+        apply_mode=_stage34_apply,
+    ),
+    "stage35": DrillSpec(
+        name="stage35",
+        stage="35",
+        description="Stage 35 master + metacog_router",
+        mode_keys=("mode", "metacog_router_mode"),
+        apply_mode=_stage35_apply,
+    ),
+    "stage38": DrillSpec(
+        name="stage38",
+        stage="38",
+        description="Stage 38 err_replan + push_scheduler",
+        mode_keys=("err_replan_mode", "push_scheduler_mode"),
+        apply_mode=_stage38_apply,
+    ),
+    "doc_context": DrillSpec(
+        name="doc_context",
+        stage="doc_context",
+        description="Document context injection",
+        mode_keys=("mode",),
+        apply_mode=_doc_context_apply,
     ),
     "stage40-calendar": DrillSpec(
         name="stage40-calendar",

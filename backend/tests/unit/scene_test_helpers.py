@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as _tz
 from uuid import UUID, uuid4
 
 from app.models.memory import EpisodicMemory, Scene
@@ -48,9 +48,9 @@ def make_scene(
     centroid_embedding: list[float] | None = None,
     version: str = "scene.v1",
 ) -> Scene:
-    start = time_start or datetime(2026, 4, 19, 9, 0, 0)
+    start = time_start or datetime.now(_tz.utc).replace(tzinfo=None) - timedelta(hours=2)
     end = time_end or start + timedelta(hours=2)
-    now = datetime(2026, 4, 21, 9, 0, 0)
+    now = datetime.now(_tz.utc).replace(tzinfo=None)
     return Scene(
         scene_id=build_scene_id(
             user_id=user_id,
