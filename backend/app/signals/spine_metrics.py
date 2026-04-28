@@ -28,6 +28,21 @@ except Exception:
     _PROM_DIRECTIVES_APPLIED = _PROM_OUTCOMES = _PROM_EFFECTIVE = None
     _PROM_RECEIPTS = _PROM_RETRACTIONS = None
 
+try:
+    from prometheus_client import Counter as _Counter
+    _PROM_SIGNALS = _Counter("sparkle_spine_signals_generated_total", "Spine signals generated")
+    _PROM_POLICIES = _Counter("sparkle_spine_policies_evaluated_total", "Spine policies evaluated")
+    _PROM_DIRECTIVES = _Counter("sparkle_spine_directives_generated_total", "Spine directives generated")
+    _PROM_DIRECTIVES_APPLIED = _Counter("sparkle_spine_directives_applied_total", "Spine directives applied")
+    _PROM_OUTCOMES = _Counter("sparkle_spine_outcomes_recorded_total", "Spine outcomes recorded")
+    _PROM_EFFECTIVE = _Counter("sparkle_spine_effective_attributions_total", "Spine effective attributions")
+    _PROM_RECEIPTS = _Counter("sparkle_spine_receipts_shown_total", "Spine receipts shown")
+    _PROM_RETRACTIONS = _Counter("sparkle_spine_retractions_total", "Spine retractions")
+except Exception:
+    _PROM_SIGNALS = _PROM_POLICIES = _PROM_DIRECTIVES = None
+    _PROM_DIRECTIVES_APPLIED = _PROM_OUTCOMES = _PROM_EFFECTIVE = None
+    _PROM_RECEIPTS = _PROM_RETRACTIONS = None
+
 
 # ── 指标定义 ─────────────────────────────────────────────────────────
 # 每个指标有 name, description, numerator_key, denominator_key。
@@ -94,7 +109,12 @@ class SpineMetricsCollector:
     1. 每次 pipeline 运行时调用 increment_* 方法
     2. 定期调用 snapshot() 获取指标快照
     3. 快照可暴露给 Prometheus / Grafana
+
+    自动 rollover: 当任意计数器超过 _ROLLOVER_THRESHOLD 时，
+    自动将当前值归档到历史 baseline 并重置，防止长期无限增长。
     """
+
+    _ROLLOVER_THRESHOLD = 100_000  # per-counter rollover trigger
 
     def __init__(self, redis_client: Any):
         self.redis = redis_client
@@ -103,17 +123,41 @@ class SpineMetricsCollector:
     async def increment(self, counter: str, amount: int = 1) -> None:
         """递增计数器。Auto-TTL: refresh 7-day expiry on each increment."""
         key = f"{self._prefix}:{counter}"
-        await self.redis.incrby(key, amount)
+        new_val = await self.redis.incrby(key, amount)
         try:
             await self.redis.expire(key, 7 * 24 * 3600)
         except Exception:
             pass
+        # Rollover if threshold exceeded (guard against mock Redis returning non-int)
+        if isinstance(new_val, int) and new_val >= self._ROLLOVER_THRESHOLD:
+            await self._rollover_counter(counter, new_val)
+
+    async def _rollover_counter(self, counter: str, current_value: int) -> None:
+        """Archive current value to baseline and reset counter to preserve precision."""
+        try:
+            baseline_key = f"{self._prefix}:baseline:{counter}"
+            prev_raw = await self.redis.get(baseline_key)
+            prev = int(prev_raw) if prev_raw else 0
+            await self.redis.set(baseline_key, str(prev + current_value), ex=90 * 24 * 3600)
+            # Reset the live counter
+            key = f"{self._prefix}:{counter}"
+            await self.redis.set(key, "0", ex=7 * 24 * 3600)
+            logger.debug("SpineMetrics rollover: {} archived {}", counter, current_value)
+        except Exception:
+            pass
 
     async def get_counter(self, counter: str) -> int:
-        """获取计数器值。"""
+        """获取计数器值（含历史 baseline）。"""
         key = f"{self._prefix}:{counter}"
         raw = await self.redis.get(key)
-        return int(raw) if raw else 0
+        live = int(raw) if raw else 0
+        baseline_key = f"{self._prefix}:baseline:{counter}"
+        try:
+            prev_raw = await self.redis.get(baseline_key)
+            baseline = int(prev_raw) if prev_raw else 0
+        except Exception:
+            baseline = 0
+        return baseline + live
 
     async def snapshot(self) -> dict[str, Any]:
         """

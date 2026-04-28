@@ -62,6 +62,18 @@ _ATTRIBUTION_RULES: dict[str, dict[str, Any]] = {
         "insufficient_hypothesis": "no_behavioral_change_detected",
         "next_policy": "escalate_or_try_different_approach",
     },
+    "user_wellbeing": {
+        "harmful_conditions": {
+            "user_reported_negative": True,
+        },
+        "harmful_attribution": "harmful",
+        "harmful_confidence": 0.8,
+        "needs_confirmation_conditions": {
+            "ambiguous_outcome": True,
+        },
+        "needs_confirmation_attribution": "needs_confirmation",
+        "needs_confirmation_confidence": 0.5,
+    },
 }
 
 
@@ -109,7 +121,7 @@ class OutcomeRecorder:
         await self.redis.set(key, json.dumps(record.to_dict()), ex=720 * 3600)  # 30 days
 
         # Write PolicyEffectLedger entry for learning loop
-        if record.attribution != "inconclusive":
+        if record.attribution not in ("inconclusive", "needs_confirmation"):
             await self._write_policy_effect(record)
 
         # Link to trace
@@ -164,6 +176,26 @@ class OutcomeRecorder:
         if not rules:
             return "inconclusive", 0.0, None, None
 
+        # Check harmful conditions first (highest priority)
+        harmful_conds = rules.get("harmful_conditions", {})
+        if harmful_conds and self._conditions_met(harmful_conds, actual_outcome):
+            return (
+                rules.get("harmful_attribution", "harmful"),
+                rules.get("harmful_confidence", 0.8),
+                "intervention_caused_harm",
+                "immediate_retraction_and_apology",
+            )
+
+        # Check needs_confirmation conditions (ambiguous outcomes)
+        nc_conds = rules.get("needs_confirmation_conditions", {})
+        if nc_conds and self._conditions_met(nc_conds, actual_outcome):
+            return (
+                rules.get("needs_confirmation_attribution", "needs_confirmation"),
+                rules.get("needs_confirmation_confidence", 0.5),
+                "outcome_requires_user_confirmation",
+                "request_user_feedback",
+            )
+
         # Check effective conditions
         effective_conds = rules.get("effective_conditions", {})
         if self._conditions_met(effective_conds, actual_outcome):
@@ -175,13 +207,33 @@ class OutcomeRecorder:
             )
 
         # Check insufficient conditions
-        insufficient_conds = rules.get("insufficient_conditions", {})
-        if self._conditions_met(insufficient_conds, actual_outcome):
+        insufficient_conds = rules.get("insufficient_conditions")
+        if insufficient_conds and self._conditions_met(insufficient_conds, actual_outcome):
             return (
                 "insufficient",
                 0.6,
                 rules.get("insufficient_hypothesis"),
                 rules.get("next_policy"),
+            )
+
+        # Check harmful conditions (OUT-004)
+        harmful_conds = rules.get("harmful_conditions")
+        if harmful_conds and self._conditions_met(harmful_conds, actual_outcome):
+            return (
+                "harmful",
+                0.8,
+                "intervention_caused_harm",
+                "immediate_retraction_and_apology",
+            )
+
+        # Check needs_confirmation conditions
+        nc_conds = rules.get("needs_confirmation_conditions")
+        if nc_conds and self._conditions_met(nc_conds, actual_outcome):
+            return (
+                "needs_confirmation",
+                0.5,
+                "ambiguous_outcome_needs_confirmation",
+                None,
             )
 
         return "inconclusive", 0.3, "unexpected_outcome_pattern", None
@@ -193,6 +245,106 @@ class OutcomeRecorder:
             if actual.get(key) != expected_value:
                 return False
         return True
+
+    @staticmethod
+    def build_self_correction_receipt(record: OutcomeRecord) -> dict[str, Any] | None:
+        if record.attribution != "harmful":
+            return None
+        return {
+            "type": "divine_moment_self_correction",
+            "message": f"检测到干预可能造成了负面影响: {record.new_hypothesis}",
+            "attribution": record.attribution,
+            "confidence": record.attribution_confidence,
+            "next_policy": record.next_policy_suggestion,
+        }
+
+    async def _write_policy_effect(self, record: OutcomeRecord) -> None:
+        """Write a PolicyEffectLedger entry from an outcome record."""
+        import json
+
+        # Extract user feedback signal from actual_outcome
+        feedback_signal = None
+        feedback = record.actual_outcome.get("user_feedback", "")
+        if feedback:
+            # Normalize common Chinese feedback patterns
+            if "看不懂" in feedback or "不懂" in feedback:
+                feedback_signal = "cant_understand"
+            elif "太难" in feedback or "too_hard" in feedback:
+                feedback_signal = "too_hard"
+            elif "太短" in feedback or "too_short" in feedback:
+                feedback_signal = "too_short"
+            elif "完成" in feedback or "completed" in feedback:
+                feedback_signal = "completed"
+            else:
+                feedback_signal = feedback[:50]
+
+        entry = PolicyEffectEntry(
+            entry_id=_uid("pe"),
+            policy_key=record.reason,
+            intervention_summary=record.intervention,
+            attribution=record.attribution,
+            attribution_confidence=record.attribution_confidence,
+            user_feedback_signal=feedback_signal,
+            new_hypothesis=record.new_hypothesis,
+        )
+
+        # Store by entry ID
+        entry_key = f"spine:policy_effect:{entry.entry_id}"
+        await self.redis.set(entry_key, json.dumps(entry.to_dict()), ex=720 * 3600)
+
+        # Append to user's policy effect index (by trace's user)
+        # We look up the trace to find the user
+        trace_key = f"spine:trace:{record.causal_trace_id}"
+        raw = await self.redis.get(trace_key)
+        if raw:
+            # Find user from spine:user_traces reverse lookup
+            # Store in a global policy effect list for the trace's context
+            ledger_key = f"spine:policy_effect_ledger:{record.causal_trace_id}"
+            await self.redis.lpush(ledger_key, entry.entry_id)
+            await self.redis.ltrim(ledger_key, 0, 19)  # keep last 20
+            await self.redis.expire(ledger_key, 720 * 3600)
+
+        logger.info(
+            "PolicyEffectLedger: {} policy={} attribution={} feedback={}",
+            entry.entry_id, entry.policy_key, entry.attribution, feedback_signal,
+        )
+
+    async def get_recent_policy_effects(
+        self,
+        user_id: str,
+        limit: int = 5,
+    ) -> list[PolicyEffectEntry]:
+        """Get recent PolicyEffectEntries for a user's traces."""
+        import json
+
+        # Get user's recent traces
+        entries: list[PolicyEffectEntry] = []
+
+        # Scan recent traces for policy effects
+        user_traces_key = f"spine:user_traces:{user_id}"
+        trace_ids = await self.redis.lrange(user_traces_key, 0, limit - 1)
+
+        for tid in trace_ids:
+            ledger_key = f"spine:policy_effect_ledger:{tid}"
+            effect_ids = await self.redis.lrange(ledger_key, 0, limit - 1)
+            for eid in effect_ids:
+                raw = await self.redis.get(f"spine:policy_effect:{eid}")
+                if raw:
+                    entries.append(PolicyEffectEntry.from_dict(json.loads(raw)))
+
+        return entries[:limit]
+
+    async def get_insufficient_count_for_policy(
+        self,
+        user_id: str,
+        policy_key: str,
+    ) -> int:
+        """Count how many times a policy was insufficient for a user."""
+        effects = await self.get_recent_policy_effects(user_id, limit=20)
+        return sum(
+            1 for e in effects
+            if e.policy_key == policy_key and e.attribution == "insufficient"
+        )
 
     async def _write_policy_effect(self, record: OutcomeRecord) -> None:
         """Write a PolicyEffectLedger entry from an outcome record."""
@@ -293,7 +445,7 @@ class OutcomeRecorder:
 
         Template: "我需要修正一下。之前把问题理解成 X，但反馈说明更可能是 Y。所以改成 Z。"
         """
-        if record.attribution != "insufficient":
+        if record.attribution not in ("insufficient", "harmful"):
             return None
 
         # Derive what we originally thought
@@ -303,6 +455,10 @@ class OutcomeRecorder:
         # Determine the correction based on hypothesis
         hypothesis = record.new_hypothesis or "strategy_mismatch"
         correction_map = {
+            "intervention_caused_harm": {
+                "correction": "立即撤回该策略，检查用户状态，降低后续干预强度",
+                "new_action": "retract_and_reduce",
+            },
             "task_completed_but_intervention_may_be_insufficient": {
                 "correction": "不再机械重复相同策略，改为检查具体执行障碍",
                 "new_action": "diagnostic_check",

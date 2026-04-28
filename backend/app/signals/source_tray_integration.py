@@ -20,11 +20,13 @@ from loguru import logger
 from app.signals.types import RetrievalDirective, SourceAsset, SourceTraySelection, SourceTrayState
 
 
-def compute_retrieval_plan(
+async def compute_retrieval_plan(
     *,
     retrieval_directive: RetrievalDirective,
     source_tray: SourceTrayState,
     target_nodes: list[str] | None = None,
+    blocked_source_ids: set[str] | None = None,
+    low_effectiveness_source_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """
     Given a RetrievalDirective and the user's SourceTrayState, compute
@@ -60,6 +62,16 @@ def compute_retrieval_plan(
 
     for source in available:
         sid = source.source_id
+
+        # SRC-014: Skip sources blocked by user correction
+        if blocked_source_ids and sid in blocked_source_ids:
+            do_not_load.append({"source_id": sid, "reason": "user_correction_blocked"})
+            continue
+
+        # SRC-013: Skip sources with historically low effectiveness
+        if low_effectiveness_source_ids and sid in low_effectiveness_source_ids:
+            do_not_load.append({"source_id": sid, "reason": "low_effectiveness_rate"})
+            continue
 
         # Skip failed parses
         if source.parsed_status == "failed":
@@ -351,6 +363,34 @@ class SourceEffectivenessTracker:
                 results.append(data)
         return sorted(results, key=lambda x: x.get("effectiveness_rate", 0), reverse=True)
 
+    # SRC-014: Source trust correction
+    _BLOCKLIST_KEY = "spine:source_blocklist:{user_id}"
+
+    async def record_user_correction(
+        self,
+        *,
+        user_id: str,
+        source_id: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        key = self._BLOCKLIST_KEY.format(user_id=user_id)
+        await self.redis.sadd(key, source_id)
+        await self.redis.expire(key, _SOURCE_EFFECT_TTL)
+        return {
+            "source_id": source_id,
+            "auto_reuse_blocked": True,
+            "status": "user_corrected",
+        }
+
+    async def is_source_blocked(self, user_id: str, source_id: str) -> bool:
+        key = self._BLOCKLIST_KEY.format(user_id=user_id)
+        return bool(await self.redis.sismember(key, source_id))
+
+    async def get_blocked_sources(self, user_id: str) -> list[str]:
+        key = self._BLOCKLIST_KEY.format(user_id=user_id)
+        members = await self.redis.smembers(key)
+        return [m if isinstance(m, str) else m.decode() for m in members]
+
     async def get_low_effectiveness_sources(
         self,
         user_id: str,
@@ -364,6 +404,61 @@ class SourceEffectivenessTracker:
             for e in all_effects
             if e.get("total", 0) >= min_trials and e.get("effectiveness_rate", 1.0) <= max_rate
         ]
+
+    # ── SRC-014: User correction → source_trust update ──────────────
+
+    _TRUST_KEY = "spine:source_trust:{user_id}:{source_id}"
+    _TRUST_BLOCKLIST = "spine:source_trust_blocklist:{user_id}"
+    _TRUST_TTL = 30 * 24 * 3600  # 30 days
+
+    async def record_user_correction(
+        self,
+        *,
+        user_id: str,
+        source_id: str,
+        reason: str = "user_marked_irrelevant",
+    ) -> dict[str, Any]:
+        """User corrected a source as irrelevant/wrong. Update trust and block auto-reuse."""
+        import json
+
+        from datetime import UTC, datetime
+
+        # Record as insufficient outcome
+        await self.record_source_outcome(
+            user_id=user_id,
+            source_id=source_id,
+            outcome="insufficient",
+            context={"correction_reason": reason},
+        )
+
+        # Set trust flag
+        trust_key = self._TRUST_KEY.format(user_id=user_id, source_id=source_id)
+        trust_data = {
+            "source_id": source_id,
+            "status": "user_corrected",
+            "reason": reason,
+            "auto_reuse_blocked": True,
+            "corrected_at": datetime.now(UTC).isoformat(),
+        }
+        await self.redis.set(trust_key, json.dumps(trust_data), ex=self._TRUST_TTL)
+
+        # Add to blocklist for fast lookup
+        bl_key = self._TRUST_BLOCKLIST.format(user_id=user_id)
+        await self.redis.sadd(bl_key, source_id)
+        await self.redis.expire(bl_key, self._TRUST_TTL)
+
+        return trust_data
+
+    async def is_source_blocked(self, user_id: str, source_id: str) -> bool:
+        """Check if a source is blocked from auto-reuse due to user correction."""
+        bl_key = self._TRUST_BLOCKLIST.format(user_id=user_id)
+        return bool(await self.redis.sismember(bl_key, source_id))
+
+    async def get_blocked_sources(self, user_id: str) -> list[str]:
+        """Return all source IDs blocked from auto-reuse."""
+        bl_key = self._TRUST_BLOCKLIST.format(user_id=user_id)
+        members = await self.redis.smembers(bl_key)
+        return [m if isinstance(m, str) else m.decode() for m in members]
 
 
 def _build_receipt_reason(loaded_count: int, skipped: list[dict[str, Any]]) -> str:

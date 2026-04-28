@@ -59,6 +59,7 @@ class RecallMessage:
     deep_link: str
     cooldown_until: str | None
     frequency_tag: str
+    reasoning: str = ""  # NUDGE-009: Why this notification was sent
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -70,6 +71,7 @@ class RecallMessage:
             "deep_link": self.deep_link,
             "cooldown_until": self.cooldown_until,
             "frequency_tag": self.frequency_tag,
+            "reasoning": self.reasoning,
         }
 
     @classmethod
@@ -111,6 +113,14 @@ class RecallNotificationBuilder:
         },
     }
 
+    # NUDGE-009: Explainable reasoning templates
+    REASONING_TEMPLATES: dict[str, str] = {
+        "undigested_material": "你上传了资料但还没完成诊断。资料如果不诊断就不会影响你的学习计划。",
+        "task_not_started": "今天的计划中有待办任务。开始第一个任务能帮你保持节奏。",
+        "task_missed": "有一个任务过了截止时间。跳过没关系，但重新安排能避免知识点脱节。",
+        "pre_exam_silence": "考试临近但你最近没有复习活动。考前高频回顾对成绩帮助最大。",
+    }
+
     def build_message(
         self,
         trigger_type: str,
@@ -146,6 +156,7 @@ class RecallNotificationBuilder:
             deep_link=template["deep_link"],
             cooldown_until=context.get("cooldown_until"),
             frequency_tag=context.get("frequency_tag", _FREQUENCY_TAGS.get(trigger_type, "1_per_day")),
+            reasoning=self.REASONING_TEMPLATES.get(trigger_type, ""),
         )
 
     def check_cooldown(
@@ -210,6 +221,22 @@ class RecallNotificationBuilder:
     def get_cooldown_until(self, trigger_type: str) -> str:
         cooldown_seconds = _COOLDOWN_SECONDS.get(trigger_type, 24 * 3600)
         return (datetime.now(UTC) + timedelta(seconds=cooldown_seconds)).isoformat()
+
+    @staticmethod
+    def _build_reasoning(trigger_type: str, strategy: str, context: dict[str, Any]) -> str:
+        reasons = {
+            "undigested_material": "检测到{material_count}份资料中还有{undigested}份未完成诊断，建议用户花少量时间完成。",
+            "task_not_started": "今日首个任务尚未开始，通过低阻力提醒推动执行。",
+            "task_missed": "检测到任务过期未完成，提供恢复方案降低重新启动的心理门槛。",
+            "spaced_recall": "基于间隔重复算法，当前是最佳复习时间窗口。",
+            "momentum_recovery": "检测到学习动量下降趋势，主动介入恢复节奏。",
+            "streak_celebration": "检测到连续学习streak达成，确认并强化积极行为。",
+        }
+        template = reasons.get(trigger_type, f"基于{trigger_type}触发规则，策略为{strategy}，主动提醒用户。")
+        try:
+            return template.format(**context)
+        except (KeyError, IndexError):
+            return template
 
     def _normalize_context(self, trigger_type: str, context: dict[str, Any]) -> dict[str, Any]:
         normalized = {k: _format_number(v) for k, v in context.items()}

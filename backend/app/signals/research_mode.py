@@ -606,3 +606,431 @@ class ContinuousImprovementLoop:
             "improvement_summary": self.measure_improvement(),
             "recent_log": self._improvement_log[-10:],
         }
+
+
+# ── P4-RES-005: Consent Tracking ────────────────────────────────────
+
+
+class ConsentTracker:
+    """Track user consent for research data inclusion."""
+
+    REQUIRED_CONSENTS = ("research_analytics", "cohort_comparison", "anonymized_export")
+
+    def __init__(self):
+        self._consents: dict[str, set[str]] = {}
+
+    def grant_consent(self, *, user_id: str, consent_type: str) -> None:
+        if user_id not in self._consents:
+            self._consents[user_id] = set()
+        self._consents[user_id].add(consent_type)
+
+    def revoke_consent(self, *, user_id: str, consent_type: str) -> None:
+        if user_id in self._consents:
+            self._consents[user_id].discard(consent_type)
+
+    def has_consent(self, user_id: str, consent_type: str) -> bool:
+        return consent_type in self._consents.get(user_id, set())
+
+    def can_include_in_research(self, user_id: str) -> bool:
+        granted = self._consents.get(user_id, set())
+        return all(ct in granted for ct in self.REQUIRED_CONSENTS)
+
+    def check_all_consents(self, user_id: str) -> dict[str, bool]:
+        granted = self._consents.get(user_id, set())
+        return {ct: ct in granted for ct in self.REQUIRED_CONSENTS}
+
+
+# ── P4-RES-003/004: Research Dataset Builder ────────────────────────
+
+_FREE_TEXT_FIELDS = frozenset({"selection_reason", "user_feedback", "knowledge_bottleneck"})
+
+
+class ResearchDatasetBuilder:
+    """Build privacy-preserving research datasets from spine episodes."""
+
+    @staticmethod
+    def anonymize_episode(episode: dict[str, Any]) -> dict[str, Any]:
+        import hashlib as _hl
+
+        result: dict[str, Any] = {}
+        for key, value in episode.items():
+            if key in _FREE_TEXT_FIELDS:
+                continue
+            if key in ("user_id", "goal_id"):
+                result[key] = _hl.sha256(value.encode()).hexdigest()[:16]
+            elif key == "context_signature" and isinstance(value, dict):
+                cs = {k: v for k, v in value.items() if k not in _FREE_TEXT_FIELDS}
+                result[key] = cs
+            else:
+                result[key] = value
+        return result
+
+    @staticmethod
+    def should_exclude(
+        episode: dict[str, Any],
+        *,
+        min_evidence_grade: int = 2,
+        has_unconfirmed_insight: bool = False,
+        has_peer_observation: bool = False,
+    ) -> tuple[bool, str]:
+        grade = episode.get("evidence_quality", {}).get("grade", 0)
+        if grade < min_evidence_grade:
+            return True, f"evidence_grade_below_{min_evidence_grade}"
+        if has_unconfirmed_insight:
+            return True, "unconfirmed_insight_excluded"
+        if has_peer_observation:
+            return True, "peer_observation_excluded"
+        return False, ""
+
+    @staticmethod
+    def build_dataset(
+        episodes: list[dict[str, Any]],
+        *,
+        version: str = "1.0",
+        spine_version: str = "",
+        policy_config_hash: str = "",
+        data_window_start: str = "",
+        data_window_end: str = "",
+        min_evidence_grade: int = 2,
+    ) -> tuple[list[dict[str, Any]], Any]:
+        from dataclasses import dataclass as _dc
+
+        @_dc
+        class _Meta:
+            version: str
+            spine_version: str
+            policy_config_hash: str
+            episode_count: int
+            exclusion_rules_applied: list[str]
+            anonymization_applied: list[str]
+
+        filtered: list[dict[str, Any]] = []
+        exclusion_rules: list[str] = []
+        for ep in episodes:
+            exc, reason = ResearchDatasetBuilder.should_exclude(
+                ep, min_evidence_grade=min_evidence_grade,
+            )
+            if exc:
+                if reason not in exclusion_rules:
+                    exclusion_rules.append(reason)
+                continue
+            filtered.append(ResearchDatasetBuilder.anonymize_episode(ep))
+
+        meta = _Meta(
+            version=version,
+            spine_version=spine_version,
+            policy_config_hash=policy_config_hash,
+            episode_count=len(filtered),
+            exclusion_rules_applied=exclusion_rules,
+            anonymization_applied=["hash_user_ids"],
+        )
+        return filtered, meta
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-RES-003/004: Research Dataset Builder + Anonymization + Reproducibility
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class ResearchDatasetMetadata:
+    """Metadata for an exported research dataset (P4-RES-004 reproducibility)."""
+    dataset_id: str = ""
+    created_at: str = field(default_factory=_utcnow)
+    version: str = ""
+    spine_version: str = ""
+    policy_config_hash: str = ""
+    data_window_start: str = ""
+    data_window_end: str = ""
+    episode_count: int = 0
+    exclusion_rules_applied: list[str] = field(default_factory=list)
+    anonymization_applied: list[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if not self.dataset_id:
+            self.dataset_id = _uid("rds")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "dataset_id": self.dataset_id,
+            "created_at": self.created_at,
+            "version": self.version,
+            "spine_version": self.spine_version,
+            "policy_config_hash": self.policy_config_hash,
+            "data_window_start": self.data_window_start,
+            "data_window_end": self.data_window_end,
+            "episode_count": self.episode_count,
+            "exclusion_rules_applied": self.exclusion_rules_applied,
+            "anonymization_applied": self.anonymization_applied,
+        }
+
+
+class ResearchDatasetBuilder:
+    """Build anonymized, reproducible research datasets from episodes (P4-RES-003/004).
+
+    Iron laws:
+    - User IDs are always hashed (never raw)
+    - Free-text fields are removed (never exported)
+    - Raw source material is excluded
+    - Episodes with unresolved long-term insights are excluded
+    - Peer/private observations are excluded
+    """
+
+    # Fields that contain free text and must be stripped
+    _FREE_TEXT_FIELDS = frozenset({
+        "selection_reason", "source_detail", "description", "hypothesis",
+        "title", "summary", "recommendation",
+    })
+
+    # Fields that contain raw user identifiers
+    _USER_ID_FIELDS = frozenset({"user_id", "goal_id"})
+
+    # Exclusion criteria: episode types that must never enter research datasets
+    _EXCLUSION_REASONS = {
+        "long_term_insight_unconfirmed": "未确认的长期洞察不得进入研究集",
+        "peer_private_observation": "伙伴私密观察不得进入研究集",
+        "raw_profile_text": "个人资料原文不得进入研究集",
+        "evidence_grade_below_2": "证据等级 < 2 的 episode 不参与高等级评估",
+    }
+
+    @staticmethod
+    def _hash_id(raw_id: str, salt: str = "sparkle_research_v1") -> str:
+        """Deterministic hash of an ID for anonymization."""
+        import hashlib
+        return hashlib.sha256(f"{salt}:{raw_id}".encode()).hexdigest()[:16]
+
+    @classmethod
+    def anonymize_episode(
+        cls,
+        episode_dict: dict[str, Any],
+        *,
+        salt: str = "sparkle_research_v1",
+    ) -> dict[str, Any]:
+        """Anonymize a single episode dict for research export.
+
+        - Hash user_id and goal_id
+        - Remove free-text fields
+        - Keep quantitative fields intact
+        """
+        out = dict(episode_dict)
+
+        # Hash identifiers
+        for field_name in cls._USER_ID_FIELDS:
+            if field_name in out and out[field_name]:
+                out[field_name] = cls._hash_id(out[field_name], salt)
+
+        # Strip free text
+        for field_name in cls._FREE_TEXT_FIELDS:
+            out.pop(field_name, None)
+
+        # Strip nested free text in context_signature
+        cs = out.get("context_signature")
+        if isinstance(cs, dict):
+            cs.pop("knowledge_bottleneck", None)
+            # Keep categorical fields (goal_mode, deadline_phase, etc.)
+
+        # Strip nested free text in outcome_vector
+        ov = out.get("outcome_vector")
+        if isinstance(ov, dict):
+            # All outcome fields are quantitative — safe to keep
+            pass
+
+        # Strip evidence_quality text fields
+        eq = out.get("evidence_quality")
+        if isinstance(eq, dict):
+            # All evidence quality fields are booleans — safe to keep
+            pass
+
+        return out
+
+    @classmethod
+    def should_exclude(
+        cls,
+        episode_dict: dict[str, Any],
+        *,
+        min_evidence_grade: int = 2,
+        has_unconfirmed_insight: bool = False,
+        has_peer_observation: bool = False,
+        has_raw_profile: bool = False,
+    ) -> tuple[bool, str]:
+        """Check if an episode should be excluded from research datasets.
+
+        Returns (should_exclude: bool, reason: str).
+        """
+        if has_unconfirmed_insight:
+            return True, "long_term_insight_unconfirmed"
+        if has_peer_observation:
+            return True, "peer_private_observation"
+        if has_raw_profile:
+            return True, "raw_profile_text"
+
+        eq = episode_dict.get("evidence_quality", {})
+        grade = eq.get("grade", 0) if isinstance(eq, dict) else 0
+        if grade < min_evidence_grade:
+            return True, "evidence_grade_below_2"
+
+        return False, ""
+
+    @classmethod
+    def build_dataset(
+        cls,
+        episodes: list[dict[str, Any]],
+        *,
+        salt: str = "sparkle_research_v1",
+        min_evidence_grade: int = 2,
+        exclusion_flags: list[dict[str, bool]] | None = None,
+        version: str = "1.0",
+        spine_version: str = "",
+        policy_config_hash: str = "",
+        data_window_start: str = "",
+        data_window_end: str = "",
+    ) -> tuple[list[dict[str, Any]], ResearchDatasetMetadata]:
+        """Build an anonymized research dataset from episodes.
+
+        Returns (anonymized_episodes, metadata).
+        """
+        exclusion_rules_applied: list[str] = []
+        anonymized: list[dict[str, Any]] = []
+
+        for i, ep in enumerate(episodes):
+            flags = exclusion_flags[i] if exclusion_flags and i < len(exclusion_flags) else {}
+            should_exc, reason = cls.should_exclude(
+                ep,
+                min_evidence_grade=min_evidence_grade,
+                has_unconfirmed_insight=flags.get("has_unconfirmed_insight", False),
+                has_peer_observation=flags.get("has_peer_observation", False),
+                has_raw_profile=flags.get("has_raw_profile", False),
+            )
+            if should_exc:
+                if reason not in exclusion_rules_applied:
+                    exclusion_rules_applied.append(reason)
+                continue
+            anonymized.append(cls.anonymize_episode(ep, salt=salt))
+
+        meta = ResearchDatasetMetadata(
+            version=version,
+            spine_version=spine_version,
+            policy_config_hash=policy_config_hash,
+            data_window_start=data_window_start,
+            data_window_end=data_window_end,
+            episode_count=len(anonymized),
+            exclusion_rules_applied=exclusion_rules_applied,
+            anonymization_applied=["hash_user_ids", "strip_free_text", "min_evidence_grade_" + str(min_evidence_grade)],
+        )
+
+        return anonymized, meta
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# P4-RES-005: Consent Tracking for Research Data Usage
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class ConsentRecord:
+    """User consent for research data usage (P4-RES-005)."""
+    consent_id: str = ""
+    user_id: str = ""
+    consent_type: str = ""       # "research_analytics" | "cohort_comparison" | "anonymized_export"
+    granted: bool = False
+    granted_at: str = ""
+    revoked_at: str = ""
+    version: str = "1.0"         # Consent version (for policy changes)
+    source: str = ""             # "settings_page" | "onboarding" | "api"
+
+    def __post_init__(self):
+        if not self.consent_id:
+            self.consent_id = _uid("con")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "consent_id": self.consent_id,
+            "user_id": self.user_id,
+            "consent_type": self.consent_type,
+            "granted": self.granted,
+            "granted_at": self.granted_at,
+            "revoked_at": self.revoked_at,
+            "version": self.version,
+            "source": self.source,
+        }
+
+
+class ConsentTracker:
+    """P4-RES-005: Track user consent for research data usage.
+
+    Iron laws:
+    - No user data enters research pipeline without explicit consent
+    - Consent can be revoked at any time
+    - Consent version tracked for policy transparency
+    """
+
+    # Required consent types for research operations
+    REQUIRED_CONSENTS = frozenset({
+        "research_analytics",     # Aggregate analytics
+        "cohort_comparison",      # Cross-user pattern comparison
+        "anonymized_export",      # Export to research datasets
+    })
+
+    def __init__(self):
+        self._consents: dict[str, dict[str, ConsentRecord]] = {}  # user_id → {consent_type → record}
+
+    def grant_consent(
+        self,
+        *,
+        user_id: str,
+        consent_type: str,
+        source: str = "api",
+        version: str = "1.0",
+    ) -> ConsentRecord:
+        """Grant consent for a specific research usage."""
+        record = ConsentRecord(
+            user_id=user_id,
+            consent_type=consent_type,
+            granted=True,
+            granted_at=_utcnow(),
+            version=version,
+            source=source,
+        )
+        if user_id not in self._consents:
+            self._consents[user_id] = {}
+        self._consents[user_id][consent_type] = record
+        return record
+
+    def revoke_consent(
+        self,
+        *,
+        user_id: str,
+        consent_type: str,
+    ) -> ConsentRecord | None:
+        """Revoke consent for a specific research usage."""
+        user_consents = self._consents.get(user_id, {})
+        record = user_consents.get(consent_type)
+        if record:
+            record.granted = False
+            record.revoked_at = _utcnow()
+        return record
+
+    def has_consent(self, user_id: str, consent_type: str) -> bool:
+        """Check if user has granted consent for a specific type."""
+        user_consents = self._consents.get(user_id, {})
+        record = user_consents.get(consent_type)
+        return record is not None and record.granted
+
+    def check_all_consents(self, user_id: str) -> dict[str, bool]:
+        """Check all required consent types for a user."""
+        return {
+            ct: self.has_consent(user_id, ct)
+            for ct in self.REQUIRED_CONSENTS
+        }
+
+    def can_include_in_research(self, user_id: str) -> bool:
+        """Check if user can be included in research datasets."""
+        return all(
+            self.has_consent(user_id, ct)
+            for ct in self.REQUIRED_CONSENTS
+        )
+
+    def get_user_consents(self, user_id: str) -> list[dict[str, Any]]:
+        """Get all consent records for a user."""
+        user_consents = self._consents.get(user_id, {})
+        return [r.to_dict() for r in user_consents.values()]

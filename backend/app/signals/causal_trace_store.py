@@ -32,6 +32,7 @@ _TRACE_TTL = 30 * 24 * 3600  # 30 days
 _COMPACT_TTL = 90 * 24 * 3600  # 90 days for compacted summaries
 _DIRECTIVE_TTL = 48 * 3600   # 48 hours
 _MAX_USER_TRACES = 50
+_MAX_LIST_ITEMS = 20  # max items per trace list field (prevents unbounded growth)
 _COMPACT_BATCH_SIZE = 10  # compact when traces exceed this many
 
 
@@ -47,6 +48,13 @@ class CausalTraceStore:
         await self._save_trace(trace)
         return trace
 
+    @staticmethod
+    def _bounded_append(lst: list, item: str) -> None:
+        """Append item to list, trimming oldest entries if over limit."""
+        lst.append(item)
+        if len(lst) > _MAX_LIST_ITEMS:
+            del lst[:len(lst) - _MAX_LIST_ITEMS]
+
     async def get_trace(self, trace_id: str) -> CausalTrace | None:
         raw = await self.redis.get(_TRACE_KEY.format(trace_id=trace_id))
         if not raw:
@@ -58,8 +66,8 @@ class CausalTraceStore:
         if not trace:
             logger.warning("trace {} not found for signal append", trace_id)
             return
-        trace.signal_ids.append(signal.signal_id)
-        trace.state_keys_changed.append(signal.state_key)
+        self._bounded_append(trace.signal_ids, signal.signal_id)
+        self._bounded_append(trace.state_keys_changed, signal.state_key)
         from datetime import UTC, datetime
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
@@ -69,6 +77,7 @@ class CausalTraceStore:
         if not trace:
             return
         trace.policy_decision_id = decision.policy_decision_id
+        # Policy is singular — no list append needed
         from datetime import UTC, datetime
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
@@ -80,10 +89,18 @@ class CausalTraceStore:
         trace = await self.get_trace(trace_id)
         if not trace:
             return
-        trace.directive_ids.append(directive.directive_id)
+        self._bounded_append(trace.directive_ids, directive.directive_id)
         from datetime import UTC, datetime
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
+        # Store directive object for timeline retrieval
+        key = f"spine:directive_by_id:{directive.directive_id}"
+        await self.redis.set(key, json.dumps(directive.to_dict()), ex=_TRACE_TTL)
+
+    async def store_directive_by_id(self, directive_id: str, data: dict) -> None:
+        """Store any directive type by ID for timeline retrieval."""
+        key = f"spine:directive_by_id:{directive_id}"
+        await self.redis.set(key, json.dumps(data), ex=_TRACE_TTL)
         # Store directive object for timeline retrieval
         key = f"spine:directive_by_id:{directive.directive_id}"
         await self.redis.set(key, json.dumps(directive.to_dict()), ex=_TRACE_TTL)
@@ -97,7 +114,7 @@ class CausalTraceStore:
         trace = await self.get_trace(trace_id)
         if not trace:
             return
-        trace.audit_ids.append(audit.audit_id)
+        self._bounded_append(trace.audit_ids, audit.audit_id)
         from datetime import UTC, datetime
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
@@ -106,7 +123,7 @@ class CausalTraceStore:
         trace = await self.get_trace(trace_id)
         if not trace:
             return
-        trace.receipt_ids.append(receipt.receipt_id)
+        self._bounded_append(trace.receipt_ids, receipt.receipt_id)
         from datetime import UTC, datetime
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
@@ -115,6 +132,13 @@ class CausalTraceStore:
         key = _USER_TRACES_KEY.format(user_id=user_id)
         await self.redis.lrem(key, 0, trace_id)
         await self.redis.lpush(key, trace_id)
+        # Before trimming, compact traces that would be dropped
+        try:
+            current_count = len(await self.redis.lrange(key, 0, -1))
+            if current_count > _MAX_USER_TRACES:
+                await self.compact_old_traces(user_id)
+        except Exception:
+            pass
         await self.redis.ltrim(key, 0, _MAX_USER_TRACES - 1)
         await self.redis.expire(key, _TRACE_TTL)
 
