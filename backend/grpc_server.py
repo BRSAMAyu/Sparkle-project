@@ -80,6 +80,15 @@ async def serve():
     """
     启动 gRPC 服务器
     """
+    # Initialize Sentry crash reporting for gRPC server
+    if settings.SENTRY_DSN:
+        from app.core.sentry import init_sentry
+        init_sentry(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.SENTRY_ENVIRONMENT or settings.ENVIRONMENT,
+            traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        )
+
     # 创建服务器
     server = grpc.aio.server(
         futures.ThreadPoolExecutor(max_workers=10),

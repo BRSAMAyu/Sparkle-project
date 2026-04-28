@@ -742,6 +742,9 @@ class Settings(BaseSettings):
     INTERNAL_API_KEY: str = ""
     GATEWAY_INTERNAL_URL: str = ""
 
+    # Production URL (used for Flutter deeplinks, CORS, and email links)
+    PRODUCTION_URL: str = ""  # e.g. https://sparkle.example.com
+
     # Logging
     LOG_LEVEL: str = "INFO"
 
