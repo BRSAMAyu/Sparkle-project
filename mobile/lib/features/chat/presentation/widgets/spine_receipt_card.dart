@@ -133,7 +133,7 @@ class _Header extends StatelessWidget {
             const SizedBox(width: 9),
             Expanded(
               child: Text(
-                'Aurora 调整了判断',
+                '抱歉，我之前判断有误',
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -213,7 +213,7 @@ class _CorrectionChip extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           decoration: BoxDecoration(
             color: DS.warning.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(18),

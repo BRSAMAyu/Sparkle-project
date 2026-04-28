@@ -58,6 +58,12 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
 
   String get _elapsedLabel {
     if (widget.elapsedMinutes < 60) return '${widget.elapsedMinutes} 分钟';
+    if (widget.elapsedMinutes >= 1440) {
+      final days = widget.elapsedMinutes ~/ 1440;
+      final remaining = widget.elapsedMinutes % 1440;
+      final hours = remaining ~/ 60;
+      return hours > 0 ? '$days 天 $hours 小时' : '$days 天';
+    }
     final hours = widget.elapsedMinutes ~/ 60;
     final mins = widget.elapsedMinutes % 60;
     return mins > 0 ? '$hours 小时 $mins 分钟' : '$hours 小时';

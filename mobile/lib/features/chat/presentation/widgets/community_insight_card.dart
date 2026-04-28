@@ -106,6 +106,8 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Text(
                   widget.anonymousSummary,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: DS.labelSmall.copyWith(color: DS.textSecondary),
                 ),
               ),

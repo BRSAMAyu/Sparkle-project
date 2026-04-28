@@ -164,7 +164,7 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                           border: Border.all(color: DS.borderSubtle),
                         ),
                         child: Text(
-                          '知道了',
+                          '暂时忽略',
                           style: DS.labelSmall.copyWith(
                             color: DS.textTertiary,
                           ),
