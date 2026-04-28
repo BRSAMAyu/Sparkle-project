@@ -2,8 +2,8 @@
 
 ## Session Summary
 
-**Test Results**: 56 failures → ~5 failures (51 fixed), 5794 → ~5855 passed
-**Commits**: 7 fix commits on `gpt_pro方案推进`
+**Test Results**: 56 failures → 0 failures, 5794 → 5898 passed, 5 collection errors → 0
+**Commits**: 10 fix commits on `gpt_pro方案推进`
 
 ---
 
@@ -101,6 +101,14 @@
 - Flat proto files converted to re-export stubs (local-only, gitignored)
 - `tests/unit/test_exam_sprint_api.py` renamed to `test_exam_sprint_diagnose_api.py` to resolve module name collision with `tests/api/test_exam_sprint_api.py`
 - ChatRequest contract updated for new `use_document_context` (14) and `document_filter` (15) fields
+
+### 17. Production Aurora Config Missing (Session 2 Fix)
+**Root Cause**: `docker-compose.prod.yml` had zero Aurora environment variables. `ENABLE_AURORA_RUNTIME_V1` defaults to `False`, meaning the entire Aurora adaptive kernel was disabled in production.
+**Fix**: Added 34 Aurora live-mode overrides to both `backend` and `agent` services, matching `docker-compose.yml` (dev).
+
+### 18. Reflection Rule Y Gate Assertion Tightened (Session 2 Self-Review)
+**File**: `backend/tests/unit/test_reflection_rule_y_gate.py`
+**Fix**: Set initial mode to "live" before testing streak reset, making assertion deterministic (`mode == "live"`) instead of permissive (`mode in ("off", "live")`).
 
 ## Root Cause Categories of All 51 Fixed Failures
 
