@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 进行中 (6/18 完成)
+## 当前状态: Phase 0 进行中 (11/18 完成, 非阻塞项留待后续)
 
 ---
 
@@ -19,15 +19,15 @@
 | T0.1.1 nginx.conf 添加 443 + SSL | ✅ 完成 | main | HTTP→HTTPS 重定向, TLSv1.2/1.3, HSTS |
 | T0.1.2 docker-compose.prod.yml 挂载证书 | ✅ 完成 | main | SSL_CERT_DIR volume mount, 443 端口 |
 | T0.1.3 SSL 证书生成脚本 | ✅ 完成 | main | scripts/ssl/generate_dev_certs.sh |
-| T0.1.4 settings.py CORS HTTPS | ⬜ 未开始 | — | 需添加生产域名 |
-| T0.1.5 Flutter 生产 API URL | ⬜ 未开始 | — | 需添加 HTTPS base URL |
+| T0.1.4 settings.py CORS HTTPS | ⬜ 未开始 | — | 需生产域名, 部署时配置 |
+| T0.1.5 Flutter 生产 API URL | ✅ 完成 | main | 已支持 String.fromEnvironment('API_BASE_URL'), release mode 警告 http |
 
 ### 0.2 崩溃报告 (Sentry)
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T0.2.1 backend/app/core/sentry.py | ✅ 完成 | main | FastAPI+Redis+Celery 集成 |
 | T0.2.2 main.py startup init | ✅ 完成 | main | lifespan 中早期初始化 |
-| T0.2.3 gRPC server sentry init | ⬜ 未开始 | — | |
+| T0.2.3 gRPC server sentry init | ✅ 完成 | main | grpc_server.py serve() |
 | T0.2.4 .env.example Sentry DSN | ✅ 完成 | main | |
 | T0.2.5 settings.py Sentry 字段 | ✅ 完成 | main | |
 | T0.2.6 Flutter Sentry init | ⬜ 未开始 | — | |
@@ -37,7 +37,7 @@
 |------|------|--------|------|
 | T0.3.1 settings.py production secret 校验 | ✅ 完成 | main | SECRET_KEY+POSTGRES+REDIS+MINIO+INTERNAL_API+LLM |
 | T0.3.2 MinIO 默认值改为空 | ✅ 完成 | main | "minioadmin" → "" |
-| T0.3.3 .env.example placeholder 注释 | ⬜ 未开始 | — | |
+| T0.3.3 .env.example placeholder 注释 | ✅ 完成 | main | 头部警告 + REQUIRED 注释 |
 | T0.3.4 check_production_secrets.py 脚本 | ✅ 完成 | main | 含引号去除, 开发跳过 |
 
 ### 0.4 基础设施安全加固
@@ -46,7 +46,7 @@
 | T0.4.1 Grafana 密码必填 | ✅ 完成 | main | :? 语法, 未设则 docker compose 报错 |
 | T0.4.2 JPush placeholder 移除 | ✅ 完成 | main | '' 默认 + jpushEffectiveEnabled guard |
 | T0.4.3 MinIO credentials 从 env | ⬜ 未开始 | — | |
-| T0.4.4 PRODUCTION_URL setting | ⬜ 未开始 | — | |
+| T0.4.4 PRODUCTION_URL setting | ✅ 完成 | main | settings.py + .env.example |
 | T0.4.5 Grafana 8 dashboard 预配置 | ⬜ 未开始 | — | |
 
 ### 0.5 邮件服务配置
@@ -73,12 +73,12 @@
 ### 1.2 Breakpoint #6: Structured CognitiveAdjustments
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| T1.2.1 CognitiveAdjustment dataclass | ⬜ 未开始 | — | |
-| T1.2.2 orchestrator 消费结构调整 | ⬜ 未开始 | — | |
+| T1.2.1 CognitiveAdjustment dataclass | ✅ 完成 | main | dimension/value/reason/evidence/scope/ttl/user_visible |
+| T1.2.2 orchestrator 消费结构调整 | ⬜ 未开始 | — | 下一步: 在路由决策时生成 structured_adjustments |
 | T1.2.3 ux_envelope 从调整生成 | ⬜ 未开始 | — | |
 | T1.2.4 prompts.py 结构化参数 | ⬜ 未开始 | — | |
 | T1.2.5 Flutter WebSocket 传递 | ⬜ 未开始 | — | |
-| T1.2.6 test_structured_cognitive_adjustments.py | ⬜ 未开始 | — | |
+| T1.2.6 test_structured_cognitive_adjustments.py | ✅ 完成 | main | 5 tests passed |
 
 ### 1.3 Breakpoint #7: Verification Loop
 | 任务 | 状态 | 负责人 | 备注 |
