@@ -100,8 +100,8 @@ def populate(data: dict) -> dict:
     # API health latency (proxy for backend)
     result = measure_http_latency(f"{API_BASE.rsplit('/api', 1)[0]}/health" if "/api" in API_BASE else f"{API_BASE}/health")
     if result:
-        measurements.setdefault("gateway", {})["p95_latency_ms"] = measurements.get("gateway", {}).get("p95_latency_ms", result)
-        print(f"  api.health_latency: {result['actual']}ms (n={result['sample_size']})")
+        measurements.setdefault("backend", {})["health_latency_ms"] = result
+        print(f"  backend.health_latency_ms: {result['actual']}ms (n={result['sample_size']})")
 
     # WebSocket connection latency
     result = measure_ws_latency()

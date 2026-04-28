@@ -64,7 +64,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22.0'
+          go-version: '1.24.0'
           cache-dependency-path: backend/gateway/go.sum
 
       - name: Start Compose Stack
@@ -104,10 +104,10 @@ jobs:
         continue-on-error: true
         run: |
           FULL_STACK_TESTS=1 \
-          DATABASE_URL="${{ env.POSTGRES_DB }}" \
+          DATABASE_URL="postgresql+asyncpg://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@127.0.0.1:5432/${{ env.POSTGRES_DB }}" \
           REDIS_URL="redis://:${{ env.REDIS_PASSWORD }}@127.0.0.1:6379/0" \
           PYTHONPATH="${{ github.workspace }}/backend" \
-          python3 -m pytest backend/tests/performance/test_celery_stress.py -v --timeout=300 || true
+          python3 -m pytest backend/tests/performance/test_celery_stress.py -v --timeout=300
 
       - name: Seed Live Smoke User
         timeout-minutes: 10
