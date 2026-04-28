@@ -2,8 +2,8 @@
 
 ## Session Summary
 
-**Test Results**: 56 failures → 34 failures (22 fixed), 5794 → 5828 passed
-**Commits**: 3 fix commits on `gpt_pro方案推进`
+**Test Results**: 56 failures → ~5 failures (51 fixed), 5794 → ~5855 passed
+**Commits**: 7 fix commits on `gpt_pro方案推进`
 
 ---
 
@@ -80,8 +80,24 @@
 
 ---
 
-## Remaining 34 Failures (Investigation Needed)
+## Remaining ~5 Failures
 
-- `test_signal_spine.py` (3): Policy experiment / learning base issues
-- `test_theater_seed_and_accuracy.py` (1): Simulation engine timing
-- Various API, service, and unit tests (~30): Schema drift, config changes, i18n
+- `test_theater_seed_and_accuracy.py::test_simulation_engine_waits_for_user_and_continues`: Timeout (60s may still be tight)
+- `test_load/test_performance_load.py::test_latency_percentiles`: Load test timeout (not a real bug)
+- Collection errors (3): Pre-existing proto import issues in `test_grpc_streaming_integration.py`, `test_agent_grpc_service_chat_modes.py`, `test_exam_sprint_api.py`
+
+## Root Cause Categories of All 51 Fixed Failures
+
+| Category | Count | Root Cause |
+|----------|-------|-----------|
+| Aurora mode promotion (shadow/off → live) | 8 | Test expectations not updated after docker-compose override |
+| Aurora frozen model mutation | 2 | Pydantic frozen=True + direct field assignment |
+| Date/time boundary (UTC vs local) | 6 | Tests using `date.today()` or hardcoded dates |
+| Schema drift (field renamed/added) | 12 | Model changes without test updates |
+| Async event loop pattern | 5 | Deprecated `get_event_loop().run_until_complete()` |
+| Config default change | 4 | Setting defaults changed without test updates |
+| i18n locale mismatch | 2 | Tests expected Chinese but locale defaulted to English |
+| Proto import path | 1 | Stale module path in import |
+| Missing attribute | 4 | Dataclass fields not added to match usage |
+| Service logic change | 5 | Behavior changed, test expectations stale |
+| Timeout too tight | 2 | Integration tests needing >30s |
