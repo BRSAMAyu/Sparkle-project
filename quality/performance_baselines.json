@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "version": 1,
+    "updated_at": "2026-04-28",
+    "description": "Performance baselines for Sparkle production services"
+  },
+  "baselines": {
+    "llm": {
+      "first_token_latency_ms": {
+        "target": 500,
+        "warning": 1500,
+        "critical": 3000,
+        "alert": "AIFirstTokenLatency"
+      },
+      "total_duration_ms": {
+        "target": 3000,
+        "warning": 8000,
+        "critical": 15000,
+        "alert": "AITotalDuration"
+      }
+    },
+    "gateway": {
+      "p95_latency_ms": {
+        "target": 200,
+        "warning": 1500,
+        "critical": 3000,
+        "alert": "SparkleBackendP95LatencyHigh"
+      },
+      "5xx_rate_percent": {
+        "target": 0.1,
+        "warning": 2.0,
+        "critical": 5.0,
+        "alert": "SparkleBackendHigh5xxRate"
+      }
+    },
+    "websocket": {
+      "message_delivery_ms": {
+        "target": 100,
+        "warning": 500,
+        "critical": 1000
+      },
+      "connection_rate_per_min": {
+        "max": 5,
+        "burst": 10
+      }
+    },
+    "redis": {
+      "hit_rate_percent": {
+        "target": 85,
+        "warning": 70,
+        "critical": 50
+      },
+      "event_stream_lag_seconds": {
+        "target": 10,
+        "warning": 60,
+        "critical": 120,
+        "alert": "SparkleEventStreamLagHigh"
+      }
+    },
+    "database": {
+      "query_p95_ms": {
+        "target": 50,
+        "warning": 200,
+        "critical": 500
+      },
+      "vector_search_ms": {
+        "target": 100,
+        "warning": 500,
+        "critical": 1000
+      },
+      "connection_pool_usage_percent": {
+        "target": 50,
+        "warning": 80,
+        "critical": 95
+      }
+    },
+    "spine_pipeline": {
+      "signal_to_directive_ms": {
+        "target": 50,
+        "warning": 200,
+        "critical": 500
+      },
+      "outcome_attribution_ms": {
+        "target": 30,
+        "warning": 100,
+        "critical": 250
+      },
+      "metrics_rollover_threshold": 100000
+    },
+    "rate_limiting": {
+      "ip_requests_per_second": {
+        "target": 10,
+        "burst": 30
+      },
+      "auth_requests_per_second": {
+        "target": 5,
+        "burst": 15
+      },
+      "ws_connections_per_minute": {
+        "target": 5,
+        "burst": 10
+      }
+    }
+  },
+  "prometheus_queries": {
+    "gateway_latency_p95": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+    "backend_5xx_rate": "rate(http_requests_total{status=~\"5..\"}[10m]) / rate(http_requests_total[10m])",
+    "event_stream_lag": "sparkle_event_stream_lag_seconds",
+    "spine_signals_generated": "sparkle_spine_signals_generated_total",
+    "spine_directives_applied": "sparkle_spine_directives_applied_total"
+  }
+}
