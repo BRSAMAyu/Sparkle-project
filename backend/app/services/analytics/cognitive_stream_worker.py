@@ -21,6 +21,7 @@ from app.services.analytics.model_metrics import record_bkt_auc, record_irt_rmse
 from app.services.analytics.normalization import BehaviorNormalizer
 from app.services.compliance.age_gate import AgeGateService
 from app.services.compliance.crypto_erase import CryptoEraseManager
+from app.services.state_estimator_service import StateEstimatorService
 
 
 def _utcnow() -> datetime:
@@ -143,6 +144,8 @@ class CognitiveStreamWorker:
         self._record_model_metrics(payload, event)
 
         await self._create_fragment(user_id, event, payload, decision.should_collect_sensitive)
+        estimator = StateEstimatorService(self.db)
+        await estimator.update_state(user_id, timezone_name=None)
         await self.db.commit()
 
     def _record_model_metrics(self, payload: dict[str, Any], event: dict[str, Any]) -> None:
