@@ -607,6 +607,7 @@ class RoutingEngineMixin:
                 added_strategy_adjustments,
                 limit=5,
             ),
+            structured_adjustments=list(decision.structured_adjustments),
         )
 
     @classmethod
@@ -646,6 +647,7 @@ class RoutingEngineMixin:
                 added_strategy_adjustments,
                 limit=5,
             ),
+            structured_adjustments=list(decision.structured_adjustments),
         )
 
     # ------------------------------------------------------------------

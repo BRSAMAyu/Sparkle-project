@@ -67,6 +67,32 @@ class DualCoreRoutingInput:
 
 
 @dataclass(frozen=True)
+class CognitiveAdjustment:
+    """Structured cognitive adjustment from Dual-Core Router."""
+    dimension: str  # tone, verbosity, challenge_level, explanation_depth, etc.
+    value: str | int | float
+    reason: str
+    evidence: list[str] = field(default_factory=list)
+    scope: str = "turn"  # turn, session, sprint
+    user_visible: bool = False
+    ttl: str | None = None
+
+    def to_text(self) -> str:
+        return f"{self.dimension}={self.value} ({self.reason})"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "dimension": self.dimension,
+            "value": self.value,
+            "reason": self.reason,
+            "evidence": list(self.evidence),
+            "scope": self.scope,
+            "user_visible": self.user_visible,
+            "ttl": self.ttl,
+        }
+
+
+@dataclass(frozen=True)
 class DualCoreDecision:
     mode: str
     reason: str
@@ -74,12 +100,14 @@ class DualCoreDecision:
     execution_constraints: list[str]
     routing_debug: dict[str, Any] = field(default_factory=dict)
     strategy_adjustments: list[dict[str, Any]] = field(default_factory=list)
+    structured_adjustments: list[CognitiveAdjustment] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "mode": self.mode,
             "reason": self.reason,
             "cognitive_adjustments": list(self.cognitive_adjustments),
+            "structured_adjustments": [a.to_dict() for a in self.structured_adjustments],
             "execution_constraints": list(self.execution_constraints),
             "routing_debug": dict(self.routing_debug or {}),
             "strategy_adjustments": [dict(item) for item in self.strategy_adjustments if isinstance(item, dict)],
