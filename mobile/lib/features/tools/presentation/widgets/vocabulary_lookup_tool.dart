@@ -334,7 +334,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                 spacing: DS.spacing8,
                                 runSpacing: DS.spacing8,
                                 children: [
-                                  _buildMetaChip('${package.entryCount} 词条'),
+                                  _buildMetaChip(context.l10n.toolsVocabEntryCount),
                                   _buildMetaChip(package.packageScope),
                                   if (package.sizeBytes != null)
                                     _buildMetaChip(
@@ -374,7 +374,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                     const SizedBox(width: DS.spacing10),
                                     Expanded(
                                       child: SparkleButton(
-                                        label: '移除',
+                                        label: context.l10n.toolsVocabRemove,
                                         variant: ButtonVariant.ghost,
                                         onPressed: () async {
                                           Navigator.of(context).pop();
@@ -418,13 +418,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.search_rounded,
-      title: '查词',
-      subtitle: '用来做快速词义确认、例句生成和关联词扩展，查询结果可以直接收进本地生词本。',
+      title: context.l10n.toolsVocabTitle,
+      subtitle: context.l10n.toolsVocabSubtitle,
       accentColor: accent,
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: _isInLocalWordbook ? '已在生词本中' : '可加入生词本',
+          label: _isInLocalWordbook ? context.l10n.toolsVocabInWordbook : context.l10n.toolsVocabAddToWordbook,
           accentColor: accent,
           icon: _isInLocalWordbook
               ? Icons.bookmark_added_rounded
@@ -451,10 +451,10 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '查询输入',
-            subtitle: '输入英文单词后回车或点击查询。Oxford 词典优先，本地离线包会先于网络命中。',
+            title: context.l10n.toolsVocabInput,
+            subtitle: context.l10n.toolsVocabInputDesc,
             trailing: SparkleButton(
-              label: _installedPackageCount > 0 ? '管理离线词典' : '下载离线词典',
+              label: _installedPackageCount > 0 ? context.l10n.toolsVocabManageOffline : context.l10n.toolsVocabDownloadOffline,
               onPressed: _isDownloadingDictionary
                   ? null
                   : (_installedPackageCount > 0
@@ -479,7 +479,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                         controller: _controller,
                         focusNode: _focusNode,
                         decoration: const InputDecoration(
-                          hintText: '输入英文单词...',
+                          hintText: context.l10n.toolsVocabInputHint,
                           prefixIcon: Icon(Icons.menu_book_rounded),
                         ),
                         textInputAction: TextInputAction.search,
@@ -487,7 +487,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       ),
                       const SizedBox(height: DS.spacing12),
                       SparkleButton(
-                        label: '查询',
+                        label: context.l10n.toolsVocabSearch,
                         onPressed: _lookup,
                         icon: const Icon(Icons.search_rounded),
                         loading: state.isLookingUp,
@@ -504,7 +504,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                         controller: _controller,
                         focusNode: _focusNode,
                         decoration: const InputDecoration(
-                          hintText: '输入英文单词...',
+                          hintText: context.l10n.toolsVocabInputHint,
                           prefixIcon: Icon(Icons.menu_book_rounded),
                         ),
                         textInputAction: TextInputAction.search,
@@ -513,7 +513,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                     ),
                     const SizedBox(width: DS.spacing12),
                     SparkleButton(
-                      label: '查询',
+                      label: context.l10n.toolsVocabSearch,
                       onPressed: _lookup,
                       icon: const Icon(Icons.search_rounded),
                       loading: state.isLookingUp,
@@ -528,13 +528,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             constraints: const BoxConstraints(minHeight: 200),
             child: ToolSectionCard(
               accentColor: accent,
-              title: '查询结果',
-              subtitle: '词义、例句、关联词和模型生成句都在这里。',
+              title: context.l10n.toolsVocabResult,
+              subtitle: context.l10n.toolsVocabResultDesc,
               child: result == null
                   ? ToolEmptyState(
                       icon: Icons.travel_explore_rounded,
-                      title: error == null ? '输入单词开始查询' : '查询暂时失败',
-                      description: error ?? '查询完成后可以直接收藏到生词本，并继续生成例句。',
+                      title: error == null ? context.l10n.toolsVocabStartHint : context.l10n.toolsVocabSearchFailed,
+                      description: error ?? context.l10n.toolsVocabResultHint,
                       accentColor: accent,
                     )
                   : SingleChildScrollView(
@@ -760,14 +760,14 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           final compact = constraints.maxWidth < 520;
           final secondaryAction = _isInLocalWordbook
               ? SparkleButton(
-                  label: '移出生词本',
+                  label: context.l10n.toolsVocabRemoveFromWordbook,
                   variant: ButtonVariant.ghost,
                   onPressed: _removeFromWordbook,
                   icon: const Icon(Icons.remove_circle_outline_rounded),
                   expand: true,
                 )
               : SparkleButton(
-                  label: '加入生词本',
+                  label: context.l10n.toolsVocabAddToWordbookAction,
                   onPressed: result == null ? null : _addToWordbook,
                   icon: const Icon(Icons.bookmark_add_rounded),
                   expand: true,
@@ -778,7 +778,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SparkleButton(
-                  label: '生成例句',
+                  label: context.l10n.toolsVocabGenerateExample,
                   variant: ButtonVariant.ghost,
                   onPressed: result == null ? null : _generateSentence,
                   icon: const Icon(Icons.auto_awesome_rounded),
@@ -794,7 +794,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             children: [
               Expanded(
                 child: SparkleButton(
-                  label: '生成例句',
+                  label: context.l10n.toolsVocabGenerateExample,
                   variant: ButtonVariant.ghost,
                   onPressed: result == null ? null : _generateSentence,
                   icon: const Icon(Icons.auto_awesome_rounded),

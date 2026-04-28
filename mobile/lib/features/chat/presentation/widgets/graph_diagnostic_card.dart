@@ -223,7 +223,7 @@ class _NodeTile extends StatelessWidget {
           if (_listString(item['prerequisite_names']).isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '前置相关：${_listString(item['prerequisite_names']).join('、')}',
+              context.l10n.chatGraphPrerequisites(items: _listString(item['prerequisite_names']).join('、')}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),
@@ -232,7 +232,7 @@ class _NodeTile extends StatelessWidget {
           if (_listString(item['downstream_names']).isNotEmpty) ...[
             const SizedBox(height: DS.spacing4),
             Text(
-              '受影响后续：${_listString(item['downstream_names']).join('、')}',
+              context.l10n.chatGraphAffectedLater(items: _listString(item['downstream_names']).join('、')}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),

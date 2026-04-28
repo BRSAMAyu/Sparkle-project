@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -636,7 +637,7 @@ class _PosterStudioHero extends StatelessWidget {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _HeroChip(label: '4 种核心海报'),
+              _HeroChip(label: context.l10n.communityShareCorePosters),
               _HeroChip(label: '实时预览'),
               _HeroChip(label: '下载图片'),
               _HeroChip(label: '系统分享'),

@@ -214,13 +214,13 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
         if (remainingExperts > 0)
           ChatAccessoryPill(
             icon: Icons.add_rounded,
-            label: '$remainingExperts 位',
+            label: context.l10n.chatRoundtableMoreExperts(count: remainingExperts),
             onTap: onExpand,
           ),
         if (turnCount > 0)
           ChatAccessoryPill(
             icon: Icons.notes_rounded,
-            label: '$turnCount 条观点',
+            label: context.l10n.chatRoundtableTurnCount(count: turnCount),
             onTap: onExpand,
           ),
         if (complexityTier != null && complexityTier!.isNotEmpty)
@@ -354,7 +354,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
             if (hiddenTurns > 0)
               ChatAccessoryPill(
                 icon: Icons.more_horiz_rounded,
-                label: '还有 $hiddenTurns 条观点',
+                label: context.l10n.chatRoundtableHiddenTurns(count: hiddenTurns),
               ),
           ],
         ],
@@ -413,7 +413,7 @@ String _etaLabel(int? etaMin, int? etaMax) {
   final low = etaMin ?? etaMax;
   final high = etaMax ?? etaMin;
   if (low == null || high == null) return context.l10n.chatRoundtableEstimatedProcessing;
-  if (low == high) return '约 ${low}s';
+  if (low == high) return context.l10n.chatRoundtableAboutSeconds(seconds: low);
   return '$low-$high s';
 }
 

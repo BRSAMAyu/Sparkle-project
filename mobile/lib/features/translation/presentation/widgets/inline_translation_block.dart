@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Inline translation block for sentences/paragraphs
 ///
@@ -178,7 +179,7 @@ class _InlineTranslationBlockState
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             SizedBox(width: DS.sm),
-            Text('翻译中...', style: TextStyle(fontSize: 14)),
+            Text(context.l10n.transTranslating, style: TextStyle(fontSize: 14)),
           ],
         ),
       );
@@ -267,7 +268,7 @@ class _InlineTranslationBlockState
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: const Text('保存到生词卡', style: TextStyle(fontSize: 13)),
+                label: const Text(context.l10n.transSaveToWordCard, style: TextStyle(fontSize: 13)),
                 onPressed: widget.onSaveToKnowledge,
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(

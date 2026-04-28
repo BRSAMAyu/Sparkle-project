@@ -110,7 +110,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           final filteredErrors = _filterErrors(errors);
 
           if (filteredErrors.isEmpty) {
-            return _buildEmptyState(context, customMessage: '没有符合条件的错题');
+            return _buildEmptyState(context, customMessage: context.l10n.ebNoMatchingErrors);
           }
 
           // 复习完成
@@ -542,7 +542,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.error('提交失败: $e'),
+        SparkleSnackBar.error(context.l10n.ebSubmitFailed(e.toString())),
       );
     }
   }
@@ -828,7 +828,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text(context.l10n.ebConfirmExit),
-        content: const Text('复习还未完成，确定要退出吗？'),
+        content: const Text(context.l10n.ebConfirmExitDesc),
         actions: [
           SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),

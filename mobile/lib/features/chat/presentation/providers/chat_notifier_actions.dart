@@ -663,7 +663,7 @@ extension ChatNotifierActions on ChatNotifier {
       notificationData: {
         'id':
             'achievement-progress-${event.achievementId}-${event.milestonePercent}-${now.microsecondsSinceEpoch}',
-        'title': '${event.achievementName} 进度达到 ${event.milestonePercent}%',
+        'title': S.chatAchievementProgress(name: event.achievementName, percent: event.milestonePercent),
         'content': event.message,
         'type': 'achievement_progress',
         'priority': 'medium',

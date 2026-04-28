@@ -145,7 +145,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
             _isSaving = false;
           });
 
-          AppFeedback.error(context, '保存失败，请重试');
+          AppFeedback.error(context, context.l10n.transSaveFailed);
         }
       }
     } on ServiceUnavailableException catch (e) {
@@ -178,7 +178,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         setState(() {
           _isSaving = false;
         });
-        AppFeedback.error(context, '未知错误: $e');
+        AppFeedback.error(context, context.l10n.transUnknownError(e.toString()));
       }
     }
   }
@@ -230,7 +230,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton(
-                    label: _saved ? context.l10n.transSaved : (_isSaving ? '保存中...' : context.l10n.transWordCard),
+                    label: _saved ? context.l10n.transSaved : (_isSaving ? context.l10n.transSaving : context.l10n.transWordCard),
                     icon: Icon(
                       _saved ? Icons.bookmark : Icons.bookmark_add_outlined,
                       size: DS.iconSizeXs,
@@ -257,7 +257,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           SizedBox(width: DS.sm),
-          Text('翻译中...', style: TextStyle(fontSize: 14)),
+          Text(context.l10n.transTranslating, style: TextStyle(fontSize: 14)),
         ],
       );
 

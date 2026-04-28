@@ -1654,7 +1654,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
 
     if (!_endTime.isAfter(_startTime)) {
       setState(() {
-        _saveError = '结束时间需要晚于开始时间';
+        _saveError = context.l10n.calEndAfterStart;
       });
       return;
     }
@@ -1706,7 +1706,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _saveError = '创建日程失败：$e';
+        _saveError = context.l10n.calCreateEventFailed(e.toString());
       });
     } finally {
       if (mounted) {

@@ -46,7 +46,7 @@ class _AuroraCalibrationStripState
       AppFeedback.success(context, _successMessage(response));
     } catch (error) {
       if (!mounted) return;
-      AppFeedback.error(context, '提交校准反馈失败：$error');
+      AppFeedback.error(context, context.l10n.auroraFeedbackFailed(error.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -301,7 +301,7 @@ class _CalibrationCardTile extends StatelessWidget {
                 ),
               ),
               SparkleButton(
-                label: '不对',
+                label: context.l10n.auroraNotRight,
                 variant: ButtonVariant.ghost,
                 size: ButtonSize.small,
                 loading: pendingResponse == AuroraCalibrationResponse.incorrect,
@@ -311,7 +311,7 @@ class _CalibrationCardTile extends StatelessWidget {
                 ),
               ),
               SparkleButton(
-                label: '以后别这样判断',
+                label: context.l10n.auroraDontJudge,
                 variant: ButtonVariant.ghost,
                 size: ButtonSize.small,
                 loading: pendingResponse == AuroraCalibrationResponse.mute,

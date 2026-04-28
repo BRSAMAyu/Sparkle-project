@@ -106,7 +106,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
 
                 if (coreNodes.isEmpty && optionalNodes.isEmpty) {
                   return const Center(
-                    child: Text('无需前置知识，可以直接开始学习！'),
+                    child: Text(context.l10n.insNoPrereq),
                   );
                 }
 
@@ -168,7 +168,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                   builder: (context, constraints) {
                     final compact = constraints.maxWidth < 420;
                     final taskButton = SparkleButton(
-                      label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
+                      label: _isGeneratingTaskPath ? '正在生成...' : context.l10n.insQuickPath,
                       icon: _isGeneratingTaskPath
                           ? const SizedBox(
                               width: 16,
@@ -182,7 +182,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                       loading: _isGeneratingTaskPath,
                     );
                     final planButton = SparkleButton(
-                      label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
+                      label: _isGeneratingFullPlan ? '正在生成...' : context.l10n.insFullPlan,
                       icon: _isGeneratingFullPlan
                           ? const SizedBox(
                               width: 16,
@@ -455,7 +455,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     try {
       final task = await ref.read(taskRepositoryProvider).createTask(
             TaskCreate(
-              title: '学习：${node.name}',
+              title: context.l10n.insLearnNode,
               type: TaskType.learning,
               estimatedMinutes: 25,
               difficulty: 2,
@@ -471,7 +471,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('创建失败：$e');
+      _setInlineError(context.l10n.insCreateFailed(e.toString()));
     }
   }
 

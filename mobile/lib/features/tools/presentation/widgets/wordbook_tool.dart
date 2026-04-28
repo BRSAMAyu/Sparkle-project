@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class WordbookTool extends ConsumerStatefulWidget {
   const WordbookTool({
@@ -115,7 +116,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('设置重要程度'),
+          title: const Text(context.l10n.toolsWbSetImportance),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -133,7 +134,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   (index) {
                     final starValue = index + 1;
                     return ToolChoiceChip(
-                      label: '$starValue 星',
+                      label: context.l10n.toolsWbStarCount,
                       selected: selectedImportance == starValue,
                       onTap: () {
                         setDialogState(() {
@@ -150,11 +151,11 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           ),
           actions: [
             SparkleButton.ghost(
-              label: '取消',
+              label: context.l10n.toolsWbCancel,
               onPressed: () => Navigator.pop(context),
             ),
             SparkleButton(
-              label: '保存',
+              label: context.l10n.toolsWbSave,
               onPressed: () async {
                 await ref
                     .read(vocabularyProvider.notifier)
@@ -195,18 +196,18 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
         : ToolShell(
             surface: widget.surface,
             icon: Icons.menu_book_rounded,
-            title: '生词本',
-            subtitle: '把查词结果变成可复习资产。支持搜索、重要度筛选和快闪式复习。',
+            title: context.l10n.toolsWbTitle,
+            subtitle: context.l10n.toolsWbSubtitle,
             accentColor: DS.success,
             compactHeader: true,
             heroChips: [
               ToolHeroChip(
-                label: '$totalCount 个词条',
+                label: context.l10n.toolsWbTotalCount,
                 accentColor: DS.success,
                 icon: Icons.bookmarks_rounded,
               ),
               ToolHeroChip(
-                label: '$dueCount 个待复习',
+                label: context.l10n.toolsWbDueCount,
                 accentColor: DS.success,
                 icon: Icons.schedule_rounded,
               ),
@@ -216,19 +217,19 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 ToolMetricRow(
                   children: [
                     ToolMetricCard(
-                      label: '总词条',
+                      label: context.l10n.toolsWbTotal,
                       value: '$totalCount',
                       accentColor: DS.success,
                       icon: Icons.library_books_rounded,
                     ),
                     ToolMetricCard(
-                      label: '待复习',
+                      label: context.l10n.toolsWbDue,
                       value: '$dueCount',
                       accentColor: DS.warning,
                       icon: Icons.pending_actions_rounded,
                     ),
                     ToolMetricCard(
-                      label: '高重要度',
+                      label: context.l10n.toolsWbHighImportance,
                       value: '$highImportance',
                       accentColor: DS.warning,
                       icon: Icons.star_rounded,
@@ -238,14 +239,14 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 const SizedBox(height: DS.spacing16),
                 ToolSectionCard(
                   accentColor: DS.success,
-                  title: '筛选与搜索',
-                  subtitle: '先用筛选缩小范围，再用搜索定位具体词条。',
+                  title: context.l10n.toolsWbFilter,
+                  subtitle: context.l10n.toolsWbFilterDesc,
                   child: Column(
                     children: [
                       TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: '搜索单词或释义',
+                          hintText: context.l10n.toolsWbSearchHint,
                           prefixIcon: const Icon(Icons.search_rounded),
                           suffixIcon: _searchController.text.isEmpty
                               ? null
@@ -286,8 +287,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     unselectedLabelColor: DS.textSecondary,
                     dividerColor: Colors.transparent,
                     tabs: const [
-                      Tab(text: '待复习'),
-                      Tab(text: '全部词条'),
+                      Tab(text: context.l10n.toolsWbDue),
+                      Tab(text: context.l10n.toolsWbAll),
                     ],
                   ),
                 ),
@@ -308,7 +309,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             footer: dueCount == 0
                 ? null
                 : SparkleButton(
-                    label: '开始复习',
+                    label: context.l10n.toolsWbStartReview,
                     onPressed: _startReview,
                     icon: const Icon(Icons.play_arrow_rounded),
                     expand: true,
@@ -343,7 +344,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             icon: isReviewList
                 ? Icons.check_circle_outline_rounded
                 : Icons.library_books_outlined,
-            title: isReviewList ? '当前没有待复习单词' : '生词本还是空的',
+            title: isReviewList ? context.l10n.toolsWbEmptyNoDue : context.l10n.toolsWbEmpty,
             description:
                 isReviewList ? '继续通过查词工具积累新词，或者稍后再来复习。' : '先去查词，把值得反复看的词条收进来。',
             accentColor: isReviewList ? DS.warning : DS.success,
@@ -364,15 +365,15 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             final confirmed = await showSensoryDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('删除单词'),
-                content: Text('确定要从生词本中删除 "${word['word']}" 吗？'),
+                title: const Text(context.l10n.toolsWbDeleteTitle),
+                content: Text('${context.l10n.toolsWbDeleteConfirm} "${word['word']}"${context.l10n.toolsWbDeleteSuffix}'),
                 actions: [
                   SparkleButton.ghost(
-                    label: '取消',
+                    label: context.l10n.toolsWbCancel,
                     onPressed: () => Navigator.pop(context, false),
                   ),
                   SparkleButton.destructive(
-                    label: '删除',
+                    label: context.l10n.toolsWbDelete,
                     onPressed: () => Navigator.pop(context, true),
                   ),
                 ],
@@ -398,8 +399,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     return ToolShell(
       surface: widget.surface,
       icon: Icons.auto_stories_rounded,
-      title: '复习模式',
-      subtitle: '以快闪卡片方式确认是否记住当前词条。',
+      title: context.l10n.toolsWbReviewMode,
+      subtitle: context.l10n.toolsWbReviewDesc,
       accentColor: DS.warning,
       compactHeader: true,
       heroChips: [
@@ -409,7 +410,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           icon: Icons.layers_rounded,
         ),
         ToolHeroChip(
-          label: _showAnswer ? '答案已展开' : '点击卡片看答案',
+          label: _showAnswer ? context.l10n.toolsWbAnswerRevealed : context.l10n.toolsWbTapForAnswer,
           accentColor: DS.warning,
           icon: Icons.visibility_rounded,
         ),
@@ -488,14 +489,14 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           final actions = _showAnswer
               ? <Widget>[
                   SparkleButton(
-                    label: '不认识',
+                    label: context.l10n.toolsWbDontKnow,
                     variant: ButtonVariant.ghost,
                     onPressed: () => _handleReview(false),
                     icon: const Icon(Icons.close_rounded),
                     expand: true,
                   ),
                   SparkleButton(
-                    label: '认识',
+                    label: context.l10n.toolsWbKnow,
                     onPressed: () => _handleReview(true),
                     icon: const Icon(Icons.check_rounded),
                     expand: true,
@@ -503,13 +504,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 ]
               : <Widget>[
                   SparkleButton(
-                    label: '退出复习',
+                    label: context.l10n.toolsWbExitReview,
                     variant: ButtonVariant.ghost,
                     onPressed: () => setState(() => _isReviewMode = false),
                     expand: true,
                   ),
                   SparkleButton(
-                    label: '显示答案',
+                    label: context.l10n.toolsWbShowAnswer,
                     onPressed: () => setState(() => _showAnswer = true),
                     icon: const Icon(Icons.visibility_rounded),
                     expand: true,

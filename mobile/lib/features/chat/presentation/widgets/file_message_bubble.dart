@@ -83,7 +83,7 @@ class _FileMessageBubbleWithThumbnailState
       AppFeedback.success(context, context.l10n.chatFileSavedToLibrary);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '保存失败: $e');
+      AppFeedback.error(context, context.l10n.chatFileSaveFailed(error: e.toString()));
     } finally {
       if (mounted) {
         setState(() => _isSavingToLibrary = false);

@@ -58,16 +58,16 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
   }
 
   String get _elapsedLabel {
-    if (widget.elapsedMinutes < 60) return '${widget.elapsedMinutes} 分钟';
+    if (widget.elapsedMinutes < 60) return context.l10n.chatStaleMinutes(minutes: widget.elapsedMinutes);
     if (widget.elapsedMinutes >= 1440) {
       final days = widget.elapsedMinutes ~/ 1440;
       final remaining = widget.elapsedMinutes % 1440;
       final hours = remaining ~/ 60;
-      return hours > 0 ? '$days 天 $hours 小时' : '$days 天';
+      return hours > 0 ? context.l10n.chatStaleDaysHour(days: days, hours: hours) : context.l10n.chatStaleDaysOnly(days: days);
     }
     final hours = widget.elapsedMinutes ~/ 60;
     final mins = widget.elapsedMinutes % 60;
-    return mins > 0 ? '$hours 小时 $mins 分钟' : '$hours 小时';
+    return mins > 0 ? context.l10n.chatStaleHoursMins(hours: hours, mins: mins) : context.l10n.chatStaleHoursOnly(hours: hours);
   }
 
   @override
@@ -150,7 +150,7 @@ class _Header extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '你离开了 $elapsedLabel，欢迎回来 👋',
+                context.l10n.chatStaleWelcomeBack(elapsed: elapsedLabel),
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w600,

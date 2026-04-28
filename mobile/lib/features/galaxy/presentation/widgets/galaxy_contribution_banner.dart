@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
@@ -74,7 +75,7 @@ class GalaxyContributionBanner extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '正在汇总你对星图的贡献...',
+                          context.l10n.galaxyContribLoading,
                           style: TextStyle(
                             color: foreground,
                             fontSize: 14,
@@ -89,7 +90,7 @@ class GalaxyContributionBanner extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '开始你的第一次学习',
+                            context.l10n.galaxyContribStartLearning,
                             style: TextStyle(
                               color: foreground,
                               fontSize: 16,
@@ -98,7 +99,7 @@ class GalaxyContributionBanner extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '完成一项学习、修复一道错题，或者通过对话纠正理解后，这里会记录你怎样一步步改变这张星图。',
+                            context.l10n.galaxyContribIntro,
                             style: TextStyle(
                               color: secondary,
                               fontSize: 13,
@@ -115,19 +116,19 @@ class GalaxyContributionBanner extends StatelessWidget {
                             runSpacing: 10,
                             children: [
                               _ContributionMetricPill(
-                                label: '首次点亮',
+                                label: context.l10n.galaxyContribFirstLight,
                                 count: stats.firstActivationCount,
                                 foreground: foreground,
                                 background: foreground.withValues(alpha: 0.08),
                               ),
                               _ContributionMetricPill(
-                                label: '错题修复',
+                                label: context.l10n.galaxyContribErrorFix,
                                 count: stats.errorRepairedCount,
                                 foreground: foreground,
                                 background: foreground.withValues(alpha: 0.08),
                               ),
                               _ContributionMetricPill(
-                                label: '对话更新',
+                                label: context.l10n.galaxyContribChatUpdate,
                                 count: stats.conversationUpdatedCount,
                                 foreground: foreground,
                                 background: foreground.withValues(alpha: 0.08),
@@ -136,7 +137,7 @@ class GalaxyContributionBanner extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            '点按查看我的贡献详情',
+                            context.l10n.galaxyContribTapDetails,
                             style: TextStyle(
                               color: secondary,
                               fontSize: 12,
@@ -191,7 +192,7 @@ class _ContributionMetricPill extends StatelessWidget {
               const SizedBox(height: 2),
               SparkleCountUp(
                 end: count,
-                suffix: ' 个节点',
+                suffix: context.l10n.galaxyContribNodesSuffix,
                 style: TextStyle(
                   color: foreground,
                   fontSize: 14,
@@ -238,7 +239,7 @@ class GalaxyContributionDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '我的贡献详情',
+              context.l10n.galaxyContribMyDetails,
               style: TextStyle(
                 color: foreground,
                 fontSize: 20,
@@ -247,7 +248,7 @@ class GalaxyContributionDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '星图会把你的第一次点亮、错题修复和对话纠偏都记录下来。',
+              context.l10n.galaxyContribDetailIntro,
               style: TextStyle(
                 color: secondary,
                 fontSize: 13,
@@ -263,24 +264,24 @@ class GalaxyContributionDetailSheet extends StatelessWidget {
                 shrinkWrap: true,
                 children: [
                   _ContributionSection(
-                    title: '第一次学习激活',
-                    emptyText: '还没有节点被你第一次点亮。',
+                    title: context.l10n.galaxyContribFirstLearnTitle,
+                    emptyText: context.l10n.galaxyContribFirstLearnEmpty,
                     items: stats.firstActivatedNodes,
                     foreground: foreground,
                     secondary: secondary,
                   ),
                   const SizedBox(height: 16),
                   _ContributionSection(
-                    title: '通过对话纠正',
-                    emptyText: '还没有节点因对话写回而更新。',
+                    title: context.l10n.galaxyContribChatCorrectionTitle,
+                    emptyText: context.l10n.galaxyContribChatCorrectionEmpty,
                     items: stats.conversationUpdatedNodes,
                     foreground: foreground,
                     secondary: secondary,
                   ),
                   const SizedBox(height: 16),
                   _ContributionSection(
-                    title: '复习巩固',
-                    emptyText: '还没有节点因复习修复而提升。',
+                    title: context.l10n.galaxyContribReviewTitle,
+                    emptyText: context.l10n.galaxyContribReviewEmpty,
                     items: stats.errorRepairedNodes,
                     foreground: foreground,
                     secondary: secondary,

@@ -272,8 +272,8 @@ class SeedItemCard extends StatelessWidget {
       showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('删除内容'),
-          content: const Text('确定要删除这个内容吗？'),
+          title: const Text(context.l10n.seedDeleteContent),
+          content: const Text(context.l10n.seedDeleteConfirm),
           actions: [
             SparkleButton.ghost(
               onPressed: () => Navigator.pop(context),

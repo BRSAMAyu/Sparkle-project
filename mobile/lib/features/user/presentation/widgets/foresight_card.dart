@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
@@ -22,7 +23,7 @@ class ForesightCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '前瞻提示',
+              context.l10n.userForesightHint,
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -31,7 +32,7 @@ class ForesightCard extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Text(
               (value?.hintText ?? '').isEmpty
-                  ? '暂时还没有可展示的前瞻提示，后端会继续观察。'
+                  ? context.l10n.userForesightEmpty
                   : value!.hintText!,
               style: DS.bodyMedium.copyWith(color: DS.textPrimary),
             ),
@@ -74,11 +75,11 @@ class ForesightCard extends StatelessWidget {
   String _labelForDim(String dim) {
     switch (dim) {
       case 'execution_stability':
-        return '执行稳定度';
+        return context.l10n.userStabilityScore;
       case 'schedule_fit':
-        return '节奏贴合';
+        return context.l10n.userRhythmFit;
       case 'overload_risk':
-        return '过载风险';
+        return context.l10n.userOverloadRisk;
       default:
         return dim;
     }

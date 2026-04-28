@@ -199,7 +199,7 @@ class _AvatarSelectionDialogState extends State<AvatarSelectionDialog> {
           Text(context.l10n.avatarSelectTitle),
           const SizedBox(height: DS.spacing6),
           Text(
-            '挑一个更贴近你气质的形象，默认就能直接应用。',
+            context.l10n.userAvatarPickerHint,
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
         ],
@@ -477,20 +477,20 @@ class _AvatarSelectionDialogState extends State<AvatarSelectionDialog> {
   }
 
   String _collectionLabel(AvatarCollection collection) => switch (collection) {
-        AvatarCollection.all => '全部',
-        AvatarCollection.persona => '人物感',
-        AvatarCollection.playful => '活泼感',
-        AvatarCollection.abstract => '抽象感',
-        AvatarCollection.calm => '安静感',
+        AvatarCollection.all => context.l10n.userCollectionAll,
+        AvatarCollection.persona => context.l10n.userCollectionPersona,
+        AvatarCollection.playful => context.l10n.userCollectionPlayful,
+        AvatarCollection.abstract => context.l10n.userCollectionAbstract,
+        AvatarCollection.calm => context.l10n.userCollectionCalm,
       };
 
   String _collectionDescription(AvatarCollection collection) =>
       switch (collection) {
-        AvatarCollection.all => '从人物、抽象到轻松风格里挑一个更像你的头像。',
-        AvatarCollection.persona => '更像角色形象，适合想保留个性辨识度的主页氛围。',
-        AvatarCollection.playful => '更轻松、更有情绪张力，适合希望主页更灵动的人。',
-        AvatarCollection.abstract => '更干净、图形化，适合偏系统感和科技感的风格。',
-        AvatarCollection.calm => '更柔和克制，适合长时间陪伴型的个人空间。',
+        AvatarCollection.all => context.l10n.userCollectionAllHint,
+        AvatarCollection.persona => context.l10n.userCollectionPersonaHint,
+        AvatarCollection.playful => context.l10n.userCollectionPlayfulHint,
+        AvatarCollection.abstract => context.l10n.userCollectionAbstractHint,
+        AvatarCollection.calm => context.l10n.userCollectionCalmHint,
       };
 
   String _localizedLabel(BuildContext context, String id) {

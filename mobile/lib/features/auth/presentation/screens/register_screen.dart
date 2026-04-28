@@ -236,7 +236,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             );
                             setState(() => _acceptedTos = value ?? false);
                           },
-                          title: const Text('我已阅读并同意《用户协议》'),
+                          title: const Text(context.l10n.authAgreeTerms),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                         ),
@@ -260,7 +260,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             );
                             setState(() => _acceptedPrivacy = value ?? false);
                           },
-                          title: const Text('我已阅读并同意《隐私政策》'),
+                          title: const Text(context.l10n.authAgreePrivacy),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                         ),

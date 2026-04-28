@@ -287,19 +287,19 @@ class _ClaimTile extends StatelessWidget {
             children: [
               if ((claim['confidence_label']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: '置信 ${claim['confidence_label']}',
+                  label: context.l10n.chatProfileConfidence(level: claim['confidence_label']}',
                   color: DS.primaryBase,
                   background: DS.primaryBase.withValues(alpha: 0.08),
                 ),
               if ((claim['source']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: '来源 ${claim['source']}',
+                  label: context.l10n.chatProfileSource(source: claim['source']}',
                   color: DS.neutral700,
                   background: DS.neutral100,
                 ),
               if ((claim['freshness']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: '新鲜度 ${claim['freshness']}',
+                  label: context.l10n.chatProfileFreshness(level: claim['freshness']}',
                   color: DS.neutral700,
                   background: DS.neutral100,
                 ),
@@ -420,7 +420,7 @@ class _PredictionTile extends StatelessWidget {
           if ((item['recommended_action']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '建议动作：${item['recommended_action']}',
+              context.l10n.chatProfileSuggestedAction(action: item['recommended_action']}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral900,
                     fontWeight: DS.fontWeightSemibold,

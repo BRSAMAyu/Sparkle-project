@@ -52,13 +52,13 @@ class ExecutionTemplateModel {
   String get modeLabel {
     switch (executionMode) {
       case ExecutionMode.human:
-        return '人工';
+        return S.taskModeHuman;
       case ExecutionMode.agent:
         return 'AI';
       case ExecutionMode.hybrid:
-        return '协作';
+        return S.taskModeHybrid;
       case ExecutionMode.unknown:
-        return '未知';
+        return S.taskModeUnknown;
     }
   }
 }

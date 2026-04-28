@@ -244,7 +244,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
               orElse: () => '',
             );
         if (actionLabel.isNotEmpty) {
-          return '你现在可以先做：$actionLabel';
+          return context.l10n.chatPredictionYouCanDoFirst(action: actionLabel);
         }
         if (insight.summary.trim().isNotEmpty) {
           return context.l10n.chatPredictionNextStepsReady;

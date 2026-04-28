@@ -306,7 +306,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                         controller: _goalController,
                         decoration: const InputDecoration(
                           labelText: '冲刺目标',
-                          hintText: '例如：两周内完成 50 道 LeetCode',
+                          hintText: context.l10n.communityCreateGroupGoalHint,
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {

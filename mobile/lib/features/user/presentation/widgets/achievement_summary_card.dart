@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 
@@ -21,7 +22,7 @@ class AchievementSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '成就摘要',
+              context.l10n.userAchievementSummary,
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -38,15 +39,15 @@ class AchievementSummaryCard extends StatelessWidget {
             const SizedBox(height: DS.spacing12),
             if (unlocks.isEmpty && progress.isEmpty)
               Text(
-                '近期还没有新的高光或进度变化，继续推进会在这里留下痕迹。',
+                context.l10n.userNoRecentHighlights,
                 style: DS.bodyMedium.copyWith(color: DS.textSecondary),
               )
             else ...[
               if (unlocks.isNotEmpty)
-                _MetricLine(label: '最近解锁', value: unlocks.first.name),
+                _MetricLine(label: context.l10n.userLatestUnlock, value: unlocks.first.name),
               if (progress.isNotEmpty)
                 _MetricLine(
-                  label: '当前推进',
+                  label: context.l10n.userCurrentProgress,
                   value:
                       '${progress.first.name} ${(progress.first.progress * 100).round()}%',
                 ),

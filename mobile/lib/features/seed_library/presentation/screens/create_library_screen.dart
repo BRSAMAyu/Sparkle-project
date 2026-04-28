@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Create Library Screen
 /// Allows users to create a new seed library
@@ -72,7 +73,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
         setState(() {
           _isCreating = false;
         });
-        AppFeedback.error(context, '创建失败：$e');
+        AppFeedback.error(context, context.l10n.seedCreateFailed(e.toString()));
       }
     }
   }
@@ -104,13 +105,13 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
   Widget build(BuildContext context) => SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
-          title: const Text('创建种子库'),
+          title: const Text(context.l10n.seedCreateTitle),
         ),
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(DS.spacing16),
             child: SparkleButton(
-              label: '创建种子库',
+              label: context.l10n.seedCreateTitle,
               onPressed: _createLibrary,
               loading: _isCreating,
               expand: true,
@@ -128,8 +129,8 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                   child: TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
-                      labelText: '名称',
-                      hintText: '输入种子库名称',
+                      labelText: context.l10n.seedNameLabel,
+                      hintText: context.l10n.seedNameHint,
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) {
@@ -147,8 +148,8 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                   child: TextFormField(
                     controller: _descriptionController,
                     decoration: const InputDecoration(
-                      labelText: '描述',
-                      hintText: '输入种子库描述（可选）',
+                      labelText: context.l10n.seedDescLabel,
+                      hintText: context.l10n.seedDescHint,
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 3,
@@ -250,7 +251,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                       child: TextField(
                         controller: _tagsController,
                         decoration: const InputDecoration(
-                          hintText: '输入标签',
+                          hintText: context.l10n.seedTagHint,
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: DS.spacing12,

@@ -117,7 +117,7 @@ class _GroupKnowledgeBaseViewState
 
   Future<void> _openFile(GroupFileInfo file) async {
     if (!file.canDownload) {
-      AppFeedback.info(context, '暂无下载权限');
+      AppFeedback.info(context, context.l10n.communityNoDownloadPermission);
       return;
     }
     final presigned = await ref
@@ -134,10 +134,10 @@ class _GroupKnowledgeBaseViewState
           .read(fileRepositoryProvider)
           .copyGroupFileToMyLibrary(widget.groupId, file.fileId);
       if (!mounted) return;
-      AppFeedback.success(context, '已保存到我的资料库');
+      AppFeedback.success(context, context.l10n.communitySavedToLibrary);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '保存失败: $e');
+      AppFeedback.error(context, context.l10n.communitySaveFailed(e.toString()));
     }
   }
 
@@ -147,7 +147,7 @@ class _GroupKnowledgeBaseViewState
     setState(() => _officialOverrides[file.fileId] = nextValue);
     AppFeedback.success(
       context,
-      nextValue ? '已标记为官方资料' : '已移除官方资料标记',
+      nextValue ? context.l10n.communityMarkedOfficial : context.l10n.communityRemovedOfficial,
     );
   }
 
@@ -177,22 +177,22 @@ class _GroupKnowledgeBaseViewState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '添加到知识库',
+                    context.l10n.communityAddToKnowledgeBase,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    '填写资料说明后开始上传。上传完成后会自动进入群知识库。',
+                    context.l10n.communityUploadHint,
                     style: TextStyle(color: DS.textSecondary, height: 1.4),
                   ),
                   const SizedBox(height: DS.spacing16),
                   TextField(
                     controller: categoryController,
                     decoration: const InputDecoration(
-                      labelText: '分类',
-                      hintText: '例如：真题、写作模板、词汇表',
+                      labelText: context.l10n.communityCategory,
+                      hintText: context.l10n.communityCategoryHint,
                     ),
                   ),
                   const SizedBox(height: DS.spacing12),
@@ -200,15 +200,15 @@ class _GroupKnowledgeBaseViewState
                     controller: descriptionController,
                     maxLines: 4,
                     decoration: const InputDecoration(
-                      labelText: '描述',
-                      hintText: '补充这份资料适合谁、怎么使用、重点看哪里。',
+                      labelText: context.l10n.communityDescription,
+                      hintText: context.l10n.communityDescriptionHint,
                     ),
                   ),
                   const SizedBox(height: DS.spacing12),
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('加入群星图'),
-                    subtitle: const Text('让这份资料也出现在群组知识星图索引里'),
+                    title: Text(context.l10n.communityAddToGroupGalaxy),
+                    subtitle: Text(context.l10n.communityGalaxyIndexHint),
                     value: addToGalaxy,
                     onChanged: (value) =>
                         setModalState(() => addToGalaxy = value),
@@ -216,8 +216,8 @@ class _GroupKnowledgeBaseViewState
                   if (_isAdmin)
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('标记为官方资料'),
-                      subtitle: const Text('官方资料会获得金色星标并优先展示'),
+                      title: Text(context.l10n.communityMarkAsOfficial),
+                      subtitle: Text(context.l10n.communityOfficialHint),
                       value: markOfficial,
                       onChanged: (value) =>
                           setModalState(() => markOfficial = value),
@@ -234,7 +234,7 @@ class _GroupKnowledgeBaseViewState
                       const SizedBox(width: DS.spacing12),
                       Expanded(
                         child: SparkleButton.primary(
-                          label: '继续上传',
+                          label: context.l10n.communityContinueUpload,
                           onPressed: () => Navigator.pop(context, true),
                         ),
                       ),
@@ -286,7 +286,7 @@ class _GroupKnowledgeBaseViewState
               }
             });
             _reload();
-            AppFeedback.success(context, '资料已加入群知识库');
+            AppFeedback.success(context, context.l10n.communityFileAddedToKB);
           },
           onError: (message) {
             if (!mounted) return;
@@ -353,12 +353,12 @@ class _GroupKnowledgeBaseViewState
                                 ),
                                 _MetaChip(
                                   icon: Icons.download_outlined,
-                                  label: '${file.downloadCount} 次下载',
+                                  label: context.l10n.communityDownloadsCount(file.downloadCount),
                                 ),
                                 if (_isOfficial(file))
                                   const _MetaChip(
                                     icon: Icons.star_rounded,
-                                    label: '官方资料',
+                                    label: context.l10n.communityOfficialFile,
                                     accentColor: Color(0xFFE0A800),
                                   ),
                               ],
@@ -411,7 +411,7 @@ class _GroupKnowledgeBaseViewState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  file.sharedBy?.displayName ?? '群成员',
+                                  context.l10n.communityGroupMemberFallback,
                                   style: TextStyle(
                                     fontWeight: DS.fontWeightSemiBold,
                                     color: DS.textPrimary,
@@ -419,7 +419,7 @@ class _GroupKnowledgeBaseViewState
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '贡献者资料页',
+                                  context.l10n.communityContributorProfile,
                                   style: TextStyle(color: DS.textSecondary),
                                 ),
                               ],
@@ -438,7 +438,7 @@ class _GroupKnowledgeBaseViewState
                     children: [
                       Expanded(
                         child: SparkleButton.ghost(
-                          label: '查看',
+                          label: context.l10n.communityView,
                           icon: const Icon(Icons.open_in_new_rounded),
                           onPressed: () => _openFile(file),
                         ),
@@ -446,7 +446,7 @@ class _GroupKnowledgeBaseViewState
                       const SizedBox(width: DS.spacing12),
                       Expanded(
                         child: SparkleButton.primary(
-                          label: '保存到我的资料库',
+                          label: context.l10n.communitySaveToMyLibrary,
                           icon: const Icon(Icons.bookmark_add_outlined),
                           onPressed: () => _saveToMyLibrary(file),
                         ),
@@ -486,7 +486,7 @@ class _GroupKnowledgeBaseViewState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '群知识库',
+                          context.l10n.communityGroupKnowledgeBase,
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -494,7 +494,7 @@ class _GroupKnowledgeBaseViewState
                         ),
                         const SizedBox(height: DS.spacing4),
                         Text(
-                          '共享学习资料、真题、模板和群内精选知识。',
+                          context.l10n.communityKBDescription,
                           style: TextStyle(
                             color: DS.textSecondary,
                             height: 1.35,
@@ -518,7 +518,7 @@ class _GroupKnowledgeBaseViewState
                 builder: (context, constraints) {
                   final searchField = TextField(
                     decoration: InputDecoration(
-                      hintText: '搜索群内资料内容、分类或贡献者',
+                      hintText: context.l10n.communitySearchKBHint,
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
@@ -532,7 +532,7 @@ class _GroupKnowledgeBaseViewState
                   );
 
                   final uploadButton = SparkleButton.primary(
-                    label: '添加到知识库',
+                    label: context.l10n.communityAddToKnowledgeBase,
                     icon: const Icon(Icons.add_circle_outline_rounded),
                     onPressed: _showUploadFlow,
                   );
@@ -568,19 +568,19 @@ class _GroupKnowledgeBaseViewState
                   scrollDirection: Axis.horizontal,
                   children: [
                     _SortChip(
-                      label: '最新',
+                      label: context.l10n.communitySortLatest,
                       selected: _sort == KnowledgeBaseSort.recency,
                       onTap: () =>
                           setState(() => _sort = KnowledgeBaseSort.recency),
                     ),
                     _SortChip(
-                      label: '最受欢迎',
+                      label: context.l10n.communitySortPopular,
                       selected: _sort == KnowledgeBaseSort.popularity,
                       onTap: () =>
                           setState(() => _sort = KnowledgeBaseSort.popularity),
                     ),
                     _SortChip(
-                      label: '可信度',
+                      label: context.l10n.communitySortTrustLevel,
                       selected: _sort == KnowledgeBaseSort.trustLevel,
                       onTap: () =>
                           setState(() => _sort = KnowledgeBaseSort.trustLevel),
@@ -599,7 +599,7 @@ class _GroupKnowledgeBaseViewState
                       scrollDirection: Axis.horizontal,
                       children: [
                         _CategoryChip(
-                          label: '全部',
+                          label: context.l10n.communityFilterAll,
                           selected: _selectedCategory == null,
                           onTap: () {
                             setState(() => _selectedCategory = null);
@@ -608,7 +608,7 @@ class _GroupKnowledgeBaseViewState
                         ),
                         for (final item in categories)
                           _CategoryChip(
-                            label: item.category ?? '未分类',
+                            label: item.category ?? context.l10n.communityUncategorized,
                             selected: _selectedCategory == item.category,
                             onTap: () {
                               setState(() => _selectedCategory = item.category);
@@ -632,7 +632,7 @@ class _GroupKnowledgeBaseViewState
               }
               if (snapshot.hasError) {
                 return Center(
-                  child: Text('加载失败: ${snapshot.error}'),
+                  child: Text(context.l10n.communityLoadFailed(snapshot.error.toString())),
                 );
               }
 
@@ -841,7 +841,7 @@ class _KnowledgeBaseListCard extends StatelessWidget {
                         [
                           _typeLabel(file.mimeType, file.fileName),
                           _formatSize(file.fileSize),
-                          '$formattedDate 上传',
+                          context.l10n.communityUploadedOn(formattedDate),
                         ].join(' · '),
                         style: TextStyle(color: DS.textSecondary),
                       ),
@@ -887,7 +887,7 @@ class _KnowledgeBaseListCard extends StatelessWidget {
                         ),
                         const SizedBox(width: DS.spacing8),
                         Text(
-                          file.sharedBy?.displayName ?? '群成员',
+                          context.l10n.communityGroupMemberFallback,
                           style: TextStyle(
                             fontSize: 12,
                             color: DS.textPrimary,
@@ -904,7 +904,7 @@ class _KnowledgeBaseListCard extends StatelessWidget {
                 if (isInGalaxy) ...[
                   const SizedBox(width: DS.spacing8),
                   const _InlinePill(
-                    label: '群星图',
+                    label: context.l10n.communityGroupGalaxy,
                     icon: Icons.auto_awesome_outlined,
                   ),
                 ],
@@ -1032,7 +1032,7 @@ class _KnowledgeBaseGridCard extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                description.isEmpty ? '点击查看预览与详情' : description,
+                description.isEmpty ? context.l10n.communityClickToPreview : description,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: DS.textSecondary, height: 1.35),
@@ -1052,7 +1052,7 @@ class _KnowledgeBaseGridCard extends StatelessWidget {
                   ),
                   if (isInGalaxy)
                     const _InlinePill(
-                      label: '群星图',
+                      label: context.l10n.communityGroupGalaxy,
                       icon: Icons.auto_awesome_outlined,
                     ),
                 ],
@@ -1201,7 +1201,7 @@ class _DocumentPreviewPanelState extends ConsumerState<_DocumentPreviewPanel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '预览摘录',
+                    context.l10n.communityPreviewExcerpt,
                     style: TextStyle(
                       fontWeight: DS.fontWeightSemiBold,
                       color: DS.textPrimary,
@@ -1210,7 +1210,7 @@ class _DocumentPreviewPanelState extends ConsumerState<_DocumentPreviewPanel> {
                   const SizedBox(height: DS.spacing8),
                   Text(
                     widget.description.isEmpty
-                        ? '文件已上传到群知识库。若系统已生成预览，将显示首页缩略图；保存到个人资料库后也会触发后续处理。'
+                        ? context.l10n.communityPreviewHint
                         : widget.description,
                     style: TextStyle(
                       color: DS.textSecondary,
@@ -1250,7 +1250,7 @@ class _LockedKnowledgeBase extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                '加入群组后可浏览共享资料',
+                context.l10n.communityJoinToBrowse,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -1258,7 +1258,7 @@ class _LockedKnowledgeBase extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '群知识库会展示群成员共享的学习材料、官方文档和精选资源。',
+                context.l10n.communityJoinToBrowseHint,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: DS.textSecondary, height: 1.4),
               ),
@@ -1289,7 +1289,7 @@ class _KnowledgeBaseEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing16),
           Text(
-            '还没有共享资料',
+            context.l10n.communityNoSharedFiles,
             textAlign: TextAlign.center,
             style: Theme.of(context)
                 .textTheme
@@ -1298,7 +1298,7 @@ class _KnowledgeBaseEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '上传真题、词汇表、写作模板或复习笔记，让群知识库开始生长。',
+            context.l10n.communityUploadPrompt,
             textAlign: TextAlign.center,
             style: TextStyle(color: DS.textSecondary, height: 1.4),
           ),

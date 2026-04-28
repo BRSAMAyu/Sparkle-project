@@ -217,7 +217,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
                           expands: true,
                           textAlignVertical: TextAlignVertical.top,
                           decoration: const InputDecoration(
-                            hintText: '把刚刚闪过的想法先放进来...',
+                            hintText: context.l10n.toolsNotesHint,
                             border: InputBorder.none,
                           ),
                           style:
@@ -258,7 +258,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
               expand: true,
             ),
             SparkleButton(
-              label: _isSyncing ? '同步中...' : context.l10n.toolsNotesSyncToPrism,
+              label: _isSyncing ? context.l10n.toolsNotesSyncing : context.l10n.toolsNotesSyncToPrism,
               onPressed: _isSyncing ? null : _syncToPrism,
               icon: const Icon(Icons.psychology_alt_rounded),
               loading: _isSyncing,

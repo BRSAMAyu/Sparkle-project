@@ -182,7 +182,7 @@ class _OpenClawExecutionPreferencesCardState
           SwitchListTile.adaptive(
             value: draft.autoExtendTimeout,
             contentPadding: EdgeInsets.zero,
-            title: const Text('自动延长长任务超时'),
+            title: const Text(context.l10n.settingsAutoExtend),
             subtitle: Text(
               '长耗时任务接近超时时，优先尝试自动续期。',
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
@@ -197,7 +197,7 @@ class _OpenClawExecutionPreferencesCardState
           SwitchListTile.adaptive(
             value: draft.trustAutoUpgrade,
             contentPadding: EdgeInsets.zero,
-            title: const Text('允许系统基于历史自动建议升级信任'),
+            title: const Text(context.l10n.settingsAutoSuggestTrust),
             subtitle: Text(
               '当某类动作长期稳定成功时，Sparkle 会建议减少确认频率。',
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
@@ -365,7 +365,7 @@ class _OpenClawExecutionPreferencesCardState
                           _dirty = false;
                         });
                         messenger.showSnackBar(
-                          SparkleSnackBar.success('执行偏好已保存'),
+                          SparkleSnackBar.success(context.l10n.settingsPreferencesSaved),
                         );
                       }
                     },

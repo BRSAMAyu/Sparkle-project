@@ -482,7 +482,7 @@ class _SourceRow extends StatelessWidget {
                         if (nodeCount > 0) ...[
                           const SizedBox(width: 8),
                           Text(
-                            '$nodeCount 知识节点',
+                            context.l10n.chatStudyNodeCount(count: nodeCount),
                             style: DS.labelSmall.copyWith(
                               color: DS.textTertiary,
                               fontSize: 11,
@@ -492,7 +492,7 @@ class _SourceRow extends StatelessWidget {
                         if (document.citationInsight.totalReferences > 0) ...[
                           const SizedBox(width: 8),
                           Text(
-                            '引用 ${document.citationInsight.totalReferences} 次',
+                            context.l10n.chatStudyCitationCount(count: document.citationInsight.totalReferences),
                             style: DS.labelSmall.copyWith(
                               color: DS.textTertiary,
                               fontSize: 11,

@@ -54,7 +54,7 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: hasText ? '已捕获 $_charCount 字' : '30 秒单次录音',
+          label: hasText ? context.l10n.toolsSttCharCount : context.l10n.toolsSttRecordingInfo,
           accentColor: accent,
           icon: Icons.graphic_eq_rounded,
         ),
@@ -126,7 +126,7 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
                       child: ToolEmptyState(
                         icon: Icons.hearing_rounded,
                         title: context.l10n.toolsSttEmpty,
-                        description: '开始一次录音后，文本会实时显示在这里。适合课堂摘录、灵感捕捉和会议补记。',
+                        description: context.l10n.toolsSttEmptyDesc,
                         accentColor: accent,
                       ),
                     ),

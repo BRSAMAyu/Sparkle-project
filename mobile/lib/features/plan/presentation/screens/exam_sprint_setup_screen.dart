@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -53,7 +54,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final probabilityLabel = '${_dailyMinutes.round()} 分钟/天';
+    final probabilityLabel = context.l10n.planSprintDailyChipLabel(_dailyMinutes.round());
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -63,7 +64,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('考试冲刺设置'),
+        title: Text(context.l10n.planSprintSetupTitle),
       ),
       child: ContentConstraint(
         child: Form(
@@ -75,7 +76,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               const SizedBox(height: DS.spacing16),
               _buildSection(
                 context,
-                title: '1. 哪门课？',
+                title: context.l10n.planSprintStep1Title,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -83,12 +84,12 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                       controller: _subjectController,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
-                        hintText: '例如：计算机网络 / 高数 / 英语四级',
+                        hintText: context.l10n.planSprintStep1Hint,
                         prefixIcon: Icon(Icons.menu_book_outlined),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return '先告诉我你要冲刺哪门课';
+                          return context.l10n.planSprintStep1Required;
                         }
                         return null;
                       },
@@ -119,7 +120,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               const SizedBox(height: DS.spacing12),
               _buildSection(
                 context,
-                title: '2. 考试哪天？',
+                title: context.l10n.planSprintStep2Title,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
                   onTap: _pickExamDate,
@@ -139,7 +140,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                             children: [
                               Text(
                                 _examDate == null
-                                    ? '选择考试日期'
+                                    ? context.l10n.planSprintSelectDate
                                     : MaterialLocalizations.of(context)
                                         .formatMediumDate(_examDate!),
                                 style: Theme.of(context).textTheme.titleMedium,
@@ -147,8 +148,8 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                               const SizedBox(height: DS.spacing4),
                               Text(
                                 _examDate == null
-                                    ? '日期会决定冲刺天数和节奏'
-                                    : '离考试还有 ${_daysLeftLabel(_examDate!)}',
+                                    ? context.l10n.planSprintDateDecides
+                                    : context.l10n.planSprintDaysLeft(_daysLeftLabel(_examDate!)),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -186,8 +187,8 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               const SizedBox(height: DS.spacing12),
               _buildSection(
                 context,
-                title: '4. 考试范围 / 老师重点有吗？',
-                subtitle: '可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。',
+                title: context.l10n.planSprintStep4Title,
+                subtitle: context.l10n.planSprintStep4Subtitle,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -196,7 +197,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                       maxLines: 5,
                       minLines: 4,
                       decoration: const InputDecoration(
-                        hintText: '例如：重点看传输层、网络层；老师说会考简答和计算题。',
+                        hintText: context.l10n.planSprintStep4Hint,
                         alignLabelWithHint: true,
                       ),
                     ),
@@ -204,15 +205,15 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                     Row(
                       children: [
                         SparkleButton.outline(
-                          label: '上传资料',
+                          label: context.l10n.planSprintUploadMaterials,
                           icon: const Icon(Icons.upload_file_outlined),
                           onPressed: _openUploadSheet,
                         ),
                         const SizedBox(width: DS.spacing8),
                         Text(
                           _uploadedFiles.isEmpty
-                              ? '还没上传资料'
-                              : '已上传 ${_uploadedFiles.length} 份资料',
+                              ? context.l10n.planSprintNoUpload
+                              : context.l10n.planSprintUploadedCount(_uploadedFiles.length),
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -320,7 +321,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_dailyMinutes.round()} 分钟 / 天',
+                      context.l10n.planSprintDailySliderLabel(_dailyMinutes.round()),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Slider(
@@ -328,7 +329,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                       min: 30,
                       max: 360,
                       divisions: 11,
-                      label: '${_dailyMinutes.round()} 分钟',
+                      label: context.l10n.planSprintDailyChipLabel(_dailyMinutes.round()),
                       onChanged: (double value) {
                         setState(() => _dailyMinutes = value);
                       },
@@ -345,7 +346,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               ),
               const SizedBox(height: DS.spacing20),
               SparkleButton(
-                label: '生成我的第一天任务',
+                label: context.l10n.planSprintGenerateFirstDay,
                 icon: const Icon(Icons.rocket_launch_outlined),
                 loading: _isSubmitting,
                 expand: true,
@@ -353,7 +354,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                '提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。',
+                context.l10n.planSprintSubmitHint,
                 textAlign: TextAlign.center,
                 style: Theme.of(context)
                     .textTheme
@@ -390,12 +391,12 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '不是填问卷，是一起确定起点',
+                        context.l10n.planSprintNotQuestionnaire,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        '填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。',
+                        context.l10n.planSprintFillPromise,
                         style: Theme.of(context)
                             .textTheme
                             .bodyMedium
@@ -470,7 +471,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
             }
           });
           Navigator.of(sheetContext).pop();
-          AppFeedback.success(context, '资料已上传');
+          AppFeedback.success(context, context.l10n.planSprintMaterialUploaded);
         },
         onError: (String message) {
           if (mounted) {
@@ -486,7 +487,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
       return;
     }
     if (_examDate == null) {
-      AppFeedback.error(context, '先选择考试日期');
+      AppFeedback.error(context, context.l10n.planSprintSelectDateFirst);
       return;
     }
 
@@ -566,7 +567,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                '初步评估已完成',
+                context.l10n.planSprintAssessmentDone,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: DS.spacing8),
@@ -582,12 +583,12 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                   _buildResultChip(
                     context,
                     Icons.flag_outlined,
-                    '通过概率 ${(result.initialAssessment.passProbability * 100).round()}%',
+                    context.l10n.planSprintPassProbability((result.initialAssessment.passProbability * 100).round()),
                   ),
                   _buildResultChip(
                     context,
                     Icons.tune_rounded,
-                    '建议模式 ${result.initialAssessment.recommendedModeLabel}',
+                    context.l10n.planSprintRecommendedMode(result.initialAssessment.recommendedModeLabel),
                   ),
                   _buildResultChip(
                     context,
@@ -692,7 +693,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
     final days = DateUtils.dateOnly(examDate)
         .difference(DateUtils.dateOnly(DateTime.now()))
         .inDays;
-    return '${days <= 0 ? 1 : days} 天';
+    return context.l10n.planSprintDaysLabel(days <= 0 ? 1 : days);
   }
 
   List<String> _chapterSuggestionsFor(String subject) {
@@ -730,7 +731,7 @@ class _TargetModeOption {
 }
 
 const List<_TargetModeOption> _targetOptions = <_TargetModeOption>[
-  _TargetModeOption(value: 'pass', label: '通过'),
-  _TargetModeOption(value: 'hold', label: '保分'),
-  _TargetModeOption(value: 'high_score', label: '冲高分'),
+  _TargetModeOption(value: 'pass', label: context.l10n.planSprintTargetPass),
+  _TargetModeOption(value: 'hold', label: context.l10n.planSprintTargetHold),
+  _TargetModeOption(value: 'high_score', label: context.l10n.planSprintTargetHighScore),
 ];

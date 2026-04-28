@@ -130,7 +130,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = '启动 Aurora 校准失败，请稍后重试。';
+          _error = context.l10n.auroraStartFailed;
           _loading = false;
         });
       }
@@ -339,7 +339,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             children: [
               const CircularProgressIndicator(strokeWidth: 2),
               const SizedBox(height: DS.spacing12),
-              Text('Aurora 正在准备中…', style: TextStyle(color: DS.textSecondary)),
+              Text(context.l10n.auroraPreparing, style: TextStyle(color: DS.textSecondary)),
             ],
           ),
         ),
@@ -551,7 +551,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             minLines: 1,
             style: DS.bodyMedium.copyWith(color: DS.textPrimary),
             decoration: InputDecoration(
-              hintText: '你认为实际情况是…',
+              hintText: context.l10n.auroraWhatDoYouThink,
               hintStyle: TextStyle(color: DS.textSecondary),
               filled: true,
               fillColor: DS.surfaceSecondary,

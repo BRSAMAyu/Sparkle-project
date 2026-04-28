@@ -71,7 +71,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
       ),
       heroChips: [
         ToolHeroChip(
-          label: '${state.streakDays} 天连续专注',
+          label: context.l10n.toolsStatsStreak,
           accentColor: accent,
           icon: Icons.local_fire_department_rounded,
         ),

@@ -162,7 +162,7 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                               ? context.l10n.chatMemorySyncing
                               : _error != null
                                   ? context.l10n.chatMemoryUnavailable
-                                  : '${_session.items.length} 条当前 session 记忆',
+                                  : context.l10n.chatMemorySessionCount(count: _session.items.length),
                           style: TextStyle(
                             color: DS.textSecondary,
                             fontSize: DS.fontSizeXs,
@@ -246,7 +246,7 @@ class _ChatWorkingMemoryPanelState extends ConsumerState<ChatWorkingMemoryPanel>
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    '提及 ${item.mentionCount} 次 · ${item.subjectType}',
+                    context.l10n.chatMemoryMentionCount(count: item.mentionCount, type: item.subjectType),
                     style: TextStyle(
                       color: DS.textSecondary,
                       fontSize: DS.fontSizeXs,

@@ -819,7 +819,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () =>
                 context.push('${HomeRoutes.openClawHub}?section=delegate'),
             semanticLabel: showOpenClawAttention
-                ? 'OpenClaw Hub，有 ${openClawConnection.queuedRequestCount} 个排队任务'
+                ? context.l10n.chatOpenclawHubQueued(count: openClawConnection.queuedRequestCount)
                 : 'OpenClaw Hub',
             variant: ButtonVariant.ghost,
           ),
@@ -1321,7 +1321,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ref
                               .read(chatProvider.notifier)
                               .sendMessage(
-                                '参考社群建议：${hint.anonymousSummary}。${hint.tip}',
+                                context.l10n.chatCommunitySuggestion(summary: hint.anonymousSummary, tip: hint.tip),
                               );
                         },
                         onDismiss: () => ref
@@ -1341,7 +1341,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               .read(chatProvider.notifier)
                               .dismissUXWarning();
                           ref.read(chatProvider.notifier).sendMessage(
-                                '${warning.suggestedAction}。原因：${warning.reason}',
+                                context.l10n.chatWarningAction(action: warning.suggestedAction, reason: warning.reason),
                               );
                         },
                         onDismiss: () => ref
@@ -1404,7 +1404,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               .read(chatProvider.notifier)
                               .dismissGoalArbitration();
                           ref.read(chatProvider.notifier).sendMessage(
-                                '我想先专注在「${arb.primaryGoalTitle}」这个目标上。',
+                                context.l10n.chatFocusOnGoal(title: arb.primaryGoalTitle),
                               );
                         },
                         onContinueMulti: () => ref
@@ -2067,7 +2067,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (status.isNotEmpty && status != 'processed') {
                 AppFeedback.info(
                   context,
-                  '${file.fileName} 已添加，当前状态：${_attachmentStatusText(file.status)}',
+                  context.l10n.chatFileAdded(fileName: file.fileName, status: _attachmentStatusText(file.status)),
                 );
               }
             },
@@ -2876,7 +2876,7 @@ class _ReviewNodeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final masteryText = mastery != null
-        ? ' · 当前掌握 ${(mastery! * 100).round().clamp(0, 100)}%'
+        ? context.l10n.chatCurrentMastery(percent: (mastery! * 100).round().clamp(0, 100).toString())
         : '';
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -2898,7 +2898,7 @@ class _ReviewNodeBanner extends StatelessWidget {
           const SizedBox(width: DS.spacing8),
           Expanded(
             child: Text(
-              '正在复习: $nodeLabel$masteryText',
+              context.l10n.chatReviewingNode(label: nodeLabel, mastery: masteryText),
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: DS.info,

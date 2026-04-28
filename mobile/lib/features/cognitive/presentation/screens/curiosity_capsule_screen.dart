@@ -109,7 +109,7 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         ),
         error: (err, stack) => CustomErrorWidget.page(
           context: context,
-          title: '胶囊列表加载失败',
+          title: context.l10n.cogCapsuleListFailed,
           message: l10n.capsuleLoadFailed('$err'),
           onRetry: () => ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
         ),

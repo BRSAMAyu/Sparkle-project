@@ -835,10 +835,10 @@ class DailyDetailScreen extends ConsumerWidget {
                       ),
                       items: const [
                         DropdownMenuItem(value: 0, child: Text(context.l10n.calAtStart)),
-                        DropdownMenuItem(value: 5, child: Text('提前 5 分钟')),
-                        DropdownMenuItem(value: 15, child: Text('提前 15 分钟')),
-                        DropdownMenuItem(value: 30, child: Text('提前 30 分钟')),
-                        DropdownMenuItem(value: 60, child: Text('提前 1 小时')),
+                        DropdownMenuItem(value: 5, child: Text(context.l10n.cal5MinBefore)),
+                        DropdownMenuItem(value: 15, child: Text(context.l10n.cal15MinBefore)),
+                        DropdownMenuItem(value: 30, child: Text(context.l10n.cal30MinBefore)),
+                        DropdownMenuItem(value: 60, child: Text(context.l10n.cal1HourBefore)),
                       ],
                       onChanged: (value) {
                         if (value != null) {

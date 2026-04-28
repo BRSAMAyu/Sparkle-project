@@ -200,13 +200,13 @@ class UnifiedNotificationCard extends StatelessWidget {
                           if (pushDismissAction != null)
                             SparkleButton.ghost(
                               onPressed: pushDismissAction,
-                              label: '这次不用了',
+                              label: context.l10n.notificationDismissPush,
                             ),
                           if (notification.canDisablePushCategory &&
                               pushDisableCategoryAction != null)
                             SparkleButton.outline(
                               onPressed: pushDisableCategoryAction,
-                              label: '不再提醒这类',
+                              label: context.l10n.notificationDisablePushCategory,
                             ),
                         ],
                       ),
@@ -221,7 +221,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                         )
                       else
                         Text(
-                          '已鼓励',
+                          context.l10n.notificationEncouraged,
                           style: DS.bodySmall.copyWith(color: DS.success),
                         ),
                     ],
@@ -261,7 +261,7 @@ class UnifiedNotificationCard extends StatelessWidget {
         badgeLabel = context.l10n.notificationSourceIntervention;
       case 'push':
         badgeColor = DS.success;
-        badgeLabel = '主动提醒';
+        badgeLabel = context.l10n.notificationPushReminder;
       default:
     }
 
@@ -367,7 +367,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildDetailRow(
                   context,
-                  '当前状态',
+                  context.l10n.notificationCurrentState,
                   _labelForInteractionState(interactionState),
                 ),
               ],
@@ -375,7 +375,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 _buildDetailRow(
                   context,
-                  '验证结果',
+                  context.l10n.notificationVerificationResult,
                   _labelForOutcomeStatus(outcomeStatus),
                 ),
               ],

@@ -260,7 +260,7 @@ Caching improves performance by reducing the number of expensive operations, suc
                 ),
                 onSaveToKnowledge: (selectedText, translation) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SparkleSnackBar.success('已保存到生词卡'),
+                    SparkleSnackBar.success(context.l10n.transSavedToWordCard),
                   );
                 },
               ),

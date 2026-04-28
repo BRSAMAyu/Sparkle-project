@@ -89,7 +89,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         AppFeedback.success(context, context.l10n.chatGroupFavorited);
       }).catchError((Object e) {
         if (!mounted) return;
-        AppFeedback.error(context, '收藏失败: $e');
+        AppFeedback.error(context, context.l10n.chatGroupFavoriteFailed(error: e.toString()));
       }),
     );
   }
@@ -133,7 +133,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       final g = groups[i];
                       return ListTile(
                         title: Text(g.name),
-                        subtitle: Text('${g.memberCount} 成员'),
+                        subtitle: Text(context.l10n.chatGroupMemberCount(count: g.memberCount)),
                         onTap: () async {
                           Navigator.pop(ctx);
                           try {
@@ -145,10 +145,10 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                   targetGroupId: g.id,
                                 );
                             if (!mounted) return;
-                            AppFeedback.success(context, '已转发到 ${g.name}');
+                            AppFeedback.success(context, context.l10n.chatGroupForwardedTo(name: g.name));
                           } catch (e) {
                             if (!mounted) return;
-                            AppFeedback.error(context, '转发失败: $e');
+                            AppFeedback.error(context, context.l10n.chatGroupForwardFailed(error: e.toString()));
                           }
                         },
                       );
@@ -253,7 +253,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           AppFeedback.success(context, context.l10n.chatGroupReportSubmitted);
                         } catch (e) {
                           if (!mounted) return;
-                          AppFeedback.error(context, '举报失败: $e');
+                          AppFeedback.error(context, context.l10n.chatGroupReportFailed(error: e.toString()));
                         }
                       },
                     ),

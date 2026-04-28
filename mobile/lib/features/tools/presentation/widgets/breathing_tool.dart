@@ -145,7 +145,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           kind: _BreathingPhaseKind.inhale,
         ),
         _BreathingPhase(
-          label: '停留',
+          label: context.l10n.toolsBreathHold,
           seconds: _pattern.hold,
           kind: _BreathingPhaseKind.holdExpanded,
         ),
@@ -155,7 +155,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           kind: _BreathingPhaseKind.exhale,
         ),
         _BreathingPhase(
-          label: '停留',
+          label: context.l10n.toolsBreathHold,
           seconds: _pattern.rest,
           kind: _BreathingPhaseKind.holdCollapsed,
         ),
@@ -832,7 +832,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                   children: List.generate(
                     _durations.length,
                     (index) => ToolChoiceChip(
-                      label: '${_durations[index]} 分钟',
+                      label: context.l10n.toolsBreathDurationMin,
                       selected: _selectedDurationIndex == index,
                       onTap: () => unawaited(_updateDuration(index)),
                       accentColor: accent,
@@ -861,7 +861,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
             expand: true,
           );
           final secondaryButton = SparkleButton(
-            label: _isPlaying ? context.l10n.toolsBreathStop : '重置',
+            label: _isPlaying ? context.l10n.toolsBreathStop : context.l10n.toolsBreathReset,
             variant: ButtonVariant.ghost,
             onPressed: _stopBreathing,
             icon: Icon(

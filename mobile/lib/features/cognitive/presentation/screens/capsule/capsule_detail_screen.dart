@@ -81,7 +81,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           if (c == null) {
             return const EmptyState(
               title: context.l10n.cogCapsuleUnavailable,
-              description: '它可能已经被移除，或者还没有完成生成。',
+              description: context.l10n.cogCapsuleUnavailableDesc,
               icon: Icons.auto_awesome_outlined,
             );
           }

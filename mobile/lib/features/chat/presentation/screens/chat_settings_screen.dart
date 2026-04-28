@@ -54,14 +54,14 @@ class ChatSettingsScreen extends ConsumerWidget {
     )) {
       (true, _, _) => context.l10n.chatSettingsSyncingSeeds,
       (_, false, _) => context.l10n.chatSettingsSeedsDefaultOff,
-      (_, true, > 0) => '当前接入 $enabledSeedCount 个已启用种子库',
+      (_, true, > 0) => context.l10n.chatSettingsSeedsEnabledCount(count: enabledSeedCount),
       _ => context.l10n.chatSettingsSeedsEnabledNone,
     };
 
     final seedSubtitle = seedLibraryEnabled
         ? enabledSeedNames.isEmpty
             ? context.l10n.chatSettingsSeedEnableHint
-            : '当前生效：${enabledSeedNames.join('、')}'
+            : context.l10n.chatSettingsCurrentSeeds(names: enabledSeedNames.join('、'))
         : context.l10n.chatSettingsSeedDisableHint;
 
     return SparklePageScaffold(
@@ -193,7 +193,7 @@ class ChatSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.sm),
             _SettingsToggleCard(
-              title: '显示 AI 系统面板',
+              title: context.l10n.chatSettingsShowAiPanel,
               subtitle: context.l10n.chatSettingsShowAiPanelDesc,
               value: preferences.enabled,
               onChanged: notifier.setEnabled,
@@ -227,7 +227,7 @@ class ChatSettingsScreen extends ConsumerWidget {
             const SizedBox(height: DS.sm),
             _SettingsToggleCard(
               title: context.l10n.chatSettingsShowTransparencyCapsule,
-              subtitle: '控制底部悬浮的 AI 完成情况与透明化信息。',
+              subtitle: context.l10n.chatSettingsShowTransparencyDesc,
               value: showChatTransparencyCapsule,
               onChanged: (value) => ref
                   .read(showChatTransparencyCapsuleProvider.notifier)
@@ -244,14 +244,14 @@ class ChatSettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DS.sm),
               _SettingsToggleCard(
-                title: '显示 Token 与成本',
+                title: context.l10n.chatSettingsShowTokenCost,
                 subtitle: context.l10n.chatSettingsShowTokenCostDesc,
                 value: preferences.showTokenUsage,
                 onChanged: notifier.setShowTokenUsage,
               ),
               const SizedBox(height: DS.sm),
               _SettingsToggleCard(
-                title: '显示 Agent 协作',
+                title: context.l10n.chatSettingsShowAgentCollab,
                 subtitle: context.l10n.chatSettingsShowAgentCollabDesc,
                 value: preferences.showAgentSwitching,
                 onChanged: notifier.setShowAgentSwitching,

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 
@@ -100,7 +101,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '星图视图设置',
+                                context.l10n.galaxySimSettings,
                                 style: TextStyle(
                                   color: titleColor,
                                   fontSize: 18,
@@ -109,7 +110,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '调节显示密度、力场参数与回放节奏，让星图浏览更顺手、更直观。',
+                                context.l10n.galaxySimSettingsDesc,
                                 style: TextStyle(
                                   color: bodyColor,
                                   fontSize: 12,
@@ -122,7 +123,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                         TextButton.icon(
                           onPressed: onReset,
                           icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                          label: const Text('恢复默认'),
+                          label: const Text(context.l10n.galaxySimResetDefault),
                         ),
                       ],
                     ),
@@ -134,12 +135,12 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _SectionTitle(
-                              title: '常用调整',
-                              subtitle: '第一眼只保留最常用、最直接影响整体体验的四项。',
+                              title: context.l10n.galaxySimCommonAdjust,
+                              subtitle: context.l10n.galaxySimCommonDesc,
                               isDarkMode: isDarkMode,
                             ),
                             _SliderTile(
-                              label: '中心吸引力',
+                              label: context.l10n.galaxySimCenterGravity,
                               valueLabel:
                                   settings.centerForce.toStringAsFixed(4),
                               value: settings.centerForce,
@@ -148,7 +149,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                               onChanged: onCenterForceChanged,
                             ),
                             _SliderTile(
-                              label: '节点排斥力',
+                              label: context.l10n.galaxySimNodeRepulsion,
                               valueLabel:
                                   settings.repelForce.toStringAsFixed(0),
                               value: settings.repelForce,
@@ -157,7 +158,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                               onChanged: onRepelForceChanged,
                             ),
                             _SliderTile(
-                              label: '连线牵引力',
+                              label: context.l10n.galaxySimLinkTension,
                               valueLabel: settings.linkForce.toStringAsFixed(3),
                               value: settings.linkForce,
                               min: kGalaxyLinkForceMin,
@@ -165,7 +166,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                               onChanged: onLinkForceChanged,
                             ),
                             _SliderTile(
-                              label: '回放速度',
+                              label: context.l10n.galaxySimReplaySpeed,
                               valueLabel:
                                   '${settings.replaySpeed.toStringAsFixed(1)}x',
                               value: settings.replaySpeed,
@@ -175,18 +176,18 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                             ),
                             const SizedBox(height: 12),
                             _SectionTitle(
-                              title: '高级调整',
-                              subtitle: '需要微调视觉密度时再展开，默认不用第一眼看到。',
+                              title: context.l10n.galaxySimAdvanced,
+                              subtitle: context.l10n.galaxySimAdvancedDesc,
                               isDarkMode: isDarkMode,
                             ),
                             _ExpandablePanel(
-                              title: '展开高级选项',
+                              title: context.l10n.galaxySimExpandAdvanced,
                               isDarkMode: isDarkMode,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _SliderTile(
-                                    label: '文字显现阈值',
+                                    label: context.l10n.galaxySimTextThreshold,
                                     valueLabel: settings.textFadeThreshold
                                         .toStringAsFixed(2),
                                     value: settings.textFadeThreshold,
@@ -195,7 +196,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                                     onChanged: onTextFadeThresholdChanged,
                                   ),
                                   _SliderTile(
-                                    label: '节点尺寸',
+                                    label: context.l10n.galaxySimNodeSize,
                                     valueLabel:
                                         '${settings.nodeSizeScale.toStringAsFixed(2)}x',
                                     value: settings.nodeSizeScale,
@@ -204,7 +205,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                                     onChanged: onNodeSizeScaleChanged,
                                   ),
                                   _SliderTile(
-                                    label: '连线粗细',
+                                    label: context.l10n.galaxySimLinkWidth,
                                     valueLabel:
                                         '${settings.linkThicknessScale.toStringAsFixed(2)}x',
                                     value: settings.linkThicknessScale,
@@ -213,7 +214,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                                     onChanged: onLinkThicknessScaleChanged,
                                   ),
                                   _SliderTile(
-                                    label: '连线距离',
+                                    label: context.l10n.galaxySimLinkDistance,
                                     valueLabel: settings.linkDistance
                                         .toStringAsFixed(0),
                                     value: settings.linkDistance,

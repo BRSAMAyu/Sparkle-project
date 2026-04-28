@@ -257,7 +257,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             label: Text(
               expert.official
                   ? expert.displayName
-                  : '${expert.displayName} · 自定义',
+                  : context.l10n.chatTeamExpertCustom(name: expert.displayName),
             ),
             avatar: isSelected
                 ? null

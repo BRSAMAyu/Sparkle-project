@@ -67,11 +67,11 @@ class CommunityScreen extends ConsumerWidget {
                     Icon(Icons.error_outline, size: 48, color: DS.error),
                     const SizedBox(height: DS.lg),
                     Text(
-                      '加载失败',
+                      context.l10n.communityLoadFailedTitle,
                       style: TextStyle(color: DS.brandPrimary300),
                     ),
                     SparkleButton.ghost(
-                      label: '重试',
+                      label: context.l10n.communityRetry,
                       onPressed: () =>
                           ref.read(feedProvider.notifier).refresh(),
                     ),
@@ -97,7 +97,7 @@ class CommunityScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '社群',
+            context.l10n.communityCommunity,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,

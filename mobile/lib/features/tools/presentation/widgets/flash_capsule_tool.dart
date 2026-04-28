@@ -116,7 +116,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       await ref.read(cognitiveProvider.notifier).loadFragments(limit: 50);
     } catch (e) {
       if (!silent && mounted) {
-        AppFeedback.error(context, '加载历史胶囊失败: $e');
+        AppFeedback.error(context, context.l10n.toolsFlashLoadFailed(e.toString()));
       }
     }
   }
@@ -344,7 +344,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
-        AppFeedback.error(context, '记录失败: $e');
+        AppFeedback.error(context, context.l10n.toolsFlashSaveFailed(e.toString()));
       }
     }
   }
@@ -358,13 +358,13 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.lightbulb_outline_rounded,
-      title: '闪念胶囊',
-      subtitle: '把一闪而过的疑点及时落地成错题线索，减少“知道有问题但没记住”的损耗。',
+      title: context.l10n.toolsFlashTitle,
+      subtitle: context.l10n.toolsFlashSubtitle,
       accentColor: accent,
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: '${_subjectOptions.length} 个科目',
+          label: context.l10n.toolsFlashSubjectCount,
           accentColor: accent,
           icon: Icons.category_rounded,
         ),
@@ -383,8 +383,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '记录内容',
-            subtitle: '选择科目、错误类型，再补充知识点和描述。',
+            title: context.l10n.toolsFlashContent,
+            subtitle: context.l10n.toolsFlashContentDesc,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -402,8 +402,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 TextField(
                   controller: _topicController,
                   decoration: const InputDecoration(
-                    labelText: '知识点',
-                    hintText: '例如：三角函数求导、牛顿第二定律...',
+                    labelText: context.l10n.toolsFlashKnowledge,
+                    hintText: context.l10n.toolsFlashKnowledgeHint,
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -432,8 +432,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   controller: _descriptionController,
                   maxLines: 8,
                   decoration: const InputDecoration(
-                    labelText: '错误描述',
-                    hintText: '记录你是怎么错的、卡在什么地方、下次要如何避免。',
+                    labelText: context.l10n.toolsFlashErrorDesc,
+                    hintText: context.l10n.toolsFlashErrorDescHint,
                     alignLabelWithHint: true,
                   ),
                   onChanged: (_) => setState(() {}),
@@ -445,19 +445,19 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           ToolMetricRow(
             children: [
               ToolMetricCard(
-                label: '知识点长度',
+                label: context.l10n.toolsFlashKnowledgeLen,
                 value: '${_topicController.text.trim().length}',
                 accentColor: accent,
                 icon: Icons.topic_rounded,
               ),
               ToolMetricCard(
-                label: '描述长度',
+                label: context.l10n.toolsFlashDescLen,
                 value: '${_descriptionController.text.trim().length}',
                 accentColor: accent,
                 icon: Icons.notes_rounded,
               ),
               ToolMetricCard(
-                label: '认知维度',
+                label: context.l10n.toolsFlashCognitiveDim,
                 value: _inferCognitiveDimension().label,
                 accentColor: accent,
                 icon: Icons.psychology_alt_rounded,
@@ -470,14 +470,14 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 520;
           final historyButton = SparkleButton(
-            label: '查看历史',
+            label: context.l10n.toolsFlashViewHistory,
             variant: ButtonVariant.ghost,
             onPressed: _isSubmitting ? null : _openHistory,
             icon: const Icon(Icons.history_rounded),
             expand: true,
           );
           final saveButton = SparkleButton(
-            label: _isSubmitting ? '记录中...' : '保存胶囊',
+            label: _isSubmitting ? '记录中...' : context.l10n.toolsFlashSaveCapsule,
             onPressed: _isSubmitting ? null : _submit,
             icon: const Icon(Icons.check_rounded),
             loading: _isSubmitting,
@@ -540,7 +540,7 @@ class _SubjectDropdown extends StatelessWidget {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              hint: const Text('选择科目'),
+              hint: const Text(context.l10n.toolsFlashSelectSubject),
               items: subjects
                   .map(
                     (subject) => DropdownMenuItem<String>(

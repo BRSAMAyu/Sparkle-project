@@ -223,7 +223,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.calendar_today_rounded,
-          label: '${narrative.studyDays} 天学习',
+          label: context.l10n.insStudyDays,
         ),
       );
     }
@@ -231,7 +231,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.task_alt_rounded,
-          label: '${narrative.tasksCompleted} 个任务',
+          label: context.l10n.insTasksDone,
         ),
       );
     }
@@ -239,7 +239,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.psychology_alt_rounded,
-          label: '修复 ${narrative.errorsFixed} 个错误',
+          label: context.l10n.insErrorsFixed,
         ),
       );
     }
@@ -247,7 +247,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.rate_review_rounded,
-          label: '${narrative.reflectionRecords} 次复盘',
+          label: context.l10n.insReflections,
         ),
       );
     }
@@ -255,7 +255,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.trending_up_rounded,
-          label: '掌握 +${narrative.masteryDelta.toStringAsFixed(1)}',
+          label: context.l10n.insMasteryGain,
         ),
       );
     }

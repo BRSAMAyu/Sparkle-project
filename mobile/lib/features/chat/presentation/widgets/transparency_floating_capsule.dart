@@ -172,7 +172,7 @@ class TransparencyFloatingCapsule extends StatelessWidget {
                               if ((details ?? '').trim().isNotEmpty) details!,
                               if ((currentAgentName ?? '').trim().isNotEmpty)
                                 currentAgentName!,
-                              if (stepLabel != null) '步骤 $stepLabel',
+                              if (stepLabel != null) context.l10n.chatTransparencyStep(step: stepLabel),
                               if (activeTools.isNotEmpty)
                                 '${activeTools.length} tools',
                             ].join(' · '),

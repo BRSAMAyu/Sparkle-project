@@ -82,11 +82,11 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     'study_group': '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。',
     'knowledge_debate': '让不同立场直接碰撞，适合验证观点、证据和边界条件。',
     'historical_roleplay': '带入人物与时代约束，让讨论像真实历史现场一样推进。',
-    'socratic_dialogue': '通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。',
+    'socratic_dialogue': context.l10n.simSocraticDesc,
     'case_analysis': '围绕具体案例做拆解、诊断和决策，适合实务型主题。',
     'what_if_path': '比较不同学习或行动路线，适合规划、取舍与资源分配。',
     'concept_map_build': '把知识点织成结构图，适合建立全局框架与连接关系。',
-    'error_diagnosis': '专注识别错因、纠偏路径与验证方式，适合查漏补缺。',
+    'error_diagnosis': context.l10n.simErrorDiagDesc,
   };
   static const Map<String, String> _facilitationLabels = {
     'balanced': '平衡推进',

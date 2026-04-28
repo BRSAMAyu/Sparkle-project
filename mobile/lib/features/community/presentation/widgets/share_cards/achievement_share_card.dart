@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
@@ -79,11 +80,11 @@ class AchievementShareCardFactory {
               spacing: DS.spacing6,
               runSpacing: DS.spacing6,
               children: [
-                _chip('稀有度', metadata['rarity']?.toString() ?? '荣耀'),
+                _chip(context.l10n.communityShareRarity, metadata['rarity']?.toString() ?? '荣耀'),
                 if (metadata['unlocked_count'] != null)
-                  _chip('已解锁', '${metadata['unlocked_count']}'),
+                  _chip(context.l10n.communityShareUnlocked, '${metadata['unlocked_count']}'),
                 if (metadata['flame_level'] != null)
-                  _chip('等级', 'Lv.${metadata['flame_level']}'),
+                  _chip(context.l10n.communityShareLevel, 'Lv.${metadata['flame_level']}'),
               ],
             ),
           ],

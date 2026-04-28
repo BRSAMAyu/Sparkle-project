@@ -54,7 +54,7 @@ class EvidenceCard extends StatelessWidget {
 
   Widget _buildContent(BuildContext context) {
     if (item.status != 'ok') {
-      return Text(item.redactionReason ?? '无法解析证据');
+      return Text(item.redactionReason ?? context.l10n.memEvidenceParseFail);
     }
     final payload = item.payload ?? const {};
     if (payload['event'] != null) {
@@ -155,7 +155,7 @@ class EvidenceCard extends StatelessWidget {
       if (errorId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/errors/$errorId',
-          label: '回到错题本看',
+          label: context.l10n.memBackToErrorBook,
         );
       }
     }

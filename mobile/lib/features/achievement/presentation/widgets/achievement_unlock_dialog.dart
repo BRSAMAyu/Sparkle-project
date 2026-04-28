@@ -13,6 +13,7 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 enum _AchievementUnlockActionState {
@@ -533,7 +534,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                         const SizedBox(height: DS.spacing12),
                         _buildActionButton(
                           icon: Icons.share,
-                          label: '分享',
+                          label: context.l10n.achievementUnlockShare,
                           isPrimary: true,
                           onPressed: _handleShare,
                         ),
@@ -565,7 +566,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                         Expanded(
                           child: _buildActionButton(
                             icon: Icons.share,
-                            label: '分享',
+                            label: context.l10n.achievementUnlockShare,
                             isPrimary: true,
                             onPressed: _handleShare,
                           ),
@@ -766,16 +767,16 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
             ),
             Text(
               isBusy &&
-                      ((label == '关闭' &&
+                      ((label == context.l10n.achievementUnlockClose &&
                               _actionState ==
                                   _AchievementUnlockActionState.closing) ||
-                          (label == '分享' &&
+                          (label == context.l10n.achievementUnlockShare &&
                               _actionState ==
                                   _AchievementUnlockActionState.sharing) ||
-                          (label == '查看奖励' &&
+                          (label == context.l10n.achievementUnlockViewRewards &&
                               _actionState ==
                                   _AchievementUnlockActionState.navigating))
-                  ? '处理中...'
+                  ? context.l10n.achievementUnlockProcessing
                   : label,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
@@ -803,7 +804,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '荣耀收获',
+            context.l10n.achievementUnlockGloryHarvest,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightBold,
@@ -882,7 +883,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '身份变化会出现在',
+          context.l10n.achievementUnlockIdentityChange,
           style: TextStyle(
             fontSize: DS.fontSizeSm,
             fontWeight: DS.fontWeightBold,
@@ -982,13 +983,13 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   String _getUnlockText() {
     switch (widget.event.rarity) {
       case AchievementRarity.common:
-        return '成就解锁！';
+        return context.l10n.achievementUnlockTitleCommon;
       case AchievementRarity.rare:
-        return '稀有成就解锁！';
+        return context.l10n.achievementUnlockTitleRare;
       case AchievementRarity.epic:
-        return '史诗成就解锁！';
+        return context.l10n.achievementUnlockTitleEpic;
       case AchievementRarity.legendary:
-        return '传说成就解锁！';
+        return context.l10n.achievementUnlockTitleLegendary;
     }
   }
 
@@ -997,13 +998,17 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     final diff = now.difference(time);
 
     if (diff.inSeconds < 60) {
-      return '刚刚';
+      return context.l10n.achievementUnlockTimeJustNow;
     } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} 分钟前';
+      return context.l10n.achievementUnlockTimeMinutesAgo(diff.inMinutes);
     } else if (diff.inHours < 24) {
-      return '${diff.inHours} 小时前';
+      return context.l10n.achievementUnlockTimeHoursAgo(diff.inHours);
     } else {
-      return '${time.month}月${time.day}日 ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      return context.l10n.achievementUnlockTimeDate(
+        time.month, time.day,
+        time.hour.toString().padLeft(2, '0'),
+        time.minute.toString().padLeft(2, '0'),
+      );
     }
   }
 
@@ -1050,7 +1055,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   size: 24,
                 ),
                 Text(
-                  '$comboCount连击！',
+                  context.l10n.achievementUnlockCombo(comboCount),
                   style: TextStyle(
                     fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightBold,
@@ -1100,7 +1105,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 color: colors.primary,
               ),
               Text(
-                '里程碑达成！',
+                context.l10n.achievementUnlockMilestoneReached,
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightBold,
@@ -1156,10 +1161,10 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   }
 
   String _getComboText(int count) {
-    if (count >= 10) return '超神！';
-    if (count >= 5) return '太棒了！';
-    if (count >= 3) return '继续！';
-    return '不错！';
+    if (count >= 10) return context.l10n.achievementUnlockComboGodlike;
+    if (count >= 5) return context.l10n.achievementUnlockComboAmazing;
+    if (count >= 3) return context.l10n.achievementUnlockComboKeepGoing;
+    return context.l10n.achievementUnlockComboNice;
   }
 
   bool _hasVisualElementRewards() {
@@ -1477,7 +1482,7 @@ class MilestoneInfo {
       final percentage = newMilestone * 25;
       return MilestoneInfo(
         milestoneType: '$percentage%',
-        description: '达成$percentage%进度！',
+        description: S.current.achievementUnlockMilestoneProgress(percentage),
         reward: _getMilestoneReward(percentage),
         progressPercentage: newProgress,
       );
@@ -1493,13 +1498,13 @@ class MilestoneInfo {
   static String? _getMilestoneReward(int percentage) {
     switch (percentage) {
       case 25:
-        return '+10 光子';
+        return S.current.achievementUnlockPhotonReward10;
       case 50:
-        return '+25 光子';
+        return S.current.achievementUnlockPhotonReward25;
       case 75:
-        return '+50 光子';
+        return S.current.achievementUnlockPhotonReward50;
       case 100:
-        return '+100 光子';
+        return S.current.achievementUnlockPhotonReward100;
       default:
         return null;
     }

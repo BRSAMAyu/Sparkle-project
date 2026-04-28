@@ -504,11 +504,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     }
     return switch (preset) {
       'polish_reply' =>
-        '$base\n\n我当前输入框里的原始草稿是：\n$composerText\n\n请保留我的原意和口吻，只做润色，不要换成第三方视角。',
+        context.l10n.chatPrivatePolishPrompt(base: base, composerText: composerText),
       'gentle_reminder' =>
-        '$base\n\n我当前输入框里的草稿和补充上下文是：\n$composerText\n\n请在尽量保留我表达意图的前提下，改成更温和自然的提醒。',
+        context.l10n.chatPrivateGentlePrompt(base: base, composerText: composerText),
       'schedule_sync' =>
-        '$base\n\n我当前输入框里的草稿和补充上下文是：\n$composerText\n\n请基于这段内容生成一条适合我直接发出的时间协调消息。',
+        context.l10n.chatPrivateSchedulePrompt(base: base, composerText: composerText),
       _ => base,
     };
   }

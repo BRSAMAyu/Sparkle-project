@@ -25,7 +25,7 @@ class AccountabilityCheckInCadenceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '伙伴打卡节奏',
+              context.l10n.communityPartnerCheckinCadence,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -186,7 +187,7 @@ class NodeShareCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                category ?? '知识节点',
+                                category ?? context.l10n.communityShareKnowledgeNode,
                                 style: TextStyle(
                                   fontSize: DS.fontSizeXs,
                                   color: DS.textTertiary,
@@ -282,14 +283,14 @@ class NodeShareCard extends StatelessWidget {
                       children: [
                         if (learningTime != null)
                           _buildStat(
-                            '学习',
+                            context.l10n.communityShareLearning,
                             '${learningTime}分钟',
                             Icons.timer_outlined,
                           ),
                         if (connections != null && connections! > 0) ...[
                           const SizedBox(width: DS.md),
                           _buildStat(
-                            '关联',
+                            context.l10n.communityShareConnections,
                             '$connections个',
                             Icons.hub,
                           ),
@@ -319,10 +320,10 @@ class NodeShareCard extends StatelessWidget {
 
   String _getMasteryLabel() {
     if (masteryLevel == null) return '';
-    if (masteryLevel! >= 0.9) return '精通';
-    if (masteryLevel! >= 0.7) return '熟练';
-    if (masteryLevel! >= 0.4) return '学习中';
-    return '入门';
+    if (masteryLevel! >= 0.9) return context.l10n.communityShareMastered;
+    if (masteryLevel! >= 0.7) return context.l10n.communityShareProficient;
+    if (masteryLevel! >= 0.4) return context.l10n.communityShareLearningStatus;
+    return context.l10n.communityShareBeginner;
   }
 
   Widget _buildStat(String label, String value, IconData icon) => Row(

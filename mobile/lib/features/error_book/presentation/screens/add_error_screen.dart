@@ -123,7 +123,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
       setState(() {
         _localQuestionImage = null;
       });
-      AppFeedback.error(context, '图片上传失败: $e');
+      AppFeedback.error(context, context.l10n.ebImageUploadFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -327,7 +327,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           FilledButton.icon(
             onPressed: _isUploadingImage ? null : _pickQuestionImage,
             icon: const Icon(Icons.upload_file_outlined),
-            label: Text(_hasQuestionImage ? '重新上传图片' : '上传题目图片'),
+            label: Text(_hasQuestionImage ? context.l10n.ebReuploadImage : context.l10n.ebUploadImage),
           ),
         ],
       ),
@@ -342,7 +342,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: Text(widget.isEditMode ? '编辑错题' : '添加错题'),
+          title: Text(widget.isEditMode ? context.l10n.ebEditError : context.l10n.ebAddError),
         ),
         child: const Center(child: CircularProgressIndicator()),
       );
@@ -374,10 +374,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
             ),
-            title: const Text('编辑错题'),
+            title: const Text(context.l10n.ebEditError),
           ),
           child: Center(
-            child: Text('加载错题失败: $error'),
+            child: Text(context.l10n.ebLoadError(error.toString())),
           ),
         ),
       );
@@ -397,7 +397,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(widget.isEditMode ? '编辑错题' : '添加错题'),
+        title: Text(widget.isEditMode ? context.l10n.ebEditError : context.l10n.ebAddError),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: DS.spacing8),
@@ -444,10 +444,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 controller: _chapterController,
                 decoration: const InputDecoration(
                   labelText: context.l10n.ebChapterOptional,
-                  hintText: '例如：第三章 牛顿运动定律',
+                  hintText: context.l10n.ebChapterHint,
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.folder_outlined),
-                  helperText: '填写后便于按章节筛选复习',
+                  helperText: context.l10n.ebChapterHelper,
                 ),
                 textInputAction: TextInputAction.next,
               ),
@@ -458,11 +458,11 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 controller: _questionController,
                 decoration: const InputDecoration(
                   labelText: context.l10n.ebQuestionContent,
-                  hintText: '请输入完整的题目内容，或仅上传题目图片...',
+                  hintText: context.l10n.ebQuestionHint,
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.quiz_outlined),
                   alignLabelWithHint: true,
-                  helperText: '题目文字和题目图片二选一即可，推荐两者都填以提升分析质量',
+                  helperText: context.l10n.ebQuestionHelper,
                 ),
                 maxLines: 6,
                 textInputAction: TextInputAction.newline,
@@ -473,7 +473,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 controller: _userAnswerController,
                 decoration: const InputDecoration(
                   labelText: context.l10n.ebYourAnswer,
-                  hintText: '你当时写的错误答案...',
+                  hintText: context.l10n.ebYourAnswerHint,
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.edit_outlined),
                   alignLabelWithHint: true,
@@ -495,7 +495,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 controller: _correctAnswerController,
                 decoration: const InputDecoration(
                   labelText: context.l10n.ebCorrectAnswer,
-                  hintText: '标准答案或正确的解题过程...',
+                  hintText: context.l10n.ebCorrectAnswerHint,
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.check_circle_outline),
                   alignLabelWithHint: true,
