@@ -205,10 +205,14 @@ async def test_e2e_achievement_unlock_creates_reinforcement_signal():
         from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
         consumer = AchievementReinforcementConsumer()
         momentum = consumer.compute_momentum(
-            recent_unlocks=[{"type": "streak", "streak_count": 7}],
+            user_id="u_e2e",
+            recent_unlocks=1,
+            active_streaks=1,
             in_progress_count=1,
         )
-        assert momentum >= 0.0, "Momentum should be computed for streak"
+        assert momentum is not None, "Momentum should be computed for streak"
+        assert hasattr(momentum, 'momentum_score'), "Momentum should have momentum_score attribute"
+        assert momentum.momentum_score >= 0.0, "Momentum score should be non-negative"
 
 
 # ── E2E Test 4: Self-Correction Receipt → User Correction Flow ──────

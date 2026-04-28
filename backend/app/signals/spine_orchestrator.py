@@ -24,7 +24,6 @@ from app.signals.recall_opportunity import RecallOpportunityDetector
 from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
 from app.signals.signal_ranker import SignalRanker
 from app.signals.state_register import StateRegister
-from app.signals.state_register import StateRegister
 from app.signals.exam_rescue_detector import ExamRescueDetector
 from app.signals.stale_state_guard import StaleStateGuard
 from app.signals.state_packet_builder import ActionableStatePacketBuilder
@@ -50,7 +49,6 @@ from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.goal_world_graph import GoalWorldGraphService
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.directive_quota import DirectiveQuotaService
-from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.signals.types import (
     ActionableSignal,
@@ -107,7 +105,6 @@ class SpineOrchestrator:
         self.reply_engine = SpineReplyOptionEngine()
         self.wake_judge = AuroraWakeJudge()
         self.signal_ranker = SignalRanker()
-        self.state_register = StateRegister(redis_client)
         self.state_register = StateRegister(redis_client)
         self.outcome_recorder = OutcomeRecorder(redis_client)
         self.metrics = SpineMetricsCollector(redis_client)
