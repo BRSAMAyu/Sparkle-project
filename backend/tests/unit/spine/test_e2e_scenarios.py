@@ -231,7 +231,7 @@ class TestE2EMatrixScenario10_SnapshotRehydration:
             "timestamp": "2026-01-27T00:00:00",
         }
         await redis.set(
-            "spine:snapshot:returning_user",
+            "spine:snapshot:returning_user:latest",
             json.dumps(snapshot_data),
             ex=90 * 24 * 3600,
         )
@@ -239,7 +239,9 @@ class TestE2EMatrixScenario10_SnapshotRehydration:
         # User returns after 3 months
         recovered = await spine.recover_from_snapshot(user_id="returning_user")
         # Snapshot exists, recovery attempted
-        assert recovered is not None or True  # recovery is best-effort
+        assert recovered is not None, "Expected snapshot recovery for returning_user"
+        assert "user_id" in recovered, "Recovered snapshot should contain user_id"
+        assert recovered["user_id"] == "returning_user"
 
 
 class TestE2EMatrixScenario11_FatigueGuard:

@@ -121,8 +121,9 @@ async def test_e2e_task_timeout_signal_flows_through_all_8_layers():
             actual_minutes=90,
         )
 
-        # Verify pipeline executed — at minimum signal was generated
-        assert result is not None or mock_metrics.record_signal_generated.call_count >= 0
+        # Verify pipeline executed — signal generated with trace
+        assert result is not None, "Expected CausalTrace for task with 3x overrun (30→90 min)"
+        assert result.trace_id, "Trace should have a valid trace_id"
 
 
 # ── E2E Test 2: User Return → Stale State → Recovery Directive ──────
