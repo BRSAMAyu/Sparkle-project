@@ -713,7 +713,7 @@ def test_aurora_agenda_item_statuses():
         assert item.status == s
 
 
-def test_aurora_control_signal_in_pipeline():
+async def test_aurora_control_signal_in_pipeline():
     """Integration: PolicyEngine + AuroraControlSignal envelope wires correctly for a high-risk signal."""
     engine = PolicyEngine()
     signal = ActionableSignal(
@@ -729,7 +729,7 @@ def test_aurora_control_signal_in_pipeline():
         possible_effects=["seven_day_survival"],
         priority="high",
     )
-    result = asyncio.get_event_loop().run_until_complete(engine.evaluate(signal))
+    result = await engine.evaluate(signal)
     assert result is not None
     policy, _directive = result
     assert policy.risk_level == "high"
@@ -1102,7 +1102,7 @@ def test_learning_base_select_strategy_cold_start():
     assert result["source"] == "rule_fallback"
 
 
-def test_learning_base_persist_and_load():
+async def test_learning_base_persist_and_load():
     """Beliefs persist to Redis and load back correctly."""
     lb = LearningBase()
     redis = FakeRedis()
@@ -1110,22 +1110,20 @@ def test_learning_base_persist_and_load():
         StrategyBelief(strategy_key="s1", alpha=5, beta=3, evidence_count=8, last_updated="2026-04-27"),
         StrategyBelief(strategy_key="s2", alpha=2, beta=7, evidence_count=9),
     ]
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(lb.persist_beliefs(redis, "u1", beliefs))
+    await lb.persist_beliefs(redis, "u1", beliefs)
 
-    loaded = asyncio.get_event_loop().run_until_complete(lb.load_beliefs(redis, "u1"))
+    loaded = await lb.load_beliefs(redis, "u1")
     assert len(loaded) == 2
     assert loaded[0].strategy_key == "s1"
     assert loaded[0].alpha == 5
     assert loaded[1].beta == 7
 
 
-def test_learning_base_load_empty():
+async def test_learning_base_load_empty():
     """Loading from empty Redis returns empty list."""
     lb = LearningBase()
     redis = FakeRedis()
-    import asyncio
-    loaded = asyncio.get_event_loop().run_until_complete(lb.load_beliefs(redis, "u_noone"))
+    loaded = await lb.load_beliefs(redis, "u_noone")
     assert loaded == []
 
 

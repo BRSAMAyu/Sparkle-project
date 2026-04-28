@@ -8491,7 +8491,7 @@ def test_policy_experiment_create():
     assert restored.primary_strategy == "recover_execution_rhythm"
 
 
-def test_policy_experiment_record_trial():
+async def test_policy_experiment_record_trial():
     from app.signals.policy_experiments import PolicyExperimentManager
     redis = MagicMock()
     redis.set = AsyncMock()
@@ -8502,13 +8502,11 @@ def test_policy_experiment_record_trial():
     redis.lrange = AsyncMock(return_value=[])
 
     mgr = PolicyExperimentManager(redis)
-    exp = asyncio.get_event_loop().run_until_complete(
-        mgr.create_experiment(
-            user_id="u1",
-            signal_state_key="task_granularity_fit",
-            signal_claim="recent_task_too_large",
-            primary_strategy="recover_execution_rhythm",
-        )
+    exp = await mgr.create_experiment(
+        user_id="u1",
+        signal_state_key="task_granularity_fit",
+        signal_claim="recent_task_too_large",
+        primary_strategy="recover_execution_rhythm",
     )
     assert exp is not None
     assert exp.shadow_strategy == "recover_execution_rhythm_gentle"
@@ -8516,25 +8514,21 @@ def test_policy_experiment_record_trial():
     # Simulate recording a trial
     import json
     redis.get = AsyncMock(return_value=json.dumps(exp.to_dict()))
-    updated = asyncio.get_event_loop().run_until_complete(
-        mgr.record_trial(exp.experiment_id, primary_outcome="effective", shadow_hypothesis="effective")
-    )
+    updated = await mgr.record_trial(exp.experiment_id, primary_outcome="effective", shadow_hypothesis="effective")
     assert updated is not None
     assert updated.total_trials == 1
     assert updated.primary_wins == 1
 
 
-def test_policy_experiment_no_alternative():
+async def test_policy_experiment_no_alternative():
     from app.signals.policy_experiments import PolicyExperimentManager
     redis = MagicMock()
     mgr = PolicyExperimentManager(redis)
-    exp = asyncio.get_event_loop().run_until_complete(
-        mgr.create_experiment(
-            user_id="u1",
-            signal_state_key="unknown",
-            signal_claim="unknown",
-            primary_strategy="nonexistent_strategy",
-        )
+    exp = await mgr.create_experiment(
+        user_id="u1",
+        signal_state_key="unknown",
+        signal_claim="unknown",
+        primary_strategy="nonexistent_strategy",
     )
     assert exp is None
 
@@ -11447,7 +11441,7 @@ def test_aurora_agenda_item_statuses():
         assert item.status == s
 
 
-def test_aurora_control_signal_in_pipeline():
+async def test_aurora_control_signal_in_pipeline():
     """Integration: PolicyEngine + AuroraControlSignal envelope wires correctly for a high-risk signal."""
     engine = PolicyEngine()
     signal = ActionableSignal(
@@ -11463,7 +11457,7 @@ def test_aurora_control_signal_in_pipeline():
         possible_effects=["seven_day_survival"],
         priority="high",
     )
-    result = asyncio.get_event_loop().run_until_complete(engine.evaluate(signal))
+    result = await engine.evaluate(signal)
     assert result is not None
     policy, _directive = result
     assert policy.risk_level == "high"
@@ -11836,7 +11830,7 @@ def test_learning_base_select_strategy_cold_start():
     assert result["source"] == "rule_fallback"
 
 
-def test_learning_base_persist_and_load():
+async def test_learning_base_persist_and_load():
     """Beliefs persist to Redis and load back correctly."""
     lb = LearningBase()
     redis = FakeRedis()
@@ -11844,22 +11838,20 @@ def test_learning_base_persist_and_load():
         StrategyBelief(strategy_key="s1", alpha=5, beta=3, evidence_count=8, last_updated="2026-04-27"),
         StrategyBelief(strategy_key="s2", alpha=2, beta=7, evidence_count=9),
     ]
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(lb.persist_beliefs(redis, "u1", beliefs))
+    await lb.persist_beliefs(redis, "u1", beliefs)
 
-    loaded = asyncio.get_event_loop().run_until_complete(lb.load_beliefs(redis, "u1"))
+    loaded = await lb.load_beliefs(redis, "u1")
     assert len(loaded) == 2
     assert loaded[0].strategy_key == "s1"
     assert loaded[0].alpha == 5
     assert loaded[1].beta == 7
 
 
-def test_learning_base_load_empty():
+async def test_learning_base_load_empty():
     """Loading from empty Redis returns empty list."""
     lb = LearningBase()
     redis = FakeRedis()
-    import asyncio
-    loaded = asyncio.get_event_loop().run_until_complete(lb.load_beliefs(redis, "u_noone"))
+    loaded = await lb.load_beliefs(redis, "u_noone")
     assert loaded == []
 
 
