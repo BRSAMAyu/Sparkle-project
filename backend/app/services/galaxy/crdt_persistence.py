@@ -1,4 +1,5 @@
 from datetime import timezone, datetime
+from typing import Any
 
 import y_py as Y
 from redis.asyncio import Redis
@@ -116,3 +117,133 @@ class CRDTPersistenceManager:
         )
         self.db.add(log_entry)
         await self.db.commit()
+
+
+class MasteryMergeCRDT:
+    """Stateless CRDT merge strategies for mastery/task status."""
+
+    _STATUS_ORDER = {"pending": 0, "in_progress": 1, "completed": 2}
+
+    @staticmethod
+    def merge_mastery(a: float, b: float) -> float:
+        return max(a, b)
+
+    @classmethod
+    def merge_task_status(cls, a: str, b: str) -> str:
+        order_a = cls._STATUS_ORDER.get(a, 0)
+        order_b = cls._STATUS_ORDER.get(b, 0)
+        return a if order_a >= order_b else b
+
+    @classmethod
+    def merge_node(cls, local: dict, remote: dict) -> dict:
+        return {
+            "mastery_score": cls.merge_mastery(
+                local.get("mastery_score", 0.0),
+                remote.get("mastery_score", 0.0),
+            ),
+            "status": cls.merge_task_status(
+                local.get("status", "pending"),
+                remote.get("status", "pending"),
+            ),
+            "revision": max(local.get("revision", 0), remote.get("revision", 0)) + 1,
+        }
+
+    @classmethod
+    def merge_batch(
+        cls,
+        local: dict[str, dict],
+        remote: dict[str, dict],
+    ) -> list[dict]:
+        all_keys = set(local) | set(remote)
+        results: list[dict] = []
+        for key in all_keys:
+            if key in local and key in remote:
+                merged = cls.merge_node(local[key], remote[key])
+                merged["node_id"] = key
+                results.append(merged)
+            elif key in local:
+                entry = dict(local[key])
+                entry.setdefault("node_id", key)
+                results.append(entry)
+            else:
+                entry = dict(remote[key])
+                entry.setdefault("node_id", key)
+                results.append(entry)
+        return results
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# APP-005: CRDT Mastery Merge — offline/multi-device conflict resolution
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class MasteryMergeCRDT:
+    """CRDT merge strategy for node mastery scores across devices.
+
+    Strategy: max-wins for mastery scores (learning progress is monotonic).
+    For local task status: most-progressed wins.
+    All merges are commutative, associative, and idempotent (CRDT properties).
+    """
+
+    @staticmethod
+    def merge_mastery(local: float, remote: float) -> float:
+        """Merge two mastery scores — max wins (learning is monotonic)."""
+        return max(local, remote)
+
+    @staticmethod
+    def merge_task_status(local: str, remote: str) -> str:
+        """Merge task status — most progressed wins."""
+        order = {"pending": 0, "in_progress": 1, "completed": 2, "abandoned": 3}
+        if order.get(local, 0) >= order.get(remote, 0):
+            return local
+        return remote
+
+    @staticmethod
+    def merge_node(
+        local: dict[str, Any],
+        remote: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Merge a full node from two devices.
+
+        Rules:
+        - mastery: max wins
+        - status: most progressed wins
+        - revision: max wins (LWW for metadata)
+        - updated_at: latest wins
+        """
+        merged = dict(local)
+
+        local_mastery = float(local.get("mastery_score", 0.0))
+        remote_mastery = float(remote.get("mastery_score", 0.0))
+        merged["mastery_score"] = max(local_mastery, remote_mastery)
+
+        local_status = str(local.get("status", "pending"))
+        remote_status = str(remote.get("status", "pending"))
+        merged["status"] = MasteryMergeCRDT.merge_task_status(local_status, remote_status)
+
+        local_rev = int(local.get("revision", 0))
+        remote_rev = int(remote.get("revision", 0))
+        merged["revision"] = max(local_rev, remote_rev) + 1
+
+        return merged
+
+    @staticmethod
+    def merge_batch(
+        local_nodes: dict[str, dict[str, Any]],
+        remote_nodes: dict[str, dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Merge a batch of nodes from two devices.
+
+        Returns list of merged node dicts (only nodes that changed).
+        Nodes only in local or only in remote are included as-is.
+        """
+        all_ids = set(local_nodes.keys()) | set(remote_nodes.keys())
+        merged = []
+        for node_id in all_ids:
+            loc = local_nodes.get(node_id)
+            rem = remote_nodes.get(node_id)
+            if loc and rem:
+                merged.append(MasteryMergeCRDT.merge_node(loc, rem))
+            else:
+                merged.append(loc or rem)
+        return merged

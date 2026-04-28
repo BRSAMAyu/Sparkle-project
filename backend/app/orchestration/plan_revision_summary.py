@@ -16,6 +16,8 @@ class PlanRevisionSummary:
     what_stays: str
     what_changes: str
     new_next_action: str
+    impact_scope: tuple[str, ...] = ()  # Task/phase IDs affected by this revision
+    version: int = 0                     # Plan version after this revision
     created_at: str = field(default_factory=_utcnow)
 
     def to_dict(self) -> dict[str, Any]:
@@ -25,5 +27,7 @@ class PlanRevisionSummary:
             "what_stays": self.what_stays,
             "what_changes": self.what_changes,
             "new_next_action": self.new_next_action,
+            "impact_scope": list(self.impact_scope),
+            "version": self.version,
             "created_at": self.created_at,
         }

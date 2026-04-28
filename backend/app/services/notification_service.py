@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -147,17 +147,13 @@ class NotificationService:
         ):
             return False, "notification_type_disabled"
 
-        if not prefs or not prefs.quiet_hours_enabled:
-            return True, None
-
-        # NUDGE-007: Consecutive ignore backoff
+        # NUDGE-007: Consecutive ignore backoff (runs regardless of quiet hours)
         try:
             from app.core.cache import cache_service
             if cache_service.redis:
                 _ignore_key = f"nudge:consecutive_ignore:{user_id}"
                 _ignore_raw = await cache_service.redis.get(_ignore_key)
                 consecutive_ignores = int(_ignore_raw) if _ignore_raw else 0
-                # Check recent dismissal count from DB to keep counter accurate
                 if consecutive_ignores == 0:
                     _recent_result = await db.execute(
                         select(NotificationInteraction)
@@ -189,6 +185,27 @@ class NotificationService:
                     )
         except Exception:
             pass
+
+        # NUDGE-005: Fatigue protection — suppress non-critical notifications under stress
+        try:
+            from app.core.cache import cache_service
+            if cache_service.redis:
+                fatigue_key = f"spine:fatigue:{user_id}:latest"
+                fatigue_raw = await cache_service.redis.get(fatigue_key)
+                if fatigue_raw:
+                    import json
+                    fatigue_data = json.loads(fatigue_raw if isinstance(fatigue_raw, str) else fatigue_raw.decode())
+                    fatigue_level = fatigue_data.get("fatigue_level", "low")
+                    if fatigue_level == "critical":
+                        return False, "fatigue_protection_critical"
+                    if fatigue_level == "high" and cls.source_type_for_notification(notification_type) == "system":
+                        return False, "fatigue_protection_high"
+        except Exception:
+            pass
+
+        # Quiet hours check
+        if not prefs or not prefs.quiet_hours_enabled:
+            return True, None
 
         timezone_result = await db.execute(
             select(PushPreference.timezone).where(PushPreference.user_id == user_id)
