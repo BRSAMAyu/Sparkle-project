@@ -1,0 +1,137 @@
+# Sparkle Roadmap v3 — 工作跟踪文档
+
+> **创建日期**: 2026-04-28
+> **最后更新**: 2026-04-28
+> **对应 Roadmap**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
+> **用途**: 记录所有已完成、进行中、待做的工作, 支持并行推进与阶段审查
+
+---
+
+## 当前状态: Phase 0 进行中 (6/18 完成)
+
+---
+
+## Phase 0: 生产基础设施硬化
+
+### 0.1 TLS/HTTPS 终止
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T0.1.1 nginx.conf 添加 443 + SSL | ✅ 完成 | main | HTTP→HTTPS 重定向, TLSv1.2/1.3, HSTS |
+| T0.1.2 docker-compose.prod.yml 挂载证书 | ✅ 完成 | main | SSL_CERT_DIR volume mount, 443 端口 |
+| T0.1.3 SSL 证书生成脚本 | ✅ 完成 | main | scripts/ssl/generate_dev_certs.sh |
+| T0.1.4 settings.py CORS HTTPS | ⬜ 未开始 | — | 需添加生产域名 |
+| T0.1.5 Flutter 生产 API URL | ⬜ 未开始 | — | 需添加 HTTPS base URL |
+
+### 0.2 崩溃报告 (Sentry)
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T0.2.1 backend/app/core/sentry.py | ✅ 完成 | main | FastAPI+Redis+Celery 集成 |
+| T0.2.2 main.py startup init | ✅ 完成 | main | lifespan 中早期初始化 |
+| T0.2.3 gRPC server sentry init | ⬜ 未开始 | — | |
+| T0.2.4 .env.example Sentry DSN | ✅ 完成 | main | |
+| T0.2.5 settings.py Sentry 字段 | ✅ 完成 | main | |
+| T0.2.6 Flutter Sentry init | ⬜ 未开始 | — | |
+
+### 0.3 秘钥启动校验
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T0.3.1 settings.py production secret 校验 | ✅ 完成 | main | SECRET_KEY+POSTGRES+REDIS+MINIO+INTERNAL_API+LLM |
+| T0.3.2 MinIO 默认值改为空 | ✅ 完成 | main | "minioadmin" → "" |
+| T0.3.3 .env.example placeholder 注释 | ⬜ 未开始 | — | |
+| T0.3.4 check_production_secrets.py 脚本 | ✅ 完成 | main | 含引号去除, 开发跳过 |
+
+### 0.4 基础设施安全加固
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T0.4.1 Grafana 密码必填 | ✅ 完成 | main | :? 语法, 未设则 docker compose 报错 |
+| T0.4.2 JPush placeholder 移除 | ✅ 完成 | main | '' 默认 + jpushEffectiveEnabled guard |
+| T0.4.3 MinIO credentials 从 env | ⬜ 未开始 | — | |
+| T0.4.4 PRODUCTION_URL setting | ⬜ 未开始 | — | |
+| T0.4.5 Grafana 8 dashboard 预配置 | ⬜ 未开始 | — | |
+
+### 0.5 邮件服务配置
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T0.5.1 email 发送逻辑确认 | ⬜ 未开始 | — | |
+| T0.5.2 SMTP 配置说明 | ⬜ 未开始 | — | |
+| T0.5.3 EMAIL_ENABLED 生产默认 | ⬜ 未开始 | — | |
+
+---
+
+## Phase 1: 核心闭环关闭
+
+### 1.1 Breakpoint #5: Behavior-driven Push
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T1.1.1 notification_service 增强 | ⬜ 未开始 | — | |
+| T1.1.2 session_end RecallOpportunity | ⬜ 未开始 | — | |
+| T1.1.3 push_scheduler.py 新建 | ⬜ 未开始 | — | |
+| T1.1.4 JPush 内容增强 | ⬜ 未开始 | — | |
+| T1.1.5 Flutter 推送跳转 | ⬜ 未开始 | — | |
+| T1.1.6 test_behavior_driven_push.py | ⬜ 未开始 | — | |
+
+### 1.2 Breakpoint #6: Structured CognitiveAdjustments
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T1.2.1 CognitiveAdjustment dataclass | ⬜ 未开始 | — | |
+| T1.2.2 orchestrator 消费结构调整 | ⬜ 未开始 | — | |
+| T1.2.3 ux_envelope 从调整生成 | ⬜ 未开始 | — | |
+| T1.2.4 prompts.py 结构化参数 | ⬜ 未开始 | — | |
+| T1.2.5 Flutter WebSocket 传递 | ⬜ 未开始 | — | |
+| T1.2.6 test_structured_cognitive_adjustments.py | ⬜ 未开始 | — | |
+
+### 1.3 Breakpoint #7: Verification Loop
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T1.3.1 outcome_tracker.py | ⬜ 未开始 | — | |
+| T1.3.2 register_expected_outcome | ⬜ 未开始 | — | |
+| T1.3.3 record_actual_outcome | ⬜ 未开始 | — | |
+| T1.3.4 attribution.py | ⬜ 未开始 | — | |
+| T1.3.5 learning_guard.py | ⬜ 未开始 | — | |
+| T1.3.6 test_verification_loop.py | ⬜ 未开始 | — | |
+
+### 1.4 Outcome 回流闭环
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T1.4.1 9 类 directive outcome | ⬜ 未开始 | — | |
+| T1.4.2 统一 outcome 写入 CausalTrace | ⬜ 未开始 | — | |
+| T1.4.3 Outcome Grafana dashboard | ⬜ 未开始 | — | |
+
+### 1.5 Card Protocol 迁移
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T1.5.1 card_service.py 完善 | ⬜ 未开始 | — | |
+| T1.5.2 planning_workflow Card 写入 | ⬜ 未开始 | — | |
+| T1.5.3 TaskOccurrence 从 Card 生成 | ⬜ 未开始 | — | |
+| T1.5.4 InterventionRecord 记录 | ⬜ 未开始 | — | |
+| T1.5.5 Flutter Card 模型适配 | ⬜ 未开始 | — | |
+| T1.5.6 双写一致性校验 | ⬜ 未开始 | — | |
+
+---
+
+## Phase 2-7: 简要索引 (详细任务在对应阶段展开时填写)
+
+| Phase | 状态 | 开始日期 | 完成日期 |
+|-------|------|----------|----------|
+| Phase 2: Spine 深化 | ⬜ 未开始 | — | — |
+| Phase 3: Aurora↔Spine | ⬜ 未开始 | — | — |
+| Phase 4: 活体验打磨 | ⬜ 未开始 | — | — |
+| Phase 5: P4 平台 | ⬜ 未开始 | — | — |
+| Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
+| Phase 7: 验收上线 | ⬜ 未开始 | — | — |
+
+---
+
+## 审查日志
+
+| 日期 | Phase | 审查类型 | 发现问题 | 修复状态 |
+|------|-------|----------|----------|----------|
+| — | — | — | — | — |
+
+---
+
+## 提交日志
+
+| 日期 | Commit | Phase | 范围 |
+|------|--------|-------|------|
+| — | — | — | — |

@@ -127,6 +127,15 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
 
+    # Initialize Sentry crash reporting
+    if settings.SENTRY_DSN:
+        from app.core.sentry import init_sentry
+        init_sentry(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.SENTRY_ENVIRONMENT or settings.ENVIRONMENT,
+            traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        )
+
     # 版本兼容性检查 (passlib/bcrypt)
     try:
         import bcrypt

@@ -21,11 +21,14 @@ class PushConfig {
   // JPush Configuration
   // ===========================================================================
 
-  /// JPush App Key (should be replaced with actual value in production)
+  /// JPush App Key (must be set via --dart-define=JPUSH_APP_KEY=xxx for production)
   static const String jpushAppKey = String.fromEnvironment(
     'JPUSH_APP_KEY',
-    defaultValue: 'YOUR_JPUSH_APPKEY',
+    defaultValue: '',
   );
+
+  /// Whether JPush is effectively enabled (requires both flag and non-empty appKey)
+  static bool get jpushEffectiveEnabled => jpushEnabled && jpushAppKey.isNotEmpty;
 
   /// JPush Channel for statistics
   static const String jpushChannel = 'developer-default';
@@ -159,7 +162,7 @@ class PushConfig {
 
   /// Check if JPush should be used based on region
   static bool shouldUseJPush(String? region) {
-    if (!jpushEnabled) return false;
+    if (!jpushEffectiveEnabled) return false;
     if (region == null) return false;
     return jpushPreferredRegions.contains(region.toLowerCase());
   }

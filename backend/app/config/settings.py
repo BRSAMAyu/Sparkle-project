@@ -223,33 +223,33 @@ class Settings(BaseSettings):
 
     # Aurora Stage 18
     AURORA_STAGE18_AGGREGATOR_MODE: str = "live"  # off | shadow | live
-    AURORA_STAGE18_PUSH_POLICY_MODE: str = "off"  # off | shadow | live
-    AURORA_STAGE18_PUSH_DELIVERY_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE18_PUSH_POLICY_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE18_PUSH_DELIVERY_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 19
-    AURORA_STAGE19_WORKING_MEMORY_MODE: str = "off"  # off | shadow | live
-    AURORA_STAGE19_LLM_EXTRACTOR_MODE: str = "off"  # off | shadow | live
-    AURORA_STAGE19_CONSOLIDATION_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE19_WORKING_MEMORY_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE19_LLM_EXTRACTOR_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE19_CONSOLIDATION_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 21
     AURORA_STAGE21_SKILL_STORE_MODE: str = "live"  # off | shadow | live
-    AURORA_STAGE21_SKILL_SELECTION_MODE: str = "off"  # off | shadow | live
-    AURORA_STAGE21_SKILL_SHARE_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE21_SKILL_SELECTION_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE21_SKILL_SHARE_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 23
     AURORA_BAYESIAN_MODE: str = (
-        "shadow"  # Promoted to shadow: Stage 23 SQAM complete, begin real data collection (2026-04-25)
+        "live"  # Promoted to live: shadow soak passed (2026-04-28)
     )
     AURORA_BAYESIAN_LIVE_CANARY_PERCENT: int = 5
     AURORA_BAYESIAN_TTL_DAYS: int = 30
 
     # Aurora Stage 24
-    AURORA_POLICY_COMPILER_MODE: str = "off"  # off | shadow | live
+    AURORA_POLICY_COMPILER_MODE: str = "live"  # off | shadow | live
     AURORA_POLICY_DAILY_BUDGET: int = 2
     AURORA_POLICY_COOLDOWN_HOURS: int = 24
 
     # Aurora Stage 25
-    AURORA_REFLECTION_WIRE_MODE: str = "off"  # off | shadow | live
+    AURORA_REFLECTION_WIRE_MODE: str = "live"  # off | shadow | live
     AURORA_REFLECTION_CONTEXT_LIMIT: int = 20
     AURORA_REFLECTION_CONTEXT_MAX_TOKENS: int = 800
     AURORA_REFLECTION_TRIGGER_TOO_DIFFICULT: bool = True
@@ -260,13 +260,13 @@ class Settings(BaseSettings):
     AURORA_REFLECTION_TRIGGER_OVERLOAD: bool = True
 
     # Aurora Stage 26
-    AURORA_SCENE_MODE: str = "off"  # off | shadow | live
+    AURORA_SCENE_MODE: str = "live"  # off | shadow | live
     AURORA_SCENE_SIMILARITY_THRESHOLD: float = 0.75
     AURORA_SCENE_TIME_WINDOW_HOURS: int = 72
     AURORA_SCENE_QUALITY_THRESHOLD: float = 0.6
 
     # Aurora Stage 27
-    AURORA_FORESIGHT_MODE: str = "off"  # off | shadow | live
+    AURORA_FORESIGHT_MODE: str = "live"  # off | shadow | live
     AURORA_FORESIGHT_ATTRACTOR: str = "live"  # off | shadow | live
     AURORA_FORESIGHT_DEVIATION: str = "live"  # off | shadow | live
     AURORA_FORESIGHT_JITAI: str = "live"  # off | shadow | live
@@ -279,9 +279,9 @@ class Settings(BaseSettings):
     AURORA_FORESIGHT_JITAI_MISFIRE_THRESHOLD: float = 0.15
 
     # Aurora Stage 28
-    AURORA_TRAITS_MODE: str = "off"  # off | shadow | live
-    AURORA_TRAITS_NLP_MODE: str = "off"  # off | shadow | live
-    AURORA_TRAITS_COLDSTART_MODE: str = "off"  # off | shadow | live
+    AURORA_TRAITS_MODE: str = "live"  # off | shadow | live
+    AURORA_TRAITS_NLP_MODE: str = "live"  # off | shadow | live
+    AURORA_TRAITS_COLDSTART_MODE: str = "live"  # off | shadow | live
     AURORA_TRAITS_NLP_COOLDOWN_HOURS: int = 24
     AURORA_TRAITS_NLP_BIAS_THRESHOLD: float = 0.10
     AURORA_TRAITS_NLP_MAX_DAYS: int = 30
@@ -289,17 +289,17 @@ class Settings(BaseSettings):
     AURORA_TRAITS_NLP_P95_MS_BUDGET: int = 800
 
     # Aurora Stage 29
-    AURORA_SRL_MODE: str = "off"  # off | shadow | live
-    AURORA_SRL_TRACKER_MODE: str = "off"  # off | shadow | live
-    AURORA_SRL_BRIDGE_MODE: str = "off"  # off | shadow | live
-    AURORA_SRL_SCAFFOLDING_CONSUME_MODE: str = "off"  # off | shadow | live
+    AURORA_SRL_MODE: str = "live"  # off | shadow | live
+    AURORA_SRL_TRACKER_MODE: str = "live"  # off | shadow | live
+    AURORA_SRL_BRIDGE_MODE: str = "live"  # off | shadow | live
+    AURORA_SRL_SCAFFOLDING_CONSUME_MODE: str = "live"  # off | shadow | live
     AURORA_SRL_EVENT_LAG_P95_THRESHOLD_SECONDS: float = 5.0
     AURORA_SRL_MISJUDGMENT_THRESHOLD: float = 0.20
     AURORA_SRL_TRACKER_P95_MS_BUDGET: int = 20
     AURORA_SRL_AGGREGATOR_TTL_SECONDS: int = 15
 
     # Aurora Stage 30
-    AURORA_METACOG_MODE: str = "off"  # off | shadow | live
+    AURORA_METACOG_MODE: str = "live"  # off | shadow | live
     AURORA_METACOG_DASHBOARD_MODE: str = "live"  # off | shadow | live
     AURORA_METACOG_PROCESS_SCAFFOLDING_MODE: str = "live"  # off | shadow | live
     AURORA_METACOG_FSM_COMBINE_MODE: str = "live"  # off | shadow | live
@@ -313,25 +313,25 @@ class Settings(BaseSettings):
     AURORA_METACOG_PROXY_QUESTION_TO_STATEMENT_RATIO: str = "live"
     AURORA_METACOG_PROXY_TIME_TO_FIRST_ACTION: str = "live"
     AURORA_METACOG_PROXY_COMPLETION_VS_ESTIMATE_DELTA_SIGN: str = "live"
-    AURORA_IDIOGRAPHIC_MODE: str = "shadow"  # off | shadow | live
+    AURORA_IDIOGRAPHIC_MODE: str = "live"  # off | shadow | live
     AURORA_IDIOGRAPHIC_TTL_SECONDS: int = 300
 
     # Aurora Stage 33
-    AURORA_STAGE33_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE33_SOCIAL_MODE: str = "live"  # off | shadow | live
-    AURORA_STAGE33_SRL_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE33_WM_PROMPT_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE33_EVENTS_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_SRL_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE33_WM_PROMPT_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE33_EVENTS_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 34
-    AURORA_STAGE34_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE34_ERROR_BRIDGE_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE34_CAPSULE_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE34_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE34_ERROR_BRIDGE_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE34_CAPSULE_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED: str = "live"  # off | shadow | live
 
     # Aurora Stage 35
-    AURORA_STAGE35_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE35_METACOG_ROUTER_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE35_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE35_METACOG_ROUTER_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 37
     AURORA_STAGE37_LLM_SAFETY_ENABLED: bool = True
@@ -597,15 +597,15 @@ class Settings(BaseSettings):
     GALAXY_KNOWLEDGE_CONTEXT_RATIO: float = 0.15
     TASK_ERROR_CONTEXT_RATIO: float = 0.10
     COGNITIVE_PROFILE_CONTEXT_RATIO: float = 0.10
-    AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE: str = "shadow"  # off | shadow | live
+    AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE: str = "live"  # off | shadow | live
     # Aurora document-context gate. auto/live/on run the classifier; off/skip disable
     # document retrieval for every turn; selective/aggressive cap positive decisions.
     AURORA_DOC_CONTEXT_MODE: str = "auto"
     AURORA_DOC_CONTEXT_AGGRESSIVE_BUDGET_TOKENS: int = 2200
     AURORA_DOC_CONTEXT_SELECTIVE_BUDGET_TOKENS: int = 900
     AURORA_DOC_CONTEXT_AMBIGUOUS_BUDGET_TOKENS: int = 500
-    AURORA_STAGE38_ERR_REPLAN_MODE: str = "shadow"
-    AURORA_STAGE38_PUSH_SCHEDULER_MODE: str = "shadow"
+    AURORA_STAGE38_ERR_REPLAN_MODE: str = "live"
+    AURORA_STAGE38_PUSH_SCHEDULER_MODE: str = "live"
     AURORA_STAGE38_PUSH_SCHEDULER_INTERVAL_MINUTES: int = 5
     CONTEXT_SEMANTIC_GATING_RULES_JSON: str = ""
     CONTEXT_RANKING_SOFT_CAP_EPISODIC: int = 6
@@ -723,8 +723,8 @@ class Settings(BaseSettings):
     )
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_PUBLIC_ENDPOINT: str = ""
-    MINIO_ACCESS_KEY: str = "minioadmin"
-    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_ACCESS_KEY: str = ""
+    MINIO_SECRET_KEY: str = ""
     MINIO_BUCKET: str = "sparkle-files"
     MINIO_REGION: str = ""
     MINIO_USE_SSL: bool = False
@@ -744,6 +744,11 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    # Sentry crash reporting
+    SENTRY_DSN: str = ""
+    SENTRY_ENVIRONMENT: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
 
     # Demo Mode (演示模式 - 用于竞赛演示，确保关键流程稳定)
     DEMO_MODE: bool = False  # 生产环境应设为 False
@@ -967,6 +972,32 @@ class Settings(BaseSettings):
 
         if env in ("prod", "production") and "*" in self.BACKEND_CORS_ORIGINS:
             raise ValueError("BACKEND_CORS_ORIGINS cannot include '*' in production")
+
+        # Production secret validation: critical credentials must not be empty
+        if env in ("prod", "production"):
+            _placeholder_prefixes = ("your_", "replace_with", "changeme")
+            _critical_secrets = {
+                "SECRET_KEY": self.SECRET_KEY,
+                "POSTGRES_PASSWORD": self.POSTGRES_PASSWORD,
+                "REDIS_PASSWORD": self.REDIS_PASSWORD,
+                "INTERNAL_API_KEY": self.INTERNAL_API_KEY,
+                "MINIO_ACCESS_KEY": self.MINIO_ACCESS_KEY,
+                "MINIO_SECRET_KEY": self.MINIO_SECRET_KEY,
+            }
+            for _name, _val in _critical_secrets.items():
+                if not _val or any(_val.startswith(p) for p in _placeholder_prefixes):
+                    raise ValueError(f"{_name} must be set to a real value in production (not empty or placeholder)")
+
+            _llm_keys = {
+                "LLM_API_KEY": self.LLM_API_KEY,
+                "ZHIPU_API_KEY": self.ZHIPU_API_KEY,
+                "DEEPSEEK_API_KEY": self.DEEPSEEK_API_KEY,
+            }
+            _has_any_llm = any(
+                v and not any(v.startswith(p) for p in _placeholder_prefixes) for v in _llm_keys.values()
+            )
+            if not _has_any_llm:
+                raise ValueError("At least one LLM API key must be set in production (LLM_API_KEY, ZHIPU_API_KEY, or DEEPSEEK_API_KEY)")
 
         if self.WS_ALLOW_QUERY_TOKEN is None:
             self.WS_ALLOW_QUERY_TOKEN = env not in ("prod", "production")
