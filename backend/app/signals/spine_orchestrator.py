@@ -8,6 +8,7 @@ Spine Orchestrator — 编排完整的 Signal→State→Decision→Directive→A
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from loguru import logger
@@ -22,6 +23,7 @@ from app.signals.mistake_signal import MistakeSignalDetector
 from app.signals.recall_opportunity import RecallOpportunityDetector
 from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
 from app.signals.signal_ranker import SignalRanker
+from app.signals.state_register import StateRegister
 from app.signals.state_register import StateRegister
 from app.signals.exam_rescue_detector import ExamRescueDetector
 from app.signals.stale_state_guard import StaleStateGuard
@@ -49,6 +51,7 @@ from app.signals.goal_world_graph import GoalWorldGraphService
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
+from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -67,6 +70,11 @@ from app.signals.types import (
     UserVisibleReceipt,
     _uid,
 )
+
+
+def _utcnow_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
 
 
 class SpineOrchestrator:
@@ -99,6 +107,7 @@ class SpineOrchestrator:
         self.reply_engine = SpineReplyOptionEngine()
         self.wake_judge = AuroraWakeJudge()
         self.signal_ranker = SignalRanker()
+        self.state_register = StateRegister(redis_client)
         self.state_register = StateRegister(redis_client)
         self.outcome_recorder = OutcomeRecorder(redis_client)
         self.metrics = SpineMetricsCollector(redis_client)
@@ -168,6 +177,9 @@ class SpineOrchestrator:
         # Step 2b: 存储 signal 并链接到 trace
         await self.trace_store.store_signal(signal)
         await self.trace_store.append_signal(trace.trace_id, signal)
+
+        # Layer 4: Persist signal state to StateRegister
+        await self.state_register.upsert_from_signal(user_id, signal)
         trace.signal_ids.append(signal.signal_id)  # Keep local trace in sync
         await self.metrics.record_signal_generated()
 
@@ -188,6 +200,10 @@ class SpineOrchestrator:
         if result is None:
             trace.outcome_to_measure = ["signal_no_rule_match"]
             await self.trace_store._save_trace(trace)
+            try:
+                await self.redis.delete(f"spine:pipeline_lock:{user_id}")
+            except Exception:
+                pass
             return trace
 
         decision, directive = result
@@ -201,11 +217,17 @@ class SpineOrchestrator:
 
         # Step 4: 存储 active directive 供 task_generator 消费
         await self.trace_store.set_active_directive(user_id, directive)
-        await self._link_directive_to_active_session(user_id, directive.directive_id)
         await self.metrics.record_directive_generated()
+        await self._link_directive_to_active_session(user_id, directive.directive_id)
 
         # Step 4b: Build and store directives (only those flagged in which_directives)
         wd = decision.which_directives
+        _collected_directive_ids: dict[str, str | None] = {
+            "execution": directive.directive_id,
+            "response": None, "notification": None, "retrieval": None,
+            "plan": None, "model_write": None, "ux": None,
+            "community": None, "skill": None,
+        }
         _collected_directive_ids: dict[str, str | None] = {
             "execution": directive.directive_id,
             "response": None, "notification": None, "retrieval": None,
@@ -290,6 +312,19 @@ class SpineOrchestrator:
             ex=72 * 3600,
         )
 
+        # Step 4i: Build AuroraControlSignal envelope (Final Spec Section 6)
+        from app.signals.types import AuroraControlSignal
+        energy = "light" if decision.risk_level == "low" else "medium" if decision.risk_level == "medium" else "full"
+        directive_ids = {dt: did for dt, did in _collected_directive_ids.items() if did}
+        acs = AuroraControlSignal(
+            control_id=_uid("acs"),
+            energy=energy,
+            policy_decision_id=decision.policy_decision_id,
+            response_policy=decision.primary_strategy,
+            directive_ids=directive_ids,
+            risk_level=decision.risk_level,
+        )
+
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":
             receipt = UserVisibleReceipt(
@@ -300,6 +335,7 @@ class SpineOrchestrator:
                 related_state_keys=[signal.state_key],
             )
             await self.trace_store.append_receipt(trace.trace_id, receipt)
+            await self.metrics.record_receipt_shown()
             await self.metrics.record_receipt_shown()
             trace = await self.trace_store.get_trace(trace.trace_id) or trace
             # 将 receipt 挂到用户维度，方便前端拉取
@@ -323,6 +359,30 @@ class SpineOrchestrator:
             "user_feedback",
         ]
         await self.trace_store._save_trace(trace)
+
+        # Step 6b: Check Aurora wake eligibility for high-risk signals
+        if decision.risk_level in ("critical", "high"):
+            neg_outcomes = sum(
+                1 for pe in recent_effects
+                if getattr(pe, "attribution", "") == "insufficient"
+            ) if recent_effects else 0
+            wake_result = self.check_aurora_wake(
+                user_id=user_id,
+                quota_remaining=3,
+                cooldown_status="available",
+                consecutive_negative_outcomes=neg_outcomes,
+            )
+            if wake_result.can_wake:
+                import json
+                await self.redis.set(
+                    f"spine:aurora_wake_pending:{user_id}",
+                    json.dumps(wake_result.to_dict()),
+                    ex=3600,
+                )
+                logger.info(
+                    "Aurora wake recommended: user={} type={}",
+                    user_id, wake_result.recommended_session_type,
+                )
 
         # Step 6b: Check Aurora wake eligibility for high-risk signals
         if decision.risk_level in ("critical", "high"):
@@ -744,6 +804,18 @@ class SpineOrchestrator:
                 )
             except Exception as exc:
                 logger.debug("on_user_correction skipped: {}", exc)
+
+            # Divine moment 2: 承认误判 — chronicle + relationship update
+            try:
+                await self.on_user_correction(
+                    user_id=user_id,
+                    correction_type="receipt_correction",
+                    original_claim="strategy_adjustment",
+                    corrected_understanding="user_disagreed_with_adjustment",
+                    trace_id=receipt_id,
+                )
+            except Exception as exc:
+                logger.debug("on_user_correction skipped: {}", exc)
         elif action == "confirm":
             await self.metrics.record_outcome_recorded(effective=True)
         elif action == "dismiss":
@@ -794,6 +866,18 @@ class SpineOrchestrator:
             )
         except Exception:
             pass
+
+        # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
+        try:
+            return_case = await self.growth_chronicle.build_return_case_file(user_id)
+            if return_case and return_case.get("confirmed_insights"):
+                await self.redis.set(
+                    f"spine:return_case_file:{user_id}:latest",
+                    json.dumps(return_case),
+                    ex=7 * 24 * 3600,
+                )
+        except Exception as exc:
+            logger.debug("build_return_case_file skipped: {}", exc)
 
         return trace
 
@@ -1214,15 +1298,20 @@ class SpineOrchestrator:
             return trace
 
         decision, directive = result
+
+        # GOV-016: Force receipt visibility for high-impact low-confidence signals
+        # (handled after policy evaluation)
+
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
+        await self.metrics.record_directive_generated()
+        trace.policy_decision_id = decision.policy_decision_id  # Keep local in sync
+        trace.directive_ids.append(directive.directive_id)  # Keep local in sync
+
         # Overlay ExamSprintPolicy constraints if user is in exam_rescue mode
         directive = await self._apply_exam_sprint_overlay(user_id, directive)
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
-        trace.policy_decision_id = decision.policy_decision_id  # Keep local in sync
-        trace.directive_ids.append(directive.directive_id)  # Keep local in sync
-        await self.metrics.record_directive_generated()
 
         # Build and store ResponseDirective
         response_dir = self.policy_engine.build_response_directive(decision, signal)
@@ -1249,6 +1338,17 @@ class SpineOrchestrator:
                 )
             except Exception:
                 pass
+            # Divine moment 3: 知道不用资料 — build context receipt
+            try:
+                await self.build_context_receipt(
+                    user_id=user_id,
+                    used_sources=list(ret_dir.must_load or []),
+                    excluded_sources=list(ret_dir.do_not_load or []),
+                    reason=signal.evidence_summary or "",
+                    retrieval_mode=ret_dir.retrieval_mode,
+                )
+            except Exception:
+                pass
 
         # Build and store PlanDirective
         plan_dir = self.policy_engine.build_plan_directive(decision, signal)
@@ -1261,6 +1361,8 @@ class SpineOrchestrator:
         if mw_dir:
             await self._store_model_write_directive(user_id, mw_dir)
             trace.directive_ids.append(mw_dir.directive_id)
+            # Auto-apply model writes (confidence-gated, no user_confirmation needed)
+            await self._apply_model_writes(user_id, mw_dir)
             await self._apply_model_writes(user_id, mw_dir)
 
         # Build and store UXDirective
@@ -1308,6 +1410,14 @@ class SpineOrchestrator:
             "behavioral_change",
         ]
         await self.trace_store._save_trace(trace)
+
+        # P0-2: Post-policy enrichment from previously orphaned modules
+        await self._enrich_pipeline_post_policy(
+            user_id=user_id,
+            signal=signal,
+            decision=decision,
+            directive=directive,
+        )
 
         # P0-2: Post-policy enrichment from previously orphaned modules
         await self._enrich_pipeline_post_policy(
@@ -1411,6 +1521,20 @@ class SpineOrchestrator:
                     logger.info("Spine state recovered from snapshot for user={}", user_id)
         except Exception as exc:
             logger.debug("recover_from_snapshot skipped: {}", exc)
+
+        # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
+        try:
+            return_case = await self.growth_chronicle.build_return_case_file(user_id)
+            if return_case and return_case.get("confirmed_insights"):
+                await self.redis.set(
+                    f"spine:return_case_file:{user_id}:latest",
+                    json.dumps(return_case),
+                    ex=7 * 24 * 3600,
+                )
+                logger.info("Spine ReturnCaseFile loaded for user={}: {} confirmed insights",
+                            user_id, len(return_case["confirmed_insights"]))
+        except Exception as exc:
+            logger.debug("build_return_case_file skipped: {}", exc)
 
         # Refresh snapshot on return (pre_ttl_expiry — extends the 90d window)
         try:
@@ -1693,6 +1817,12 @@ class SpineOrchestrator:
             momentum_stalled=momentum_stalled,
         )
 
+    # ── Layer 3: Signal Ranking ────────────────────────────────────────
+
+    def rank_signals(self, signals: list[ActionableSignal], *, max_signals: int = 5):
+        """排序信号并解决冲突。返回 RankingResult。"""
+        return self.signal_ranker.rank(signals, max_signals=max_signals)
+
     # ── P1-3 Integration: CoreSession lifecycle ────────────────────────
 
     async def create_core_session(self, user_id: str, goal_id: str | None = None) -> CoreSession:
@@ -1741,6 +1871,26 @@ class SpineOrchestrator:
         import json
         key = f"spine:response_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
+
+    async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
+        """获取用户当前 ResponseDirective。Degraded: returns None on Redis failure."""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:response_directive:{user_id}:latest")
+            if not raw:
+                return None
+            return ResponseDirective.from_dict(json.loads(raw))
+        except Exception:
+            logger.debug("get_response_directive degraded: Redis unavailable for user={}", user_id)
+            return None
+
+    # ── Layer 6: ResponseDirective ─────────────────────────────────────
+
+    async def _store_response_directive(self, user_id: str, rd: ResponseDirective) -> None:
+        """存储 ResponseDirective 供 response layer 消费。"""
+        import json
+        key = f"spine:response_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
 
     async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
@@ -1760,6 +1910,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:notification_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(nd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
         await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
 
     async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
@@ -1832,10 +1983,51 @@ class SpineOrchestrator:
             ex=72 * 3600,
         )
 
+    async def _enrich_retrieval_with_source_tray(self, user_id: str, rd: RetrievalDirective) -> None:
+        """Enrich RetrievalDirective with SourceTrayState, producing concrete load plans."""
+        from app.signals.source_tray_integration import compute_retrieval_plan, build_source_receipt
+        from app.signals.types import SourceTrayState
+
+        try:
+            import json
+            raw = await self.redis.get(f"spine:source_tray:{user_id}")
+            if not raw:
+                return
+            tray = SourceTrayState.from_dict(json.loads(raw if isinstance(raw, str) else raw.decode()))
+        except Exception:
+            return
+
+        # SRC-014: Fetch user-corrected blocklist
+        from app.signals.source_tray_integration import SourceEffectivenessTracker
+        blocked: set[str] = set()
+        try:
+            tracker = SourceEffectivenessTracker(self.redis)
+            blocked = set(await tracker.get_blocked_sources(user_id))
+        except Exception:
+            pass
+
+        plan = await compute_retrieval_plan(
+            retrieval_directive=rd, source_tray=tray, blocked_source_ids=blocked or None,
+        )
+        if plan["must_load"]:
+            rd.must_load = list({s["source_id"] for s in plan["must_load"]} | set(rd.must_load or []))
+        if plan["do_not_load"]:
+            rd.do_not_load = list({s["source_id"] for s in plan["do_not_load"]} | set(rd.do_not_load or []))
+
+        loaded_ids = [s["source_id"] for s in plan["must_load"]]
+        receipt = build_source_receipt(rd, tray, loaded_ids)
+        import json
+        await self.redis.set(
+            f"spine:source_receipt:{user_id}:latest",
+            json.dumps(receipt),
+            ex=72 * 3600,
+        )
+
     async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
         import json
         key = f"spine:retrieval_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
         await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
 
     async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
@@ -1870,12 +2062,33 @@ class SpineOrchestrator:
             ex=7 * 24 * 3600,
         )
 
+    async def get_source_receipt(self, user_id: str) -> dict[str, Any] | None:
+        """获取用户最新的资料使用回执。"""
+        try:
+            import json
+            raw = await self.redis.get(f"spine:source_receipt:{user_id}:latest")
+            if not raw:
+                return None
+            return json.loads(raw if isinstance(raw, str) else raw.decode())
+        except Exception:
+            return None
+
+    async def set_source_tray(self, user_id: str, tray_state: dict[str, Any]) -> None:
+        """存储用户的 SourceTrayState 供检索时使用。"""
+        import json
+        await self.redis.set(
+            f"spine:source_tray:{user_id}",
+            json.dumps(tray_state),
+            ex=7 * 24 * 3600,
+        )
+
     # ── Layer 6: PlanDirective ──────────────────────────────────────────
 
     async def _store_plan_directive(self, user_id: str, pd: PlanDirective) -> None:
         import json
         key = f"spine:plan_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(pd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
         await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
 
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
@@ -1896,6 +2109,7 @@ class SpineOrchestrator:
         import json
         key = f"spine:model_write_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(mwd.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(mwd.directive_id, mwd.to_dict())
         await self.trace_store.store_directive_by_id(mwd.directive_id, mwd.to_dict())
 
     async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
@@ -1967,6 +2181,7 @@ class SpineOrchestrator:
         key = f"spine:ux_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(uxd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
+        await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
 
     async def get_ux_directive(self, user_id: str) -> UXDirective | None:
         """获取用户当前 UXDirective。Degraded: returns None on Redis failure."""
@@ -2013,44 +2228,69 @@ class SpineOrchestrator:
         user_id: str,
         directive: ExecutionDirective,
     ) -> ExecutionDirective:
-        """Overlay ExamSprintPhase constraints onto an ExecutionDirective if in exam_rescue mode.
+        """Overlay ExamSprintPhase or GoalTypeAdapter constraints onto an ExecutionDirective.
 
-        Takes the stricter value for duration caps and adds phase-specific biases.
-        No-ops if user is not in exam_rescue mode or deadline > 7 days.
+        Exam sprint mode uses phase-specific constraints.
+        Non-exam goals use GoalTypeAdapter for task type bias and retrieval mode.
         """
         goal_mode, days = await self._get_exam_sprint_context(user_id)
-        if not ExamSprintPolicyService.should_activate(goal_mode=goal_mode, days_to_deadline=days):
+        if ExamSprintPolicyService.should_activate(goal_mode=goal_mode, days_to_deadline=days):
+            assert days is not None  # guaranteed by should_activate
+            esp = self.exam_sprint_policy.compute(days_to_deadline=days)
+            phase = esp.phase
+
+            hc = dict(directive.hard_constraints or {})
+            existing_max = hc.get("max_task_duration_min", 999)
+            hc["max_task_duration_min"] = min(existing_max, phase.max_task_duration_min)
+            if not phase.allow_new_chapters:
+                hc["avoid_new_chapter"] = True
+            if phase.prefer_high_yield_review:
+                hc["prefer_high_yield"] = True
+            hc["exam_sprint_task_type_bias"] = phase.task_type_bias
+            hc["exam_sprint_difficulty_cap"] = phase.difficulty_cap
+            hc["exam_sprint_retrieval_mode"] = phase.retrieval_mode
+            hc["exam_sprint_phase_id"] = phase.phase_id
+            directive.hard_constraints = hc
+
+            prefix = f"[D-{days} · {phase.phase_id}]"
+            existing = directive.user_visible_reason or ""
+            if prefix not in existing:
+                directive.user_visible_reason = f"{prefix} {existing}".strip()
+
+            logger.info(
+                "ExamSprintPolicy overlay applied: user={} days={} phase={} max_dur={}",
+                user_id, days, phase.phase_id, hc["max_task_duration_min"],
+            )
             return directive
 
-        assert days is not None  # guaranteed by should_activate
-        esp = self.exam_sprint_policy.compute(days_to_deadline=days)
-        phase = esp.phase
+        # Non-exam goal: apply GoalTypeAdapter for task type bias
+        try:
+            goal_type_raw = await self.redis.get(f"spine:goal_type:{user_id}")
+            if goal_type_raw:
+                import json
+                goal_data = json.loads(goal_type_raw if isinstance(goal_type_raw, str) else goal_type_raw.decode())
+                goal_type = goal_data.get("goal_type", "general")
+                if goal_type != "exam":
+                    mapping = self.goal_type_adapter.adapt_mastery_mapping(
+                        mastery=0.3,  # default; actual mastery comes from Galaxy
+                        goal_type=goal_type,
+                    )
+                    hc = dict(directive.hard_constraints or {})
+                    hc["goal_type_task_bias"] = mapping.get("task_type", "")
+                    hc["goal_type_difficulty"] = mapping.get("difficulty", 3)
+                    hc["goal_type_focus"] = mapping.get("focus", "")
+                    hc["goal_type_label"] = mapping.get("node_label", "")
+                    hc["goal_type_retrieval_mode"] = (
+                        "task_bound_graph_rag" if mapping.get("mastery_trackable") else "targeted_source_rag"
+                    )
+                    directive.hard_constraints = hc
+                    logger.info(
+                        "GoalTypeAdapter overlay: user={} goal_type={} task_bias={}",
+                        user_id, goal_type, mapping.get("task_type"),
+                    )
+        except Exception:
+            pass
 
-        hc = dict(directive.hard_constraints or {})
-        # Duration cap: take the stricter (smaller) limit
-        existing_max = hc.get("max_task_duration_min", 999)
-        hc["max_task_duration_min"] = min(existing_max, phase.max_task_duration_min)
-        # Chapter guard: once exam sprint says no new chapters, it cannot be relaxed
-        if not phase.allow_new_chapters:
-            hc["avoid_new_chapter"] = True
-        if phase.prefer_high_yield_review:
-            hc["prefer_high_yield"] = True
-        hc["exam_sprint_task_type_bias"] = phase.task_type_bias
-        hc["exam_sprint_difficulty_cap"] = phase.difficulty_cap
-        hc["exam_sprint_retrieval_mode"] = phase.retrieval_mode
-        hc["exam_sprint_phase_id"] = phase.phase_id
-        directive.hard_constraints = hc
-
-        # Append phase context to the user-visible reason
-        prefix = f"[D-{days} · {phase.phase_id}]"
-        existing = directive.user_visible_reason or ""
-        if prefix not in existing:
-            directive.user_visible_reason = f"{prefix} {existing}".strip()
-
-        logger.info(
-            "ExamSprintPolicy overlay applied: user={} days={} phase={} max_dur={}",
-            user_id, days, phase.phase_id, hc["max_task_duration_min"],
-        )
         return directive
 
     async def update_exam_sprint_deadline(self, user_id: str, days_to_deadline: int) -> None:
@@ -2290,12 +2530,50 @@ class SpineOrchestrator:
         except Exception:
             pass
 
+        # v2.5: Skill extraction from effective strategies
+        try:
+            if user_id and record.attribution == "effective":
+                policy_effects = await self.outcome_recorder.get_recent_policy_effects(
+                    user_id, limit=20,
+                )
+                new_skills = self.skill_extraction.scan_for_extractions(
+                    policy_effects,
+                    user_id=user_id,
+                    context={"goal_mode": actual_outcome.get("goal_mode", "")},
+                )
+                for skill in new_skills:
+                    await self.skill_lifecycle_manager.store_skill(
+                        user_id=user_id, skill=skill,
+                    )
+                    logger.info("Skill extracted and registered: {} from policy={}", skill.skill_id, skill.source_policy_key)
+        except Exception:
+            pass
+
+        # v2.5: Consume Aurora decisions for outcome attribution
+        try:
+            if user_id:
+                await self._consume_aurora_decisions_for_attribution(user_id, record)
+        except Exception:
+            pass
+
+        # v2.5: Counterfactual shadow evaluation (research-grade)
+        try:
+            if user_id and record.attribution in ("effective", "insufficient"):
+                await self._run_counterfactual_shadow(user_id, record, actual_outcome)
+        except Exception:
+            pass
+
         return record
 
     async def get_outcome_for_trace(self, trace_id: str):
         """获取 CausalTrace 对应的 OutcomeRecord。"""
         return await self.outcome_recorder.get_outcome_for_trace(trace_id)
 
+    # ── Metrics ────────────────────────────────────────────────────────
+
+    async def get_metrics_snapshot(self) -> dict[str, Any]:
+        """获取 Decision Realization Score 指标快照。"""
+        return await self.metrics.snapshot()
     # ── Metrics ────────────────────────────────────────────────────────
 
     async def get_metrics_snapshot(self) -> dict[str, Any]:
@@ -2537,6 +2815,216 @@ class SpineOrchestrator:
         except Exception:
             pass
 
+        # 8. P4 counterfactual evaluation: store policy decision for later analysis
+        try:
+            from datetime import datetime as _dt, timezone as _tz
+            decision_record = {
+                "strategy": decision.primary_strategy,
+                "signal_claim": signal.claim,
+                "signal_confidence": signal.confidence,
+                "risk_level": decision.risk_level,
+                "timestamp": _dt.now(_tz.utc).isoformat(),
+            }
+            await self.redis.rpush(
+                f"spine:policy_decisions:{user_id}",
+                json.dumps(decision_record),
+            )
+            await self.redis.ltrim(f"spine:policy_decisions:{user_id}", -100, -1)
+            await self.redis.expire(f"spine:policy_decisions:{user_id}", 90 * 24 * 3600)
+        except Exception:
+            pass
+
+        # 9. P4 quality guard: signal quality + directive compliance checks
+        try:
+            from app.signals.spine_quality_guard import SpineQualityGuard
+            traces = await self.trace_store.get_user_traces(user_id, limit=20)
+            if traces:
+                trace_dicts = []
+                for t in traces:
+                    td = t.to_dict() if hasattr(t, "to_dict") else {}
+                    td["had_policy_decision"] = bool(getattr(t, "policy_decision_id", ""))
+                    td["had_directive"] = bool(getattr(t, "directive_ids", []))
+                    trace_dicts.append(td)
+                sig_check = SpineQualityGuard.check_signal_actionability(trace_dicts)
+                dir_check = SpineQualityGuard.check_directive_compliance(trace_dicts)
+                violations = []
+                for chk in (sig_check, dir_check):
+                    if not chk.passed:
+                        violations.append(chk.to_dict() if hasattr(chk, "to_dict") else {"name": chk.check_name, "score": chk.score})
+                if violations:
+                    await self.redis.set(
+                        f"spine:quality_violations:{user_id}:latest",
+                        json.dumps({"violations": violations}),
+                        ex=24 * 3600,
+                    )
+        except Exception:
+            pass
+
+        # 10. P4 research mode: gap detection for continuous improvement
+        try:
+            from app.signals.research_mode import GapDetector
+            quality_health = "healthy"
+            quality_score = 1.0
+            systemic_issues: list[str] = []
+            raw_violations = await self.redis.get(f"spine:quality_violations:{user_id}:latest")
+            if raw_violations:
+                viol_data = json.loads(raw_violations if isinstance(raw_violations, str) else raw_violations.decode())
+                quality_health = "at_risk"
+                quality_score = 0.5
+                systemic_issues = [v.get("name", "unknown") for v in viol_data.get("violations", [])]
+            proposals = GapDetector.from_quality_report(
+                quality_health=quality_health,
+                quality_score=quality_score,
+                systemic_issues=systemic_issues,
+            )
+            if proposals:
+                await self.redis.set(
+                    f"spine:research_gaps:{user_id}:latest",
+                    json.dumps([p.to_dict() if hasattr(p, "to_dict") else p for p in proposals[:5]]),
+                    ex=24 * 3600,
+                )
+        except Exception:
+            pass
+
+        # 11. P4 safe experiment: bandit suggestion for strategy selection
+        try:
+            from app.signals.safe_experiment_platform import SafeBanditController
+            from app.signals.intervention_episode import ContextSignature
+            ctx_sig = ContextSignature(
+                goal_mode="standard",
+                failure_type=signal.claim,
+                cognitive_load="medium" if signal.priority == "high" else "low",
+                user_id=user_id,
+            )
+            candidate_strategies = [decision.primary_strategy, "reduce_pace", "reinforce_without_overpressure"]
+            bandit = SafeBanditController()
+            result = bandit.select_action(
+                candidate_actions=candidate_strategies,
+                context=ctx_sig,
+                risk_level=decision.risk_level or "low",
+            )
+            if result and result.get("selected_action") != decision.primary_strategy:
+                await self.redis.set(
+                    f"spine:bandit_suggestion:{user_id}:latest",
+                    json.dumps({
+                        "suggested_strategy": result["selected_action"],
+                        "reason": result.get("reason", ""),
+                    }),
+                    ex=24 * 3600,
+                )
+        except Exception:
+            pass
+
+    # ── Aurora → Spine Return Path ────────────────────────────────────
+
+    async def consume_aurora_decisions(
+        self,
+        *,
+        user_id: str,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        """Consume recent Aurora decisions written by feed_aurora_decision().
+
+        These are Aurora's surface-level action choices that should inform
+        Spine's outcome attribution and strategy learning.
+        """
+        import json
+        decisions: list[dict[str, Any]] = []
+        try:
+            key = f"spine:aurora_decisions:{user_id}"
+            raw_list = await self.redis.lrange(key, -limit, -1)
+            for raw in raw_list:
+                raw_str = raw if isinstance(raw, str) else raw.decode()
+                decisions.append(json.loads(raw_str))
+        except Exception:
+            pass
+        return decisions
+
+    async def _consume_aurora_decisions_for_attribution(
+        self,
+        user_id: str,
+        outcome_record: Any,
+    ) -> None:
+        """Link Aurora decisions with Spine outcomes for cross-system attribution."""
+        import json
+        try:
+            decisions = await self.consume_aurora_decisions(user_id=user_id, limit=5)
+            if not decisions:
+                return
+            # Store the latest Aurora decision alongside the outcome for traceability
+            latest = decisions[-1] if decisions else {}
+            attribution_link = {
+                "spine_attribution": getattr(outcome_record, "attribution", "unknown"),
+                "aurora_action": latest.get("action"),
+                "aurora_surface": latest.get("surface"),
+                "linked_at": _utcnow_iso(),
+            }
+            await self.redis.set(
+                f"spine:aurora_outcome_link:{user_id}:latest",
+                json.dumps(attribution_link),
+                ex=7 * 24 * 3600,
+            )
+            # Feed into learning base: if Aurora's action aligns with effective outcome,
+            # boost strategy confidence
+            if getattr(outcome_record, "attribution", "") == "effective" and latest.get("action"):
+                beliefs = await self._load_strategy_beliefs(user_id)
+                belief_map = {b.strategy_key: b for b in beliefs}
+                aurora_key = f"aurora_{latest['action']}"
+                from app.signals.learning_base import StrategyBelief
+                if aurora_key not in belief_map:
+                    belief_map[aurora_key] = StrategyBelief(strategy_key=aurora_key)
+                self.learning_base.update_belief(belief_map[aurora_key], "effective")
+                await self._persist_strategy_beliefs(user_id, list(belief_map.values()))
+        except Exception:
+            pass
+
+    async def _run_counterfactual_shadow(
+        self,
+        user_id: str,
+        outcome_record: Any,
+        actual_outcome: dict[str, Any],
+    ) -> None:
+        """Run counterfactual evaluation in shadow mode for research-grade analysis.
+
+        Compares the actual strategy against alternatives, storing results for
+        later policy improvement without affecting live decisions.
+        """
+        import json
+        try:
+            from app.signals.counterfactual_evaluation import MatchedContextEvaluator
+            from app.signals.intervention_episode import InterventionEpisode, ContextSignature
+            evaluator = MatchedContextEvaluator()
+            # Build a synthetic episode from the outcome
+            actual_strategy = getattr(outcome_record, "intervention", "unknown")
+            ctx = ContextSignature(
+                goal_mode=actual_outcome.get("goal_mode", "standard"),
+                failure_type=actual_outcome.get("failure_type", ""),
+                cognitive_load="medium",
+            )
+            # Compare against common alternatives
+            alternatives = ["reduce_pace", "simplify_task", "worked_example_first"]
+            results: list[dict[str, Any]] = []
+            for alt in alternatives:
+                estimate = evaluator.evaluate(
+                    actual_policy=actual_strategy,
+                    alternative_policy=alt,
+                    episodes=[],  # Shadow mode — no real episodes yet
+                    target_context=ctx,
+                )
+                results.append({
+                    "alternative": alt,
+                    "estimate": estimate.to_dict() if hasattr(estimate, "to_dict") else str(estimate),
+                })
+            if results:
+                await self.redis.rpush(
+                    f"spine:counterfactual_shadow:{user_id}",
+                    json.dumps({"strategies_compared": results, "timestamp": _utcnow_iso()}),
+                )
+                await self.redis.ltrim(f"spine:counterfactual_shadow:{user_id}", -50, -1)
+                await self.redis.expire(f"spine:counterfactual_shadow:{user_id}", 90 * 24 * 3600)
+        except Exception:
+            pass
+
     # ── P1: Divine Moment Enrichers ──────────────────────────────────
 
     async def on_achievement_unlocked(
@@ -2608,6 +3096,26 @@ class SpineOrchestrator:
         except Exception:
             pass
 
+    async def on_streak_update(
+        self,
+        *,
+        user_id: str,
+        streak_length: int,
+        broken: bool = False,
+    ) -> None:
+        """Update relationship model from streak events."""
+        try:
+            if broken:
+                await self.relationship_model.update_from_behavioral_signal(
+                    user_id, "streak_broken", {"streak_length": streak_length},
+                )
+            else:
+                await self.relationship_model.update_from_behavioral_signal(
+                    user_id, "streak_maintained", {"streak_length": streak_length},
+                )
+        except Exception:
+            pass
+
     async def on_user_correction(
         self,
         *,
@@ -2644,6 +3152,7 @@ class SpineOrchestrator:
                 source="user_receipt_correction",
             )
 
+
             # Store correction event for Aurora
             correction_event = {
                 "type": "user_correction",
@@ -2659,6 +3168,41 @@ class SpineOrchestrator:
             )
 
             return correction_event
+        except Exception:
+            return None
+
+    async def on_partner_checkin(
+        self,
+        *,
+        user_id: str,
+        partner_id: str,
+        checkin_type: str,
+    ) -> dict[str, Any] | None:
+        """Process a partner accountability check-in event."""
+        try:
+            result = await self.community_loops.record_partner_checkin(
+                self.redis,
+                user_id=user_id,
+                partner_id=partner_id,
+                checkin_type=checkin_type,
+            )
+            signal_data = result.get("signal")
+            if signal_data:
+                signal = ActionableSignal(
+                    signal_id=_uid("sig"),
+                    source_event_ids=[partner_id],
+                    source_system="community_loops",
+                    state_key=signal_data["state_key"],
+                    claim=signal_data["claim"],
+                    confidence=signal_data["confidence"],
+                    scope=signal_data["scope"],
+                    ttl_hours=signal_data["ttl_hours"],
+                    evidence_summary=signal_data["evidence_summary"],
+                    possible_effects=["adjust_strategy_for_partner_engagement"],
+                    priority=signal_data["priority"],
+                )
+                await self.state_register.upsert_from_signal(user_id, signal)
+            return result
         except Exception:
             return None
 
@@ -3197,6 +3741,86 @@ class SpineOrchestrator:
             priority="high" if claim == "burnout_risk" else "medium",
         )
 
+    # ── P2: Cognitive Load & Affective Pressure Detectors ────────────────
+
+    async def detect_cognitive_load(
+        self,
+        *,
+        user_id: str,
+        recent_tasks_count: int = 0,
+        new_topics_count: int = 0,
+        avg_accuracy: float | None = None,
+        session_duration_min: float = 0.0,
+    ) -> ActionableSignal | None:
+        """Detect high cognitive load from task density + accuracy patterns."""
+        triggers = []
+        if new_topics_count >= 3 and recent_tasks_count >= 4:
+            triggers.append("many_new_topics_in_short_time")
+        if avg_accuracy is not None and avg_accuracy < 0.5 and recent_tasks_count >= 3:
+            triggers.append("low_accuracy_with_many_tasks")
+        if session_duration_min > 90:
+            triggers.append("extended_session")
+
+        if not triggers:
+            return None
+
+        return ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[f"cognitive_load_{user_id}"],
+            source_system="spine_orchestrator",
+            state_key="cognitive_load",
+            claim="high_load_detected",
+            confidence=min(0.9, 0.5 + 0.15 * len(triggers)),
+            scope="session",
+            ttl_hours=6,
+            evidence_summary=f"认知负荷触发: {', '.join(triggers)}",
+            possible_effects=["reduce_explanation_length", "prefer_review", "simplify_context"],
+            priority="medium",
+        )
+
+    async def detect_affective_pressure(
+        self,
+        *,
+        user_id: str,
+        consecutive_abandons: int = 0,
+        error_density: float = 0.0,
+        is_late_night: bool = False,
+        days_to_deadline: int | None = None,
+        streak_broken: bool = False,
+    ) -> ActionableSignal | None:
+        """Detect emotional/affective pressure from behavioral signals."""
+        triggers = []
+        claim = "stress_detected"
+
+        if consecutive_abandons >= 2:
+            triggers.append("consecutive_abandonment")
+        if error_density > 0.6:
+            triggers.append("high_error_density")
+        if is_late_night:
+            triggers.append("late_night_study")
+        if streak_broken:
+            triggers.append("streak_broken")
+
+        if not triggers:
+            return None
+
+        if consecutive_abandons >= 3 or (days_to_deadline is not None and days_to_deadline <= 2 and len(triggers) >= 2):
+            claim = "burnout_risk"
+
+        return ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[f"affective_{user_id}"],
+            source_system="spine_orchestrator",
+            state_key="affective_pressure",
+            claim=claim,
+            confidence=min(0.9, 0.5 + 0.12 * len(triggers)),
+            scope="session",
+            ttl_hours=12,
+            evidence_summary=f"情绪压力触发: {', '.join(triggers)}",
+            possible_effects=["reduce_pressure", "suggest_break", "easy_win_task"],
+            priority="high" if claim == "burnout_risk" else "medium",
+        )
+
     # ── P2: State Snapshot & Recovery ────────────────────────────────
 
     async def save_spine_snapshot(
@@ -3423,6 +4047,18 @@ class SpineOrchestrator:
             focus_ids = {s["node_id"] for s in suggestions}
         return self.goal_graph.get_deferred_nodes(graph, focus_ids=focus_ids)
 
+    async def get_goal_deferred_nodes(
+        self, user_id: str, goal_id: str, focus_ids: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """GOAL-006: Get deferred nodes with why_deferred explanations."""
+        graph = await self.goal_graph.get_graph(user_id, goal_id)
+        if not graph:
+            return []
+        if focus_ids is None:
+            suggestions = self.goal_graph.suggest_focus_nodes(graph)
+            focus_ids = {s["node_id"] for s in suggestions}
+        return self.goal_graph.get_deferred_nodes(graph, focus_ids=focus_ids)
+
     async def arbitrate_goals(self, user_id: str):
         """v2.5: Arbitrate between multiple active goals.
 
@@ -3439,6 +4075,8 @@ class SpineOrchestrator:
                 signal_ids=["multi_goal_arbitration"],
                 state_keys_changed=[f"goal_priority.{result.primary_goal_id}"],
             )
+            await self.trace_store._save_trace(trace)
+            await self.trace_store.link_to_user(user_id, trace.trace_id)
             await self.trace_store._save_trace(trace)
             await self.trace_store.link_to_user(user_id, trace.trace_id)
         return result
@@ -3494,3 +4132,59 @@ class SpineOrchestrator:
             mastery=mastery,
         )
         await self.goal_arbitrator.register_goal(user_id, goal)
+
+    # ── GOAL-009: Goal Drift Detection ────────────────────────────────
+
+    async def detect_goal_drift(
+        self,
+        *,
+        user_id: str,
+        goal_id: str,
+        current_goal_mode: str,
+        recent_behavior: dict[str, Any],
+    ) -> ActionableSignal | None:
+        drift_signals: list[str] = []
+
+        if recent_behavior.get("studying_out_of_scope"):
+            drift_signals.append("studying_out_of_scope")
+        if recent_behavior.get("goal_task_skip_rate", 0) > 0.6:
+            drift_signals.append("high_skip_rate")
+        if recent_behavior.get("mentions_different_priority"):
+            drift_signals.append("different_priority_mentioned")
+        if recent_behavior.get("goal_inactive_days", 0) >= 5 and recent_behavior.get("other_goal_active"):
+            drift_signals.append("goal_abandoned_while_active_elsewhere")
+
+        if not drift_signals:
+            return None
+
+        evidence_summary = ", ".join(drift_signals)
+        confidence = min(0.5 + 0.1 * len(drift_signals), 0.95)
+
+        return ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[],
+            source_system="goal_drift_detector",
+            state_key="goal_drift_suspected",
+            claim="goal_drift_detected",
+            confidence=confidence,
+            scope=f"goal:{goal_id}",
+            ttl_hours=48,
+            evidence_summary=evidence_summary,
+            possible_effects=["request_goal_confirmation", "suggest_goal_realignment"],
+            priority="high",
+        )
+
+    # ── GoalTypeAdapter overlay for non-exam goals ────────────────────
+
+    async def _apply_goal_type_overlay(
+        self, user_id: str, directive: ExecutionDirective,
+    ) -> ExecutionDirective:
+        raw = await self.redis.get(f"spine:goal_type:{user_id}")
+        if raw:
+            goal_info = json.loads(raw if isinstance(raw, str) else raw.decode())
+            goal_type = goal_info.get("goal_type", "exam")
+            if goal_type != "exam":
+                mapping = self.goal_type_adapter.adapt_mastery_mapping(0.5, goal_type)
+                directive.hard_constraints["goal_type_task_bias"] = mapping.get("task_type", "")
+                directive.hard_constraints["goal_type_label"] = mapping.get("node_label", "")
+        return directive
