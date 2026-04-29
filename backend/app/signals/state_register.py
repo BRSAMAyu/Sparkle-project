@@ -90,6 +90,34 @@ class StateRegister:
     def __init__(self, redis_client: Any):
         self.redis = redis_client
 
+    def _decode_redis_set(self, raw_members: Any) -> list[str]:
+        """Decode Redis SMEMBERS result (bytes or str) to list of str."""
+        return [m if isinstance(m, str) else m.decode() for m in raw_members]
+
+    async def _mget_with_fallback(self, keys: list[str]) -> list[Any]:
+        """Batch GET via MGET, falling back to individual GETs for FakeRedis."""
+        try:
+            return await self.redis.mget(*keys)
+        except AttributeError:
+            return [await self.redis.get(k) for k in keys]
+
+    def _scan_expired(
+        self, decoded_keys: list[str], raw_values: list[Any],
+    ) -> tuple[list[StateEntry], list[str]]:
+        """Scan MGET results, returning (active entries, expired keys)."""
+        entries: list[StateEntry] = []
+        expired: list[str] = []
+        for state_key, data in zip(decoded_keys, raw_values, strict=False):
+            if data is None:
+                expired.append(state_key)
+                continue
+            entry = StateEntry.from_dict(json.loads(data))
+            if self._is_expired(entry):
+                expired.append(state_key)
+                continue
+            entries.append(entry)
+        return entries, expired
+
     async def upsert_from_signal(self, user_id: str, signal: ActionableSignal) -> StateEntry:
         """
         Upsert a state from a signal. If the state_key already exists and
@@ -143,34 +171,11 @@ class StateRegister:
         if not state_keys:
             return []
 
-        decoded_keys = [
-            raw_key if isinstance(raw_key, str) else raw_key.decode()
-            for raw_key in state_keys
-        ]
-
-        # MGET: single round-trip instead of N individual GETs
-        # Fallback to individual GETs if mget not available (e.g. FakeRedis)
+        decoded_keys = self._decode_redis_set(state_keys)
         redis_keys = [f"spine:state:{user_id}:{sk}" for sk in decoded_keys]
-        try:
-            raw_values = await self.redis.mget(*redis_keys)
-        except AttributeError:
-            raw_values = [await self.redis.get(k) for k in redis_keys]
+        raw_values = await self._mget_with_fallback(redis_keys)
 
-        entries: list[StateEntry] = []
-        expired: list[str] = []
-
-        for state_key, data in zip(decoded_keys, raw_values, strict=False):
-            if data is None:
-                expired.append(state_key)
-                continue
-
-            entry = StateEntry.from_dict(json.loads(data))
-            if self._is_expired(entry):
-                expired.append(state_key)
-                continue
-
-            entries.append(entry)
-
+        entries, expired = self._scan_expired(decoded_keys, raw_values)
         if expired:
             await self._remove_keys(user_id, expired)
 
@@ -217,25 +222,12 @@ class StateRegister:
         if not all_keys:
             return 0
 
-        decoded_keys = [
-            raw_key if isinstance(raw_key, str) else raw_key.decode()
-            for raw_key in all_keys
-        ]
-
+        decoded_keys = self._decode_redis_set(all_keys)
         redis_keys = [f"spine:state:{user_id}:{sk}" for sk in decoded_keys]
-        try:
-            raw_values = await self.redis.mget(*redis_keys)
-        except AttributeError:
-            raw_values = [await self.redis.get(k) for k in redis_keys]
+        raw_values = await self._mget_with_fallback(redis_keys)
 
-        expired: list[str] = []
-        for state_key, data in zip(decoded_keys, raw_values, strict=False):
-            if data is None:
-                expired.append(state_key)
-                continue
-            entry = StateEntry.from_dict(json.loads(data))
-            if self._is_expired(entry):
-                expired.append(state_key)
+        expired = [sk for sk, data in zip(decoded_keys, raw_values, strict=False)
+                   if data is None or self._is_expired(StateEntry.from_dict(json.loads(data)))]
 
         if expired:
             await self._remove_keys(user_id, expired)
