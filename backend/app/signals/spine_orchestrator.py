@@ -180,27 +180,13 @@ class SpineOrchestrator:
         """
         完整链路：task.completed → (可能) signal → policy → directive → trace。
 
+        Delegates to _run_signal_pipeline for lock management and pipeline execution.
+        Only handles signal detection and task-completed-specific post-processing.
+
         Returns:
             CausalTrace if signal was generated and policy applied, None otherwise.
         """
-        # Concurrency guard: skip if a pipeline is already running for this user
-        lock_key = f"spine:pipeline_lock:{user_id}"
-        try:
-            locked = await self.redis.set(lock_key, "1", nx=True, ex=30)
-            if not locked:
-                logger.debug("on_task_completed skipped: concurrent pipeline for user={}", user_id)
-                return None
-        except Exception as _lock_err:
-            _ce = classify_error(_lock_err, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
-            logger.warning("Pipeline lock failed: {} [{}]", _lock_err, _ce.severity.value)
-
-        # Step 1: 创建 trace 骨架
-        trace = await self.trace_store.create_trace()
-        trace.raw_event_ids.append(task_id)
-        await self.trace_store.link_to_user(user_id, trace.trace_id)
-        await self.trace_store._save_trace(trace)
-
-        # Step 2: 固定规则检测
+        # Step 1: Signal detection (no lock needed — lock is in _run_signal_pipeline)
         signal = await self.timeout_detector.on_task_completed(
             user_id=user_id,
             task_id=task_id,
@@ -210,191 +196,32 @@ class SpineOrchestrator:
         )
 
         if signal is None:
-            # 无信号 — trace 记录了事件但无后续动作
+            # No signal — record lightweight trace for the event
+            trace = await self.trace_store.create_trace()
+            trace.raw_event_ids.append(task_id)
+            await self.trace_store.link_to_user(user_id, trace.trace_id)
             trace.outcome_to_measure = ["task_completed_normally"]
             await self.trace_store._save_trace(trace)
-            # Still update relationship from behavioral signal
             try:
                 await self.relationship_model.update_from_behavioral_signal(
                     user_id, "task_completed", {"task_id": task_id},
                 )
             except Exception:
                 logger.warning("on_task_completed: relationship_model failed", exc_info=True)
-            try:
-                await self.redis.delete(lock_key)
-            except Exception:
-                logger.warning("on_task_completed: lock release failed", exc_info=True)
             return trace
 
-        # Step 2b: 存储 signal 并链接到 trace
-        await self.trace_store.store_signal(signal)
-        await self.trace_store.append_signal(trace.trace_id, signal)
-
-        # Layer 4: Persist signal state to StateRegister
-        await self.state_register.upsert_from_signal(user_id, signal)
-        trace.signal_ids.append(signal.signal_id)  # Keep local trace in sync
-        await self.metrics.record_signal_generated()
-        await self.metrics.record_signal_entered_state()
-
-        # Step 3: PolicyEngine (with shadow learning from recent outcomes + Aurora feedback)
-        consecutive = await self.timeout_detector._get_consecutive_timeouts(user_id)
-        recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
-
-        aurora_decisions = await self.consume_aurora_decisions(user_id=user_id, limit=3)
-
-        result = await self.policy_engine.evaluate(
-            signal,
-            context={"consecutive": consecutive, "aurora_decisions": aurora_decisions},
-            recent_policy_effects=recent_effects,
+        # Step 2: Delegate pipeline to _run_signal_pipeline (handles lock)
+        trace = await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=[task_id],
         )
-        await self.metrics.record_policy_evaluated(matched=result is not None)
+        if trace is None:
+            return None
 
-        if result is None:
-            trace.outcome_to_measure = ["signal_no_rule_match"]
-            await self.trace_store._save_trace(trace)
-            try:
-                await self.redis.delete(lock_key)
-            except Exception:
-                logger.warning("on_task_completed: lock release failed", exc_info=True)
-            return trace
+        # Step 3: Task-completed-specific post-processing
 
-        decision, directive = result
-
-        # Step 3b: 链接到 trace
-        await self.trace_store.append_policy(trace.trace_id, decision)
-        await self.trace_store.append_directive(trace.trace_id, directive)
-
-        # Step 3c: Overlay ExamSprintPolicy constraints if user is in exam_rescue mode
-        directive = await self._apply_exam_sprint_overlay(user_id, directive)
-
-        # Step 4: 存储 active directive 供 task_generator 消费
-        await self.trace_store.set_active_directive(user_id, directive)
-        await self.metrics.record_directive_generated()
-        await self._link_directive_to_active_session(user_id, directive.directive_id)
-
-        # Step 4b: Build and store directives (only those flagged in which_directives)
-        wd = decision.which_directives
-        _collected_directive_ids: dict[str, str | None] = {
-            "execution": directive.directive_id,
-            "response": None, "notification": None, "retrieval": None,
-            "plan": None, "model_write": None, "ux": None,
-            "community": None, "skill": None,
-        }
-
-        if wd.get("response"):
-            active_states = await self._get_active_states_dicts(user_id)
-            response_dir = self.policy_engine.build_response_directive(
-                decision, signal, active_states=active_states,
-            )
-            if response_dir:
-                await self._store_response_directive(user_id, response_dir)
-                _collected_directive_ids["response"] = response_dir.directive_id
-
-        if wd.get("notification"):
-            notif_dir = self.policy_engine.build_notification_directive(decision, signal)
-            if notif_dir:
-                quota_check = await self.directive_quota.check_allowed(user_id, "notification")
-                if quota_check["allowed"]:
-                    await self._store_notification_directive(user_id, notif_dir)
-                    await self.directive_quota.record_emission(user_id, "notification")
-                    _collected_directive_ids["notification"] = notif_dir.directive_id
-
-        if wd.get("retrieval"):
-            ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
-            if ret_dir:
-                await self._enrich_retrieval_with_source_tray(user_id, ret_dir)
-                await self._store_retrieval_directive(user_id, ret_dir)
-                _collected_directive_ids["retrieval"] = ret_dir.directive_id
-
-        if wd.get("plan"):
-            plan_dir = self.policy_engine.build_plan_directive(decision, signal)
-            if plan_dir:
-                await self._store_plan_directive(user_id, plan_dir)
-                trace.directive_ids.append(plan_dir.directive_id)
-                _collected_directive_ids["plan"] = plan_dir.directive_id
-
-        if wd.get("model_write"):
-            mw_dir = self.policy_engine.build_model_write_directive(decision, signal)
-            if mw_dir:
-                await self._store_model_write_directive(user_id, mw_dir)
-                trace.directive_ids.append(mw_dir.directive_id)
-                await self._apply_model_writes(user_id, mw_dir)
-                _collected_directive_ids["model_write"] = mw_dir.directive_id
-
-        if wd.get("ux"):
-            ux_dir = self.policy_engine.build_ux_directive(decision, signal)
-            if ux_dir:
-                await self._store_ux_directive(user_id, ux_dir)
-                trace.directive_ids.append(ux_dir.directive_id)
-                _collected_directive_ids["ux"] = ux_dir.directive_id
-
-        if wd.get("community"):
-            comm_dir = self.policy_engine.build_community_directive(decision, signal)
-            if comm_dir:
-                await self._store_community_directive(user_id, comm_dir)
-                trace.directive_ids.append(comm_dir.directive_id)
-                _collected_directive_ids["community"] = comm_dir.directive_id
-
-        if wd.get("skill"):
-            skill_dir = self.policy_engine.build_skill_directive(decision, signal)
-            if skill_dir:
-                await self._store_skill_directive(user_id, skill_dir)
-                trace.directive_ids.append(skill_dir.directive_id)
-                _collected_directive_ids["skill"] = skill_dir.directive_id
-
-        # Step 4i: Build AuroraControlSignal envelope (Final Spec Section 6)
-        from app.signals.types import AuroraControlSignal
-        energy = "light" if decision.risk_level == "low" else "medium" if decision.risk_level == "medium" else "full"
-        directive_ids = {dt: did for dt, did in _collected_directive_ids.items() if did}
-        acs = AuroraControlSignal(
-            control_id=_uid("acs"),
-            energy=energy,
-            policy_decision_id=decision.policy_decision_id,
-            response_policy=decision.primary_strategy,
-            directive_ids=directive_ids,
-            risk_level=decision.risk_level,
-        )
-        import json
-        await self.redis.set(
-            f"spine:aurora_control_signal:{user_id}:latest",
-            json.dumps(acs.to_dict()),
-            ex=72 * 3600,
-        )
-
-        # Step 5: 生成 Receipt（如果 visibility = "receipt"）
-        if decision.visibility == "receipt":
-            receipt = UserVisibleReceipt(
-                receipt_id=_uid("rcpt"),
-                receipt_type="strategy_adjustment",
-                message=directive.user_visible_reason,
-                actions=["confirm", "correct", "dismiss"],
-                related_state_keys=[signal.state_key],
-            )
-            await self.trace_store.append_receipt(trace.trace_id, receipt)
-            await self.metrics.record_receipt_shown()
-            trace = await self.trace_store.get_trace(trace.trace_id) or trace
-            # 将 receipt 挂到用户维度，方便前端拉取
-            import json
-            receipt_key = f"spine:receipt:{user_id}:latest"
-            receipt_data = json.dumps(receipt.to_dict())
-            await self.redis.set(receipt_key, receipt_data, ex=72 * 3600)
-            # Store by receipt ID for timeline retrieval
-            await self.redis.set(
-                f"spine:receipt_by_id:{receipt.receipt_id}",
-                receipt_data,
-                ex=72 * 3600,
-            )
-
-        # Step 6: 设置 outcome_to_measure
-        trace.outcome_to_measure = [
-            "task_started",
-            "task_completed",
-            "actual_duration_min",
-            "mini_quiz_accuracy",
-            "user_feedback",
-        ]
-
-        # Step 6-Energy: Record Aurora energy level decision in trace (T3.1.6)
+        # Step 3a: Record Aurora energy level decision in trace (T3.1.6)
         try:
             active_states_dicts = await self._get_active_states_dicts(user_id)
             from app.aurora.runtime_v1.state import AuroraEnergyStore
@@ -410,14 +237,14 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("on_task_completed: energy decision failed for user={}", user_id, exc_info=True)
 
-        await self.trace_store._save_trace(trace)
-
-        # Step 6a: Register expected outcome for verification loop
+        # Step 3b: Register expected outcome for verification loop
         try:
-            expected_outcome_type = "task_started_and_completed" if decision.primary_strategy != "timeout_warning" else "behavioral_change"
+            recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+            primary_strategy = getattr(trace, 'primary_strategy', 'task_completed')
+            expected_outcome_type = "task_started_and_completed" if primary_strategy != "timeout_warning" else "behavioral_change"
             await self.outcome_tracker.register_expected(
                 user_id=user_id,
-                directive_type=decision.primary_strategy,
+                directive_type=primary_strategy,
                 trace=trace,
                 expected_outcome=expected_outcome_type,
                 verification_window_hours=48,
@@ -431,41 +258,36 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("on_task_completed: outcome_tracker.register_expected failed", exc_info=True)
 
-        # Step 6b: Check Aurora wake eligibility for high-risk signals
-        if decision.risk_level in ("critical", "high"):
-            neg_outcomes = sum(
-                1 for pe in recent_effects
-                if getattr(pe, "attribution", "") == "insufficient"
-            ) if recent_effects else 0
-            wake_result = self.check_aurora_wake(
-                user_id=user_id,
-                quota_remaining=3,
-                cooldown_status="available",
-                consecutive_negative_outcomes=neg_outcomes,
-            )
-            if wake_result.can_wake:
-                import json
-                await self.redis.set(
-                    f"spine:aurora_wake_pending:{user_id}",
-                    json.dumps(wake_result.to_dict()),
-                    ex=3600,
-                )
-                logger.info(
-                    "Aurora wake recommended: user={} type={}",
-                    user_id, wake_result.recommended_session_type,
-                )
-
-        logger.info(
-            "Spine complete: trace={} signal={} policy={} directive={}",
-            trace.trace_id, signal.signal_id,
-            decision.policy_decision_id, directive.directive_id,
-        )
-
+        # Step 3c: Check Aurora wake eligibility for high-risk signals
         try:
-            await self.redis.delete(lock_key)
+            recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+            risk_level = getattr(trace, 'risk_level', None)
+            if risk_level in ("critical", "high"):
+                neg_outcomes = sum(
+                    1 for pe in recent_effects
+                    if getattr(pe, "attribution", "") == "insufficient"
+                ) if recent_effects else 0
+                wake_result = self.check_aurora_wake(
+                    user_id=user_id,
+                    quota_remaining=3,
+                    cooldown_status="available",
+                    consecutive_negative_outcomes=neg_outcomes,
+                )
+                if wake_result.can_wake:
+                    import json
+                    await self.redis.set(
+                        f"spine:aurora_wake_pending:{user_id}",
+                        json.dumps(wake_result.to_dict()),
+                        ex=3600,
+                    )
+                    logger.info(
+                        "Aurora wake recommended: user={} type={}",
+                        user_id, wake_result.recommended_session_type,
+                    )
         except Exception:
-            logger.warning("on_task_completed: final lock release failed", exc_info=True)
+            logger.warning("on_task_completed: aurora wake check failed", exc_info=True)
 
+        await self.trace_store._save_trace(trace)
         return trace
 
     async def get_active_directive(self, user_id: str) -> ExecutionDirective | None:
