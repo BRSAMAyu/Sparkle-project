@@ -527,28 +527,6 @@ class TraitsColdstartCompleted(Event):
         }
 
 
-class UserSettingsUpdatedEvent(Event):
-    """用户设置更新事件"""
-
-    def __init__(
-        self,
-        user_id: str,
-        setting_keys: list[str],
-        timestamp: str | None = None,
-    ):
-        self.user_id = user_id
-        self.setting_keys = setting_keys
-        self.timestamp = timestamp or datetime.now(timezone.utc).isoformat()
-
-    def to_dict(self):
-        return {
-            "event_type": "user_settings.updated",
-            "user_id": self.user_id,
-            "setting_keys": self.setting_keys,
-            "timestamp": self.timestamp,
-        }
-
-
 class CalendarEventCreated(Event):
     """日历事件创建"""
 
