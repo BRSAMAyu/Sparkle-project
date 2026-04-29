@@ -253,6 +253,7 @@
 | 2026-04-29 | Phase 3.5 | Claude P2审计清理 | **P2-9** ✅ 57个缺失settings补全到.env.example, **P2-10** ✅ Stage 37 bool→str三态+Stage 39统一KillSwitchBinding, **P2-11** ✅ CalendarSignalBridge接入SpineEventBridge; 15 new tests |
 | 2026-04-29 | Phase 3 | Claude+Codex验收 | **T3.4 gap closure**: RoutingEngine._build_dual_core_input() 现读取AuroraUserPreferencesService→传入DualCoreRoutingInput; 偏好→双核路由链路闭环; 3 new tests, 39 routing engine tests 无回归 |
 | 2026-04-29 | Phase 3.5 | Claude 卫生债清理 | spine_orchestrator.py ruff 32→0 errors: 删除10个重复方法定义 (F811), 排序imports, 清除未使用import; 53 affected tests pass |
+| 2026-04-29 | Phase 4.1 | Claude | **T4.1**: DashboardService 集成 Spine/Aurora 6-state band — dashboard API 现返回 band_status/band_energy/active_claims/correction_options; Redis 不可用时优雅降级; 9 tests passed |
 | 2026-04-29 | Phase 3.5 | Claude 语义收紧 | cooldown_can_override 从无条件 True 改为 l3_session_count_today < 3 (L3 daily_quota), 防止冷却绕过流量限制; 移除未使用的 CostController 实例化; 6 tests passed 含新 quota-exhausted 用例 |
 | 2026-04-29 | R3 O-01 | Claude 离线审计修复 | OfflineChatMessage 模型已全面接线: (1)断连/发送失败→Isar持久化, (2)重连→从DB加载pending消息并入队, (3)发送成功→markSent, (4)服务器ACK→markAcked, (5)队列溢出/失败丢弃→DB清理, (6)dispose→清理24h旧acked. 新建 OfflineMessageQueueService, flutter analyze 零错误 |
 | 2026-04-29 | Phase 4.1 | Claude Flutter状态带接入 | AuroraStatusBand 从硬编码→真实API: 新建 spineStatusBandProvider (GET /aurora/spine/status-band); AuroraBandState 扩展6态 (sensing/calibrated/riskFound/needsConfirm/calibrationAvailable/coolingDown); dashboard_screen 消费 provider 并 fallback 硬编码; 26 contract tests passed |
@@ -308,6 +309,9 @@
 | 2026-04-29 | 9ed7c00d | Phase 5 | T5.1.2 — wire InterventionEpisode generation into Spine pipeline (19 tests) |
 | 2026-04-29 | 2a5d9086 | Phase 5 | T5.1.3 — episode data integrity validation (5 new tests, 24 total) |
 | 2026-04-29 | 58c5d290 | 全系统 | P1-5/P2-5/P2-9 — CI Go version, WS message validation, Flutter subscription leak |
+| 2026-04-29 | cee6bf9c | P2-7 | Replace pong JSON decode with lightweight string check |
+| 2026-04-29 | 1c7fc8f5 | T6.3.2 | Weekly chaos drill CI workflow |
+| 2026-04-29 | ac8c007a | T4.1 | Dashboard Spine/Aurora status band integration |
 
 ---
 
