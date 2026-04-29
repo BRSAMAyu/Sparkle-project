@@ -1,0 +1,128 @@
+name: Chaos Engineering Drill
+
+on:
+  schedule:
+    # Run weekly chaos drills on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      drill:
+        description: 'Drill to run (redis-down|db-slow|llm-timeout|network-partition|all)'
+        required: false
+        default: 'all'
+
+jobs:
+  chaos-drill:
+    name: Chaos Drill
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sparkle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://sparkle:test@localhost:5432/sparkle_test
+          ENVIRONMENT: development
+          GRPC_REQUIRE_TLS: 'false'
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Start backend services
+        run: |
+          # Start Go Gateway
+          (
+            cd backend/gateway
+            DATABASE_URL=postgresql://sparkle:test@localhost:5432/sparkle_test \
+            REDIS_URL=localhost:6379 \
+            go run cmd/server/main.go
+          ) &
+          echo $! > gateway.pid
+
+          # Start Python gRPC Server
+          (
+            cd backend
+            DATABASE_URL=postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test \
+            REDIS_URL=redis://localhost:6379/0 \
+            ENVIRONMENT=development \
+            GRPC_REQUIRE_TLS=false \
+            python grpc_server.py
+          ) &
+          echo $! > grpc.pid
+
+          # Wait for services
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/api/v1/health 2>/dev/null; then
+              echo "Gateway healthy"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run resilience tests (baseline)
+        run: |
+          cd backend
+          pytest tests/unit/test_spine_resilience.py -v --tb=short
+
+      - name: Run chaos drill
+        run: |
+          chmod +x scripts/chaos_drill.sh
+          bash scripts/chaos_drill.sh "${{ github.event.inputs.drill || 'all' }}"
+
+      - name: Run resilience tests (post-drill)
+        run: |
+          cd backend
+          pytest tests/unit/test_spine_resilience.py -v --tb=short
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kill $(cat gateway.pid) 2>/dev/null || true
+          kill $(cat grpc.pid) 2>/dev/null || true
+
+      - name: Upload drill results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-drill-results
+          path: |
+            gateway.pid
+            grpc.pid
+          retention-days: 7

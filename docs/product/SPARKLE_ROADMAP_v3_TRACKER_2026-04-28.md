@@ -264,6 +264,7 @@
 | 2026-04-29 | R4-P1-03 | Claude 首页纠偏遥测 | dashboard_screen onCorrectionTap/onCooldownOverride 先提交 recordStatusBandCorrection() (semantic_value/is_disconfirming) 再跳转 chat; AuroraTelemetryService 新增方法; flutter analyze 0 errors |
 | 2026-04-29 | 全系统 | 7-Agent 全面验收审计 | **P0-1**: achievement_engine._get_relevant_achievements kwargs NameError → 加 **kwargs + 透传; **P0-2**: spine_orchestrator 5处复制粘贴导致双写/指标膨胀/ID断链 → 删除重复块; **P1-2**: Event Bus retry阻塞+stale/new互斥 → 移除阻塞sleep+stale不再饿死new; **P1-4**: DocumentCitationFeedbackEvent重复类定义 → 删除死代码dataclass; **P0-4**: Go Gateway 3/17 RPC → 17/17全部实现 + injectMetadata helper |
 | 2026-04-29 | TEST-Q1 | Claude 弹性测试 | 23 production-grade resilience tests: Redis全挂/部分挂/数据损坏、并发20-100用户、边界值; 修复StateRegister Redis宕机崩溃bug; 960现有测试无回归 |
+| 2026-04-29 | 全系统 | 7-Agent 审计续修 | **P1-5**: CI Go版本 1.22→1.24 (匹配go.mod); **P1-7**: cognitive_service vector runtime unbounded Set→TTL dict+size cap; **P1-8**: memory_service SELECT FOR UPDATE 防竞态; **P2-3**: spine_orchestrator logger.debug→warning; **P2-5**: Go WS proxy 256KB消息限制+类型白名单; **P2-9**: Flutter community WS subscription leak fix |
 
 ### 测试质量升级 (🔴 横切任务)
 
@@ -306,6 +307,7 @@
 | 2026-04-29 | (pending) | R3 O-01 | OfflineChatMessage wiring — Isar persistence, reconnect replay, ACK marking, cleanup |
 | 2026-04-29 | 9ed7c00d | Phase 5 | T5.1.2 — wire InterventionEpisode generation into Spine pipeline (19 tests) |
 | 2026-04-29 | 2a5d9086 | Phase 5 | T5.1.3 — episode data integrity validation (5 new tests, 24 total) |
+| 2026-04-29 | 58c5d290 | 全系统 | P1-5/P2-5/P2-9 — CI Go version, WS message validation, Flutter subscription leak |
 
 ---
 
@@ -354,7 +356,7 @@
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T6.3.1 Toxiproxy 集成 | ✅ 完成 | Claude | scripts/chaos_drill.sh (redis-down, db-slow, llm-timeout, network-partition) |
-| T6.3.2 CI 定期演练 | 🟡 待证据 | Claude | R4: 发现 chaos_drill.sh, 但未见 GitHub Actions 定期演练接线证据 |
+| T6.3.2 CI 定期演练 | ✅ 完成 | Claude | .github/workflows/chaos-drill.yml: weekly Sunday 3AM UTC + manual dispatch; baseline + drill + post-drill resilience tests |
 | T6.3.3 事故复盘模板 | ✅ 完成 | Claude | docs/engineering/incident_postmortem_template.md |
 
 ### 6.4 成本守卫
