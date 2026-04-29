@@ -25855,4 +25855,143 @@ class AppLocalizationsZh extends AppLocalizations {
   String planSprintSevenDayResultsFor(String subject) {
     return '$subject 7 天备考成果';
   }
+
+  @override
+  String get friendPartnerInviteTitle => '责任伙伴邀请';
+
+  @override
+  String get friendPartnerAccepted => '已接受责任伙伴邀请！';
+
+  @override
+  String get friendPartnerConflict => '你当前已经有核心责任伙伴，先进入现有工作台继续协作。';
+
+  @override
+  String get friendInviteDeclined => '已拒绝邀请';
+
+  @override
+  String get friendMatchingTitle => '责任伙伴匹配';
+
+  @override
+  String get friendMatchingDescription =>
+      '系统会结合公开画像、学习主题、社群重合度与责任伙伴状态，优先推荐适合作为核心责任伙伴的人。';
+
+  @override
+  String get friendPrivacyNotice => '仅展示允许公开发现的用户，推荐理由来自可解释的画像摘要，不会暴露私密原始数据。';
+
+  @override
+  String get friendCalibrationTitle => '待你校准';
+
+  @override
+  String get friendCalibrationDescription => '分阶段反馈会直接调整你后续的好友与责任伙伴匹配。';
+
+  @override
+  String get friendEmptyTitle => '暂时没有合适候选人';
+
+  @override
+  String get friendEmptyDescription => '换个匹配策略或稍后刷新，我们会持续根据最新画像和社群活跃度更新推荐。';
+
+  @override
+  String get friendFeedbackSubmitted => '反馈已提交，后续推荐会更贴近你的偏好';
+
+  @override
+  String friendSubmitFailed(String error) {
+    return '提交失败: $error';
+  }
+
+  @override
+  String get friendRecommendationHidden => '已隐藏这条推荐';
+
+  @override
+  String friendActionFailed(String error) {
+    return '操作失败: $error';
+  }
+
+  @override
+  String get friendRequestSent => '好友请求已发送';
+
+  @override
+  String get friendInviteDialogTitle => '发起责任伙伴邀请';
+
+  @override
+  String friendInviteDialogContent(String name) {
+    return '邀请 $name 成为你的责任伙伴';
+  }
+
+  @override
+  String get friendGoalLabel => '我的目标';
+
+  @override
+  String get friendCheckInFrequency => '打卡频率:';
+
+  @override
+  String get friendCheckInEveryDay => '每天';
+
+  @override
+  String friendCheckInEveryDays(int days) {
+    return '每 $days 天';
+  }
+
+  @override
+  String get friendCancel => '取消';
+
+  @override
+  String get friendSendInvite => '发送邀请';
+
+  @override
+  String get friendGoalRequired => '请填写目标';
+
+  @override
+  String get friendInviteSent => '责任伙伴邀请已发送！';
+
+  @override
+  String get friendStrategyCompatibility => '契合度';
+
+  @override
+  String get friendStrategyComplementary => '互补型';
+
+  @override
+  String get friendCanInviteDirectly => '可直接邀请伙伴';
+
+  @override
+  String get friendAlreadyFriend => '已是好友';
+
+  @override
+  String get friendAddFriendFirst => '先加好友';
+
+  @override
+  String get friendComplementaryRecommendation => '互补推荐';
+
+  @override
+  String get friendCompatibilityRecommendation => '契合推荐';
+
+  @override
+  String get friendHide => '隐藏';
+
+  @override
+  String get friendRateRecommendation => '评价推荐';
+
+  @override
+  String get friendStartPartnership => '发起责任伙伴';
+
+  @override
+  String get friendViewProfile => '查看详情';
+
+  @override
+  String get friendPartnersLoadFailed => '互督伙伴加载失败';
+
+  @override
+  String get friendMyPartnersTitle => '我的责任伙伴';
+
+  @override
+  String get friendAddPartnerPrompt => '点击添加责任伙伴，互相监督成长';
+
+  @override
+  String friendActiveCount(int count) {
+    return '$count 位进行中';
+  }
+
+  @override
+  String friendPendingCount(int count) {
+    return '$count 位待确认';
+  }
 }

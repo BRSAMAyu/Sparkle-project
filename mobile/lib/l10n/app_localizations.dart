@@ -47121,6 +47121,258 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{subject} 7 天备考成果'**
   String planSprintSevenDayResultsFor(String subject);
+
+  /// No description provided for @friendPartnerInviteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'责任伙伴邀请'**
+  String get friendPartnerInviteTitle;
+
+  /// No description provided for @friendPartnerAccepted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已接受责任伙伴邀请！'**
+  String get friendPartnerAccepted;
+
+  /// No description provided for @friendPartnerConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'你当前已经有核心责任伙伴，先进入现有工作台继续协作。'**
+  String get friendPartnerConflict;
+
+  /// No description provided for @friendInviteDeclined.
+  ///
+  /// In zh, this message translates to:
+  /// **'已拒绝邀请'**
+  String get friendInviteDeclined;
+
+  /// No description provided for @friendMatchingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'责任伙伴匹配'**
+  String get friendMatchingTitle;
+
+  /// No description provided for @friendMatchingDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统会结合公开画像、学习主题、社群重合度与责任伙伴状态，优先推荐适合作为核心责任伙伴的人。'**
+  String get friendMatchingDescription;
+
+  /// No description provided for @friendPrivacyNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅展示允许公开发现的用户，推荐理由来自可解释的画像摘要，不会暴露私密原始数据。'**
+  String get friendPrivacyNotice;
+
+  /// No description provided for @friendCalibrationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'待你校准'**
+  String get friendCalibrationTitle;
+
+  /// No description provided for @friendCalibrationDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'分阶段反馈会直接调整你后续的好友与责任伙伴匹配。'**
+  String get friendCalibrationDescription;
+
+  /// No description provided for @friendEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时没有合适候选人'**
+  String get friendEmptyTitle;
+
+  /// No description provided for @friendEmptyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'换个匹配策略或稍后刷新，我们会持续根据最新画像和社群活跃度更新推荐。'**
+  String get friendEmptyDescription;
+
+  /// No description provided for @friendFeedbackSubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已提交，后续推荐会更贴近你的偏好'**
+  String get friendFeedbackSubmitted;
+
+  /// No description provided for @friendSubmitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败: {error}'**
+  String friendSubmitFailed(String error);
+
+  /// No description provided for @friendRecommendationHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'已隐藏这条推荐'**
+  String get friendRecommendationHidden;
+
+  /// No description provided for @friendActionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作失败: {error}'**
+  String friendActionFailed(String error);
+
+  /// No description provided for @friendRequestSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友请求已发送'**
+  String get friendRequestSent;
+
+  /// No description provided for @friendInviteDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'发起责任伙伴邀请'**
+  String get friendInviteDialogTitle;
+
+  /// No description provided for @friendInviteDialogContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'邀请 {name} 成为你的责任伙伴'**
+  String friendInviteDialogContent(String name);
+
+  /// No description provided for @friendGoalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的目标'**
+  String get friendGoalLabel;
+
+  /// No description provided for @friendCheckInFrequency.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡频率:'**
+  String get friendCheckInFrequency;
+
+  /// No description provided for @friendCheckInEveryDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天'**
+  String get friendCheckInEveryDay;
+
+  /// No description provided for @friendCheckInEveryDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'每 {days} 天'**
+  String friendCheckInEveryDays(int days);
+
+  /// No description provided for @friendCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get friendCancel;
+
+  /// No description provided for @friendSendInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送邀请'**
+  String get friendSendInvite;
+
+  /// No description provided for @friendGoalRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写目标'**
+  String get friendGoalRequired;
+
+  /// No description provided for @friendInviteSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'责任伙伴邀请已发送！'**
+  String get friendInviteSent;
+
+  /// No description provided for @friendStrategyCompatibility.
+  ///
+  /// In zh, this message translates to:
+  /// **'契合度'**
+  String get friendStrategyCompatibility;
+
+  /// No description provided for @friendStrategyComplementary.
+  ///
+  /// In zh, this message translates to:
+  /// **'互补型'**
+  String get friendStrategyComplementary;
+
+  /// No description provided for @friendCanInviteDirectly.
+  ///
+  /// In zh, this message translates to:
+  /// **'可直接邀请伙伴'**
+  String get friendCanInviteDirectly;
+
+  /// No description provided for @friendAlreadyFriend.
+  ///
+  /// In zh, this message translates to:
+  /// **'已是好友'**
+  String get friendAlreadyFriend;
+
+  /// No description provided for @friendAddFriendFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'先加好友'**
+  String get friendAddFriendFirst;
+
+  /// No description provided for @friendComplementaryRecommendation.
+  ///
+  /// In zh, this message translates to:
+  /// **'互补推荐'**
+  String get friendComplementaryRecommendation;
+
+  /// No description provided for @friendCompatibilityRecommendation.
+  ///
+  /// In zh, this message translates to:
+  /// **'契合推荐'**
+  String get friendCompatibilityRecommendation;
+
+  /// No description provided for @friendHide.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏'**
+  String get friendHide;
+
+  /// No description provided for @friendRateRecommendation.
+  ///
+  /// In zh, this message translates to:
+  /// **'评价推荐'**
+  String get friendRateRecommendation;
+
+  /// No description provided for @friendStartPartnership.
+  ///
+  /// In zh, this message translates to:
+  /// **'发起责任伙伴'**
+  String get friendStartPartnership;
+
+  /// No description provided for @friendViewProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看详情'**
+  String get friendViewProfile;
+
+  /// No description provided for @friendPartnersLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'互督伙伴加载失败'**
+  String get friendPartnersLoadFailed;
+
+  /// No description provided for @friendMyPartnersTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的责任伙伴'**
+  String get friendMyPartnersTitle;
+
+  /// No description provided for @friendAddPartnerPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击添加责任伙伴，互相监督成长'**
+  String get friendAddPartnerPrompt;
+
+  /// No description provided for @friendActiveCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位进行中'**
+  String friendActiveCount(int count);
+
+  /// No description provided for @friendPendingCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位待确认'**
+  String friendPendingCount(int count);
 }
 
 class _AppLocalizationsDelegate

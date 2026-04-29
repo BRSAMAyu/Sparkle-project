@@ -26977,4 +26977,150 @@ class AppLocalizationsEn extends AppLocalizations {
   String planSprintSevenDayResultsFor(String subject) {
     return '$subject 7-Day Sprint Results';
   }
+
+  @override
+  String get friendPartnerInviteTitle => 'Accountability Partner Invite';
+
+  @override
+  String get friendPartnerAccepted => 'Accountability partner invite accepted!';
+
+  @override
+  String get friendPartnerConflict =>
+      'You already have a core accountability partner. Continue collaborating in your existing workspace.';
+
+  @override
+  String get friendInviteDeclined => 'Invite declined';
+
+  @override
+  String get friendMatchingTitle => 'Accountability Partner Matching';
+
+  @override
+  String get friendMatchingDescription =>
+      'The system combines public profiles, learning topics, community overlap, and partner status to recommend suitable core accountability partners.';
+
+  @override
+  String get friendPrivacyNotice =>
+      'Only users who allow public discovery are shown. Recommendation reasons come from explainable profile summaries—no private raw data is exposed.';
+
+  @override
+  String get friendCalibrationTitle => 'Calibration Needed';
+
+  @override
+  String get friendCalibrationDescription =>
+      'Feedback at each stage directly adjusts your future friend and partner matches.';
+
+  @override
+  String get friendEmptyTitle => 'No suitable candidates yet';
+
+  @override
+  String get friendEmptyDescription =>
+      'Try a different matching strategy or refresh later. We continuously update recommendations based on latest profiles and community activity.';
+
+  @override
+  String get friendFeedbackSubmitted =>
+      'Feedback submitted. Future recommendations will better match your preferences.';
+
+  @override
+  String friendSubmitFailed(String error) {
+    return 'Submit failed: $error';
+  }
+
+  @override
+  String get friendRecommendationHidden => 'Recommendation hidden';
+
+  @override
+  String friendActionFailed(String error) {
+    return 'Action failed: $error';
+  }
+
+  @override
+  String get friendRequestSent => 'Friend request sent';
+
+  @override
+  String get friendInviteDialogTitle => 'Send Accountability Partner Invite';
+
+  @override
+  String friendInviteDialogContent(String name) {
+    return 'Invite $name to be your accountability partner';
+  }
+
+  @override
+  String get friendGoalLabel => 'My Goal';
+
+  @override
+  String get friendCheckInFrequency => 'Check-in frequency:';
+
+  @override
+  String get friendCheckInEveryDay => 'Every day';
+
+  @override
+  String friendCheckInEveryDays(int days) {
+    return 'Every $days days';
+  }
+
+  @override
+  String get friendCancel => 'Cancel';
+
+  @override
+  String get friendSendInvite => 'Send Invite';
+
+  @override
+  String get friendGoalRequired => 'Please fill in your goal';
+
+  @override
+  String get friendInviteSent => 'Accountability partner invite sent!';
+
+  @override
+  String get friendStrategyCompatibility => 'Compatibility';
+
+  @override
+  String get friendStrategyComplementary => 'Complementary';
+
+  @override
+  String get friendCanInviteDirectly => 'Can invite as partner';
+
+  @override
+  String get friendAlreadyFriend => 'Already friends';
+
+  @override
+  String get friendAddFriendFirst => 'Add friend first';
+
+  @override
+  String get friendComplementaryRecommendation => 'Complementary match';
+
+  @override
+  String get friendCompatibilityRecommendation => 'Compatibility match';
+
+  @override
+  String get friendHide => 'Hide';
+
+  @override
+  String get friendRateRecommendation => 'Rate recommendation';
+
+  @override
+  String get friendStartPartnership => 'Start partnership';
+
+  @override
+  String get friendViewProfile => 'View profile';
+
+  @override
+  String get friendPartnersLoadFailed =>
+      'Failed to load accountability partners';
+
+  @override
+  String get friendMyPartnersTitle => 'My Accountability Partners';
+
+  @override
+  String get friendAddPartnerPrompt =>
+      'Tap to add an accountability partner and grow together';
+
+  @override
+  String friendActiveCount(int count) {
+    return '$count active';
+  }
+
+  @override
+  String friendPendingCount(int count) {
+    return '$count pending';
+  }
 }
