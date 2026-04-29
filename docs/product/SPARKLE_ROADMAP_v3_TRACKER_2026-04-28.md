@@ -63,7 +63,7 @@
 ### 1.1 Breakpoint #5: Behavior-driven Push
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| T1.1.1 notification_service 增强 | ⬜ 未开始 | — | |
+| T1.1.1 notification_service 增强 | ✅ 完成 | main | Spine NotificationDirective 集成 |
 | T1.1.2 session_end RecallOpportunity | ⬜ 未开始 | — | |
 | T1.1.3 push_scheduler.py 新建 | ⬜ 未开始 | — | |
 | T1.1.4 JPush 内容增强 | ⬜ 未开始 | — | |
