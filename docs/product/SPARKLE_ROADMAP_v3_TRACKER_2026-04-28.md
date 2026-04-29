@@ -129,7 +129,7 @@
 
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| H-01-FIX: 6 个 EventBus 事件接入 Spine | 🟡 审查新增 | — | task.abandoned, task.stuck, focus.session.completed, plan.created, srl.phase.transition, calendar.event.* |
+| H-01-FIX: 6 个 EventBus 事件接入 Spine | ✅ 完成 | Codex | SpineEventBridge 接入 task.abandoned/stuck、focus.session.completed、plan.created、srl.phase.transition、calendar.event.*; 3 tests passed |
 | H-02-FIX: Aurora→Spine 反馈接入 PolicyEngine | 🟡 审查新增 | — | feed_aurora_decision 写入 Redis 但无 Spine 策略评估读取 |
 | H-03-FIX: Spine 降级 Prometheus counter + 告警 | ✅ 完成 | Codex | sparkle_spine_degradation_total + SparkleSpineDegradation 告警 + runbook; 1 test passed |
 | H-04-FIX: Context Receipt Bar 用户行动按钮 | 🟡 审查新增 | — | receipt 显示正确但缺少"按课件重讲/排除资料"等行动 |
@@ -161,6 +161,7 @@
 | T2.3.4 Spine Timeline API | ⬜ 未开始 | ✅ 已存在 | endpoint 已在 `aurora.py` line 447+, path: `/api/v1/aurora/spine/timeline` |
 | T2.3.5 causal_timeline_panel.dart | ⬜ 未开始 | ✅ 已存在 | widget 已实现, 调用 API, 支持 corrections |
 | T2.1.6 / H-03 Spine 降级监控 | ⬜ 未开始 | ✅ 完成 | chat_turn Spine 异常写入 Prometheus counter, 5m 告警接入 Alertmanager |
+| H-01 EventBus→Spine 接线 | ⬜ 未开始 | ✅ 完成 | TaskEventConsumer 现在将 6 类高价值事件桥接为 ActionableSignal |
 
 ---
 
@@ -188,6 +189,7 @@
 | 2026-04-29 | Phase 1.6 | Codex Self Review | C-03 adapter 已消费 Spine context, 但 ExecutionEngine 入口若不传字段仍会断链 | ✅ 已修: multi_agent_context 从 state.context_data 透传 Spine + dual-core prompt instruction |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.6 双写迁移缺少可重复运行的一致性检查入口 | ✅ 已修: 后端 validator + CLI, 覆盖缺失投影/重复/孤儿/缺 Edge |
 | 2026-04-29 | Phase 2 | Codex Self Review | Spine 降级只写 `spine_degraded` metadata, 没有生产监控与告警 | ✅ 已修: Prometheus counter + SLO alert + runbook |
+| 2026-04-29 | Phase 2 | Codex Self Review | H-01 若继续用 `on_external_event(source="task")` 会落到未实现 dispatch/unsupported source, 仍无法真正进入 Spine | ✅ 已修: 新增 SpineEventBridge 直接构造 ActionableSignal 并运行 Spine pipeline |
 | 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ⬜ 待修 — 见 R3 报告 |
 | 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1**: OfflineChatMessage 模型存在但未使用, **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 | ⬜ 待修 — 见 R3 报告 |
 

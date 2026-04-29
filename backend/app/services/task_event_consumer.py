@@ -64,12 +64,23 @@ class TaskEventConsumer:
             await self._handle_task_completed(event)
         elif event_type == "task.abandoned":
             await self._handle_task_abandoned(event)
+        elif event_type == "task.stuck":
+            await self._handle_task_stuck(event)
         elif event_type == "task.feedback_submitted":
             await self._handle_task_feedback(event)
         elif event_type == "plan.replanned":
             await self._handle_plan_replanned(event)
         elif event_type == "behavior.pattern.updated":
             await self._handle_behavior_pattern(event)
+        elif event_type in {
+            "focus.session.completed",
+            "plan.created",
+            "srl.phase.transition",
+            "calendar.event.created",
+            "calendar.event.updated",
+            "calendar.event.deleted",
+        }:
+            await self._handle_spine_bridge_event(event)
 
     async def _handle_task_completed(self, event: dict):
         """处理任务完成。"""
@@ -178,8 +189,18 @@ class TaskEventConsumer:
                 except Exception as outcome_exc:
                     logger.warning("Outcome recording failed for abandoned task {}: {}", task_id, outcome_exc)
 
+            if user_id:
+                await self._handle_spine_bridge_event(event)
+
         except Exception as e:
             logger.error(f"Failed to handle task.abandoned: {e}")
+
+    async def _handle_task_stuck(self, event: dict):
+        """处理任务卡住 — H-01: 新增 Spine 信号。"""
+        try:
+            await self._handle_spine_bridge_event(event)
+        except Exception as e:
+            logger.error(f"Failed to handle task.stuck: {e}")
 
     async def _handle_task_feedback(self, event: dict):
         try:
@@ -249,6 +270,14 @@ class TaskEventConsumer:
                 await collector.handle_behavior_pattern_event(event)
         except Exception as e:
             logger.error(f"Failed to handle behavior.pattern.updated: {e}")
+
+    async def _handle_spine_bridge_event(self, event: dict) -> None:
+        try:
+            from app.services.spine_event_bridge import SpineEventBridge
+
+            await SpineEventBridge(cache_service.redis).handle_event(event)
+        except Exception as e:
+            logger.warning("Spine event bridge failed for {}: {}", event.get("event_type"), e)
 
     async def _record_task_outcome(
         self,
