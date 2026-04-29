@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/models/skill_models.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
 
@@ -48,7 +50,7 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '我的方式加载失败: $e';
+        _error = context.l10n.skillLoadFailed(e.toString());
         _loading = false;
       });
     }
@@ -63,16 +65,16 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
   @override
   Widget build(BuildContext context) => GraphiteScaffold(
         appBar: AppBar(
-          title: const Text('我的方式'),
+          title: Text(context.l10n.skillTitle),
           actions: [
             IconButton(
               icon: const Icon(Icons.auto_awesome_outlined),
-              tooltip: '从草稿生成',
+              tooltip: context.l10n.skillFromDraft,
               onPressed: _openDraftExtractor,
             ),
             IconButton(
               icon: const Icon(Icons.add_rounded),
-              tooltip: '新建方式',
+              tooltip: context.l10n.skillNewSkill,
               onPressed: () => _openEditor(),
             ),
             IconButton(
@@ -82,9 +84,9 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
           ],
           bottom: TabBar(
             controller: _tabController,
-            tabs: const [
-              Tab(text: '我的方式'),
-              Tab(text: '共享目录'),
+            tabs: [
+              Tab(text: context.l10n.skillTabMySkills),
+              Tab(text: context.l10n.skillTabSharedCatalog),
             ],
           ),
         ),
@@ -107,9 +109,9 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                             const SizedBox(height: DS.spacing12),
                             ..._skills.map(_buildSkillCard),
                             if (_skills.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.only(top: DS.spacing24),
-                                child: Center(child: Text('还没有沉淀任何 Skill')),
+                              Padding(
+                                padding: const EdgeInsets.only(top: DS.spacing24),
+                                child: Center(child: Text(context.l10n.skillEmptyMy)),
                               ),
                           ],
                         ),
@@ -123,9 +125,9 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                           children: [
                             ..._sharedSkills.map(_buildSharedSkillCard),
                             if (_sharedSkills.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.only(top: DS.spacing24),
-                                child: Center(child: Text('共享目录暂时为空')),
+                              Padding(
+                                padding: const EdgeInsets.only(top: DS.spacing24),
+                                child: Center(child: Text(context.l10n.skillEmptyShared)),
                               ),
                           ],
                         ),
@@ -142,12 +144,12 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '把你认可的处理方式沉淀下来',
+                context.l10n.skillIntroTitle,
                 style: DS.titleMedium.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '你可以手动新建、从对话草稿导入、启用/停用、编辑、删除、共享或从匿名目录 fork。',
+                context.l10n.skillIntroDesc,
                 style: DS.bodyMedium.copyWith(color: DS.textSecondary),
               ),
             ],
@@ -207,21 +209,21 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                   runSpacing: DS.spacing8,
                   children: [
                     SparkleButton.ghost(
-                      label: '编辑',
+                      label: context.l10n.skillEdit,
                       onPressed: () => _openEditor(existing: item),
                     ),
                     SparkleButton.ghost(
-                      label: '删除',
+                      label: context.l10n.skillDelete,
                       onPressed: () => _deleteSkill(item),
                     ),
                     if (!item.isForked && !item.isShared)
                       SparkleButton.ghost(
-                        label: '共享',
+                        label: context.l10n.skillShare,
                         onPressed: () => _shareSkill(item),
                       ),
                     if (item.isShared)
                       SparkleButton.ghost(
-                        label: '撤回共享',
+                        label: context.l10n.skillUnshare,
                         onPressed: () => _unshareSkill(item),
                       ),
                   ],
@@ -260,7 +262,7 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                 ),
                 const SizedBox(height: DS.spacing12),
                 SparkleButton(
-                  label: 'Fork 到我的方式',
+                  label: context.l10n.skillForkToMy,
                   disabled: _busyIds.contains(item.id),
                   onPressed: () => _forkSkill(item),
                 ),
@@ -356,10 +358,10 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
         _replaceSkill(saved);
       }
       if (!mounted) return;
-      AppFeedback.success(context, '已保存我的方式');
+      AppFeedback.success(context, context.l10n.skillSaved);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '保存失败: $e');
+      AppFeedback.error(context, context.l10n.skillSaveFailed(e.toString()));
     }
   }
 
@@ -378,7 +380,7 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
       await action();
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '操作失败: $e');
+        AppFeedback.error(context, context.l10n.skillActionFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -456,18 +458,18 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.existing == null ? '新建方式' : '编辑方式'),
+        title: Text(widget.existing == null ? context.l10n.skillEditorNew : context.l10n.skillEditorEdit),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: '名称'),
+                decoration: InputDecoration(labelText: context.l10n.skillEditorName),
               ),
               TextField(
                 controller: _patternController,
-                decoration: const InputDecoration(labelText: '处理模板'),
+                decoration: InputDecoration(labelText: context.l10n.skillEditorTemplate),
                 minLines: 3,
                 maxLines: 5,
               ),
@@ -489,7 +491,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
               ),
               TextField(
                 controller: _examplesController,
-                decoration: const InputDecoration(labelText: '示例（每行一条）'),
+                decoration: InputDecoration(labelText: context.l10n.skillEditorExamples),
                 minLines: 2,
                 maxLines: 4,
               ),
@@ -499,11 +501,11 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(context.l10n.skillCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(_buildPayload()),
-            child: const Text('保存'),
+            child: Text(context.l10n.skillSave),
           ),
         ],
       );
@@ -567,24 +569,24 @@ class _SkillDraftRequestDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('从草稿生成'),
+        title: Text(AppLocalizations.of(context)!.skillDraftTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _consentController,
-                decoration: const InputDecoration(labelText: '显式同意文本'),
+                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.skillDraftConsentLabel),
               ),
               TextField(
                 controller: _userController,
-                decoration: const InputDecoration(labelText: '用户原话'),
+                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.skillDraftUserMessage),
                 minLines: 2,
                 maxLines: 4,
               ),
               TextField(
                 controller: _assistantController,
-                decoration: const InputDecoration(labelText: 'AI 回复'),
+                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.skillDraftAiReply),
                 minLines: 2,
                 maxLines: 4,
               ),
@@ -594,11 +596,11 @@ class _SkillDraftRequestDialogState
         actions: [
           TextButton(
             onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context)!.skillCancel),
           ),
           ElevatedButton(
             onPressed: _submitting ? null : _submit,
-            child: Text(_submitting ? '生成中...' : '生成草稿'),
+            child: Text(_submitting ? AppLocalizations.of(context)!.skillDraftGenerating : AppLocalizations.of(context)!.skillDraftGenerate),
           ),
         ],
       );
@@ -617,7 +619,7 @@ class _SkillDraftRequestDialogState
       Navigator.of(context).pop(draft);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '草稿生成失败: $e');
+      AppFeedback.error(context, AppLocalizations.of(context)!.skillDraftFailed(e.toString()));
       setState(() => _submitting = false);
     }
   }
