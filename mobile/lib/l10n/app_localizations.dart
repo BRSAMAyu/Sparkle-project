@@ -40831,6 +40831,156 @@ abstract class AppLocalizations {
   /// **'转账失败：{error}'**
   String ptFailed(String error);
 
+  /// No description provided for @gdSprintCountdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺倒计时 {days} 天'**
+  String gdSprintCountdown(int days);
+
+  /// No description provided for @gdMembers.
+  ///
+  /// In zh, this message translates to:
+  /// **'成员'**
+  String get gdMembers;
+
+  /// No description provided for @gdFlamePower.
+  ///
+  /// In zh, this message translates to:
+  /// **'火力值'**
+  String get gdFlamePower;
+
+  /// No description provided for @gdTodayCheckin.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日打卡'**
+  String get gdTodayCheckin;
+
+  /// No description provided for @gdAbout.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于'**
+  String get gdAbout;
+
+  /// No description provided for @gdNoDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无描述'**
+  String get gdNoDescription;
+
+  /// No description provided for @gdAnnouncement.
+  ///
+  /// In zh, this message translates to:
+  /// **'公告'**
+  String get gdAnnouncement;
+
+  /// No description provided for @gdNoAnnouncement.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无公告'**
+  String get gdNoAnnouncement;
+
+  /// No description provided for @gdEnterChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入聊天'**
+  String get gdEnterChat;
+
+  /// No description provided for @gdTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get gdTasks;
+
+  /// No description provided for @gdOpenKnowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开知识库'**
+  String get gdOpenKnowledge;
+
+  /// No description provided for @gdJoinGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入群组'**
+  String get gdJoinGroup;
+
+  /// No description provided for @gdJoinFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入失败: {error}'**
+  String gdJoinFailed(String error);
+
+  /// No description provided for @gdLeaveGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'离开群组'**
+  String get gdLeaveGroup;
+
+  /// No description provided for @gdConfirmLeave.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认离开?'**
+  String get gdConfirmLeave;
+
+  /// No description provided for @gdLeaveConfirmMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要离开这个群组吗？'**
+  String get gdLeaveConfirmMsg;
+
+  /// No description provided for @gdCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get gdCancel;
+
+  /// No description provided for @gdLeave.
+  ///
+  /// In zh, this message translates to:
+  /// **'离开'**
+  String get gdLeave;
+
+  /// No description provided for @gdEditAnnouncement.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑公告'**
+  String get gdEditAnnouncement;
+
+  /// No description provided for @gdAnnouncementHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入群组公告...'**
+  String get gdAnnouncementHint;
+
+  /// No description provided for @gdSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get gdSave;
+
+  /// No description provided for @gdAnnouncementUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'公告已更新'**
+  String get gdAnnouncementUpdated;
+
+  /// No description provided for @gdUpdateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新失败: {error}'**
+  String gdUpdateFailed(String error);
+
+  /// No description provided for @gdOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'概览'**
+  String get gdOverview;
+
+  /// No description provided for @gdKnowledgeBase.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识库'**
+  String get gdKnowledgeBase;
+
   /// No description provided for @simSocratic.
   ///
   /// In zh, this message translates to:

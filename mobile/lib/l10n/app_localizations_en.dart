@@ -23330,6 +23330,87 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String gdSprintCountdown(int days) {
+    return 'Sprint countdown: $days days';
+  }
+
+  @override
+  String get gdMembers => 'Members';
+
+  @override
+  String get gdFlamePower => 'Flame Power';
+
+  @override
+  String get gdTodayCheckin => 'Today\'s Check-in';
+
+  @override
+  String get gdAbout => 'About';
+
+  @override
+  String get gdNoDescription => 'No description';
+
+  @override
+  String get gdAnnouncement => 'Announcement';
+
+  @override
+  String get gdNoAnnouncement => 'No announcement';
+
+  @override
+  String get gdEnterChat => 'Enter Chat';
+
+  @override
+  String get gdTasks => 'Tasks';
+
+  @override
+  String get gdOpenKnowledge => 'Open Knowledge Base';
+
+  @override
+  String get gdJoinGroup => 'Join Group';
+
+  @override
+  String gdJoinFailed(String error) {
+    return 'Join failed: $error';
+  }
+
+  @override
+  String get gdLeaveGroup => 'Leave Group';
+
+  @override
+  String get gdConfirmLeave => 'Leave Group?';
+
+  @override
+  String get gdLeaveConfirmMsg => 'Are you sure you want to leave this group?';
+
+  @override
+  String get gdCancel => 'Cancel';
+
+  @override
+  String get gdLeave => 'Leave';
+
+  @override
+  String get gdEditAnnouncement => 'Edit Announcement';
+
+  @override
+  String get gdAnnouncementHint => 'Enter group announcement...';
+
+  @override
+  String get gdSave => 'Save';
+
+  @override
+  String get gdAnnouncementUpdated => 'Announcement updated';
+
+  @override
+  String gdUpdateFailed(String error) {
+    return 'Update failed: $error';
+  }
+
+  @override
+  String get gdOverview => 'Overview';
+
+  @override
+  String get gdKnowledgeBase => 'Knowledge Base';
+
+  @override
   String get simSocratic => 'Socratic Dialogue';
 
   @override

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -229,7 +230,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   ),
                 ),
                 child: Text(
-                  '冲刺倒计时 ${group.daysRemaining} 天',
+                  context.l10n.gdSprintCountdown(group.daysRemaining ?? 0),
                   style: TextStyle(
                     color: DS.error,
                     fontWeight: FontWeight.bold,
@@ -262,7 +263,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 Expanded(
                   child: _buildStatCard(
                     context,
-                    '成员',
+                    context.l10n.gdMembers,
                     '${group.memberCount}/${group.maxMembers}',
                     Icons.people,
                   ),
@@ -271,7 +272,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 Expanded(
                   child: _buildStatCard(
                     context,
-                    '火力值',
+                    context.l10n.gdFlamePower,
                     '${group.totalFlamePower}',
                     Icons.local_fire_department,
                   ),
@@ -280,7 +281,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 Expanded(
                   child: _buildStatCard(
                     context,
-                    '今日打卡',
+                    context.l10n.gdTodayCheckin,
                     '${group.todayCheckinCount}',
                     Icons.check_circle,
                   ),
@@ -290,13 +291,13 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           ),
           const SizedBox(height: DS.xxl),
           Text(
-            '关于',
+            context.l10n.gdAbout,
             style: theme.textTheme.titleLarge
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: DS.sm),
           Text(
-            group.description ?? '暂无描述',
+            group.description ?? context.l10n.gdNoDescription,
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: DS.textSecondary, height: 1.6),
           ),
@@ -327,7 +328,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '公告',
+                  context.l10n.gdAnnouncement,
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
@@ -345,14 +346,14 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           ),
           const SizedBox(height: DS.sm),
           Text(
-            group.announcement?.isNotEmpty ?? false ? group.announcement! : '暂无公告',
+            group.announcement?.isNotEmpty ?? false ? group.announcement! : context.l10n.gdNoAnnouncement,
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: DS.textSecondary, height: 1.6),
           ),
           const SizedBox(height: DS.xxl),
           if (isMember) ...[
             CustomButton.primary(
-              text: '进入聊天',
+              text: context.l10n.gdEnterChat,
               icon: Icons.chat_bubble_outline,
               size: CustomButtonSize.large,
               onPressed: () =>
@@ -363,7 +364,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
               children: [
                 Expanded(
                   child: CustomButton.secondary(
-                    text: '任务',
+                    text: context.l10n.gdTasks,
                     icon: Icons.task_alt,
                     onPressed: () =>
                         unawaited(context.push('/community/groups/${widget.groupId}/tasks')),
@@ -372,7 +373,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 const SizedBox(width: DS.lg),
                 Expanded(
                   child: CustomButton.secondary(
-                    text: '成员',
+                    text: context.l10n.gdMembers,
                     icon: Icons.people_outline,
                     onPressed: () => unawaited(
                       context.push(
@@ -385,14 +386,14 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             ),
             const SizedBox(height: DS.lg),
             CustomButton.secondary(
-              text: '打开知识库',
+              text: context.l10n.gdOpenKnowledge,
               icon: Icons.auto_stories_outlined,
               onPressed: () =>
                   setState(() => _selectedTab = _GroupDetailTab.knowledgeBase),
             ),
           ] else ...[
             CustomButton.primary(
-              text: '加入群组',
+              text: context.l10n.gdJoinGroup,
               onPressed: () async {
                 unawaited(
                   SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
@@ -406,7 +407,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    AppFeedback.error(context, '加入失败: $e');
+                    AppFeedback.error(context, context.l10n.gdJoinFailed(e.toString()));
                   }
                 }
               },
@@ -485,7 +486,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   ),
                 ),
                 title: Text(
-                  '离开群组',
+                  context.l10n.gdLeaveGroup,
                   style: TextStyle(
                     color: DS.error,
                     fontWeight: FontWeight.bold,
@@ -496,15 +497,15 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   final confirm = await showSensoryDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('确认离开?'),
-                      content: const Text('确定要离开这个群组吗？'),
+                      title: Text(context.l10n.gdConfirmLeave),
+                      content: Text(context.l10n.gdLeaveConfirmMsg),
                       actions: [
                         SparkleButton.ghost(
-                          label: '取消',
+                          label: context.l10n.gdCancel,
                           onPressed: () => Navigator.pop(context, false),
                         ),
                         SparkleButton.destructive(
-                          label: '离开',
+                          label: context.l10n.gdLeave,
                           onPressed: () => Navigator.pop(context, true),
                         ),
                       ],
@@ -543,22 +544,22 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
         ),
-        title: const Text('编辑公告'),
+        title: Text(context.l10n.gdEditAnnouncement),
         content: TextField(
           controller: controller,
           maxLines: 4,
           maxLength: 2000,
-          decoration: const InputDecoration(
-            hintText: '输入群组公告...',
+          decoration: InputDecoration(
+            hintText: context.l10n.gdAnnouncementHint,
           ),
         ),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.gdCancel,
             onPressed: () => Navigator.pop(context),
           ),
           SparkleButton.primary(
-            label: '保存',
+            label: context.l10n.gdSave,
             onPressed: () => Navigator.pop(context, controller.text.trim()),
           ),
         ],
@@ -570,9 +571,9 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       await ref
           .read(groupDetailProvider(widget.groupId).notifier)
           .updateAnnouncement(result.isEmpty ? null : result);
-      if (context.mounted) AppFeedback.success(context, '公告已更新');
+      if (context.mounted) AppFeedback.success(context, context.l10n.gdAnnouncementUpdated);
     } catch (e) {
-      if (context.mounted) AppFeedback.error(context, '更新失败: $e');
+      if (context.mounted) AppFeedback.error(context, context.l10n.gdUpdateFailed(e.toString()));
     }
   }
 }
@@ -598,7 +599,7 @@ class _GroupDetailTabs extends StatelessWidget {
           children: [
             Expanded(
               child: _TabButton(
-                label: '概览',
+                label: context.l10n.gdOverview,
                 selected: selectedTab == _GroupDetailTab.overview,
                 onTap: () => onChanged(_GroupDetailTab.overview),
               ),
@@ -606,7 +607,7 @@ class _GroupDetailTabs extends StatelessWidget {
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: _TabButton(
-                label: '知识库',
+                label: context.l10n.gdKnowledgeBase,
                 selected: selectedTab == _GroupDetailTab.knowledgeBase,
                 onTap: () => onChanged(_GroupDetailTab.knowledgeBase),
               ),

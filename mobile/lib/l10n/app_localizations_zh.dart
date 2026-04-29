@@ -22355,6 +22355,87 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String gdSprintCountdown(int days) {
+    return '冲刺倒计时 $days 天';
+  }
+
+  @override
+  String get gdMembers => '成员';
+
+  @override
+  String get gdFlamePower => '火力值';
+
+  @override
+  String get gdTodayCheckin => '今日打卡';
+
+  @override
+  String get gdAbout => '关于';
+
+  @override
+  String get gdNoDescription => '暂无描述';
+
+  @override
+  String get gdAnnouncement => '公告';
+
+  @override
+  String get gdNoAnnouncement => '暂无公告';
+
+  @override
+  String get gdEnterChat => '进入聊天';
+
+  @override
+  String get gdTasks => '任务';
+
+  @override
+  String get gdOpenKnowledge => '打开知识库';
+
+  @override
+  String get gdJoinGroup => '加入群组';
+
+  @override
+  String gdJoinFailed(String error) {
+    return '加入失败: $error';
+  }
+
+  @override
+  String get gdLeaveGroup => '离开群组';
+
+  @override
+  String get gdConfirmLeave => '确认离开?';
+
+  @override
+  String get gdLeaveConfirmMsg => '确定要离开这个群组吗？';
+
+  @override
+  String get gdCancel => '取消';
+
+  @override
+  String get gdLeave => '离开';
+
+  @override
+  String get gdEditAnnouncement => '编辑公告';
+
+  @override
+  String get gdAnnouncementHint => '输入群组公告...';
+
+  @override
+  String get gdSave => '保存';
+
+  @override
+  String get gdAnnouncementUpdated => '公告已更新';
+
+  @override
+  String gdUpdateFailed(String error) {
+    return '更新失败: $error';
+  }
+
+  @override
+  String get gdOverview => '概览';
+
+  @override
+  String get gdKnowledgeBase => '知识库';
+
+  @override
   String get simSocratic => '苏格拉底对话';
 
   @override
