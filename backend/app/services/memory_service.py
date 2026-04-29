@@ -426,7 +426,7 @@ class MemoryService:
 
         await self.db.commit()
         await self.db.refresh(record)
-        MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
+        MEMORY_WRITE_TOTAL.labels(type="goal", status="ok").inc()
 
         try:
             evolution = MemoryEvolutionService(self.db)

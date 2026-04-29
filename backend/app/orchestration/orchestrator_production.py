@@ -1148,6 +1148,19 @@ class ProductionChatOrchestrator:
             except Exception as _spine_exc:
                 logger.debug("Spine directive fetch skipped: {}", _spine_exc)
 
+            # R5-DF2/DF3: Inject community and skill directives into user_context for prompt rendering
+            try:
+                from app.signals.spine_orchestrator import SpineOrchestrator as _SO
+                _spine_quick = _SO(self.redis)
+                _comm_dir = await _spine_quick.get_community_directive(str(user_id))
+                if _comm_dir:
+                    user_context_data["spine_community_directive"] = _comm_dir.to_dict()
+                _skill_dir = await _spine_quick.get_skill_directive(str(user_id))
+                if _skill_dir:
+                    user_context_data["spine_skill_directive"] = _skill_dir.to_dict()
+            except Exception:
+                pass
+
             base_system_prompt = build_system_prompt(
                 user_context_data,
                 conversation_history=conversation_context,

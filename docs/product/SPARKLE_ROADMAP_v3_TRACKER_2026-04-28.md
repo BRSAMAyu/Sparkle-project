@@ -481,3 +481,130 @@
 | GAP-KG001: 节点属性补全 | ✅ 已修复 | Claude | GraphNode 新增 exam_weight/difficulty/trainability/mistakes |
 | GAP-KG004: 节点优先级持久化 | ✅ 已修复 | Claude | GraphNode.focus_priority + _recompute 自动持久化 |
 | GAP-KG005: 错因聚类挂节点 | ✅ 已验证 | Claude | CommunityErrorAggregationService.aggregate_and_annotate_node() 绑定错因到 KnowledgeNode.community_signal |
+
+---
+
+## R5 深度审计 (2026-04-30)
+
+> **审查范围**: 全系统深度瓶颈 + 愿景差距 + 细节打磨
+> **方法**: 4 路并行审查 Agent (后端 Python / Flutter+Gateway / 数据流集成 / 愿景差距)
+
+### R5.1 后端 Python 审查 (20 issues)
+
+| ID | 严重度 | 问题 | 文件 | 状态 |
+|----|--------|------|------|------|
+| P1-7 | P1 | SpineOrchestrator 零测试覆盖 (4357行 60方法) | `spine_orchestrator.py` | 🔴 待修 |
+| P1-8 | P1 | AchievementEngine threading.Lock 配 async | `achievement_engine.py` | 🔴 待修 |
+| P1-9 | P1 | ContractService `current_minutes=0` 丢失额外分钟 | `contract_service.py` | 🔴 待修 |
+| P1-10 | P1 | FocusSessionCompletedEvent 定义但从未发布到 EventBus | `event_bus.py` / signal modules | 🔴 待修 |
+| P1-12 | P1 | SpineOrchestrator 零测试 (重复 P1-7) | — | 🔴 待修 |
+| P1-13 | P1 | AchievementEngine sprint/contract/weekend 测试不足 | `test_achievement_engine.py` | 🔴 待修 |
+| P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | 🔴 待修 |
+| P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🔴 待修 |
+| P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🔴 待修 |
+| P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | 🔴 待修 |
+| P2-4 | P2 | 事件消费者无背压/限流 | event consumers | 🔴 待修 |
+| P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | 🔴 待修 |
+| P2-6 | P2 | Redis 连接无 circuit breaker | 多文件 | 🔴 待修 |
+| P2-7 | P2 | context_manager 异常处理不一致 | `context_manager.py` | 🔴 待修 |
+| P2-8 | P2 | StateRegister 无 TTL/过期清理 | `state_register.py` | 🔴 待修 |
+| P2-9 | P2 | OutcomeRecorder 无幂等保护 | `outcome_recorder.py` | 🔴 待修 |
+| P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | 🔴 待修 |
+| P2-14 | P2 | cognitive_adjustments 被截断到 [:2]/[:3] | `dual_core_router.py` | 🔴 待修 |
+| P2-17 | P2 | pipeline lock 管理 on_task_completed vs _run_signal_pipeline 不一致 | `spine_orchestrator.py` | 🔴 待修 |
+| P2-20 | P2 | EventBus consumer loop Redis 断连不重连 | `event_bus.py` | 🔴 待修 |
+
+### R5.2 Flutter + Gateway 审查 (17 issues)
+
+| ID | 严重度 | 问题 | 文件 | 状态 |
+|----|--------|------|------|------|
+| G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | 🔴 待修 |
+| F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | 🔴 待修 |
+| F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | 🔴 待修 |
+| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🔴 待修 |
+| F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | 🔴 待修 |
+| G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | 🔴 待修 |
+| G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | 🔴 待修 |
+| G-04 | P1 | WS 后端→客户端消息无验证 | `websocket_proxy.go:244-264` | 🔴 待修 |
+| G-05 | P1 | WS Auth 中间件查询 token 模式日志风险 | `ws_auth.go:37,63,71` | 🔴 待修 |
+| F-05 | P2 | _GoalChip 触摸目标 ~32px < 44px | `dashboard_screen.dart:1362` | 🔴 待修 |
+| F-06 | P2 | _AuroraQuickTrigger 触摸目标 ~26px | `chat_screen.dart:3312` | 🔴 待修 |
+| F-07 | P2 | _QuickActionChip 无 Semantics 标签 | `chat_screen.dart:2778` | 🔴 待修 |
+| F-08 | P2 | 错误状态 10 秒静默自动清除 | `chat_screen.dart:179-194` | 🔴 待修 |
+| F-09 | P2 | Dashboard provider 错误不自动重试 | `dashboard_provider.dart:407` | 🔴 待修 |
+| F-10 | P2 | Growth provider 静默吞异常 | `dashboard_screen.dart:113-132` | 🔴 待修 |
+| G-06 | P2 | gRPC WithBlock() 导致启动挂起 | `client.go:75,132,171` | 🔴 待修 |
+| G-07 | P2 | gRPC 重连无指数退避 | `client.go:191-207` | 🔴 待修 |
+
+### R5.3 数据流完整性审查 (12 issues)
+
+| ID | 严重度 | 问题 | 数据流 | 状态 |
+|----|--------|------|--------|------|
+| DF-1 | 高 | ModelWriteDirective 写入黑洞 (get_model_claims 从未被生产代码调用) | Spine→Redis→无消费者 | 🔴 待修 |
+| DF-2 | 中 | CommunityDirective 写入但从未被消费 | Spine→state.context_data→无读取 | 🔴 待修 |
+| DF-3 | 中 | SkillDirective 写入但从未被消费 | Spine→state.context_data→无读取 | 🔴 待修 |
+| DF-4 | 中 | UXDirective 键不匹配 (orchestrator 发 `spine_ux`, Flutter 监听 `spine_ux_warning`) | WS metadata | 🔴 待修 |
+| DF-5 | 低-中 | NotificationService.consume_spine_notification_directive 死代码 | 未被调用 | 🔴 待修 |
+| DF-6 | 低 | 成就数据渲染为单行摘要 (14表19事件→1行) | prompts.py | 🔴 待修 |
+| DF-7 | 低 | 执行引擎上下文缺少 ux/community/skill directive | execution_engine.py | 🔴 待修 |
+| DF-8 | 低 | cognitive_adjustments 仅为文本注入无结构化强制 | dual_core_router | 🟡 设计层面 |
+| DF-9 | 低 | 日历 shadow 模式静默抑制无遥测 | prompts.py | 🔴 待修 |
+| DF-10 | 低 | State Aggregator 成就摘要仅来自DB不含事件 | state_aggregator | 🔴 待修 |
+| DF-11 | 低 | CommunitySignalBridge 事件不触发上下文刷新 | 事件→直接查询 | 🟡 架构选择 |
+| DF-12 | 极低 | spine_retrieval_directive 注入两次 | session_state + orchestrator | 🔴 待修 |
+
+### R5.4 愿景 vs 实现差距 (14 issues)
+
+| ID | 严重度 | 差距 | 缺失部分 | 状态 |
+|----|--------|------|----------|------|
+| V-1 | P2 | 神圣时刻 #1 "看见坚持" 无专属连续性识别 UI | 专用卡片组件 | 🔴 待修 |
+| V-2 | P1 | 神圣时刻 #5 "阻止低收益" 无用户可见拦截卡片 | 拦截 UI + 解释 | 🔴 待修 |
+| V-3 | P1 | 神圣时刻 #6 社群经验转策略未连接生产触发器 | Celery connector + UI | 🔴 待修 |
+| V-4 | P1 | 4/9 Directive 无消费者 (Retrieval/UX/Skill/Community) | 下游消费者 | 🔴 待修 |
+| V-5 | P1 | Aurora 偏好设置 UI 不存在 | 设置屏幕 | 🔴 待修 |
+| V-6 | P1 | 材料范围控制过于简单 (仅3态切换) | 丰富 Source Selector | 🔴 待修 |
+| V-7 | P2 | SkillExtractionService 为 stub | 提取逻辑 | 🔴 待修 |
+| V-8 | P2 | 成就信号未被 Task Generator 消费 | 消费者接线 | 🔴 待修 |
+| V-9 | P2 | Outcome 跟踪为只写, 无自动策略学习 | 策略更新循环 | 🔴 待修 |
+| V-10 | P2 | 截止日期阶段策略为静态无逐日转换 | 动态阶段逻辑 | 🔴 待修 |
+| V-11 | P3 | 多消息 Aurora 议程不存在 | 整个功能 | 🟡 未来增强 |
+| V-12 | P1 | ContextPlan 检索模式用户不可控 | 模式选择器 | 🔴 待修 |
+| V-13 | P2 | cognitive_adjustments 文本注入非结构化消费 | 结构化消费 | 🟡 设计层面 |
+| V-14 | P2 | 辅助 Spine 事件 (mistake/quiz) 无完整管道 | 完整 Directive 管道 | 🔴 待修 |
+
+### R5 总计: 63 issues (1 P0, 18 P1, 32 P2, 2 P3, 10 低)
+
+**第一轮修复 (P0 + 高影响 P1)**:
+1. G-01: Auth logout/guest-upgrade 公开代理
+2. DF-1: ModelWriteDirective 消费者接入
+3. DF-2/3: Community/SkillDirective 渲染到 prompt
+4. DF-4: UXDirective 键对齐
+5. P1-9: ContractService 分钟丢失
+6. P1-15: MemoryService 日志错误
+7. F-04: Dashboard 错误 UI
+
+---
+
+### R5 修复优先级排序
+
+**第一轮 (P0)**:
+1. G-01: Auth logout/guest-upgrade 公开代理风险
+
+**第二轮 (P1 后端)**:
+2. P1-7/12: SpineOrchestrator 测试覆盖
+3. P1-8: AchievementEngine async lock
+4. P1-9: ContractService 分钟丢失
+5. P1-10: FocusSessionCompletedEvent 发布
+6. P1-15: MemoryService 日志错误
+
+**第三轮 (P1 Flutter/Gateway)**:
+7. F-04: Dashboard 错误 UI
+8. G-02: 未认证路由限流
+9. G-04: WS 输出验证
+10. G-05: WS 日志清理
+
+**第四轮 (P2 高影响)**:
+11. P2-14: cognitive_adjustments 截断
+12. P2-17: pipeline lock 不一致
+13. P2-20: EventBus 重连
+14. P2-1/2: God class 拆分 (长期)

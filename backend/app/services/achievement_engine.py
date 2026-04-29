@@ -2733,7 +2733,8 @@ class ContractService:
         contract.current_minutes += study_minutes
         if contract.current_minutes >= contract.target_study_minutes:
             contract.current_days += 1
-            contract.current_minutes = 0  # 重置当日分钟数
+            # R5-P1-9: Carry over excess minutes instead of discarding
+            contract.current_minutes = max(0, contract.current_minutes - contract.target_study_minutes)
 
         await self.db.commit()
 

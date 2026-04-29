@@ -80,6 +80,10 @@ class CognitiveContext(BaseModel):
         default_factory=dict,
         description="Favorite capsule-derived content depth and subject preferences",
     )
+    spine_model_claims: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="R5-DF1: Active Spine model-write claims about user behavior",
+    )
 
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
@@ -279,6 +283,7 @@ class ContextOrchestrator:
             achievement_data = dict(achievement_data or {})
             achievement_data["recent_progress_events"] = achievement_progress_events
         past_session_memory = await self._get_past_session_memory(uid)
+        spine_model_claims = await self._get_spine_model_claims(user_id)
 
         knowledge_summary = {}
         preference_version = 0
@@ -316,6 +321,7 @@ class ContextOrchestrator:
             calendar_context=calendar_data or {},
             past_session_memory=past_session_memory,
             capsule_preferences=capsule_preferences or {},
+            spine_model_claims=spine_model_claims,
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
         )
@@ -375,6 +381,34 @@ class ContextOrchestrator:
                 }
             )
         return memories
+
+    async def _get_spine_model_claims(self, user_id: str) -> list[dict[str, Any]]:
+        """R5-DF1: Read Spine model-write claims so AI can see inferred user traits."""
+        if not self.redis:
+            return []
+        try:
+            import asyncio
+
+            pattern = f"spine:model_claim:{user_id}:*"
+            keys = []
+            try:
+                keys = await self.redis.keys(pattern)
+            except Exception:
+                return []
+            if not keys:
+                return []
+            claims: list[dict[str, Any]] = []
+            for key in keys[:10]:
+                try:
+                    raw = await self.redis.get(key)
+                    if raw:
+                        claims.append(json.loads(raw))
+                except Exception:
+                    continue
+            return claims
+        except Exception as exc:
+            logger.debug(f"spine model claims read skipped: {exc}")
+            return []
 
     async def _get_capsule_preferences(
         self,

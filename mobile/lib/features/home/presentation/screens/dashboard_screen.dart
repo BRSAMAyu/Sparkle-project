@@ -398,7 +398,43 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     var sectionIndex = growthSections.length;
     final dashboardSections = <Widget>[];
-    if (dashboardState.isLoading) {
+    if (dashboardState.hasError) {
+      // R5-F04: Show error UI instead of silently falling back
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: CompactStatusBar(
+            user: user,
+            dashboardState: dashboardState,
+          ),
+        ),
+      );
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              children: [
+                Icon(Icons.cloud_off_outlined, size: 40, color: DS.textTertiary),
+                const SizedBox(height: 12),
+                Text(
+                  dashboardState.error ?? '加载失败',
+                  style: TextStyle(color: DS.textSecondary, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () => ref.invalidate(dashboardProvider),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else if (dashboardState.isLoading) {
       dashboardSections.add(
         _staggeredSection(
           index: sectionIndex++,

@@ -488,6 +488,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 {capsule_preference_section}
 
+{spine_model_claims_section}
+
+{spine_community_skill_section}
+
 ## 对话历史
 
 {conversation_history_section}
@@ -1002,6 +1006,8 @@ def build_system_prompt(
     )
     past_session_memory_section = _format_past_session_memory_section(user_context)
     capsule_preference_section = _format_capsule_preference_section(user_context)
+    spine_model_claims_section = _format_spine_model_claims_section(user_context)
+    spine_community_skill_section = _format_spine_community_skill_section(user_context)
 
     llm_profile = _extract_llm_profile(user_context)
     understanding_depth_hint = None
@@ -3645,6 +3651,48 @@ def _format_capsule_preference_section(user_context: dict[str, Any] | None) -> s
     if methods or method_summaries:
         lines.append("- 行为适配: 当用户要安排学习节奏、启动任务或复盘方法时，优先尝试这些方法偏好。")
     return "\n".join(lines)
+
+
+def _format_spine_model_claims_section(user_context: dict[str, Any] | None) -> str:
+    """R5-DF1: Render Spine model-write claims as prompt context for AI."""
+    if not isinstance(user_context, dict):
+        return ""
+    claims = user_context.get("spine_model_claims")
+    if not isinstance(claims, list) or not claims:
+        return ""
+    lines = [
+        "## 系统推断的用户特征 [Spine Signal]",
+        "以下特征由 Signal-to-Action Spine 从用户行为中推断得出。在响应中自然体现，但不要直接提及 '系统推断'。",
+    ]
+    for claim in claims[:5]:
+        if not isinstance(claim, dict):
+            continue
+        model = str(claim.get("target_model") or "").strip()
+        scope = str(claim.get("scope") or "").strip()
+        value = str(claim.get("value") or "").strip()
+        if model or scope:
+            lines.append(f"- {model}/{scope}: {value}" if scope else f"- {model}: {value}")
+    return "\n".join(lines) if len(lines) > 2 else ""
+
+
+def _format_spine_community_skill_section(user_context: dict[str, Any] | None) -> str:
+    """R5-DF2/DF3: Render Community + Skill directives as prompt context."""
+    if not isinstance(user_context, dict):
+        return ""
+    lines = []
+    comm = user_context.get("spine_community_directive")
+    if isinstance(comm, dict) and comm:
+        hint = str(comm.get("hint") or comm.get("summary") or "").strip()
+        if hint:
+            lines.append("## 社群信号指导 [Spine Community]")
+            lines.append(hint)
+    skill = user_context.get("spine_skill_directive")
+    if isinstance(skill, dict) and skill:
+        hint = str(skill.get("hint") or skill.get("summary") or "").strip()
+        if hint:
+            lines.append("## 技能建议 [Spine Skill]")
+            lines.append(hint)
+    return "\n\n".join(lines) if lines else ""
 
 
 def _extract_capsule_preferences(user_context: dict[str, Any] | None) -> dict[str, Any]:

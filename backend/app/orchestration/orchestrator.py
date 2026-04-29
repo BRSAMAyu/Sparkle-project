@@ -2606,13 +2606,14 @@ class ChatOrchestrator(
                 )
 
                 # v2.10: Emit UXDirective metadata for Flutter status band + receipt display
+                # R5-DF4: Use 'spine_ux_warning' to match Flutter websocket_chat_service_v2 listener
                 _spine_ux_data = (request_extra_context or {}).get("spine_ux_directive")
                 if _spine_ux_data and stream_callback:
                     try:
                         await stream_callback(
                             agent_service_pb2.ChatResponse(
                                 metadata={
-                                    "spine_ux": json.dumps(_spine_ux_data, ensure_ascii=False),
+                                    "spine_ux_warning": json.dumps(_spine_ux_data, ensure_ascii=False),
                                 },
                             )
                         )
