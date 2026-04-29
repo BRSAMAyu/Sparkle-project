@@ -70,6 +70,20 @@ GoRouter _buildRouter() => GoRouter(
           ),
         ),
         GoRoute(
+          path: '/tasks/:id/execute',
+          builder: (context, state) => Scaffold(
+            body: Text('task-execute-${state.pathParameters['id']}'),
+          ),
+        ),
+        GoRoute(
+          path: '/notification-center',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              'notification-${state.uri.queryParameters['highlight'] ?? ''}',
+            ),
+          ),
+        ),
+        GoRoute(
           path: '/achievements/milestone/:milestoneId',
           builder: (context, state) => Scaffold(
             body: Text('milestone-${state.pathParameters['milestoneId']}'),
@@ -226,6 +240,96 @@ void main() {
     expect(service.canHandleDebugUri(Uri.parse('sparkle://push-open')), isTrue);
     expect(payload['destination_route'], '/focus');
     expect(payload['intervention_id'], 'abc123');
+  });
+
+  test('push navigation service resolves JPush behavior context payloads', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final service = container.read(pushNavigationServiceProvider);
+
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'goal_context':
+            '{"goal_id":"goal-42","task_id":"task-42","deadline_pressure":"medium"}',
+        'suggested_action':
+            '{"type":"open_task","task_id":"task-42","estimated_minutes":5}',
+      }),
+      '/tasks/task-42/execute',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'goal_context': '{"goal_id":"plan-42"}',
+      }),
+      '/plans/plan-42',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'type': 'recall',
+        'recall_type': 'task_not_started',
+      }),
+      '/chat?entry=recall&recall_type=task_not_started',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'notification_id': 'notif-42',
+      }),
+      '/notification-center?highlight=notif-42',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'deep_link': 'sparkle://task/task-7',
+      }),
+      '/tasks/task-7/execute',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'deep_link': 'sparkle://chat/session-7',
+      }),
+      '/chat?session_id=session-7',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'deep_link': 'sparkle://plan/plan-7/review',
+      }),
+      '/exam-sprint/review?plan_id=plan-7',
+    );
+  });
+
+  testWidgets('push navigation service opens task from JPush extras',
+      (tester) async {
+    final fakeInterventionService = _FakeInterventionActionService();
+    final router = _buildRouter();
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          interventionActionServiceProvider
+              .overrideWithValue(fakeInterventionService),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.text('home-screen')),
+      listen: false,
+    );
+
+    await container.read(pushNavigationServiceProvider).handleOpenedPayload(
+      payload: <String, dynamic>{
+        'goal_context': '{"task_id":"task-42"}',
+        'suggested_action': '{"type":"open_task","task_id":"task-42"}',
+      },
+      source: 'jpush',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('task-execute-task-42'), findsOneWidget);
+    expect(fakeInterventionService.lastAction, 'seen');
+    expect(fakeInterventionService.lastPayload?['source'], 'jpush');
   });
 
   testWidgets(
