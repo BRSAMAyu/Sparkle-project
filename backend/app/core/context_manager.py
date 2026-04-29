@@ -338,6 +338,19 @@ class ContextOrchestrator:
         return await self.get_user_context(user_id, force_refresh=force_refresh)
 
     def _sanitize_context(self, context: CognitiveContext) -> CognitiveContext:
+        from app.core.data_minimization import DataMinimizationAuditor
+
+        _auditor = DataMinimizationAuditor()
+
+        # Audit collected fields (logs but does not block)
+        all_fields: list[str] = []
+        for attr in ("preferences", "engagement_metrics", "achievement_summary", "calendar_context", "capsule_preferences"):
+            data = getattr(context, attr, {})
+            if isinstance(data, dict):
+                all_fields.extend(data.keys())
+        if all_fields:
+            _auditor.audit_data_collection("context_manager", all_fields)
+
         sensitive_keys = {"email", "phone", "device_id", "ip_address", "raw_content", "sensitive_tags"}
 
         def _clean(data: dict[str, Any]) -> dict[str, Any]:
