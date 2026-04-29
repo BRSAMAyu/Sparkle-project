@@ -23,6 +23,7 @@ from app.aurora.runtime_v1.aurora_spine_confluence import (
 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
+from app.core.cost_controller import is_aurora_within_budget
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
 from app.signals.aurora_wake import AuroraWakeJudge
@@ -39,7 +40,6 @@ from app.signals.goal_world_graph import GoalWorldGraphService
 from app.signals.growth_chronicle import GrowthChronicleService
 from app.signals.intervention_episode import (
     ContextSignature,
-    EvidenceQuality,
     InterventionEpisode,
     InterventionEpisodeLedger,
 )
@@ -86,7 +86,6 @@ from app.signals.types import (
     UXDirective,
     _uid,
 )
-from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 
 
 def _utcnow_iso() -> str:
@@ -207,9 +206,6 @@ class SpineOrchestrator:
         await self.state_register.upsert_from_signal(user_id, signal)
         trace.signal_ids.append(signal.signal_id)  # Keep local trace in sync
         await self.metrics.record_signal_generated()
-
-        # Layer 4: Persist signal state to StateRegister
-        await self.state_register.upsert_from_signal(user_id, signal)
         await self.metrics.record_signal_entered_state()
 
         # Step 3: PolicyEngine (with shadow learning from recent outcomes + Aurora feedback)
@@ -250,12 +246,6 @@ class SpineOrchestrator:
 
         # Step 4b: Build and store directives (only those flagged in which_directives)
         wd = decision.which_directives
-        _collected_directive_ids: dict[str, str | None] = {
-            "execution": directive.directive_id,
-            "response": None, "notification": None, "retrieval": None,
-            "plan": None, "model_write": None, "ux": None,
-            "community": None, "skill": None,
-        }
         _collected_directive_ids: dict[str, str | None] = {
             "execution": directive.directive_id,
             "response": None, "notification": None, "retrieval": None,
@@ -343,19 +333,6 @@ class SpineOrchestrator:
             ex=72 * 3600,
         )
 
-        # Step 4i: Build AuroraControlSignal envelope (Final Spec Section 6)
-        from app.signals.types import AuroraControlSignal
-        energy = "light" if decision.risk_level == "low" else "medium" if decision.risk_level == "medium" else "full"
-        directive_ids = {dt: did for dt, did in _collected_directive_ids.items() if did}
-        acs = AuroraControlSignal(
-            control_id=_uid("acs"),
-            energy=energy,
-            policy_decision_id=decision.policy_decision_id,
-            response_policy=decision.primary_strategy,
-            directive_ids=directive_ids,
-            risk_level=decision.risk_level,
-        )
-
         # Step 5: 生成 Receipt（如果 visibility = "receipt"）
         if decision.visibility == "receipt":
             receipt = UserVisibleReceipt(
@@ -366,7 +343,6 @@ class SpineOrchestrator:
                 related_state_keys=[signal.state_key],
             )
             await self.trace_store.append_receipt(trace.trace_id, receipt)
-            await self.metrics.record_receipt_shown()
             await self.metrics.record_receipt_shown()
             trace = await self.trace_store.get_trace(trace.trace_id) or trace
             # 将 receipt 挂到用户维度，方便前端拉取
@@ -426,30 +402,6 @@ class SpineOrchestrator:
             )
         except Exception:
             logger.warning("on_task_completed: outcome_tracker.register_expected failed", exc_info=True)
-
-        # Step 6b: Check Aurora wake eligibility for high-risk signals
-        if decision.risk_level in ("critical", "high"):
-            neg_outcomes = sum(
-                1 for pe in recent_effects
-                if getattr(pe, "attribution", "") == "insufficient"
-            ) if recent_effects else 0
-            wake_result = self.check_aurora_wake(
-                user_id=user_id,
-                quota_remaining=3,
-                cooldown_status="available",
-                consecutive_negative_outcomes=neg_outcomes,
-            )
-            if wake_result.can_wake:
-                import json
-                await self.redis.set(
-                    f"spine:aurora_wake_pending:{user_id}",
-                    json.dumps(wake_result.to_dict()),
-                    ex=3600,
-                )
-                logger.info(
-                    "Aurora wake recommended: user={} type={}",
-                    user_id, wake_result.recommended_session_type,
-                )
 
         # Step 6b: Check Aurora wake eligibility for high-risk signals
         if decision.risk_level in ("critical", "high"):

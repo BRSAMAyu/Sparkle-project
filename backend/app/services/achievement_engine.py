@@ -317,7 +317,7 @@ class AchievementEngine:
             await self._update_streak_stats(user_id, event_type, **kwargs)
 
             # 2. 获取相关成就定义
-            relevant_achievements = await self._get_relevant_achievements(event_type)
+            relevant_achievements = await self._get_relevant_achievements(event_type, **kwargs)
 
             # 3. 检查每个成就的条件
             unlocked = []
@@ -397,7 +397,7 @@ class AchievementEngine:
 
             return unlocked
 
-    async def _get_relevant_achievements(self, event_type: str) -> list[Achievement]:
+    async def _get_relevant_achievements(self, event_type: str, **kwargs) -> list[Achievement]:
         """获取与事件类型相关的成就"""
         all_achievements = await self._get_all_achievements()
 

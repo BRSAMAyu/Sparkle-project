@@ -1051,9 +1051,6 @@ class EventBus:
             return
 
         next_retry = retry_count + 1
-        delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
-        if delay_ms > 0:
-            await asyncio.sleep(delay_ms / 1000)
 
         retry_payload = dict(parsed_data)
         retry_payload["_retry_count"] = next_retry
@@ -1071,6 +1068,7 @@ class EventBus:
             self._serialize_stream_body(retry_payload),
             maxlen=self.retry_stream_maxlen,
         )
+        delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
         logger.warning(
             "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} delay_ms={} error={}",
             stream,
@@ -1363,18 +1361,27 @@ class EventBus:
                     await asyncio.sleep(1)
                     continue
 
-                entries = []
+                # Process stale messages first (from crashed/slow consumers)
                 stale_messages = await self._claim_stale_messages(stream, group_name, consumer_name)
                 if stale_messages:
-                    entries = [(stream, stale_messages)]
-                else:
-                    entries = await self.redis.xreadgroup(
-                        groupname=group_name,
-                        consumername=consumer_name,
-                        streams={stream: ">"},
-                        count=1,
-                        block=2000,
-                    )
+                    for msg_id, msg_data in stale_messages:
+                        await self._process_stream_message(
+                            stream=stream,
+                            group_name=group_name,
+                            consumer_name=consumer_name,
+                            callback=callback,
+                            message_id=msg_id,
+                            data=msg_data,
+                        )
+
+                # Always try to read new messages (non-blocking)
+                entries = await self.redis.xreadgroup(
+                    groupname=group_name,
+                    consumername=consumer_name,
+                    streams={stream: ">"},
+                    count=1,
+                    block=2000,
+                )
 
                 if not entries:
                     continue
@@ -1539,10 +1546,8 @@ class EventBusReliablePublisher:
 event_bus_reliable = EventBusReliablePublisher(event_bus)
 
 
-from dataclasses import dataclass
 
-
-@dataclass
+@_dataclass
 class InterventionRecorded:
     event_type: str = "intervention_recorded"
     user_id: str = ""
@@ -1560,7 +1565,7 @@ class InterventionRecorded:
         }
 
 
-@dataclass
+@_dataclass
 class InterventionOutcomeRecorded:
     event_type: str = "intervention_outcome_recorded"
     user_id: str = ""
@@ -1577,28 +1582,4 @@ class InterventionOutcomeRecorded:
             "effective": self.effective,
             "status": self.status,
             "checked_at": self.checked_at,
-        }
-
-
-@dataclass
-class DocumentCitationFeedbackEvent:
-    """Fired when a user provides feedback on a document citation / retrieved chunk."""
-
-    event_type: str = "document.citation.feedback"
-    user_id: str = ""
-    file_id: str = ""
-    chunk_id: str | None = None
-    feedback_score: int = 0  # 1=positive, -1=negative, 0=neutral
-    query_intent_type: str | None = None
-    conversation_id: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "event_type": self.event_type,
-            "user_id": self.user_id,
-            "file_id": self.file_id,
-            "chunk_id": self.chunk_id,
-            "feedback_score": self.feedback_score,
-            "query_intent_type": self.query_intent_type,
-            "conversation_id": self.conversation_id,
         }
