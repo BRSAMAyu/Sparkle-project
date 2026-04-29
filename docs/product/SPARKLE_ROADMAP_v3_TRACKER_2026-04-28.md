@@ -259,6 +259,9 @@
 | 2026-04-29 | Phase 4.2 | Claude 展开交互+纠偏chip | AuroraStatusBand→StatefulWidget: 有correction_options时tap展开显示chip列表, 无options时走onTap跳转chat; chip点击→chat路由initial_user_message; AnimatedContainer+AnimatedRotation动画; flutter analyze 0 errors |
 | 2026-04-29 | Phase 4.3 | Claude 冷却显示 | coolingDown状态展开显示倒计时 (_formatCooldown: 秒/分/时) + 快速校准 TextButton (cooldownCanOverride gate); 点击→chat initial_user_message='快速校准'; flutter analyze 0 errors |
 | 2026-04-29 | R3 O-04 | Claude Focus自动同步 | FocusStatisticsProvider.build() 添加: (1)启动时 unawaited(sync()) 同步未上传会话, (2)Connectivity().onConnectivityChanged 监听网络恢复自动sync; flutter analyze 0 errors |
+| 2026-04-29 | Bug Fix | Claude 7 bugs fixed | B-001 description→guide_content field mapping; B-002 unknown status validation; B-003 batch per-task error handling; B-004 case-insensitive status; B-005 word-boundary regex; B-006 DecrQuota zero guard; B-007 Flutter l10n syntax; 72+52+27 tests pass |
+| 2026-04-29 | R4-P1-01 | Claude 成本守卫接线 | is_rag_within_budget() + record_rag_cost() 接入 graph_rag.retrieve(); is_aurora_within_budget() 接入 L3 start_aurora_core_session + L4 create_candidate |
+| 2026-04-29 | R4-P1-03 | Claude 首页纠偏遥测 | dashboard_screen onCorrectionTap/onCooldownOverride 先提交 recordStatusBandCorrection() (semantic_value/is_disconfirming) 再跳转 chat; AuroraTelemetryService 新增方法; flutter analyze 0 errors |
 
 ### 测试质量升级 (🔴 横切任务)
 
@@ -356,9 +359,9 @@
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T6.4.1 LLM 调用成本监控 | ✅ 完成 | Claude | LLMMonitor.estimate_and_record_cost + per-user Redis daily counter; 9 tests passed |
-| T6.4.2 RAG 成本监控 | 🟡 组件完成/待接线 | Claude | R4: cost_controller.py 存在, 但 record_rag_cost 未接入生产 RAG 路径 |
-| T6.4.3 Aurora Core 成本监控 | 🟡 组件完成/待接线 | Claude | R4: record_aurora_cost 未接入 Aurora wake/Core Session 主链 |
-| T6.4.4 预算熔断 | 🟡 组件完成/待接线 | Claude+Codex | R4: BudgetCircuitBreaker 已修 Redis 降级与测试, 但生产熔断行为待接入 |
+| T6.4.2 RAG 成本监控 | ✅ 已接入 | Claude | is_rag_within_budget() 前置守卫 + record_rag_cost() 后置记录, 接入 graph_rag.retrieve() |
+| T6.4.3 Aurora Core 成本监控 | ✅ 已接入 | Claude | is_aurora_within_budget() 接入 L3 start_aurora_core_session + L4 create_candidate |
+| T6.4.4 预算熔断 | ✅ 已接入 | Claude+Codex | BudgetCircuitBreaker Redis降级+测试; RAG/Aurora 生产路径已接线 |
 
 ### 6.5 存储增长管理
 | 任务 | 状态 | 负责人 | 备注 |

@@ -590,7 +590,7 @@ class TestUpdateTaskStatusTool:
             assert result.success is False
 
     @pytest.mark.asyncio
-    async def test_unrecognized_status_returns_unchanged_task(self, db_session, user_id):
+    async def test_unrecognized_status_returns_error(self, db_session, user_id):
         task = _make_task(status=TaskStatus.PENDING)
         with (
             patch("app.tools.task_tools.TaskService.get_by_id", new_callable=AsyncMock, return_value=task),
@@ -598,8 +598,8 @@ class TestUpdateTaskStatusTool:
             tool = UpdateTaskStatusTool()
             params = UpdateTaskStatusParams(task_id=str(task.id), status="unknown_status")
             result = await tool.execute(params, user_id, db_session)
-            assert result.success is True
-            assert result.data["new_status"] == "PENDING"
+            assert result.success is False
+            assert "不支持的状态" in result.error_message
 
     @pytest.mark.asyncio
     async def test_completed_returns_new_status_in_data(self, db_session, user_id):

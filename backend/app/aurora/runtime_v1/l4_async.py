@@ -25,6 +25,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.cost_controller import is_aurora_within_budget
 from app.signals.types import _uid
 
 
@@ -169,6 +170,14 @@ class L4AsyncEngine:
         Validates analysis_type and enforces min_episodes before creating.
         Returns None if validation fails.
         """
+        try:
+            within = await is_aurora_within_budget(tier="l4_async")
+        except Exception:
+            within = True
+        if not within:
+            logger.warning("L4: Aurora budget exhausted for user={}", user_id)
+            return None
+
         type_config = L4_ANALYSIS_TYPES.get(analysis_type)
         if not type_config:
             logger.warning("L4: unknown analysis_type={}", analysis_type)

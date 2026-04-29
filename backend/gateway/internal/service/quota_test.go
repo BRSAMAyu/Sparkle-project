@@ -130,11 +130,11 @@ func TestQuotaService_DcrQuota(t *testing.T) {
 		assert.Equal(t, int64(4), remaining)
 	})
 
-	t.Run("Goes negative without safeguard", func(t *testing.T) {
+	t.Run("Returns error when quota is zero", func(t *testing.T) {
 		s.Set(fmt.Sprintf("user:quota:%s", uid), "0")
 		remaining, err := svc.DecrQuota(ctx, uid)
-		assert.NoError(t, err)
-		assert.Equal(t, int64(-1), remaining)
+		assert.ErrorIs(t, err, ErrQuotaInsufficient)
+		assert.Equal(t, int64(0), remaining)
 	})
 }
 

@@ -7,6 +7,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
+import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
@@ -440,11 +442,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 cooldownCanOverride: band?.cooldownCanOverride ?? false,
                 onTap: () => context.push(ChatRoutes.chat),
                 onCorrectionTap: (opt) {
+                  final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
+                  unawaited(telemetry.recordStatusBandCorrection(
+                    label: opt.label,
+                    semanticValue: opt.semanticValue,
+                    isDisconfirming: opt.isDisconfirming,
+                    bandStatus: band?.bandStatus.name ?? '',
+                  ));
                   context.push(ChatRoutes.chat, extra: {
                     'initial_user_message': opt.label,
                   });
                 },
                 onCooldownOverride: () {
+                  final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
+                  unawaited(telemetry.recordStatusBandCorrection(
+                    label: '快速校准',
+                    semanticValue: 'quick_calibration',
+                    isDisconfirming: false,
+                    bandStatus: band?.bandStatus.name ?? '',
+                  ));
                   context.push(ChatRoutes.chat, extra: {
                     'initial_user_message': '快速校准',
                   });

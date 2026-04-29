@@ -287,18 +287,18 @@ class _ClaimTile extends StatelessWidget {
             children: [
               if ((claim['confidence_label']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileConfidence(claim['confidence_label']}',
+                  label: context.l10n.chatProfileConfidence(claim['confidence_label'].toString()),
                   color: DS.primaryBase,
                   background: DS.primaryBase.withValues(alpha: 0.08),
                 ),
               if ((claim['source']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileSource(claim['source']}',
+                  label: context.l10n.chatProfileSource(claim['source'].toString()),
                   color: DS.neutral700,
                   background: DS.neutral100,),
               if ((claim['freshness']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileFreshness(claim['freshness']}',
+                  label: context.l10n.chatProfileFreshness(claim['freshness'].toString()),
                   color: DS.neutral700,
                   background: DS.neutral100,),
             ],
@@ -418,7 +418,7 @@ class _PredictionTile extends StatelessWidget {
           if ((item['recommended_action']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              context.l10n.chatProfileSuggestedAction(item['recommended_action']}',
+              context.l10n.chatProfileSuggestedAction(item['recommended_action'].toString()),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral900,
                     fontWeight: DS.fontWeightSemibold,

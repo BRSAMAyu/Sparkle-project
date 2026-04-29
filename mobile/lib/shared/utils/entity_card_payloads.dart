@@ -439,7 +439,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
             cardRef?.lifecycleStatus,
       ),
       'execution_state':
-          (_asString(source['status']) == 'COMPLETED') ? 'confirmed' : 'draft',
+          (_asString(source['status'])?.toUpperCase() == 'COMPLETED') ? 'confirmed' : 'draft',
       'linked_entities': {
         if (_asString(source['legacy_plan_id'] ?? source['plan_id']) != null)
           'plan_id': _asString(source['legacy_plan_id'] ?? source['plan_id']),

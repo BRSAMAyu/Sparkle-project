@@ -25,6 +25,7 @@ from app.config_rag_strategy import DEFAULT_STRATEGY
 from app.core.agent_profiles import AgentRole, TaskType
 from app.core.age_client import get_age_client
 from app.core.cache import cache_service
+from app.core.cost_controller import is_rag_within_budget, record_rag_cost
 from app.core.metrics import CACHE_HIT_COUNT, RAG_RETRIEVAL_LATENCY, RETRIEVAL_TIMEOUT_TOTAL
 from app.core.redis_search_client import redis_search_client
 from app.services.embedding_service import embedding_service
@@ -2001,6 +2002,16 @@ Return ONLY a JSON array of entity names."""
             GraphRAGResult
         """
         logger.info(f"GraphRAG 检索: query='{query}', user='{user_id}'")
+
+        if not await is_rag_within_budget():
+            logger.warning(f"RAG budget exhausted, returning empty result for user {user_id}")
+            return GraphRAGResult(
+                answer="",
+                sources=[],
+                trace=None,
+                metadata={"budget_exhausted": True},
+            )
+
         strategy = RagRouter().select(query, route_intent=route_intent)
         resolved_group_scope = await self._resolve_group_scope(
             user_id=user_id,
@@ -2204,6 +2215,11 @@ Return ONLY a JSON array of entity names."""
             f"graph={len(graph_results)}, fused={len(unique_results)}, "
             f"total_time={timing['total']:.3f}s"
         )
+
+        try:
+            await record_rag_cost(operation="graphrag_retrieve")
+        except Exception:
+            pass
 
         return result
 

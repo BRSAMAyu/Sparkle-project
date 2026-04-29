@@ -86,6 +86,7 @@ from app.signals.types import (
     UXDirective,
     _uid,
 )
+from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 
 
 def _utcnow_iso() -> str:
@@ -3578,6 +3579,10 @@ class SpineOrchestrator:
     ) -> dict[str, Any] | None:
         """Start an L3 Aurora Core Session. Per D6: backend builds case file + agenda."""
         try:
+            if not await is_aurora_within_budget(tier="l3_full_core"):
+                logger.warning("Aurora L3 budget exhausted, user={}", user_id)
+                return None
+
             # Validate entry via L3 engine
             validation = self.l3_engine.validate_entry(
                 wake_reasons=wake_reasons or [wake_reason],
