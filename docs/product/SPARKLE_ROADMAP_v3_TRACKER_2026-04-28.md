@@ -506,7 +506,7 @@
 | P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🔴 待修 |
 | P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🔴 待修 |
 | P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | ✅ 已修 (b766be2f) |
-| P2-4 | P2 | 事件消费者无背压/限流 | event consumers | 🔴 待修 |
+| P2-4 | P2 | 事件消费者无背压/限流 | event consumers | 🟡 已有: count=1 消费 + MAXLEN 50000 流截断 |
 | P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | ✅ 已修 (eaa1e1db) |
 | P2-6 | P2 | Redis 连接无 circuit breaker | 多文件 | 🟡 Spine 管道已有; 其余 try/except 覆盖 |
 | P2-7 | P2 | context_manager 异常处理不一致 | `context_manager.py` | ✅ 已修 (1cf2c249) |

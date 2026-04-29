@@ -3307,7 +3307,9 @@ def _render_user_context_content(
     if achievement_line:
         if "【近期进展】" not in lines:
             lines.append("【近期进展】")
-        lines.append(f"- {achievement_line}")
+        for part in achievement_line.split("；"):
+            if part.strip():
+                lines.append(f"- {part.strip()}")
         _mark_rendered("achievement_summary")
 
     next_actions = normalized.get("next_actions") or []
