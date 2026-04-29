@@ -220,3 +220,4 @@
 | 2026-04-29 | 2b69f4c7 | Phase 1.6 | C-03 ExecutionEngine carries Spine context into multi-agent adapter |
 | 2026-04-29 | d6afea15 | Phase 2 | H-03/T2.1.6 Spine degradation Prometheus counter + alert |
 | 2026-04-29 | 2520b14e | Phase 2 | H-01 EventBus lifecycle events bridge into Spine signals |
+| 2026-04-29 | 74a14d5a | Phase 2 | H-02 Aurora decisions feed PolicyEngine soft bias |
