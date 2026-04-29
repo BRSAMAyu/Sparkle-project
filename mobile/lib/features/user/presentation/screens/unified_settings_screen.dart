@@ -23,6 +23,7 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
 import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
+import 'package:sparkle/features/aurora/presentation/providers/aurora_preferences_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -71,6 +72,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _bgmExpanded = false;
   bool _bgmAdvancedExpanded = false;
   bool _themeExpanded = false;
+  bool _auroraPrefsExpanded = false;
   bool _bgmEnabled = true;
   bool _bgmReady = false;
   double _bgmVolume = 0.85;
@@ -91,6 +93,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   AmbientScene _ambientScene = AmbientScene.none;
   double _ambientVolume = 0.5;
   Timer? _learningPrefsDebounce;
+
+  bool get _isZh =>
+      WidgetsBinding.instance.platformDispatcher.locale.languageCode == 'zh';
   String? _learningPreferenceStatus;
   bool _learningPreferenceStatusIsError = false;
 
@@ -1129,6 +1134,141 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ),
               ),
               const SizedBox(height: DS.spacing20),
+              // ── Aurora Communication Preferences ──
+              GraphiteCardSurface(
+                child: Column(
+                  children: [
+                    _buildCollapsibleHeader(
+                      icon: Icons.auto_awesome_outlined,
+                      title: __isZh ? 'Aurora 沟通偏好' : 'Aurora Preferences',
+                      subtitle: _isZh
+                          ? '控制 Aurora 如何与你互动'
+                          : 'Control how Aurora interacts with you',
+                      expanded: _auroraPrefsExpanded,
+                      onToggle: () => setState(
+                          () => _auroraPrefsExpanded = !_auroraPrefsExpanded),
+                    ),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Builder(
+                        builder: (context) {
+                          final prefsAsync =
+                              ref.watch(auroraPreferencesProvider);
+                          return prefsAsync.when(
+                            data: (prefs) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildAuroraPrefSegmented(
+                                  label: _isZh ? '分析深度' : 'Analysis Depth',
+                                  options: [
+                                    (
+                                      _isZh ? '少分析我' : 'Light',
+                                      'light',
+                                      Icons.insights_outlined,
+                                    ),
+                                    (
+                                      _isZh ? '多分析我' : 'Deep',
+                                      'deep',
+                                      Icons.psychology_outlined,
+                                    ),
+                                  ],
+                                  selected: prefs.analysisDepth,
+                                  onChanged: (v) => ref
+                                      .read(auroraPreferencesProvider.notifier)
+                                      .updatePreference(
+                                          'aurora_analysis_depth', v),
+                                ),
+                                const Divider(height: DS.spacing24),
+                                _buildAuroraPrefSegmented(
+                                  label: _isZh ? '沟通方式' : 'Directness',
+                                  options: [
+                                    (
+                                      _isZh ? '直接安排我' : 'Direct',
+                                      'direct',
+                                      Icons.fast_forward_outlined,
+                                    ),
+                                    (
+                                      _isZh ? '引导我' : 'Guided',
+                                      'guided',
+                                      Icons.tour_outlined,
+                                    ),
+                                  ],
+                                  selected: prefs.directness,
+                                  onChanged: (v) => ref
+                                      .read(auroraPreferencesProvider.notifier)
+                                      .updatePreference(
+                                          'aurora_directness', v),
+                                ),
+                                const Divider(height: DS.spacing24),
+                                _buildAuroraPrefSegmented(
+                                  label:
+                                      _isZh ? '解释详细程度' : 'Explanation Level',
+                                  options: [
+                                    (
+                                      _isZh ? '多解释原因' : 'Detailed',
+                                      'detailed',
+                                      Icons.article_outlined,
+                                    ),
+                                    (
+                                      _isZh ? '简洁' : 'Brief',
+                                      'brief',
+                                      Icons.short_text_outlined,
+                                    ),
+                                  ],
+                                  selected: prefs.explanationLevel,
+                                  onChanged: (v) => ref
+                                      .read(auroraPreferencesProvider.notifier)
+                                      .updatePreference(
+                                          'aurora_explanation_level', v),
+                                ),
+                                const Divider(height: DS.spacing24),
+                                _buildAuroraPrefSegmented(
+                                  label:
+                                      _isZh ? '压力提醒风格' : 'Pressure Style',
+                                  options: [
+                                    (
+                                      _isZh ? '不用压力提醒' : 'Gentle',
+                                      'gentle',
+                                      Icons.spa_outlined,
+                                    ),
+                                    (
+                                      _isZh ? '可用压力' : 'Motivating',
+                                      'motivating',
+                                      Icons.fitness_center_outlined,
+                                    ),
+                                  ],
+                                  selected: prefs.pressureStyle,
+                                  onChanged: (v) => ref
+                                      .read(auroraPreferencesProvider.notifier)
+                                      .updatePreference(
+                                          'aurora_pressure_style', v),
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                              ],
+                            ),
+                            loading: () =>
+                                const Center(
+                                    child: CircularProgressIndicator()),
+                            error: (_, __) => Padding(
+                              padding: const EdgeInsets.all(DS.spacing16),
+                              child: Text(
+                                _isZh ? '加载偏好失败' : 'Failed to load preferences',
+                                style: DS.bodySmall
+                                    .copyWith(color: DS.textSecondary),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      crossFadeState: _auroraPrefsExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 250),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: DS.spacing20),
               // Notification permission status card
               _buildNotificationPermissionCard(context, l10n),
               const SizedBox(height: DS.spacing20),
@@ -2124,6 +2264,37 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               fontSize: DS.fontSizeLg,
               fontWeight: DS.fontWeightBold,
             ),
+          ),
+        ],
+      );
+
+  Widget _buildAuroraPrefSegmented({
+    required String label,
+    required List<(String, String, IconData)> options,
+    required String selected,
+    required ValueChanged<String> onChanged,
+  }) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: options
+                .map(
+                  (opt) => ChoiceChip(
+                    avatar: Icon(opt.$3, size: 16),
+                    label: Text(opt.$1),
+                    selected: selected == opt.$2,
+                    onSelected: (_) => onChanged(opt.$2),
+                  ),
+                )
+                .toList(),
           ),
         ],
       );

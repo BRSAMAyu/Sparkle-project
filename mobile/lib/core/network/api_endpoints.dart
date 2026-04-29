@@ -220,6 +220,7 @@ class ApiEndpoints {
   static const String auroraSpineSourceTray = '/aurora/spine/source-tray';
   static const String auroraSpineSourceTraySelect =
       '/aurora/spine/source-tray/select';
+  static const String auroraPreferences = '/aurora/preferences';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
