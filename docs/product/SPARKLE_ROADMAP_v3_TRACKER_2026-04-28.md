@@ -67,7 +67,7 @@
 | T1.1.2 session_end RecallOpportunity | ✅ 完成 | main | StreamChat 结束后触发召回检测 |
 | T1.1.3 push_scheduler.py 新建 | ✅ 完成 | main | PushScheduler + recall queue + scheduler 集成 |
 | T1.1.4 JPush 内容增强 | ✅ 完成 | main | JPushPayload 支持 goal_context + suggested_action extras, 2 tests passed |
-| T1.1.5 Flutter 推送跳转 | ⬜ 未开始 | — | |
+| T1.1.5 Flutter 推送跳转 | ✅ 完成 | main | PushNavigationService 解析 deep_link、goal_context、suggested_action、recall_type 并跳转 task/plan/chat/notification-center |
 | T1.1.6 test_behavior_driven_push.py | ✅ 完成 | main | 13 tests passed, 含 invalid recall queue key 防崩溃覆盖 |
 
 ### 1.2 Breakpoint #6: Structured CognitiveAdjustments
@@ -146,3 +146,4 @@
 | 2026-04-29 | cec517ac | Phase 1 | Claude Review handoff + code quality annotations |
 | 2026-04-29 | 2428d022 | Phase 1 | Review follow-ups — Redis pipeline, REVIEW cleanup, missing tests |
 | 2026-04-29 | 8817a4b9 | Phase 1 | T1.1.4 JPush behavior context payload — goal_context + suggested_action |
+| 2026-04-29 | b0a0cb95 | Phase 1 | T1.1.5 Flutter push open routing — task/goal/recall contexts |
