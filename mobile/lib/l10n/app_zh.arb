@@ -11076,5 +11076,73 @@
   "@posterTemplateSuffix": {
     "placeholders": { "name": { "type": "String" } }
   },
-  "posterTemplateDefaultDesc": "适合分享你的成长亮点"
+  "posterTemplateDefaultDesc": "适合分享你的成长亮点",
+  "gmMembersTitle": "{groupName} - 成员",
+  "@gmMembersTitle": {
+    "placeholders": { "groupName": { "type": "String" } }
+  },
+  "gmTabMembers": "成员列表",
+  "gmTabLeaderboard": "排行榜",
+  "gmLoadFailed": "加载失败",
+  "gmLoadMembersFailed": "加载成员失败，请稍后重试",
+  "gmTabFlame": "火焰",
+  "gmTabCheckin": "打卡",
+  "gmTabTasks": "任务",
+  "gmFlameValue": "{count} 火焰",
+  "@gmFlameValue": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "gmDayValue": "{count} 天",
+  "@gmDayValue": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "gmTaskValue": "{count} 任务",
+  "@gmTaskValue": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "gmMute": "禁言",
+  "gmSendWarning": "发出警告",
+  "gmKick": "移出群组",
+  "gmKickConfirm": "移出 {name}？",
+  "@gmKickConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmKickConfirmMsg": "该成员将被移出群组。",
+  "gmKicked": "{name} 已被移出群组",
+  "@gmKicked": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmActionFailed": "操作失败: {error}",
+  "@gmActionFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "gmCancel": "取消",
+  "gmConfirm": "确认",
+  "gmMuteTitle": "禁言 {name}",
+  "@gmMuteTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmMuteDuration": "禁言时长：",
+  "gm24Hours": "24小时",
+  "gmMinutes": "{m} 分钟",
+  "@gmMinutes": {
+    "placeholders": { "m": { "type": "int" } }
+  },
+  "gmMuteReason": "禁言原因（可选）",
+  "gmConfirmMute": "确认禁言",
+  "gmMuted": "{name} 已被禁言",
+  "@gmMuted": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmWarnTitle": "警告 {name}",
+  "@gmWarnTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmWarnReason": "警告原因",
+  "gmSendWarningBtn": "发出警告",
+  "gmWarnReasonRequired": "请输入警告原因",
+  "gmWarned": "已向 {name} 发出警告",
+  "@gmWarned": {
+    "placeholders": { "name": { "type": "String" } }
+  }
 }

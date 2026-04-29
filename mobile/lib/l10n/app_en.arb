@@ -11076,6 +11076,74 @@
   "@posterTemplateSuffix": {
     "placeholders": { "name": { "type": "String" } }
   },
-  "posterTemplateDefaultDesc": "Perfect for sharing your growth highlights"
+  "posterTemplateDefaultDesc": "Perfect for sharing your growth highlights",
+  "gmMembersTitle": "{groupName} - Members",
+  "@gmMembersTitle": {
+    "placeholders": { "groupName": { "type": "String" } }
+  },
+  "gmTabMembers": "Members",
+  "gmTabLeaderboard": "Leaderboard",
+  "gmLoadFailed": "Load failed",
+  "gmLoadMembersFailed": "Failed to load members, please try again later",
+  "gmTabFlame": "Flame",
+  "gmTabCheckin": "Check-in",
+  "gmTabTasks": "Tasks",
+  "gmFlameValue": "{count} flame",
+  "@gmFlameValue": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "gmDayValue": "{count} days",
+  "@gmDayValue": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "gmTaskValue": "{count} tasks",
+  "@gmTaskValue": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "gmMute": "Mute",
+  "gmSendWarning": "Send Warning",
+  "gmKick": "Remove from Group",
+  "gmKickConfirm": "Remove {name}?",
+  "@gmKickConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmKickConfirmMsg": "This member will be removed from the group.",
+  "gmKicked": "{name} has been removed",
+  "@gmKicked": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmActionFailed": "Action failed: {error}",
+  "@gmActionFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "gmCancel": "Cancel",
+  "gmConfirm": "Confirm",
+  "gmMuteTitle": "Mute {name}",
+  "@gmMuteTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmMuteDuration": "Mute duration:",
+  "gm24Hours": "24 hours",
+  "gmMinutes": "{m} minutes",
+  "@gmMinutes": {
+    "placeholders": { "m": { "type": "int" } }
+  },
+  "gmMuteReason": "Mute reason (optional)",
+  "gmConfirmMute": "Confirm Mute",
+  "gmMuted": "{name} has been muted",
+  "@gmMuted": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmWarnTitle": "Warn {name}",
+  "@gmWarnTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "gmWarnReason": "Warning reason",
+  "gmSendWarningBtn": "Send Warning",
+  "gmWarnReasonRequired": "Please enter a warning reason",
+  "gmWarned": "Warning sent to {name}",
+  "@gmWarned": {
+    "placeholders": { "name": { "type": "String" } }
+  }
 
 }

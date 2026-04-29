@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -60,12 +61,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text('${widget.groupName} - 成员'),
+        title: Text(context.l10n.gmMembersTitle(widget.groupName)),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: '成员列表'),
-            Tab(text: '排行榜'),
+          tabs: [
+            Tab(text: context.l10n.gmTabMembers),
+            Tab(text: context.l10n.gmTabLeaderboard),
           ],
         ),
         actions: [
@@ -201,7 +202,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           Icon(Icons.error_outline, size: 64, color: DS.error),
                           const SizedBox(height: DS.md),
                           Text(
-                            '加载失败',
+                            context.l10n.gmLoadFailed,
                             style: TextStyle(color: DS.error, fontSize: 16),
                           ),
                           const SizedBox(height: DS.md),
@@ -226,7 +227,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
                 child: Text(
-                  '加载成员失败，请稍后重试',
+                  context.l10n.gmLoadMembersFailed,
                   style: TextStyle(color: DS.textSecondary),
                 ),
               ),
@@ -250,11 +251,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
       length: 3,
       child: Column(
         children: [
-          const TabBar(
+          TabBar(
             tabs: [
-              Tab(text: '火焰'),
-              Tab(text: '打卡'),
-              Tab(text: '任务'),
+              Tab(text: context.l10n.gmTabFlame),
+              Tab(text: context.l10n.gmTabCheckin),
+              Tab(text: context.l10n.gmTabTasks),
             ],
           ),
           Expanded(
@@ -262,15 +263,15 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               children: [
                 _buildRankList(
                   byFlame,
-                  value: (m) => '${m.flameContribution} 火焰',
+                  value: (m) => context.l10n.gmFlameValue(m.flameContribution),
                 ),
                 _buildRankList(
                   byStreak,
-                  value: (m) => '${m.checkinStreak} 天',
+                  value: (m) => context.l10n.gmDayValue(m.checkinStreak),
                 ),
                 _buildRankList(
                   byTasks,
-                  value: (m) => '${m.tasksCompleted} 任务',
+                  value: (m) => context.l10n.gmTaskValue(m.tasksCompleted),
                 ),
               ],
             ),
@@ -510,7 +511,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             Icon(Icons.mic_off, size: 18, color: DS.warning),
                             const SizedBox(width: DS.sm),
                             Text(
-                              '禁言',
+                              context.l10n.gmMute,
                               style: TextStyle(color: DS.warning),
                             ),
                           ],
@@ -518,13 +519,13 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                       ),
                     )
                     ..add(
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'warn',
                         child: Row(
                           children: [
                             Icon(Icons.warning_amber_outlined, size: 18),
                             SizedBox(width: DS.sm),
-                            Text('发出警告'),
+                            Text(context.l10n.gmSendWarning),
                           ],
                         ),
                       ),
@@ -538,7 +539,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             Icon(Icons.person_remove, size: 18, color: DS.error),
                             const SizedBox(width: DS.sm),
                             Text(
-                              '移出群组',
+                              context.l10n.gmKick,
                               style: TextStyle(color: DS.error),
                             ),
                           ],
@@ -666,8 +667,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
 
       case 'kick':
         final confirmed = await _showConfirmDialog(
-          '移出 ${member.user.displayName}？',
-          '该成员将被移出群组。',
+          context.l10n.gmKickConfirm(member.user.displayName),
+          context.l10n.gmKickConfirmMsg,
           isDestructive: true,
         );
         if ((confirmed ?? false) && mounted) {
@@ -678,12 +679,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             if (mounted) {
               AppFeedback.success(
                 context,
-                '${member.user.displayName} 已被移出群组',
+                context.l10n.gmKicked(member.user.displayName),
               );
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, '操作失败: $e');
+              AppFeedback.error(context, context.l10n.gmActionFailed(e.toString()));
             }
           }
         }
@@ -702,11 +703,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           content: Text(message),
           actions: [
             SparkleButton.ghost(
-              label: '取消',
+              label: context.l10n.gmCancel,
               onPressed: () => Navigator.pop(context, false),
             ),
             SparkleButton(
-              label: '确认',
+              label: context.l10n.gmConfirm,
               onPressed: () => Navigator.pop(context, true),
               variant: isDestructive
                   ? ButtonVariant.destructive
@@ -724,18 +725,18 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: Text('禁言 ${member.user.displayName}'),
+          title: Text(context.l10n.gmMuteTitle(member.user.displayName)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('禁言时长：'),
+              Text(context.l10n.gmMuteDuration),
               Wrap(
                 spacing: DS.sm,
                 children: [
                   for (final m in [15, 30, 60, 1440])
                     ChoiceChip(
-                      label: Text(m >= 1440 ? '24小时' : '$m 分钟'),
+                      label: Text(m >= 1440 ? context.l10n.gm24Hours : context.l10n.gmMinutes(m)),
                       selected: durationMinutes == m,
                       onSelected: (_) => setState(() => durationMinutes = m),
                     ),
@@ -744,8 +745,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               const SizedBox(height: DS.md),
               TextField(
                 controller: reasonController,
-                decoration: const InputDecoration(
-                  labelText: '禁言原因（可选）',
+                decoration: InputDecoration(
+                  labelText: context.l10n.gmMuteReason,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -753,11 +754,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           ),
           actions: [
             SparkleButton.ghost(
-              label: '取消',
+              label: context.l10n.gmCancel,
               onPressed: () => Navigator.pop(ctx),
             ),
             SparkleButton.primary(
-              label: '确认禁言',
+              label: context.l10n.gmConfirmMute,
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
@@ -772,11 +773,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   if (!mounted) return;
                   AppFeedback.success(
                     context,
-                    '${member.user.displayName} 已被禁言',
+                    context.l10n.gmMuted(member.user.displayName),
                   );
                 } catch (e) {
                   if (!mounted) return;
-                  AppFeedback.error(context, '操作失败: $e');
+                  AppFeedback.error(context, context.l10n.gmActionFailed(e.toString()));
                 }
               },
             ),
@@ -793,11 +794,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
     await showSensoryDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('警告 ${member.user.displayName}'),
+        title: Text(context.l10n.gmWarnTitle(member.user.displayName)),
         content: TextField(
           controller: reasonController,
-          decoration: const InputDecoration(
-            labelText: '警告原因',
+          decoration: InputDecoration(
+            labelText: context.l10n.gmWarnReason,
             border: OutlineInputBorder(),
           ),
           autofocus: true,
@@ -805,15 +806,15 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
         ),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.gmCancel,
             onPressed: () => Navigator.pop(ctx),
           ),
           SparkleButton.primary(
-            label: '发出警告',
+            label: context.l10n.gmSendWarningBtn,
             onPressed: () async {
               final reason = reasonController.text.trim();
               if (reason.isEmpty) {
-                AppFeedback.info(ctx, '请输入警告原因');
+                AppFeedback.info(ctx, context.l10n.gmWarnReasonRequired);
                 return;
               }
               Navigator.pop(ctx);
@@ -824,11 +825,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 if (!mounted) return;
                 AppFeedback.success(
                   context,
-                  '已向 ${member.user.displayName} 发出警告',
+                  context.l10n.gmWarned(member.user.displayName),
                 );
               } catch (e) {
                 if (!mounted) return;
-                AppFeedback.error(context, '操作失败: $e');
+                AppFeedback.error(context, context.l10n.gmActionFailed(e.toString()));
               }
             },
           ),
