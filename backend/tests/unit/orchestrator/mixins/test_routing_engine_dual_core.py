@@ -84,6 +84,58 @@ async def test_build_dual_core_input_uses_active_plan_from_user_context(orchestr
 
 
 @pytest.mark.asyncio
+async def test_build_dual_core_input_reads_spine_state_register(orchestrator):
+    user_id = str(uuid.uuid4())
+    orchestrator._get_routing_profile = AsyncMock(return_value={})
+    orchestrator._get_cognitive_routing_signals = AsyncMock(
+        return_value={
+            "pattern_names": [],
+            "pattern_types": {},
+            "pattern_details": [],
+            "emotional_block_detected": False,
+            "procrastination_pattern": False,
+            "cognitive_mode_suggested": False,
+            "suggested_verbosity": None,
+            "current_guidance": None,
+        }
+    )
+    orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
+
+    state_entry = SimpleNamespace(
+        state_key="knowledge_bottleneck",
+        value="transfer_failure",
+        confidence=0.86,
+        scope="session",
+    )
+
+    with patch("app.orchestration.routing_engine.StateRegister") as register_cls:
+        register_cls.return_value.get_active_states = AsyncMock(return_value=[state_entry])
+
+        routing_input = await orchestrator._build_dual_core_input(
+            active_db=None,
+            user_id=user_id,
+            plan_id=None,
+            user_context_payload={},
+            plan_context={},
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.88,
+            ),
+            information_sufficient=True,
+        )
+
+    assert routing_input.spine_active_states == [
+        {
+            "state_key": "knowledge_bottleneck",
+            "value": "transfer_failure",
+            "confidence": 0.86,
+            "scope": "session",
+        }
+    ]
+    register_cls.return_value.get_active_states.assert_awaited_once_with(user_id)
+
+
+@pytest.mark.asyncio
 async def test_build_dual_core_input_tolerates_plan_progress_failures(orchestrator):
     with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls, \
          patch("app.orchestration.routing_engine.RoutingProfileService") as profile_service_cls, \

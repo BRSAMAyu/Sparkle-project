@@ -313,3 +313,65 @@ def test_dual_core_router_logs_and_uses_capsule_method_preferences() -> None:
     assert decision.routing_debug["explicit_capsule_signal"] is True
     assert decision.routing_debug["capsule_preferences"]["method_preference_summary"] == ["用户偏好番茄钟方法"]
     assert decision.routing_debug["capsule_method_preferences"][0]["key"] == "pomodoro"
+
+
+def test_dual_core_router_uses_spine_state_register_for_cognitive_routing() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.92,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            spine_active_states=[
+                {
+                    "state_key": "knowledge_bottleneck",
+                    "value": "transfer_failure",
+                    "confidence": 0.82,
+                    "scope": "session",
+                }
+            ],
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert decision.mode == "cognitive_first"
+    assert "Spine 检测到知识瓶颈" in rendered
+    assert decision.routing_debug["explicit_spine_state_signal"] is True
+    assert decision.routing_debug["spine_knowledge_bottleneck"] is True
+
+
+def test_dual_core_router_uses_spine_state_register_for_execution_granularity() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.92,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            spine_active_states=[
+                {
+                    "state_key": "task_granularity_fit",
+                    "value": "too_large",
+                    "confidence": 0.72,
+                    "scope": "task",
+                }
+            ],
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert decision.mode == "execution_first"
+    assert "Spine 检测到执行连贯性或任务粒度偏差" in rendered
+    assert decision.routing_debug["spine_execution_low"] is True
+    assert any(
+        item["field"] == "planning_granularity"
+        and item["recommended_value"] == "startup_ready"
+        for item in decision.strategy_adjustments
+    )
