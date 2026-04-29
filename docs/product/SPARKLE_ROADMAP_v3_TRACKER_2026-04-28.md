@@ -548,7 +548,7 @@
 | DF-3 | 中 | SkillDirective 写入但从未被消费 | Spine→prompts.py section | ✅ 已修 |
 | DF-4 | 中 | UXDirective 键不匹配 (orchestrator 发 `spine_ux`, Flutter 监听 `spine_ux_warning`) | WS metadata | ✅ 已修 |
 | DF-5 | 低-中 | NotificationService.consume_spine_notification_directive 死代码 | 未被调用 | ✅ 已修 (b69e4951) |
-| DF-6 | 低 | 成就数据渲染为单行摘要 (14表19事件→1行) | prompts.py | 🔴 待修 |
+| DF-6 | 低 | 成就数据渲染为单行摘要 (14表19事件→1行) | prompts.py | ✅ 已修 (8c4bd096) |
 | DF-7 | 低 | 执行引擎上下文缺少 ux/community/skill directive | execution_engine.py | ✅ 已修 (同 DF-2/3) |
 | DF-8 | 低 | cognitive_adjustments 仅为文本注入无结构化强制 | dual_core_router | 🟡 设计层面 |
 | DF-9 | 低 | 日历 shadow 模式静默抑制无遥测 | prompts.py | ✅ 已修 (05e9c5e6) |
@@ -624,11 +624,11 @@
 | 维度 | 声称分数 | 修正分数 | 差距根因 | 状态 |
 |------|---------|---------|----------|------|
 | 信号流完整性 | 9 | 6 | 4/9 Directive 无消费者 | 🔴 待修 |
-| 治理执行力 | 9 | 4 | 5 个治理模块从未接入生产 | 🔴 待修 |
+| 治理执行力 | 9 | 4 | 5 个治理模块从未接入生产 | ✅ 已修 (8973526f) |
 | 测试真实性 | 9 | 5 | 测试 mock 过重，无集成验证 | 🔴 待修 |
 | Prompt 注入防御 | 9 | 5 | 无生产级 prompt injection 测试 | 🔴 待修 |
-| 数据最小化 | 8 | 4 | data_minimization.py 死代码 | 🔴 待修 |
-| CI 有效性 | 9 | 5 | load-test CI 为 no-op | 🔴 待修 |
+| 数据最小化 | 8 | 4 | data_minimization.py 死代码 | ✅ 已修 (9260ce74, 同P2-10) |
+| CI 有效性 | 9 | 5 | load-test CI 为 no-op | ✅ 已修 (34636342) |
 
 ### R6.2 死代码治理模块 → 接线生产
 
@@ -651,8 +651,8 @@
 
 | ID | 问题 | 行动 | 状态 |
 |----|------|------|------|
-| EA-8 | `.github/workflows/load-test.yml` 有 `|| true` 且无 services 启动 app | 添加 app startup 步骤, 移除 `|| true`, 使负载测试真正验证 | 🔴 待修 |
-| EA-9 | CI 覆盖率阈值不一致: env vars 设 15/40/20 但实际 config 为 14/35/15 | 统一为一致值并写入配置单一来源 | 🔴 待修 |
+| EA-8 | `.github/workflows/load-test.yml` 有 `|| true` 且无 services 启动 app | 添加 app startup 步骤, 移除 `|| true`, 使负载测试真正验证 | ✅ 已修 (34636342) |
+| EA-9 | CI 覆盖率阈值不一致: env vars 设 15/40/20 但实际 config 为 14/35/15 | 统一为一致值并写入配置单一来源 | ✅ 已修 (34636342) |
 | EA-10 | `.env` 包含真实 API key (LLM_API_KEY, JWT_SECRET 等) | 确认 .gitignore 覆盖, 添加 pre-commit gitleaks 检查 | ✅ 已验证: .gitignore 覆盖, 未入库 |
 
 ### R6.5 测试真实性提升
