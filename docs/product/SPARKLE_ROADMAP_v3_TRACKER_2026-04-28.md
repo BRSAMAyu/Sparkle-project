@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (F-03 error_book 29 + friends 37 + plan 47 = 113 strings i18n'd; all P0/P1/P2 resolved)
+> **最后更新**: 2026-04-30 (P2-17 pipeline lock fix, P2-3 dead event cleanup, P2-10/F-01/F-02 verified as false positives; all R5 P0/P1 resolved)
 
 ### P0 Critical — 当前会话修复
 
@@ -514,16 +514,16 @@
 | P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | ✅ 已修 |
 | P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🟡 长期重构 (123 方法可按 directive store/event handler/goal/session 分组提取 mixin) |
 | P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🟡 长期重构 (需与 P2-1 协同拆分) |
-| P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | ✅ 已修 (b766be2f) |
+| P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | ✅ 已修 (b0bcc636: 实际仅1个死类 UserSettingsUpdatedEvent, 其余均有生产代码实例化) |
 | P2-4 | P2 | 事件消费者无背压/限流 | event consumers | ✅ 已有: count=1 消费 + MAXLEN 50000 流截断 |
 | P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | ✅ 已修 (eaa1e1db) |
 | P2-6 | P2 | Redis 连接无 circuit breaker | 多文件 | ✅ 已有: Spine 管道 pipeline + 其余 try/except 覆盖 |
 | P2-7 | P2 | context_manager 异常处理不一致 | `context_manager.py` | ✅ 已修 (1cf2c249) |
 | P2-8 | P2 | StateRegister 无 TTL/过期清理 | `state_register.py` | ✅ 已修 (cdedb67f) |
 | P2-9 | P2 | OutcomeRecorder 无幂等保护 | `outcome_recorder.py` | ✅ 已修 (b908c7bb) |
-| P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | ✅ 已修 (9260ce74) |
+| P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | ✅ 误报 (context_manager.py:341-352 已调用 DataMinimizationAuditor.audit_data_collection + _sanitize_context 在每次 get_user_context 时运行) |
 | P2-14 | P2 | cognitive_adjustments 被截断到 [:2]/[:3] | `dual_core_router.py` | ✅ 已修 → [:5] |
-| P2-17 | P2 | pipeline lock 管理 on_task_completed vs _run_signal_pipeline 不一致 | `spine_orchestrator.py` | ✅ 已修 (ea4b9c92) |
+| P2-17 | P2 | pipeline lock 管理 on_task_completed vs _run_signal_pipeline 不一致 | `spine_orchestrator.py` | ✅ 已修 (5dc92b70: on_task_completed 去重~200行重复管道逻辑, 委托 _run_signal_pipeline 统一锁管理) |
 | P2-20 | P2 | EventBus consumer loop Redis 断连不重连 | `event_bus.py` | ✅ 已修: 自动重连 |
 
 ### R5.2 Flutter + Gateway 审查 (17 issues)
@@ -531,8 +531,8 @@
 | ID | 严重度 | 问题 | 文件 | 状态 |
 |----|--------|------|------|------|
 | G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
-| F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已修 (a6c81d07) |
-| F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已修 (17a49bd5) |
+| F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已验证零中文残留 (所有字符串已用 context.l10n.* 模式) |
+| F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已验证零中文UI残留 (仅注释含中文) |
 | F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🟡 进行中 (plan 47 + friends 37 + error_book 29 = 113 strings i18n'd, ae6ded02) |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
 | G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | ✅ 已修 (4c6301aa) |
