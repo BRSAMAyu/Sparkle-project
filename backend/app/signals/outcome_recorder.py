@@ -144,7 +144,7 @@ class OutcomeRecorder:
                 attribution=record.attribution,
             ).inc()
         except Exception:
-            pass
+            logger.debug("outcome_recorder: Prometheus metric inc failed")
 
         return record
 

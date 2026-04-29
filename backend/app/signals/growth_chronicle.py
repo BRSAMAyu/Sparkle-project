@@ -138,12 +138,13 @@ class GrowthChronicleService:
                 await self.redis.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
         except Exception:
             # WATCH not supported (FakeRedis) — just write directly
+            logger.debug("chronicle add_entry: WATCH fallback for user={}", user_id)
             await self._save_entries(user_id, entries[:_MAX_STORED_ENTRIES])
         finally:
             try:
                 await self.redis.unwatch()
             except Exception:
-                pass
+                logger.debug("chronicle add_entry: unwatch failed for user={}", user_id)
 
         logger.info(
             "GrowthChronicle entry added: user={} entry={} type={}",
@@ -178,12 +179,13 @@ class GrowthChronicleService:
                 except (AttributeError, TypeError, RuntimeError):
                     await self.redis.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
             except Exception:
+                logger.debug("chronicle hide_entry: WATCH fallback for user={}", user_id)
                 await self._save_entries(user_id, entries)
             finally:
                 try:
                     await self.redis.unwatch()
                 except Exception:
-                    pass
+                    logger.debug("chronicle hide_entry: unwatch failed for user={}", user_id)
         logger.info("GrowthChronicle entry hidden: user={} entry={}", user_id, entry_id)
 
     async def edit_entry(self, user_id: str, entry_id: str, new_narrative: str) -> None:
@@ -208,12 +210,13 @@ class GrowthChronicleService:
                 except (AttributeError, TypeError, RuntimeError):
                     await self.redis.set(key, payload, ex=_CHRONICLE_TTL_SECONDS)
             except Exception:
+                logger.debug("chronicle edit_entry: WATCH fallback for user={}", user_id)
                 await self._save_entries(user_id, entries)
             finally:
                 try:
                     await self.redis.unwatch()
                 except Exception:
-                    pass
+                    logger.debug("chronicle edit_entry: unwatch failed for user={}", user_id)
             logger.info("GrowthChronicle entry edited: user={} entry={}", user_id, entry_id)
             return
 

@@ -127,7 +127,7 @@ class SpineMetricsCollector:
         try:
             await self.redis.expire(key, 7 * 24 * 3600)
         except Exception:
-            pass
+            logger.debug("SpineMetrics increment: expire failed for key={}", key)
         # Rollover if threshold exceeded (guard against mock Redis returning non-int)
         if isinstance(new_val, int) and new_val >= self._ROLLOVER_THRESHOLD:
             await self._rollover_counter(counter, new_val)
@@ -144,7 +144,7 @@ class SpineMetricsCollector:
             await self.redis.set(key, "0", ex=7 * 24 * 3600)
             logger.debug("SpineMetrics rollover: {} archived {}", counter, current_value)
         except Exception:
-            pass
+            logger.debug("SpineMetrics rollover: failed for counter={}", counter)
 
     async def get_counter(self, counter: str) -> int:
         """获取计数器值（含历史 baseline）。"""
@@ -156,6 +156,7 @@ class SpineMetricsCollector:
             prev_raw = await self.redis.get(baseline_key)
             baseline = int(prev_raw) if prev_raw else 0
         except Exception:
+            logger.debug("SpineMetrics get_counter: baseline read failed for counter={}", counter)
             baseline = 0
         return baseline + live
 

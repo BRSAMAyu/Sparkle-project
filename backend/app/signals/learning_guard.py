@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from loguru import logger
+
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.types import OutcomeRecord
 
@@ -119,4 +121,4 @@ class LearningGuard:
             from app.core.business_metrics import SPINE_OUTCOME_LEARNING_GUARD_TOTAL
             SPINE_OUTCOME_LEARNING_GUARD_TOTAL.labels(action=action).inc()
         except Exception:
-            pass
+            logger.debug("learning_guard: Prometheus metric inc failed")

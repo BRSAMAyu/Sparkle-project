@@ -465,7 +465,7 @@ class AuroraCoreSessionService:
                 try:
                     await self.redis.delete(_ACTIVE_SESSION_KEY.format(user_id=user_id))
                 except Exception:
-                    pass
+                    logger.debug("AuroraCoreSession: failed to clear active session key for user={}", user_id)
 
         logger.info(
             "AuroraCoreSession: transitioned session={} {} → {}",
