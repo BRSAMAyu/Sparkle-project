@@ -60,9 +60,9 @@
 | Phase 2a | Python PlanService / TaskService 核心业务逻辑测试 (52个) | ✅ 完成 |
 | Phase 2b | Python Plan/Task Tools 测试升级 (72个) | ✅ 完成 |
 | Phase 3a | Go ChatOrchestrator/Quota/ChatHistory 测试升级 (27个新增) | ✅ 完成 |
-| Phase 3b | Go TaskCommandService CQRS 测试 | 待开始 |
-| Phase 4a | Flutter Chat Provider 测试 | 待开始 |
-| Phase 4b | Flutter Galaxy Provider 测试 | 待开始 |
+| Phase 3b | Go TaskCommandService CQRS 测试 | ⏸ 需要 PostgreSQL |
+| Phase 4a | Flutter Chat/Galaxy Provider 测试 | ✅ 已有高质量测试 |
+| Phase 4b | Flutter Task Provider 业务逻辑测试 | ⏸ 需大量 mock |
 
 ---
 
@@ -363,6 +363,65 @@
 **发现**: B-006 `DecrQuota` 无下限保护
 **备注**: Go ChatHistory 和 ChatOrchestrator 测试已使用 miniredis/真实逻辑，质量高于 Python 原始测试
 
+### Phase 3b 评估
+
+**状态**: 暂缓（需 PostgreSQL 基础设施）
+**原因**: `TaskCommandService` 使用 CQRS + Outbox 模式（`pgxpool.Pool` + `outbox.UnitOfWork`），所有方法在事务内执行 SQL + 发布领域事件。无法使用 miniredis 等轻量替代品，需要真实 PostgreSQL 连接。
+**建议**: 使用 Docker Compose 中已有的 `sparkle_db` 运行集成测试，或引入 pgx mock 接口。
+
+### Phase 4a 评估 (Flutter Chat/Galaxy Provider)
+
+**状态**: 已有高质量测试，无需升级
+**评估**: 
+- **Chat Provider** (`test/unit/chat_provider_test.dart`): 6个测试覆盖初始状态、导航动作、历史加载失败保护、分页错误处理、临时会话过滤。使用 Riverpod `ProviderContainer` + mock repository，测试真实业务逻辑。
+- **Galaxy Provider** (`test/features/galaxy/unit/galaxy_provider_test.dart`): 20+个测试覆盖图加载、节点选择/拖拽、缩放聚合级别、视口裁剪+节流、spark 节点、集群计算、SSE 事件处理、乐观更新、任务完成刷新。质量达到生产级。
+
+### Phase 4b 评估 (Flutter Task Provider)
+
+**状态**: 暂缓（需大量 mock 工作）
+**原因**: `TaskListNotifier` (1329行) 依赖 15+ 个 provider（TaskRepository, PlanProvider, GalaxyProvider, CalendarProvider, AchievementProvider 等），业务方法（fetchTasks, completeTask, abandonTask, handoffToAgent 等）需要 mock 整个依赖链。
+**现有覆盖**: `test/features/task/presentation/providers/task_provider_test.dart` 测试 `TaskListState` 的 copyWith、模型创建、枚举完整性（452行），覆盖了状态管理层。
+**建议**: 引入 `MockTail` + `build_runner` 生成 mock 类，逐步覆盖核心业务方法。
+
 ---
 
-*文档持续更新中...*
+## 7. 最终总结
+
+### 成果统计
+
+| 语言 | 原始测试问题 | 新增/升级测试 | 发现的代码 bug |
+|------|-------------|-------------|---------------|
+| Python | 低拟真度（mock 返回值、断言 success=True） | 124个生产级测试 | 5个 (B-001~B-005) |
+| Go | 缺少方法覆盖 | 27个子测试 | 1个 (B-006) |
+| Flutter | — | 已有高质量测试 | — |
+| **合计** | | **151个测试** | **6个代码问题** |
+
+### 新增测试文件
+
+| 文件 | 测试数 | 范围 |
+|------|--------|------|
+| `backend/tests/test_plan_task_service_production.py` | 52 | PlanService + TaskService 核心业务逻辑 |
+| `backend/tests/test_plan_task_tools_production.py` | 72 | 7个 AI 工具 + 2个 schema 验证 |
+| `backend/gateway/internal/service/quota_test.go` | 27 (升级) | QuotaService 全方法覆盖 |
+
+### 发现的代码问题清单
+
+| 编号 | 严重程度 | 文件 | 问题 |
+|------|---------|------|------|
+| B-001 | **高** | `plan_tools.py:276` | TaskCreate description 字段丢失 |
+| B-002 | 中 | `task_tools.py:146-158` | 未知 status 静默成功 |
+| B-003 | 中 | `task_tools.py:223-256` | 批量创建无逐任务容错 |
+| B-004 | 低 | `entity_cards.py:147` | 状态大小写敏感 |
+| B-005 | 低 | `plan_tools.py:531` | 节点名子串误匹配 |
+| B-006 | 中 | `quota.go:23-32` | 配额可递减为负数 |
+
+### 后续建议
+
+1. **优先修复 B-001**: 任务描述在 `GenerateTasksForPlanTool` 中静默丢失，影响用户体验
+2. **修复 B-006**: Go `DecrQuota` 添加下限保护，防止配额变为负数
+3. **Phase 3b**: 设置 Go PostgreSQL 集成测试环境，测试 TaskCommandService CQRS
+4. **Phase 4b**: 使用 `mocktail` + `build_runner` 为 Flutter Task Provider 添加 Notifier 业务逻辑测试
+
+---
+
+*文档更新完成: 2026-04-29*
