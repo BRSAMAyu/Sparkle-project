@@ -2452,7 +2452,10 @@ class ChatOrchestrator(
                         if _spine_skill:
                             request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
                     except Exception as _spine_err:
-                        logger.debug(f"Spine signal check skipped: {_spine_err}")
+                        from app.core.business_metrics import record_spine_degradation
+
+                        record_spine_degradation("chat_turn", _spine_err)
+                        logger.warning("Spine signal check degraded: {}", _spine_err)
                         request_extra_context["spine_degraded"] = True
 
                 expert_routing_decision = None

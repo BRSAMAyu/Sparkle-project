@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 部分已存在
+## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 推进中
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-02 ✅ 已修, C-01/C-03 ❌ 仍待修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
@@ -131,7 +131,7 @@
 |------|------|--------|------|
 | H-01-FIX: 6 个 EventBus 事件接入 Spine | 🟡 审查新增 | — | task.abandoned, task.stuck, focus.session.completed, plan.created, srl.phase.transition, calendar.event.* |
 | H-02-FIX: Aurora→Spine 反馈接入 PolicyEngine | 🟡 审查新增 | — | feed_aurora_decision 写入 Redis 但无 Spine 策略评估读取 |
-| H-03-FIX: Spine 降级 Prometheus counter + 告警 | 🟡 审查新增 | — | Spine 异常时静默降级无监控 |
+| H-03-FIX: Spine 降级 Prometheus counter + 告警 | ✅ 完成 | Codex | sparkle_spine_degradation_total + SparkleSpineDegradation 告警 + runbook; 1 test passed |
 | H-04-FIX: Context Receipt Bar 用户行动按钮 | 🟡 审查新增 | — | receipt 显示正确但缺少"按课件重讲/排除资料"等行动 |
 
 ### P2 Medium
@@ -147,7 +147,7 @@
 
 | Phase | 状态 | 开始日期 | 完成日期 |
 |-------|------|----------|----------|
-| Phase 2: Spine 深化 | ⬜ 部分已存在 | — | — |
+| Phase 2: Spine 深化 | 🟡 进行中 | 2026-04-29 | — |
 | Phase 3: Aurora↔Spine | ⬜ 未开始 | — | — |
 | Phase 4: 活体验打磨 | ⬜ 未开始 | — | — |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
@@ -160,6 +160,7 @@
 |------|--------|------|------|
 | T2.3.4 Spine Timeline API | ⬜ 未开始 | ✅ 已存在 | endpoint 已在 `aurora.py` line 447+, path: `/api/v1/aurora/spine/timeline` |
 | T2.3.5 causal_timeline_panel.dart | ⬜ 未开始 | ✅ 已存在 | widget 已实现, 调用 API, 支持 corrections |
+| T2.1.6 / H-03 Spine 降级监控 | ⬜ 未开始 | ✅ 完成 | chat_turn Spine 异常写入 Prometheus counter, 5m 告警接入 Alertmanager |
 
 ---
 
@@ -185,6 +186,7 @@
 | 2026-04-29 | Phase 1.6 | Codex Self Review | C-01 初版会在同一个 task.completed 事件里先注册再立刻解析当前 pending, 且 verify_pending 未等待验证窗口 | ✅ 已修: 行为回填改为解析旧 pending, pending 过窗才 timeout, 统一 OutcomeTracker API |
 | 2026-04-29 | Phase 1.6 | Codex Self Review | C-03 需要覆盖 multi-agent synthesis 与 fallback 两条 prompt 构造路径, 不能只改一处 | ✅ 已修: 两处 build_system_prompt 均透传 Spine context, 新增 2 条回归测试 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.6 双写迁移缺少可重复运行的一致性检查入口 | ✅ 已修: 后端 validator + CLI, 覆盖缺失投影/重复/孤儿/缺 Edge |
+| 2026-04-29 | Phase 2 | Codex Self Review | Spine 降级只写 `spine_degraded` metadata, 没有生产监控与告警 | ✅ 已修: Prometheus counter + SLO alert + runbook |
 | 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ⬜ 待修 — 见 R3 报告 |
 | 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1**: OfflineChatMessage 模型存在但未使用, **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 | ⬜ 待修 — 见 R3 报告 |
 
@@ -207,3 +209,7 @@
 | 2026-04-29 | cba418cd | Phase 1.5 | T1.5.2-T1.5.3 planning/task card projection verification |
 | 2026-04-29 | 02dd8b13 | Phase 1.5 | T1.5.4 InterventionService dual-writes Card Protocol InterventionRecord |
 | 2026-04-29 | 3f126de5 | Phase 1.5 | T1.5.5 Flutter Card Protocol payload adaptation + R3 audit report |
+| 2026-04-29 | 93e1420f | Phase 1.5 | T1.5.6 Card Protocol dual-write consistency validator |
+| 2026-04-29 | b60299d4 | Phase 1.6 | C-01 OutcomeTracker production wiring |
+| 2026-04-29 | 65750e69 | Phase 1.6 | C-03 Multi-agent Spine context prompt wiring |
+| 2026-04-29 | d96d3d56 | Phase 2 | H-03/T2.1.6 Spine degradation Prometheus counter + alert |

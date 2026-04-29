@@ -599,6 +599,27 @@ SPINE_DIRECTIVE_AUDIT_TOTAL = get_or_create_metric(
     ['directive_type', 'compliant']
 )
 
+SPINE_DEGRADATION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_spine_degradation_total',
+    'Spine degradation events by surface and reason',
+    ['surface', 'reason']
+)
+
+
+def record_spine_degradation(surface: str, error: BaseException | str | None = None) -> None:
+    """Record a best-effort Spine degradation event without breaking the caller."""
+    try:
+        if isinstance(error, BaseException):
+            reason = error.__class__.__name__
+        elif error:
+            reason = str(error)
+        else:
+            reason = "unknown"
+        SPINE_DEGRADATION_TOTAL.labels(surface=surface or "unknown", reason=reason[:80]).inc()
+    except Exception:
+        return
+
 # ========== Decorators and Tools ==========
 def track_routing_decision(method: str):
     """Routing decision tracking decorator"""
