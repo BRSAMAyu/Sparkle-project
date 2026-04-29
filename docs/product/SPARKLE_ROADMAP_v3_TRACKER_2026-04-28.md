@@ -512,7 +512,7 @@
 | P2-7 | P2 | context_manager 异常处理不一致 | `context_manager.py` | 🔴 待修 |
 | P2-8 | P2 | StateRegister 无 TTL/过期清理 | `state_register.py` | 🔴 待修 |
 | P2-9 | P2 | OutcomeRecorder 无幂等保护 | `outcome_recorder.py` | ✅ 已修 (b908c7bb) |
-| P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | 🔴 待修 |
+| P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | ✅ 已修 (9260ce74) |
 | P2-14 | P2 | cognitive_adjustments 被截断到 [:2]/[:3] | `dual_core_router.py` | ✅ 已修 → [:5] |
 | P2-17 | P2 | pipeline lock 管理 on_task_completed vs _run_signal_pipeline 不一致 | `spine_orchestrator.py` | ✅ 已修 (ea4b9c92) |
 | P2-20 | P2 | EventBus consumer loop Redis 断连不重连 | `event_bus.py` | ✅ 已修: 自动重连 |
