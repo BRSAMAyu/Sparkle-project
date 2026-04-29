@@ -267,7 +267,7 @@
 
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| TEST-Q1: 审计并升级全部已有 Spine/Aurora 单测为生产级别 | ⬜ 待修 | — | 标准: 真实场景还原 (多用户并发、Redis故障、边界值、错误数据); 覆盖 test_signal_spine/test_state_register/test_causal_trace/test_policy_engine 等核心文件; T3.1.3 已按新标准 (25 tests) |
+| TEST-Q1: 审计并升级全部已有 Spine/Aurora 单测为生产级别 | ✅ 完成 | Claude | 23 production-grade resilience tests: Redis故障(全挂/部分挂/数据损坏)、并发写入(20/100用户)、边界值(NaN/inf/空串/超大payload)、多用户隔离; 修复StateRegister Redis宕机崩溃bug; 960现有测试无回归 |
 
 ---
 

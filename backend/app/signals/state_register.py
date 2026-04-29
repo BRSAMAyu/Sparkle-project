@@ -23,8 +23,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.signals.types import ActionableSignal, StateEntry, _uid
-
+from app.signals.types import ActionableSignal, StateEntry
 
 # Scope max TTL — Iron Rule 7: sprint 状态不能写成长期人格
 _SCOPE_MAX_TTL: dict[str, int] = {
@@ -135,8 +134,12 @@ class StateRegister:
 
     async def get_active_states(self, user_id: str) -> list[StateEntry]:
         """Get all active (non-expired) states for a user. Uses MGET for batch loading."""
-        index_key = f"spine:state_index:{user_id}"
-        state_keys = await self.redis.smembers(index_key)
+        try:
+            index_key = f"spine:state_index:{user_id}"
+            state_keys = await self.redis.smembers(index_key)
+        except Exception:
+            logger.warning("StateRegister: Redis unavailable during get_active_states for user={}", user_id)
+            return []
         if not state_keys:
             return []
 
@@ -156,7 +159,7 @@ class StateRegister:
         entries: list[StateEntry] = []
         expired: list[str] = []
 
-        for state_key, data in zip(decoded_keys, raw_values):
+        for state_key, data in zip(decoded_keys, raw_values, strict=False):
             if data is None:
                 expired.append(state_key)
                 continue
@@ -226,7 +229,7 @@ class StateRegister:
             raw_values = [await self.redis.get(k) for k in redis_keys]
 
         expired: list[str] = []
-        for state_key, data in zip(decoded_keys, raw_values):
+        for state_key, data in zip(decoded_keys, raw_values, strict=False):
             if data is None:
                 expired.append(state_key)
                 continue
@@ -326,9 +329,13 @@ class StateRegister:
                 pipe.sadd(index_key, entry.state_key)
                 await pipe.execute()
         except (AttributeError, TypeError):
-            # Fallback for FakeRedis or non-pipeline clients
-            await self.redis.set(key, json.dumps(entry.to_dict()), ex=ttl_seconds)
-            await self.redis.sadd(index_key, entry.state_key)
+            try:
+                await self.redis.set(key, json.dumps(entry.to_dict()), ex=ttl_seconds)
+                await self.redis.sadd(index_key, entry.state_key)
+            except Exception:
+                logger.warning("StateRegister: Redis unavailable during _save_state for user={}", user_id)
+        except Exception:
+            logger.warning("StateRegister: Redis unavailable during pipeline _save_state for user={}", user_id)
 
     async def _remove_keys(self, user_id: str, state_keys: list[str]) -> None:
         """Remove state entries and their index entries using pipeline for batch deletes."""
