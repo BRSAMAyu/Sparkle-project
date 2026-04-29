@@ -51,6 +51,7 @@ from app.signals.goal_world_graph import GoalWorldGraphService
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
+from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.signals.types import (
     ActionableStatePacket,
     ActionableSignal,
@@ -123,6 +124,7 @@ class SpineOrchestrator:
         self.relationship_model = RelationshipModelService(redis_client)
         self.directive_quota = DirectiveQuotaService(redis_client)
         self.aurora_core = AuroraCoreSessionService(redis_client)
+        self.l3_engine = L3FullCoreEngine(redis_client)
         self.skill_extraction = SkillExtractionService()
         self.goal_type_adapter = GoalTypeAdapter()
         self.material_signal_detector = MaterialSignalDetector(redis_client)
@@ -3355,13 +3357,32 @@ class SpineOrchestrator:
         current_plan_summary: str,
         wake_reason: str,
         session_type: str = "strategy_recalibration",
+        wake_reasons: list[str] | None = None,
+        quota_remaining: int = 3,
+        cooldown_status: str = "available",
     ) -> dict[str, Any] | None:
         """Start an L3 Aurora Core Session. Per D6: backend builds case file + agenda."""
         try:
+            # Validate entry via L3 engine
+            validation = self.l3_engine.validate_entry(
+                wake_reasons=wake_reasons or [wake_reason],
+                can_wake=True,
+                quota_remaining=quota_remaining,
+                cooldown_status=cooldown_status,
+            )
+            if not validation["allowed"]:
+                logger.info(
+                    "start_aurora_core_session: denied user={} reason={}",
+                    user_id, validation["reason"],
+                )
+                return None
+
             states = await self.state_register.get_active_states(user_id)
             state_dicts = [s.to_dict() for s in states]
 
             recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=5)
+
+            resolved_type = validation.get("session_type", session_type)
 
             case_file = self.aurora_core.build_case_file(
                 user_id,
@@ -3372,7 +3393,7 @@ class SpineOrchestrator:
                 recent_outcomes=recent_effects,
             )
 
-            agenda = self.aurora_core.build_agenda_from_case_file(case_file, session_type)
+            agenda = self.aurora_core.build_agenda_from_case_file(case_file, resolved_type)
 
             session = await self.aurora_core.create_session(user_id, case_file, agenda)
             return session
@@ -3386,8 +3407,24 @@ class SpineOrchestrator:
         item_index: int,
         reply: str,
     ) -> dict[str, Any] | None:
-        """Process a user reply to an Aurora agenda item."""
-        return await self.aurora_core.record_reply(session_id, item_index, reply)
+        """Process a user reply to an Aurora agenda item via L3 engine."""
+        return await self.l3_engine.execute_agenda_step(session_id, item_index, reply)
+
+    async def pause_aurora_session(
+        self,
+        session_id: str,
+        reason: str = "user_request",
+    ) -> dict[str, Any] | None:
+        """Pause an active Aurora session."""
+        return await self.aurora_core.pause_session(session_id, reason)
+
+    async def resume_aurora_session(self, session_id: str) -> dict[str, Any] | None:
+        """Resume a paused Aurora session."""
+        return await self.aurora_core.resume_session(session_id)
+
+    async def check_aurora_session_health(self, session_id: str) -> dict[str, Any]:
+        """Check health of an Aurora session (idle timeout, max turns, etc.)."""
+        return await self.l3_engine.check_session_health(session_id)
 
     async def close_aurora_session(
         self,

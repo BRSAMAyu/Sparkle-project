@@ -152,6 +152,15 @@ _SESSION_KEY = "spine:aurora_session:{session_id}"
 _ACTIVE_SESSION_KEY = "spine:aurora_session_active:{user_id}"
 _SESSION_TTL = 24 * 3600  # 24h
 
+# Session lifecycle transitions — only these transitions are valid
+_SESSION_TRANSITIONS: dict[str, set[str]] = {
+    "active":    {"paused", "completed"},
+    "paused":    {"active", "completed", "abandoned"},
+    "completed": {"reflected"},
+    "reflected": set(),
+    "abandoned": set(),
+}
+
 
 class AuroraCoreSessionService:
     """Manage L3 Aurora Core Sessions.
@@ -327,10 +336,16 @@ class AuroraCoreSessionService:
 
     async def get_session(self, session_id: str) -> dict[str, Any] | None:
         """Load a session by ID."""
-        raw = await self.redis.get(_SESSION_KEY.format(session_id=session_id))
+        try:
+            raw = await self.redis.get(_SESSION_KEY.format(session_id=session_id))
+        except Exception:
+            return None
         if not raw:
             return None
-        return json.loads(raw)
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return None
 
     async def get_active_session(self, user_id: str) -> dict[str, Any] | None:
         """Get the active Aurora session for a user."""
@@ -404,3 +419,93 @@ class AuroraCoreSessionService:
             session_id, len(closure.state_patches), len(closure.policy_changes),
         )
         return session
+
+    async def transition_session(
+        self,
+        session_id: str,
+        new_status: str,
+    ) -> dict[str, Any] | None:
+        """Transition session to a new status, validating the transition."""
+        try:
+            session = await self.get_session(session_id)
+        except Exception:
+            return None
+        if not session:
+            return None
+
+        current = session.get("status", "active")
+        valid_next = _SESSION_TRANSITIONS.get(current, set())
+        if new_status not in valid_next:
+            logger.warning(
+                "AuroraCoreSession: invalid transition {} → {} for session={}",
+                current, new_status, session_id,
+            )
+            return None
+
+        session["status"] = new_status
+        session["updated_at"] = datetime.now(UTC).isoformat()
+
+        if new_status in ("completed", "abandoned"):
+            session[new_status + "_at"] = datetime.now(UTC).isoformat()
+
+        try:
+            await self.redis.set(
+                _SESSION_KEY.format(session_id=session_id),
+                json.dumps(session),
+                ex=_SESSION_TTL,
+            )
+        except Exception:
+            logger.warning("AuroraCoreSession: transition persist failed", exc_info=True)
+            return None
+
+        # Clear active pointer for terminal states
+        if new_status in ("completed", "abandoned"):
+            user_id = session.get("user_id", "")
+            if user_id:
+                try:
+                    await self.redis.delete(_ACTIVE_SESSION_KEY.format(user_id=user_id))
+                except Exception:
+                    pass
+
+        logger.info(
+            "AuroraCoreSession: transitioned session={} {} → {}",
+            session_id, current, new_status,
+        )
+        return session
+
+    async def pause_session(
+        self,
+        session_id: str,
+        reason: str = "user_request",
+    ) -> dict[str, Any] | None:
+        """Pause an active session."""
+        session = await self.transition_session(session_id, "paused")
+        if session:
+            session["pause_reason"] = reason
+            session["paused_at"] = datetime.now(UTC).isoformat()
+            await self.redis.set(
+                _SESSION_KEY.format(session_id=session_id),
+                json.dumps(session),
+                ex=_SESSION_TTL,
+            )
+        return session
+
+    async def resume_session(self, session_id: str) -> dict[str, Any] | None:
+        """Resume a paused session."""
+        session = await self.transition_session(session_id, "active")
+        if session:
+            session.pop("pause_reason", None)
+            session.pop("paused_at", None)
+            await self.redis.set(
+                _SESSION_KEY.format(session_id=session_id),
+                json.dumps(session),
+                ex=_SESSION_TTL,
+            )
+        return session
+
+    def get_reply_count(self, session: dict[str, Any]) -> int:
+        """Count how many agenda items have been completed."""
+        return sum(
+            1 for item in session.get("agenda", {}).get("agenda_items", [])
+            if item.get("status") == "done"
+        )

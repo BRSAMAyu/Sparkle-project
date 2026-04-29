@@ -81,6 +81,11 @@ class AuroraWakeJudge:
         consecutive_negative_outcomes: int = 0,
         user_requested_deep_review: bool = False,
         momentum_stalled: bool = False,
+        model_conflict: bool = False,
+        consecutive_user_rejections: int = 0,
+        goal_changed: bool = False,
+        deadline_high_risk: bool = False,
+        self_model_confidence_dropped: bool = False,
     ) -> AuroraWakeEligibility:
         """
         判断唤醒资格。
@@ -93,27 +98,63 @@ class AuroraWakeJudge:
             consecutive_negative_outcomes: 连续负向结果次数
             user_requested_deep_review: 用户是否主动请求深度复盘
             momentum_stalled: 成就动量是否停滞
+            model_conflict: 系统发现关键模型冲突
+            consecutive_user_rejections: 连续用户否定判断次数
+            goal_changed: 目标发生变化
+            deadline_high_risk: deadline 高风险
+            self_model_confidence_dropped: SparkleSelfModel 置信度下降
         """
         wake_reasons: list[str] = []
         session_type = "strategy_recalibration"
         scope = ""
 
-        # 检查唤醒理由（按优先级排列，后者不覆盖前者）
+        # 检查唤醒理由（按优先级排列，前者优先决定 session_type）
+        if deadline_high_risk:
+            wake_reasons.append("deadline_high_risk")
+            session_type = "exam_emergency"
+            scope = "deadline 高风险，紧急校准"
+
+        if model_conflict:
+            wake_reasons.append("model_conflict")
+            if not scope:
+                session_type = "conflict_resolution"
+                scope = "系统发现关键模型冲突"
+
+        if consecutive_user_rejections >= 2:
+            wake_reasons.append("consecutive_user_rejections")
+            if not scope:
+                session_type = "belief_revision"
+                scope = "用户连续否定系统判断"
+
         if consecutive_negative_outcomes >= 2:
             wake_reasons.append("consecutive_strategy_failure")
-            session_type = "strategy_recalibration"
-            scope = "策略连续失效，需要 Aurora 重新校准"
+            if not scope:
+                session_type = "strategy_recalibration"
+                scope = "策略连续失效，需要 Aurora 重新校准"
+
+        if goal_changed:
+            wake_reasons.append("goal_changed")
+            if not scope:
+                session_type = "goal_realignment"
+                scope = "目标发生变化，重新对齐"
+
+        if self_model_confidence_dropped:
+            wake_reasons.append("self_model_confidence_dropped")
+            if not scope:
+                session_type = "self_model_recalibration"
+                scope = "SparkleSelfModel 置信度下降"
 
         if user_requested_deep_review:
             wake_reasons.append("user_requested_deep_review")
-            session_type = "deep_review"
-            scope = scope or "用户主动请求深度复盘"
+            if not scope:
+                session_type = "deep_review"
+                scope = "用户主动请求深度复盘"
 
         if momentum_stalled:
             wake_reasons.append("momentum_stalled")
-            if len(wake_reasons) == 1:
+            if not scope:
                 session_type = "motivation_check"
-            scope = scope or "成就动量停滞，可能需要重新对齐目标"
+                scope = "成就动量停滞，可能需要重新对齐目标"
 
         # 没有唤醒理由 → 不可唤醒
         if not wake_reasons:
