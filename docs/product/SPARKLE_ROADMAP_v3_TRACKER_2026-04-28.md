@@ -8,7 +8,8 @@
 ---
 
 ## 当前状态: Phase 0 完成, Phase 1 Card Protocol 收尾中, Phase 1.6 审查接线缺口待修, Phase 2 部分已存在
-> **审查报告**: [`docs/product/SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 Critical + 4 P1 High + 3 P2 Medium
+> **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
+> **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-02 ✅ 已修, C-01/C-03 ❌ 仍待修
 
 ---
 
@@ -120,7 +121,7 @@
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | C-01-FIX: OutcomeTracker 接线到生产代码 | 🔴 审查新增 | — | register_expected/record_actual 从未被生产代码调用, 整个 verification loop 是死代码 |
-| C-02-FIX: structured_adjustments 注入 prompts.py | 🔴 审查新增 | — | CognitiveAdjustment 被计算但从未到达 LLM system prompt, Breakpoint #6 核心价值未实现 |
+| C-02-FIX: structured_adjustments 注入 prompts.py | ✅ R2 验证通过 | — | prompt_instruction property 自动转为文本经 dual_core_instruction 参数注入, 机制正确 |
 | C-03-FIX: multi_agent_adapter 传入 Spine context | 🔴 审查新增 | — | Expert/Multi-Agent 模式完全跳过 Spine directives, 影响该模式全部用户 |
 
 ### P1 High — 重要信号缺失
@@ -136,7 +137,7 @@
 
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| M-01-FIX: structured_cognitive_adjustments Flutter 解析 | 🔵 审查新增 | — | 后端字段在 Flutter 端零引用, 属于 T1.2.5 的补充 |
+| M-01-FIX: structured_cognitive_adjustments Flutter 解析 | ✅ R2 验证通过 | — | T1.2.5 已完成 WS→Provider→State 数据管道, UI 渲染留 Phase 4 |
 | M-02-FIX: dual_core_router 消费 Spine StateRegister | 🔵 审查新增 | — | Phase 3 核心任务的前置准备 |
 
 ---
@@ -174,6 +175,8 @@
 | 2026-04-29 | Phase 1-2 | Claude Deep Audit | **3 P0 Critical**: OutcomeTracker 死代码, CognitiveAdjustment 未到 LLM prompt, multi_agent 跳过 Spine | ⬜ 待修 — 见审查报告 |
 | 2026-04-29 | Phase 1-2 | Claude Deep Audit | **4 P1 High**: 6 EventBus 事件绕过 Spine, Aurora→Spine 只写日志, Spine 降级无监控, Receipt 缺行动按钮 | ⬜ 待修 — 见审查报告 |
 | 2026-04-29 | Phase 2 | Claude Deep Audit | **T2.3.4/T2.3.5 已完成**: Spine Timeline API + Flutter Panel 均已存在, 无需新建 | ✅ 确认 |
+| 2026-04-29 | Phase 1 | Claude R2 验收 | C-02 ✅ 已修 (prompt_instruction property 机制), M-01 ✅ (T1.2.5 Flutter 管道) | ✅ 验收通过 |
+| 2026-04-29 | Phase 1 | Claude R2 验收 | C-01 ❌ OutcomeTracker 仍未接线, C-03 ❌ multi_agent_adapter 仍未传 Spine | ⬜ 待修 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.1 CardService 需成为 Card CRUD/Edge/Snapshot 稳定入口, 避免上层直接拼多服务 | ✅ 已修: 增加薄门面与版本查询, 14 Card Protocol tests + ruff 通过 |
 
 ---
