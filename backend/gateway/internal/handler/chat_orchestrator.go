@@ -275,6 +275,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	_ = authToken
 
 	log.Printf("WebSocket connected for user: %s", userID)
+	// P0-1: Log reconnect context if session_id provided via query param
+	if reconnectSID := c.Query("session_id"); reconnectSID != "" {
+		log.Printf("WebSocket reconnect for user: %s with session_id: %s", userID, reconnectSID)
+	}
 	authMethod := c.GetString("ws_auth_method")
 	if authMethod == "" {
 		authMethod = "unknown"

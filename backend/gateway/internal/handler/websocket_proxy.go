@@ -113,6 +113,14 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 
 	backendURL := p.personalBackendURL()
 
+	// P0-1: Forward session_id for reconnect context restoration
+	if sessionID := c.Query("session_id"); sessionID != "" {
+		backendURL = backendURL + "?session_id=" + url.QueryEscape(sessionID)
+		p.logger.Info("WS reconnect with session_id",
+			zap.String("user_id", userID),
+			zap.String("session_id", sessionID))
+	}
+
 	p.proxyWebSocket(c.Writer, c.Request, backendURL, token, userID, "personal", "")
 }
 

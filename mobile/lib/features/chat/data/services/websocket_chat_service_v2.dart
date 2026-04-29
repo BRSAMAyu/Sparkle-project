@@ -1571,6 +1571,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       }
 
       final queryParameters = <String, String>{'user_id': userId};
+      // P0-1: Include session_id on reconnect so backend can restore context
+      if (_currentSessionId != null && _reconnectAttempts > 0) {
+        queryParameters['session_id'] = _currentSessionId!;
+      }
       if (wsTicket != null && wsTicket.isNotEmpty) {
         queryParameters['ticket'] = wsTicket;
       } else if (effectiveToken != null && effectiveToken.isNotEmpty) {
