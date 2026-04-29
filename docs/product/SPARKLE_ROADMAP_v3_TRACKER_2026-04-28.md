@@ -505,7 +505,7 @@
 | P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | ✅ 已修 |
 | P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🔴 待修 |
 | P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🔴 待修 |
-| P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | 🔴 待修 |
+| P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | ✅ 已修 (b766be2f) |
 | P2-4 | P2 | 事件消费者无背压/限流 | event consumers | 🔴 待修 |
 | P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | 🔴 待修 |
 | P2-6 | P2 | Redis 连接无 circuit breaker | 多文件 | 🔴 待修 |
