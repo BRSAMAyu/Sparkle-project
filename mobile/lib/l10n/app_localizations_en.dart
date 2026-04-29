@@ -11447,6 +11447,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardUpdatesInsights => 'Updates & Insights';
 
   @override
+  String get dashboardSprintPhase => 'Exam sprint phase, strategy adjusted';
+
+  @override
+  String dashboardSprintDaysLeft(int days) {
+    return '$days days left in sprint, today\'s tasks aligned';
+  }
+
+  @override
+  String get dashboardWhatToPush =>
+      'What do you want to push forward most right now?';
+
+  @override
+  String get dashboardGoalExamSprint => 'Exam Sprint';
+
+  @override
+  String get dashboardGoalLongTerm => 'Long-term Study';
+
+  @override
+  String get dashboardGoalProject => 'Project Delivery';
+
+  @override
+  String get dashboardGoalSelfGrowth => 'Self Growth';
+
+  @override
+  String get dashboardGoalNotSure => 'Not Sure';
+
+  @override
+  String get dashboardGoalExamSprintPrompt =>
+      'I want to prepare for an exam sprint';
+
+  @override
+  String get dashboardGoalLongTermPrompt =>
+      'I want to systematically study a course';
+
+  @override
+  String get dashboardGoalProjectPrompt => 'I have a project to complete';
+
+  @override
+  String get dashboardGoalSelfGrowthPrompt => 'I want to better manage myself';
+
+  @override
+  String get dashboardGoalNotSurePrompt => 'I\'m not sure what I want';
+
+  @override
+  String get dashboardLoadFailed => 'Load failed';
+
+  @override
+  String get dashboardRetry => 'Retry';
+
+  @override
+  String get dashboardQuickCalibration => 'Quick Calibration';
+
+  @override
   String planEditTypeTitle(Object type) {
     return 'Edit $type';
   }

@@ -20248,6 +20248,102 @@ abstract class AppLocalizations {
   /// **'更新与洞察'**
   String get dashboardUpdatesInsights;
 
+  /// No description provided for @dashboardSprintPhase.
+  ///
+  /// In zh, this message translates to:
+  /// **'考前冲刺阶段，策略已调整'**
+  String get dashboardSprintPhase;
+
+  /// No description provided for @dashboardSprintDaysLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺剩余 {days} 天，已对齐今日任务'**
+  String dashboardSprintDaysLeft(int days);
+
+  /// No description provided for @dashboardWhatToPush.
+  ///
+  /// In zh, this message translates to:
+  /// **'你现在最想推进什么？'**
+  String get dashboardWhatToPush;
+
+  /// No description provided for @dashboardGoalExamSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试冲刺'**
+  String get dashboardGoalExamSprint;
+
+  /// No description provided for @dashboardGoalLongTerm.
+  ///
+  /// In zh, this message translates to:
+  /// **'长期学习'**
+  String get dashboardGoalLongTerm;
+
+  /// No description provided for @dashboardGoalProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'项目交付'**
+  String get dashboardGoalProject;
+
+  /// No description provided for @dashboardGoalSelfGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'自我成长'**
+  String get dashboardGoalSelfGrowth;
+
+  /// No description provided for @dashboardGoalNotSure.
+  ///
+  /// In zh, this message translates to:
+  /// **'我也说不清'**
+  String get dashboardGoalNotSure;
+
+  /// No description provided for @dashboardGoalExamSprintPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我想准备考试冲刺'**
+  String get dashboardGoalExamSprintPrompt;
+
+  /// No description provided for @dashboardGoalLongTermPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我想系统学习一门课'**
+  String get dashboardGoalLongTermPrompt;
+
+  /// No description provided for @dashboardGoalProjectPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我有一个项目要完成'**
+  String get dashboardGoalProjectPrompt;
+
+  /// No description provided for @dashboardGoalSelfGrowthPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我想更好地管理自己'**
+  String get dashboardGoalSelfGrowthPrompt;
+
+  /// No description provided for @dashboardGoalNotSurePrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我也说不清我想要什么'**
+  String get dashboardGoalNotSurePrompt;
+
+  /// No description provided for @dashboardLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get dashboardLoadFailed;
+
+  /// No description provided for @dashboardRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get dashboardRetry;
+
+  /// No description provided for @dashboardQuickCalibration.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速校准'**
+  String get dashboardQuickCalibration;
+
   /// No description provided for @planEditTypeTitle.
   ///
   /// In zh, this message translates to:

@@ -10980,6 +10980,56 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dashboardUpdatesInsights => '更新与洞察';
 
   @override
+  String get dashboardSprintPhase => '考前冲刺阶段，策略已调整';
+
+  @override
+  String dashboardSprintDaysLeft(int days) {
+    return '冲刺剩余 $days 天，已对齐今日任务';
+  }
+
+  @override
+  String get dashboardWhatToPush => '你现在最想推进什么？';
+
+  @override
+  String get dashboardGoalExamSprint => '考试冲刺';
+
+  @override
+  String get dashboardGoalLongTerm => '长期学习';
+
+  @override
+  String get dashboardGoalProject => '项目交付';
+
+  @override
+  String get dashboardGoalSelfGrowth => '自我成长';
+
+  @override
+  String get dashboardGoalNotSure => '我也说不清';
+
+  @override
+  String get dashboardGoalExamSprintPrompt => '我想准备考试冲刺';
+
+  @override
+  String get dashboardGoalLongTermPrompt => '我想系统学习一门课';
+
+  @override
+  String get dashboardGoalProjectPrompt => '我有一个项目要完成';
+
+  @override
+  String get dashboardGoalSelfGrowthPrompt => '我想更好地管理自己';
+
+  @override
+  String get dashboardGoalNotSurePrompt => '我也说不清我想要什么';
+
+  @override
+  String get dashboardLoadFailed => '加载失败';
+
+  @override
+  String get dashboardRetry => '重试';
+
+  @override
+  String get dashboardQuickCalibration => '快速校准';
+
+  @override
   String planEditTypeTitle(Object type) {
     return '编辑$type';
   }

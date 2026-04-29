@@ -4491,6 +4491,27 @@
   },
   "dashboardReviewPending": "夜间复盘待处理",
   "dashboardUpdatesInsights": "更新与洞察",
+  "dashboardSprintPhase": "考前冲刺阶段，策略已调整",
+  "dashboardSprintDaysLeft": "冲刺剩余 {days} 天，已对齐今日任务",
+  "@dashboardSprintDaysLeft": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "dashboardWhatToPush": "你现在最想推进什么？",
+  "dashboardGoalExamSprint": "考试冲刺",
+  "dashboardGoalLongTerm": "长期学习",
+  "dashboardGoalProject": "项目交付",
+  "dashboardGoalSelfGrowth": "自我成长",
+  "dashboardGoalNotSure": "我也说不清",
+  "dashboardGoalExamSprintPrompt": "我想准备考试冲刺",
+  "dashboardGoalLongTermPrompt": "我想系统学习一门课",
+  "dashboardGoalProjectPrompt": "我有一个项目要完成",
+  "dashboardGoalSelfGrowthPrompt": "我想更好地管理自己",
+  "dashboardGoalNotSurePrompt": "我也说不清我想要什么",
+  "dashboardLoadFailed": "加载失败",
+  "dashboardRetry": "重试",
+  "dashboardQuickCalibration": "快速校准",
   "planEditTypeTitle": "编辑{type}",
   "@planEditTypeTitle": {
     "placeholders": {

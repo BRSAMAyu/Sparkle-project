@@ -95,8 +95,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String? _auroraBandLabel(DashboardState state) {
     final sprint = state.sprint;
     if (sprint != null) {
-      if (sprint.daysLeft <= 2) return '考前冲刺阶段，策略已调整';
-      return '冲刺剩余 ${sprint.daysLeft} 天，已对齐今日任务';
+      if (sprint.daysLeft <= 2) return context.l10n.dashboardSprintPhase;
+      return context.l10n.dashboardSprintDaysLeft(sprint.daysLeft);
     }
     return null;
   }
@@ -185,7 +185,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(height: DS.spacing16),
                 Text(
-                  '你现在最想推进什么？',
+                  context.l10n.dashboardWhatToPush,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
                     fontWeight: FontWeight.w500,
@@ -197,38 +197,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   runSpacing: DS.spacing8,
                   children: [
                     _GoalChip(
-                      label: '考试冲刺',
+                      label: context.l10n.dashboardGoalExamSprint,
                       icon: Icons.local_fire_department_outlined,
                       onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent('我想准备考试冲刺')}',
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalExamSprintPrompt)}',
                       ),
                     ),
                     _GoalChip(
-                      label: '长期学习',
+                      label: context.l10n.dashboardGoalLongTerm,
                       icon: Icons.school_outlined,
                       onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent('我想系统学习一门课')}',
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalLongTermPrompt)}',
                       ),
                     ),
                     _GoalChip(
-                      label: '项目交付',
+                      label: context.l10n.dashboardGoalProject,
                       icon: Icons.rocket_launch_outlined,
                       onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent('我有一个项目要完成')}',
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalProjectPrompt)}',
                       ),
                     ),
                     _GoalChip(
-                      label: '自我成长',
+                      label: context.l10n.dashboardGoalSelfGrowth,
                       icon: Icons.psychology_outlined,
                       onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent('我想更好地管理自己')}',
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalSelfGrowthPrompt)}',
                       ),
                     ),
                     _GoalChip(
-                      label: '我也说不清',
+                      label: context.l10n.dashboardGoalNotSure,
                       icon: Icons.help_outline,
                       onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent('我也说不清我想要什么')}',
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalNotSurePrompt)}',
                       ),
                     ),
                   ],
@@ -398,7 +398,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     var sectionIndex = growthSections.length;
     final dashboardSections = <Widget>[];
-    if (dashboardState.hasError) {
+    if (dashboardState.error != null) {
       // R5-F04: Show error UI instead of silently falling back
       dashboardSections.add(
         _staggeredSection(
@@ -419,7 +419,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Icon(Icons.cloud_off_outlined, size: 40, color: DS.textTertiary),
                 const SizedBox(height: 12),
                 Text(
-                  dashboardState.error ?? '加载失败',
+                  dashboardState.error ?? context.l10n.dashboardLoadFailed,
                   style: TextStyle(color: DS.textSecondary, fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
@@ -427,7 +427,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 TextButton.icon(
                   onPressed: () => ref.invalidate(dashboardProvider),
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('重试'),
+                  label: Text(context.l10n.dashboardRetry),
                 ),
               ],
             ),
@@ -492,13 +492,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 onCooldownOverride: () {
                   final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
                   unawaited(telemetry.recordStatusBandCorrection(
-                    label: '快速校准',
+                    label: context.l10n.dashboardQuickCalibration,
                     semanticValue: 'quick_calibration',
                     isDisconfirming: false,
                     bandStatus: band?.bandStatus.name ?? '',
                   ));
                   context.push(ChatRoutes.chat, extra: {
-                    'initial_user_message': '快速校准',
+                    'initial_user_message': context.l10n.dashboardQuickCalibration,
                   });
                 },
               ),

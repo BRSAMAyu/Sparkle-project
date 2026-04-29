@@ -4498,6 +4498,27 @@
   },
   "dashboardReviewPending": "review pending",
   "dashboardUpdatesInsights": "Updates & Insights",
+  "dashboardSprintPhase": "Exam sprint phase, strategy adjusted",
+  "dashboardSprintDaysLeft": "{days} days left in sprint, today's tasks aligned",
+  "@dashboardSprintDaysLeft": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "dashboardWhatToPush": "What do you want to push forward most right now?",
+  "dashboardGoalExamSprint": "Exam Sprint",
+  "dashboardGoalLongTerm": "Long-term Study",
+  "dashboardGoalProject": "Project Delivery",
+  "dashboardGoalSelfGrowth": "Self Growth",
+  "dashboardGoalNotSure": "Not Sure",
+  "dashboardGoalExamSprintPrompt": "I want to prepare for an exam sprint",
+  "dashboardGoalLongTermPrompt": "I want to systematically study a course",
+  "dashboardGoalProjectPrompt": "I have a project to complete",
+  "dashboardGoalSelfGrowthPrompt": "I want to better manage myself",
+  "dashboardGoalNotSurePrompt": "I'm not sure what I want",
+  "dashboardLoadFailed": "Load failed",
+  "dashboardRetry": "Retry",
+  "dashboardQuickCalibration": "Quick Calibration",
   "planEditTypeTitle": "Edit {type}",
   "@planEditTypeTitle": {
     "placeholders": {
