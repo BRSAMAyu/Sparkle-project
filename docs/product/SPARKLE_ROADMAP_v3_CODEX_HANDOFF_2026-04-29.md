@@ -5,6 +5,7 @@
 > **用途**: Codex agent 持续推进 Roadmap v3 所有剩余任务的完整交接
 > **路线图**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
 > **跟踪器**: `docs/product/SPARKLE_ROADMAP_v3_TRACKER_2026-04-28.md`
+> **审查报告**: `docs/product/SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md` — **3 P0 Critical 接线缺口**
 
 ---
 
@@ -38,7 +39,7 @@
 
 ## 2. Phase 1 代码质量审查发现
 
-> **审查者注**: 以下问题由 Opus 审查发现，部分已修复 (commit `93b72fd4`)，但仍有残留。
+> **✅ 全部已由 Codex 修复 (commit `2428d022`)**
 
 ### 2.1 outcome_recorder.py — 死代码残留 (P2)
 
@@ -229,29 +230,39 @@ cd backend && pytest tests/unit/ -x -q
 
 ## 7. 推荐的 Codex 执行顺序
 
+> **🔴 2026-04-29 审查更新**: 发现 3 个 P0 Critical 接线缺口，优先级提升到所有其他任务之前。
+
 ```
+Step 0: P0 Critical 接线修复 (审查发现 — 最高优先级)
+        │ C-01-FIX: OutcomeTracker → 接线到生产代码
+        │ C-02-FIX: structured_adjustments → 注入 prompts.py
+        │ C-03-FIX: multi_agent_adapter → 传入 Spine context
+        ↓
 Step 1: Phase 1 收尾 — Card Protocol (T1.5.1-T1.5.6)
         ↓ 先完成 Card 双写，这是后续 Phase 2-3 的基础
 
-Step 2: Phase 2.3 — CausalTrace 端到端 (T2.3.1-T2.3.5)
-        ↓ Timeline API 是可观测性的核心
+Step 2: P1 High 接线修复 (审查发现)
+        │ H-01-FIX: 6 EventBus 事件接入 Spine
+        │ H-03-FIX: Spine 降级 Prometheus counter + 告警
+        ↓
 
-Step 3: Phase 1 Flutter 侧 + T1.4.3 Grafana dashboard
-        ↓ 并行推送 (可与 Step 2 同时)
-
-Step 4: Phase 2.1 — Signal Ranking 验证/增强 (T2.1.1-T2.1.6)
+Step 3: Phase 2.1 — Signal Ranking 验证/增强 (T2.1.1-T2.1.6)
         ↓ 先确认已有代码是否满足需求
 
-Step 5: Phase 2.2 — Directive Audit (T2.2.1-T2.2.3)
+Step 4: Phase 2.2 — Directive Audit (T2.2.1-T2.2.3)
         ↓
 
-Step 6: Phase 2.4 — 降级与恢复 (T2.4.1-T2.4.6)
+Step 5: Phase 2.4 — 降级与恢复 (T2.4.1-T2.4.6)
         ↓
 
-Step 7: Phase 3 Aurora↔Spine 收敛
+Step 6: Phase 3 Aurora↔Spine 收敛 (含 H-02-FIX Aurora→Spine 反馈接线)
         ↓
 
-Step 8+: Phase 4-7 (见路线图文档)
+Step 7+: Phase 4-7 (见路线图文档)
+```
+
+**注意**: T2.3.4 (Timeline API) 和 T2.3.5 (Causal Timeline Panel) 已确认存在，无需实现。
+**注意**: T1.4.3 (Outcome Grafana dashboard) 已确认完成 (sparkle-spine-outcome.json)。
 ```
 
 ---
