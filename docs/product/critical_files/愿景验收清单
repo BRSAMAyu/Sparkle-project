@@ -1,0 +1,883 @@
+# Sparkle 完全体验收清单 v1.0
+
+## 用于 code agent 持续审查、打磨、迭代、回归验证
+
+这份清单的目的不是确认“代码有没有写”，而是确认：
+
+> **Sparkle 是否真的从一个能用的 AI 学习系统，达到“长期好用、可信、可持续进化”的 AI-native 目标实现操作系统标准。**
+
+我基于你提供的完整架构全景、完全体愿景、Causal Control Spine 裁定、深度审计与 P4 研究级设计来整理。当前项目真实架构已经是 Flutter 移动端 + Go 网关 + Python AI 引擎 + PostgreSQL/Redis/MinIO + 可观测性栈的三层混合系统，并且已经具备 WebSocket、gRPC、REST、事件总线、CQRS、CRDT、Aurora 灰度、可观测性和混沌工程等基础设施；所以验收不能只看 AI 层，还必须覆盖移动端、网关、AI 引擎、事件流、持久化、离线恢复、治理与生产运行。
+
+完全体验收的核心判断仍然是：Sparkle 不是聊天机器人、知识库、RAG 工具、计划生成器或任务清单，而是以 Aurora 为认知内核、知识/目标图谱为用户世界模型、任务卡为执行协议、Causal Control Spine 为因果控制主脊柱、社群为共调节层、Skill Extraction 为持续学习机制的 AI-native 目标实现系统。
+
+---
+
+# 0. 使用方式
+
+## 0.1 验收等级
+
+每一项用 0-5 分评分。
+
+| 分数 | 含义                                |
+| -- | --------------------------------- |
+| 0  | 没有实现                              |
+| 1  | 有代码/对象/接口，但未接入主链                  |
+| 2  | 已接入主链，但只在理想路径工作                   |
+| 3  | 用户可感知，且有基础测试                      |
+| 4  | 有 Outcome 回流、审计、异常处理和回归测试         |
+| 5  | 长期稳定、可解释、可撤销、可观测、可降级、可用于 P4 研究级评估 |
+
+## 0.2 完全体通过线
+
+系统达到完全体，必须满足：
+
+```text
+Critical 项：100% 达到 4 分及以上
+Core 项：90% 达到 4 分及以上
+Experience 项：85% 达到 4 分及以上
+Research/P4 项：80% 达到 3 分及以上，关键安全项必须 4 分及以上
+Infrastructure/Governance 项：100% 关键项达到 4 分及以上
+```
+
+## 0.3 一票否决项
+
+以下任一项失败，不能称为完全体：
+
+```text
+1. Aurora 与 Causal Control Spine 仍是割裂系统；
+2. 关键模块只存在代码，未被生产主链消费；
+3. 用户关键反馈只被记录，不改变下一步行动；
+4. 任务、资料、计划、召回、社群、成就任一关键闭环没有 Outcome 回流；
+5. 高影响判断不可解释、不可纠正、不可撤销；
+6. 资料/RAG 粗暴污染上下文，且用户无法知道或覆盖；
+7. 长期模型会把短期状态写成人格标签；
+8. 生产环境缺少降级、回滚、kill switch、观测与告警；
+9. P4 实验或策略学习能绕过安全边界直接影响用户；
+10. 多目标状态互相污染。
+```
+
+---
+
+# 1. 产品身份与北极星验收
+
+| ID         | 范围              | 验收标准                                             | 通过效果                      |
+| ---------- | --------------- | ------------------------------------------------ | ------------------------- |
+| VISION-001 | 产品定位            | 用户在 1 分钟内能理解 Sparkle 不是聊天助手，而是帮助推进目标的 AI 学习/成长教练 | 用户说得出：“它不是只回答我，而是帮我把事情做成” |
+| VISION-002 | 核心价值            | 所有主流程都围绕“理解 → 计划 → 适应 → 成长”四种用户模式组织              | 不再是功能入口堆叠                 |
+| VISION-003 | 北极星场景           | 至少有一个完整可演示的高压目标场景，例如“14 天准备热力学期末”或“7 天考试先过线”     | 从目标输入到复盘全链路可跑             |
+| VISION-004 | 目标实现导向          | 任意 AI 回复、计划、任务、提醒、资料调用都能解释“它如何帮助当前目标前进”          | 没有纯炫技输出                   |
+| VISION-005 | 用户不需要 prompt 工程 | 普通用户不需要手动管理上下文、RAG、资料、策略、任务粒度                    | Aurora 自动承担复杂性            |
+| VISION-006 | 不是一次性计划         | 系统不会只生成一份计划后结束，而会根据执行、错因、时间、反馈持续调整               | 用户感到系统在“陪跑”               |
+| VISION-007 | 从能用到好用          | 用户关键体验不是“功能存在”，而是“我做了什么，Sparkle 真的改变了下一步”        | 用户可感知因果变化                 |
+| VISION-008 | 长期好用            | 老用户回归、目标切换、资料累积、状态变化后，系统仍能稳定理解和恢复                | 不会用久后退化成新手体验              |
+| VISION-009 | 可解释智能           | 系统重要判断必须能显示依据、证据、替代解释和纠正入口                       | 用户信任不是盲信                  |
+| VISION-010 | 产品气质            | Sparkle 的朋友感来自行动上的理解、校准和陪跑，而不是闲聊人格               | 温柔但不空泛，直接但不压迫             |
+
+---
+
+# 2. 端到端目标闭环验收
+
+## 2.1 首次目标输入与 First Minute Aha
+
+| ID      | 范围     | 验收标准                                                                         | 通过效果                                       |
+| ------- | ------ | ---------------------------------------------------------------------------- | ------------------------------------------ |
+| E2E-001 | 首次输入   | 用户输入“我 7 天后考试，基本没学，想先别挂”后，60 秒内识别目标模式                                        | detected_mode = exam_rescue / minimum_pass |
+| E2E-002 | 啊哈判断   | 系统先给出场景判断，而不是先要求填表                                                           | 用户感觉“它立刻理解我的处境”                            |
+| E2E-003 | 可纠正    | First Minute Aha 必须提供“先过线 / 冲高分 / 我有基础 / 我没资料”等纠正入口                          | 不武断、不锁死路径                                  |
+| E2E-004 | 低成本下一步 | 首轮必须给出低成本行动：上传资料、12 分钟诊断、选择目标验收标准                                            | 用户能立刻开始                                    |
+| E2E-005 | 事件入链   | 首次目标输入必须产生 RawEvent、ActionableSignal、StatePatch、PolicyDecision 和 CausalTrace | 不只是聊天回复                                    |
+| E2E-006 | UI 一致  | Flutter 端首屏、WebSocket 响应、后端 trace 和状态带表现一致                                   | 无前后端割裂                                     |
+| E2E-007 | 非考试目标  | 用户输入“下周产品面试”“两周做完 MVP”“恢复健身习惯”时，也能识别目标类型                                     | Exam Sprint 是样板，不是边界                       |
+
+## 2.2 资料上传到目标图谱
+
+| ID      | 范围              | 验收标准                                                      | 通过效果                 |
+| ------- | --------------- | --------------------------------------------------------- | -------------------- |
+| E2E-020 | 资料接入            | 用户上传课件、题库、笔记、错题截图后，系统生成 SourceAsset / SourceSlice 或等价规范对象 | 文件不是附件               |
+| E2E-021 | 节点挂载            | 资料片段必须挂载到知识/目标图谱节点                                        | 用户看到资料覆盖了哪些节点        |
+| E2E-022 | 资料质量            | 每份资料有质量、适用范围、噪声风险、推荐用途和不推荐用途                              | 不盲目使用资料              |
+| E2E-023 | 资料不污染上下文        | 上传资料不等于每轮都进入 prompt/RAG                                   | 资料进入系统 ≠ 资料进入上下文     |
+| E2E-024 | Source Tray     | 用户能看到可参与本轮的资料、相关度、推荐状态、排除状态                               | 类 NotebookLM，但目标感知更强 |
+| E2E-025 | 作用域选择           | 用户选择资料时必须指定作用域：本轮 / 当前任务 / 今天 / 当前目标                      | 一次选择不会永久污染           |
+| E2E-026 | Context Receipt | 资料相关回答必须说明用了什么、没用什么、为什么                                   | 用户知道 AI 的依据          |
+| E2E-027 | Outcome 回流      | 资料使用后必须记录是否帮助完成任务、提升正确率、减少错因                              | 资料有效性可学习             |
+| E2E-028 | 社群资料            | 社群共享资料默认不能自动进入个人上下文，必须用户接受                                | 隐私和主权成立              |
+
+## 2.3 诊断、计划、任务、执行、反馈全链路
+
+| ID      | 范围              | 验收标准                                            | 通过效果                                        |
+| ------- | --------------- | ----------------------------------------------- | ------------------------------------------- |
+| E2E-040 | 诊断              | 用户完成诊断后，系统输出基线、薄弱节点、优先级、最低通过路径                  | 不平均复习                                       |
+| E2E-041 | 计划生成            | 计划必须基于目标、deadline、资料、掌握度、用户时间、压力状态              | 不生成泛泛时间表                                    |
+| E2E-042 | 计划解释            | 计划必须解释为什么先做这些节点，为什么暂时不做另一些节点                    | 用户接受取舍                                      |
+| E2E-043 | 任务卡生成           | 每张任务卡必须是执行协议，不是 todo                            | 有 why/materials/steps/stuck/success/updates |
+| E2E-044 | 执行开始            | 用户开始任务后，系统进入任务执行态，记录开始时间与预期结束                   | 时间感成立                                       |
+| E2E-045 | 执行中卡住           | 用户点击“我卡住了”后，必须区分卡点类型并改变 ContextPlan             | 不是普通聊天兜底                                    |
+| E2E-046 | 任务失败            | 任务失败后系统先归因，不直接责备或简单标记失败                         | 失败变成学习信号                                    |
+| E2E-047 | 用户纠正            | 用户说“不是没时间，是不会做”后，系统必须改判并改变下一张任务                 | 纠正真的改变系统                                    |
+| E2E-048 | 复盘              | 每个 checkpoint / sprint 结束后生成复盘，包含策略有效性、自我修正和下一步 | 不是报告堆数据                                     |
+| E2E-049 | Causal Timeline | 用户能看到“为什么今天任务变短 / 为什么不用课件 / 为什么改策略”             | 信任界面成立                                      |
+
+---
+
+# 3. Unified Causal Runtime 与 Causal Control Spine 验收
+
+Causal Control Spine 是完全体核心。愿景文件明确要求所有功能都接入 Raw Event → Actionable Signal → Signal Ranking & Conflict → Actionable State Register → Policy Arbitration → Aurora Control Signal → Directives → Actuation → Audit → Receipt → Outcome → Causal Attribution → Model Update → Skill Extraction 这条主链。
+
+## 3.1 主链完整性
+
+| ID        | 范围             | 验收标准                                                                                                                                 | 通过效果           |
+| --------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| SPINE-001 | 统一入口           | 所有用户消息、任务事件、资料事件、社群事件、成就事件、召回事件都进入 RawEvent                                                                                          | 无隐形旁路          |
+| SPINE-002 | 事件事实性          | RawEvent 只记录事实，不直接写解释性标签                                                                                                             | 不把“未完成”直接解释成懒惰 |
+| SPINE-003 | 信号生成           | 高价值 RawEvent 必须产生 ActionableSignal，包含 claim、confidence、scope、ttl、evidence、counter_evidence、alternative_explanations、possible_effects | 信号可信           |
+| SPINE-004 | 信号排序           | Signal Ranking 至少考虑 goal_impact、decision_relevance、urgency、confidence、freshness、contradiction、privacy、user_visibility                | 不让噪声进入决策       |
+| SPINE-005 | 冲突仲裁           | 成就、焦虑、deadline、错因、用户偏好、关系状态冲突时，有明确 Policy Arbitration                                                                                | 不靠 LLM 随机综合    |
+| SPINE-006 | 状态寄存器          | ActionableStateRegister 只存能改变行动的状态                                                                                                   | 不做大而无用画像       |
+| SPINE-007 | 状态作用域          | 所有状态必须有 turn/session/task/day/sprint/goal/domain/relationship/long_term 作用域                                                          | 不污染长期模型        |
+| SPINE-008 | PolicyDecision | 每个重要行动前必须有 PolicyDecision 或等价策略记录                                                                                                    | 行动不是黑箱         |
+| SPINE-009 | Directives     | Response / Execution / Plan / Retrieval / ModelWrite / Notification / UX / Community / Skill 九类 Directive 必须全可用                      | 控制面完整          |
+| SPINE-010 | 硬约束            | max_task_duration、avoid_new_chapter、required_task_type 等硬约束必须被下游真实执行                                                                 | 不是 prompt 建议   |
+| SPINE-011 | Audit          | 每个下游模块返回 DirectiveApplicationAudit                                                                                                   | 可知道约束是否生效      |
+| SPINE-012 | Receipt        | 关键改变必须产生 UserVisibleReceipt                                                                                                          | 用户能感知变化        |
+| SPINE-013 | Outcome        | 每个干预必须定义 expected_outcome 并记录 actual_outcome                                                                                         | 系统知道是否有效       |
+| SPINE-014 | Attribution    | Outcome 必须进入 Causal Attribution，至少区分 effective / insufficient / inconclusive / harmful / needs_confirmation                          | 不只记录结果         |
+| SPINE-015 | Model Update   | 归因后才允许写模型、改策略、沉淀 skill                                                                                                               | 不乱写记忆          |
+| SPINE-016 | Trace          | 每条关键链路可从 CausalTrace 回放                                                                                                              | 审计成立           |
+| SPINE-017 | Orphan 检测      | 所有未被消费的高价值 signal 必须被统计和告警                                                                                                           | 不再出现沉睡模块       |
+| SPINE-018 | 主链一致性          | Flutter / Go Gateway / Python AI / Celery / EventBus 产生的关键事件最终能关联同一 trace_id                                                         | 跨层可追踪          |
+| SPINE-019 | 生产主链           | 单元测试通过不算完成，必须证明生产 orchestrator 实际消费这些对象                                                                                              | 防测试幻觉          |
+| SPINE-020 | 降级主链           | Redis/LLM/RAG/外部服务降级时，Spine 仍能生成安全策略与 trace                                                                                          | 可恢复            |
+
+## 3.2 关键控制指标
+
+| ID         | 指标                         | 验收标准                                                                |
+| ---------- | -------------------------- | ------------------------------------------------------------------- |
+| METRIC-001 | Signal-to-State Rate       | 高价值信号进入状态的比例可监控                                                     |
+| METRIC-002 | State-to-Policy Rate       | 状态变化触发策略变化的比例可监控                                                    |
+| METRIC-003 | Policy-to-Directive Rate   | 策略变成结构化 directive 的比例可监控                                            |
+| METRIC-004 | Directive Application Rate | 下游真实应用 directive 的比例可监控                                             |
+| METRIC-005 | Output Change Rate         | 系统判断导致输出实际变化的比例可监控                                                  |
+| METRIC-006 | User-visible Receipt Rate  | 关键变化中用户可感知的比例可监控                                                    |
+| METRIC-007 | Outcome Feedback Rate      | 干预后有 outcome 回流的比例可监控                                               |
+| METRIC-008 | Retraction Rate            | 系统撤回/修正错误判断的比例可监控                                                   |
+| METRIC-009 | Orphan Signal Count        | 无消费者信号数量可监控并有阈值                                                     |
+| METRIC-010 | Aurora-Spine Coupling Rate | 每轮同时存在 StatePacket、AuroraDecision、PolicyDecision、DirectiveAudit 的比例 |
+
+---
+
+# 4. Aurora 完全体验收
+
+## 4.1 Aurora 身份与分层
+
+| ID      | 范围    | 验收标准                                          | 通过效果             |
+| ------- | ----- | --------------------------------------------- | ---------------- |
+| AUR-001 | 身份    | Aurora 是认知控制内核，不是普通聊天人格                       | 用户不会把它理解成另一个聊天窗口 |
+| AUR-002 | L0    | L0 规则感知无需 LLM，处理时间、任务状态、deadline、勿扰、基础事件      | 低成本常驻            |
+| AUR-003 | L1    | Light Aurora 每轮参与，负责路由、上下文、语气、策略参数、升级判断       | 标准对话被轻量校准        |
+| AUR-004 | L2    | Mid Aurora 在失败、错因重复、计划偏离、状态冲突时介入              | 局部校准可用           |
+| AUR-005 | L3    | Full Aurora Core 是稀缺、限时、显性的交互式建模会话            | 不常驻、不滥用          |
+| AUR-006 | L4    | Async Deep Learning 后台运行，产出候选，不直接改 live state | 学习安全             |
+| AUR-007 | 能级可观测 | 每轮响应能记录 Aurora 能级与升级/不升级理由                    | 可调试、可审计          |
+| AUR-008 | 成本控制  | L3/L4 有配额、冷却、fallback、成本与延迟记录                 | 不失控              |
+| AUR-009 | 用户主权  | 用户可进入、推迟、退出、纠正 Aurora Core                    | 不强迫              |
+| AUR-010 | 退回后台  | L3 完成后必须显式退回标准层，并产生 SessionClosure            | 不割裂              |
+
+## 4.2 Aurora ↔ Spine 合流
+
+| ID      | 范围          | 验收标准                                                                                    | 通过效果            |
+| ------- | ----------- | --------------------------------------------------------------------------------------- | --------------- |
+| AUR-020 | 输入          | Aurora 必须消费 ActionableStatePacket、recent PolicyDecision、recent Outcome、user corrections | 不再独立猜           |
+| AUR-021 | 输出          | Aurora 输出 hypotheses、policy proposals、directive proposals、experience outputs            | 不只给 ChatAdapter |
+| AUR-022 | 仲裁          | Aurora 提案必须进入 Policy Arbitration，由 Spine 生成最终决策                                         | 不绕过治理           |
+| AUR-023 | 共同 trace    | 每次 Aurora 影响系统都写入同一 CausalTrace                                                         | 可证明影响           |
+| AUR-024 | override 记录 | Spine 覆盖 Aurora 建议时必须记录原因                                                               | 避免黑箱            |
+| AUR-025 | 自我修正        | Aurora 承认误判后必须改变 State/Policy/Directive/Task                                            | 不是道歉文案          |
+| AUR-026 | 自我模型        | Aurora 维护当前假设、开放问题、近期误判、策略信心、关系姿态                                                       | 有连续思考           |
+| AUR-027 | 不伪智能        | 状态带不展示无法解释的伪精确分数                                                                        | 用户信任不被破坏        |
+
+## 4.3 Aurora 状态带与显性体验
+
+| ID      | 范围       | 验收标准                                                                               | 通过效果       |
+| ------- | -------- | ---------------------------------------------------------------------------------- | ---------- |
+| AUR-040 | 状态带      | 状态带至少支持：轻量感知中、已校准、发现风险、需要确认、深度校准可用、冷却中                                             | 入口完整       |
+| AUR-041 | 展开内容     | 展开后显示当前判断、依据、可纠正选项、是否可唤醒 L3                                                        | 不是装饰       |
+| AUR-042 | 预测选项     | 每组 PredictedReplyOption 包含 label、semantic_value、effect、confidence、telemetry_id     | 可写回模型      |
+| AUR-043 | 反驳位      | 每组预测选项必须包含“都不对，我解释一下”或等价自由纠正                                                       | 用户主权       |
+| AUR-044 | 芯片遥测     | 用户点击预测选项或自由纠正必须记录 telemetry                                                        | 学习闭环       |
+| AUR-045 | 多消息会话    | Aurora Core 支持多消息 agenda、用户打断、暂停、恢复、结束                                             | 像认知校准，不像问卷 |
+| AUR-046 | CaseFile | Aurora Core 只加载压缩 case file，不粗暴加载全部历史                                              | 成本与质量可控    |
+| AUR-047 | 校准产物     | L3 必须输出 state_patches、policy_changes、directives_to_regenerate、user_visible_summary | 校准可执行      |
+| AUR-048 | 冷却体验     | 冷却中提供快速校准 fallback，不冷冰冰拒绝                                                          | 用户体验自然     |
+| AUR-049 | 用户设置     | 用户可设置少分析我、直接安排我、多解释原因、不用压力提醒等偏好                                                    | 关系可协商      |
+
+---
+
+# 5. 目标建模、GoalWorldGraph 与 DomainPack 验收
+
+| ID       | 范围             | 验收标准                                                                                                                             | 通过效果       |
+| -------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| GOAL-001 | 目标建模           | 目标必须包含目标类型、截止时间、最低验收标准、可用时间、资料状态、用户约束                                                                                            | 不靠一句话生成计划  |
+| GOAL-002 | 目标模式           | 支持 exam_rescue、standard_mastery、project_delivery、job_search、habit、research 等模式                                                   | 通用 Goal OS |
+| GOAL-003 | GoalWorldGraph | 底层图谱不只支持 KnowledgeNode，还支持 CapabilityNode、ArtifactNode、MilestoneNode、HabitNode、RiskNode、ConstraintNode、ResourceNode、FeedbackNode | 不考试化       |
+| GOAL-004 | DomainPack     | 每个领域通过 DomainPack 提供节点类型、任务模板、反馈分类、风险模式、Skill、checkpoint                                                                         | 新领域不重写主链   |
+| GOAL-005 | ExamSprintPack | 考试包包含知识节点、题型、错因、考试权重、deadline phase、任务模板、source policy                                                                           | 备考策略资产化    |
+| GOAL-006 | 目标图可解释         | 用户能看到为什么当前节点优先、为什么某些节点暂缓                                                                                                         | 取舍透明       |
+| GOAL-007 | 多目标            | 支持同时存在多个目标，状态命名空间隔离                                                                                                              | 不互相污染      |
+| GOAL-008 | 多目标仲裁          | 时间/能量冲突时给出解释性取舍，并允许用户覆盖                                                                                                          | 用户主权       |
+| GOAL-009 | 目标漂移           | 用户行为和原目标冲突时，系统请求确认而不是静默改目标                                                                                                       | 不擅自重定义目标   |
+| GOAL-010 | 目标关闭           | 目标完成、放弃、暂停、归档时，相关状态正确降级或归档                                                                                                       | 长期干净       |
+| GOAL-011 | 老目标恢复          | 用户回归旧目标时，系统加载 ReturnCaseFile，而不是从零开始                                                                                             | 长期陪跑       |
+| GOAL-012 | 跨目标迁移          | 被用户确认的长期策略可作为候选迁移到新目标，但不能硬套                                                                                                      | 迁移有边界      |
+
+---
+
+# 6. 计划与 Exam Sprint 验收
+
+| ID       | 范围        | 验收标准                                     | 通过效果     |
+| -------- | --------- | ---------------------------------------- | -------- |
+| PLAN-001 | 计划不是日程表   | 计划必须基于目标路径、资料、节点优先级、用户状态和 deadline phase | 不是普通时间安排 |
+| PLAN-002 | 最小通过路径    | exam_rescue 场景必须优先高频、可训练、可转分节点           | 不平均复习    |
+| PLAN-003 | 冲高分路径     | 用户选择冲高分时，计划策略与先过线路径不同                    | 目标差异真实影响 |
+| PLAN-004 | D-7 到 D-0 | 考试冲刺阶段自动切换策略：诊断、主瓶颈、错因修复、考前复盘、低负荷回顾      | 时间感真实    |
+| PLAN-005 | 零基础危机     | 3 天零基础场景进入 crisis mode，明确放弃低收益内容         | 不过度承诺    |
+| PLAN-006 | 低收益阻止     | D-1/D-0 用户想开新章节时，系统提示低收益风险并提供 override   | 温和阻止     |
+| PLAN-007 | 局部重规划     | 任务失败、错因重复、资料失效时优先局部重规划，不随便推翻全计划          | 稳定       |
+| PLAN-008 | 全局重规划     | 目标变化、deadline 变化、资料重大变化时可全局重规划，并解释影响     | 可控       |
+| PLAN-009 | 计划版本      | 每次计划变化有版本、原因、diff、影响范围                   | 可回滚      |
+| PLAN-010 | 计划与任务一致   | 任务卡能追溯到计划节点，计划能看到任务完成反馈                  | 计划不是静态文档 |
+| PLAN-011 | 计划与资料一致   | 资料变化会更新节点覆盖和计划置信度                        | 资料影响策略   |
+| PLAN-012 | 计划与社群一致   | 社群共性错因可作为 soft bias 影响计划，但不硬覆盖个人情况       | 社群共调节    |
+
+---
+
+# 7. 任务卡执行协议验收
+
+| ID       | 范围        | 验收标准                                                                                                                                      | 通过效果        |
+| -------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| TASK-001 | 任务卡协议     | 每张任务卡包含 why_this_task、materials_protocol、steps、stuck_protocol、success_criteria、minimum_output、updates_after_completion、fallback_if_failed | 不是 todo     |
+| TASK-002 | Why       | why_this_task 必须引用目标、节点、错因、时间、策略或资料依据                                                                                                     | 用户知道为什么做    |
+| TASK-003 | Materials | materials_protocol 说明用哪些 SourceSlice/错题/任务上下文，以及用途                                                                                        | 资料进入任务      |
+| TASK-004 | Steps     | 步骤必须有时长、顺序、验收点                                                                                                                            | 可执行         |
+| TASK-005 | Stuck     | 卡住时至少区分：看不懂概念、会概念不会做题、步骤跟不上、时间不够、状态不行                                                                                                     | 不用泛聊兜底      |
+| TASK-006 | 卡住分流      | 不同卡点触发不同 ContextPlan 和策略                                                                                                                  | 任务内闭环       |
+| TASK-007 | 成功标准      | 完成标准必须可验证，不只是“学习完成”                                                                                                                       | Outcome 可记录 |
+| TASK-008 | 最低产出      | 每张任务卡有 minimum_output，用于低能量或时间不足时保底                                                                                                       | 防止全失败       |
+| TASK-009 | 完成更新      | 完成后更新 knowledge/mastery/mistake/task_granularity/source_effectiveness/policy_effect                                                       | 任务改变系统      |
+| TASK-010 | 失败更新      | 失败后必须归因，并可能更新 task_granularity、knowledge_bottleneck、source_trust、strategy_confidence                                                      | 失败有价值       |
+| TASK-011 | 执行状态      | 任务支持 start/pause/stuck/complete/abandon/restore                                                                                           | 真实执行        |
+| TASK-012 | 时间恢复      | 用户离开超过预期时间回来，先出现恢复卡                                                                                                                       | 系统活在时间里     |
+| TASK-013 | 离线执行      | Flutter 离线执行任务后，恢复网络可同步并合并状态                                                                                                              | 离线优先成立      |
+| TASK-014 | 指令审计      | 任务生成必须返回 ExecutionDirective Audit                                                                                                         | 可证明任务被控制    |
+| TASK-015 | 用户覆盖      | 用户能缩短、延后、替换、拒绝任务，且进入 trace                                                                                                                | 不强制         |
+| TASK-016 | 多目标绑定     | 每张任务卡明确绑定 goal_id 和节点，不允许跨目标污染                                                                                                            | 多目标安全       |
+
+---
+
+# 8. 知识星图、资料与 Context Engineering 验收
+
+用户特别强调，Sparkle 的知识库必须比普通项目/文档型 AI 更强：资料不是“可上传的上下文”，而是能挂载到知识星图、影响任务和反馈、由 Aurora 自动管理的目标资产；普通用户不需要手动调 RAG，复杂 context engineering 由 Aurora 承担。
+
+## 8.1 知识/目标图谱
+
+| ID     | 范围      | 验收标准                                                                                                        | 通过效果     |
+| ------ | ------- | ----------------------------------------------------------------------------------------------------------- | -------- |
+| KG-001 | 节点属性    | 学习节点至少包含 mastery、exam_weight、difficulty、trainability、dependencies、sources、mistakes、tasks、recommended_action | 可计算      |
+| KG-002 | 非学习节点   | 项目/求职/习惯目标中对应节点有相应属性                                                                                        | 通用化      |
+| KG-003 | 节点更新    | 小测、错题、任务、用户反馈能更新节点状态                                                                                        | 图不是展示页   |
+| KG-004 | 节点优先级   | 任务/计划能消费节点优先级                                                                                               | 图参与决策    |
+| KG-005 | 错因聚类    | 重复错因必须挂到节点并影响任务模板                                                                                           | 错因变行动    |
+| KG-006 | 资料覆盖    | 节点显示哪些资料覆盖、覆盖质量和缺口                                                                                          | 用户理解资料价值 |
+| KG-007 | 社群错因    | 节点可显示匿名共性错因和推荐策略                                                                                            | 社群经验进入图  |
+| KG-008 | CRDT 同步 | 节点掌握度离线/多端更新无冲突                                                                                             | 移动端可靠    |
+| KG-009 | 可解释路径   | 用户能看到“为什么这个节点排在今天”                                                                                          | 图谱可解释    |
+| KG-010 | 图谱不伪精确  | 不展示不可解释的小数掌握度作为绝对真相                                                                                         | 避免伪科学    |
+
+## 8.2 Source/RAG/ContextPlan
+
+| ID      | 范围                  | 验收标准                                                                                                                       | 通过效果        |
+| ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| SRC-001 | SourceAsset         | 所有上传资料有结构化元数据、所有者、可见性、解析状态、质量、目标绑定                                                                                         | 资料治理        |
+| SRC-002 | SourceSlice         | 资料片段有位置、摘要、节点映射、证据类型、噪声风险、retrieval tags                                                                                   | 可检索可审计      |
+| SRC-003 | ContextPlan         | 每轮必须有 no_retrieval / graph_only / task_bound_rag / targeted_source_rag / user_pinned_sources / deep_source_synthesis 等模式之一 | RAG 不是开关    |
+| SRC-004 | SourceDecision      | 即使不用资料，也有 SourceDecision 和原因                                                                                               | “不用资料”是正式决策 |
+| SRC-005 | Pollution Guard     | 高噪声、低相关、范围过大的资料不能自动进入上下文                                                                                                   | 不污染         |
+| SRC-006 | Token Budget        | 每轮资料调用有 token budget 与裁剪策略                                                                                                 | 成本可控        |
+| SRC-007 | 用户主动指定              | 用户说“按课件讲”时，系统必须切换到 source-grounded 模式或解释无法使用原因                                                                             | 尊重用户        |
+| SRC-008 | 自动选择                | 用户不介入时，Aurora 自动判断是否用资料、用哪一片、用多少                                                                                           | 普通用户无感      |
+| SRC-009 | Source Tray         | 前端有资料托盘，显示可用资料、推荐状态、相关度、排除状态                                                                                               | 可控          |
+| SRC-010 | Context Receipt     | 回答后显示 used/excluded/reason/actions                                                                                         | 用户知道依据      |
+| SRC-011 | 证据查看                | 用户能查看关键证据片段，但不被迫阅读长文档                                                                                                      | 透明不过载       |
+| SRC-012 | 资料排除                | 用户能排除资料，指定作用域和原因                                                                                                           | 主权          |
+| SRC-013 | SourceEffectiveness | 使用资料后记录对任务完成、准确率、错因修复、用户反馈的影响                                                                                              | 资料会学习       |
+| SRC-014 | 错误资料纠正              | 用户指出资料不相关/错误后，系统更新 source_trust 并避免重复使用                                                                                    | 纠错闭环        |
+| SRC-015 | 社群资料推荐              | 社群资料需用户接受后才能进入个人 Source Library                                                                                            | 隐私          |
+| SRC-016 | 引用安全                | 当答案依赖资料时，需要可追溯证据；不依赖资料时不能假装引用                                                                                              | 可信          |
+| SRC-017 | 多资料冲突               | 多份资料矛盾时，系统显式标注冲突并请求确认或按来源优先级处理                                                                                             | 不幻觉         |
+| SRC-018 | 资料生命周期              | 删除、归档、目标结束后资料参与权限正确收回                                                                                                      | 数据治理        |
+
+---
+
+# 9. 用户体验界面验收
+
+## 9.1 移动端核心界面
+
+| ID     | 范围          | 验收标准                                                                     | 通过效果        |
+| ------ | ----------- | ------------------------------------------------------------------------ | ----------- |
+| UX-001 | 首页          | 首页围绕目标推进，而不是功能宫格                                                         | 用户知道今天该做什么  |
+| UX-002 | 聊天页         | 聊天页能承载主回复、状态带、Context Receipt、任务卡、预测选项、Timeline 提示                       | 体验统一        |
+| UX-003 | 状态带         | Aurora 状态带常驻但克制，能展开、纠正、唤醒                                                | 后台智能可感知     |
+| UX-004 | 任务页         | 任务卡完整展示执行协议，默认简洁，展开可见细节                                                  | 可执行不过载      |
+| UX-005 | 星图页         | 星图展示当前目标世界，而不是炫酷图                                                        | 用户知道薄弱点和下一步 |
+| UX-006 | Source Tray | 资料托盘易用，默认自动，用户可覆盖                                                        | 复杂性被系统承担    |
+| UX-007 | 时间线         | Causal Timeline 有 compact card、expanded evidence、user correction actions | 信任界面        |
+| UX-008 | 成长页         | Growth Chronicle 展示用户确认过的长期洞察，不展示黑箱标签                                    | 成长叙事        |
+| UX-009 | 社群页         | 社群围绕承诺、共性错因、资源质量，不变成无关信息流                                                | 共调节         |
+| UX-010 | 设置页         | 用户能管理记忆、社群智能、资料权限、提醒偏好、关系偏好                                              | 主权          |
+| UX-011 | 通知中心        | 召回通知显示目标价值和低成本下一步，不是泛提醒                                                  | 不骚扰         |
+| UX-012 | 离线体验        | 离线状态可继续查看任务、记录完成、稍后同步                                                    | 移动端真实可用     |
+| UX-013 | 可访问性        | 字体、对比度、屏幕阅读、触控目标、低负荷模式达标                                                 | 长期可用        |
+| UX-014 | 国际化         | 文案、时间、日期、错误、提醒支持 i18n                                                    | 架构一致        |
+| UX-015 | 情绪克制        | 在焦虑/疲劳状态下 UI 不制造更多压力                                                     | 教练感成立       |
+
+## 9.2 六个“神性时刻”验收
+
+| ID        | 神性时刻    | 验收标准                                                 |
+| --------- | ------- | ---------------------------------------------------- |
+| MAGIC-001 | 看见坚持    | 七连胜后，Sparkle 不只展示徽章，而是解释它如何改变提醒、挑战、语气，同时允许用户说“我其实很累” |
+| MAGIC-002 | 承认误判    | 系统判断错误后，必须承认、解释、改判、改变任务/资料/策略，并写入 timeline           |
+| MAGIC-003 | 知道不用资料  | 本轮未用课件时，系统说明为什么不用，并提供“按课件重讲”                         |
+| MAGIC-004 | 记得时间    | 用户离开后回来，系统识别时间流逝、任务状态过期，并提供恢复卡                       |
+| MAGIC-005 | 阻止低收益   | 用户在高压 deadline 做低收益事时，系统温和阻止并保留 override             |
+| MAGIC-006 | 社群经验转策略 | 匿名共性错因影响任务模板，并被用户看见为“同目标用户也常错这个点”                    |
+
+---
+
+# 10. 反馈、Outcome、学习与 Skill 验收
+
+## 10.1 Outcome 与归因
+
+| ID      | 范围                  | 验收标准                                       | 通过效果        |
+| ------- | ------------------- | ------------------------------------------ | ----------- |
+| OUT-001 | OutcomeVector       | Outcome 不只记录完成，还记录学习、目标推进、用户主权、负荷、信任、持续性   | 多目标评估       |
+| OUT-002 | Expected Outcome    | 每个干预前定义 expected_outcome                   | 可评估         |
+| OUT-003 | Actual Outcome      | 任务、资料、提醒、Aurora、社群、skill 都有 actual_outcome | 闭环          |
+| OUT-004 | Attribution         | 归因包含有效、不足、反效果、不确定、需确认                      | 谦逊          |
+| OUT-005 | CounterEvidence     | 用户纠正或失败必须能降低错误假设置信度                        | 系统不固执       |
+| OUT-006 | Retraction          | 系统能撤回旧判断，并在用户侧表达                           | 会纠错         |
+| OUT-007 | Learning Guard      | 单次成功/失败不能直接变成长久结论                          | 防过拟合        |
+| OUT-008 | Outcome 到 Policy    | Outcome 必须影响后续 PolicyDecision 或解释为什么不影响    | 不只是日志       |
+| OUT-009 | Outcome 到 SelfModel | 系统记录自己的策略表现                                | Sparkle 会反思 |
+| OUT-010 | Outcome 到 Skill     | 多次有效策略进入 SkillCandidate                    | 会沉淀         |
+
+## 10.2 Learning Base 与 StrategyBelief
+
+| ID        | 范围                 | 验收标准                                                                                        |
+| --------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| LEARN-001 | StrategyBelief     | 策略信念包含 context_signature、scope、belief_score、confidence、evidence、counter_evidence、retract_if |
+| LEARN-002 | 消费路径               | PolicyEngine 实际消费 StrategyBelief 作为 soft bias                                               |
+| LEARN-003 | 反证降权               | 用户拒绝或策略失败会降权                                                                                |
+| LEARN-004 | 跨 sprint           | 被验证的个人策略可跨 sprint 保留，但有作用域和衰减                                                               |
+| LEARN-005 | 用户可见               | 高影响长期洞察需用户确认/编辑/删除                                                                          |
+| LEARN-006 | 长期不标签化             | 不把“今天焦虑”写成“用户焦虑型人格”                                                                         |
+| LEARN-007 | L4 候选              | L4 只产出候选，不直接改 live state                                                                    |
+| LEARN-008 | 日总结                | DailyGoalReflection 能影响次日计划并解释原因                                                            |
+| LEARN-009 | State Decay        | 过期状态自动衰减或请求重新确认                                                                             |
+| LEARN-010 | Learning Dashboard | Admin/Research 能看到策略信念变化、证据和反证                                                              |
+
+## 10.3 Skill Lifecycle
+
+| ID        | 范围             | 验收标准                                                                                                                               |
+| --------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| SKILL-001 | SkillCandidate | 有效策略进入 candidate 前必须有多个 episode 或明确低风险标记                                                                                           |
+| SKILL-002 | 生命周期           | candidate → personal_shadow → personal_live → cohort_candidate → cohort_shadow → cohort_live → system_skill → deprecated/retracted |
+| SKILL-003 | SkillDirective | Skill 能通过 SkillDirective 真实改变任务、计划、资料或召回                                                                                           |
+| SKILL-004 | Evidence       | Skill 有 uses、effective、insufficient、negative、evidence_grade                                                                        |
+| SKILL-005 | 禁忌             | Skill 有 contraindications 和 retract_if                                                                                             |
+| SKILL-006 | 用户拒绝           | 用户可拒绝某个个人策略，拒绝进入反证                                                                                                                 |
+| SKILL-007 | 版本             | Skill 有版本、回滚、变更说明                                                                                                                  |
+| SKILL-008 | 社群晋升           | personal 到 cohort/system 必须满足隐私、样本、效果和负反馈门槛                                                                                        |
+| SKILL-009 | Marketplace    | P4 Skill 上架必须可预览、可采纳、可撤销、可追踪                                                                                                       |
+| SKILL-010 | 不伪装            | experimental skill 不能伪装成系统稳定能力                                                                                                     |
+
+---
+
+# 11. 成就、成长叙事与长期记忆验收
+
+| ID       | 范围              | 验收标准                                              | 通过效果   |
+| -------- | --------------- | ------------------------------------------------- | ------ |
+| GROW-001 | 成就不是终点          | 成就事件必须转为 GrowthSignal 候选，而不是只展示 badge             | 成就进入策略 |
+| GROW-002 | 质量交叉检查          | 七连胜必须结合任务价值、小测质量、超时、压力状态判断                        | 不盲目加压  |
+| GROW-003 | 动机策略            | 成就可影响 nudge_style、challenge_delta、tone，但受压力/错因约束  | 成熟教练   |
+| GROW-004 | 成长卡片            | 用户能看到系统如何理解自己的坚持，并能纠正                             | 可感知    |
+| GROW-005 | GrowthChronicle | 长期成长档案是用户共同维护的成长叙事                                | 不偷偷画像  |
+| GROW-006 | 用户确认            | 长期洞察需 pending/confirmed/edited/rejected/hidden 状态 | 用户主权   |
+| GROW-007 | 证据              | 每条长期洞察有证据、作用域、置信度、未来用途、撤回条件                       | 可信     |
+| GROW-008 | 老用户回归           | 回归时可引用被确认洞察作为参考，但不硬套                              | 长期好用   |
+| GROW-009 | 删除与导出           | 用户能删除、隐藏、导出成长洞察                                   | 合规     |
+| GROW-010 | 情绪边界            | 成长洞察不把心理状态病理化                                     | 安全     |
+
+---
+
+# 12. 社群共调节验收
+
+| ID      | 范围                 | 验收标准                                                 | 通过效果    |
+| ------- | ------------------ | ---------------------------------------------------- | ------- |
+| COM-001 | 社群定位               | 社群不是聊天广场，而是责任伙伴、共性错因、资源质量三闭环                         | 不跑偏     |
+| COM-002 | Commitment         | 用户可创建承诺，包含任务、成功标准、期限、可见范围                            | 可见证     |
+| COM-003 | Partner Reminder   | 伙伴能提醒/见证，但权限有限                                       | 支持执行    |
+| COM-004 | 外部观察候选             | 伙伴解释类反馈必须进入 candidate，用户确认前不能写模型                     | 隐私      |
+| COM-005 | 用户拒绝               | 用户拒绝伙伴观察后，后续不能用于策略                                   | 主权      |
+| COM-006 | Cohort Mistake     | 匿名共性错因能影响节点、任务 why、task_type、ContextPlan             | 社群经验转策略 |
+| COM-007 | Resource Quality   | 共享资料质量基于使用效果、用户反馈、适用范围，而不是单纯点赞                       | 资料可用    |
+| COM-008 | k 阈值               | 社群聚合必须满足最小群体阈值，不能反推出个人                               | 隐私      |
+| COM-009 | Opt-out            | 用户可关闭社群智能或某类社群信号                                     | 可控      |
+| COM-010 | CommunityDirective | 社群信号通过 CommunityDirective 进入 Spine，而不是散落 soft prompt | 可审计     |
+| COM-011 | 社群 UI              | 用户看到的是“这如何帮我目标前进”，不是无关动态流                            | 体验聚焦    |
+| COM-012 | 社群 Outcome         | 社群策略影响必须记录 outcome                                   | 不迷信社群   |
+
+---
+
+# 13. 召回、提醒、干预与 JITAI 验收
+
+| ID        | 范围                     | 验收标准                                                                                |
+| --------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| NUDGE-001 | Goal-Respectful Recall | 召回必须基于目标中的下一步价值，不是泛留存                                                               |
+| NUDGE-002 | RecallOpportunity      | 每次召回有 trigger、value_reason、suggested_action、effort、deadline_pressure、channel_policy |
+| NUDGE-003 | 低成本动作                  | 召回必须给出低成本下一步                                                                        |
+| NUDGE-004 | 安静时间                   | 尊重 quiet hours 和用户通知偏好                                                              |
+| NUDGE-005 | 疲劳保护                   | 高频使用、深夜使用、压力高时降低提醒强度                                                                |
+| NUDGE-006 | Outcome                | 打开、忽略、行动、拒绝都记录并影响后续策略                                                               |
+| NUDGE-007 | 不骚扰                    | 连续召回无行动时必须降频或请求确认                                                                   |
+| NUDGE-008 | 推送一致                   | JPush/FCM/应用内通知内容和后端 RecallOpportunity 一致                                           |
+| NUDGE-009 | 召回可解释                  | 用户能看到“为什么提醒我这件事”                                                                    |
+| NUDGE-010 | 召回可关闭                  | 用户可关闭某类召回                                                                           |
+
+---
+
+# 14. P4 研究级护城河验收
+
+P4 的标准是：Sparkle 不只是会学习，而是能安全地评估、验证、进化和沉淀自己的能力。你已经明确要求 P4 成为最前沿、最高阶、最深的护城河，因此验收必须覆盖 Evaluation-Grade Logging、反事实评估、安全实验、模拟、Marketplace、隐私社群智能、自治质量守卫和研究模式。
+
+## 14.1 Evaluation-Grade Logging
+
+| ID          | 范围                   | 验收标准                                                                   |
+| ----------- | -------------------- | ---------------------------------------------------------------------- |
+| P4-EVID-001 | InterventionEpisode  | 每次策略性干预形成 episode                                                      |
+| P4-EVID-002 | ContextSignature     | episode 记录 goal_mode、deadline、bottleneck、load、relationship、source 等上下文 |
+| P4-EVID-003 | CandidatePolicies    | 记录当时有哪些候选策略                                                            |
+| P4-EVID-004 | SelectionReason      | 记录为什么选中当前策略                                                            |
+| P4-EVID-005 | SelectionProbability | 若用于 OPE/bandit，必须记录选择概率                                                |
+| P4-EVID-006 | RiskLevel            | 每次策略选择有风险等级                                                            |
+| P4-EVID-007 | OutcomeVector        | Outcome 多维记录                                                           |
+| P4-EVID-008 | EvidenceQuality      | 标记是否可用于研究级评估                                                           |
+| P4-EVID-009 | Trace Linkage        | episode 与 CausalTrace、DirectiveAudit、Outcome 关联                        |
+| P4-EVID-010 | 数据完整性                | 缺少关键字段的 episode 不参与高等级评估                                               |
+
+## 14.2 反事实与离线评估
+
+| ID        | 范围                     | 验收标准                                             |
+| --------- | ---------------------- | ------------------------------------------------ |
+| P4-CF-001 | Evidence Grade         | 证据等级 0-5 清晰                                      |
+| P4-CF-002 | Matched Context        | 能按相似上下文比较策略                                      |
+| P4-CF-003 | CounterfactualEstimate | 输出实际策略、替代策略、估计效果、不确定性、限制                         |
+| P4-CF-004 | 不直接 live               | 反事实结果只能生成 PolicyUpdateCandidate，不直接改 live policy |
+| P4-CF-005 | 谦逊表达                   | 用户侧不说“已证明”，除非证据等级足够                              |
+| P4-CF-006 | 小样本保护                  | 样本不足时只产生 hypothesis                              |
+| P4-CF-007 | 子群体检查                  | 策略效果必须检查不同用户群体是否受伤害                              |
+| P4-CF-008 | Admin 报告               | 反事实评估有可读报告                                       |
+
+## 14.3 安全实验平台
+
+| ID         | 范围                 | 验收标准                                                                 |
+| ---------- | ------------------ | -------------------------------------------------------------------- |
+| P4-EXP-001 | ExperimentRegistry | 实验有 hypothesis、eligible_context、excluded_context、policies、guardrails |
+| P4-EXP-002 | Shadow First       | 默认先 shadow，不直接 live                                                  |
+| P4-EXP-003 | Canary             | canary 只在低风险场景                                                       |
+| P4-EXP-004 | SafeBandit         | bandit 受风险、用户主权、deadline、疲劳、隐私约束                                     |
+| P4-EXP-005 | Kill Switch        | 每个实验可单独关闭                                                            |
+| P4-EXP-006 | Rollback           | live 实验有回滚策略                                                         |
+| P4-EXP-007 | Guardrail Metrics  | 负反馈、纠正率、疲劳、信任下降触发暂停                                                  |
+| P4-EXP-008 | 晋升门槛               | 晋升需样本、证据等级、负反馈、安全检查、必要时人审                                            |
+| P4-EXP-009 | 高风险禁探索             | D0、危机、疲劳 critical 等场景禁止探索                                            |
+| P4-EXP-010 | 用户 opt-out         | 用户可退出实验性策略                                                           |
+
+## 14.4 Simulation & Benchmark Lab
+
+| ID         | 范围                | 验收标准                                               |
+| ---------- | ----------------- | -------------------------------------------------- |
+| P4-SIM-001 | SparkleGoalBench  | 有固定 benchmark 套件，覆盖考试、项目、求职、多目标、长期回归               |
+| P4-SIM-002 | Trace Replay      | 能用历史 trace 回放新策略                                   |
+| P4-SIM-003 | Scenario DSL      | 能定义极端情景剧本                                          |
+| P4-SIM-004 | Synthetic Persona | 有规则/LLM 混合用户模拟，但不能作为唯一评估                           |
+| P4-SIM-005 | 回归门禁              | 重大 Policy/Aurora/Skill/DomainPack 改动前必须跑 benchmark |
+| P4-SIM-006 | 失败阻断              | 高风险场景失败阻止晋升                                        |
+| P4-SIM-007 | 成本延迟              | 模拟报告包含 latency/cost 估计                             |
+| P4-SIM-008 | 用户主权检查            | 模拟验证系统是否保留纠正与覆盖                                    |
+| P4-SIM-009 | 长期污染检查            | 模拟检查是否错误写入 long_term                               |
+| P4-SIM-010 | 多端路径              | 模拟覆盖 Flutter-Go-Python-EventBus 主路径                |
+
+## 14.5 Skill / DomainPack Marketplace
+
+| ID         | 范围            | 验收标准                                       |
+| ---------- | ------------- | ------------------------------------------ |
+| P4-MKT-001 | SkillCard v2  | Skill 有版本、证据等级、适用范围、策略协议、禁忌、隐私、治理          |
+| P4-MKT-002 | Pack Registry | DomainPack 有版本、来源、节点 schema、任务模板、风险规则、质量证据 |
+| P4-MKT-003 | 预览            | 用户采纳前可预览影响范围                               |
+| P4-MKT-004 | 用户采纳          | Pack/Skill 不能自动进入用户目标                      |
+| P4-MKT-005 | 可撤销           | 用户可撤销采纳                                    |
+| P4-MKT-006 | 影响可追踪         | Pack/Skill 每次影响任务/计划/资料都写 trace            |
+| P4-MKT-007 | 版本回滚          | Pack/Skill 更新可回滚                           |
+| P4-MKT-008 | 隐私安全          | Marketplace 资产不得包含个人隐私                     |
+| P4-MKT-009 | 质量评分          | 质量基于 outcome、负反馈、适用范围，而非下载量                |
+| P4-MKT-010 | 下架机制          | 负反馈、回归、隐私风险可自动下架或降级                        |
+
+## 14.6 Privacy-Preserving Community Intelligence
+
+| ID         | 范围                          | 验收标准                                                         |
+| ---------- | --------------------------- | ------------------------------------------------------------ |
+| P4-PCI-001 | CommunityAggregateSignal v2 | 聚合信号包含 cohort_scope、privacy、content、evidence、allowed_effects |
+| P4-PCI-002 | k-anonymity                 | 未达 k 阈值不得产生群体信号                                              |
+| P4-PCI-003 | 原始数据隔离                      | 不暴露原始用户轨迹、个人文件、伙伴解释                                          |
+| P4-PCI-004 | Soft Bias                   | 社群信号默认只能 soft bias，不能硬覆盖个人状态                                 |
+| P4-PCI-005 | 用户关闭                        | 用户可关闭社群智能                                                    |
+| P4-PCI-006 | 查看来源                        | 用户可查看洞察如何产生的高层解释                                             |
+| P4-PCI-007 | 资源质量账本                      | 社群资源有质量账本                                                    |
+| P4-PCI-008 | 隐私审计                        | 每次社群信号进入个人策略都有 privacy audit                                 |
+| P4-PCI-009 | 跨 cohort 限制                 | 不同课程/目标/群体信号不得错用                                             |
+| P4-PCI-010 | DP 预留                       | 未来可接 differential privacy，不破坏架构                              |
+
+## 14.7 Autonomous Quality Guard
+
+| ID        | 范围                  | 验收标准                                                                    |
+| --------- | ------------------- | ----------------------------------------------------------------------- |
+| P4-QG-001 | SystemHealthInsight | 系统能生成健康洞察                                                               |
+| P4-QG-002 | Spine Health        | 监控 Signal-to-State、Directive Application、Outcome Feedback、Orphan Signal |
+| P4-QG-003 | UX Health           | 监控纠正率、负反馈、receipt dismiss、source override                               |
+| P4-QG-004 | Learning Health     | 监控策略漂移、Skill 回归、信念过拟合                                                   |
+| P4-QG-005 | Source Health       | 监控资料污染、错用资料、引用缺失                                                        |
+| P4-QG-006 | Community Health    | 监控 opt-out、隐私阈值、资源争议                                                    |
+| P4-QG-007 | 自动刹车                | 异常时能暂停实验、降级策略、回滚 skill/source ranker                                    |
+| P4-QG-008 | Admin Dashboard     | 管理端可查看质量洞察、影响范围和建议动作                                                    |
+| P4-QG-009 | Release Gate        | 关键质量指标失败阻止发布                                                            |
+| P4-QG-010 | 事故复盘                | 每次自动刹车生成 incident trace                                                 |
+
+## 14.8 Research Mode
+
+| ID         | 范围                     | 验收标准                                                                |
+| ---------- | ---------------------- | ------------------------------------------------------------------- |
+| P4-RES-001 | ResearchDatasetBuilder | 可导出脱敏 episode 数据集                                                   |
+| P4-RES-002 | Protocol Registry      | 每个研究问题有 protocol、eligible data、exclusion rules、privacy requirements |
+| P4-RES-003 | Anonymization          | 用户 ID、原始资料、自由文本隐私正确脱敏                                               |
+| P4-RES-004 | Reproducibility        | 研究分析可复现，记录版本、策略、数据窗口                                                |
+| P4-RES-005 | Consent                | 研究用途符合用户同意边界                                                        |
+| P4-RES-006 | Exclusion              | 未确认长期洞察、伙伴私密观察、个人资料原文不得进入研究集                                        |
+| P4-RES-007 | Benchmark Report       | 可输出 GoalOSBench / SparkleGoalBench 报告                               |
+| P4-RES-008 | 人审边界                   | 高影响研究或公开结论需要人审                                                      |
+| P4-RES-009 | 不影响产品                  | Research Mode 不得绕过 live safety                                      |
+| P4-RES-010 | 科研价值                   | 能支持目标实现科学、Causal Control OS、ContextPlan、共调节等研究问题                    |
+
+---
+
+# 15. 架构、网关、AI 引擎与基础设施验收
+
+架构报告显示当前项目由 Flutter 移动端、Go 网关、Python AI 引擎、PostgreSQL/pgvector/AGE、Redis、MinIO/S3、Celery 与可观测性栈组成；核心流程包含 Flutter WebSocket → Go ChatOrchestrator → gRPC StreamChat → Python AgentService → UnifiedIntentRouter → ChatOrchestrator → LLM/工具 → 流式返回，同时有 Redis Streams 事件总线、DLQ、幂等重试、CQRS 与事务性发件箱。
+
+## 15.1 Flutter 移动端
+
+| ID      | 范围        | 验收标准                                 |
+| ------- | --------- | ------------------------------------ |
+| APP-001 | 状态管理      | Riverpod 状态与后端 ExperienceEnvelope 一致 |
+| APP-002 | WebSocket | 流式聊天、状态带、任务更新、干预推送稳定                 |
+| APP-003 | 本地库       | Isar 本地任务、消息、资料、trace summary 支持离线   |
+| APP-004 | 离线发件箱     | 离线操作恢复后幂等同步                          |
+| APP-005 | CRDT      | 图谱掌握度、本地任务状态冲突可合并                    |
+| APP-006 | UI 回归     | 关键卡片在不同屏幕尺寸、弱网、离线下可用                 |
+| APP-007 | 推送        | 推送点击能回到对应目标/任务/召回上下文                 |
+| APP-008 | 错误态       | LLM/RAG/网络失败时 UI 有温和降级               |
+| APP-009 | 性能        | 首屏、聊天流、图谱、任务卡渲染不卡顿                   |
+| APP-010 | 可观测       | 前端关键行为带 trace_id/turn_id 上报          |
+
+## 15.2 Go Gateway
+
+| ID     | 范围               | 验收标准                                |
+| ------ | ---------------- | ----------------------------------- |
+| GW-001 | 认证               | JWT、Apple ID、WebSocket ticket、黑名单稳定 |
+| GW-002 | WS 编排            | 流式消息、断线重连、消息去重、错误处理稳定               |
+| GW-003 | gRPC 客户端         | TLS/mTLS、重试、断路器、超时配置完整              |
+| GW-004 | 限流               | HTTP/WS/内部 API 有分布式限流               |
+| GW-005 | 反向代理             | /api/v1、/api/v2、社区、文件等代理一致          |
+| GW-006 | 文件服务             | 上传、下载、权限、MinIO 元数据一致                |
+| GW-007 | CQRS             | 写模型、读模型、投影、outbox、一致性检测有效           |
+| GW-008 | DLQ              | 失败事件进入 DLQ，可重放                      |
+| GW-009 | 健康检查             | /health、/ready、/live 反映真实依赖状态       |
+| GW-010 | Data consistency | 数据一致性检查和修复工具可靠                      |
+
+## 15.3 Python AI 引擎
+
+| ID     | 范围                  | 验收标准                         |
+| ------ | ------------------- | ---------------------------- |
+| AI-001 | ChatOrchestrator    | 上下文组装、路由、验证、执行、响应、持久化、观测主链清晰 |
+| AI-002 | UnifiedIntentRouter | 显式/规则/LLM 三层意图识别可解释          |
+| AI-003 | LLM Router          | 9 级模型路由按成本、延迟、能力、风险选择        |
+| AI-004 | 工具系统                | 工具调用有权限、超时、错误、trace          |
+| AI-005 | LangGraph           | 深度工作流只在需要时触发，有 fallback      |
+| AI-006 | Memory              | 长期记忆有作用域、证据、衰减、用户控制          |
+| AI-007 | Galaxy              | 图谱查询、更新、RAG 路由一致             |
+| AI-008 | Intervention        | JITAI 干预进入 Spine，不旁路         |
+| AI-009 | Feedback            | 用户反馈进入 Outcome/Learning，不只存表 |
+| AI-010 | 多智能体                | 多 agent 不暴露复杂内部机制，不破坏主链      |
+| AI-011 | 安全                  | PII 脱敏、提示注入检测、LLM 输出安全       |
+| AI-012 | 幂等                  | 重试不会重复写状态/任务/通知              |
+
+## 15.4 事件与异步系统
+
+| ID      | 范围            | 验收标准                                   |
+| ------- | ------------- | -------------------------------------- |
+| EVT-001 | Redis Streams | 消费组、重试、DLQ、幂等去重有效                      |
+| EVT-002 | 事件 schema     | 事件类型版本化，不破坏消费者                         |
+| EVT-003 | Celery        | L4 jobs、通知、解析、分析、聚合有明确队列优先级            |
+| EVT-004 | APScheduler   | 定时任务不会重复、漂移或阻塞关键路径                     |
+| EVT-005 | Outbox        | 事务性发件箱确保写入与事件最终一致                      |
+| EVT-006 | 回放            | 关键事件可重放并保持幂等                           |
+| EVT-007 | 背压            | 消费堆积时有降级、告警和限流                         |
+| EVT-008 | 死信处理          | DLQ 有人工/自动处理路径                         |
+| EVT-009 | 跨服务 trace     | 事件携带 trace_id、user_id、goal_id、event_id |
+| EVT-010 | 生产监控          | 事件延迟、失败率、重复率可观测                        |
+
+---
+
+# 16. 长期稳定性、恢复与极端场景验收
+
+深度审计曾指出长期风险包括 Redis TTL 过期后老用户回归状态丢失、trace 只保留短窗口、PolicyEffectEntry 截断、多目标命名空间缺失，以及考前 24 小时高频使用、零基础 3 天考试、弱网/Redis 宕机等极端场景。 这些必须纳入完全体验收。
+
+| ID       | 范围                  | 验收标准                                                         |
+| -------- | ------------------- | ------------------------------------------------------------ |
+| STAB-001 | Hot/Warm/Cold State | Redis 热状态、Postgres 温状态、长期冷状态分层明确                             |
+| STAB-002 | SpineSnapshot       | session_end/daily/goal_checkpoint/pre_ttl_expiry 生成 snapshot |
+| STAB-003 | Rehydration         | Redis 状态过期后可从 snapshot 恢复                                    |
+| STAB-004 | ReturnCaseFile      | 老用户回归生成可确认历史摘要                                               |
+| STAB-005 | TraceCompaction     | CausalTrace 有 recent/detail/summary/archive 分层               |
+| STAB-006 | 长期 trace            | 用户纠正、重大成就、策略失败、目标变化长期保留摘要                                    |
+| STAB-007 | Metrics buckets     | 指标使用日/周/月滚动窗口，不无限增长                                          |
+| STAB-008 | Growth pagination   | GrowthChronicle append-only + 分页，不全量加载                       |
+| STAB-009 | 多目标命名空间             | 状态 key 明确 user/goal/domain/scope                             |
+| STAB-010 | FatigueGuard        | 高频使用、深夜、正确率下降、重复求助触发疲劳保护                                     |
+| STAB-011 | Crisis Mode         | 零基础 + 极短 deadline 进入应急策略                                     |
+| STAB-012 | Degraded Mode       | Redis/LLM/RAG/MinIO 失败时有安全降级                                 |
+| STAB-013 | Recovery Mode       | 依赖恢复后可补偿、重放、恢复状态                                             |
+| STAB-014 | 弱网                  | 移动端断连恢复不丢任务/消息/trace                                         |
+| STAB-015 | 高并发                 | 高频用户、群体活动、考试前高峰不拖垮系统                                         |
+| STAB-016 | 存储增长                | 文件、trace、metrics、events、logs 有归档/清理策略                        |
+| STAB-017 | 成本守卫                | LLM、RAG、Aurora Core、Simulation 有预算和熔断                        |
+| STAB-018 | 性能 SLO              | 聊天首 token、任务生成、资料检索、图谱加载有 SLO                                |
+| STAB-019 | 蓝绿部署                | 生产蓝绿部署健康检查、冒烟、观察期、自动回滚有效                                     |
+| STAB-020 | 混沌演练                | Toxiproxy/混沌管理器定期验证网关、Redis、DB、LLM 降级                        |
+
+---
+
+# 17. 安全、隐私、合规、治理验收
+
+| ID      | 范围               | 验收标准                                              |
+| ------- | ---------------- | ------------------------------------------------- |
+| GOV-001 | 用户数据主权           | 用户能查看、导出、删除关键数据                                   |
+| GOV-002 | 资料权限             | 私人资料、社群资料、伙伴可见资料边界清晰                              |
+| GOV-003 | 记忆控制             | 用户能关闭长期记忆、删除洞察、拒绝某类建模                             |
+| GOV-004 | PII 脱敏           | 日志、研究集、LLM 输入按策略脱敏                                |
+| GOV-005 | Prompt Injection | 上传资料与用户输入有提示注入防护                                  |
+| GOV-006 | 年龄/合规            | 年龄门控、删除协议、法律保留、加密擦除可用                             |
+| GOV-007 | Kill Switch      | Aurora、RAG、实验、Skill、社群、召回、P4 研究均有 off/shadow/live |
+| GOV-008 | 三态治理             | off/shadow/live 行为一致且可观测                          |
+| GOV-009 | Rule Guard       | 治理规则进入 CI，不只是文档                                   |
+| GOV-010 | 高影响判断            | 高影响判断需确认、证据、纠正入口                                  |
+| GOV-011 | 社群隐私             | 伙伴信号、聚合信号、共享资料遵守边界                                |
+| GOV-012 | 研究合规             | Research Mode 不包含未授权个人数据                          |
+| GOV-013 | 数据最小化            | 不为方便建模而收集无关敏感数据                                   |
+| GOV-014 | 审计日志             | 管理员操作、策略发布、实验晋升、数据导出有审计                           |
+| GOV-015 | 用户透明             | 用户能理解 Sparkle 用了哪些数据帮助自己                          |
+| GOV-016 | 安全降级             | 安全异常时优先降级，而不是继续高风险输出                              |
+| GOV-017 | 误导防止             | 系统不能虚构资料来源、考试范围、证明有效性                             |
+| GOV-018 | 医疗/心理边界          | 情绪状态只作为学习支持，不做临床判断                                |
+| GOV-019 | 权限隔离             | Go 网关、Python 服务、MinIO、DB、Redis 权限最小化              |
+| GOV-020 | 发布审批             | 高风险策略、实验、Marketplace 资产有审批流程                      |
+
+---
+
+# 18. 可观测性、质量工程与发布验收
+
+项目架构报告显示系统已有 Prometheus、Loki、Tempo、Grafana、Alertmanager 等可观测性栈，以及蓝绿部署、Kubernetes 配置、混沌工程和健康检查能力。完全体验收必须证明这些不是“存在”，而是能支撑长期运行。
+
+| ID      | 范围                  | 验收标准                                                                   |
+| ------- | ------------------- | ---------------------------------------------------------------------- |
+| OBS-001 | Trace               | 每次用户关键路径有端到端 trace：Flutter → Go → Python → DB/Redis/LLM                |
+| OBS-002 | Logs                | 结构化日志包含 trace_id、user_id hash、goal_id、component、severity               |
+| OBS-003 | Metrics             | 业务指标、AI 指标、Spine 指标、系统指标全部入 Prometheus                                 |
+| OBS-004 | Dashboards          | Grafana 至少有 Product、Spine、Aurora、RAG、Learning、Infra、Cost、P4 dashboards |
+| OBS-005 | Alerts              | 关键错误、延迟、成本、降级、实验异常、隐私违规有告警                                             |
+| OBS-006 | Runbook             | 每类告警有运行手册                                                              |
+| OBS-007 | Error taxonomy      | 错误分 warning/degraded/critical，并进入 trace                                |
+| OBS-008 | No silent except    | 关键路径禁止吞 Exception                                                      |
+| OBS-009 | Fake vs Prod        | FakeRedis/测试替身与生产差异有专门测试                                               |
+| OBS-010 | E2E tests           | 不只单元测试，必须有端到端场景测试                                                      |
+| OBS-011 | Scenario regression | 重大改动跑 SparkleGoalBench                                                 |
+| OBS-012 | Load test           | 真实高峰流量、上传资料、群体事件、考试前使用有压力测试                                            |
+| OBS-013 | Cost test           | LLM/RAG/Aurora/P4 simulation 成本可预测                                     |
+| OBS-014 | Latency test        | 首屏、首 token、任务生成、RAG 检索、Aurora Core 有延迟预算                               |
+| OBS-015 | Release gates       | 指标不达标阻止发布                                                              |
+| OBS-016 | Rollback            | 所有策略、prompt、DomainPack、Skill、实验可回滚                                     |
+| OBS-017 | Canary              | 高风险改动先 canary/shadow                                                   |
+| OBS-018 | Data migration      | schema 迁移可回滚，可验证数据完整                                                   |
+| OBS-019 | Backup/restore      | DB/Redis/MinIO 备份恢复定期演练                                                |
+| OBS-020 | Chaos               | 混沌测试覆盖网关、DB、Redis、LLM、MinIO、网络                                         |
+
+---
+
+# 19. 真实用户体验验收问题
+
+这些不是代码测试，而是内测访谈必须回答“是”。
+
+| ID       | 用户问题                             | 完全体通过标准                   |
+| -------- | -------------------------------- | ------------------------- |
+| USER-001 | 你觉得 Sparkle 懂你的目标吗？              | 用户能举出具体例子                 |
+| USER-002 | 你觉得 Sparkle 的计划和普通 AI/自己排的有什么不同？ | 用户说出资料、状态、错因、时间影响了计划      |
+| USER-003 | 你做错或失败后，Sparkle 怎么处理？            | 用户感到它先归因、再调整              |
+| USER-004 | 你能看懂它为什么改变任务吗？                   | 用户能通过 receipt/timeline 理解 |
+| USER-005 | 它有没有承认过自己判断错了？                   | 用户能回忆具体时刻                 |
+| USER-006 | 资料上传后是否真的被用起来？                   | 用户能看到资料进入星图/任务/解释         |
+| USER-007 | 它有没有知道什么时候不用资料？                  | 用户能看到未调用原因                |
+| USER-008 | 你会不会觉得被过度分析？                     | 用户知道可关闭/纠正/删除             |
+| USER-009 | 你愿不愿意长期让它陪你推进目标？                 | 愿意，且理由不是“回答快”             |
+| USER-010 | 你愿意推荐给同学/朋友吗？                    | 推荐理由指向目标推进，而非聊天           |
+| USER-011 | 当你很焦虑或疲劳时，它是否更稳？                 | 不制造压力                     |
+| USER-012 | 老用户回归时，它是否还记得有用信息？               | 有连续性但不硬套                  |
+
+---
+
+# 20. 最终完全体总验收矩阵
+
+## 20.1 Critical 必须全部通过
+
+```text
+C1. Aurora-Spine 合流，所有关键决策经过 Unified Causal Runtime。
+C2. 所有关键模块接入生产主链，没有沉睡核心模块。
+C3. 9 类 Directive 全部可被消费、审计、回流。
+C4. 用户反馈、失败、纠正必然能改变后续状态或策略。
+C5. Source/RAG 由 ContextPlan 管理，不污染上下文。
+C6. 任务卡是执行协议，不是 todo。
+C7. Causal Timeline 能解释关键变化。
+C8. 长期状态有作用域、证据、衰减、用户确认。
+C9. P4 实验、反事实、Marketplace 不能直接绕过安全影响用户。
+C10. 生产环境有观测、降级、回滚、kill switch。
+```
+
+## 20.2 Core 通过标准
+
+```text
+Core 领域包括：
+目标建模
+计划
+任务
+资料
+图谱
+Aurora
+Spine
+Outcome
+Learning
+Skill
+Community
+Mobile UX
+Infrastructure
+
+每个领域 90% 以上条目达到 4 分及以上。
+```
+
+## 20.3 Experience 通过标准
+
+```text
+六个神性时刻全部 live；
+用户能感知 Sparkle 记得、会解释、会纠错、会管理资料、会阻止低收益、会用社群经验；
+关键体验不依赖 debug 页面或后台日志。
+```
+
+## 20.4 Research/P4 通过标准
+
+```text
+Evaluation-grade episode 数据完整；
+反事实评估可用但不越权；
+实验系统 shadow/canary/safe live 清晰；
+Simulation Lab 能阻止策略回归；
+Skill/DomainPack Marketplace 可预览、可采纳、可撤销；
+Community Intelligence 隐私安全；
+Quality Guard 能自动刹车。
+```
+
+---
+
+# 21. 给 code agent 的最终验收口径
+
+每次审查一个模块时，必须填下面这张表：
+
+```text
+模块名称：
+
+1. 用户价值：
+它让用户更接近哪个目标？
+
+2. 主链接入：
+RawEvent 是什么？
+ActionableSignal 是什么？
+StatePatch 是什么？
+PolicyDecision 是什么？
+Directive 是什么？
+Actuation 是什么？
+Outcome 是什么？
+CausalTrace 在哪里？
+
+3. 用户体验：
+用户在哪里看见？
+用户能否理解？
+用户能否纠正？
+用户能否关闭/撤销？
+
+4. 学习闭环：
+结果是否回流？
+是否有反证？
+是否会影响下次？
+是否可能沉淀为 Skill / StrategyBelief / GrowthChronicle？
+
+5. 稳定性：
+离线/弱网/Redis down/LLM fail 时怎样？
+是否有降级？
+是否有回滚？
+是否有 kill switch？
+
+6. P4 资格：
+是否生成 InterventionEpisode？
+是否可用于 Counterfactual Evaluation？
+是否可被 Simulation 覆盖？
+是否进入 QualityGuard 监控？
+是否有 evidence_grade？
+
+7. 验收结论：
+0-5 分；
+阻塞项；
+需要补的测试；
+需要补的 UI；
+需要补的 trace/metrics。
+```
+
+---
+
+# 22. 最终判断
+
+如果这份清单全部通过，Sparkle 才算真正达到完全体：
+
+> **它不是功能齐全，而是闭环真实；
+> 不是智能很多，而是每次智能都能改变行动；
+> 不是代码存在，而是用户感知；
+> 不是短期能用，而是长期稳定；
+> 不是会学习，而是能安全、可审计、可撤销地进化。**
+
+最终验收标准只有一句：
+
+> **用户把目标、资料、限制、失败和反馈交给 Sparkle 后，Sparkle 能持续把这些信息编译成更好的下一步，并且每一次重要改变都可解释、可纠正、可验证、可回流、可长期沉淀。**
