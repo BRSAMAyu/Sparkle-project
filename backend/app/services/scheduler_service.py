@@ -75,6 +75,9 @@ class SchedulerService:
         # OpenClaw 定时/条件执行轮询（每分钟）
         self.scheduler.add_job(self.run_execution_schedule_tick, 'interval', minutes=1)
 
+        # C-01-FIX: Outcome verification (每6小时检查过期待验证结果)
+        self.scheduler.add_job(self.run_outcome_verification, 'interval', hours=6)
+
         self.scheduler.start()
         logger.info("Scheduler started with smart push cycle, daily decay, capsule generation, and weekly preference inference decay jobs")
 
@@ -480,6 +483,34 @@ class SchedulerService:
 
         except Exception as e:
             logger.error(f"Error in weekly deep capsule generation: {e}", exc_info=True)
+
+    # ========== Outcome 验证任务 ==========
+
+    async def run_outcome_verification(self):
+        """C-01-FIX: 定期验证待处理结果，将过期的标记为 inconclusive。"""
+        logger.info("Starting outcome verification job...")
+        try:
+            from app.core.cache import cache_service
+            from app.signals.outcome_tracker import OutcomeTracker
+
+            redis = cache_service.redis
+            tracker = OutcomeTracker(redis)
+            total_resolved = 0
+
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(User).where(User.is_active))
+                users = result.scalars().all()
+
+                for user in users:
+                    try:
+                        resolved = await tracker.verify_pending(str(user.id))
+                        total_resolved += len(resolved)
+                    except Exception:
+                        logger.warning("Outcome verification failed for user {}", user.id, exc_info=True)
+
+            logger.info(f"Outcome verification completed: resolved={total_resolved} across {len(users)} users")
+        except Exception as e:
+            logger.error(f"Error in outcome verification job: {e}", exc_info=True)
 
 
 scheduler_service = SchedulerService()

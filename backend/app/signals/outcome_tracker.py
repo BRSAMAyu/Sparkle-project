@@ -15,6 +15,7 @@ Stage: Signal-to-Action Spine P1-4 Outcome Tracker
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -70,11 +71,12 @@ class OutcomeTracker:
         }
         key = f"{_PENDING_KEY}{outcome_id}"
         ttl_seconds = verification_window_hours * 3600
-        await self.redis.set(key, json.dumps(pending, ensure_ascii=False), ex=ttl_seconds)
 
-        # Also index by user for quick lookup.
+        # Store the pending outcome and user index together so scheduler/event
+        # consumers do not observe a dangling half-write.
         user_index_key = f"{_PENDING_KEY}user:{user_id}"
         pipe = self.redis.pipeline()
+        pipe.set(key, json.dumps(pending, ensure_ascii=False), ex=ttl_seconds)
         pipe.lpush(user_index_key, outcome_id)
         pipe.ltrim(user_index_key, 0, 49)
         pipe.expire(user_index_key, ttl_seconds)
@@ -138,6 +140,55 @@ class OutcomeTracker:
         )
         return record
 
+    async def record_actual_for_user(
+        self,
+        *,
+        user_id: str,
+        actual_outcome: dict[str, Any],
+        match_context: dict[str, Any] | None = None,
+        exclude_context: dict[str, Any] | None = None,
+    ) -> OutcomeRecord | None:
+        """
+        Resolve the newest unresolved pending outcome for a user.
+
+        This is the production-safe entry point for behavioral event consumers:
+        they should not know Redis key shapes or pending payload internals.
+        Optional context filters let a task event avoid resolving the directive
+        that was just created by the same event.
+        """
+        pending_items = await self.get_unresolved_for_user(user_id)
+        for pending in pending_items:
+            context = pending.get("context") or {}
+            if match_context and not _context_matches(context, match_context):
+                continue
+            if exclude_context and _context_matches(context, exclude_context):
+                continue
+            return await self.record_actual(
+                pending_outcome_id=pending["outcome_id"],
+                actual_outcome=actual_outcome,
+            )
+        return None
+
+    async def get_unresolved_for_user(self, user_id: str) -> list[dict[str, Any]]:
+        """Return newest-first unresolved pending outcome payloads for a user."""
+        user_index_key = f"{_PENDING_KEY}user:{user_id}"
+        pending_ids = await self.redis.lrange(user_index_key, 0, -1)
+        items: list[dict[str, Any]] = []
+
+        for pid in pending_ids:
+            pid_str = _decode_redis_value(pid)
+            raw = await self.redis.get(f"{_PENDING_KEY}{pid_str}")
+            if not raw:
+                continue
+            try:
+                pending = json.loads(_decode_redis_value(raw))
+            except (TypeError, json.JSONDecodeError):
+                logger.warning("Invalid pending outcome payload: {}", pid_str)
+                continue
+            if not pending.get("resolved"):
+                items.append(pending)
+        return items
+
     async def verify_pending(self, user_id: str) -> list[OutcomeRecord]:
         """
         Check for pending outcomes whose verification window has expired.
@@ -145,24 +196,13 @@ class OutcomeTracker:
 
         Called periodically by the scheduler.
         """
-        user_index_key = f"{_PENDING_KEY}user:{user_id}"
-        pending_ids = await self.redis.lrange(user_index_key, 0, -1)
         resolved: list[OutcomeRecord] = []
 
-        for pid in pending_ids:
-            pid_str = pid.decode() if isinstance(pid, bytes) else pid
-            key = f"{_PENDING_KEY}{pid_str}"
-            raw = await self.redis.get(key)
-            if not raw:
+        for pending in await self.get_unresolved_for_user(user_id):
+            if not _verification_window_expired(pending):
                 continue
-
-            pending = json.loads(raw)
-            if pending.get("resolved"):
-                continue
-
-            # Window expired → mark inconclusive
             record = await self.record_actual(
-                pending_outcome_id=pid_str,
+                pending_outcome_id=pending["outcome_id"],
                 actual_outcome={"timeout": True, "no_observable_change": True},
             )
             if record:
@@ -186,5 +226,33 @@ class OutcomeTracker:
 
 
 def _now_iso() -> str:
-    from datetime import UTC, datetime
     return datetime.now(UTC).isoformat()
+
+
+def _decode_redis_value(value: Any) -> str:
+    return value.decode() if isinstance(value, bytes) else str(value)
+
+
+def _context_matches(context: dict[str, Any], expected: dict[str, Any]) -> bool:
+    for key, value in expected.items():
+        if value is None:
+            continue
+        if str(context.get(key)) != str(value):
+            return False
+    return True
+
+
+def _verification_window_expired(pending: dict[str, Any]) -> bool:
+    registered_at = pending.get("registered_at")
+    if not registered_at:
+        return True
+    try:
+        registered = datetime.fromisoformat(str(registered_at).replace("Z", "+00:00"))
+    except ValueError:
+        logger.warning("Invalid pending outcome registered_at: {}", registered_at)
+        return True
+    if registered.tzinfo is None:
+        registered = registered.replace(tzinfo=UTC)
+
+    window_hours = int(pending.get("verification_window_hours") or _DEFAULT_TTL_HOURS)
+    return datetime.now(UTC) >= registered + timedelta(hours=window_hours)

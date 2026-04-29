@@ -90,6 +90,21 @@ class TaskEventConsumer:
                 await MetacognitionService(db, cache_service.redis, self.event_bus).refresh_snapshot(user_id)
                 await bridge.handle_group_task_completed(event)
 
+                # Resolve a previously issued Spine directive with this new behavior
+                # before on_task_completed potentially registers a fresh expectation.
+                try:
+                    await self._record_task_outcome(
+                        user_id=str(user_id),
+                        task_id=str(task_id),
+                        plan_id=event.get("plan_id"),
+                        completed=True,
+                        actual_minutes=actual,
+                        estimated_minutes=estimated,
+                        completion_rate=completion_rate,
+                    )
+                except Exception as outcome_exc:
+                    logger.warning("Outcome recording failed for task {}: {}", task_id, outcome_exc)
+
                 # Signal-to-Action Spine: task.completed → signal detection
                 try:
                     from app.signals.spine_orchestrator import SpineOrchestrator
@@ -142,9 +157,26 @@ class TaskEventConsumer:
     async def _handle_task_abandoned(self, event: dict):
         """处理任务放弃。"""
         try:
+            user_id = event.get("user_id")
+            task_id = event.get("task_id")
             async with AsyncSessionLocal() as db:
                 collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 await collector.handle_task_abandoned_event(event)
+
+            # C-01-FIX: Record actual outcome (abandoned) for pending Spine directives
+            if user_id:
+                try:
+                    await self._record_task_outcome(
+                        user_id=str(user_id),
+                        task_id=str(task_id) if task_id else None,
+                        plan_id=event.get("plan_id"),
+                        completed=False,
+                        actual_minutes=event.get("actual_minutes", 0),
+                        estimated_minutes=event.get("estimated_minutes", 0),
+                        completion_rate=0.0,
+                    )
+                except Exception as outcome_exc:
+                    logger.warning("Outcome recording failed for abandoned task {}: {}", task_id, outcome_exc)
 
         except Exception as e:
             logger.error(f"Failed to handle task.abandoned: {e}")
@@ -217,6 +249,40 @@ class TaskEventConsumer:
                 await collector.handle_behavior_pattern_event(event)
         except Exception as e:
             logger.error(f"Failed to handle behavior.pattern.updated: {e}")
+
+    async def _record_task_outcome(
+        self,
+        *,
+        user_id: str,
+        task_id: str | None,
+        plan_id: str | None,
+        completed: bool,
+        actual_minutes: int | float,
+        estimated_minutes: int | float,
+        completion_rate: float,
+    ) -> None:
+        """Record actual outcome for the most recent pending Spine directive."""
+        from app.signals.outcome_tracker import OutcomeTracker
+
+        actual = {
+            "task_id": task_id,
+            "plan_id": plan_id,
+            "completed": completed,
+            "started": True,
+            "actual_duration_min": actual_minutes,
+            "estimated_duration_min": estimated_minutes,
+            "completion_rate": completion_rate,
+        }
+        if not completed:
+            actual["user_responded"] = False
+            actual["behavior_changed"] = False
+
+        tracker = OutcomeTracker(cache_service.redis)
+        await tracker.record_actual_for_user(
+            user_id=user_id,
+            actual_outcome=actual,
+            exclude_context={"task_id": task_id},
+        )
 
     def stop(self):
         """停止消费者"""

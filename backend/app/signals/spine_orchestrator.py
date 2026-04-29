@@ -33,6 +33,7 @@ from app.signals.community_loops import CommunityLoopManager
 from app.signals.predicted_reply_options import SpineReplyOptionEngine
 from app.signals.aurora_wake import AuroraWakeJudge
 from app.signals.outcome_recorder import OutcomeRecorder
+from app.signals.outcome_tracker import OutcomeTracker
 from app.signals.spine_metrics import SpineMetricsCollector
 from app.signals.exam_sprint_policy import ExamSprintPolicyService
 from app.signals.skill_lifecycle import SkillLifecycleManager
@@ -51,6 +52,7 @@ from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.signals.types import (
+    ActionableStatePacket,
     ActionableSignal,
     CausalTrace,
     CommunityDirective,
@@ -107,6 +109,7 @@ class SpineOrchestrator:
         self.signal_ranker = SignalRanker()
         self.state_register = StateRegister(redis_client)
         self.outcome_recorder = OutcomeRecorder(redis_client)
+        self.outcome_tracker = OutcomeTracker(redis_client)
         self.metrics = SpineMetricsCollector(redis_client)
         self.policy_engine = PolicyEngine(reply_engine=self.reply_engine)
         self.exam_sprint_policy = ExamSprintPolicyService()
@@ -356,6 +359,25 @@ class SpineOrchestrator:
             "user_feedback",
         ]
         await self.trace_store._save_trace(trace)
+
+        # Step 6a: Register expected outcome for verification loop
+        try:
+            expected_outcome_type = "task_started_and_completed" if decision.primary_strategy != "timeout_warning" else "behavioral_change"
+            await self.outcome_tracker.register_expected(
+                user_id=user_id,
+                directive_type=decision.primary_strategy,
+                trace=trace,
+                expected_outcome=expected_outcome_type,
+                verification_window_hours=48,
+                context={
+                    "signal_claim": signal.claim,
+                    "signal_state_key": signal.state_key,
+                    "plan_id": plan_id,
+                    "task_id": task_id,
+                },
+            )
+        except Exception:
+            logger.warning("on_task_completed: outcome_tracker.register_expected failed", exc_info=True)
 
         # Step 6b: Check Aurora wake eligibility for high-risk signals
         if decision.risk_level in ("critical", "high"):

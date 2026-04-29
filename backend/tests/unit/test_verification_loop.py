@@ -84,7 +84,7 @@ async def test_register_expected_stores_pending() -> None:
         verification_window_hours=24,
     )
     assert outcome_id.startswith("po")
-    redis.set.assert_called_once()
+    pipe.set.assert_called_once()
     pipe.lpush.assert_called_once_with("spine:pending_outcomes:user:u1", outcome_id)
     pipe.ltrim.assert_called_once_with("spine:pending_outcomes:user:u1", 0, 49)
     pipe.expire.assert_called_once_with("spine:pending_outcomes:user:u1", 24 * 3600)
@@ -156,7 +156,7 @@ async def test_verify_pending_marks_unresolved_as_timeout() -> None:
         "trace_id": "trace_test_001",
         "expected_outcome": "user_response",
         "context": {"reason": "task_not_started"},
-        "registered_at": "2026-01-01T00:00:00Z",
+        "registered_at": "2020-01-01T00:00:00Z",
         "verification_window_hours": 48,
         "resolved": False,
     }
@@ -174,6 +174,35 @@ async def test_verify_pending_marks_unresolved_as_timeout() -> None:
         pending_outcome_id="po_timeout",
         actual_outcome={"timeout": True, "no_observable_change": True},
     )
+
+
+@pytest.mark.asyncio
+async def test_verify_pending_skips_active_verification_window() -> None:
+    from datetime import UTC, datetime
+
+    from app.signals.outcome_tracker import OutcomeTracker
+
+    pending = {
+        "outcome_id": "po_active",
+        "user_id": "u1",
+        "directive_type": "push_nudge",
+        "trace_id": "trace_test_001",
+        "expected_outcome": "user_response",
+        "context": {"reason": "task_not_started"},
+        "registered_at": datetime.now(UTC).isoformat(),
+        "verification_window_hours": 48,
+        "resolved": False,
+    }
+    redis = AsyncMock()
+    redis.lrange = AsyncMock(return_value=[b"po_active"])
+    redis.get = AsyncMock(return_value=json.dumps(pending))
+
+    tracker = OutcomeTracker(redis)
+    with patch.object(tracker, "record_actual", new_callable=AsyncMock) as mock_record:
+        resolved = await tracker.verify_pending("u1")
+
+    assert resolved == []
+    mock_record.assert_not_awaited()
 
 
 @pytest.mark.asyncio
