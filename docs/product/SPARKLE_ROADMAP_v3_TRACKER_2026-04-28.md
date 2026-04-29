@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 生产基础设施硬化完成, Phase 1 后端核心完成, Phase 2 已有基础设施完备
+## 当前状态: Phase 0 生产基础设施硬化完成, Phase 1 后端核心与审查债务已收口, Card Protocol + Flutter 侧待推进, Phase 2 已有基础设施完备
 
 ---
 
@@ -68,7 +68,7 @@
 | T1.1.3 push_scheduler.py 新建 | ✅ 完成 | main | PushScheduler + recall queue + scheduler 集成 |
 | T1.1.4 JPush 内容增强 | ⬜ 未开始 | — | |
 | T1.1.5 Flutter 推送跳转 | ⬜ 未开始 | — | |
-| T1.1.6 test_behavior_driven_push.py | ✅ 完成 | main | 12 tests passed |
+| T1.1.6 test_behavior_driven_push.py | ✅ 完成 | main | 13 tests passed, 含 invalid recall queue key 防崩溃覆盖 |
 
 ### 1.2 Breakpoint #6: Structured CognitiveAdjustments
 | 任务 | 状态 | 负责人 | 备注 |
@@ -88,14 +88,14 @@
 | T1.3.3 record_actual_outcome | ✅ 完成 | main | 触发 OutcomeRecorder 归因 |
 | T1.3.4 attribution.py | ✅ 完成 | main | 已有 OutcomeRecorder._attribute (4 规则) |
 | T1.3.5 learning_guard.py | ✅ 完成 | main | should_learn/retract/verdict 三层守卫 |
-| T1.3.6 test_verification_loop.py | ✅ 完成 | main | 16 tests passed |
+| T1.3.6 test_verification_loop.py | ✅ 完成 | main | 21 tests passed, 含 pending verification、policy effect、learning guard 缺口覆盖 |
 
 ### 1.4 Outcome 回流闭环
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T1.4.1 9 类 directive outcome | ✅ 完成 | main | OutcomeRecorder 已支持 4 类归因规则 |
 | T1.4.2 统一 outcome 写入 CausalTrace | ✅ 完成 | main | OutcomeTracker 链接 pending→trace→outcome |
-| T1.4.3 Outcome Grafana dashboard | ⬜ 未开始 | — | |
+| T1.4.3 Outcome Grafana dashboard | ✅ 完成 | main | monitoring/grafana-dashboards/sparkle-spine-outcome.json, provisioning 已挂载 |
 
 ### 1.5 Card Protocol 迁移
 | 任务 | 状态 | 负责人 | 备注 |
@@ -127,11 +127,11 @@
 | 日期 | Phase | 审查类型 | 发现问题 | 修复状态 |
 |------|-------|----------|----------|----------|
 | 2026-04-29 | Phase 1 | Opus Audit | outcome_recorder.py 重复方法定义, push_scheduler await sync method | ✅ 全部修复 |
-| 2026-04-29 | Phase 1 | Claude Review | outcome_recorder._attribute() 死代码残留 (lines 229-246 重复 harmful/needs_confirmation 检查) | ⬜ 待修 |
-| 2026-04-29 | Phase 1 | Claude Review | outcome_tracker 非原子 Redis 操作 (lpush+ltrim+expire 未用 pipeline) | ⬜ 待修 |
-| 2026-04-29 | Phase 1 | Claude Review | push_scheduler UUID(user_id) 缺少 try-except, 格式异常会中断 queue 处理 | ⬜ 待修 |
-| 2026-04-29 | Phase 1 | Claude Review | learning_guard.should_learn() lines 56-57 冗余分支 | ⬜ 待修 |
-| 2026-04-29 | Phase 1 | Claude Review | 5 个方法缺单元测试 (build_self_correction_receipt, verify_pending, get_guard_verdict 等) | ⬜ 待补 |
+| 2026-04-29 | Phase 1 | Claude Review | outcome_recorder._attribute() 死代码残留 (lines 229-246 重复 harmful/needs_confirmation 检查) | ✅ 已修: 死代码已删除, REVIEW 残留已移除 |
+| 2026-04-29 | Phase 1 | Claude Review | outcome_tracker 非原子 Redis 操作 (lpush+ltrim+expire 未用 pipeline) | ✅ 已修: register_expected 用户索引改为 pipeline |
+| 2026-04-29 | Phase 1 | Claude Review | push_scheduler UUID(user_id) 缺少 try-except, 格式异常会中断 queue 处理 | ✅ 已修: ValueError skip+delete bad key, 单测覆盖 |
+| 2026-04-29 | Phase 1 | Claude Review | learning_guard.should_learn() lines 56-57 冗余分支 | ✅ 已修: 冗余分支已删除, REVIEW 残留已移除 |
+| 2026-04-29 | Phase 1 | Claude Review | 5 个方法缺单元测试 (build_self_correction_receipt, verify_pending, get_guard_verdict 等) | ✅ 已补: verification_loop 21 tests, behavior_push 13 tests |
 
 ---
 
@@ -143,3 +143,5 @@
 | 2026-04-29 | a9ec2ac3 | Phase 1 | Breakpoints #5/#6/#7 — structured adjustments, behavior-driven push, verification loop |
 | 2026-04-29 | e1812b92 | Phase 1 | Prometheus outcome metrics + Grafana outcome dashboard |
 | 2026-04-29 | 93b72fd4 | Phase 1 | Audit fixes — dedup outcome_recorder, async record_sent |
+| 2026-04-29 | cec517ac | Phase 1 | Claude Review handoff + code quality annotations |
+| 2026-04-29 | 2428d022 | Phase 1 | Review follow-ups — Redis pipeline, REVIEW cleanup, missing tests |
