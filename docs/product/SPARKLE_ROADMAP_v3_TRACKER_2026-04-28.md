@@ -552,7 +552,7 @@
 | DF-7 | 低 | 执行引擎上下文缺少 ux/community/skill directive | execution_engine.py | ✅ 已修 (同 DF-2/3) |
 | DF-8 | 低 | cognitive_adjustments 仅为文本注入无结构化强制 | dual_core_router | 🟡 设计层面 |
 | DF-9 | 低 | 日历 shadow 模式静默抑制无遥测 | prompts.py | ✅ 已修 (05e9c5e6) |
-| DF-10 | 低 | State Aggregator 成就摘要仅来自DB不含事件 | state_aggregator | 🔴 待修 |
+| DF-10 | 低 | State Aggregator 成就摘要仅来自DB不含事件 | state_aggregator | ✅ 已修 (30c31c3a) |
 | DF-11 | 低 | CommunitySignalBridge 事件不触发上下文刷新 | 事件→直接查询 | 🟡 架构选择 |
 | DF-12 | 极低 | spine_retrieval_directive 注入两次 | session_state + orchestrator | ✅ 误报: 仅注入一次 |
 
