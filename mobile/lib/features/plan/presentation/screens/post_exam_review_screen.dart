@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -46,6 +47,11 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
     return subject.isEmpty ? '考试复盘' : '考试复盘 · $subject';
   }
 
+  String _titleL10n(AppLocalizations l10n) {
+    final subject = widget.subjectName.trim();
+    return subject.isEmpty ? l10n.planExamReviewNoSubject : l10n.planExamReviewSubject(subject);
+  }
+
   @override
   void dispose() {
     _resultDescriptionController.dispose();
@@ -64,7 +70,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: Text(_title),
+          title: Text(_titleL10n(context.l10n)),
         ),
         child: Stack(
           children: [
@@ -189,7 +195,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _title,
+                    _titleL10n(context.l10n),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: DS.spacing4),

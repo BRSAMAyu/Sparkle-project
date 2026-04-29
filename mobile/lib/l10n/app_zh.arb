@@ -10798,5 +10798,25 @@
     }
   },
   "planViewRestore": "恢复",
-  "planViewUncategorized": "未分类"
+  "planViewUncategorized": "未分类",
+  "planSprintWeakestChaptersLabel": "最怕哪几章？",
+  "planSprintRealisticTimeHint": "用\u201C你大概率能坚持\u201D的时间，不用理想状态。",
+  "planSprintFirstDayFocus": "第一天先做什么",
+  "planPortfolioLoadFailed": "学习档案加载失败：{message}",
+  "@planPortfolioLoadFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "planSprintSevenDayResults": "7 天备考成果",
+  "planSprintSevenDayResultsFor": "{subject} 7 天备考成果",
+  "@planSprintSevenDayResultsFor": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  }
 }

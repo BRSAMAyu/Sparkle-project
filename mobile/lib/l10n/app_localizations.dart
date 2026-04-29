@@ -43746,8 +43746,8 @@ abstract class AppLocalizations {
   /// No description provided for @planPortfolioLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'学习档案加载失败'**
-  String get planPortfolioLoadFailed;
+  /// **'学习档案加载失败：{message}'**
+  String planPortfolioLoadFailed(String message);
 
   /// No description provided for @planMyArchive.
   ///
@@ -47091,6 +47091,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未分类'**
   String get planViewUncategorized;
+
+  /// No description provided for @planSprintWeakestChaptersLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'最怕哪几章？'**
+  String get planSprintWeakestChaptersLabel;
+
+  /// No description provided for @planSprintRealisticTimeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'用“你大概率能坚持”的时间，不用理想状态。'**
+  String get planSprintRealisticTimeHint;
+
+  /// No description provided for @planSprintFirstDayFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一天先做什么'**
+  String get planSprintFirstDayFocus;
+
+  /// No description provided for @planSprintSevenDayResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'7 天备考成果'**
+  String get planSprintSevenDayResults;
+
+  /// No description provided for @planSprintSevenDayResultsFor.
+  ///
+  /// In zh, this message translates to:
+  /// **'{subject} 7 天备考成果'**
+  String planSprintSevenDayResultsFor(String subject);
 }
 
 class _AppLocalizationsDelegate

@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,6 +60,11 @@ class _SprintCompletionScreenState
   String get _subjectLabel {
     final subject = widget.subjectName.trim();
     return subject.isEmpty ? '7 天备考成果' : '$subject 7 天备考成果';
+  }
+
+  String _subjectLabelL10n(AppLocalizations l10n) {
+    final subject = widget.subjectName.trim();
+    return subject.isEmpty ? l10n.planSprintSevenDayResults : l10n.planSprintSevenDayResultsFor(subject);
   }
 
   @override
@@ -236,7 +242,7 @@ class _SprintCompletionScreenState
                     _CompletionUnavailable(onRetry: _loadSummary)
                   else
                     _CompletionContent(
-                      subjectLabel: _subjectLabel,
+                      subjectLabel: _subjectLabelL10n(context.l10n),
                       summary: summary,
                       shareBoundaryKey: _shareBoundaryKey,
                       isSharing: _isSharing,

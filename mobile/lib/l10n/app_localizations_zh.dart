@@ -23915,7 +23915,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planShareCard => '分享卡片';
 
   @override
-  String get planPortfolioLoadFailed => '学习档案加载失败';
+  String planPortfolioLoadFailed(String message) {
+    return '学习档案加载失败：$message';
+  }
 
   @override
   String get planMyArchive => '我的学习档案';
@@ -25836,4 +25838,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planViewUncategorized => '未分类';
+
+  @override
+  String get planSprintWeakestChaptersLabel => '最怕哪几章？';
+
+  @override
+  String get planSprintRealisticTimeHint => '用“你大概率能坚持”的时间，不用理想状态。';
+
+  @override
+  String get planSprintFirstDayFocus => '第一天先做什么';
+
+  @override
+  String get planSprintSevenDayResults => '7 天备考成果';
+
+  @override
+  String planSprintSevenDayResultsFor(String subject) {
+    return '$subject 7 天备考成果';
+  }
 }

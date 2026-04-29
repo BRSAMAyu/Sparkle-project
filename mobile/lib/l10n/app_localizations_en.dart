@@ -24962,7 +24962,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planShareCard => 'Share Card';
 
   @override
-  String get planPortfolioLoadFailed => 'Failed to load learning archive';
+  String planPortfolioLoadFailed(String message) {
+    return 'Failed to load learning profile: $message';
+  }
 
   @override
   String get planMyArchive => 'My Learning Archive';
@@ -26956,4 +26958,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planViewUncategorized => 'Uncategorized';
+
+  @override
+  String get planSprintWeakestChaptersLabel =>
+      'Which chapters scare you the most?';
+
+  @override
+  String get planSprintRealisticTimeHint =>
+      'Use the time you can realistically sustain, not ideal.';
+
+  @override
+  String get planSprintFirstDayFocus => 'What to do on Day 1';
+
+  @override
+  String get planSprintSevenDayResults => '7-Day Sprint Results';
+
+  @override
+  String planSprintSevenDayResultsFor(String subject) {
+    return '$subject 7-Day Sprint Results';
+  }
 }

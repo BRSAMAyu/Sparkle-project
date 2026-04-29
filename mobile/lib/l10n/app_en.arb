@@ -10798,5 +10798,25 @@
     }
   },
   "planViewRestore": "Restore",
-  "planViewUncategorized": "Uncategorized"
+  "planViewUncategorized": "Uncategorized",
+  "planSprintWeakestChaptersLabel": "Which chapters scare you the most?",
+  "planSprintRealisticTimeHint": "Use the time you can realistically sustain, not ideal.",
+  "planSprintFirstDayFocus": "What to do on Day 1",
+  "planPortfolioLoadFailed": "Failed to load learning profile: {message}",
+  "@planPortfolioLoadFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "planSprintSevenDayResults": "7-Day Sprint Results",
+  "planSprintSevenDayResultsFor": "{subject} 7-Day Sprint Results",
+  "@planSprintSevenDayResultsFor": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  }
 }

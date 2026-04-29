@@ -84,7 +84,7 @@ class _LearningPortfolioScreenState
               ..hideCurrentSnackBar()
               ..showSnackBar(
                 SparkleSnackBar.error(
-                  context.l10n.planPortfolioLoadFailed,
+                  context.l10n.planPortfolioLoadFailed(nextMessage),
                   onRetry: () => ref.invalidate(learningPortfolioProvider),
                   retryLabel: context.l10n.planPortfolioRetry,
                 ),
@@ -577,7 +577,7 @@ class _PortfolioErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '学习档案加载失败：$message',
+              context.l10n.planPortfolioLoadFailed(message),
               textAlign: TextAlign.center,
               style: DS.bodyMedium.copyWith(color: DS.textSecondary),
             ),

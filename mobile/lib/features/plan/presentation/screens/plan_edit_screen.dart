@@ -31,7 +31,7 @@ class PlanEditScreen extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(DS.spacing24),
             child: Text(
-              '计划加载失败：$error',
+              context.l10n.planLoadFailedError(error.toString()),
               style: DS.bodyMedium.copyWith(color: DS.textSecondary),
               textAlign: TextAlign.center,
             ),

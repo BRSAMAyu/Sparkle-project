@@ -284,7 +284,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                     ),
                     const SizedBox(height: DS.spacing8),
                     Text(
-                      '最怕哪几章？',
+                      context.l10n.planSprintWeakestChaptersLabel,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: DS.spacing8),
@@ -335,7 +335,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                       },
                     ),
                     Text(
-                      '用“你大概率能坚持”的时间，不用理想状态。',
+                      context.l10n.planSprintRealisticTimeHint,
                       style: Theme.of(context)
                           .textTheme
                           .bodySmall
@@ -604,7 +604,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '第一天先做什么',
+                      context.l10n.planSprintFirstDayFocus,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: DS.spacing8),
