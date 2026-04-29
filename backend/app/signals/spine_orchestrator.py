@@ -187,12 +187,15 @@ class SpineOrchestrator:
         await self.state_register.upsert_from_signal(user_id, signal)
         await self.metrics.record_signal_entered_state()
 
-        # Step 3: PolicyEngine (with shadow learning from recent outcomes)
+        # Step 3: PolicyEngine (with shadow learning from recent outcomes + Aurora feedback)
         consecutive = await self.timeout_detector._get_consecutive_timeouts(user_id)
         recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+
+        aurora_decisions = await self.consume_aurora_decisions(user_id=user_id, limit=3)
+
         result = await self.policy_engine.evaluate(
             signal,
-            context={"consecutive": consecutive},
+            context={"consecutive": consecutive, "aurora_decisions": aurora_decisions},
             recent_policy_effects=recent_effects,
         )
         await self.metrics.record_policy_evaluated(matched=result is not None)
@@ -1300,10 +1303,15 @@ class SpineOrchestrator:
             self._load_strategy_beliefs(user_id),
             fallback=[],
         )
+        aurora_decisions = await resilient_redis_call(
+            "spine_pipeline",
+            self.consume_aurora_decisions(user_id=user_id, limit=3),
+            fallback=[],
+        )
 
         result = await self.policy_engine.evaluate(
             signal,
-            context={"source": "pipeline"},
+            context={"source": "pipeline", "aurora_decisions": aurora_decisions},
             recent_policy_effects=recent_effects,
             strategy_beliefs=strategy_beliefs,
         )

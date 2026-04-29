@@ -525,6 +525,46 @@ class PolicyEngine:
         return rule
 
     @staticmethod
+    def _apply_aurora_decision_bias(
+        rule: dict[str, Any],
+        context: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Inject recent Aurora decisions as reversible soft policy bias."""
+        if not context:
+            return rule
+
+        decisions = context.get("aurora_decisions")
+        if not isinstance(decisions, list) or not decisions:
+            return rule
+
+        latest = decisions[-1]
+        if not isinstance(latest, dict):
+            return rule
+
+        action = str(latest.get("action") or "").strip()
+        surface = str(latest.get("surface") or "").strip()
+        if not action and not surface:
+            return rule
+
+        adjusted = dict(rule)
+        soft_biases = dict(rule.get("soft_biases", {}))
+        if action:
+            soft_biases["aurora_recent_action"] = action
+        if surface:
+            soft_biases["aurora_recent_surface"] = surface
+
+        if action in {"reduce_load", "pause", "defer", "protect_user"} or "fatigue" in surface:
+            soft_biases["tone"] = "low_pressure"
+            soft_biases["nudge_style"] = "minimal"
+            adjusted["reasoning_template"] = (
+                str(rule.get("reasoning_template", ""))
+                + " Aurora 最近判断需要降低负荷，因此本轮只做软性收敛。"
+            )
+
+        adjusted["soft_biases"] = soft_biases
+        return adjusted
+
+    @staticmethod
     def _apply_quality_cross_check(
         rule: dict[str, Any],
         context: dict[str, Any] | None,
@@ -613,6 +653,10 @@ class PolicyEngine:
 
         # v2.4: Bayesian strategy belief bias
         rule = self._apply_belief_bias(rule, strategy_beliefs)
+
+        # Aurora → Spine feedback: Aurora decisions may soften tone/load, but
+        # never bypass policy arbitration or mutate hard constraints directly.
+        rule = self._apply_aurora_decision_bias(rule, context)
 
         # P0-1b: Achievement quality cross-check (3-tier rules for momentum_high)
         if signal.state_key == "growth_momentum" and signal.claim == "momentum_high":
