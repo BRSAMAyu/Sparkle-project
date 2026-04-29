@@ -522,7 +522,7 @@
 | ID | 严重度 | 问题 | 文件 | 状态 |
 |----|--------|------|------|------|
 | G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
-| F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | 🔴 待修 |
+| F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已修 (a6c81d07) |
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | 🔴 待修 |
 | F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🔴 待修 |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
