@@ -380,7 +380,7 @@ class SpineOrchestrator:
             trace.aurora_energy_level = energy_decision.current_level
             trace.aurora_upgrade_reason = energy_decision.upgrade_reason
         except Exception:
-            logger.debug("on_task_completed: energy decision failed", exc_info=True)
+            logger.warning("on_task_completed: energy decision failed for user={}", user_id, exc_info=True)
 
         await self.trace_store._save_trace(trace)
 
@@ -2187,7 +2187,7 @@ class SpineOrchestrator:
             engine = L2InterventionEngine(self.redis)
             return await engine.check_escalation(user_id, active_states)
         except Exception as exc:
-            logger.debug("L2 escalation check failed for user={}: {}", user_id, exc)
+            logger.warning("L2 escalation check failed for user={}: {}", user_id, exc)
             return None
 
     # ── Layer 6: ResponseDirective ─────────────────────────────────────

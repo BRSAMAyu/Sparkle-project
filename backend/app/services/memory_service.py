@@ -390,7 +390,7 @@ class MemoryService:
                 MemoryGoal.user_id == user_id,
                 MemoryGoal.id == goal_id,
                 MemoryGoal.deleted_at.is_(None),
-            )
+            ).with_for_update()
         )
         record = result.scalar_one_or_none()
         if record is None:

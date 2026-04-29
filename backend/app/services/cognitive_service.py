@@ -9,7 +9,7 @@ import asyncio
 import inspect
 import json
 import threading
-from datetime import timezone, datetime
+from datetime import timedelta, timezone, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -35,7 +35,8 @@ def _utcnow() -> datetime:
 
 
 _VECTOR_RUNTIME_ENABLED = True
-_VECTOR_RUNTIME_DISABLED_USERS: set[str] = set()
+_VECTOR_RUNTIME_DISABLED_USERS: dict[str, datetime] = {}  # user_key → disabled_at timestamp
+_VECTOR_RUNTIME_DISABLED_TTL = timedelta(hours=1)  # Auto-re-enable after 1h
 _VECTOR_RUNTIME_STATE_LOCK = threading.Lock()
 
 
@@ -72,15 +73,26 @@ class CognitiveService:
         with _VECTOR_RUNTIME_STATE_LOCK:
             if not _VECTOR_RUNTIME_ENABLED:
                 return False
-            return CognitiveService._normalize_vector_runtime_user_key(user_id) not in _VECTOR_RUNTIME_DISABLED_USERS
+            user_key = CognitiveService._normalize_vector_runtime_user_key(user_id)
+            if user_key not in _VECTOR_RUNTIME_DISABLED_USERS:
+                return True
+            # Check TTL expiry — re-enable if old enough
+            disabled_at = _VECTOR_RUNTIME_DISABLED_USERS[user_key]
+            if _utcnow() - disabled_at > _VECTOR_RUNTIME_DISABLED_TTL:
+                del _VECTOR_RUNTIME_DISABLED_USERS[user_key]
+                return True
+            return False
 
     @staticmethod
     def _disable_vector_runtime_for_user(user_id: UUID | str | None, reason: str) -> None:
         user_key = CognitiveService._normalize_vector_runtime_user_key(user_id)
         with _VECTOR_RUNTIME_STATE_LOCK:
-            if user_key in _VECTOR_RUNTIME_DISABLED_USERS:
-                return
-            _VECTOR_RUNTIME_DISABLED_USERS.add(user_key)
+            _VECTOR_RUNTIME_DISABLED_USERS[user_key] = _utcnow()
+            # Evict oldest entries if set grows too large
+            if len(_VECTOR_RUNTIME_DISABLED_USERS) > 10000:
+                sorted_keys = sorted(_VECTOR_RUNTIME_DISABLED_USERS, key=_VECTOR_RUNTIME_DISABLED_USERS.get)  # type: ignore[arg-type]
+                for old_key in sorted_keys[: len(sorted_keys) - 5000]:
+                    del _VECTOR_RUNTIME_DISABLED_USERS[old_key]
         logger.warning("Disabling cognitive vector runtime fallback for user {}: {}", user_key, reason)
 
     def _sanitize_content(self, content: str) -> str:
