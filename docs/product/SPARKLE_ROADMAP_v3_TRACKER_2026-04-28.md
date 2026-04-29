@@ -233,7 +233,7 @@
 | 2026-04-29 | Phase 2 | Codex Self Review | H-04 Context Receipt Bar 只有查看依据和 timeline, 用户发现资料不合适时无法即时纠偏 | ✅ 已修: 详情 sheet 增加 3 个行动 chip 并续发纠偏 prompt; 窄范围 analyzer passed, Flutter test 受既有全包编译错误阻塞 |
 | 2026-04-29 | Phase 3 | Claude+Codex | M-02 dual_core_router 不消费 Spine StateRegister, Phase 3 前置缺失 | ✅ 已修: RoutingEngine 读取 StateRegister, Router 消费 fatigue/cognitive_load/execution/knowledge 状态并进入 mode/debug/strategy; 38 tests passed |
 | 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ✅ 均已修: D-01 连续dismiss→fatigue signal; D-02 shop.purchase_completed+achievement.unlocked→reward_engagement signal; 10 tests passed |
-| 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1** ✅: OfflineChatMessage 模型已接入 — 断连消息持久化Isar + 重连回补 + ACK标记 + 24h清理. **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 ⬜ | 见 R3 报告
+| 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1** ✅: OfflineChatMessage 已接入. **O-04 P2** ✅: Focus自动同步已接入 (connectivity listener + startup sync). **O-02/03 P2**: CRDT/任务离线 ⬜ (Phase 6) | 见 R3 报告
 | 2026-04-29 | Phase 3 | Claude | T3.1.1 L0 rule-aware Aurora: deadline_pressure 自动计算 + quiet_hours 强制执行 | ✅ 已修: L0RuleEngine 新建, deadline_pressure→StateRegister, dual_core_router 消费 deadline state, quiet_hours 解析; 11 tests passed |
 | 2026-04-29 | Phase 3 | Claude | T3.1.2 L1 Light Aurora: ResponseDirective 消费 StateRegister 活跃状态调节 tone | ✅ 已修: build_response_directive 增加 active_states 参数, fatigue→low_pressure(优先), deadline→urgent, SpineOrchestrator 两处调用点传入; 6 tests passed |
 | 2026-04-29 | Phase 3 | Claude | T3.1.3 L2 Mid Aurora: 升级模式检测 + 结构性干预 | ✅ 完成: L2InterventionEngine 新建 (4 escalation patterns: knowledge_crisis/execution_collapse/exam_underwater/burnout_risk); SpineOrchestrator._check_l2_escalation 接入; Redis cooldown 1h; 25 production-grade tests passed, 965 spine tests 无回归 |
@@ -253,6 +253,7 @@
 | 2026-04-29 | Phase 4.1 | Claude Flutter状态带接入 | AuroraStatusBand 从硬编码→真实API: 新建 spineStatusBandProvider (GET /aurora/spine/status-band); AuroraBandState 扩展6态 (sensing/calibrated/riskFound/needsConfirm/calibrationAvailable/coolingDown); dashboard_screen 消费 provider 并 fallback 硬编码; 26 contract tests passed |
 | 2026-04-29 | Phase 4.2 | Claude 展开交互+纠偏chip | AuroraStatusBand→StatefulWidget: 有correction_options时tap展开显示chip列表, 无options时走onTap跳转chat; chip点击→chat路由initial_user_message; AnimatedContainer+AnimatedRotation动画; flutter analyze 0 errors |
 | 2026-04-29 | Phase 4.3 | Claude 冷却显示 | coolingDown状态展开显示倒计时 (_formatCooldown: 秒/分/时) + 快速校准 TextButton (cooldownCanOverride gate); 点击→chat initial_user_message='快速校准'; flutter analyze 0 errors |
+| 2026-04-29 | R3 O-04 | Claude Focus自动同步 | FocusStatisticsProvider.build() 添加: (1)启动时 unawaited(sync()) 同步未上传会话, (2)Connectivity().onConnectivityChanged 监听网络恢复自动sync; flutter analyze 0 errors |
 
 ### 测试质量升级 (🔴 横切任务)
 
