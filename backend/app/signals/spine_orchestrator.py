@@ -2218,6 +2218,19 @@ class SpineOrchestrator:
         key = f"spine:notification_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(nd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
+        # DF-5: Publish event so notification consumers can act on the directive
+        try:
+            from app.core.event_bus import EventBus
+            bus = EventBus()
+            await bus.publish("spine.notification_directive", {
+                "user_id": user_id,
+                "directive_id": nd.directive_id,
+                "notification_type": nd.notification_type,
+                "allowed": nd.allowed,
+                "user_visible_reason": nd.user_visible_reason,
+            })
+        except Exception:
+            logger.debug("notification_directive event publish failed", exc_info=True)
 
     async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
         """获取用户当前 NotificationDirective。Degraded: returns None on Redis failure."""
