@@ -10,7 +10,7 @@ Achievement Engine Service
 from __future__ import annotations
 import asyncio
 import contextlib
-import threading
+import asyncio
 from datetime import timezone, date, datetime, timedelta
 from typing import Any, Awaitable, Callable
 
@@ -173,7 +173,7 @@ class AchievementEngine:
     _achievement_cache: dict[str, Achievement] = {}
     _cache_last_update: datetime = None
     _cache_ttl = timedelta(minutes=5)
-    _cache_lock = threading.Lock()
+    _cache_lock = asyncio.Lock()
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -268,7 +268,7 @@ class AchievementEngine:
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
         now = _utcnow()
-        with self._cache_lock:
+        async with self._cache_lock:
             if self._cache_last_update and (now - self._cache_last_update < self._cache_ttl):
                 return
 
@@ -276,7 +276,7 @@ class AchievementEngine:
         result = await self.db.execute(query)
         achievements = result.scalars().all()
 
-        with self._cache_lock:
+        async with self._cache_lock:
             self._achievement_cache = {a.id: a for a in achievements}
             self._cache_last_update = now
 
