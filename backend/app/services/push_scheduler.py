@@ -178,7 +178,7 @@ class PushScheduler:
                             policy=policy,
                         )
                         stats["sent"] += 1
-                        await self.notif_builder.record_sent(
+                        await self.notif_builder.record_sent_async(
                             user_id=user_id,
                             trigger_type=trigger_data.get("trigger_type", ""),
                             redis_client=self.redis,
