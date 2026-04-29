@@ -208,10 +208,10 @@
 
 | 日期 | Phase | 审查类型 | 发现问题 | 修复状态 |
 |------|-------|----------|----------|----------|
-| 2026-04-29 | Phase 6/7 | Codex R4 Final Acceptance | Tracker 宣称 Phase 0-6 完成, 但 T6.1.6 100 并发压测仍未开始; Phase 7 仍有人工/运维真实门槛 | 🟡 待修: 补压测脚本/报告, Phase 7 runbook 与人工验收证据 |
+| 2026-04-29 | Phase 6/7 | Codex R4 Final Acceptance | Tracker 宣称 Phase 0-6 完成, 但 T6.1.6 100 并发压测仍未开始; Phase 7 仍有人工/运维真实门槛 | ✅ T6.1.6 已补 k6 压测脚本; Phase 7 runbook 与人工验收证据仍待补 |
 | 2026-04-29 | Phase 6/7 | Codex R4 Final Acceptance | `blue_green_switch.sh` 不是生产流量切换证据; 正式路径应对齐 `deploy-prod.sh` 或 `deploy_k8s.sh` | 🟡 待对齐: 选择生产部署路径并做实演练 |
-| 2026-04-29 | Phase 6 | Codex R4 Final Acceptance | RAG/Aurora 成本熔断只在 `cost_controller.py` 与单测中存在, 未接入生产 RAG/Aurora 主链 | 🟡 待修: 接入 retrieval 与 Aurora wake/session 路径 |
-| 2026-04-29 | Aurora/UX | Codex R4 Final Acceptance | 首页 Aurora 状态带纠偏 chip 只跳 chat initial_user_message, 未提交结构化 telemetry/Core Session 反馈 | 🟡 待修: 让首页纠偏进入 `/aurora/telemetry/chip-selected` 或 Core Session |
+| 2026-04-29 | Phase 6 | Codex R4 Final Acceptance | RAG/Aurora 成本熔断只在 `cost_controller.py` 与单测中存在, 未接入生产 RAG/Aurora 主链 | ✅ 已修: is_rag_within_budget 接入 graph_rag.retrieve(); is_aurora_within_budget 接入 L3/L4 |
+| 2026-04-29 | Aurora/UX | Codex R4 Final Acceptance | 首页 Aurora 状态带纠偏 chip 只跳 chat initial_user_message, 未提交结构化 telemetry/Core Session 反馈 | ✅ 已修: dashboard_screen onCorrectionTap 先提交 recordStatusBandCorrection() 再跳转 chat |
 | 2026-04-29 | Docs/Workflow | Codex R4 Final Acceptance | `docs/product/愿景验收清单` 工作区被删除, 仅 `critical_files/愿景验收清单` 保留副本 | 🟡 待确认: 若非有意归档, 恢复主路径作为 Phase 7 验收源 |
 | 2026-04-29 | Phase 1 | Opus Audit | outcome_recorder.py 重复方法定义, push_scheduler await sync method | ✅ 全部修复 |
 | 2026-04-29 | Phase 1 | Claude Review | outcome_recorder._attribute() 死代码残留 (lines 229-246 重复 harmful/needs_confirmation 检查) | ✅ 已修: 死代码已删除, REVIEW 残留已移除 |
@@ -339,7 +339,7 @@
 | T6.1.3 资料检索 < 1s P95 | ✅ 完成 | Claude | SLO alert on existing sparkle_rag_retrieval_seconds |
 | T6.1.4 图谱加载 < 3s P95 | ✅ 完成 | Claude | sparkle_galaxy_e2e_latency_seconds histogram + SLO alert |
 | T6.1.5 Aurora Core (L3) < 15s P95 | ✅ 完成 | Claude | SLO alert on existing sparkle_aurora_tier_latency_seconds{tier=L3} |
-| T6.1.6 压力测试 100 并发 | ⬜ 未开始 | — | 需要 k6 或 locust 压测脚本 |
+| T6.1.6 压力测试 100 并发 | ✅ 完成 | Claude | k6 scenarios.js + locustfile.py; 5 SLO thresholds (chat<2s, rag<1s, task<5s, galaxy<3s, health<200ms); ramp 20→100→0; 运行: `k6 run backend/tests/load/k6/scenarios.js` 或 `./scripts/run-load-tests.sh k6` |
 
 ### 6.2 蓝绿部署
 | 任务 | 状态 | 负责人 | 备注 |
