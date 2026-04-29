@@ -1527,6 +1527,42 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ),
               ),
               const SizedBox(height: DS.spacing20),
+              // UX-010: Data & Privacy management entries
+              _buildSectionHeader(Icons.shield_outlined, 'Data & Privacy'),
+              const SizedBox(height: DS.spacing12),
+              GraphiteCardSurface(
+                child: Column(
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.psychology_outlined),
+                      title: const Text('Memory Settings'),
+                      subtitle: const Text('Manage what Sparkle remembers'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/settings/memory'),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.group_outlined),
+                      title: const Text('Community Intelligence'),
+                      subtitle: const Text('Control shared learning insights'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/settings/community'),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.source_outlined),
+                      title: const Text('Source Permissions'),
+                      subtitle: const Text('Manage material access'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/settings/sources'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: DS.spacing20),
               _buildSectionHeader(Icons.language_rounded, l10n.language),
               const SizedBox(height: DS.spacing12),
               GraphiteCardSurface(

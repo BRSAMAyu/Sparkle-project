@@ -56,6 +56,13 @@ class GraphNode:
     dependency_ids: list[str] = field(default_factory=list)
     status: str = "pending"  # "pending" | "in_progress" | "mastered" | "blocked" | "done"
     metadata: dict[str, Any] = field(default_factory=dict)
+    # KG-001: Extended node attributes
+    exam_weight: float = 0.0  # 考试权重 0-1 (how important for exam)
+    difficulty: float = 0.5  # 难度 0-1
+    trainability: float = 0.5  # 可训练性 0-1 (how responsive to practice)
+    mistakes: int = 0  # 累计错误次数
+    # KG-004: Persisted focus priority
+    focus_priority: float = 0.0  # 运行时计算后持久化的优先级
 
     @property
     def tracks_mastery(self) -> bool:
@@ -78,6 +85,11 @@ class GraphNode:
             "dependency_ids": self.dependency_ids,
             "status": self.status,
             "metadata": self.metadata,
+            "exam_weight": self.exam_weight,
+            "difficulty": self.difficulty,
+            "trainability": self.trainability,
+            "mistakes": self.mistakes,
+            "focus_priority": self.focus_priority,
         }
 
     @classmethod
@@ -352,6 +364,15 @@ class GoalWorldGraphService:
         bn = self.find_bottleneck(graph)
         if bn:
             graph.bottleneck_node_id = bn.node_id
+
+        # KG-004: Persist computed focus priorities on nodes
+        suggestions = self.suggest_focus_nodes(graph, limit=len(graph.nodes))
+        for i, sug in enumerate(suggestions):
+            node_id = sug["node_id"]
+            for node in graph.nodes:
+                if node.node_id == node_id:
+                    node.focus_priority = round(1.0 - (i * 0.1), 2)
+                    break
 
     async def _save(self, graph: GoalWorldGraph) -> None:
         key = _GRAPH_KEY.format(user_id=graph.user_id, goal_id=graph.goal_id)

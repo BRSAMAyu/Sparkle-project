@@ -388,6 +388,8 @@ class _HistoryContent extends StatelessWidget {
           else
             ...relatedErrors.map(_ErrorPreview.new),
           const SizedBox(height: DS.spacing20),
+          _FocusReasonSection(nodeId: nodeId, mastery: history.mastery),
+          const SizedBox(height: DS.spacing20),
           _CommunityInsightSection(nodeId: nodeId),
           const SizedBox(height: DS.spacing20),
           Row(
@@ -1542,6 +1544,58 @@ String _buildExcerptReferenceLabel(
     parts.add(copy.excerpt(excerpt.fallbackOrdinal));
   }
   return parts.join(' · ');
+}
+
+/// KG-009: "Why is this node prioritized today?" explainable path section.
+class _FocusReasonSection extends StatelessWidget {
+  const _FocusReasonSection({required this.nodeId, required this.mastery});
+
+  final String nodeId;
+  final double mastery;
+
+  @override
+  Widget build(BuildContext context) {
+    final reason = _computeReason(mastery);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.lightbulb_outline_rounded, size: DS.iconSizeSm, color: DS.warning),
+            const SizedBox(width: DS.spacing8),
+            Text(
+              'Why today?',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: DS.warning.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(DS.radius8),
+            border: Border.all(color: DS.warning.withOpacity(0.15)),
+          ),
+          child: Text(
+            reason,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _computeReason(double m) {
+    if (m <= 0) return 'You haven\'t started this yet — it\'s unblocked and ready to begin.';
+    if (m < 0.3) return 'Early stage — building a foundation here will unlock dependent topics.';
+    if (m < 0.7) return 'Making progress! Reviewing now will solidify your understanding.';
+    return 'Almost mastered — a final review will help lock this in.';
+  }
 }
 
 class _CommunityInsightSection extends ConsumerWidget {

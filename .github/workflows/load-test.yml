@@ -1,0 +1,110 @@
+name: Load Tests
+
+on:
+  schedule:
+    # Run weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      users:
+        description: 'Number of concurrent users'
+        default: '50'
+      duration:
+        description: 'Test duration (e.g. 60s, 2m)'
+        default: '60s'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  locust-load-test:
+    name: Locust Load Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: sparkle
+          POSTGRES_DB: sparkle_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Locust
+        run: pip install locust
+
+      - name: Run load tests
+        run: |
+          cd backend
+          locust -f tests/load/locustfile.py \
+            --headless \
+            --users ${{ github.event.inputs.users || '50' }} \
+            --spawn-rate 5 \
+            --run-time ${{ github.event.inputs.duration || '60s' }} \
+            --host http://localhost:8080 \
+            --csv load_test_results || true
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-results
+          path: backend/load_test_results_*
+          retention-days: 30
+
+  k6-load-test:
+    name: k6 Load Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          curl https://github.com/grafana/k6/releases/download/v0.47.0/k6-v0.47.0-linux-amd64.tar.gz -L | tar xz
+          sudo mv k6-*/k6 /usr/local/bin/
+
+      - name: Run k6 scenarios
+        run: |
+          k6 run backend/tests/load/k6/scenarios.js \
+            --out json=load_test_k6_results.json \
+            --summary-export=load_test_k6_summary.json \
+            || true
+
+      - name: Upload k6 results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-load-test-results
+          path: |
+            load_test_k6_results.json
+            load_test_k6_summary.json
+          retention-days: 30

@@ -447,37 +447,37 @@
 | P1-N2: 监控端口暴露 | ✅ 已修复 | Claude | Prometheus/Grafana/Loki/Tempo/Alertmanager 端口绑定 127.0.0.1 |
 | P1-N3: AchievementEngine 无锁缓存 | ✅ 已修复 | Claude | threading.Lock 保护 _achievement_cache 写入 |
 | P2-N3: EventBus requeue 消息丢失 | ✅ 已修复 | Claude | xadd-before-xack 替代 ack-before-xadd |
-| GAP-GOV012: Research Mode 隔离 | ⬜ 待修复 | — | GOV-012: 研究模式未与生产数据隔离 |
-| GAP-GOV016: 安全降级模式 | ⬜ 待修复 | — | GOV-016: 无自动安全降级; 异常不触发能力缩减 |
-| GAP-GOV017: 误导防止 | ⬜ 待修复 | — | GOV-017: 无验证管道防止系统虚构来源/范围 |
-| GAP-OBS009: Fake vs Prod 测试 | ⬜ 待修复 | — | OBS-009: FakeRedis/测试替身与生产差异无专门测试 |
-| GAP-OBS011: 场景回归门禁 | ⬜ 待修复 | — | OBS-011: SparkleGoalBench 不阻止发布 |
-| GAP-UX009: 社群页聚焦 | ⬜ 待修复 | — | UX-009: 社群页非目标聚焦 (Flutter) |
-| GAP-UX010: 设置页管理 | ⬜ 待修复 | — | UX-010: 缺记忆/社群/资料权限管理入口 (Flutter) |
+| GAP-GOV012: Research Mode 隔离 | ✅ 已修复 | Claude | research_isolation.py: ResearchIsolationGuard + ResearchContext + PII filtering |
+| GAP-GOV016: 安全降级模式 | ✅ 已修复 | Claude | safety_degradation.py: NORMAL/CAUTION/RESTRICTED 三级自动降级 |
+| GAP-GOV017: 误导防止 | ✅ 已修复 | Claude | fabrication_guard.py: 源验证管道 + 6 种虚构模式检测 |
+| GAP-OBS009: Fake vs Prod 测试 | ✅ 已修复 | Claude | test_fake_vs_prod_redis.py: 9 项双端对比测试 |
+| GAP-OBS011: 场景回归门禁 | ✅ 已修复 | Claude | benchmark.yml 新增 scenario-regression-gate job |
+| GAP-UX009: 社群页聚焦 | ✅ 已修复 | Claude | community_screen.dart 新增 GoalFocusSection + Goal Mates filter |
+| GAP-UX010: 设置页管理 | ✅ 已修复 | Claude | unified_settings_screen.dart 新增 Data & Privacy 区块 |
 
 ### Score 3 差距 — 应修复
 
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| GAP-GOV010: 高影响判断确认框架 | ⬜ 待修复 | — | GOV-010: 确认散布各处, 无统一框架 |
-| GAP-GOV013: 数据最小化审查 | ⬜ 待修复 | — | GOV-013: 无系统化敏感数据收集审查 |
-| GAP-GOV015: 用户透明统一界面 | ⬜ 待修复 | — | GOV-015: 透明性碎片化, 无统一仪表板 |
-| GAP-GOV019: 权限隔离测试 | ⬜ 待修复 | — | GOV-019: 最小权限未系统测试 |
+| GAP-GOV010: 高影响判断确认框架 | ✅ 已修复 | Claude | high_impact_confirmation.py: 统一确认框架 |
+| GAP-GOV013: 数据最小化审查 | ✅ 已修复 | Claude | data_minimization.py: MinimizationAuditor + 模型范围过滤 |
+| GAP-GOV015: 用户透明统一界面 | ✅ 已修复 | Claude | data_usage_dashboard_screen.dart: 统一数据隐私仪表板 |
+| GAP-GOV019: 权限隔离测试 | ✅ 已修复 | Claude | test_permission_isolation.py: 6 项权限隔离测试 |
 | GAP-OBS008: 禁止吞异常 | ✅ 部分修复 | Claude | OBS-008: 14 处 silent except → debug logging; 关键服务已覆盖; 非关键路径保留 |
-| GAP-OBS012: 压测入CI | ⬜ 待修复 | — | OBS-012: 压测能力存在但未入CI |
-| GAP-OBS013: 成本预测测试 | ⬜ 待修复 | — | OBS-013: 成本追踪但无预算门禁 |
-| GAP-MAGIC005: 低收益阻止前端 | ⬜ 待修复 | — | MAGIC-005: 后端存在, 前端 widget 缺失 |
-| GAP-UX001: 首页目标聚焦 | ⬜ 待修复 | — | UX-001: 首页需验证目标导向 |
-| GAP-UX005: 星图页体验 | ⬜ 待修复 | — | UX-005: 图谱集成需验证 |
+| GAP-OBS012: 压测入CI | ✅ 已修复 | Claude | load-test.yml: Locust + k6 定期负载测试 CI workflow |
+| GAP-OBS013: 成本预测测试 | ✅ 已修复 | Claude | test_cost_prediction_accuracy.py: 5 项成本预测准确性测试 |
+| GAP-MAGIC005: 低收益阻止前端 | ✅ 已验证 | Claude | StrategyInterventionCard + UXWarningEvent 已存在并接入 chat_screen.dart |
+| GAP-UX001: 首页目标聚焦 | ✅ 已验证 | Claude | dashboard_screen.dart 含 goal chips/sprint/next action/bottleneck |
+| GAP-UX005: 星图页体验 | ✅ 已验证 | Claude | galaxy_screen.dart 含 force engine/spatial index/gesture/search/detail |
 
 ### KG 知识星图差距 (🔴 2026-04-30)
 
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| GAP-KG002: 非学习节点类型 | ⬜ 待修复 | — | KG-002: 仅 KnowledgeNode, 缺 CapabilityNode/ArtifactNode/HabitNode 等 (Score 1) |
-| GAP-KG007: 社群错因展示 | ⬜ 待修复 | — | KG-007: 节点无匿名共性错因 UI (Score 2) |
-| GAP-KG008: CRDT 掌握度同步 | ⬜ 待修复 | — | KG-008: CRDT 仅图结构, 掌握度非 CRDT (Score 2) |
-| GAP-KG009: 可解释路径 | ⬜ 待修复 | — | KG-009: 无"为什么今天排这个节点" UI (Score 2) |
-| GAP-KG001: 节点属性补全 | ⬜ 待修复 | — | KG-001: 缺 exam_weight/difficulty/trainability/mistakes 字段 (Score 3) |
-| GAP-KG004: 节点优先级持久化 | ⬜ 待修复 | — | KG-004: 优先级运行时计算, 不持久化 (Score 3) |
-| GAP-KG005: 错因聚类挂节点 | ⬜ 待修复 | — | KG-005: 错因聚类存在但未绑定到具体节点 (Score 3) |
+| GAP-KG002: 非学习节点类型 | ✅ 已验证 | Claude | goal_world_graph.py 含 10 种 node type: knowledge/capability/artifact/milestone/habit/risk/constraint/resource/feedback/relationship |
+| GAP-KG007: 社群错因展示 | ✅ 已验证 | Claude | node_detail_sheet.dart 已含 _CommunityInsightSection |
+| GAP-KG008: CRDT 掌握度同步 | ✅ 已修复 | Claude | sync_queue.dart: _localMergeMastery max-wins 本地 CRDT |
+| GAP-KG009: 可解释路径 | ✅ 已修复 | Claude | node_detail_sheet.dart: _FocusReasonSection "Why today?" 解释 |
+| GAP-KG001: 节点属性补全 | ✅ 已修复 | Claude | GraphNode 新增 exam_weight/difficulty/trainability/mistakes |
+| GAP-KG004: 节点优先级持久化 | ✅ 已修复 | Claude | GraphNode.focus_priority + _recompute 自动持久化 |
+| GAP-KG005: 错因聚类挂节点 | ✅ 已验证 | Claude | CommunityErrorAggregationService.aggregate_and_annotate_node() 绑定错因到 KnowledgeNode.community_signal |

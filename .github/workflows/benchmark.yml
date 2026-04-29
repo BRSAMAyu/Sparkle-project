@@ -341,6 +341,55 @@ jobs:
             backend/load_test_results_*
           retention-days: 30
 
+  # OBS-011: Scenario regression gate (SparkleGoalBench)
+  scenario-regression-gate:
+    name: Scenario Regression Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -e .
+          pip install pytest pytest-asyncio
+
+      - name: Run SparkleGoalBench scenarios
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          cd backend
+          python -m pytest tests/unit/test_simulation_lab.py -v -k "goal_bench or scenario" --tb=short
+
+      - name: Run spine quality guard tests
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          cd backend
+          python -m pytest tests/unit/ -k "quality_guard" -v --tb=short
+
   # Performance Regression Report
   regression-report:
     name: Performance Regression Report
