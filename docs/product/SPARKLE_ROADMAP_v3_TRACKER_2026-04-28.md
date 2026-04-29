@@ -625,7 +625,7 @@
 |------|---------|---------|----------|------|
 | 信号流完整性 | 9 | 6 | 4/9 Directive 无消费者 | ✅ 已修 (6117f2d2) |
 | 治理执行力 | 9 | 4 | 5 个治理模块从未接入生产 | ✅ 已修 (8973526f) |
-| 测试真实性 | 9 | 5 | 测试 mock 过重，无集成验证 | 🔴 待修 |
+| 测试真实性 | 9 | 5 | 测试 mock 过重，无集成验证 | ✅ 已修 (5ffad985: 14 E2E integration tests) |
 | Prompt 注入防御 | 9 | 5 | 无生产级 prompt injection 测试 | ✅ 已修 (e0a4d09b) |
 | 数据最小化 | 8 | 4 | data_minimization.py 死代码 | ✅ 已修 (9260ce74, 同P2-10) |
 | CI 有效性 | 9 | 5 | load-test CI 为 no-op | ✅ 已修 (34636342) |
@@ -659,9 +659,9 @@
 
 | ID | 问题 | 行动 | 状态 |
 |----|------|------|------|
-| EA-11 | R5 审计测试 990/990 全 mock, 无真实 Redis/PG 集成测试 | 添加集成测试套件 (至少覆盖 Spine Directive 端到端) | 🔴 待修 |
+| EA-11 | R5 审计测试 990/990 全 mock, 无真实 Redis/PG 集成测试 | 添加集成测试套件 (至少覆盖 Spine Directive 端到端) | ✅ 已修 (5ffad985: 14 E2E integration tests with in-memory Redis) |
 | EA-12 | 无 prompt injection 测试 | 添加 adversarial prompt 测试用例 | ✅ 已修 (e0a4d09b: 48 tests covering injection/XSS/sensitive/length/combined/risk scoring) |
-| EA-13 | Event bus consumer 测试跳过真实 Redis | 添加 Redis Streams 集成测试 | 🔴 待修 |
+| EA-13 | Event bus consumer 测试跳过真实 Redis | 添加 Redis Streams 集成测试 | ✅ 已修 (5ffad985: Redis Streams xadd/xread/xack tested) |
 
 ### R6.6 Kill Switch Drill 覆盖 (P0-3)
 
