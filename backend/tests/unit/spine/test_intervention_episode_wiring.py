@@ -422,3 +422,80 @@ class TestLedgerHelpers:
         ids = {e.episode_id for e in filtered}
         assert "high" in ids
         assert "low" not in ids
+
+
+# ── Tests: T5.1.3 Data Integrity Validation ────────────────────────────
+
+
+class TestEpisodeIntegrity:
+    """Test that episodes with missing key fields get capped at EvidenceGrade < 3."""
+
+    def test_no_candidates_caps_grade_below_3(self):
+        """Episode with no candidate_policies cannot support OPE — grade < 3."""
+        episode = InterventionEpisode(
+            candidate_policies=[],
+            selected_policy="reduce_pace",
+            selection_probability=1.0,
+            evidence_quality=EvidenceQuality(
+                outcome_complete=True, propensity_logged=True,
+                counterfactual_candidates_logged=True, user_feedback_present=True,
+            ),
+        )
+        eq = InterventionEpisodeLedger.validate_integrity(episode)
+        assert eq.propensity_logged is False
+        assert eq.counterfactual_candidates_logged is False
+        # Even with outcome_complete=True, grade should be < 3
+        assert eq.grade < 3
+
+    def test_single_candidate_propensity_false(self):
+        """Single candidate with probability=1.0 means no real propensity."""
+        episode = InterventionEpisode(
+            candidate_policies=["only_one"],
+            selected_policy="only_one",
+            selection_probability=1.0,
+        )
+        eq = InterventionEpisodeLedger.validate_integrity(episode)
+        assert eq.propensity_logged is False
+        assert eq.counterfactual_candidates_logged is True  # still has candidates
+
+    def test_multiple_candidates_propensity_true(self):
+        """Multiple candidates with probability < 1.0 → propensity logged."""
+        episode = InterventionEpisode(
+            candidate_policies=["a", "b", "c"],
+            selected_policy="a",
+            selection_probability=0.33,
+        )
+        eq = InterventionEpisodeLedger.validate_integrity(episode)
+        assert eq.propensity_logged is True
+        assert eq.counterfactual_candidates_logged is True
+
+    def test_validate_integrity_resets_outcome_flags(self):
+        """validate_integrity is called at creation time — outcome not yet available."""
+        episode = InterventionEpisode(
+            candidate_policies=["a", "b"],
+            selection_probability=0.5,
+        )
+        eq = InterventionEpisodeLedger.validate_integrity(episode)
+        assert eq.outcome_complete is False
+        assert eq.user_feedback_present is False
+
+    @pytest.mark.asyncio
+    async def test_pipeline_episode_has_validated_integrity(self):
+        """Episodes from the pipeline have integrity-validated evidence_quality."""
+        from app.signals.spine_orchestrator import SpineOrchestrator
+        from tests.unit.spine._helpers import FakeRedis
+
+        spine = SpineOrchestrator(FakeRedis())
+        signal = _make_signal("knowledge_transfer", claim="transfer_failure", confidence=0.8, priority="high")
+        decision = _make_decision(strategy="repair_knowledge_bottleneck", risk_level="high")
+
+        episode = await spine._generate_episode(
+            user_id="user_1", signal=signal, decision=decision,
+            directive=AsyncMock(directive_id="dir_1"), trace=AsyncMock(trace_id="tr_1"),
+        )
+
+        assert episode is not None
+        # Pipeline always generates with candidates + propensity → grade should allow OPE
+        assert episode.evidence_quality.propensity_logged is True
+        assert episode.evidence_quality.counterfactual_candidates_logged is True
+        assert len(episode.candidate_policies) >= 3

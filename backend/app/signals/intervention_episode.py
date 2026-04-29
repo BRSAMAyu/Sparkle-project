@@ -415,6 +415,30 @@ class InterventionEpisodeLedger:
     """
 
     @staticmethod
+    def validate_integrity(episode: InterventionEpisode) -> EvidenceQuality:
+        """Validate episode data integrity and compute EvidenceQuality.
+
+        Episodes missing candidate_policies or selection_probability
+        cannot support OPE and are capped at grade < 3.
+        """
+        eq = EvidenceQuality()
+        eq.propensity_logged = (
+            episode.selection_probability < 1.0
+            or len(episode.candidate_policies) > 1
+        )
+        eq.counterfactual_candidates_logged = len(episode.candidate_policies) > 0
+        eq.outcome_complete = False  # No outcome yet at creation time
+        eq.user_feedback_present = False
+
+        # Iron law: episodes without candidate_policies cannot support OPE.
+        # Force propensity_logged=False if no candidates exist.
+        if not episode.candidate_policies:
+            eq.propensity_logged = False
+            eq.counterfactual_candidates_logged = False
+
+        return eq
+
+    @staticmethod
     def create_episode(
         *,
         user_id: str,

@@ -2193,6 +2193,9 @@ class SpineOrchestrator:
                 directive_ids=[directive.directive_id],
             )
 
+            # T5.1.3: Validate integrity and apply evidence quality
+            episode.evidence_quality = InterventionEpisodeLedger.validate_integrity(episode)
+
             return episode
         except Exception:
             logger.warning("_generate_episode failed for user={}", user_id, exc_info=True)
