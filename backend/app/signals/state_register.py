@@ -327,11 +327,13 @@ class StateRegister:
             async with self.redis.pipeline() as pipe:
                 pipe.set(key, json.dumps(entry.to_dict()), ex=ttl_seconds)
                 pipe.sadd(index_key, entry.state_key)
+                pipe.expire(index_key, max(ttl_seconds, 86400))
                 await pipe.execute()
         except (AttributeError, TypeError):
             try:
                 await self.redis.set(key, json.dumps(entry.to_dict()), ex=ttl_seconds)
                 await self.redis.sadd(index_key, entry.state_key)
+                await self.redis.expire(index_key, max(ttl_seconds, 86400))
             except Exception:
                 logger.warning("StateRegister: Redis unavailable during _save_state for user={}", user_id)
         except Exception:
