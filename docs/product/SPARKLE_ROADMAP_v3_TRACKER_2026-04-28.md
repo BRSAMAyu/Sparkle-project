@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (P0-3 drill coverage complete)
+> **最后更新**: 2026-04-30 (V-9/V-10/V-14 fixed, R5 vision gaps closing)
 > **对应 Roadmap**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
 > **用途**: 记录所有已完成、进行中、待做的工作, 支持并行推进与阶段审查
 
@@ -568,12 +568,12 @@
 | V-6 | P1 | 材料范围控制过于简单 (仅3态切换) | 丰富 Source Selector | 🔴 待修 |
 | V-7 | P2 | SkillExtractionService 为 stub | 提取逻辑 | 🔴 待修 |
 | V-8 | P2 | 成就信号未被 Task Generator 消费 | 消费者接线 | ✅ 已修 (dce0628c) |
-| V-9 | P2 | Outcome 跟踪为只写, 无自动策略学习 | 策略更新循环 | 🔴 待修 |
-| V-10 | P2 | 截止日期阶段策略为静态无逐日转换 | 动态阶段逻辑 | 🔴 待修 |
+| V-9 | P2 | Outcome 跟踪为只写, 无自动策略学习 | 策略更新循环 | ✅ 已修 (56ac6b53: Bayesian belief update loop in record_outcome) |
+| V-10 | P2 | 截止日期阶段策略为静态无逐日转换 | 动态阶段逻辑 | ✅ 已修 (c7485dbc: foundation phase D-8+, should_activate ≤30) |
 | V-11 | P3 | 多消息 Aurora 议程不存在 | 整个功能 | 🟡 未来增强 |
 | V-12 | P1 | ContextPlan 检索模式用户不可控 | 模式选择器 | 🔴 待修 |
 | V-13 | P2 | cognitive_adjustments 文本注入非结构化消费 | 结构化消费 | 🟡 设计层面 |
-| V-14 | P2 | 辅助 Spine 事件 (mistake/quiz) 无完整管道 | 完整 Directive 管道 | 🔴 待修 |
+| V-14 | P2 | 辅助 Spine 事件 (mistake/quiz) 无完整管道 | 完整 Directive 管道 | ✅ 已修 (9711a98c: on_file_uploaded + on_recall_check wired) |
 
 ### R5 总计: 63 issues (1 P0, 18 P1, 32 P2, 2 P3, 10 低)
 
