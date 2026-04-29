@@ -253,6 +253,22 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             logger.info(f"StreamChat completed for trace={trace_id}")
 
+            # Fire-and-forget: check recall opportunities at session end
+            if user_id:
+                try:
+                    from app.services.push_scheduler import PushScheduler
+                    async with self.db_session_factory() as recall_db:
+                        push_scheduler = PushScheduler(recall_db)
+                        await push_scheduler.enqueue_session_end_recall(
+                            user_id=user_id,
+                            session_context={
+                                "uploaded_files_count": len(request_extra_context.get("file_ids") or []),
+                                "diagnosed_files_count": 0,
+                            },
+                        )
+                except Exception as recall_err:
+                    logger.debug(f"Session-end recall check failed (non-fatal): {recall_err}")
+
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
             safe_message, error_code, retryable = build_safe_chat_error(e)

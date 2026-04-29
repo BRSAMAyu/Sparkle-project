@@ -81,12 +81,21 @@ class SchedulerService:
     async def run_smart_push_cycle(self):
         """
         执行智能推送周期
-        触发 PushService.process_all_users()
+        触发 PushService.process_all_users() + PushScheduler 回收队列处理
         """
         logger.info("Starting smart push cycle...")
         async with AsyncSessionLocal() as db:
             push_service = PushService(db)
             await push_service.process_all_users()
+        try:
+            async with AsyncSessionLocal() as db:
+                from app.services.push_scheduler import PushScheduler
+                scheduler = PushScheduler(db)
+                recall_stats = await scheduler.process_recall_queue()
+                if recall_stats["processed"] > 0:
+                    logger.info(f"Recall queue: {recall_stats}")
+        except Exception as e:
+            logger.warning(f"Recall queue processing failed (non-fatal): {e}")
 
     # async def check_fragmented_time(self):
     #     """

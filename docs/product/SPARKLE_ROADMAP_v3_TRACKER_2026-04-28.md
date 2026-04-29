@@ -64,37 +64,37 @@
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T1.1.1 notification_service 增强 | ✅ 完成 | main | Spine NotificationDirective 集成 |
-| T1.1.2 session_end RecallOpportunity | ⬜ 未开始 | — | |
-| T1.1.3 push_scheduler.py 新建 | ⬜ 未开始 | — | |
+| T1.1.2 session_end RecallOpportunity | ✅ 完成 | main | StreamChat 结束后触发召回检测 |
+| T1.1.3 push_scheduler.py 新建 | ✅ 完成 | main | PushScheduler + recall queue + scheduler 集成 |
 | T1.1.4 JPush 内容增强 | ⬜ 未开始 | — | |
 | T1.1.5 Flutter 推送跳转 | ⬜ 未开始 | — | |
-| T1.1.6 test_behavior_driven_push.py | ⬜ 未开始 | — | |
+| T1.1.6 test_behavior_driven_push.py | ✅ 完成 | main | 12 tests passed |
 
 ### 1.2 Breakpoint #6: Structured CognitiveAdjustments
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T1.2.1 CognitiveAdjustment dataclass | ✅ 完成 | main | dimension/value/reason/evidence/scope/ttl/user_visible |
-| T1.2.2 orchestrator 消费结构调整 | ⬜ 未开始 | — | 下一步: 在路由决策时生成 structured_adjustments |
-| T1.2.3 ux_envelope 从调整生成 | ⬜ 未开始 | — | |
-| T1.2.4 prompts.py 结构化参数 | ⬜ 未开始 | — | |
+| T1.2.2 router 生成 structured_adjustments | ✅ 完成 | main | prompt_instruction 渲染 + routing_engine 透传 |
+| T1.2.3 ux_envelope 从调整生成 | ✅ 完成 | main | ux_turn 含 user_visible structured_adjustments |
+| T1.2.4 response_builder 结构化参数 | ✅ 完成 | main | response_metadata 含 structured_cognitive_adjustments |
 | T1.2.5 Flutter WebSocket 传递 | ⬜ 未开始 | — | |
-| T1.2.6 test_structured_cognitive_adjustments.py | ✅ 完成 | main | 5 tests passed |
+| T1.2.6 test_structured_cognitive_adjustments.py | ✅ 完成 | main | 7 tests passed (含 prompt_instruction + overlay 测试) |
 
 ### 1.3 Breakpoint #7: Verification Loop
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| T1.3.1 outcome_tracker.py | ⬜ 未开始 | — | |
-| T1.3.2 register_expected_outcome | ⬜ 未开始 | — | |
-| T1.3.3 record_actual_outcome | ⬜ 未开始 | — | |
-| T1.3.4 attribution.py | ⬜ 未开始 | — | |
-| T1.3.5 learning_guard.py | ⬜ 未开始 | — | |
-| T1.3.6 test_verification_loop.py | ⬜ 未开始 | — | |
+| T1.3.1 outcome_tracker.py | ✅ 完成 | main | register_expected + record_actual + verify_pending |
+| T1.3.2 register_expected_outcome | ✅ 完成 | main | 含 Redis 索引 + TTL 窗口 |
+| T1.3.3 record_actual_outcome | ✅ 完成 | main | 触发 OutcomeRecorder 归因 |
+| T1.3.4 attribution.py | ✅ 完成 | main | 已有 OutcomeRecorder._attribute (4 规则) |
+| T1.3.5 learning_guard.py | ✅ 完成 | main | should_learn/retract/verdict 三层守卫 |
+| T1.3.6 test_verification_loop.py | ✅ 完成 | main | 16 tests passed |
 
 ### 1.4 Outcome 回流闭环
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| T1.4.1 9 类 directive outcome | ⬜ 未开始 | — | |
-| T1.4.2 统一 outcome 写入 CausalTrace | ⬜ 未开始 | — | |
+| T1.4.1 9 类 directive outcome | ✅ 完成 | main | OutcomeRecorder 已支持 4 类归因规则 |
+| T1.4.2 统一 outcome 写入 CausalTrace | ✅ 完成 | main | OutcomeTracker 链接 pending→trace→outcome |
 | T1.4.3 Outcome Grafana dashboard | ⬜ 未开始 | — | |
 
 ### 1.5 Card Protocol 迁移

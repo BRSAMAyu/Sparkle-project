@@ -444,6 +444,13 @@ class ResponseBuilderMixin:
         strategy_state = final_state.context_data.get("user_strategy_state")
         if isinstance(strategy_state, dict):
             response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)
+        dual_core_decision = final_state.context_data.get("dual_core_decision")
+        if isinstance(dual_core_decision, dict):
+            structured = dual_core_decision.get("structured_adjustments") or []
+            if structured:
+                response_metadata["structured_cognitive_adjustments"] = json.dumps(
+                    structured, ensure_ascii=False,
+                )
         understanding_depth = (
             (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
         )

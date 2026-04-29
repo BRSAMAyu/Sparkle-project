@@ -79,3 +79,32 @@ def test_structured_adjustments_preserved_across_overlay() -> None:
     )
     assert overlaid.structured_adjustments == [ca]
     assert "peer_mistake_hint" in overlaid.cognitive_adjustments
+
+
+def test_prompt_instruction_renders_structured_adjustments() -> None:
+    ca = CognitiveAdjustment(
+        dimension="challenge_level",
+        value=-0.2,
+        reason="deadline pressure",
+        evidence=["quiz_accuracy=0.4"],
+        scope="sprint",
+        user_visible=True,
+    )
+    decision = DualCoreDecision(
+        "balanced",
+        "test",
+        ["tone=gentle"],
+        ["no heavy tasks"],
+        structured_adjustments=[ca],
+    )
+    instruction = decision.prompt_instruction
+    assert "tone=gentle" in instruction
+    assert "challenge_level=-0.2 (deadline pressure)" in instruction
+    assert "no heavy tasks" in instruction
+
+
+def test_prompt_instruction_without_structured_adjustments() -> None:
+    decision = DualCoreDecision("balanced", "test", ["tone=gentle"], [])
+    instruction = decision.prompt_instruction
+    assert "tone=gentle" in instruction
+    assert "结构化认知调整" not in instruction

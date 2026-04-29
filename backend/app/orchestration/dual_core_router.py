@@ -129,6 +129,10 @@ class DualCoreDecision:
                 "## 双核心认知调制\n"
                 + "\n".join(f"- {item}" for item in self.cognitive_adjustments)
             )
+        if self.structured_adjustments:
+            lines = [f"- {adj.to_text()}" for adj in self.structured_adjustments]
+            if lines:
+                sections.append("## 结构化认知调整\n" + "\n".join(lines))
         if self.execution_constraints:
             sections.append(
                 "## 双核心执行约束\n"

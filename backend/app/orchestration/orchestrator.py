@@ -3238,6 +3238,7 @@ class ChatOrchestrator(
                     metadata={
                         "mode": dual_core_decision.get("mode"),
                         "cognitive_adjustments": dual_core_decision.get("cognitive_adjustments", []),
+                        "structured_adjustments": dual_core_decision.get("structured_adjustments", []),
                         "execution_constraints": dual_core_decision.get("execution_constraints", []),
                         "session_id": session_id,
                     },
