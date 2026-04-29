@@ -52,6 +52,7 @@ from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
+from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider, CostController
 from app.signals.types import (
     ActionableStatePacket,
     ActionableSignal,
@@ -125,6 +126,8 @@ class SpineOrchestrator:
         self.directive_quota = DirectiveQuotaService(redis_client)
         self.aurora_core = AuroraCoreSessionService(redis_client)
         self.l3_engine = L3FullCoreEngine(redis_client)
+        self.energy_decider = EnergyLevelDecider()
+        self.cost_controller = CostController()
         self.skill_extraction = SkillExtractionService()
         self.goal_type_adapter = GoalTypeAdapter()
         self.material_signal_detector = MaterialSignalDetector(redis_client)
@@ -366,6 +369,23 @@ class SpineOrchestrator:
             "mini_quiz_accuracy",
             "user_feedback",
         ]
+
+        # Step 6-Energy: Record Aurora energy level decision in trace (T3.1.6)
+        try:
+            active_states_dicts = await self._get_active_states_dicts(user_id)
+            from app.aurora.runtime_v1.state import AuroraEnergyStore
+            energy_store = AuroraEnergyStore(self.redis)
+            energy = await energy_store.load_energy(user_id)
+            energy_decision = self.energy_decider.decide(
+                user_id=user_id,
+                energy=energy,
+                active_states=active_states_dicts,
+            )
+            trace.aurora_energy_level = energy_decision.current_level
+            trace.aurora_upgrade_reason = energy_decision.upgrade_reason
+        except Exception:
+            logger.debug("on_task_completed: energy decision failed", exc_info=True)
+
         await self.trace_store._save_trace(trace)
 
         # Step 6a: Register expected outcome for verification loop

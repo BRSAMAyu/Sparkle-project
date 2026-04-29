@@ -623,6 +623,8 @@ class CausalTrace:
     audit_ids: list[str] = field(default_factory=list)
     receipt_ids: list[str] = field(default_factory=list)
     outcome_to_measure: list[str] = field(default_factory=list)
+    aurora_energy_level: str = ""          # T3.1.6: L0/L1/L2/L3 at this turn
+    aurora_upgrade_reason: str = ""        # T3.1.6: why upgraded (or "not_upgraded")
     created_at: str = field(default_factory=_utcnow)
     updated_at: str = field(default_factory=_utcnow)
 
@@ -637,6 +639,8 @@ class CausalTrace:
             "audit_ids": self.audit_ids,
             "receipt_ids": self.receipt_ids,
             "outcome_to_measure": self.outcome_to_measure,
+            "aurora_energy_level": self.aurora_energy_level,
+            "aurora_upgrade_reason": self.aurora_upgrade_reason,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
