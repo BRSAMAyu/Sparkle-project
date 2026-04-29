@@ -25,7 +25,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - AGENT_ADDRESS=toxiproxy:8666
+      - AGENT_ADDRESS=agent:50051
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_SECRET=${ADMIN_SECRET}
@@ -42,13 +42,11 @@ services:
       - FILE_GC_INTERVAL_MINUTES=${FILE_GC_INTERVAL_MINUTES:-60}
       - FILE_GC_GRACE_HOURS=${FILE_GC_GRACE_HOURS:-24}
       - FILE_GC_BATCH_SIZE=${FILE_GC_BATCH_SIZE:-200}
-      - TOXIPROXY_URL=http://toxiproxy:8474
       - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
       - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
       - backend
       - agent
-      - toxiproxy
     networks:
       - edge
       - app
@@ -62,7 +60,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - AGENT_ADDRESS=toxiproxy:8666
+      - AGENT_ADDRESS=agent:50051
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_SECRET=${ADMIN_SECRET}
@@ -79,13 +77,11 @@ services:
       - FILE_GC_INTERVAL_MINUTES=${FILE_GC_INTERVAL_MINUTES:-60}
       - FILE_GC_GRACE_HOURS=${FILE_GC_GRACE_HOURS:-24}
       - FILE_GC_BATCH_SIZE=${FILE_GC_BATCH_SIZE:-200}
-      - TOXIPROXY_URL=http://toxiproxy:8474
       - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
       - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
       - backend
       - agent
-      - toxiproxy
     networks:
       - edge
       - app
@@ -206,27 +202,6 @@ services:
     networks:
       - app
 
-  toxiproxy:
-    image: shopify/toxiproxy:2.5.0
-    container_name: sparkle_toxiproxy
-    restart: unless-stopped
-    networks:
-      - app
-
-  toxiproxy_init:
-    image: shopify/toxiproxy:2.5.0
-    container_name: sparkle_toxiproxy_init
-    restart: "no"
-    depends_on:
-      - toxiproxy
-      - agent
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        /go/bin/toxiproxy-cli -h toxiproxy:8474 create grpc_backend -l 0.0.0.0:8666 -u agent:50051 || true
-    networks:
-      - app
-
   db:
     image: postgres:16
     container_name: sparkle_db
@@ -275,8 +250,8 @@ services:
       - ./monitoring/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - sparkle_tempo_data:/tmp/tempo
     ports:
-      - "3200:3200"
-      - "4317:4317"
+      - "127.0.0.1:3200:3200"
+      - "127.0.0.1:4317:4317"
     networks:
       - app
 
@@ -294,7 +269,7 @@ services:
       - ./monitoring/sparkle_production_baseline_alerts.yml:/etc/prometheus/sparkle_production_baseline_alerts.yml:ro
       - sparkle_prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     depends_on:
       - backend
       - gateway_blue
@@ -321,7 +296,7 @@ services:
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     networks:
       - app
 
@@ -335,7 +310,7 @@ services:
       - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
       - sparkle_loki_data:/loki
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     networks:
       - app
 
@@ -367,7 +342,7 @@ services:
       - ./monitoring/grafana-dashboards:/var/lib/grafana/dashboards:ro
       - sparkle_grafana_data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
       - loki
