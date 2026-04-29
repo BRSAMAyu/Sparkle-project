@@ -2,66 +2,88 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.config import settings
 from app.core.cache import cache_service
-from app.core.metrics import KILL_SWITCH_MODE
+from app.core.kill_switch import (
+    KillSwitchBinding,
+    is_enabled_mode,
+    normalize_mode,
+    read_mode,
+    record_mode_gauge,
+    write_mode,
+)
+
+_STAGE37_BINDING = KillSwitchBinding(
+    stage="37",
+    feature="llm_safety",
+    redis_key="aurora:stage37:llm_safety",
+    settings_attr="AURORA_STAGE37_LLM_SAFETY_MODE",
+    legacy_bool_attr=None,
+    fallback_mode="live",
+    enabled_mode="live",
+)
 
 
 class AuroraStage37LLMSafetyKillSwitchService:
-    PREFIX = "aurora_stage37:"
-    KEY = "llm_safety_enabled"
-
     def __init__(self) -> None:
-        self._cached_enabled: bool | None = None
+        self._cached_mode: str | None = None
 
-    async def get_enabled(self) -> bool:
+    async def get_mode(self) -> str:
         redis_client = cache_service.redis
-        if redis_client is None:
-            enabled = self._normalize_enabled(settings.AURORA_STAGE37_LLM_SAFETY_ENABLED)
-            self._cached_enabled = enabled
-            self._record_gauge(enabled)
-            return enabled
-
-        raw = await redis_client.get(f"{self.PREFIX}{self.KEY}")
-        enabled = self._normalize_enabled(
-            settings.AURORA_STAGE37_LLM_SAFETY_ENABLED if raw is None else raw
+        mode = await read_mode(
+            redis_client=redis_client,
+            prefix="sparkle:",
+            binding=_STAGE37_BINDING,
         )
-        self._cached_enabled = enabled
-        self._record_gauge(enabled)
-        return enabled
+        self._cached_mode = mode
+        return mode
 
-    async def set_enabled(self, enabled: bool) -> bool:
-        normalized = self._normalize_enabled(enabled)
+    async def set_mode(self, mode: Any) -> str:
         redis_client = cache_service.redis
-        if redis_client is None:
-            settings.AURORA_STAGE37_LLM_SAFETY_ENABLED = normalized
-        else:
-            await redis_client.set(f"{self.PREFIX}{self.KEY}", "true" if normalized else "false")
-        self._cached_enabled = normalized
-        self._record_gauge(normalized)
+        normalized = await write_mode(
+            redis_client=redis_client,
+            prefix="sparkle:",
+            binding=_STAGE37_BINDING,
+            mode=mode,
+        )
+        self._cached_mode = normalized
         return normalized
 
+    async def get_enabled(self) -> bool:
+        mode = await self.get_mode()
+        return is_enabled_mode(mode)
+
     def current_enabled(self) -> bool:
-        enabled = self._cached_enabled
-        if enabled is None:
-            enabled = self._normalize_enabled(settings.AURORA_STAGE37_LLM_SAFETY_ENABLED)
-            self._cached_enabled = enabled
-        self._record_gauge(enabled)
+        mode = self._cached_mode
+        if mode is None:
+            from app.config import settings
+
+            mode = normalize_mode(
+                getattr(settings, _STAGE37_BINDING.settings_attr, _STAGE37_BINDING.fallback_mode),
+                fallback=_STAGE37_BINDING.fallback_mode,
+            )
+            self._cached_mode = mode
+        record_mode_gauge(_STAGE37_BINDING.stage, _STAGE37_BINDING.feature, mode)
+        return is_enabled_mode(mode)
+
+    def current_mode(self) -> str:
+        mode = self._cached_mode
+        if mode is None:
+            from app.config import settings
+
+            mode = normalize_mode(
+                getattr(settings, _STAGE37_BINDING.settings_attr, _STAGE37_BINDING.fallback_mode),
+                fallback=_STAGE37_BINDING.fallback_mode,
+            )
+            self._cached_mode = mode
+        record_mode_gauge(_STAGE37_BINDING.stage, _STAGE37_BINDING.feature, mode)
+        return mode
+
+    async def set_enabled(self, enabled: bool) -> bool:
+        await self.set_mode("live" if enabled else "off")
         return enabled
 
     def reset_local_cache(self) -> None:
-        self._cached_enabled = None
-
-    @staticmethod
-    def _normalize_enabled(value: Any) -> bool:
-        if isinstance(value, bool):
-            return value
-        normalized = str(value or "").strip().lower()
-        return normalized not in {"", "0", "false", "off", "no"}
-
-    @staticmethod
-    def _record_gauge(enabled: bool) -> None:
-        KILL_SWITCH_MODE.labels(stage="37", feature="llm_safety").set(1 if enabled else 0)
+        self._cached_mode = None
 
 
 aurora_stage37_llm_safety_kill_switch_service = AuroraStage37LLMSafetyKillSwitchService()

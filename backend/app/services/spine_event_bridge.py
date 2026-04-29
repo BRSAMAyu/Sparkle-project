@@ -9,6 +9,7 @@ from typing import Any
 from loguru import logger
 
 from app.signals.spine_orchestrator import SpineOrchestrator
+from app.signals.external_integration import CalendarEvent, CalendarSignalBridge
 from app.signals.types import ActionableSignal, CausalTrace, _uid
 
 SPINE_EVENT_TYPES = {
@@ -181,19 +182,80 @@ class SpineEventBridge:
 
     def _calendar_changed(self, event: dict[str, Any]) -> ActionableSignal:
         event_type = str(event.get("event_type") or "")
-        title = event.get("title") or event.get("event_id") or "calendar event"
         deleted = event_type == "calendar.event.deleted"
+
+        # Build CalendarEvent from EventBus payload
+        cal_event = CalendarEvent(
+            event_id=str(event.get("event_id") or event.get("id") or ""),
+            title=str(event.get("title") or ""),
+            start_time=str(event.get("start_time") or ""),
+            end_time=str(event.get("end_time") or ""),
+            event_type=str(event.get("calendar_event_type") or "other"),
+            subject=event.get("subject"),
+            location=event.get("location"),
+        )
+
+        bridge = CalendarSignalBridge()
+
+        # Try enriched deadline-pressure analysis
+        if not deleted and cal_event.start_time:
+            deadline_signal = bridge.detect_deadline_pressure([cal_event])
+            if deadline_signal is not None:
+                return deadline_signal
+
+        # Fallback: build time-context-aware signal
+        if not deleted and cal_event.start_time:
+            time_ctx = bridge.build_time_context([cal_event])
+            has_pressure = time_ctx.get("has_time_pressure", False)
+            nearest_hours = time_ctx.get("nearest_deadline_hours")
+            priority = "high" if (nearest_hours is not None and nearest_hours < 24) else "medium"
+            confidence = 0.85 if has_pressure else 0.7
+            effects = ["adjust_plan_density", "refresh_today_tasks"]
+            if has_pressure:
+                effects.append("prioritize_review")
+            return self._signal(
+                event,
+                source_system="calendar_bridge",
+                state_key="time_context",
+                claim="calendar_time_context_updated",
+                confidence=confidence,
+                scope="current_sprint",
+                ttl_hours=int(nearest_hours) + 1 if nearest_hours else 72,
+                evidence_summary=(
+                    f"{cal_event.title}: {nearest_hours:.0f}h until deadline"
+                    if nearest_hours
+                    else f"{event_type}: {cal_event.title}"
+                ),
+                possible_effects=effects,
+                priority=priority,
+            )
+
+        # Deleted event or event without start_time — recompute pressure or generic signal
+        if deleted:
+            return self._signal(
+                event,
+                source_system="calendar_bridge",
+                state_key="time_context",
+                claim="calendar_deadline_removed",
+                confidence=0.62,
+                scope="current_sprint",
+                ttl_hours=72,
+                evidence_summary=f"Removed: {cal_event.title}.",
+                possible_effects=["recompute_time_pressure", "adjust_plan_density", "refresh_today_tasks"],
+                priority="medium",
+            )
+
         return self._signal(
             event,
-            source_system="event_bus.calendar",
-            state_key="deadline_pressure",
-            claim="calendar_deadline_removed" if deleted else "calendar_deadline_changed",
-            confidence=0.62 if deleted else 0.78,
-            scope="current_sprint",
-            ttl_hours=72,
-            evidence_summary=f"{event_type}: {title}.",
-            possible_effects=["recompute_time_pressure", "adjust_plan_density", "refresh_today_tasks"],
-            priority="medium",
+            source_system="calendar_bridge",
+            state_key="time_context",
+            claim="calendar_event_observed",
+            confidence=0.6,
+            scope="day",
+            ttl_hours=48,
+            evidence_summary=f"{event_type}: {cal_event.title}.",
+            possible_effects=["refresh_today_tasks"],
+            priority="low",
         )
 
     def _shop_purchase(self, event: dict[str, Any]) -> ActionableSignal:

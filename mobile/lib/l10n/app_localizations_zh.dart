@@ -17158,7 +17158,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statisticsWatermark => '星火AI学习助手';
 
   @override
-  String statisticsDateFormat(Object day, Object month, Object year) {
+  String statisticsDateFormat(Object year, Object month, Object day) {
     return '$year年$month月$day日';
   }
 
@@ -17280,7 +17280,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileUploadSelected => '已选择文件';
 
   @override
-  String fileUploadFormat(Object size, Object type) {
+  String fileUploadFormat(Object type, Object size) {
     return '$type · $size';
   }
 

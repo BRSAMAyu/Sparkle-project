@@ -12746,31 +12746,31 @@ abstract class AppLocalizations {
   /// **'解锁时间'**
   String get visualElementSortUnlockDate;
 
-  /// No description provided for @visualElementUnlockTitle.
+  /// Title displayed when a visual element is unlocked
   ///
   /// In zh, this message translates to:
   /// **'解锁视觉元素'**
   String get visualElementUnlockTitle;
 
-  /// No description provided for @visualElementUnlockSubtitle.
+  /// Subtitle displayed when a visual element is unlocked
   ///
   /// In zh, this message translates to:
   /// **'恭喜获得新的视觉元素！'**
   String get visualElementUnlockSubtitle;
 
-  /// No description provided for @visualElementViewCollection.
+  /// Button text to view the visual element collection
   ///
   /// In zh, this message translates to:
   /// **'查看收藏'**
   String get visualElementViewCollection;
 
-  /// No description provided for @achievementMapFocusTooltip.
+  /// Tooltip for the focus button on the achievement map
   ///
   /// In zh, this message translates to:
   /// **'定位到最近的成就'**
   String get achievementMapFocusTooltip;
 
-  /// No description provided for @achievementMapFocusHint.
+  /// Hint message showing which achievement to focus on
   ///
   /// In zh, this message translates to:
   /// **'尝试解锁：{name}'**
@@ -31235,7 +31235,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{year}年{month}月{day}日'**
-  String statisticsDateFormat(Object day, Object month, Object year);
+  String statisticsDateFormat(Object year, Object month, Object day);
 
   /// No description provided for @statisticsTypeFocus.
   ///
@@ -31475,7 +31475,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{type} · {size}'**
-  String fileUploadFormat(Object size, Object type);
+  String fileUploadFormat(Object type, Object size);
 
   /// No description provided for @fileUploadProgress.
   ///

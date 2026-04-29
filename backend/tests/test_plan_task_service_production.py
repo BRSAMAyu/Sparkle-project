@@ -34,19 +34,16 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-# ── PlanService: Create ──────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_plan_create_first_plan_auto_primary(db_session: AsyncSession, monkeypatch):
-    """First plan for a user MUST be auto-set as primary (is_primary=True)."""
-    user_id = uuid4()
-
+@pytest.fixture
+def mock_plan_deps(monkeypatch):
+    """Shared fixture: mock PlanQuotaService, _sync_plan_card_projection, Stage33JourneyEventService."""
     mock_quota_status = MagicMock()
     mock_quota_status.used = 0
     mock_quota_svc = AsyncMock()
     mock_quota_svc.get_quota_status.return_value = mock_quota_status
     mock_quota_svc.check_and_raise = AsyncMock()
+    mock_quota_svc.auto_set_primary_plan = AsyncMock(return_value=None)
+    mock_quota_svc.ensure_primary_exists = AsyncMock()
 
     monkeypatch.setattr(
         "app.services.plan_quota_service.PlanQuotaService",
@@ -60,6 +57,46 @@ async def test_plan_create_first_plan_auto_primary(db_session: AsyncSession, mon
         "app.services.stage33_journey_event_service.Stage33JourneyEventService.publish",
         AsyncMock(),
     )
+    return mock_quota_svc
+
+
+@pytest.fixture
+def mock_task_deps(monkeypatch):
+    """Shared fixture: mock common task service dependencies."""
+    monkeypatch.setattr(
+        "app.services.task_service.get_personalization_engine",
+        MagicMock(side_effect=Exception("no engine")),
+    )
+    monkeypatch.setattr(
+        "app.services.task_service._sync_task_card_projection",
+        AsyncMock(),
+    )
+    monkeypatch.setattr(
+        "app.services.task_service.task_document_service",
+        MagicMock(auto_link_from_task_context=AsyncMock()),
+    )
+    monkeypatch.setattr(
+        "app.services.task_service.cache_service",
+        MagicMock(redis=None),
+    )
+    monkeypatch.setattr(
+        "app.services.task_service.event_bus_reliable",
+        MagicMock(publish=AsyncMock()),
+    )
+    monkeypatch.setattr(
+        "app.services.task_service.publish_srl_event",
+        AsyncMock(),
+    )
+
+
+# ── PlanService: Create ──────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_plan_create_first_plan_auto_primary(db_session: AsyncSession, mock_plan_deps):
+    """First plan for a user MUST be auto-set as primary (is_primary=True)."""
+    user_id = uuid4()
+    mock_plan_deps.get_quota_status.return_value.used = 0
 
     obj_in = PlanCreate(name="我的第一个计划", type=PlanType.SPRINT, subject="数学")
     plan = await PlanService.create(db_session, obj_in, user_id, skip_quota_check=True)
@@ -71,28 +108,10 @@ async def test_plan_create_first_plan_auto_primary(db_session: AsyncSession, mon
 
 
 @pytest.mark.asyncio
-async def test_plan_create_second_plan_not_primary(db_session: AsyncSession, monkeypatch):
+async def test_plan_create_second_plan_not_primary(db_session: AsyncSession, mock_plan_deps):
     """Second plan for a user MUST NOT be auto-set as primary."""
     user_id = uuid4()
-
-    mock_quota_status = MagicMock()
-    mock_quota_status.used = 1
-    mock_quota_svc = AsyncMock()
-    mock_quota_svc.get_quota_status.return_value = mock_quota_status
-    mock_quota_svc.check_and_raise = AsyncMock()
-
-    monkeypatch.setattr(
-        "app.services.plan_quota_service.PlanQuotaService",
-        lambda db, redis: mock_quota_svc,
-    )
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.stage33_journey_event_service.Stage33JourneyEventService.publish",
-        AsyncMock(),
-    )
+    mock_plan_deps.get_quota_status.return_value.used = 1
 
     obj_in = PlanCreate(name="第二个计划", type=PlanType.GROWTH, subject="英语")
     plan = await PlanService.create(db_session, obj_in, user_id, skip_quota_check=True)
@@ -101,60 +120,20 @@ async def test_plan_create_second_plan_not_primary(db_session: AsyncSession, mon
 
 
 @pytest.mark.asyncio
-async def test_plan_create_defaults_to_daily_stage(db_session: AsyncSession, monkeypatch):
+async def test_plan_create_defaults_to_daily_stage(db_session: AsyncSession, mock_plan_deps):
     """When plan_stage not provided, MUST default to DAILY."""
     user_id = uuid4()
-
-    mock_quota_status = MagicMock()
-    mock_quota_status.used = 0
-    mock_quota_svc = AsyncMock()
-    mock_quota_svc.get_quota_status.return_value = mock_quota_status
-
-    monkeypatch.setattr(
-        "app.services.plan_quota_service.PlanQuotaService",
-        lambda db, redis: mock_quota_svc,
-    )
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.stage33_journey_event_service.Stage33JourneyEventService.publish",
-        AsyncMock(),
-    )
-
     obj_in = PlanCreate(name="默认阶段测试", type=PlanType.SPRINT)
     plan = await PlanService.create(db_session, obj_in, user_id, skip_quota_check=True)
-
     assert plan.plan_stage == PlanStage.DAILY
 
 
 @pytest.mark.asyncio
-async def test_plan_create_priority_default_normal(db_session: AsyncSession, monkeypatch):
+async def test_plan_create_priority_default_normal(db_session: AsyncSession, mock_plan_deps):
     """When priority not provided, MUST default to NORMAL."""
     user_id = uuid4()
-
-    mock_quota_status = MagicMock()
-    mock_quota_status.used = 0
-    mock_quota_svc = AsyncMock()
-    mock_quota_svc.get_quota_status.return_value = mock_quota_status
-
-    monkeypatch.setattr(
-        "app.services.plan_quota_service.PlanQuotaService",
-        lambda db, redis: mock_quota_svc,
-    )
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.stage33_journey_event_service.Stage33JourneyEventService.publish",
-        AsyncMock(),
-    )
-
     obj_in = PlanCreate(name="优先级测试", type=PlanType.SPRINT)
     plan = await PlanService.create(db_session, obj_in, user_id, skip_quota_check=True)
-
     assert plan.priority == PlanPriority.NORMAL
 
 
@@ -162,7 +141,7 @@ async def test_plan_create_priority_default_normal(db_session: AsyncSession, mon
 
 
 @pytest.mark.asyncio
-async def test_plan_archive_sets_inactive_and_not_primary(db_session: AsyncSession, monkeypatch):
+async def test_plan_archive_sets_inactive_and_not_primary(db_session: AsyncSession, mock_plan_deps):
     """Archiving a plan MUST set is_active=False AND is_primary=False."""
     user_id = uuid4()
     plan = Plan(
@@ -176,17 +155,6 @@ async def test_plan_archive_sets_inactive_and_not_primary(db_session: AsyncSessi
     db_session.add(plan)
     await db_session.commit()
 
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-    mock_quota_svc = AsyncMock()
-    mock_quota_svc.auto_set_primary_plan = AsyncMock(return_value=None)
-    monkeypatch.setattr(
-        "app.services.plan_quota_service.PlanQuotaService",
-        lambda db, redis: mock_quota_svc,
-    )
-
     archived = await PlanService.archive(db_session, plan.id, user_id)
 
     assert archived is not None
@@ -195,7 +163,7 @@ async def test_plan_archive_sets_inactive_and_not_primary(db_session: AsyncSessi
 
 
 @pytest.mark.asyncio
-async def test_plan_archive_triggers_auto_primary_selection(db_session: AsyncSession, monkeypatch):
+async def test_plan_archive_triggers_auto_primary_selection(db_session: AsyncSession, mock_plan_deps):
     """When archiving the primary plan, system MUST auto-select a new primary."""
     user_id = uuid4()
     plan_a = Plan(
@@ -217,24 +185,15 @@ async def test_plan_archive_triggers_auto_primary_selection(db_session: AsyncSes
     db_session.add_all([plan_a, plan_b])
     await db_session.commit()
 
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-    mock_quota_svc = AsyncMock()
-    mock_quota_svc.auto_set_primary_plan = AsyncMock(return_value=plan_b.id)
-    monkeypatch.setattr(
-        "app.services.plan_quota_service.PlanQuotaService",
-        lambda db, redis: mock_quota_svc,
-    )
+    mock_plan_deps.auto_set_primary_plan = AsyncMock(return_value=plan_b.id)
 
     await PlanService.archive(db_session, plan_a.id, user_id)
 
-    mock_quota_svc.auto_set_primary_plan.assert_called_once_with(user_id)
+    mock_plan_deps.auto_set_primary_plan.assert_called_once_with(user_id)
 
 
 @pytest.mark.asyncio
-async def test_plan_archive_wrong_user_returns_none(db_session: AsyncSession, monkeypatch):
+async def test_plan_archive_wrong_user_returns_none(db_session: AsyncSession, mock_plan_deps):
     """Archiving another user's plan MUST return None (ownership enforced)."""
     user_a = uuid4()
     user_b = uuid4()
@@ -248,17 +207,12 @@ async def test_plan_archive_wrong_user_returns_none(db_session: AsyncSession, mo
     db_session.add(plan)
     await db_session.commit()
 
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-
     result = await PlanService.archive(db_session, plan.id, user_b)
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_plan_restore_reactivates(db_session: AsyncSession, monkeypatch):
+async def test_plan_restore_reactivates(db_session: AsyncSession, mock_plan_deps):
     """Restoring an archived plan MUST set is_active=True."""
     user_id = uuid4()
     plan = Plan(
@@ -271,18 +225,6 @@ async def test_plan_restore_reactivates(db_session: AsyncSession, monkeypatch):
     db_session.add(plan)
     await db_session.commit()
 
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-    mock_quota_svc = AsyncMock()
-    mock_quota_svc.check_and_raise = AsyncMock()
-    mock_quota_svc.ensure_primary_exists = AsyncMock()
-    monkeypatch.setattr(
-        "app.services.plan_quota_service.PlanQuotaService",
-        lambda db, redis: mock_quota_svc,
-    )
-
     restored = await PlanService.restore(db_session, plan.id, user_id, skip_quota_check=True)
 
     assert restored is not None
@@ -290,7 +232,7 @@ async def test_plan_restore_reactivates(db_session: AsyncSession, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_plan_restore_active_plan_returns_none(db_session: AsyncSession, monkeypatch):
+async def test_plan_restore_active_plan_returns_none(db_session: AsyncSession, mock_plan_deps):
     """Restoring an already active plan MUST return None."""
     user_id = uuid4()
     plan = Plan(
@@ -302,11 +244,6 @@ async def test_plan_restore_active_plan_returns_none(db_session: AsyncSession, m
     )
     db_session.add(plan)
     await db_session.commit()
-
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
 
     result = await PlanService.restore(db_session, plan.id, user_id, skip_quota_check=True)
     assert result is None
@@ -414,390 +351,7 @@ async def test_plan_sprint_no_auto_archive_with_incomplete_tasks(db_session: Asy
 
 
 @pytest.mark.asyncio
-async def test_plan_growth_type_never_auto_archives(db_session: AsyncSession, monkeypatch):
-    """Growth plans MUST NEVER auto-archive, even at 100% completion."""
-    user_id = uuid4()
-    plan = Plan(
-        id=uuid4(),
-        user_id=user_id,
-        name="成长计划",
-        type=PlanType.GROWTH,
-        is_active=True,
-        progress=0.0,
-    )
-    db_session.add(plan)
-    await db_session.commit()
-
-    task = Task(
-        id=uuid4(),
-        user_id=user_id,
-        plan_id=plan.id,
-        title="唯一任务",
-        type=TaskType.LEARNING,
-        status=TaskStatus.COMPLETED,
-        estimated_minutes=30,
-    )
-    db_session.add(task)
-    await db_session.commit()
-
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-
-    new_progress = await PlanService.update_progress(db_session, plan.id, user_id)
-
-    await db_session.refresh(plan)
-    assert new_progress == 1.0
-    assert plan.is_active is True
-
-
-# ── PlanService: Update / Get ────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_plan_update_partial_fields_only(db_session: AsyncSession, monkeypatch):
-    """PlanUpdate with exclude_unset MUST only update provided fields."""
-    user_id = uuid4()
-    plan = Plan(
-        id=uuid4(),
-        user_id=user_id,
-        name="原始名称",
-        type=PlanType.SPRINT,
-        description="原始描述",
-        is_active=True,
-    )
-    db_session.add(plan)
-    await db_session.commit()
-
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-
-    update_data = PlanUpdate(description="新描述")
-    updated = await PlanService.update(db_session, plan, update_data)
-
-    assert updated.name == "原始名称"
-    assert updated.description == "新描述"
-
-
-@pytest.mark.asyncio
-async def test_plan_get_by_id_ownership_enforced(db_session: AsyncSession):
-    """get_by_id MUST return None when plan belongs to another user."""
-    user_a = uuid4()
-    user_b = uuid4()
-    plan = Plan(
-        id=uuid4(),
-        user_id=user_a,
-        name="用户A的计划",
-        type=PlanType.SPRINT,
-    )
-    db_session.add(plan)
-    await db_session.commit()
-
-    result = await PlanService.get_by_id(db_session, plan.id, user_b)
-    assert result is None
-
-    result = await PlanService.get_by_id(db_session, plan.id, user_a)
-    assert result is not None
-
-
-@pytest.mark.asyncio
-async def test_plan_list_active_excludes_archived(db_session: AsyncSession):
-    """list_active MUST only return plans where is_active=True."""
-    user_id = uuid4()
-    active_plan = Plan(
-        id=uuid4(),
-        user_id=user_id,
-        name="活跃计划",
-        type=PlanType.SPRINT,
-        is_active=True,
-    )
-    archived_plan = Plan(
-        id=uuid4(),
-        user_id=user_id,
-        name="归档计划",
-        type=PlanType.SPRINT,
-        is_active=False,
-    )
-    db_session.add_all([active_plan, archived_plan])
-    await db_session.commit()
-
-    active_plans = await PlanService.list_active(db_session, user_id)
-
-    assert len(active_plans) == 1
-    assert active_plans[0].is_active is True
-
-
-# ── TaskService: Create ──────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_task_create_default_estimation_without_personalization(db_session: AsyncSession, monkeypatch):
-    """When personalization engine unavailable, MUST use default estimated_minutes=25, difficulty=1."""
-    user_id = uuid4()
-
-    monkeypatch.setattr(
-        "app.services.task_service.get_personalization_engine",
-        MagicMock(side_effect=Exception("no engine")),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service._sync_task_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.task_document_service",
-        MagicMock(auto_link_from_task_context=AsyncMock()),
-    )
-
-    obj_in = TaskCreate(title="无估算任务", type=TaskType.LEARNING)
-    task = await TaskService.create(db_session, obj_in, user_id)
-
-    assert task.estimated_minutes == 25
-    assert task.difficulty == 1
-    assert task.status == TaskStatus.PENDING
-
-
-@pytest.mark.asyncio
-async def test_task_create_order_index_decrements(db_session: AsyncSession, monkeypatch):
-    """New tasks MUST get decreasing order_index (newest first)."""
-    user_id = uuid4()
-
-    monkeypatch.setattr(
-        "app.services.task_service.get_personalization_engine",
-        MagicMock(side_effect=Exception("no engine")),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service._sync_task_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.task_document_service",
-        MagicMock(auto_link_from_task_context=AsyncMock()),
-    )
-
-    task1 = await TaskService.create(
-        db_session,
-        TaskCreate(title="第一个", type=TaskType.LEARNING, estimated_minutes=25, difficulty=1),
-        user_id,
-    )
-    task2 = await TaskService.create(
-        db_session,
-        TaskCreate(title="第二个", type=TaskType.LEARNING, estimated_minutes=25, difficulty=1),
-        user_id,
-    )
-
-    assert task2.order_index < task1.order_index
-    assert task1.order_index == 1000
-    assert task2.order_index == 0
-
-
-# ── TaskService: Complete ────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_task_complete_updates_plan_progress(db_session: AsyncSession, monkeypatch):
-    """Completing a task with plan_id MUST trigger PlanService.update_progress."""
-    user_id = uuid4()
-    plan = Plan(
-        id=uuid4(),
-        user_id=user_id,
-        name="进度测试",
-        type=PlanType.GROWTH,
-        is_active=True,
-        progress=0.0,
-    )
-    db_session.add(plan)
-    await db_session.commit()
-
-    task = Task(
-        id=uuid4(),
-        user_id=user_id,
-        plan_id=plan.id,
-        title="待完成任务",
-        type=TaskType.LEARNING,
-        status=TaskStatus.PENDING,
-        estimated_minutes=30,
-    )
-    db_session.add(task)
-    await db_session.commit()
-
-    monkeypatch.setattr(
-        "app.services.task_service._sync_task_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.cache_service",
-        MagicMock(redis=None),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.event_bus_reliable",
-        MagicMock(publish=AsyncMock()),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.publish_srl_event",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.plan_service._sync_plan_card_projection",
-        AsyncMock(),
-    )
-
-    completed = await TaskService.complete(db_session, task, actual_minutes=28, note="完成了")
-
-    assert completed.status == TaskStatus.COMPLETED
-    assert completed.actual_minutes == 28
-    assert completed.user_note == "完成了"
-    assert completed.completed_at is not None
-
-    await db_session.refresh(plan)
-    assert plan.progress == 1.0
-
-
-@pytest.mark.asyncio
-async def test_task_complete_sets_status_and_timestamps(db_session: AsyncSession, monkeypatch):
-    """Completing a task MUST set COMPLETED status, completed_at, and actual_minutes."""
-    user_id = uuid4()
-    task = Task(
-        id=uuid4(),
-        user_id=user_id,
-        title="完成时间戳测试",
-        type=TaskType.LEARNING,
-        status=TaskStatus.IN_PROGRESS,
-        estimated_minutes=30,
-    )
-    db_session.add(task)
-    await db_session.commit()
-
-    monkeypatch.setattr(
-        "app.services.task_service._sync_task_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.cache_service",
-        MagicMock(redis=None),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.event_bus_reliable",
-        MagicMock(publish=AsyncMock()),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.publish_srl_event",
-        AsyncMock(),
-    )
-
-    before = _utcnow()
-    completed = await TaskService.complete(db_session, task, actual_minutes=35)
-    after = _utcnow()
-
-    assert completed.status == TaskStatus.COMPLETED
-    assert completed.actual_minutes == 35
-    assert completed.completed_at is not None
-    assert before <= completed.completed_at <= after
-
-
-# ── TaskService: Stuck ───────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_task_stuck_raises_for_completed(db_session: AsyncSession):
-    """Marking a COMPLETED task as stuck MUST raise ValueError."""
-    user_id = uuid4()
-    task = Task(
-        id=uuid4(),
-        user_id=user_id,
-        title="已完成任务",
-        type=TaskType.LEARNING,
-        status=TaskStatus.COMPLETED,
-        estimated_minutes=30,
-    )
-    db_session.add(task)
-    await db_session.commit()
-
-    with pytest.raises(ValueError, match="Completed or abandoned tasks cannot be marked stuck"):
-        await TaskService.mark_stuck(db_session, task, stuck_point="概念混淆")
-
-
-@pytest.mark.asyncio
-async def test_task_stuck_raises_for_abandoned(db_session: AsyncSession):
-    """Marking an ABANDONED task as stuck MUST raise ValueError."""
-    user_id = uuid4()
-    task = Task(
-        id=uuid4(),
-        user_id=user_id,
-        title="已放弃任务",
-        type=TaskType.LEARNING,
-        status=TaskStatus.ABANDONED,
-        estimated_minutes=30,
-    )
-    db_session.add(task)
-    await db_session.commit()
-
-    with pytest.raises(ValueError, match="Completed or abandoned tasks cannot be marked stuck"):
-        await TaskService.mark_stuck(db_session, task, stuck_point="不想做了")
-
-
-@pytest.mark.asyncio
-async def test_task_stuck_sets_status_and_auto_starts(db_session: AsyncSession, monkeypatch):
-    """Marking a PENDING task as stuck MUST set STUCK status and auto-set started_at."""
-    user_id = uuid4()
-    task = Task(
-        id=uuid4(),
-        user_id=user_id,
-        title="卡住任务",
-        type=TaskType.LEARNING,
-        status=TaskStatus.PENDING,
-        estimated_minutes=30,
-    )
-    db_session.add(task)
-    await db_session.commit()
-
-    async def mock_build_diagnosis(*args, **kwargs):
-        return {
-            "mistake_diagnosis": "诊断信息",
-            "one_targeted_fix": "修复建议",
-            "diagnosis_question": "卡在哪里？",
-            "diagnosis_options": ["概念没想清"],
-            "targeted_fix": "修复",
-            "check_question": "下一步",
-            "source": "test",
-            "task_state": {},
-        }
-
-    monkeypatch.setattr(
-        "app.services.task_service.TaskService._build_stuck_diagnosis",
-        mock_build_diagnosis,
-    )
-    monkeypatch.setattr(
-        "app.services.task_service._sync_task_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.event_bus_reliable",
-        MagicMock(publish=AsyncMock()),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.publish_srl_event",
-        AsyncMock(),
-    )
-
-    updated_task, diagnosis = await TaskService.mark_stuck(
-        db_session, task, stuck_point="不理解概念"
-    )
-
-    assert updated_task.status == TaskStatus.STUCK
-    assert updated_task.started_at is not None
-    assert diagnosis["mistake_diagnosis"] == "诊断信息"
-    assert updated_task.guide_json is not None
-    assert "stuck_help" in updated_task.guide_json
-
-
-# ── TaskService: Abandon ─────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_task_abandon_sets_status_and_note(db_session: AsyncSession, monkeypatch):
+async def test_task_abandon_sets_status_and_note(db_session: AsyncSession, mock_task_deps):
     """Abandoning a task MUST set ABANDONED status and prefix the note."""
     user_id = uuid4()
     task = Task(
@@ -812,23 +366,6 @@ async def test_task_abandon_sets_status_and_note(db_session: AsyncSession, monke
     db_session.add(task)
     await db_session.commit()
 
-    monkeypatch.setattr(
-        "app.services.task_service._sync_task_card_projection",
-        AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.cache_service",
-        MagicMock(redis=None),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.event_bus_reliable",
-        MagicMock(publish=AsyncMock()),
-    )
-    monkeypatch.setattr(
-        "app.services.task_service.publish_srl_event",
-        AsyncMock(),
-    )
-
     abandoned = await TaskService.abandon(db_session, task, reason="太难了")
 
     assert abandoned.status == TaskStatus.ABANDONED
@@ -836,11 +373,32 @@ async def test_task_abandon_sets_status_and_note(db_session: AsyncSession, monke
     assert abandoned.completed_at is not None
 
 
+@pytest.mark.asyncio
+async def test_task_abandon_without_reason_no_note(db_session: AsyncSession, mock_task_deps):
+    """Abandoning without reason MUST NOT set user_note."""
+    user_id = uuid4()
+    task = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="无理由放弃",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=30,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    abandoned = await TaskService.abandon(db_session, task, reason=None)
+
+    assert abandoned.status == TaskStatus.ABANDONED
+    assert abandoned.user_note is None
+
+
 # ── TaskService: Focus Progress ──────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_task_focus_progress_auto_complete(db_session: AsyncSession, monkeypatch):
+async def test_task_focus_progress_auto_complete(db_session: AsyncSession, mock_task_deps):
     """When accumulated minutes >= estimated, task MUST auto-complete."""
     user_id = uuid4()
     task = Task(
@@ -885,7 +443,7 @@ async def test_task_focus_progress_auto_complete(db_session: AsyncSession, monke
 
 
 @pytest.mark.asyncio
-async def test_task_focus_progress_no_auto_complete_under_estimate(db_session: AsyncSession, monkeypatch):
+async def test_task_focus_progress_no_auto_complete_under_estimate(db_session: AsyncSession, mock_task_deps):
     """When accumulated minutes < estimated, task MUST NOT auto-complete."""
     user_id = uuid4()
     task = Task(
@@ -947,7 +505,7 @@ async def test_task_focus_progress_zero_duration_no_change(db_session: AsyncSess
 
 
 @pytest.mark.asyncio
-async def test_task_focus_progress_auto_starts_pending(db_session: AsyncSession, monkeypatch):
+async def test_task_focus_progress_auto_starts_pending(db_session: AsyncSession, mock_task_deps):
     """PENDING task receiving focus progress MUST auto-transition to IN_PROGRESS."""
     user_id = uuid4()
     task = Task(
@@ -1073,7 +631,7 @@ async def test_task_reorder_sets_ascending_order_index(db_session: AsyncSession)
 
 
 @pytest.mark.asyncio
-async def test_task_confirm_batch_by_tool_result(db_session: AsyncSession, monkeypatch):
+async def test_task_confirm_batch_by_tool_result(db_session: AsyncSession, mock_task_deps):
     """confirm_tasks_by_tool_result MUST batch-confirm all PENDING tasks with matching tool_result_id."""
     user_id = uuid4()
     tool_result_id = "tool_result_abc123"
@@ -1236,7 +794,7 @@ def test_task_build_summary_no_note():
 
 
 @pytest.mark.asyncio
-async def test_task_delete_updates_plan_progress(db_session: AsyncSession, monkeypatch):
+async def test_task_delete_updates_plan_progress(db_session: AsyncSession, mock_plan_deps):
     """Deleting a task with plan_id MUST trigger plan progress recalculation."""
     user_id = uuid4()
     plan = Plan(

@@ -65,6 +65,7 @@ class DualCoreRoutingInput:
     cognitive_load: float | None = None
     capsule_preferences: dict[str, Any] = field(default_factory=dict)
     spine_active_states: list[dict[str, Any]] = field(default_factory=list)
+    aurora_preferences: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -418,6 +419,43 @@ class DualCoreRouter:
                     reason="Deadline pressure should preserve momentum and avoid opening new planning loops.",
                 )
 
+        # ── T3.4.4: Aurora user preferences ──
+        aurora_prefs = routing_input.aurora_preferences or {}
+        aurora_directness = str(aurora_prefs.get("aurora_directness", "guided"))
+        aurora_pressure = str(aurora_prefs.get("aurora_pressure_style", "motivating"))
+        aurora_explanation = str(aurora_prefs.get("aurora_explanation_level", "detailed"))
+        aurora_analysis = str(aurora_prefs.get("aurora_analysis_depth", "deep"))
+
+        if aurora_directness == "direct":
+            recommend_strategy(
+                "directness_mode",
+                "action_oriented",
+                reason="User prefers direct, action-oriented communication (aurora_directness=direct).",
+            )
+
+        if aurora_pressure == "gentle":
+            execution_constraints.append("用户偏好温和提醒方式，不使用压力驱动的催促策略。")
+            recommend_strategy(
+                "push_vs_support",
+                0.2,
+                reason="User prefers gentle pressure style (aurora_pressure_style=gentle).",
+            )
+
+        if aurora_explanation == "brief":
+            recommend_strategy(
+                "explanation_style",
+                "concise",
+                reason="User prefers brief explanations (aurora_explanation_level=brief).",
+            )
+
+        if aurora_analysis == "light":
+            cognitive_adjustments.append("用户偏好轻度分析，减少对行为模式的深入解读，先给可执行下一步。")
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="User prefers light analysis depth (aurora_analysis_depth=light).",
+            )
+
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
             execution_constraints.append(
                 f"用户偏好短冲刺，单次任务默认控制在 {routing_input.session_length_preference} 分钟以内。"
@@ -508,6 +546,12 @@ class DualCoreRouter:
                 for item in spine_states[:8]
                 if isinstance(item, dict) and item.get("state_key")
             ],
+            "aurora_preferences": {
+                "directness": aurora_directness,
+                "pressure": aurora_pressure,
+                "explanation": aurora_explanation,
+                "analysis": aurora_analysis,
+            },
         }
         if social_signals is not None:
             routing_debug["social_relationship_count"] = social_signals.relationship_count

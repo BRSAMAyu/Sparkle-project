@@ -13,6 +13,9 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/models/offline_chat_message.dart';
+import 'package:sparkle/core/offline/offline_message_queue_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -1205,6 +1208,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _autoConnect = autoConnect,
         _terminalDoneFallbackDelay = terminalDoneFallbackDelay {
     WidgetsBinding.instance.addObserver(this);
+    _offlineQueue = OfflineMessageQueueService(
+      _container.read(localDatabaseProvider),
+    );
   }
 
   static const List<Duration> _reconnectSchedule = <Duration>[
@@ -1277,6 +1283,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
+
+  // Offline persistent queue (R3 O-01: survive app kill)
+  late final OfflineMessageQueueService _offlineQueue;
 
   // 401错误处理和Token刷新
   bool _isRefreshingToken = false;
@@ -1608,6 +1617,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // 启动心跳
       _startHeartbeat();
 
+      // Restore pending messages from offline DB (R3 O-01)
+      unawaited(_restorePendingFromDb());
+
       // 发送待发送的消息
       _flushPendingMessages();
 
@@ -1725,6 +1737,15 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       return;
     }
     _safeAdd(controller, event);
+
+    // Mark message as acked in offline DB (R3 O-01)
+    if (event is AckEvent) {
+      unawaited(_offlineQueue.markAcked(
+        targetRequestId,
+        serverMessageId: event.messageId,
+      ));
+    }
+
     if (event is FullTextEvent) {
       _scheduleTerminalFallback(targetRequestId);
       return;
@@ -1769,8 +1790,30 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           retryable: false,
         ),
       );
+      // Remove overflowed message from offline DB (R3 O-01)
+      final droppedId = droppedPayload['request_id']?.toString();
+      if (droppedId != null && droppedId.isNotEmpty) {
+        unawaited(_offlineQueue.remove(droppedId));
+      }
     }
     _pendingMessages.add(payload);
+
+    // Persist to offline DB so messages survive app kill (R3 O-01)
+    final requestId = payload['request_id']?.toString();
+    if (requestId != null && requestId.isNotEmpty) {
+      unawaited(_offlineQueue.enqueue(
+        requestId: requestId,
+        sessionId: (payload['session_id'] ?? '').toString(),
+        message: (payload['message'] ?? '').toString(),
+        userId: _currentUserId ?? '',
+        extraContext: payload['extra_context']?.toString(),
+        fileIds: payload['file_ids'] is List
+            ? (payload['file_ids'] as List).map((e) => e.toString()).toList()
+            : null,
+        chatMode: payload['chat_mode']?.toString(),
+        nickname: payload['nickname']?.toString(),
+      ));
+    }
   }
 
   void _notifyPendingPayloadFailure(
@@ -1795,6 +1838,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         payload,
         ErrorEvent(code: code, message: message, retryable: false),
       );
+      // Remove from offline DB (R3 O-01)
+      final reqId = payload['request_id']?.toString();
+      if (reqId != null && reqId.isNotEmpty) {
+        unawaited(_offlineQueue.remove(reqId));
+      }
     }
   }
 
@@ -2252,6 +2300,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('📤 Full payload: ${json.encode(payload)}');
       _channel?.sink.add(json.encode(payload));
       _log('📤 Sent: ${payload['message']}');
+
+      // Mark as sent in offline DB (R3 O-01)
+      final reqId = payload['request_id']?.toString();
+      if (reqId != null && reqId.isNotEmpty) {
+        unawaited(_offlineQueue.markSent(reqId));
+      }
+
       span.end();
     } catch (e) {
       _log('❌ Send failed: $e');
@@ -2269,6 +2324,28 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _pendingMessages.clear();
 
     messages.forEach(_sendMessage);
+  }
+
+  /// Restore pending messages from offline Isar DB into the in-memory queue (R3 O-01).
+  Future<void> _restorePendingFromDb() async {
+    if (_currentUserId == null) return;
+    final pending = await _offlineQueue.loadPending();
+    if (pending.isEmpty) return;
+
+    _log('📨 Restoring ${pending.length} offline messages from DB');
+    for (final msg in pending) {
+      final payload = <String, dynamic>{
+        'message': msg.message,
+        'session_id': msg.sessionId,
+        'request_id': msg.requestId,
+        if (msg.nickname != null) 'nickname': msg.nickname,
+        if (msg.extraContext != null) 'extra_context': msg.extraContext,
+        if (msg.fileIds != null && msg.fileIds!.isNotEmpty)
+          'file_ids': msg.parsedFileIds,
+        if (msg.chatMode != null) 'chat_mode': msg.chatMode,
+      };
+      _pendingMessages.insert(0, payload);
+    }
   }
 
   String _applyWebSocketSchemeForEnvironment(
@@ -2434,6 +2511,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       unawaited(_heartbeatMetricsController.close());
     }
     _pendingMessages.clear();
+
+    // Cleanup old acked offline messages (R3 O-01)
+    unawaited(_offlineQueue.cleanupOldAcked());
   }
 
   // Helper for TRACKED(TD-001)

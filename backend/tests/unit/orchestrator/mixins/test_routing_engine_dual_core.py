@@ -1056,4 +1056,97 @@ async def test_apply_dual_core_routing_uses_aurora_projection_for_active_cohort(
     assert state.context_data["dual_core_decision"]["mode"] == "cognitive_first"
     assert state.context_data["aurora_cutover_state"]["mode"] == "active"
     assert state.context_data["plan_metadata"]["dual_core_source"] == "aurora"
+
+
+@pytest.mark.asyncio
+async def test_build_dual_core_input_reads_aurora_preferences_from_db(orchestrator):
+    mock_db = AsyncMock()
+    mock_prefs = {
+        "aurora_analysis_depth": "light",
+        "aurora_directness": "direct",
+        "aurora_explanation_level": "brief",
+        "aurora_pressure_style": "gentle",
+    }
+    orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
+    orchestrator._get_routing_profile = AsyncMock(return_value=None)
+    orchestrator._get_cognitive_routing_signals = AsyncMock(return_value={
+        "pattern_names": [], "pattern_types": [], "pattern_details": [],
+        "emotional_block_detected": False, "procrastination_pattern": False,
+        "cognitive_mode_suggested": False, "suggested_verbosity": "auto", "current_guidance": "balanced",
+    })
+    orchestrator._get_spine_active_states = AsyncMock(return_value=[])
+
+    with patch(
+        "app.orchestration.routing_engine.AuroraUserPreferencesService"
+    ) as mock_service_cls:
+        mock_service = mock_service_cls.return_value
+        mock_service.get = AsyncMock(return_value=mock_prefs)
+
+        routing_input = await orchestrator._build_dual_core_input(
+            active_db=mock_db,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="chat"),
+                confidence=0.5,
+            ),
+            information_sufficient=True,
+        )
+
+    assert routing_input.aurora_preferences == mock_prefs
+    mock_service.get.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_build_dual_core_input_falls_back_to_empty_prefs_when_db_none(orchestrator):
+    routing_input = await orchestrator._build_dual_core_input(
+        active_db=None,
+        user_id=str(uuid.uuid4()),
+        plan_id=None,
+        user_context_payload=None,
+        plan_context=None,
+        unified_routing_result=SimpleNamespace(
+            primary_intent=SimpleNamespace(value="chat"),
+            confidence=0.5,
+        ),
+        information_sufficient=True,
+    )
+
+    assert routing_input.aurora_preferences == {}
+
+
+@pytest.mark.asyncio
+async def test_build_dual_core_input_tolerates_preferences_service_failure(orchestrator):
+    mock_db = AsyncMock()
+    orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
+    orchestrator._get_routing_profile = AsyncMock(return_value=None)
+    orchestrator._get_cognitive_routing_signals = AsyncMock(return_value={
+        "pattern_names": [], "pattern_types": [], "pattern_details": [],
+        "emotional_block_detected": False, "procrastination_pattern": False,
+        "cognitive_mode_suggested": False, "suggested_verbosity": "auto", "current_guidance": "balanced",
+    })
+    orchestrator._get_spine_active_states = AsyncMock(return_value=[])
+
+    with patch(
+        "app.orchestration.routing_engine.AuroraUserPreferencesService"
+    ) as mock_service_cls:
+        mock_service = mock_service_cls.return_value
+        mock_service.get = AsyncMock(side_effect=RuntimeError("DB down"))
+
+        routing_input = await orchestrator._build_dual_core_input(
+            active_db=mock_db,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="chat"),
+                confidence=0.5,
+            ),
+            information_sufficient=True,
+        )
+
+    assert routing_input.aurora_preferences == {}
     orchestrator.dual_core_router.route.assert_not_called()

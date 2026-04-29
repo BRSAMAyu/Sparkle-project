@@ -17932,7 +17932,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statisticsWatermark => 'Sparkle AI';
 
   @override
-  String statisticsDateFormat(Object day, Object month, Object year) {
+  String statisticsDateFormat(Object year, Object month, Object day) {
     return '$year/$month/$day';
   }
 
@@ -18056,7 +18056,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileUploadSelected => 'File selected';
 
   @override
-  String fileUploadFormat(Object size, Object type) {
+  String fileUploadFormat(Object type, Object size) {
     return '$type · $size';
   }
 

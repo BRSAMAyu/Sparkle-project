@@ -621,6 +621,13 @@ async def get_spine_status_band(
             "active_state_keys": [],
             "directive_summary": None,
             "band_severity": "none",
+            "band_status": "sensing",
+            "band_label": "轻量感知中",
+            "band_summary": "Aurora 正在轻量感知，参考当前上下文优化回复。",
+            "band_energy": "L0",
+            "correction_options": [],
+            "cooldown_remaining_seconds": None,
+            "cooldown_can_override": False,
         }
     spine = SpineOrchestrator(redis)
     return await spine.get_status_band_summary(user_id=str(current_user.id))
@@ -890,5 +897,76 @@ async def set_source_tray_selection(
         mode=mode,
     )
     return {"status": "ok", "state": state}
+
+
+# ── T3.4.4: Aurora communication preferences ────────────────────────────────────
+
+_AURORA_PREF_KEYS = {
+    "aurora_analysis_depth": {"light", "deep"},
+    "aurora_directness": {"direct", "guided"},
+    "aurora_explanation_level": {"detailed", "brief"},
+    "aurora_pressure_style": {"gentle", "motivating"},
+}
+
+_DEFAULT_AURORA_PREFS: dict[str, str] = {
+    "aurora_analysis_depth": "deep",
+    "aurora_directness": "guided",
+    "aurora_explanation_level": "detailed",
+    "aurora_pressure_style": "motivating",
+}
+
+
+class AuroraPreferencesRequest(BaseModel):
+    aurora_analysis_depth: str | None = None   # "light" | "deep"
+    aurora_directness: str | None = None        # "direct" | "guided"
+    aurora_explanation_level: str | None = None  # "detailed" | "brief"
+    aurora_pressure_style: str | None = None     # "gentle" | "motivating"
+
+
+# route-tier: authed
+@router.get("/preferences")
+async def get_aurora_preferences(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get Aurora communication preferences. Returns all 4 prefs with defaults for unset values."""
+    from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
+
+    service = AuroraUserPreferencesService(db)
+    prefs = await service.get(user_id=current_user.id)
+    return {"preferences": prefs, "defaults": dict(_DEFAULT_AURORA_PREFS)}
+
+
+# route-tier: authed
+@router.put("/preferences")
+async def update_aurora_preferences(
+    body: AuroraPreferencesRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Update Aurora communication preferences. Only provided fields are changed."""
+    from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
+
+    updates: dict[str, str] = {}
+    for key in _AURORA_PREF_KEYS:
+        value = getattr(body, key, None)
+        if value is not None:
+            valid = _AURORA_PREF_KEYS[key]
+            if value not in valid:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"{key} must be one of: {', '.join(sorted(valid))}",
+                )
+            updates[key] = value
+
+    if not updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one preference must be provided",
+        )
+
+    service = AuroraUserPreferencesService(db)
+    prefs = await service.update(user_id=current_user.id, preferences=updates)
+    return {"preferences": prefs, "updated_keys": list(updates.keys())}
 
 

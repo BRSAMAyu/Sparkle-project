@@ -240,6 +240,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	// Sanitize Input (Security Hygiene) - reuse global sanitizer
 	input.Message = sanitizer.Sanitize(input.Message)
 
+	// Canonicalize the authenticated identity before any session history write/read.
+	// WS auth may provide an email or legacy subject, while chat history ownership
+	// and downstream AI context should consistently use the resolved UUID.
+	userUUID, resolvedUserID, resolvedUser, _ := h.resolveUserIdentity(ctx, userID)
+	if resolvedUserID != "" {
+		userID = resolvedUserID
+	}
+
 	// Persist user message to Redis history for context pruning
 	if input.SessionID != "" {
 		sessionID := input.SessionID
@@ -252,12 +260,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	traceID := ""
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
 		traceID = span.SpanContext().TraceID().String()
-	}
-
-	// Resolve user identity to UUID (token sub may be email)
-	userUUID, resolvedUserID, resolvedUser, _ := h.resolveUserIdentity(ctx, userID)
-	if resolvedUserID != "" {
-		userID = resolvedUserID
 	}
 
 	var profileSnapshot *service.ChatUserProfileSnapshot

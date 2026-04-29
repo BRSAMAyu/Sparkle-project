@@ -9,82 +9,82 @@ Spine Orchestrator — 编排完整的 Signal→State→Decision→Directive→A
 from __future__ import annotations
 
 import json
+from datetime import UTC
 from typing import Any
 
 from loguru import logger
 
-from app.signals.causal_trace_store import CausalTraceStore
-from app.signals.core_session import CoreSession, CoreSessionManager
-from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
-from app.signals.policy_engine import PolicyEngine
-from app.signals.task_timeout_detector import TaskTimeoutDetector
-from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
-from app.signals.mistake_signal import MistakeSignalDetector
-from app.signals.recall_opportunity import RecallOpportunityDetector
-from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
-from app.signals.signal_ranker import SignalRanker
-from app.signals.state_register import StateRegister
-from app.signals.exam_rescue_detector import ExamRescueDetector
-from app.signals.stale_state_guard import StaleStateGuard
-from app.signals.state_packet_builder import ActionableStatePacketBuilder
-from app.signals.self_model import SparkleSelfModelService
-from app.signals.community_signal import CommunitySignalDetector
-from app.signals.community_loops import CommunityLoopManager
-from app.signals.predicted_reply_options import SpineReplyOptionEngine
-from app.signals.aurora_wake import AuroraWakeJudge
-from app.signals.outcome_recorder import OutcomeRecorder
-from app.signals.outcome_tracker import OutcomeTracker
-from app.signals.spine_metrics import SpineMetricsCollector
-from app.signals.exam_sprint_policy import ExamSprintPolicyService
-from app.signals.skill_lifecycle import SkillLifecycleManager
-from app.signals.policy_analytics import PolicyAnalytics
-from app.signals.policy_experiments import PolicyExperimentManager
-from app.signals.learning_base import LearningBase
-from app.signals.growth_chronicle import GrowthChronicleService
-from app.signals.relationship_model import RelationshipModelService
-from app.signals.skill_extraction import SkillExtractionService
-from app.signals.goal_type_adapter import GoalTypeAdapter
-from app.signals.material_signal import MaterialSignalDetector
-from app.signals.timeline_card_renderer import TimelineCardRenderer
-from app.signals.source_tray_integration import SourceEffectivenessTracker
-from app.signals.goal_world_graph import GoalWorldGraphService
-from app.signals.multi_goal_arbitration import MultiGoalArbitrator
-from app.signals.directive_quota import DirectiveQuotaService
-from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
-from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
-from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider, CostController
-from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.aurora_spine_confluence import (
     AuroraInputAssembler,
     AuroraOutputArbitrator,
-    AuroraProposal,
     AuroraSelfCorrector,
     AuroraSelfModelAccessor,
 )
+from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
+from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
+from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
+from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
+from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
+from app.signals.aurora_wake import AuroraWakeJudge
+from app.signals.causal_trace_store import CausalTraceStore
+from app.signals.community_loops import CommunityLoopManager
+from app.signals.community_signal import CommunitySignalDetector
+from app.signals.core_session import CoreSession, CoreSessionManager
+from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
+from app.signals.directive_quota import DirectiveQuotaService
+from app.signals.exam_rescue_detector import ExamRescueDetector
+from app.signals.exam_sprint_policy import ExamSprintPolicyService
+from app.signals.goal_type_adapter import GoalTypeAdapter
+from app.signals.goal_world_graph import GoalWorldGraphService
+from app.signals.growth_chronicle import GrowthChronicleService
+from app.signals.learning_base import LearningBase
+from app.signals.material_signal import MaterialSignalDetector
+from app.signals.mistake_signal import MistakeSignalDetector
+from app.signals.multi_goal_arbitration import MultiGoalArbitrator
+from app.signals.outcome_recorder import OutcomeRecorder
+from app.signals.outcome_tracker import OutcomeTracker
+from app.signals.policy_analytics import PolicyAnalytics
+from app.signals.policy_engine import PolicyEngine
+from app.signals.policy_experiments import PolicyExperimentManager
+from app.signals.predicted_reply_options import SpineReplyOptionEngine
+from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
+from app.signals.recall_opportunity import RecallOpportunityDetector
+from app.signals.relationship_model import RelationshipModelService
+from app.signals.self_model import SparkleSelfModelService
+from app.signals.signal_ranker import SignalRanker
+from app.signals.skill_extraction import SkillExtractionService
+from app.signals.skill_lifecycle import SkillLifecycleManager
+from app.signals.source_tray_integration import SourceEffectivenessTracker
+from app.signals.spine_metrics import SpineMetricsCollector
+from app.signals.stale_state_guard import StaleStateGuard
+from app.signals.state_packet_builder import ActionableStatePacketBuilder
+from app.signals.state_register import StateRegister
+from app.signals.task_timeout_detector import TaskTimeoutDetector
+from app.signals.timeline_card_renderer import TimelineCardRenderer
 from app.signals.types import (
-    ActionableStatePacket,
     ActionableSignal,
+    ActionableStatePacket,
     CausalTrace,
     CommunityDirective,
     DirectiveApplicationAudit,
+    ExecutionDirective,
     ModelWriteDirective,
     NotificationDirective,
-    ExecutionDirective,
     PlanDirective,
     PolicyDecision,
     ResponseDirective,
     RetrievalDirective,
     SkillDirective,
     SkillEntry,
-    UXDirective,
     UserVisibleReceipt,
+    UXDirective,
     _uid,
 )
 
 
 def _utcnow_iso() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).isoformat()
+    from datetime import datetime
+    return datetime.now(UTC).isoformat()
 
 
 class SpineOrchestrator:
@@ -135,7 +135,7 @@ class SpineOrchestrator:
         self.aurora_core = AuroraCoreSessionService(redis_client)
         self.l3_engine = L3FullCoreEngine(redis_client)
         self.energy_decider = EnergyLevelDecider()
-        self.cost_controller = CostController()
+
         self.aurora_input_assembler = AuroraInputAssembler(redis_client)
         self.aurora_arbitrator = AuroraOutputArbitrator()
         self.aurora_self_corrector = AuroraSelfCorrector(redis_client)
@@ -482,9 +482,11 @@ class SpineOrchestrator:
 
     async def get_status_band_summary(self, user_id: str) -> dict[str, Any]:
         """
-        Demo Experience Point #10: Aurora 状态带显示"策略风险 / 资料感知"。
+        Demo Experience Point #10: Aurora 状态带 — 6-state band + Spine risk flags。
 
         读取 StateRegister 中活跃信号状态，生成结构化状态带摘要供 Flutter 展示。
+        新增 T3.4.1: 统一返回 6-state 模型 (sensing/calibrated/risk_found/
+        needs_confirm/calibration_available/cooling_down) + 纠正选项 + 冷却信息。
 
         Returns:
             {
@@ -497,6 +499,16 @@ class SpineOrchestrator:
               "active_state_keys": list[str],
               "directive_summary": str | None,
               "band_severity": str,      # "none" | "info" | "warning" | "critical"
+              # ── T3.4.1: 6-state band ──
+              "band_status": str,        # sensing/calibrated/risk_found/needs_confirm/calibration_available/cooling_down
+              "band_label": str,         # 中文标签
+              "band_summary": str,       # 一段话描述当前状态
+              "band_energy": str,        # L0/L1/L2/L3
+              # ── T3.4.2: correction options ──
+              "correction_options": list[dict],
+              # ── T3.4.3: cooldown info ──
+              "cooldown_remaining_seconds": int | None,
+              "cooldown_can_override": bool,
             }
         """
         # Read all active signals from StateRegister
@@ -550,6 +562,14 @@ class SpineOrchestrator:
         else:
             band_severity = "none"
 
+        # ── T3.4.1: 6-state band computation ──
+        band_status, band_label, band_summary, band_energy, cooldown_remaining, cooldown_can_override = (
+            await self._compute_6state_band(user_id, active_entries)
+        )
+
+        # ── T3.4.2: correction options ──
+        correction_options = await self._build_correction_options(band_status, active_entries)
+
         return {
             "strategy_risk": strategy_risk,
             "material_aware": material_aware,
@@ -560,7 +580,139 @@ class SpineOrchestrator:
             "active_state_keys": active_state_keys,
             "directive_summary": directive_summary,
             "band_severity": band_severity,
+            "band_status": band_status,
+            "band_label": band_label,
+            "band_summary": band_summary,
+            "band_energy": band_energy,
+            "correction_options": correction_options,
+            "cooldown_remaining_seconds": cooldown_remaining,
+            "cooldown_can_override": cooldown_can_override,
         }
+
+    async def _compute_6state_band(
+        self,
+        user_id: str,
+        active_entries: list[Any],
+    ) -> tuple[str, str, str, str, int | None, bool]:
+        """Compute the 6-state Aurora band from StateRegister + energy store.
+
+        Uses lightweight StateRegister data to approximate parameters for
+        AuroraControlSurfaceService._resolve_band_status().
+        """
+        try:
+            from datetime import UTC, datetime
+
+            from app.aurora.runtime_v1.state import AuroraEnergyState, AuroraEnergyStore
+            from app.services.aurora_control_surface_service import AuroraControlSurfaceService
+
+            energy_store = AuroraEnergyStore(self.redis, enabled=True)
+            energy = await energy_store.load_energy(user_id)
+
+            # Approximate parameters from active states
+            high_conf = [e for e in active_entries if e.confidence >= 0.6]
+            mid_conf = [e for e in active_entries if e.confidence >= 0.4]
+            has_corrections = any(len(e.counter_evidence) > 0 for e in active_entries)
+
+            aurora_active = len(active_entries) > 0
+            ready_count = len(high_conf)
+            total_count = max(4, len(active_entries))
+            active_count = len(mid_conf)
+            recalibrating = has_corrections
+
+            # Compute 6-state band
+            cs = AuroraControlSurfaceService(None, self.redis)
+            band_status = cs._resolve_band_status(
+                energy=energy,
+                aurora_active=aurora_active,
+                ready_count=ready_count,
+                total_count=total_count,
+                recalibrating=recalibrating,
+                active_count=active_count,
+            )
+
+            # Labels and summaries
+            labels: dict[str, str] = {
+                "sensing": "轻量感知中",
+                "calibrated": "已校准",
+                "risk_found": "发现风险",
+                "needs_confirm": "需要确认",
+                "calibration_available": "深度校准可用",
+                "cooling_down": "冷却中",
+            }
+            band_label = labels.get(band_status, labels["sensing"])
+            band_summary = cs._band_status_summary(band_status, [])
+            band_energy = energy.current_level if isinstance(energy, AuroraEnergyState) else "L0"
+
+            # Cooldown info — override only allowed when quota remains (P2: prevent L3 cost bypass)
+            cooldown_remaining: int | None = None
+            cooldown_can_override = False
+            if isinstance(energy, AuroraEnergyState) and energy.is_cooling_down:
+                now = datetime.now(UTC).replace(tzinfo=None)
+                if energy.cooldown_until:
+                    remaining = (energy.cooldown_until - now).total_seconds()
+                    cooldown_remaining = max(0, int(remaining))
+                # Check L3 daily quota: override should not bypass cost limits.
+                # L3 base quota is 3/day (from _COST_LIMITS). Sprint-mode quotas
+                # are enforced at session start, not at UI-override time.
+                cooldown_can_override = energy.l3_session_count_today < 3
+
+            return band_status, band_label, band_summary, band_energy, cooldown_remaining, cooldown_can_override
+
+        except Exception:
+            logger.warning("SpineOrchestrator: _compute_6state_band failed for user={}", user_id, exc_info=True)
+            return "sensing", "轻量感知中", "Aurora 正在轻量感知，参考当前上下文优化回复。", "L0", None, False
+
+    async def _build_correction_options(
+        self,
+        band_status: str,
+        active_entries: list[Any],
+    ) -> list[dict[str, Any]]:
+        """Build correction reply options for the current band status.
+
+        Each option has: label, semantic_value, is_freeform, is_disconfirming.
+        The final option is always the freeform "都不对，我解释一下" fallback.
+        """
+        options: list[dict[str, Any]] = []
+
+        # Per-band disconfirming options
+        band_options: dict[str, list[dict[str, Any]]] = {
+            "risk_found": [
+                {"label": "这个风险判断不对", "semantic_value": "risk_false_positive", "is_freeform": False, "is_disconfirming": True},
+                {"label": "风险没那么严重", "semantic_value": "risk_overstated", "is_freeform": False, "is_disconfirming": True},
+                {"label": "方向是对的，继续", "semantic_value": "risk_accepted", "is_freeform": False, "is_disconfirming": False},
+            ],
+            "needs_confirm": [
+                {"label": "这个判断不对", "semantic_value": "judgment_incorrect", "is_freeform": False, "is_disconfirming": True},
+                {"label": "对，就是这样", "semantic_value": "judgment_confirmed", "is_freeform": False, "is_disconfirming": False},
+            ],
+            "calibration_available": [
+                {"label": "现在校准", "semantic_value": "calibrate_now", "is_freeform": False, "is_disconfirming": False},
+                {"label": "暂时不需要", "semantic_value": "calibrate_later", "is_freeform": False, "is_disconfirming": False},
+            ],
+            "calibrated": [
+                {"label": "策略没问题", "semantic_value": "strategy_confirmed", "is_freeform": False, "is_disconfirming": False},
+                {"label": "需要调整方向", "semantic_value": "strategy_adjust_needed", "is_freeform": False, "is_disconfirming": True},
+            ],
+            "sensing": [
+                {"label": "帮我深入分析", "semantic_value": "request_deep_analysis", "is_freeform": False, "is_disconfirming": False},
+            ],
+            "cooling_down": [
+                {"label": "快速校准", "semantic_value": "quick_calibrate", "is_freeform": False, "is_disconfirming": False},
+                {"label": "坚持冷却", "semantic_value": "accept_cooldown", "is_freeform": False, "is_disconfirming": False},
+            ],
+        }
+
+        options = list(band_options.get(band_status, band_options["sensing"]))
+
+        # Always include freeform fallback
+        options.append({
+            "label": "都不对，我解释一下",
+            "semantic_value": "freeform_correction",
+            "is_freeform": True,
+            "is_disconfirming": True,
+        })
+
+        return options
 
     async def get_rendered_timeline(
         self,
@@ -578,6 +730,7 @@ class SpineOrchestrator:
             signal, policy_decision, directives, receipt, outcome, event_summary).
         """
         import json
+
         from app.signals.types import ActionableSignal, PolicyDecision, UserVisibleReceipt
 
         traces = await self.trace_store.get_user_traces(user_id, limit=limit)
@@ -699,6 +852,7 @@ class SpineOrchestrator:
         It does NOT write to any database or affect long-term user state.
         """
         import json
+
         from app.signals.types import SourceTraySelection, SourceTrayState
 
         parsed: list[SourceTraySelection] = []
@@ -731,6 +885,7 @@ class SpineOrchestrator:
         Flutter reads this to render the source tray UI and indicate user overrides.
         """
         import json
+
         from app.signals.types import SourceTrayState
 
         key = f"spine:source_tray:{user_id}"
@@ -1054,7 +1209,7 @@ class SpineOrchestrator:
         Demo Experience Point #2: 上传资料后，知识星图节点被点亮。
         """
         import json
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         # Step 1: 语义检索匹配知识节点（只读，不修改任何 mastery）
         matched_nodes: list[dict[str, Any]] = []
@@ -1088,7 +1243,7 @@ class SpineOrchestrator:
                 "goal_id": goal_id,
                 "mime_type": mime_type,
                 "mapped_nodes": matched_nodes,
-                "mapped_at": datetime.now(timezone.utc).isoformat(),
+                "mapped_at": datetime.now(UTC).isoformat(),
             }),
             ex=7 * 24 * 3600,
         )
@@ -1267,6 +1422,7 @@ class SpineOrchestrator:
     ) -> CausalTrace | None:
         """通用 Signal → PolicyEngine → Directive → Trace 链路。Wrapped with circuit breaker + concurrency guard."""
         import json
+
         from app.signals.redis_resilience import resilient_redis_call
 
         # Concurrency guard: skip if a pipeline is already running for this user
@@ -1836,8 +1992,9 @@ class SpineOrchestrator:
         Supports sources: 'calendar', 'file', 'email', 'github', 'tool'.
         """
         try:
-            from app.signals.external_integration import ExternalIntegrationGateway, ExternalRawEvent
             import uuid
+
+            from app.signals.external_integration import ExternalIntegrationGateway, ExternalRawEvent
             raw_event = ExternalRawEvent(
                 event_id=f"ext_{uuid.uuid4().hex[:12]}",
                 source=source,
@@ -1913,12 +2070,6 @@ class SpineOrchestrator:
             return
         await self.core_session_manager.link_directive(session.session_id, directive_id)
 
-    # ── Layer 3: Signal Ranking ────────────────────────────────────────
-
-    def rank_signals(self, signals: list[ActionableSignal], *, max_signals: int = 5):
-        """排序信号并解决冲突。返回 RankingResult。"""
-        return self.signal_ranker.rank(signals, max_signals=max_signals)
-
     # ── Layer 4: State Register ────────────────────────────────────────
 
     async def get_active_states(self, user_id: str) -> list:
@@ -1962,26 +2113,6 @@ class SpineOrchestrator:
             return await engine.check_escalation(user_id, active_states)
         except Exception as exc:
             logger.debug("L2 escalation check failed for user={}: {}", user_id, exc)
-            return None
-
-    # ── Layer 6: ResponseDirective ─────────────────────────────────────
-
-    async def _store_response_directive(self, user_id: str, rd: ResponseDirective) -> None:
-        """存储 ResponseDirective 供 response layer 消费。"""
-        import json
-        key = f"spine:response_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
-
-    async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
-        """获取用户当前 ResponseDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:response_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return ResponseDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_response_directive degraded: Redis unavailable for user={}", user_id)
             return None
 
     # ── Layer 6: ResponseDirective ─────────────────────────────────────
@@ -2045,7 +2176,7 @@ class SpineOrchestrator:
 
     async def _enrich_retrieval_with_source_tray(self, user_id: str, rd: RetrievalDirective) -> None:
         """Enrich RetrievalDirective with SourceTrayState, producing concrete load plans."""
-        from app.signals.source_tray_integration import compute_retrieval_plan, build_source_receipt
+        from app.signals.source_tray_integration import build_source_receipt, compute_retrieval_plan
         from app.signals.types import SourceTrayState
 
         try:
@@ -2086,7 +2217,7 @@ class SpineOrchestrator:
 
     async def _enrich_retrieval_with_source_tray(self, user_id: str, rd: RetrievalDirective) -> None:
         """Enrich RetrievalDirective with SourceTrayState, producing concrete load plans."""
-        from app.signals.source_tray_integration import compute_retrieval_plan, build_source_receipt
+        from app.signals.source_tray_integration import build_source_receipt, compute_retrieval_plan
         from app.signals.types import SourceTrayState
 
         try:
@@ -2143,27 +2274,6 @@ class SpineOrchestrator:
         except Exception:
             logger.debug("get_retrieval_directive degraded: Redis unavailable for user={}", user_id)
             return None
-
-    async def get_source_receipt(self, user_id: str) -> dict[str, Any] | None:
-        """获取用户最新的资料使用回执。"""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:source_receipt:{user_id}:latest")
-            if not raw:
-                return None
-            return json.loads(raw if isinstance(raw, str) else raw.decode())
-        except Exception:
-            logger.warning("get_source_receipt: failed", exc_info=True)
-            return None
-
-    async def set_source_tray(self, user_id: str, tray_state: dict[str, Any]) -> None:
-        """存储用户的 SourceTrayState 供检索时使用。"""
-        import json
-        await self.redis.set(
-            f"spine:source_tray:{user_id}",
-            json.dumps(tray_state),
-            ex=7 * 24 * 3600,
-        )
 
     async def get_source_receipt(self, user_id: str) -> dict[str, Any] | None:
         """获取用户最新的资料使用回执。"""
@@ -2460,7 +2570,6 @@ class SpineOrchestrator:
         UXDirective flags risk_detected — combining it with the active ExecutionDirective's
         user_visible_reason. Returns None if no risk is active.
         """
-        import json
 
         _CLAIM_TO_LABEL: dict[str, str] = {
             "recent_task_too_large": "任务拆解风险",
@@ -2680,11 +2789,6 @@ class SpineOrchestrator:
     async def get_metrics_snapshot(self) -> dict[str, Any]:
         """获取 Decision Realization Score 指标快照。"""
         return await self.metrics.snapshot()
-    # ── Metrics ────────────────────────────────────────────────────────
-
-    async def get_metrics_snapshot(self) -> dict[str, Any]:
-        """获取 Decision Realization Score 指标快照。"""
-        return await self.metrics.snapshot()
 
     # ── Quality Guard: live pipeline validation ────────────────────────
 
@@ -2854,13 +2958,13 @@ class SpineOrchestrator:
 
         # 8. P4 counterfactual evaluation: store policy decision for later analysis
         try:
-            from datetime import datetime as _dt, timezone as _tz
+            from datetime import datetime as _dt
             decision_record = {
                 "strategy": decision.primary_strategy,
                 "signal_claim": signal.claim,
                 "signal_confidence": signal.confidence,
                 "risk_level": decision.risk_level,
-                "timestamp": _dt.now(_tz.utc).isoformat(),
+                "timestamp": _dt.now(UTC).isoformat(),
             }
             await self.redis.rpush(
                 f"spine:policy_decisions:{user_id}",
@@ -2925,8 +3029,8 @@ class SpineOrchestrator:
 
         # 11. P4 safe experiment: bandit suggestion for strategy selection
         try:
-            from app.signals.safe_experiment_platform import SafeBanditController
             from app.signals.intervention_episode import ContextSignature
+            from app.signals.safe_experiment_platform import SafeBanditController
             ctx_sig = ContextSignature(
                 goal_mode="standard",
                 failure_type=signal.claim,
@@ -2954,13 +3058,13 @@ class SpineOrchestrator:
 
         # 8. P4 counterfactual evaluation: store policy decision for later analysis
         try:
-            from datetime import datetime as _dt, timezone as _tz
+            from datetime import datetime as _dt
             decision_record = {
                 "strategy": decision.primary_strategy,
                 "signal_claim": signal.claim,
                 "signal_confidence": signal.confidence,
                 "risk_level": decision.risk_level,
-                "timestamp": _dt.now(_tz.utc).isoformat(),
+                "timestamp": _dt.now(UTC).isoformat(),
             }
             await self.redis.rpush(
                 f"spine:policy_decisions:{user_id}",
@@ -3025,8 +3129,8 @@ class SpineOrchestrator:
 
         # 11. P4 safe experiment: bandit suggestion for strategy selection
         try:
-            from app.signals.safe_experiment_platform import SafeBanditController
             from app.signals.intervention_episode import ContextSignature
+            from app.signals.safe_experiment_platform import SafeBanditController
             ctx_sig = ContextSignature(
                 goal_mode="standard",
                 failure_type=signal.claim,
@@ -3129,7 +3233,7 @@ class SpineOrchestrator:
         import json
         try:
             from app.signals.counterfactual_evaluation import MatchedContextEvaluator
-            from app.signals.intervention_episode import InterventionEpisode, ContextSignature
+            from app.signals.intervention_episode import ContextSignature
             evaluator = MatchedContextEvaluator()
             # Build a synthetic episode from the outcome
             actual_strategy = getattr(outcome_record, "intervention", "unknown")
@@ -3234,26 +3338,6 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("on_streak_update: relationship_model failed", exc_info=True)
 
-    async def on_streak_update(
-        self,
-        *,
-        user_id: str,
-        streak_length: int,
-        broken: bool = False,
-    ) -> None:
-        """Update relationship model from streak events."""
-        try:
-            if broken:
-                await self.relationship_model.update_from_behavioral_signal(
-                    user_id, "streak_broken", {"streak_length": streak_length},
-                )
-            else:
-                await self.relationship_model.update_from_behavioral_signal(
-                    user_id, "streak_maintained", {"streak_length": streak_length},
-                )
-        except Exception:
-            logger.warning("on_streak_update: relationship_model failed", exc_info=True)
-
     async def on_user_correction(
         self,
         *,
@@ -3320,42 +3404,6 @@ class SpineOrchestrator:
             return correction_event
         except Exception:
             logger.warning("on_user_correction: failed", exc_info=True)
-            return None
-
-    async def on_partner_checkin(
-        self,
-        *,
-        user_id: str,
-        partner_id: str,
-        checkin_type: str,
-    ) -> dict[str, Any] | None:
-        """Process a partner accountability check-in event."""
-        try:
-            result = await self.community_loops.record_partner_checkin(
-                self.redis,
-                user_id=user_id,
-                partner_id=partner_id,
-                checkin_type=checkin_type,
-            )
-            signal_data = result.get("signal")
-            if signal_data:
-                signal = ActionableSignal(
-                    signal_id=_uid("sig"),
-                    source_event_ids=[partner_id],
-                    source_system="community_loops",
-                    state_key=signal_data["state_key"],
-                    claim=signal_data["claim"],
-                    confidence=signal_data["confidence"],
-                    scope=signal_data["scope"],
-                    ttl_hours=signal_data["ttl_hours"],
-                    evidence_summary=signal_data["evidence_summary"],
-                    possible_effects=["adjust_strategy_for_partner_engagement"],
-                    priority=signal_data["priority"],
-                )
-                await self.state_register.upsert_from_signal(user_id, signal)
-            return result
-        except Exception:
-            logger.warning("on_partner_checkin: failed", exc_info=True)
             return None
 
     async def on_partner_checkin(
@@ -3588,7 +3636,7 @@ class SpineOrchestrator:
                 recovery_card["message"] = f"你离开了 {int(elapsed_minutes)} 分钟。"
 
             if last_task_id:
-                recovery_card["message"] += f" 上一张任务卡预计完成，但还没收到反馈。"
+                recovery_card["message"] += " 上一张任务卡预计完成，但还没收到反馈。"
 
             await self.redis.set(
                 f"spine:card:recovery:{user_id}:latest",
@@ -3933,86 +3981,6 @@ class SpineOrchestrator:
             priority="high" if claim == "burnout_risk" else "medium",
         )
 
-    # ── P2: Cognitive Load & Affective Pressure Detectors ────────────────
-
-    async def detect_cognitive_load(
-        self,
-        *,
-        user_id: str,
-        recent_tasks_count: int = 0,
-        new_topics_count: int = 0,
-        avg_accuracy: float | None = None,
-        session_duration_min: float = 0.0,
-    ) -> ActionableSignal | None:
-        """Detect high cognitive load from task density + accuracy patterns."""
-        triggers = []
-        if new_topics_count >= 3 and recent_tasks_count >= 4:
-            triggers.append("many_new_topics_in_short_time")
-        if avg_accuracy is not None and avg_accuracy < 0.5 and recent_tasks_count >= 3:
-            triggers.append("low_accuracy_with_many_tasks")
-        if session_duration_min > 90:
-            triggers.append("extended_session")
-
-        if not triggers:
-            return None
-
-        return ActionableSignal(
-            signal_id=_uid("sig"),
-            source_event_ids=[f"cognitive_load_{user_id}"],
-            source_system="spine_orchestrator",
-            state_key="cognitive_load",
-            claim="high_load_detected",
-            confidence=min(0.9, 0.5 + 0.15 * len(triggers)),
-            scope="session",
-            ttl_hours=6,
-            evidence_summary=f"认知负荷触发: {', '.join(triggers)}",
-            possible_effects=["reduce_explanation_length", "prefer_review", "simplify_context"],
-            priority="medium",
-        )
-
-    async def detect_affective_pressure(
-        self,
-        *,
-        user_id: str,
-        consecutive_abandons: int = 0,
-        error_density: float = 0.0,
-        is_late_night: bool = False,
-        days_to_deadline: int | None = None,
-        streak_broken: bool = False,
-    ) -> ActionableSignal | None:
-        """Detect emotional/affective pressure from behavioral signals."""
-        triggers = []
-        claim = "stress_detected"
-
-        if consecutive_abandons >= 2:
-            triggers.append("consecutive_abandonment")
-        if error_density > 0.6:
-            triggers.append("high_error_density")
-        if is_late_night:
-            triggers.append("late_night_study")
-        if streak_broken:
-            triggers.append("streak_broken")
-
-        if not triggers:
-            return None
-
-        if consecutive_abandons >= 3 or (days_to_deadline is not None and days_to_deadline <= 2 and len(triggers) >= 2):
-            claim = "burnout_risk"
-
-        return ActionableSignal(
-            signal_id=_uid("sig"),
-            source_event_ids=[f"affective_{user_id}"],
-            source_system="spine_orchestrator",
-            state_key="affective_pressure",
-            claim=claim,
-            confidence=min(0.9, 0.5 + 0.12 * len(triggers)),
-            scope="session",
-            ttl_hours=12,
-            evidence_summary=f"情绪压力触发: {', '.join(triggers)}",
-            possible_effects=["reduce_pressure", "suggest_break", "easy_win_task"],
-            priority="high" if claim == "burnout_risk" else "medium",
-        )
-
     # ── P2: State Snapshot & Recovery ────────────────────────────────
 
     async def save_spine_snapshot(
@@ -4164,6 +4132,7 @@ class SpineOrchestrator:
     async def _load_strategy_beliefs(self, user_id: str) -> list[Any]:
         """Load persisted strategy beliefs from Redis."""
         import json
+
         from app.signals.learning_base import StrategyBelief
 
         key = f"spine:beliefs:{user_id}"
@@ -4229,18 +4198,6 @@ class SpineOrchestrator:
         if not graph:
             return []
         return self.goal_graph.suggest_focus_nodes(graph, limit=limit)
-
-    async def get_goal_deferred_nodes(
-        self, user_id: str, goal_id: str, focus_ids: set[str] | None = None,
-    ) -> list[dict[str, Any]]:
-        """GOAL-006: Get deferred nodes with why_deferred explanations."""
-        graph = await self.goal_graph.get_graph(user_id, goal_id)
-        if not graph:
-            return []
-        if focus_ids is None:
-            suggestions = self.goal_graph.suggest_focus_nodes(graph)
-            focus_ids = {s["node_id"] for s in suggestions}
-        return self.goal_graph.get_deferred_nodes(graph, focus_ids=focus_ids)
 
     async def get_goal_deferred_nodes(
         self, user_id: str, goal_id: str, focus_ids: set[str] | None = None,

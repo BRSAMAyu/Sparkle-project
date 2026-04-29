@@ -344,7 +344,7 @@ class Settings(BaseSettings):
     AURORA_STAGE35_METACOG_ROUTER_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 37
-    AURORA_STAGE37_LLM_SAFETY_ENABLED: bool = True
+    AURORA_STAGE37_LLM_SAFETY_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 39
     AURORA_STAGE39_MODE: str = "live"  # off | shadow | live

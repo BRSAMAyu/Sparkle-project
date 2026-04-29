@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1 全部完成, T3.2 合流完成, T3.3 预测回答选项闭环完成), Phase 3.5 审计 P0+P1 全部修复
+## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1→T3.3 完成, T3.4 后端完成+偏好路由闭环), Phase 3.5 P0+P1+P2 全部修复, Phase 4 待启动
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
@@ -170,11 +170,11 @@
 
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| AUDIT-P2-7: AuroraEngine 与 Spine 两套独立系统 | ⬜ 待修 | — | AuroraEngine (shadow mode) 与 SpineOrchestrator 并行运行, 无集成点; 需设计统一路由 |
-| AUDIT-P2-8: AuroraEnergyStore.resolve_energy_level() 死代码 | ⬜ 待修 | — | 方法已定义但从未被调用, L0-L4能量级别解析逻辑未使用 |
-| AUDIT-P2-9: 88个 AURORA_* settings 缺失于 .env.example | ⬜ 待修 | — | settings.py 中约88个Aurora配置项无对应.env.example条目 |
-| AUDIT-P2-10: Stage 37/39 kill switch 非三态模式 | ⬜ 待修 | — | 不遵循 off/shadow/live 三态, 无drill覆盖 |
-| AUDIT-P2-11: CalendarSignalBridge 存在但从未调用 | ⬜ 待修 | — | calendar_signal_bridge.py 已实现, 但生产代码无import |
+| AUDIT-P2-7: AuroraEngine 与 Spine 两套独立系统 | 🟡 部分缓解 | Claude | T3.4 status-band 统一返回6态+风险标志, 两系统数据流已桥接但独立运行; 完全统一留 Phase 4 |
+| AUDIT-P2-8: AuroraEnergyStore.resolve_energy_level() 死代码 | ✅ 完成 | Claude | _compute_6state_band() 现在通过 AuroraEnergyStore(enabled=True) 调用 load_energy(); 绕过 settings gate |
+| AUDIT-P2-9: 88个 AURORA_* settings 缺失于 .env.example | ✅ 完成 | Claude | 57个非MODE设置已补充到 .env.example, 按Stage分组注释; 2026-04-29 |
+| AUDIT-P2-10: Stage 37/39 kill switch 非三态模式 | ✅ 完成 | Claude | Stage 37 bool→str 三态 (AURORA_STAGE37_LLM_SAFETY_MODE), Stage 39 删除自定义 _normalize_mode/_get_flag/_set_flag, 统一用 KillSwitchBinding+read_mode/write_mode; 9 tests passed; 2026-04-29 |
+| AUDIT-P2-11: CalendarSignalBridge 存在但从未调用 | ✅ 完成 | Claude | SpineEventBridge._calendar_changed() 接入 CalendarSignalBridge.detect_deadline_pressure()+build_time_context(); 6 tests passed; 2026-04-29 |
 
 ---
 
@@ -183,8 +183,9 @@
 | Phase | 状态 | 开始日期 | 完成日期 |
 |-------|------|----------|----------|
 | Phase 2: Spine 深化 | ✅ 完成 | 2026-04-29 | — |
-| Phase 3: Aurora↔Spine | 🟡 推进中 | 2026-04-29 | T3.1→T3.3 全部完成, T3.4 状态带待做 |
-| Phase 4: 活体验打磨 | ⬜ 未开始 | — | — |
+| Phase 3: Aurora↔Spine | 🟡 推进中 | 2026-04-29 | T3.1→T3.3 完成, T3.4 后端完成 (6态band+偏好CRUD+Router消费偏好), Flutter状态带消费待做 |
+| Phase 4: 活体验打磨 | ⬜ 未开始 | — | 验收报告缺口: Flutter状态带真实API消费, 展开交互, cooldown语义, R3离线审计 |
+| Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
 | Phase 7: 验收上线 | ⬜ 未开始 | — | — |
@@ -232,7 +233,7 @@
 | 2026-04-29 | Phase 2 | Codex Self Review | H-04 Context Receipt Bar 只有查看依据和 timeline, 用户发现资料不合适时无法即时纠偏 | ✅ 已修: 详情 sheet 增加 3 个行动 chip 并续发纠偏 prompt; 窄范围 analyzer passed, Flutter test 受既有全包编译错误阻塞 |
 | 2026-04-29 | Phase 3 | Claude+Codex | M-02 dual_core_router 不消费 Spine StateRegister, Phase 3 前置缺失 | ✅ 已修: RoutingEngine 读取 StateRegister, Router 消费 fatigue/cognitive_load/execution/knowledge 状态并进入 mode/debug/strategy; 38 tests passed |
 | 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ✅ 均已修: D-01 连续dismiss→fatigue signal; D-02 shop.purchase_completed+achievement.unlocked→reward_engagement signal; 10 tests passed |
-| 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1**: OfflineChatMessage 模型存在但未使用, **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 | ⬜ 待修 — 见 R3 报告 |
+| 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1** ✅: OfflineChatMessage 模型已接入 — 断连消息持久化Isar + 重连回补 + ACK标记 + 24h清理. **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 ⬜ | 见 R3 报告
 | 2026-04-29 | Phase 3 | Claude | T3.1.1 L0 rule-aware Aurora: deadline_pressure 自动计算 + quiet_hours 强制执行 | ✅ 已修: L0RuleEngine 新建, deadline_pressure→StateRegister, dual_core_router 消费 deadline state, quiet_hours 解析; 11 tests passed |
 | 2026-04-29 | Phase 3 | Claude | T3.1.2 L1 Light Aurora: ResponseDirective 消费 StateRegister 活跃状态调节 tone | ✅ 已修: build_response_directive 增加 active_states 参数, fatigue→low_pressure(优先), deadline→urgent, SpineOrchestrator 两处调用点传入; 6 tests passed |
 | 2026-04-29 | Phase 3 | Claude | T3.1.3 L2 Mid Aurora: 升级模式检测 + 结构性干预 | ✅ 完成: L2InterventionEngine 新建 (4 escalation patterns: knowledge_crisis/execution_collapse/exam_underwater/burnout_risk); SpineOrchestrator._check_l2_escalation 接入; Redis cooldown 1h; 25 production-grade tests passed, 965 spine tests 无回归 |
@@ -242,7 +243,13 @@
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P0-1**: types.py 13个重复dataclass (~500行死代码), **P0-2**: causal_trace_store 静默丢数据, **P0-3**: StateRegister 竞态条件 | ✅ 全部已修: P0-1删除509行死代码; P0-2加日志+删重复方法; P0-3 Redis pipeline原子化 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P1-4**: 3个事件路由缺失 (achievement/shop/notification→Spine), **P1-5**: L0RuleEngine未接线, **P1-6**: quality_guard仅replay | ✅ 全部已修: P1-4路由补齐; P1-5接入routing_engine; P1-6加入live pipeline |
 | 2026-04-29 | Phase 3 | Claude | T3.3.1-T3.3.3 Predicted Reply Options & 纠正反馈闭环 | ✅ 完成: ReplyOptionInjector 新建 (6 band_status 选项生成 + metadata 注入); CorrectionFeedbackProcessor 新建 (disconfirmation→confidence-0.15→StateRegister+self_model 更新, 20 semantic→state_key 映射); StateRegister.lower_confidence() 新增; response_builder 注入 predicted_reply_options; /telemetry/chip-selected 接入纠正反馈; spine_orchestrator.on_user_correction 接入; 33 production-grade tests passed, 171 Aurora tests 无回归 |
-| 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P2-7**: AuroraEngine/Spine 双系统, **P2-8**: energy_store死代码, **P2-9**: 88个settings缺.env, **P2-10**: Stage37/39非三态, **P2-11**: CalendarSignalBridge未调用 | ⬜ 待修 — P2级别, 非阻塞 |
+| 2026-04-29 | Phase 3 | Claude | T3.4.1-T3.4.4 Aurora Status Band 6-State & User Preferences | ✅ 完成: get_status_band_summary 统一返回6态band (sensing/calibrated/risk_found/needs_confirm/calibration_available/cooling_down) + correction_options + cooldown; AuroraUserPreferencesService 新建 (4偏好: 分析深度/直接性/解释级别/压力风格, GET/PUT API); DualCoreRouter 消费偏好调制路由; 35 production-grade tests passed, 2053 spine tests + 287 Aurora tests 无回归 |
+| 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P2-7**: AuroraEngine/Spine 双系统 — 部分缓解. **P2-8**: energy_store死代码 — 现在被 _compute_6state_band 调用. **P2-9/10/11**: 仍待修 |
+| 2026-04-29 | Phase 3.5 | Claude P2审计清理 | **P2-9** ✅ 57个缺失settings补全到.env.example, **P2-10** ✅ Stage 37 bool→str三态+Stage 39统一KillSwitchBinding, **P2-11** ✅ CalendarSignalBridge接入SpineEventBridge; 15 new tests |
+| 2026-04-29 | Phase 3 | Claude+Codex验收 | **T3.4 gap closure**: RoutingEngine._build_dual_core_input() 现读取AuroraUserPreferencesService→传入DualCoreRoutingInput; 偏好→双核路由链路闭环; 3 new tests, 39 routing engine tests 无回归 |
+| 2026-04-29 | Phase 3.5 | Claude 卫生债清理 | spine_orchestrator.py ruff 32→0 errors: 删除10个重复方法定义 (F811), 排序imports, 清除未使用import; 53 affected tests pass |
+| 2026-04-29 | Phase 3.5 | Claude 语义收紧 | cooldown_can_override 从无条件 True 改为 l3_session_count_today < 3 (L3 daily_quota), 防止冷却绕过流量限制; 移除未使用的 CostController 实例化; 6 tests passed 含新 quota-exhausted 用例 |
+| 2026-04-29 | R3 O-01 | Claude 离线审计修复 | OfflineChatMessage 模型已全面接线: (1)断连/发送失败→Isar持久化, (2)重连→从DB加载pending消息并入队, (3)发送成功→markSent, (4)服务器ACK→markAcked, (5)队列溢出/失败丢弃→DB清理, (6)dispose→清理24h旧acked. 新建 OfflineMessageQueueService, flutter analyze 零错误 |
 
 ### 测试质量升级 (🔴 横切任务)
 
@@ -278,3 +285,8 @@
 | 2026-04-29 | 74a14d5a | Phase 2 | H-02 Aurora decisions feed PolicyEngine soft bias |
 | 2026-04-29 | 41dc30ee | Phase 2 | H-04 Context Receipt Bar corrective action chips |
 | 2026-04-29 | f77b9fe0 | Phase 2/3 | M-02 Spine StateRegister feeds dual-core routing |
+| 2026-04-29 | (pending) | Phase 3.5 | P2-9/10/11 audit cleanup — settings, kill switch tri-state, CalendarSignalBridge wiring |
+| 2026-04-29 | (pending) | Phase 3 | T3.4 gap closure — RoutingEngine reads AuroraUserPreferences→DualCoreRoutingInput |
+| 2026-04-29 | (pending) | Phase 3.5 | Ruff hygiene — spine_orchestrator.py 32→0 errors (10 dup methods removed) |
+| 2026-04-29 | (pending) | Phase 3.5 | Cooldown semantic tightening — l3_session_count_today < 3 gate + quota-exhausted test |
+| 2026-04-29 | (pending) | R3 O-01 | OfflineChatMessage wiring — Isar persistence, reconnect replay, ACK marking, cleanup |

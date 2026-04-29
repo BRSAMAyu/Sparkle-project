@@ -27,6 +27,7 @@ from app.core.metrics import (
 )
 from app.core.unified_intent_router import UnifiedIntentType
 from app.gen.agent.v1 import agent_service_pb2
+from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
 from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
 from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
@@ -711,6 +712,14 @@ class RoutingEngineMixin:
             user_context_payload=user_context_payload,
         )
 
+        # Read Aurora communication preferences (T3.4 — user preferences → router)
+        aurora_preferences: dict[str, str] = {}
+        if active_db is not None:
+            try:
+                aurora_preferences = await AuroraUserPreferencesService(active_db).get(user_id)
+            except Exception as exc:
+                logger.warning("Failed to read Aurora preferences for routing: {}", exc)
+
         return DualCoreRoutingInput(
             intent=(
                 unified_routing_result.primary_intent.value
@@ -742,6 +751,7 @@ class RoutingEngineMixin:
             cognitive_load=self._extract_cognitive_load(user_context_payload, plan_context),
             capsule_preferences=self._extract_capsule_preferences(user_context_payload),
             spine_active_states=await self._get_spine_active_states(user_id),
+            aurora_preferences=aurora_preferences,
         )
 
     async def _build_metacognition_hint(
