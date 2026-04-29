@@ -171,6 +171,17 @@ class SpineOrchestrator:
         Returns:
             CausalTrace if signal was generated and policy applied, None otherwise.
         """
+        # Concurrency guard: skip if a pipeline is already running for this user
+        lock_key = f"spine:pipeline_lock:{user_id}"
+        try:
+            locked = await self.redis.set(lock_key, "1", nx=True, ex=30)
+            if not locked:
+                logger.debug("on_task_completed skipped: concurrent pipeline for user={}", user_id)
+                return None
+        except Exception as _lock_err:
+            _ce = classify_error(_lock_err, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
+            logger.warning("Pipeline lock failed: {} [{}]", _lock_err, _ce.severity.value)
+
         # Step 1: 创建 trace 骨架
         trace = await self.trace_store.create_trace()
         trace.raw_event_ids.append(task_id)
@@ -197,6 +208,10 @@ class SpineOrchestrator:
                 )
             except Exception:
                 logger.warning("on_task_completed: relationship_model failed", exc_info=True)
+            try:
+                await self.redis.delete(lock_key)
+            except Exception:
+                logger.warning("on_task_completed: lock release failed", exc_info=True)
             return trace
 
         # Step 2b: 存储 signal 并链接到 trace
@@ -226,9 +241,9 @@ class SpineOrchestrator:
             trace.outcome_to_measure = ["signal_no_rule_match"]
             await self.trace_store._save_trace(trace)
             try:
-                await self.redis.delete(f"spine:pipeline_lock:{user_id}")
+                await self.redis.delete(lock_key)
             except Exception:
-                logger.warning("on_task_completed: redis failed", exc_info=True)
+                logger.warning("on_task_completed: lock release failed", exc_info=True)
             return trace
 
         decision, directive = result
@@ -433,6 +448,11 @@ class SpineOrchestrator:
             trace.trace_id, signal.signal_id,
             decision.policy_decision_id, directive.directive_id,
         )
+
+        try:
+            await self.redis.delete(lock_key)
+        except Exception:
+            logger.warning("on_task_completed: final lock release failed", exc_info=True)
 
         return trace
 
