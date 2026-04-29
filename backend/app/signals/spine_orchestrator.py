@@ -2261,29 +2261,14 @@ class SpineOrchestrator:
 
     async def _store_response_directive(self, user_id: str, rd: ResponseDirective) -> None:
         """存储 ResponseDirective 供 response layer 消费。"""
-        import json
-        key = f"spine:response_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
+        await self._store_directive(user_id, "response", rd)
 
     async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
-        """获取用户当前 ResponseDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:response_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return ResponseDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_response_directive degraded: Redis unavailable for user={}", user_id)
-            return None
+        return await self._get_directive(user_id, "response", ResponseDirective)
 
     async def _store_notification_directive(self, user_id: str, nd: NotificationDirective) -> None:
         """存储 NotificationDirective 供通知服务消费。"""
-        import json
-        key = f"spine:notification_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(nd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
+        await self._store_directive(user_id, "notification", nd)
         # DF-5: Publish event so notification consumers can act on the directive
         try:
             from app.core.event_bus import EventBus
@@ -2299,16 +2284,7 @@ class SpineOrchestrator:
             logger.debug("notification_directive event publish failed", exc_info=True)
 
     async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
-        """获取用户当前 NotificationDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:notification_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return NotificationDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_notification_directive degraded: Redis unavailable for user={}", user_id)
-            return None
+        return await self._get_directive(user_id, "notification", NotificationDirective)
 
     async def _store_recall_message(self, user_id: str, message: RecallMessage) -> None:
         """存储用户可见 RecallMessage 供通知服务消费。"""
@@ -2370,26 +2346,14 @@ class SpineOrchestrator:
         )
 
     async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
-        import json
-        key = f"spine:retrieval_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
+        await self._store_directive(user_id, "retrieval", rd)
         await self._publish_directive_event("spine:retrieval_directive_channel", {
             "user_id": user_id, "directive_id": rd.directive_id,
             "retrieval_mode": rd.retrieval_mode if hasattr(rd, "retrieval_mode") else None,
         })
 
     async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
-        """获取用户当前 RetrievalDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:retrieval_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return RetrievalDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_retrieval_directive degraded: Redis unavailable for user={}", user_id)
-            return None
+        return await self._get_directive(user_id, "retrieval", RetrievalDirective)
 
     async def get_source_receipt(self, user_id: str) -> dict[str, Any] | None:
         """获取用户最新的资料使用回执。"""
@@ -2415,10 +2379,7 @@ class SpineOrchestrator:
     # ── Layer 6: PlanDirective ──────────────────────────────────────────
 
     async def _store_plan_directive(self, user_id: str, pd: PlanDirective) -> None:
-        import json
-        key = f"spine:plan_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(pd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
+        await self._store_directive(user_id, "plan", pd)
         # V-8: Publish plan_directive event for downstream consumers (task generator, replanner)
         try:
             from datetime import UTC as _UTC
@@ -2454,17 +2415,20 @@ class SpineOrchestrator:
         await self.redis.set(key, json.dumps(directive.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(directive.directive_id, directive.to_dict())
 
-    async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
-        """获取用户当前 PlanDirective。Degraded: returns None on Redis failure."""
+    async def _get_directive(self, user_id: str, directive_type: str, cls: type) -> Any | None:
+        """Generic directive retrieval. Degraded: returns None on Redis failure."""
         try:
             import json
-            raw = await self.redis.get(f"spine:plan_directive:{user_id}:latest")
+            raw = await self.redis.get(f"spine:{directive_type}_directive:{user_id}:latest")
             if not raw:
                 return None
-            return PlanDirective.from_dict(json.loads(raw))
+            return cls.from_dict(json.loads(raw))
         except Exception:
-            logger.debug("get_plan_directive degraded: Redis unavailable for user={}", user_id)
+            logger.debug("get_{}_directive degraded: Redis unavailable for user={}", directive_type, user_id)
             return None
+
+    async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
+        return await self._get_directive(user_id, "plan", PlanDirective)
 
     # ── Layer 6: ModelWriteDirective ────────────────────────────────────
 
@@ -2472,16 +2436,7 @@ class SpineOrchestrator:
         await self._store_directive(user_id, "model_write", mwd)
 
     async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
-        """获取用户当前 ModelWriteDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:model_write_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return ModelWriteDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_model_write_directive degraded: Redis unavailable for user={}", user_id)
-            return None
+        return await self._get_directive(user_id, "model_write", ModelWriteDirective)
 
     async def get_model_claims(
         self, user_id: str, target_model: str | None = None, scope: str | None = None,
@@ -2537,26 +2492,14 @@ class SpineOrchestrator:
     # ── Layer 6: UXDirective ────────────────────────────────────────────
 
     async def _store_ux_directive(self, user_id: str, uxd: UXDirective) -> None:
-        import json
-        key = f"spine:ux_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(uxd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
+        await self._store_directive(user_id, "ux", uxd)
         await self._publish_directive_event("spine:ux_directive_channel", {
             "user_id": user_id, "directive_id": uxd.directive_id,
             "presentation_mode": uxd.presentation_mode if hasattr(uxd, "presentation_mode") else None,
         })
 
     async def get_ux_directive(self, user_id: str) -> UXDirective | None:
-        """获取用户当前 UXDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:ux_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return UXDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_ux_directive degraded: Redis unavailable for user={}", user_id)
-            return None
+        return await self._get_directive(user_id, "ux", UXDirective)
 
     # ── P0-6: ExamSprintPolicy ──────────────────────────────────────────
 
@@ -2674,26 +2617,14 @@ class SpineOrchestrator:
         await self.redis.set(key, json.dumps(artifact), ex=72 * 3600)
 
     async def _store_community_directive(self, user_id: str, cd: CommunityDirective) -> None:
-        import json
-        key = f"spine:community_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(cd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(cd.directive_id, cd.to_dict())
+        await self._store_directive(user_id, "community", cd)
         await self._publish_directive_event("spine:community_directive_channel", {
             "user_id": user_id, "directive_id": cd.directive_id,
             "community_action": cd.action if hasattr(cd, "action") else None,
         })
 
     async def get_community_directive(self, user_id: str) -> CommunityDirective | None:
-        """获取用户当前 CommunityDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:community_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return CommunityDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_community_directive degraded: Redis unavailable for user={}", user_id)
-            return None
+        return await self._get_directive(user_id, "community", CommunityDirective)
 
     async def get_latest_community_hint(self, user_id: str) -> dict[str, Any] | None:
         """Return the latest privacy-safe community hint for Flutter to render.
@@ -2779,26 +2710,14 @@ class SpineOrchestrator:
     # ── Layer 6: SkillDirective ──────────────────────────────────────────
 
     async def _store_skill_directive(self, user_id: str, sd: SkillDirective) -> None:
-        import json
-        key = f"spine:skill_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(sd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(sd.directive_id, sd.to_dict())
+        await self._store_directive(user_id, "skill", sd)
         await self._publish_directive_event("spine:skill_directive_channel", {
             "user_id": user_id, "directive_id": sd.directive_id,
             "skill_action": sd.action if hasattr(sd, "action") else None,
         })
 
     async def get_skill_directive(self, user_id: str) -> SkillDirective | None:
-        """获取用户当前 SkillDirective。Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:skill_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return SkillDirective.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_skill_directive degraded: Redis unavailable for user={}", user_id)
-            return None
+        return await self._get_directive(user_id, "skill", SkillDirective)
 
     async def get_applicable_skills(self, user_id: str, context: dict[str, Any]) -> list[SkillEntry]:
         """Return skills that can safely be injected for the current context."""
