@@ -981,18 +981,6 @@ class SpineOrchestrator:
                 )
             except Exception as exc:
                 logger.debug("on_user_correction skipped: {}", exc)
-
-            # Divine moment 2: 承认误判 — chronicle + relationship update
-            try:
-                await self.on_user_correction(
-                    user_id=user_id,
-                    correction_type="receipt_correction",
-                    original_claim="strategy_adjustment",
-                    corrected_understanding="user_disagreed_with_adjustment",
-                    trace_id=receipt_id,
-                )
-            except Exception as exc:
-                logger.debug("on_user_correction skipped: {}", exc)
         elif action == "confirm":
             await self.metrics.record_outcome_recorded(effective=True)
         elif action == "dismiss":
@@ -1565,7 +1553,6 @@ class SpineOrchestrator:
             trace.directive_ids.append(mw_dir.directive_id)
             # Auto-apply model writes (confidence-gated, no user_confirmation needed)
             await self._apply_model_writes(user_id, mw_dir)
-            await self._apply_model_writes(user_id, mw_dir)
 
         # Build and store UXDirective
         ux_dir = self.policy_engine.build_ux_directive(decision, signal)
@@ -1742,18 +1729,6 @@ class SpineOrchestrator:
                 logger.info("Spine snapshot refreshed for user={} (was TTL={}s)", user_id, snap_ttl)
         except Exception:
             logger.warning("on_user_return: redis failed", exc_info=True)
-
-        # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
-        try:
-            return_case = await self.growth_chronicle.build_return_case_file(user_id)
-            if return_case and return_case.get("confirmed_insights"):
-                await self.redis.set(
-                    f"spine:return_case_file:{user_id}:latest",
-                    json.dumps(return_case),
-                    ex=7 * 24 * 3600,
-                )
-        except Exception as exc:
-            logger.debug("build_return_case_file skipped: {}", exc)
 
         return trace
 
@@ -2223,7 +2198,6 @@ class SpineOrchestrator:
         key = f"spine:notification_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(nd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
-        await self.trace_store.store_directive_by_id(nd.directive_id, nd.to_dict())
 
     async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
         """获取用户当前 NotificationDirective。Degraded: returns None on Redis failure."""
@@ -2296,52 +2270,10 @@ class SpineOrchestrator:
             ex=72 * 3600,
         )
 
-    async def _enrich_retrieval_with_source_tray(self, user_id: str, rd: RetrievalDirective) -> None:
-        """Enrich RetrievalDirective with SourceTrayState, producing concrete load plans."""
-        from app.signals.source_tray_integration import build_source_receipt, compute_retrieval_plan
-        from app.signals.types import SourceTrayState
-
-        try:
-            import json
-            raw = await self.redis.get(f"spine:source_tray:{user_id}")
-            if not raw:
-                return
-            tray = SourceTrayState.from_dict(json.loads(raw if isinstance(raw, str) else raw.decode()))
-        except Exception:
-            logger.warning("_enrich_retrieval_with_source_tray: failed", exc_info=True)
-            return
-
-        # SRC-014: Fetch user-corrected blocklist
-        from app.signals.source_tray_integration import SourceEffectivenessTracker
-        blocked: set[str] = set()
-        try:
-            tracker = SourceEffectivenessTracker(self.redis)
-            blocked = set(await tracker.get_blocked_sources(user_id))
-        except Exception:
-            logger.warning("_enrich_retrieval_with_source_tray: redis_op failed", exc_info=True)
-
-        plan = await compute_retrieval_plan(
-            retrieval_directive=rd, source_tray=tray, blocked_source_ids=blocked or None,
-        )
-        if plan["must_load"]:
-            rd.must_load = list({s["source_id"] for s in plan["must_load"]} | set(rd.must_load or []))
-        if plan["do_not_load"]:
-            rd.do_not_load = list({s["source_id"] for s in plan["do_not_load"]} | set(rd.do_not_load or []))
-
-        loaded_ids = [s["source_id"] for s in plan["must_load"]]
-        receipt = build_source_receipt(rd, tray, loaded_ids)
-        import json
-        await self.redis.set(
-            f"spine:source_receipt:{user_id}:latest",
-            json.dumps(receipt),
-            ex=72 * 3600,
-        )
-
     async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
         import json
         key = f"spine:retrieval_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
         await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
 
     async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
@@ -2384,7 +2316,6 @@ class SpineOrchestrator:
         key = f"spine:plan_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(pd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
-        await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
 
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
         """获取用户当前 PlanDirective。Degraded: returns None on Redis failure."""
@@ -2404,7 +2335,6 @@ class SpineOrchestrator:
         import json
         key = f"spine:model_write_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(mwd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(mwd.directive_id, mwd.to_dict())
         await self.trace_store.store_directive_by_id(mwd.directive_id, mwd.to_dict())
 
     async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
@@ -2476,7 +2406,6 @@ class SpineOrchestrator:
         import json
         key = f"spine:ux_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(uxd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
         await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
 
     async def get_ux_directive(self, user_id: str) -> UXDirective | None:
