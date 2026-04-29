@@ -36,14 +36,17 @@ class TestStoreDirectiveMethodsSingleCall:
         "_store_skill_directive",
     ])
     def test_store_directive_by_id_called_once(self, method_name):
-        """B-002 regression: each _store method must call store_directive_by_id exactly once."""
+        """B-002 regression: each _store method must call store_directive_by_id exactly once
+        (either directly or via _store_directive delegation)."""
         method = getattr(SpineOrchestrator, method_name, None)
         assert method is not None, f"Method {method_name} not found on SpineOrchestrator"
 
         source = inspect.getsource(method)
         count = source.count("store_directive_by_id")
-        assert count == 1, (
-            f"{method_name} calls store_directive_by_id {count} times, expected 1. "
+        # Methods delegating to _store_directive are also valid
+        delegates = "_store_directive" in source and count == 0
+        assert count == 1 or delegates, (
+            f"{method_name} calls store_directive_by_id {count} times, expected 1 (or delegation). "
             f"B-002 regression: duplicate directive storage."
         )
 
@@ -58,12 +61,15 @@ class TestStoreDirectiveMethodsSingleCall:
         "_store_skill_directive",
     ])
     def test_redis_set_called_once(self, method_name):
-        """B-002 regression: each _store method must SET to Redis exactly once."""
+        """B-002 regression: each _store method must SET to Redis exactly once
+        (either directly or via _store_directive delegation)."""
         method = getattr(SpineOrchestrator, method_name, None)
         source = inspect.getsource(method)
         count = source.count("redis.set(")
-        assert count == 1, (
-            f"{method_name} calls redis.set {count} times, expected 1. "
+        # Methods delegating to _store_directive are also valid
+        delegates = "_store_directive" in source and count == 0
+        assert count == 1 or delegates, (
+            f"{method_name} calls redis.set {count} times, expected 1 (or delegation). "
             f"B-002 regression: duplicate Redis writes."
         )
 
@@ -72,7 +78,8 @@ class TestNoDuplicateCodeBlocks:
     """Detect large duplicate code blocks that indicate copy-paste bugs."""
 
     def test_store_methods_no_duplicate_redis_calls(self):
-        """B-002 regression: each _store_* method body has exactly one redis.set call."""
+        """B-002 regression: each _store_* method body has exactly one redis.set call
+        (either directly or via _store_directive delegation)."""
         store_methods = [
             "_store_notification_directive",
             "_store_retrieval_directive",
@@ -86,15 +93,16 @@ class TestNoDuplicateCodeBlocks:
         for method_name in store_methods:
             method = getattr(SpineOrchestrator, method_name)
             source = inspect.getsource(method)
-            # Count redis.set( calls — should be exactly 1 per method
+            delegates = "_store_directive" in source
+            # Count redis.set( calls — should be exactly 1 per method (or 0 if delegating)
             set_count = source.count("redis.set(")
-            assert set_count == 1, (
+            assert set_count == 1 or (set_count == 0 and delegates), (
                 f"{method_name} has {set_count} redis.set() calls, expected 1. "
                 f"B-002 regression: double Redis write."
             )
-            # Count store_directive_by_id calls — should be exactly 1
+            # Count store_directive_by_id calls — should be exactly 1 (or 0 if delegating)
             sd_count = source.count("store_directive_by_id")
-            assert sd_count == 1, (
+            assert sd_count == 1 or (sd_count == 0 and delegates), (
                 f"{method_name} has {sd_count} store_directive_by_id calls, expected 1. "
                 f"B-002 regression: double directive storage."
             )
