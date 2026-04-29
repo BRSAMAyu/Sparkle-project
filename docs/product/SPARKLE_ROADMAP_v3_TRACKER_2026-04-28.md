@@ -489,17 +489,19 @@
 > **审查范围**: 全系统深度瓶颈 + 愿景差距 + 细节打磨
 > **方法**: 4 路并行审查 Agent (后端 Python / Flutter+Gateway / 数据流集成 / 愿景差距)
 
-### R5.1 后端 Python 审查 (20 issues)
+### R5.1 后端 Python 审查 (20 issues) — 已修 3
+
+> **P1-7/12 SpineOrchestrator 零测试 | P1-8 AchievementEngine async lock | P1-9 ✅分钟保留 | P1-10 ✅误报 | P1-13 测试不足 | P1-15 ✅日志修复 | P2-1~P2-20 待修**
 
 | ID | 严重度 | 问题 | 文件 | 状态 |
 |----|--------|------|------|------|
 | P1-7 | P1 | SpineOrchestrator 零测试覆盖 (4357行 60方法) | `spine_orchestrator.py` | 🔴 待修 |
 | P1-8 | P1 | AchievementEngine threading.Lock 配 async | `achievement_engine.py` | 🔴 待修 |
-| P1-9 | P1 | ContractService `current_minutes=0` 丢失额外分钟 | `contract_service.py` | 🔴 待修 |
-| P1-10 | P1 | FocusSessionCompletedEvent 定义但从未发布到 EventBus | `event_bus.py` / signal modules | 🔴 待修 |
+| P1-9 | P1 | ContractService `current_minutes=0` 丢失额外分钟 | `achievement_engine.py` | ✅ 已修 |
+| P1-10 | P1 | FocusSessionCompletedEvent 定义但从未发布到 EventBus | `event_bus.py` / signal modules | ✅ 误报: focus_service.py:178 已发布 |
 | P1-12 | P1 | SpineOrchestrator 零测试 (重复 P1-7) | — | 🔴 待修 |
 | P1-13 | P1 | AchievementEngine sprint/contract/weekend 测试不足 | `test_achievement_engine.py` | 🔴 待修 |
-| P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | 🔴 待修 |
+| P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | ✅ 已修 |
 | P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🔴 待修 |
 | P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🔴 待修 |
 | P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | 🔴 待修 |
@@ -510,19 +512,19 @@
 | P2-8 | P2 | StateRegister 无 TTL/过期清理 | `state_register.py` | 🔴 待修 |
 | P2-9 | P2 | OutcomeRecorder 无幂等保护 | `outcome_recorder.py` | 🔴 待修 |
 | P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | 🔴 待修 |
-| P2-14 | P2 | cognitive_adjustments 被截断到 [:2]/[:3] | `dual_core_router.py` | 🔴 待修 |
+| P2-14 | P2 | cognitive_adjustments 被截断到 [:2]/[:3] | `dual_core_router.py` | ✅ 已修 → [:5] |
 | P2-17 | P2 | pipeline lock 管理 on_task_completed vs _run_signal_pipeline 不一致 | `spine_orchestrator.py` | 🔴 待修 |
-| P2-20 | P2 | EventBus consumer loop Redis 断连不重连 | `event_bus.py` | 🔴 待修 |
+| P2-20 | P2 | EventBus consumer loop Redis 断连不重连 | `event_bus.py` | ✅ 已修: 自动重连 |
 
 ### R5.2 Flutter + Gateway 审查 (17 issues)
 
 | ID | 严重度 | 问题 | 文件 | 状态 |
 |----|--------|------|------|------|
-| G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | 🔴 待修 |
+| G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
 | F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | 🔴 待修 |
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | 🔴 待修 |
 | F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🔴 待修 |
-| F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | 🔴 待修 |
+| F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
 | G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | 🔴 待修 |
 | G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | 🔴 待修 |
 | G-04 | P1 | WS 后端→客户端消息无验证 | `websocket_proxy.go:244-264` | 🔴 待修 |
@@ -533,17 +535,17 @@
 | F-08 | P2 | 错误状态 10 秒静默自动清除 | `chat_screen.dart:179-194` | 🔴 待修 |
 | F-09 | P2 | Dashboard provider 错误不自动重试 | `dashboard_provider.dart:407` | 🔴 待修 |
 | F-10 | P2 | Growth provider 静默吞异常 | `dashboard_screen.dart:113-132` | 🔴 待修 |
-| G-06 | P2 | gRPC WithBlock() 导致启动挂起 | `client.go:75,132,171` | 🔴 待修 |
-| G-07 | P2 | gRPC 重连无指数退避 | `client.go:191-207` | 🔴 待修 |
+| G-06 | P2 | gRPC WithBlock() 导致启动挂起 | `client.go:75,132,171` | ✅ 已修: 移除WithBlock |
+| G-07 | P2 | gRPC 重连无指数退避 | `client.go:191-207` | ✅ 已修: 2s最小间隔 |
 
 ### R5.3 数据流完整性审查 (12 issues)
 
 | ID | 严重度 | 问题 | 数据流 | 状态 |
 |----|--------|------|--------|------|
-| DF-1 | 高 | ModelWriteDirective 写入黑洞 (get_model_claims 从未被生产代码调用) | Spine→Redis→无消费者 | 🔴 待修 |
-| DF-2 | 中 | CommunityDirective 写入但从未被消费 | Spine→state.context_data→无读取 | 🔴 待修 |
-| DF-3 | 中 | SkillDirective 写入但从未被消费 | Spine→state.context_data→无读取 | 🔴 待修 |
-| DF-4 | 中 | UXDirective 键不匹配 (orchestrator 发 `spine_ux`, Flutter 监听 `spine_ux_warning`) | WS metadata | 🔴 待修 |
+| DF-1 | 高 | ModelWriteDirective 写入黑洞 (get_model_claims 从未被生产代码调用) | Spine→Redis→context_manager→prompts.py | ✅ 已修 |
+| DF-2 | 中 | CommunityDirective 写入但从未被消费 | Spine→prompts.py section | ✅ 已修 |
+| DF-3 | 中 | SkillDirective 写入但从未被消费 | Spine→prompts.py section | ✅ 已修 |
+| DF-4 | 中 | UXDirective 键不匹配 (orchestrator 发 `spine_ux`, Flutter 监听 `spine_ux_warning`) | WS metadata | ✅ 已修 |
 | DF-5 | 低-中 | NotificationService.consume_spine_notification_directive 死代码 | 未被调用 | 🔴 待修 |
 | DF-6 | 低 | 成就数据渲染为单行摘要 (14表19事件→1行) | prompts.py | 🔴 待修 |
 | DF-7 | 低 | 执行引擎上下文缺少 ux/community/skill directive | execution_engine.py | 🔴 待修 |
