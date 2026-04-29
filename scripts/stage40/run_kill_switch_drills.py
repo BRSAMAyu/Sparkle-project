@@ -31,9 +31,13 @@ from app.services.aurora_stage31_idiographic_kill_switch_service import AuroraSt
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
+from app.services.aurora_stage37_llm_safety_kill_switch_service import AuroraStage37LLMSafetyKillSwitchService
 from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
+from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage40CalendarKillSwitchService
+from app.core.kill_switch import write_mode as _ks_write_mode
+from app.core.cache import cache_service as _cache
 
 
 TRANSITIONS = ("off", "shadow", "live", "shadow", "off")
@@ -53,7 +57,10 @@ DEFAULT_SPECS = (
     "stage33",
     "stage34",
     "stage35",
+    "stage37",
     "stage38",
+    "stage39",
+    "privacy",
     "doc_context",
     "stage40-calendar",
 )
@@ -194,11 +201,46 @@ async def _stage35_apply(mode: str) -> dict[str, str]:
     return await service.summary()
 
 
+async def _stage37_apply(mode: str) -> dict[str, str]:
+    service = AuroraStage37LLMSafetyKillSwitchService()
+    await service.set_mode(mode)
+    return {"mode": await service.get_mode()}
+
+
 async def _stage38_apply(mode: str) -> dict[str, str]:
     service = AuroraStage38KillSwitchService()
     await service.set_feature_mode("err_replan", mode)
     await service.set_feature_mode("push_scheduler", mode)
     return await service.summary()
+
+
+async def _stage39_apply(mode: str) -> dict[str, Any]:
+    service = AuroraStage39KillSwitchService()
+    if mode == "off":
+        await service.set_mode("off")
+        for feature in ("scaffolding_prompt", "cogload_route", "galaxy_inject"):
+            await service.set_feature_mode(feature, "off")
+    else:
+        await service.set_mode(mode)
+        for feature in ("scaffolding_prompt", "cogload_route", "galaxy_inject"):
+            await service.set_feature_mode(feature, mode)
+    return await service.summary()
+
+
+_PRIVACY_BINDING = type(
+    "PrivacyBinding",
+    (),
+    {"stage": "privacy", "feature": "pii_redaction", "redis_key": "aurora:privacy:pii_redaction",
+     "settings_attr": "AURORA_PRIVACY_PII_REDACTION_MODE", "fallback_mode": "live"},
+)()
+
+
+async def _privacy_apply(mode: str) -> dict[str, str]:
+    redis_client = _cache.redis
+    await _ks_write_mode(
+        redis_client=redis_client, prefix="sparkle:", binding=_PRIVACY_BINDING, mode=mode,
+    )
+    return {"pii_redaction_mode": mode}
 
 
 async def _doc_context_apply(mode: str) -> dict[str, str]:
@@ -319,12 +361,33 @@ SPECS = {
         mode_keys=("mode", "metacog_router_mode"),
         apply_mode=_stage35_apply,
     ),
+    "stage37": DrillSpec(
+        name="stage37",
+        stage="37",
+        description="LLM safety mode",
+        mode_keys=("mode",),
+        apply_mode=_stage37_apply,
+    ),
     "stage38": DrillSpec(
         name="stage38",
         stage="38",
         description="Stage 38 err_replan + push_scheduler",
         mode_keys=("err_replan_mode", "push_scheduler_mode"),
         apply_mode=_stage38_apply,
+    ),
+    "stage39": DrillSpec(
+        name="stage39",
+        stage="39",
+        description="Stage 39 master + scaffolding_prompt/cogload_route/galaxy_inject",
+        mode_keys=("mode", "scaffolding_prompt_mode", "cogload_route_mode", "galaxy_inject_mode"),
+        apply_mode=_stage39_apply,
+    ),
+    "privacy": DrillSpec(
+        name="privacy",
+        stage="privacy",
+        description="PII redaction mode",
+        mode_keys=("pii_redaction_mode",),
+        apply_mode=_privacy_apply,
     ),
     "doc_context": DrillSpec(
         name="doc_context",
