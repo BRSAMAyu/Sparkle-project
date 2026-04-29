@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
 void main() {
@@ -121,6 +122,55 @@ void main() {
       expect(payload.planId, 'plan-lp-1');
       expect(payload.children, hasLength(2));
       expect(payload.children.last.entityType, 'task_list');
+    });
+
+    test('adapts card protocol plan payload into plan card payload', () {
+      final plan = PlanCardPayload.fromMap({
+        'card_id': 'card-plan-1',
+        'card_type': 'PLAN',
+        'lifecycle_status': 'ACTIVE',
+        'tags': ['growth'],
+        'metadata': {
+          'legacy_plan_id': 'plan-1',
+          'name': '概率论冲刺',
+          'description': '7 天复习',
+          'plan_kind': 'GROWTH',
+          'subject': '概率论',
+          'progress': 0.42,
+        },
+      });
+
+      expect(plan.cardId, 'card-plan-1');
+      expect(plan.id, 'plan-1');
+      expect(plan.title, '概率论冲刺');
+      expect(plan.type, 'growth');
+      expect(plan.subject, '概率论');
+      expect(plan.progress, 0.42);
+    });
+
+    test('adapts card protocol task payload into legacy task model', () {
+      final task = taskModelFromEntityPayload({
+        'card_id': 'card-task-1',
+        'card_type': 'TASK',
+        'lifecycle_status': 'ACTIVE',
+        'tags': ['day:1'],
+        'metadata': {
+          'legacy_task_id': 'task-1',
+          'legacy_plan_id': 'plan-1',
+          'title': '闭卷复述贝叶斯公式',
+          'task_kind': 'learning',
+          'effort_minutes_default': 35,
+          'difficulty': 3,
+          'energy_cost': 2,
+        },
+      });
+
+      expect(task, isNotNull);
+      expect(task!.id, 'task-1');
+      expect(task.planId, 'plan-1');
+      expect(task.title, '闭卷复述贝叶斯公式');
+      expect(task.estimatedMinutes, 35);
+      expect(task.status, TaskStatus.pending);
     });
   });
 }

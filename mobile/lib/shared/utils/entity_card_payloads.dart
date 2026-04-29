@@ -2,6 +2,61 @@ import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
+class CardProtocolRef {
+  const CardProtocolRef({
+    required this.cardId,
+    required this.cardType,
+    this.lifecycleStatus,
+    this.metadata = const <String, dynamic>{},
+    this.tags = const <String>[],
+  });
+
+  factory CardProtocolRef.fromRaw(Map<String, dynamic> raw) {
+    final metadata = raw['metadata'] is Map
+        ? Map<String, dynamic>.from(raw['metadata'] as Map)
+        : const <String, dynamic>{};
+    return CardProtocolRef(
+      cardId: _asString(raw['card_id'] ?? raw['id']) ?? '',
+      cardType: _asString(raw['card_type'] ?? raw['type']) ?? 'CUSTOM',
+      lifecycleStatus: _asString(raw['lifecycle_status'] ?? raw['status']),
+      metadata: metadata,
+      tags: (raw['tags'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => item.toString())
+          .toList(),
+    );
+  }
+
+  static CardProtocolRef? maybeFromRaw(Map<String, dynamic> raw) {
+    final hasCardShape = raw.containsKey('card_id') ||
+        raw.containsKey('card_type') ||
+        raw['metadata'] is Map;
+    if (!hasCardShape) return null;
+    final ref = CardProtocolRef.fromRaw(raw);
+    return ref.cardId.isEmpty ? null : ref;
+  }
+
+  final String cardId;
+  final String cardType;
+  final String? lifecycleStatus;
+  final Map<String, dynamic> metadata;
+  final List<String> tags;
+
+  String? get legacyPlanId => _asString(metadata['legacy_plan_id']);
+  String? get legacyTaskId => _asString(metadata['legacy_task_id']);
+  String get normalizedEntityType {
+    switch (cardType.toUpperCase()) {
+      case 'PLAN':
+        return 'plan';
+      case 'TASK':
+        return 'task';
+      case 'KNOWLEDGE':
+        return 'knowledge_card';
+      default:
+        return cardType.toLowerCase();
+    }
+  }
+}
+
 class EntityCardActionPayload {
   const EntityCardActionPayload({
     required this.id,
@@ -53,7 +108,8 @@ class EntityCardSharePayload {
             ? Map<String, dynamic>.from(raw['meta'] as Map<String, dynamic>)
             : raw['meta'] is Map
                 ? Map<String, dynamic>.from(
-                    raw['meta'] as Map<Object?, Object?>)
+                    raw['meta'] as Map<Object?, Object?>,
+                  )
                 : const <String, dynamic>{},
       );
 
@@ -101,6 +157,7 @@ class EntityCardPayload {
     this.metrics = const <String, dynamic>{},
     this.tags = const <String>[],
     this.children = const <EntityCardPayload>[],
+    this.cardRef,
     this.raw = const <String, dynamic>{},
   });
 
@@ -112,7 +169,8 @@ class EntityCardPayload {
         ? Map<String, dynamic>.from(raw['entity_card'] as Map<String, dynamic>)
         : raw['entity_card'] is Map
             ? Map<String, dynamic>.from(
-                raw['entity_card'] as Map<Object?, Object?>)
+                raw['entity_card'] as Map<Object?, Object?>,
+              )
             : _buildLegacyEntityMap(raw, fallbackType: fallbackType);
     return EntityCardPayload._fromEntityMap(entityMap);
   }
@@ -171,6 +229,11 @@ class EntityCardPayload {
             ),
           )
           .toList(),
+      cardRef: raw['card_protocol'] is Map
+          ? CardProtocolRef.maybeFromRaw(
+              Map<String, dynamic>.from(raw['card_protocol'] as Map),
+            )
+          : CardProtocolRef.maybeFromRaw(raw),
       raw: raw['raw'] is Map
           ? Map<String, dynamic>.from(raw['raw'] as Map)
           : const <String, dynamic>{},
@@ -193,6 +256,7 @@ class EntityCardPayload {
   final Map<String, dynamic> metrics;
   final List<String> tags;
   final List<EntityCardPayload> children;
+  final CardProtocolRef? cardRef;
   final Map<String, dynamic> raw;
 
   String? get detailRoute => primaryAction?.route;
@@ -221,23 +285,39 @@ class PlanCardPayload {
     this.isActive,
     this.isPrimary,
     this.source,
+    this.cardRef,
   });
 
   factory PlanCardPayload.fromMap(Map<String, dynamic> raw) {
     final entity = EntityCardPayload.fromRaw(raw, fallbackType: 'plan');
+    final cardRef = CardProtocolRef.maybeFromRaw(raw) ?? entity.cardRef;
+    final metadata = cardRef?.metadata ?? const <String, dynamic>{};
     final normalizedType = _normalizePlanType(
-      raw['type'] ?? raw['plan_type'] ?? raw['category'] ?? entity.status,
+      raw['type'] ??
+          raw['plan_type'] ??
+          raw['category'] ??
+          metadata['plan_kind'] ??
+          entity.status,
     );
     return PlanCardPayload(
       entity: entity,
-      id: entity.entityId ?? _asString(raw['id'] ?? raw['plan_id']),
+      cardRef: cardRef,
+      id: entity.entityId ??
+          _asString(metadata['legacy_plan_id'] ?? raw['id'] ?? raw['plan_id']),
       title: entity.title,
       type: normalizedType,
-      description: entity.summary ?? _asString(raw['description']),
-      subject: _asString(raw['subject'] ?? entity.linkedEntities['subject']),
-      planStage: _asString(raw['plan_stage']),
-      targetDate: _parseDate(raw['target_date']),
-      progress: _asDouble(raw['progress'] ?? entity.metrics['progress']),
+      description: entity.summary ??
+          _asString(raw['description'] ?? metadata['description']),
+      subject: _asString(
+        raw['subject'] ??
+            metadata['subject'] ??
+            entity.linkedEntities['subject'],
+      ),
+      planStage: _asString(raw['plan_stage'] ?? metadata['legacy_plan_stage']),
+      targetDate: _parseDate(raw['target_date'] ?? metadata['target_date']),
+      progress: _asDouble(
+        raw['progress'] ?? metadata['progress'] ?? entity.metrics['progress'],
+      ),
       taskCount: _asInt(raw['task_count'] ?? entity.metrics['task_count']),
       targetMastery:
           _asDouble(raw['target_mastery'] ?? entity.metrics['target_mastery']),
@@ -261,6 +341,9 @@ class PlanCardPayload {
   final bool? isActive;
   final bool? isPrimary;
   final String? source;
+  final CardProtocolRef? cardRef;
+
+  String? get cardId => cardRef?.cardId;
 
   PlanType? get planType {
     switch (type) {
@@ -290,8 +373,9 @@ TaskModel? taskModelFromEntityPayload(Map<String, dynamic> raw) {
       'tags': (source['tags'] as List<dynamic>? ?? entity.tags)
           .map((item) => item.toString())
           .toList(),
-      'estimated_minutes': _asInt(source['estimated_minutes'] ??
-              entity.metrics['estimated_minutes']) ??
+      'estimated_minutes': _asInt(
+            source['estimated_minutes'] ?? entity.metrics['estimated_minutes'],
+          ) ??
           30,
       'difficulty':
           _asInt(source['difficulty'] ?? entity.metrics['difficulty']) ?? 1,
@@ -328,43 +412,65 @@ Map<String, dynamic> _buildLegacyEntityMap(
   Map<String, dynamic> raw, {
   String? fallbackType,
 }) {
-  final type = fallbackType ?? _asString(raw['entity_type']) ?? 'unknown';
+  final cardRef = CardProtocolRef.maybeFromRaw(raw);
+  final cardMetadata = cardRef?.metadata ?? const <String, dynamic>{};
+  final source = cardRef == null
+      ? raw
+      : <String, dynamic>{
+          ...cardMetadata,
+          ...raw,
+          'id': cardRef.legacyTaskId ?? cardRef.legacyPlanId ?? cardRef.cardId,
+        };
+  final type = fallbackType ??
+      cardRef?.normalizedEntityType ??
+      _asString(raw['entity_type']) ??
+      'unknown';
   if (type == 'task') {
-    final taskId = _asString(raw['id']);
+    final taskId = _asString(source['legacy_task_id'] ?? source['id']);
     return <String, dynamic>{
       'entity_type': 'task',
       'entity_id': taskId,
-      'title': _asString(raw['title']) ?? 'Unnamed Task',
-      'summary':
-          _asString(raw['guide_content']) ?? _asString(raw['description']),
-      'status': _normalizeTaskStatus(raw['status']),
+      'title': _asString(source['title']) ?? 'Unnamed Task',
+      'summary': _asString(source['guide_content']) ??
+          _asString(source['description']),
+      'status': _normalizeTaskStatus(
+        source['status'] ??
+            source['lifecycle_status'] ??
+            cardRef?.lifecycleStatus,
+      ),
       'execution_state':
-          (_asString(raw['status']) == 'COMPLETED') ? 'confirmed' : 'draft',
+          (_asString(source['status']) == 'COMPLETED') ? 'confirmed' : 'draft',
       'linked_entities': {
-        if (_asString(raw['plan_id']) != null)
-          'plan_id': _asString(raw['plan_id']),
+        if (_asString(source['legacy_plan_id'] ?? source['plan_id']) != null)
+          'plan_id': _asString(source['legacy_plan_id'] ?? source['plan_id']),
       },
       'metrics': {
-        if (_asInt(raw['estimated_minutes']) != null)
-          'estimated_minutes': _asInt(raw['estimated_minutes']),
-        if (_asInt(raw['priority']) != null)
-          'priority': _asInt(raw['priority']),
-        if (_asInt(raw['difficulty']) != null)
-          'difficulty': _asInt(raw['difficulty']),
+        if (_asInt(
+              source['estimated_minutes'] ?? source['effort_minutes_default'],
+            ) !=
+            null)
+          'estimated_minutes': _asInt(
+            source['estimated_minutes'] ?? source['effort_minutes_default'],
+          ),
+        if (_asInt(source['priority']) != null)
+          'priority': _asInt(source['priority']),
+        if (_asInt(source['difficulty']) != null)
+          'difficulty': _asInt(source['difficulty']),
       },
       'share': taskId == null
           ? null
           : {
               'resource_type': 'task',
               'resource_id': taskId,
-              'title': _asString(raw['title']) ?? 'Unnamed Task',
-              'subtitle': _asString(raw['guide_content']) ??
-                  _asString(raw['description']),
+              'title': _asString(source['title']) ?? 'Unnamed Task',
+              'subtitle': _asString(source['guide_content']) ??
+                  _asString(source['description']),
             },
       'feedback': {
-        'tool_result_id': _asString(raw['tool_result_id']),
-        'confirmation_required': _asString(raw['tool_result_id']) != null,
+        'tool_result_id': _asString(source['tool_result_id']),
+        'confirmation_required': _asString(source['tool_result_id']) != null,
       },
+      if (cardRef != null) 'card_protocol': raw,
       'raw': raw,
     };
   }
@@ -408,40 +514,46 @@ Map<String, dynamic> _buildLegacyEntityMap(
     };
   }
   if (type == 'plan') {
-    final planId = _asString(raw['id'] ?? raw['plan_id']);
+    final planId = _asString(
+      source['legacy_plan_id'] ?? source['id'] ?? source['plan_id'],
+    );
     return <String, dynamic>{
       'entity_type': 'plan',
       'entity_id': planId,
-      'title': _asString(raw['title'] ?? raw['name']) ?? 'Unnamed Plan',
-      'summary': _asString(raw['description']),
-      'status': _normalizePlanType(raw['type'] ?? raw['plan_type']),
+      'title': _asString(source['title'] ?? source['name']) ?? 'Unnamed Plan',
+      'summary': _asString(source['description']),
+      'status': _normalizePlanType(
+        source['type'] ?? source['plan_type'] ?? source['plan_kind'],
+      ),
       'execution_state':
-          (_asBool(raw['is_active']) ?? true) ? 'active' : 'draft',
+          (_asBool(source['is_active']) ?? true) ? 'active' : 'draft',
       'linked_entities': {
-        if (_asString(raw['subject']) != null)
-          'subject': _asString(raw['subject']),
-        if (_asString(raw['source']) != null)
-          'source': _asString(raw['source']),
+        if (_asString(source['subject']) != null)
+          'subject': _asString(source['subject']),
+        if (_asString(source['source']) != null)
+          'source': _asString(source['source']),
       },
       'metrics': {
-        if (_asDouble(raw['progress']) != null)
-          'progress': _asDouble(raw['progress']),
-        if (_asInt(raw['task_count']) != null)
-          'task_count': _asInt(raw['task_count']),
-        if (_asDouble(raw['target_mastery']) != null)
-          'target_mastery': _asDouble(raw['target_mastery']),
+        if (_asDouble(source['progress']) != null)
+          'progress': _asDouble(source['progress']),
+        if (_asInt(source['task_count']) != null)
+          'task_count': _asInt(source['task_count']),
+        if (_asDouble(source['target_mastery']) != null)
+          'target_mastery': _asDouble(source['target_mastery']),
       },
       'share': planId == null
           ? null
           : {
               'resource_type': 'plan',
               'resource_id': planId,
-              'title': _asString(raw['title'] ?? raw['name']) ?? 'Study Plan',
-              'subtitle': _asString(raw['description']),
+              'title':
+                  _asString(source['title'] ?? source['name']) ?? 'Study Plan',
+              'subtitle': _asString(source['description']),
             },
       'feedback': {
-        'tool_result_id': _asString(raw['tool_result_id']),
+        'tool_result_id': _asString(source['tool_result_id']),
       },
+      if (cardRef != null) 'card_protocol': raw,
       'raw': raw,
     };
   }
@@ -511,6 +623,8 @@ String _normalizeTaskStatus(dynamic raw) {
   final value = _asString(raw)?.trim().toLowerCase();
   switch (value) {
     case 'pending':
+    case 'active':
+    case 'draft':
       return 'PENDING';
     case 'in_progress':
     case 'inprogress':
@@ -536,9 +650,7 @@ String _normalizePlanType(dynamic raw) {
   }
 }
 
-String? _asString(dynamic value) {
-  return sanitizeNullableDisplayText(value);
-}
+String? _asString(dynamic value) => sanitizeNullableDisplayText(value);
 
 int? _asInt(dynamic value) {
   if (value is int) return value;
