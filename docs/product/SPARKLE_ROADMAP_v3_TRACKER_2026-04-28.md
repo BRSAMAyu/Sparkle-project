@@ -500,17 +500,17 @@
 | P1-8 | P1 | AchievementEngine threading.Lock 配 async | `achievement_engine.py` | 🔴 待修 |
 | P1-9 | P1 | ContractService `current_minutes=0` 丢失额外分钟 | `achievement_engine.py` | ✅ 已修 |
 | P1-10 | P1 | FocusSessionCompletedEvent 定义但从未发布到 EventBus | `event_bus.py` / signal modules | ✅ 误报: focus_service.py:178 已发布 |
-| P1-12 | P1 | SpineOrchestrator 零测试 (重复 P1-7) | — | 🔴 待修 |
+| P1-12 | P1 | SpineOrchestrator 零测试 (重复 P1-7) | — | ✅ 合并到 P1-7 |
 | P1-13 | P1 | AchievementEngine sprint/contract/weekend 测试不足 | `test_achievement_engine.py` | 🔴 待修 |
 | P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | ✅ 已修 |
 | P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🔴 待修 |
 | P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🔴 待修 |
 | P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | ✅ 已修 (b766be2f) |
 | P2-4 | P2 | 事件消费者无背压/限流 | event consumers | 🔴 待修 |
-| P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | 🔴 待修 |
+| P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | ✅ 已修 (eaa1e1db) |
 | P2-6 | P2 | Redis 连接无 circuit breaker | 多文件 | 🔴 待修 |
-| P2-7 | P2 | context_manager 异常处理不一致 | `context_manager.py` | 🔴 待修 |
-| P2-8 | P2 | StateRegister 无 TTL/过期清理 | `state_register.py` | 🔴 待修 |
+| P2-7 | P2 | context_manager 异常处理不一致 | `context_manager.py` | ✅ 已修 (1cf2c249) |
+| P2-8 | P2 | StateRegister 无 TTL/过期清理 | `state_register.py` | ✅ 已修 (cdedb67f) |
 | P2-9 | P2 | OutcomeRecorder 无幂等保护 | `outcome_recorder.py` | ✅ 已修 (b908c7bb) |
 | P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | ✅ 已修 (9260ce74) |
 | P2-14 | P2 | cognitive_adjustments 被截断到 [:2]/[:3] | `dual_core_router.py` | ✅ 已修 → [:5] |
@@ -638,7 +638,7 @@
 | EA-2 | `backend/app/signals/safety_degradation.py` | 文件存在但零生产 import | 接入 EventBus consumer group, 验证调用 | 🔴 待修 |
 | EA-3 | `backend/app/signals/high_impact_confirmation.py` | 文件存在但零生产 import | 接入 Directive actuation, 验证调用 | 🔴 待修 |
 | EA-4 | `backend/app/core/research_isolation.py` | 文件存在但零生产 import | 接入 StateAggregator write path, 验证调用 | 🔴 待修 |
-| EA-5 | `backend/app/core/data_minimization.py` | 文件存在但零生产 import | 接入 context_manager data flow, 验证调用 | 🔴 待修 |
+| EA-5 | `backend/app/core/data_minimization.py` | 文件存在但零生产 import | 接入 context_manager data flow, 验证调用 | ✅ 已修 (9260ce74, 同P2-10) |
 
 ### R6.3 Spine 重复代码消除
 
