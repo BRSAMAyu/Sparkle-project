@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30
+> **最后更新**: 2026-04-30 (P0-3 drill coverage complete)
 > **对应 Roadmap**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
 > **用途**: 记录所有已完成、进行中、待做的工作, 支持并行推进与阶段审查
 
@@ -662,5 +662,15 @@
 | EA-11 | R5 审计测试 990/990 全 mock, 无真实 Redis/PG 集成测试 | 添加集成测试套件 (至少覆盖 Spine Directive 端到端) | 🔴 待修 |
 | EA-12 | 无 prompt injection 测试 | 添加 adversarial prompt 测试用例 | 🔴 待修 |
 | EA-13 | Event bus consumer 测试跳过真实 Redis | 添加 Redis Streams 集成测试 | 🔴 待修 |
+
+### R6.6 Kill Switch Drill 覆盖 (P0-3)
+
+| Stage | Kill Switch Service | Drill Coverage | 状态 |
+|-------|-------------------|----------------|------|
+| stage37 (LLM Safety) | `aurora_stage37_llm_safety_kill_switch_service.py` | 缺失 → 已加 | ✅ 已修 (a6cf4051) |
+| stage39 (Scaffolding/Cogload/Galaxy) | `aurora_stage39_kill_switch_service.py` | 缺失 → 已加 | ✅ 已修 (a6cf4051) |
+| privacy (PII Redaction) | `aurora/privacy.py` (settings-based) | 缺失 → 已加 | ✅ 已修 (a6cf4051) |
+
+**结论**: 全部 47 个 Aurora kill switch 默认 `live`, "25 个从未生产运行" 的说法已过时。3 个 drill gap 已补齐。
 
 ### R6 总计: 13 issues (6 评分修正 + 5 死代码 + 3 CI + 3 测试)
