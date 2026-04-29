@@ -175,16 +175,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
         },
       )
-      // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
+      // F-08: 监听错误状态，10秒后自动清除并提示用户
       ..listenManual(chatProvider.select((state) => state.error),
           (previous, next) {
         if (next != null && next != previous) {
+          // Show snackbar so user knows error occurred
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next),
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
           Future.delayed(const Duration(seconds: 10), () {
             if (mounted) {
               final currentError = ref.read(chatProvider).error;
               if (currentError == next) {
-                // 错误仍然相同，自动清除
-                // 🔧 修复：正确使用StateNotifier更新状态
                 final notifier = ref.read(chatProvider.notifier);
                 notifier.state = notifier.state.copyWith(clearError: true);
               }
@@ -3313,8 +3319,10 @@ class _AuroraQuickTrigger extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing4),
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: DS.spacing10, vertical: DS.spacing6),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: DS.spacing10, vertical: DS.spacing10),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(999),
@@ -3337,6 +3345,7 @@ class _AuroraQuickTrigger extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

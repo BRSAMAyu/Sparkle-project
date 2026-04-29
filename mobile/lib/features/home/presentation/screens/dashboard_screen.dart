@@ -126,8 +126,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ref.read(homeGrowthStateProvider.future),
         ref.read(homeDailyContextLineProvider.future),
       ]);
-    } catch (_) {
+    } catch (e, st) {
       // The card falls back to an empty-plan state if growth data is unavailable.
+      debugPrint('Dashboard: growth state refresh failed: $e\n$st');
     }
   }
 
@@ -1397,8 +1398,10 @@ class _GoalChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(20),
@@ -1420,6 +1423,7 @@ class _GoalChip extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       );
 }
