@@ -14,7 +14,6 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
 from app.aurora.runtime_v1.aurora_spine_confluence import (
     AuroraInputAssembler,
     AuroraOutputArbitrator,
@@ -25,6 +24,7 @@ from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcesso
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.core.cost_controller import is_aurora_within_budget
+from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
 from app.signals.aurora_wake import AuroraWakeJudge
@@ -50,6 +50,7 @@ from app.signals.mistake_signal import MistakeSignalDetector
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.outcome_tracker import OutcomeTracker
+from app.signals.partner_commitment_loop import PartnerCommitmentLoop
 from app.signals.policy_analytics import PolicyAnalytics
 from app.signals.policy_engine import PolicyEngine
 from app.signals.policy_experiments import PolicyExperimentManager
@@ -138,6 +139,7 @@ class SpineOrchestrator:
         self.learning_base = LearningBase()
         self.growth_chronicle = GrowthChronicleService(redis_client)
         self.relationship_model = RelationshipModelService(redis_client)
+        self.partner_commitments = PartnerCommitmentLoop(redis_client)
         self.directive_quota = DirectiveQuotaService(redis_client)
         self.aurora_core = AuroraCoreSessionService(redis_client)
         self.l3_engine = L3FullCoreEngine(redis_client)
@@ -157,10 +159,10 @@ class SpineOrchestrator:
         self.goal_arbitrator = MultiGoalArbitrator(redis_client)
 
         # EA-1~EA-4: Governance modules — wired into production pipeline
-        from app.signals.fabrication_guard import check_response_for_fabrication
-        from app.signals.safety_degradation import SafetyDegradationManager
-        from app.signals.high_impact_confirmation import HighImpactConfirmationFramework
         from app.core.research_isolation import ResearchIsolationGuard
+        from app.signals.fabrication_guard import check_response_for_fabrication
+        from app.signals.high_impact_confirmation import HighImpactConfirmationFramework
+        from app.signals.safety_degradation import SafetyDegradationManager
         self._fabrication_scanner = check_response_for_fabrication
         self._safety_degradation = SafetyDegradationManager(redis_client)
         self._high_impact_confirmation = HighImpactConfirmationFramework()
@@ -2419,7 +2421,8 @@ class SpineOrchestrator:
         await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
         # V-8: Publish plan_directive event for downstream consumers (task generator, replanner)
         try:
-            from datetime import datetime, UTC as _UTC
+            from datetime import UTC as _UTC
+            from datetime import datetime
             await self.redis.publish(
                 "spine:plan_directive_channel",
                 json.dumps({
