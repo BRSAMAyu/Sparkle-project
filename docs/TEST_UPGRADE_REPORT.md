@@ -58,7 +58,7 @@
 | 阶段 | 范围 | 状态 |
 |------|------|------|
 | Phase 2a | Python PlanService / TaskService 核心业务逻辑测试 (52个) | ✅ 完成 |
-| Phase 2b | Python Plan/Task Tools 测试升级 | 待开始 |
+| Phase 2b | Python Plan/Task Tools 测试升级 (72个) | ✅ 完成 |
 | Phase 3a | Go ChatOrchestrator 聊天流程测试 | 待开始 |
 | Phase 3b | Go QuotaService 配额管理测试 | 待开始 |
 | Phase 3c | Go ChatHistory 聊天历史测试 | 待开始 |
@@ -75,7 +75,11 @@
 
 | 编号 | 文件 | 问题 | 严重程度 | 状态 |
 |------|------|------|---------|------|
-| (待发现) | | | | |
+| B-001 | `plan_tools.py:276` | `GenerateTasksForPlanTool` 传递 `description=validated.description` 给 `TaskCreate`，但 `TaskCreate` 没有 `description` 字段（应为 `guide_content`）。Pydantic `extra='ignore'` 静默丢弃该字段，导致任务描述丢失。 | 高 | 待修复 |
+| B-002 | `task_tools.py:146-158` | `UpdateTaskStatusTool` 对无法识别的 status 值（非 in_progress/completed/abandoned/pending）静默跳过所有分支，返回 `success=True` 但任务状态未变。应返回错误或至少警告。 | 中 | 待修复 |
+| B-003 | `task_tools.py:223-256` | `BatchCreateTasksTool` 无逐任务 try/catch。第 N 个任务失败会导致整个批次异常，但前 N-1 个任务可能已提交。对比 `GenerateTasksForPlanTool` 有正确的逐任务处理。 | 中 | 待修复 |
+| B-004 | `entity_cards.py:147` | `build_task_entity_card` 的 `execution_state` 检查使用大写 `{"IN_PROGRESS", "COMPLETED"}`，如果传入小写 status 会误判为 `draft`。 | 低 | 待修复 |
+| B-005 | `plan_tools.py:531` | `_match_learning_path_node_id` 使用 `node_ref.name.lower() in haystack` 做子串匹配，短名称如 "A" 会误匹配到包含 "a" 的任何文本。 | 低 | 待修复 |
 
 ---
 
@@ -215,11 +219,99 @@
 
 ---
 
-## 5. Git 提交记录
+### Phase 2b: Python Plan/Task Tools 测试
+
+**文件**: `backend/tests/test_plan_task_tools_production.py`
+**测试数量**: 72个
+**结果**: ✅ 全部通过
+
+#### CreatePlanTool 测试 (3个)
+- ✅ `test_creates_plan_and_returns_widget`: 创建计划返回正确 widget
+- ✅ `test_maps_all_params_to_plan_create`: 参数正确映射到 PlanCreate
+- ✅ `test_handles_service_exception`: 服务异常 → 失败 ToolResult
+
+#### GenerateTasksForPlanTool 静态方法测试 (12个)
+- ✅ `_resolve_max_session_minutes`: None→45, 15下限, 90上限, 正常值, None属性
+- ✅ `_infer_difficulty`: reflection→1, training/error_fix 按优先级映射, learning 默认映射, 大小写不敏感, 空类型/None类型
+
+#### GenerateTasksForPlanTool 集成测试 (5个)
+- ✅ `test_plan_not_found_returns_error`: 计划不存在 → 错误
+- ✅ `test_plan_wrong_user_returns_error`: 非本人计划 → 无权错误
+- ✅ `test_invalid_uuid_returns_error`: 无效UUID → 格式错误
+- ✅ `test_uses_fallback_when_llm_fails`: LLM失败 → 确定性fallback
+- ✅ `test_llm_generates_valid_tasks`: LLM生成 → 正确创建任务
+- ✅ `test_invalid_task_schema_skipped`: 无效schema → 跳过并继续
+
+#### Fallback 任务生成测试 (4个)
+- ✅ `test_without_learning_path_nodes`: 无学习路径节点 → 通用模板
+- ✅ `test_with_learning_path_nodes`: 有学习路径 → 前置+目标+练习+复盘
+- ✅ `test_pad_to_task_count`: 不足task_count → 补充巩固任务
+- ✅ `test_respects_max_session_minutes`: 遵守最大会话时长
+
+#### 学习路径节点匹配测试 (6个)
+- ✅ `test_no_nodes_returns_none`: 空列表 → None
+- ✅ `test_matches_by_name_in_title`: 标题包含节点名 → 匹配
+- ✅ `test_matches_by_name_in_description`: 描述包含节点名 → 匹配
+- ✅ `test_single_node_returns_it`: 单节点 → 直接返回
+- ✅ `test_fallback_to_index`: 按任务索引分配
+- ✅ `test_index_beyond_nodes_returns_last`: 索引超出 → 返回最后一个
+
+#### CreateTaskTool 测试 (4个)
+- ✅ `test_creates_task_with_defaults`: 默认创建返回 task_card
+- ✅ `test_default_estimated_minutes_when_none`: None → 默认30分钟
+- ✅ `test_explicit_estimated_minutes`: 显式设置分钟数
+- ✅ `test_error_returns_failure_tool_result`: 异常 → 失败
+
+#### UpdateTaskStatusTool 测试 (8个)
+- ✅ `test_routes_in_progress_to_start`: in_progress → TaskService.start
+- ✅ `test_routes_completed_to_complete`: completed → TaskService.complete
+- ✅ `test_completed_uses_estimated_when_no_actual`: 无actual_minutes → 用estimated
+- ✅ `test_routes_abandoned_to_abandon`: abandoned → TaskService.abandon
+- ✅ `test_routes_pending_to_update`: pending → TaskService.update
+- ✅ `test_task_not_found_returns_error`: 任务不存在 → 错误
+- ✅ `test_unrecognized_status_returns_unchanged_task`: 未知状态 → 返回原始任务
+- ✅ `test_completed_returns_new_status_in_data`: 完成后返回新状态
+
+#### BatchCreateTasksTool 测试 (2个)
+- ✅ `test_creates_multiple_tasks`: 批量创建3个任务
+- ✅ `test_error_returns_failure`: 批量创建失败
+
+#### SuggestQuickTaskTool 测试 (6个, 使用真实DB)
+- ✅ `test_finds_pending_task_within_time`: 按时间匹配待办任务
+- ✅ `test_no_matching_task_returns_error`: 无匹配 → 错误
+- ✅ `test_prefers_higher_priority`: 高优先级优先
+- ✅ `test_include_in_progress_flag`: include_in_progress 标志控制
+- ✅ `test_excludes_completed_and_abandoned`: 排除已完成/放弃
+- ✅ `test_filters_by_preferred_types`: 按类型过滤
+
+#### BreakdownTaskTool 测试 (7个)
+- ✅ `test_breaks_down_task_successfully`: 成功拆解3个子任务
+- ✅ `test_type_mapping_learning`: learning → LEARNING
+- ✅ `test_type_mapping_practice_to_training`: practice → TRAINING
+- ✅ `test_type_mapping_review_to_reflection`: review → REFLECTION
+- ✅ `test_empty_subtasks_returns_error`: 空子任务 → 错误
+- ✅ `test_invalid_subtask_skipped`: 无效子任务跳过（空标题→"微任务"回退）
+- ✅ `test_max_tasks_limits_output`: max_tasks 限制输出
+
+#### Schema 验证测试 (15个)
+- ✅ `_GeneratedPlanTaskSchema`: 标题长度(2-100), 类型(learning/training/error_fix/reflection), 时间(5-90), 优先级(1-5)
+- ✅ `_BreakdownSubtaskSchema`: 标题长度(2-120), 类型(learning/practice/review/exercise), 时间(5-90)
+
+#### 自我审查记录 (Phase 2b)
+
+**审查结果**: 通过（已根据审查意见修复）
+**修复内容**:
+1. 补充 plan_wrong_user_returns_error 授权测试
+2. 补充 unrecognized_status_returns_unchanged_task 测试
+3. 补充 completed_returns_new_status_in_data 状态验证
+4. 补充 _BreakdownSubtaskSchema 边界测试（title max_length, estimated_minutes max）
+5. 修复 _match_learning_path_node_id 测试数据避免子串误匹配（"A" → "AlphaNode"）
+6. 发现 B-001 ~ B-005 五个生产代码问题
 
 | 提交 | 日期 | 范围 | 描述 |
 |------|------|------|------|
-| (待提交) | | | |
+| 44185fc | 2026-04-29 | Phase 2a | PlanService/TaskService 核心业务测试 (52个) |
+| (pending) | 2026-04-29 | Phase 2b | Plan/Task Tools 测试 (72个) + 5个代码问题记录 |
 
 ---
 
@@ -228,8 +320,15 @@
 ### Phase 2a 审查
 
 **审查人**: 独立 Code Agent
-**日期**: (待审查)
-**结果**: (待审查)
+**日期**: 2026-04-29
+**结果**: 通过（已修复共享 fixture、order_index 断言、6个边界测试）
+
+### Phase 2b 审查
+
+**审查人**: 独立 Code Agent
+**日期**: 2026-04-29
+**结果**: 通过（已修复授权测试、未知状态测试、schema 边界测试）
+**发现**: 5个生产代码 bug (B-001~B-005)
 
 ### Phase 3a 审查
 
