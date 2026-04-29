@@ -9,7 +9,7 @@
 
 ## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 推进中
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
-> **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-02 ✅ 已修, C-01/C-03 ❌ 仍待修
+> **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
 
 ---
@@ -132,7 +132,7 @@
 | H-01-FIX: 6 个 EventBus 事件接入 Spine | ✅ 完成 | Codex | SpineEventBridge 接入 task.abandoned/stuck、focus.session.completed、plan.created、srl.phase.transition、calendar.event.*; 3 tests passed |
 | H-02-FIX: Aurora→Spine 反馈接入 PolicyEngine | ✅ 完成 | Codex | SpineOrchestrator 评估前读取 Aurora decisions, PolicyEngine 作为可逆 soft_bias 消费; 2 tests passed |
 | H-03-FIX: Spine 降级 Prometheus counter + 告警 | ✅ 完成 | Codex | sparkle_spine_degradation_total + SparkleSpineDegradation 告警 + runbook; 1 test passed |
-| H-04-FIX: Context Receipt Bar 用户行动按钮 | 🟡 审查新增 | — | receipt 显示正确但缺少"按课件重讲/排除资料"等行动 |
+| H-04-FIX: Context Receipt Bar 用户行动按钮 | ✅ 完成 | Codex | receipt 详情增加"按课件重讲/排除此资料/换成历年真题", 通过 chatProvider 续发纠偏 prompt; analyzer passed |
 
 ### P2 Medium
 
@@ -163,6 +163,7 @@
 | T2.1.6 / H-03 Spine 降级监控 | ⬜ 未开始 | ✅ 完成 | chat_turn Spine 异常写入 Prometheus counter, 5m 告警接入 Alertmanager |
 | H-01 EventBus→Spine 接线 | ⬜ 未开始 | ✅ 完成 | TaskEventConsumer 现在将 6 类高价值事件桥接为 ActionableSignal |
 | H-02 Aurora→Spine 策略反馈 | ⬜ 未开始 | ✅ 完成 | Aurora action/surface 进入 PolicyEngine soft_bias, 不直接改硬约束 |
+| H-04 Context Receipt Bar 用户行动按钮 | ⬜ 未开始 | ✅ 完成 | receipt sheet 现在可直接触发按课件重讲/排除此资料/换成历年真题纠偏 prompt |
 
 ---
 
@@ -176,8 +177,8 @@
 | 2026-04-29 | Phase 1 | Claude Review | push_scheduler UUID(user_id) 缺少 try-except, 格式异常会中断 queue 处理 | ✅ 已修: ValueError skip+delete bad key, 单测覆盖 |
 | 2026-04-29 | Phase 1 | Claude Review | learning_guard.should_learn() lines 56-57 冗余分支 | ✅ 已修: 冗余分支已删除, REVIEW 残留已移除 |
 | 2026-04-29 | Phase 1 | Claude Review | 5 个方法缺单元测试 (build_self_correction_receipt, verify_pending, get_guard_verdict 等) | ✅ 已补: verification_loop 21 tests, behavior_push 13 tests |
-| 2026-04-29 | Phase 1-2 | Claude Deep Audit | **3 P0 Critical**: OutcomeTracker 死代码, CognitiveAdjustment 未到 LLM prompt, multi_agent 跳过 Spine | ⬜ 待修 — 见审查报告 |
-| 2026-04-29 | Phase 1-2 | Claude Deep Audit | **4 P1 High**: 6 EventBus 事件绕过 Spine, Aurora→Spine 只写日志, Spine 降级无监控, Receipt 缺行动按钮 | ⬜ 待修 — 见审查报告 |
+| 2026-04-29 | Phase 1-2 | Claude Deep Audit | **3 P0 Critical**: OutcomeTracker 死代码, CognitiveAdjustment 未到 LLM prompt, multi_agent 跳过 Spine | ✅ 已修 — C-01/C-02/C-03 均完成 |
+| 2026-04-29 | Phase 1-2 | Claude Deep Audit | **4 P1 High**: 6 EventBus 事件绕过 Spine, Aurora→Spine 只写日志, Spine 降级无监控, Receipt 缺行动按钮 | ✅ 已修 — H-01/H-02/H-03/H-04 均完成 |
 | 2026-04-29 | Phase 2 | Claude Deep Audit | **T2.3.4/T2.3.5 已完成**: Spine Timeline API + Flutter Panel 均已存在, 无需新建 | ✅ 确认 |
 | 2026-04-29 | Phase 1 | Claude R2 验收 | C-02 ✅ 已修 (prompt_instruction property 机制), M-01 ✅ (T1.2.5 Flutter 管道) | ✅ 验收通过 |
 | 2026-04-29 | Phase 1 | Claude R2 验收 | C-01 ❌ OutcomeTracker 仍未接线, C-03 ❌ multi_agent_adapter 仍未传 Spine | ✅ 已修: C-01/C-03 均完成 |
@@ -192,6 +193,7 @@
 | 2026-04-29 | Phase 2 | Codex Self Review | Spine 降级只写 `spine_degraded` metadata, 没有生产监控与告警 | ✅ 已修: Prometheus counter + SLO alert + runbook |
 | 2026-04-29 | Phase 2 | Codex Self Review | H-01 若继续用 `on_external_event(source="task")` 会落到未实现 dispatch/unsupported source, 仍无法真正进入 Spine | ✅ 已修: 新增 SpineEventBridge 直接构造 ActionableSignal 并运行 Spine pipeline |
 | 2026-04-29 | Phase 2 | Codex Self Review | H-02 已有 `consume_aurora_decisions`, 但只用于 outcome attribution, PolicyEngine evaluate 前未读取 | ✅ 已修: on_task_completed/_run_signal_pipeline 均读取 Aurora decisions 并传入 PolicyEngine |
+| 2026-04-29 | Phase 2 | Codex Self Review | H-04 Context Receipt Bar 只有查看依据和 timeline, 用户发现资料不合适时无法即时纠偏 | ✅ 已修: 详情 sheet 增加 3 个行动 chip 并续发纠偏 prompt; 窄范围 analyzer passed, Flutter test 受既有全包编译错误阻塞 |
 | 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ⬜ 待修 — 见 R3 报告 |
 | 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1**: OfflineChatMessage 模型存在但未使用, **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 | ⬜ 待修 — 见 R3 报告 |
 

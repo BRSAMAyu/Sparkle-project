@@ -21,14 +21,14 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
-import 'package:sparkle/features/chat/presentation/widgets/aurora_message_group.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_citation_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_message_group.dart';
 import 'package:sparkle/features/chat/presentation/widgets/capability_ceiling_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/context_receipt_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/collapsible_widget_wrapper.dart';
+import 'package:sparkle/features/chat/presentation/widgets/context_receipt_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
@@ -1133,6 +1133,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   rawMetadata:
                                       (widget.message as ChatMessageModel)
                                           .rawMetadata,
+                                  onActionSelected: _continueInlinePrompt,
                                 ),
                               ),
                             if (showAiSystemAccessories &&

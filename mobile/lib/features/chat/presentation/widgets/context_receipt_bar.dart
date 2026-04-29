@@ -1,22 +1,31 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ContextReceiptBar extends StatelessWidget {
-  const ContextReceiptBar({required this.rawMetadata, super.key});
+  const ContextReceiptBar({
+    required this.rawMetadata,
+    this.onActionSelected,
+    super.key,
+  });
 
   final Map<String, dynamic>? rawMetadata;
+  final ValueChanged<String>? onActionSelected;
 
   @override
   Widget build(BuildContext context) {
     final receipt = _parseReceipt();
     if (receipt == null) return const SizedBox.shrink();
 
-    return _ReceiptChip(receipt: receipt);
+    return _ReceiptChip(
+      receipt: receipt,
+      onActionSelected: onActionSelected,
+    );
   }
 
   Map<String, dynamic>? _parseReceipt() {
@@ -36,9 +45,13 @@ class ContextReceiptBar extends StatelessWidget {
 }
 
 class _ReceiptChip extends StatelessWidget {
-  const _ReceiptChip({required this.receipt});
+  const _ReceiptChip({
+    required this.receipt,
+    required this.onActionSelected,
+  });
 
   final Map<String, dynamic> receipt;
+  final ValueChanged<String>? onActionSelected;
 
   List<String> get _usedNames {
     final raw = receipt['used_names'];
@@ -66,14 +79,19 @@ class _ReceiptChip extends StatelessWidget {
     return GestureDetector(
       onTap: hasDetail
           ? () {
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
-              showModalBottomSheet<void>(
-                context: context,
-                backgroundColor: Colors.transparent,
-                builder: (_) => _ReceiptDetailSheet(
-                  receipt: receipt,
-                  usedNames: _usedNames,
-                  excludedNames: _excludedNames,
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+              );
+              unawaited(
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => _ReceiptDetailSheet(
+                    receipt: receipt,
+                    usedNames: _usedNames,
+                    excludedNames: _excludedNames,
+                    onActionSelected: onActionSelected,
+                  ),
                 ),
               );
             }
@@ -135,11 +153,13 @@ class _ReceiptDetailSheet extends StatelessWidget {
     required this.receipt,
     required this.usedNames,
     required this.excludedNames,
+    required this.onActionSelected,
   });
 
   final Map<String, dynamic> receipt;
   final List<String> usedNames;
   final List<String> excludedNames;
+  final ValueChanged<String>? onActionSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -227,22 +247,33 @@ class _ReceiptDetailSheet extends StatelessWidget {
               (name) => _SourceRow(name: name, isUsed: false),
             ),
           ],
+          if (onActionSelected != null) ...[
+            const SizedBox(height: 14),
+            _ReceiptActionChips(
+              usedNames: usedNames,
+              onActionSelected: onActionSelected!,
+            ),
+          ],
           const SizedBox(height: 12),
           // Link to full causal timeline
           GestureDetector(
             onTap: () {
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+              );
               Navigator.of(context).pop();
-              showModalBottomSheet<void>(
-                context: context,
-                backgroundColor: Colors.transparent,
-                isScrollControlled: true,
-                builder: (_) => DraggableScrollableSheet(
-                  expand: false,
-                  initialChildSize: 0.7,
-                  minChildSize: 0.4,
-                  maxChildSize: 0.92,
-                  builder: (_, controller) => const CausalTimelinePanel(),
+              unawaited(
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                  builder: (_) => DraggableScrollableSheet(
+                    expand: false,
+                    initialChildSize: 0.7,
+                    minChildSize: 0.4,
+                    maxChildSize: 0.92,
+                    builder: (_, controller) => const CausalTimelinePanel(),
+                  ),
                 ),
               );
             },
@@ -263,6 +294,108 @@ class _ReceiptDetailSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ReceiptActionChips extends StatelessWidget {
+  const _ReceiptActionChips({
+    required this.usedNames,
+    required this.onActionSelected,
+  });
+
+  final List<String> usedNames;
+  final ValueChanged<String> onActionSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = [
+      const _ReceiptAction(
+        icon: Icons.menu_book_outlined,
+        label: '按课件重讲',
+        prompt: '请按我已上传/选中的课件重新讲一遍，优先引用刚才使用的资料。',
+      ),
+      _ReceiptAction(
+        icon: Icons.block_outlined,
+        label: '排除此资料',
+        prompt: usedNames.isEmpty
+            ? '请暂时排除刚才使用的资料，换一种解释。'
+            : '请暂时排除这些资料：${usedNames.join('、')}，换一种解释。',
+      ),
+      const _ReceiptAction(
+        icon: Icons.history_edu_outlined,
+        label: '换成历年真题',
+        prompt: '请换成历年真题/典型题视角来讲，并说明为什么这样选资料。',
+      ),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: actions
+          .map(
+            (action) => _ReceiptActionChip(
+              action: action,
+              onTap: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                );
+                Navigator.of(context).pop();
+                onActionSelected(action.prompt);
+              },
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _ReceiptAction {
+  const _ReceiptAction({
+    required this.icon,
+    required this.label,
+    required this.prompt,
+  });
+
+  final IconData icon;
+  final String label;
+  final String prompt;
+}
+
+class _ReceiptActionChip extends StatelessWidget {
+  const _ReceiptActionChip({
+    required this.action,
+    required this.onTap,
+  });
+
+  final _ReceiptAction action;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: DS.surfaceHigh.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(action.icon, size: 14, color: DS.brandPrimary),
+              const SizedBox(width: 5),
+              Text(
+                action.label,
+                style: DS.labelSmall.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 class _SectionHeader extends StatelessWidget {
