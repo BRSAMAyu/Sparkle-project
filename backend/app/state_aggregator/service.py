@@ -712,6 +712,21 @@ class StateAggregatorService:
             )
             source_ids.append(f"achievement:{achievement.id}")
 
+        # DF-10: Also read recent events from Redis cache
+        recent_events: list[dict] = []
+        try:
+            from app.core.cache import cache_service
+            import json as _json
+            events_key = f"spine:achievement_events:{user_id}"
+            raw_events = await cache_service.redis.lrange(events_key, 0, 4) if hasattr(cache_service, 'redis') else []
+            for raw in raw_events:
+                try:
+                    recent_events.append(_json.loads(raw))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         value = AchievementSummaryValue(
             recent_unlocks=tuple(
                 AchievementUnlockSummaryItemValue(
