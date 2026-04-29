@@ -10,19 +10,32 @@ import 'package:sparkle/features/error_book/presentation/widgets/error_question_
 import 'package:sparkle/features/error_book/presentation/widgets/review_performance_buttons.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 复习模式枚举
 enum ReviewMode {
-  today('today', '今日复习', '完成今天到期的所有错题'),
-  bySubject('subject', '按科目', '选择一个科目进行专项复习'),
-  weakest('weakest', '薄弱专攻', '优先复习掌握度最低的错题'),
-  random('random', '随机抽查', '随机抽取错题进行复习');
+  today('today'),
+  bySubject('subject'),
+  weakest('weakest'),
+  random('random');
 
-  const ReviewMode(this.code, this.label, this.description);
+  const ReviewMode(this.code);
 
   final String code;
-  final String label;
-  final String description;
+
+  String label(AppLocalizations l10n) => switch (this) {
+    ReviewMode.today => l10n.ebReviewModeToday,
+    ReviewMode.bySubject => l10n.ebReviewModeSubject,
+    ReviewMode.weakest => l10n.ebReviewModeWeak,
+    ReviewMode.random => l10n.ebReviewModeRandom,
+  };
+
+  String description(AppLocalizations l10n) => switch (this) {
+    ReviewMode.today => l10n.ebReviewModeTodayDesc,
+    ReviewMode.bySubject => l10n.ebReviewModeSubjectDesc,
+    ReviewMode.weakest => l10n.ebReviewModeWeakDesc,
+    ReviewMode.random => l10n.ebReviewModeRandomDesc,
+  };
 }
 
 /// 复习页面
@@ -88,10 +101,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(widget.mode.label),
+        title: Text(widget.mode.label(context.l10n)),
         actions: [
           Tooltip(
-            message: '退出复习',
+            message: context.l10n.ebExitReview,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.close),
@@ -187,7 +200,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '进度: $current/$total',
+                context.l10n.ebProgress(current, total),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -257,7 +270,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '题目',
+                  context.l10n.ebQuestion,
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: DS.fontWeightSemibold,
@@ -325,7 +338,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    '你的答案',
+                    context.l10n.ebYourAnswer,
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: theme.colorScheme.error,
                       fontWeight: DS.fontWeightSemibold,
@@ -365,7 +378,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    '正确答案',
+                    context.l10n.ebCorrectAnswer,
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: DS.success,
                       fontWeight: DS.fontWeightSemibold,
@@ -393,7 +406,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'AI 分析',
+                context.l10n.ebAiAnalysis,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                     ),
@@ -449,7 +462,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '先思考答案，再点击查看',
+                context.l10n.ebThinkFirstHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -542,7 +555,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.error(context.l10n.ebSubmitFailed(e.toString())),
+        SparkleSnackBar.error(context.l10n.ebReviewFailed),
       );
     }
   }
@@ -559,7 +572,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              customMessage ?? '暂无需要复习的错题',
+              customMessage ?? context.l10n.ebNoReviewNeeded,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: DS.fontWeightMedium,
@@ -568,7 +581,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '做得很好！继续保持',
+              context.l10n.ebNoReviewKeepUp,
               style: TextStyle(
                 fontSize: 14,
                 color: DS.textSecondary,
@@ -616,14 +629,14 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             const SizedBox(height: DS.spacing24),
 
             Text(
-              '复习完成！',
+              context.l10n.ebReviewComplete,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '本次共复习 $totalReviewed 道题',
+              context.l10n.ebReviewSummary(totalReviewed),
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -641,7 +654,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               child: Column(
                 children: [
                   Text(
-                    '复习成果',
+                    context.l10n.ebReviewResults,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                     ),
@@ -652,21 +665,21 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     children: [
                       _buildStatColumn(
                         context,
-                        '记住了',
+                        context.l10n.ebStatusRemembered,
                         remembered.toString(),
                         DS.success,
                         Icons.check_circle,
                       ),
                       _buildStatColumn(
                         context,
-                        '模糊',
+                        context.l10n.ebStatusFuzzy,
                         fuzzy.toString(),
                         DS.warningLight,
                         Icons.help_outline,
                       ),
                       _buildStatColumn(
                         context,
-                        '忘记了',
+                        context.l10n.ebStatusForgot,
                         forgotten.toString(),
                         DS.error,
                         Icons.cancel_outlined,
@@ -680,7 +693,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
             // 鼓励语
             Text(
-              _getEncouragementText(remembered, totalReviewed),
+              _getEncouragementText(context.l10n, remembered, totalReviewed),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.primary,
                 fontStyle: FontStyle.italic,
@@ -765,18 +778,18 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     );
   }
 
-  String _getEncouragementText(int remembered, int total) {
-    if (total == 0) return '继续加油！';
+  String _getEncouragementText(AppLocalizations l10n, int remembered, int total) {
+    if (total == 0) return l10n.ebEncourageKeepGoing;
 
     final ratio = remembered / total;
     if (ratio >= 0.9) {
-      return '太棒了！掌握得非常扎实 🎉';
+      return l10n.ebEncourageExcellent;
     } else if (ratio >= 0.7) {
-      return '很好！继续保持这个势头 💪';
+      return l10n.ebEncourageGreat;
     } else if (ratio >= 0.5) {
-      return '不错！再多复习几次会更好 📚';
+      return l10n.ebEncourageGood;
     } else {
-      return '加油！多复习几次就能记住了 🌟';
+      return l10n.ebEncourageTryAgain;
     }
   }
 
@@ -790,8 +803,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               color: DS.error,
             ),
             const SizedBox(height: DS.spacing16),
-            const Text(
-              '加载失败',
+            Text(
+              context.l10n.ebLoadReviewFailed,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: DS.fontWeightMedium,

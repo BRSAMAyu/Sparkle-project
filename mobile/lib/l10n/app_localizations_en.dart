@@ -23401,13 +23401,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Text or image is enough; both is recommended for better analysis';
 
   @override
-  String get ebYourAnswer => 'Your Answer *';
+  String get ebYourAnswer => 'Your Answer';
 
   @override
   String get ebYourAnswerHint => 'The wrong answer you wrote...';
 
   @override
-  String get ebCorrectAnswer => 'Correct Answer *';
+  String get ebCorrectAnswer => 'Correct Answer';
 
   @override
   String get ebCorrectAnswerHint => 'The correct answer or solution process...';
@@ -27123,4 +27123,91 @@ class AppLocalizationsEn extends AppLocalizations {
   String friendPendingCount(int count) {
     return '$count pending';
   }
+
+  @override
+  String get ebReviewModeToday => 'Today\'s Review';
+
+  @override
+  String get ebReviewModeTodayDesc => 'Review all errors due today';
+
+  @override
+  String get ebReviewModeSubject => 'By Subject';
+
+  @override
+  String get ebReviewModeSubjectDesc => 'Choose a subject for focused review';
+
+  @override
+  String get ebReviewModeWeak => 'Weak Spots';
+
+  @override
+  String get ebReviewModeWeakDesc => 'Prioritize errors with lowest mastery';
+
+  @override
+  String get ebReviewModeRandom => 'Random Quiz';
+
+  @override
+  String get ebReviewModeRandomDesc => 'Randomly sample errors for review';
+
+  @override
+  String get ebExitReview => 'Exit Review';
+
+  @override
+  String ebProgress(int current, int total) {
+    return 'Progress: $current/$total';
+  }
+
+  @override
+  String get ebQuestion => 'Question';
+
+  @override
+  String get ebAiAnalysis => 'AI Analysis';
+
+  @override
+  String get ebThinkFirstHint =>
+      'Think about the answer first, then tap to reveal';
+
+  @override
+  String get ebNoReviewNeeded => 'No errors need review right now';
+
+  @override
+  String get ebNoReviewKeepUp => 'Great job! Keep it up';
+
+  @override
+  String get ebReviewComplete => 'Review Complete!';
+
+  @override
+  String ebReviewSummary(int count) {
+    return 'Reviewed $count questions this session';
+  }
+
+  @override
+  String get ebReviewResults => 'Review Results';
+
+  @override
+  String get ebStatusRemembered => 'Remembered';
+
+  @override
+  String get ebStatusFuzzy => 'Fuzzy';
+
+  @override
+  String get ebStatusForgot => 'Forgot';
+
+  @override
+  String get ebEncourageKeepGoing => 'Keep going!';
+
+  @override
+  String get ebEncourageExcellent => 'Excellent! Very solid mastery';
+
+  @override
+  String get ebEncourageGreat => 'Great! Keep up this momentum';
+
+  @override
+  String get ebEncourageGood => 'Good! A few more reviews will help';
+
+  @override
+  String get ebEncourageTryAgain =>
+      'You\'ll get it! More reviews will help it stick';
+
+  @override
+  String get ebLoadReviewFailed => 'Failed to load';
 }

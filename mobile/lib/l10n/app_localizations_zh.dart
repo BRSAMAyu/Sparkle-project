@@ -22432,13 +22432,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebQuestionHelper => '题目文字和题目图片二选一即可，推荐两者都填以提升分析质量';
 
   @override
-  String get ebYourAnswer => '你的答案 *';
+  String get ebYourAnswer => '你的答案';
 
   @override
   String get ebYourAnswerHint => '你当时写的错误答案...';
 
   @override
-  String get ebCorrectAnswer => '正确答案 *';
+  String get ebCorrectAnswer => '正确答案';
 
   @override
   String get ebCorrectAnswerHint => '标准答案或正确的解题过程...';
@@ -25994,4 +25994,89 @@ class AppLocalizationsZh extends AppLocalizations {
   String friendPendingCount(int count) {
     return '$count 位待确认';
   }
+
+  @override
+  String get ebReviewModeToday => '今日复习';
+
+  @override
+  String get ebReviewModeTodayDesc => '完成今天到期的所有错题';
+
+  @override
+  String get ebReviewModeSubject => '按科目';
+
+  @override
+  String get ebReviewModeSubjectDesc => '选择一个科目进行专项复习';
+
+  @override
+  String get ebReviewModeWeak => '薄弱专攻';
+
+  @override
+  String get ebReviewModeWeakDesc => '优先复习掌握度最低的错题';
+
+  @override
+  String get ebReviewModeRandom => '随机抽查';
+
+  @override
+  String get ebReviewModeRandomDesc => '随机抽取错题进行复习';
+
+  @override
+  String get ebExitReview => '退出复习';
+
+  @override
+  String ebProgress(int current, int total) {
+    return '进度: $current/$total';
+  }
+
+  @override
+  String get ebQuestion => '题目';
+
+  @override
+  String get ebAiAnalysis => 'AI 分析';
+
+  @override
+  String get ebThinkFirstHint => '先思考答案，再点击查看';
+
+  @override
+  String get ebNoReviewNeeded => '暂无需要复习的错题';
+
+  @override
+  String get ebNoReviewKeepUp => '做得很好！继续保持';
+
+  @override
+  String get ebReviewComplete => '复习完成！';
+
+  @override
+  String ebReviewSummary(int count) {
+    return '本次共复习 $count 道题';
+  }
+
+  @override
+  String get ebReviewResults => '复习成果';
+
+  @override
+  String get ebStatusRemembered => '记住了';
+
+  @override
+  String get ebStatusFuzzy => '模糊';
+
+  @override
+  String get ebStatusForgot => '忘记了';
+
+  @override
+  String get ebEncourageKeepGoing => '继续加油！';
+
+  @override
+  String get ebEncourageExcellent => '太棒了！掌握得非常扎实';
+
+  @override
+  String get ebEncourageGreat => '很好！继续保持这个势头';
+
+  @override
+  String get ebEncourageGood => '不错！再多复习几次会更好';
+
+  @override
+  String get ebEncourageTryAgain => '加油！多复习几次就能记住了';
+
+  @override
+  String get ebLoadReviewFailed => '加载失败';
 }

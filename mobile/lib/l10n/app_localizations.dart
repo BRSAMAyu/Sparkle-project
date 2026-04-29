@@ -41014,7 +41014,7 @@ abstract class AppLocalizations {
   /// No description provided for @ebYourAnswer.
   ///
   /// In zh, this message translates to:
-  /// **'你的答案 *'**
+  /// **'你的答案'**
   String get ebYourAnswer;
 
   /// No description provided for @ebYourAnswerHint.
@@ -41026,7 +41026,7 @@ abstract class AppLocalizations {
   /// No description provided for @ebCorrectAnswer.
   ///
   /// In zh, this message translates to:
-  /// **'正确答案 *'**
+  /// **'正确答案'**
   String get ebCorrectAnswer;
 
   /// No description provided for @ebCorrectAnswerHint.
@@ -47373,6 +47373,168 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count} 位待确认'**
   String friendPendingCount(int count);
+
+  /// No description provided for @ebReviewModeToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日复习'**
+  String get ebReviewModeToday;
+
+  /// No description provided for @ebReviewModeTodayDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成今天到期的所有错题'**
+  String get ebReviewModeTodayDesc;
+
+  /// No description provided for @ebReviewModeSubject.
+  ///
+  /// In zh, this message translates to:
+  /// **'按科目'**
+  String get ebReviewModeSubject;
+
+  /// No description provided for @ebReviewModeSubjectDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择一个科目进行专项复习'**
+  String get ebReviewModeSubjectDesc;
+
+  /// No description provided for @ebReviewModeWeak.
+  ///
+  /// In zh, this message translates to:
+  /// **'薄弱专攻'**
+  String get ebReviewModeWeak;
+
+  /// No description provided for @ebReviewModeWeakDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先复习掌握度最低的错题'**
+  String get ebReviewModeWeakDesc;
+
+  /// No description provided for @ebReviewModeRandom.
+  ///
+  /// In zh, this message translates to:
+  /// **'随机抽查'**
+  String get ebReviewModeRandom;
+
+  /// No description provided for @ebReviewModeRandomDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'随机抽取错题进行复习'**
+  String get ebReviewModeRandomDesc;
+
+  /// No description provided for @ebExitReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出复习'**
+  String get ebExitReview;
+
+  /// No description provided for @ebProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度: {current}/{total}'**
+  String ebProgress(int current, int total);
+
+  /// No description provided for @ebQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'题目'**
+  String get ebQuestion;
+
+  /// No description provided for @ebAiAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 分析'**
+  String get ebAiAnalysis;
+
+  /// No description provided for @ebThinkFirstHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先思考答案，再点击查看'**
+  String get ebThinkFirstHint;
+
+  /// No description provided for @ebNoReviewNeeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无需要复习的错题'**
+  String get ebNoReviewNeeded;
+
+  /// No description provided for @ebNoReviewKeepUp.
+  ///
+  /// In zh, this message translates to:
+  /// **'做得很好！继续保持'**
+  String get ebNoReviewKeepUp;
+
+  /// No description provided for @ebReviewComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习完成！'**
+  String get ebReviewComplete;
+
+  /// No description provided for @ebReviewSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次共复习 {count} 道题'**
+  String ebReviewSummary(int count);
+
+  /// No description provided for @ebReviewResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习成果'**
+  String get ebReviewResults;
+
+  /// No description provided for @ebStatusRemembered.
+  ///
+  /// In zh, this message translates to:
+  /// **'记住了'**
+  String get ebStatusRemembered;
+
+  /// No description provided for @ebStatusFuzzy.
+  ///
+  /// In zh, this message translates to:
+  /// **'模糊'**
+  String get ebStatusFuzzy;
+
+  /// No description provided for @ebStatusForgot.
+  ///
+  /// In zh, this message translates to:
+  /// **'忘记了'**
+  String get ebStatusForgot;
+
+  /// No description provided for @ebEncourageKeepGoing.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续加油！'**
+  String get ebEncourageKeepGoing;
+
+  /// No description provided for @ebEncourageExcellent.
+  ///
+  /// In zh, this message translates to:
+  /// **'太棒了！掌握得非常扎实'**
+  String get ebEncourageExcellent;
+
+  /// No description provided for @ebEncourageGreat.
+  ///
+  /// In zh, this message translates to:
+  /// **'很好！继续保持这个势头'**
+  String get ebEncourageGreat;
+
+  /// No description provided for @ebEncourageGood.
+  ///
+  /// In zh, this message translates to:
+  /// **'不错！再多复习几次会更好'**
+  String get ebEncourageGood;
+
+  /// No description provided for @ebEncourageTryAgain.
+  ///
+  /// In zh, this message translates to:
+  /// **'加油！多复习几次就能记住了'**
+  String get ebEncourageTryAgain;
+
+  /// No description provided for @ebLoadReviewFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get ebLoadReviewFailed;
 }
 
 class _AppLocalizationsDelegate
