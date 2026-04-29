@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 
 /// Aurora Status Band — persistent indicator on the dashboard showing
 /// Aurora's current system state.
@@ -18,6 +19,16 @@ class AuroraStatusBand extends StatelessWidget {
   final AuroraBandState state;
   final String? label;
   final VoidCallback? onTap;
+
+  static AuroraBandState mapBandStatus(AuroraBandStatus status) => switch (status) {
+      AuroraBandStatus.sensing => AuroraBandState.sensing,
+      AuroraBandStatus.calibrated => AuroraBandState.calibrated,
+      AuroraBandStatus.riskFound => AuroraBandState.riskDetected,
+      AuroraBandStatus.needsConfirm => AuroraBandState.needsConfirmation,
+      AuroraBandStatus.calibrationAvailable =>
+        AuroraBandState.calibrationAvailable,
+      AuroraBandStatus.coolingDown => AuroraBandState.coolingDown,
+    };
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +98,15 @@ class AuroraStatusBand extends StatelessWidget {
 
   _AuroraBandConfig get _stateConfig {
     switch (state) {
+      case AuroraBandState.sensing:
+        return _AuroraBandConfig(
+          icon: Icons.wifi_tethering_rounded,
+          title: 'Aurora · 轻量感知中',
+          iconColor: DS.textTertiary,
+          iconBgColor: DS.surfaceSecondary,
+          bgColor: DS.surfaceHigh,
+          borderColor: DS.borderSubtle,
+        );
       case AuroraBandState.calibrated:
         return _AuroraBandConfig(
           icon: Icons.check_circle_outline,
@@ -113,6 +133,24 @@ class AuroraStatusBand extends StatelessWidget {
           iconBgColor: DS.brandPrimary.withValues(alpha: 0.1),
           bgColor: DS.brandPrimary.withValues(alpha: 0.04),
           borderColor: DS.brandPrimary.withValues(alpha: 0.15),
+        );
+      case AuroraBandState.calibrationAvailable:
+        return _AuroraBandConfig(
+          icon: Icons.tune_rounded,
+          title: 'Aurora · 深度校准可用',
+          iconColor: DS.info,
+          iconBgColor: DS.info.withValues(alpha: 0.1),
+          bgColor: DS.info.withValues(alpha: 0.04),
+          borderColor: DS.info.withValues(alpha: 0.15),
+        );
+      case AuroraBandState.coolingDown:
+        return _AuroraBandConfig(
+          icon: Icons.ac_unit_rounded,
+          title: 'Aurora · 冷却中',
+          iconColor: DS.textTertiary,
+          iconBgColor: DS.surfaceSecondary,
+          bgColor: DS.surfaceHigh,
+          borderColor: DS.borderSubtle,
         );
       case AuroraBandState.sourceAware:
         return _AuroraBandConfig(
@@ -145,10 +183,14 @@ class AuroraStatusBand extends StatelessWidget {
   }
 }
 
+/// 9 states: 6 from backend + 3 legacy (sourceAware, noSourcesUsed, strategyActive).
 enum AuroraBandState {
+  sensing,
   calibrated,
   riskDetected,
   needsConfirmation,
+  calibrationAvailable,
+  coolingDown,
   sourceAware,
   noSourcesUsed,
   strategyActive,

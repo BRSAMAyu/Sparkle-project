@@ -17,6 +17,7 @@ import 'package:sparkle/features/home/presentation/providers/intent_prediction_p
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_alert.dart';
+import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/aurora_status_band.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
@@ -424,11 +425,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         _staggeredSection(
           index: sectionIndex++,
-          child: AuroraStatusBand(
-            state: _resolveAuroraState(dashboardState),
-            label: _auroraBandLabel(dashboardState),
-            onTap: () => context.push(ChatRoutes.chat),
-          ),
+          child: Builder(builder: (context) {
+            final bandAsync = ref.watch(spineStatusBandProvider);
+            return bandAsync.when(
+              data: (band) => AuroraStatusBand(
+                state: band != null
+                    ? AuroraStatusBand.mapBandStatus(band.bandStatus)
+                    : _resolveAuroraState(dashboardState),
+                label: band?.bandSummary.isNotEmpty == true
+                    ? band!.bandSummary
+                    : _auroraBandLabel(dashboardState),
+                onTap: () => context.push(ChatRoutes.chat),
+              ),
+              loading: () => AuroraStatusBand(
+                state: _resolveAuroraState(dashboardState),
+                label: _auroraBandLabel(dashboardState),
+                onTap: () => context.push(ChatRoutes.chat),
+              ),
+              error: (_, __) => AuroraStatusBand(
+                state: _resolveAuroraState(dashboardState),
+                label: _auroraBandLabel(dashboardState),
+                onTap: () => context.push(ChatRoutes.chat),
+              ),
+            );
+          }),
         ),
         _staggeredSection(
           index: sectionIndex++,
