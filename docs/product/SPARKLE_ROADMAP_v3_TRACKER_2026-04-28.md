@@ -560,18 +560,18 @@
 
 | ID | 严重度 | 差距 | 缺失部分 | 状态 |
 |----|--------|------|----------|------|
-| V-1 | P2 | 神圣时刻 #1 "看见坚持" 无专属连续性识别 UI | 专用卡片组件 | 🔴 待修 |
-| V-2 | P1 | 神圣时刻 #5 "阻止低收益" 无用户可见拦截卡片 | 拦截 UI + 解释 | 🔴 待修 |
-| V-3 | P1 | 神圣时刻 #6 社群经验转策略未连接生产触发器 | Celery connector + UI | 🔴 待修 |
+| V-1 | P2 | 神圣时刻 #1 "看见坚持" 无专属连续性识别 UI | 专用卡片组件 | ✅ 已验证 (GrowthCard 已存在并接入 chat_screen.dart, 含 streakDays/strategyEffect/isMilestone) |
+| V-2 | P1 | 神圣时刻 #5 "阻止低收益" 无用户可见拦截卡片 | 拦截 UI + 解释 | ✅ 已验证 (StrategyInterventionCard + UXWarningEvent 已存在并接入, 同 GAP-MAGIC005) |
+| V-3 | P1 | 神圣时刻 #6 社群经验转策略未连接生产触发器 | Celery connector + UI | ✅ 已验证 (Celery 6h/8h 聚合 + Spine pipeline + prompts.py 渲染 + CommunityInsightCard Flutter UI 均已存在) |
 | V-4 | P1 | 4/9 Directive 无消费者 (Retrieval/UX/Skill/Community) | 下游消费者 | ✅ 已修 (6117f2d2) |
-| V-5 | P1 | Aurora 偏好设置 UI 不存在 | 设置屏幕 | 🔴 待修 |
-| V-6 | P1 | 材料范围控制过于简单 (仅3态切换) | 丰富 Source Selector | 🔴 待修 |
-| V-7 | P2 | SkillExtractionService 为 stub | 提取逻辑 | 🔴 待修 |
+| V-5 | P1 | Aurora 偏好设置 UI 不存在 | 设置屏幕 | ✅ 已修 (b4e3da79: provider + unified_settings_screen 4维度 ChoiceChip) |
+| V-6 | P1 | 材料范围控制过于简单 (仅3态切换) | 丰富 Source Selector | 🟡 部分实现 (StudyMaterialsSheet 含5模式选择+按源开关; 后端 SourceAsset 含 quality/scope/recommended 但 UI 未全部暴露) |
+| V-7 | P2 | SkillExtractionService 为 stub | 提取逻辑 | ✅ 已验证 (skill_extraction.py 含完整提取逻辑: 连续有效≥3、置信度≥0.7、负反馈检测、策略→SkillEntry) |
 | V-8 | P2 | 成就信号未被 Task Generator 消费 | 消费者接线 | ✅ 已修 (dce0628c) |
 | V-9 | P2 | Outcome 跟踪为只写, 无自动策略学习 | 策略更新循环 | ✅ 已修 (56ac6b53: Bayesian belief update loop in record_outcome) |
 | V-10 | P2 | 截止日期阶段策略为静态无逐日转换 | 动态阶段逻辑 | ✅ 已修 (c7485dbc: foundation phase D-8+, should_activate ≤30) |
 | V-11 | P3 | 多消息 Aurora 议程不存在 | 整个功能 | 🟡 未来增强 |
-| V-12 | P1 | ContextPlan 检索模式用户不可控 | 模式选择器 | 🔴 待修 |
+| V-12 | P1 | ContextPlan 检索模式用户不可控 | 模式选择器 | 🟡 部分实现 (DocumentContextMode 5模式+StudyMaterialsSheet; 后端 5 retrieval_mode 但 UI 仅暴露简化 scope) |
 | V-13 | P2 | cognitive_adjustments 文本注入非结构化消费 | 结构化消费 | 🟡 设计层面 |
 | V-14 | P2 | 辅助 Spine 事件 (mistake/quiz) 无完整管道 | 完整 Directive 管道 | ✅ 已修 (9711a98c: on_file_uploaded + on_recall_check wired) |
 
