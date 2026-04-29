@@ -78,7 +78,7 @@
 | T1.2.2 router 生成 structured_adjustments | ✅ 完成 | main | prompt_instruction 渲染 + routing_engine 透传 |
 | T1.2.3 ux_envelope 从调整生成 | ✅ 完成 | main | ux_turn 含 user_visible structured_adjustments |
 | T1.2.4 response_builder 结构化参数 | ✅ 完成 | main | response_metadata 含 structured_cognitive_adjustments |
-| T1.2.5 Flutter WebSocket 传递 | ⬜ 未开始 | — | |
+| T1.2.5 Flutter WebSocket 传递 | ✅ 完成 | main | WebSocket metadata 解码 structured_cognitive_adjustments, ChatMessageModel/UX envelope 保留结构化列表 |
 | T1.2.6 test_structured_cognitive_adjustments.py | ✅ 完成 | main | 7 tests passed (含 prompt_instruction + overlay 测试) |
 
 ### 1.3 Breakpoint #7: Verification Loop
@@ -189,3 +189,4 @@
 | 2026-04-29 | 2428d022 | Phase 1 | Review follow-ups — Redis pipeline, REVIEW cleanup, missing tests |
 | 2026-04-29 | 8817a4b9 | Phase 1 | T1.1.4 JPush behavior context payload — goal_context + suggested_action |
 | 2026-04-29 | b0a0cb95 | Phase 1 | T1.1.5 Flutter push open routing — task/goal/recall contexts |
+| 2026-04-29 | 6a8f8f3d | Phase 1 | T1.2.5 Flutter WebSocket structured cognitive adjustments |
