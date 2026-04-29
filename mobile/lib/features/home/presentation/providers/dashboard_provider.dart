@@ -648,6 +648,12 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       debugPrint('Error loading dashboard: $e');
       if (!mounted) return;
       state = DashboardState.error(e.toString());
+      // F-09: Auto-retry once after 5 seconds on error
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted && state.error != null) {
+          fetchData();
+        }
+      });
     }
   }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/metrics"
 	"go.uber.org/zap"
 )
 
@@ -17,6 +18,12 @@ const maxClientMessageSize = 256 * 1024
 
 // WebSocketProxy 专门处理 WebSocket 连接代理
 // 因为 httputil.ReverseProxy 在某些情况下无法正确处理 WebSocket 升级
+//
+// Known limitation (G-03): Connection tracking (activeByUser) is local to this
+// process. When multiple gateway instances sit behind a load balancer, per-user
+// limits are enforced per-instance, not globally. For single-instance
+// deployments this is sufficient. A Redis-backed atomic counter would be needed
+// for multi-instance enforcement — tracked as future work.
 type WebSocketProxy struct {
 	pythonBackendURL string
 	upgrader         *websocket.Upgrader
@@ -312,6 +319,8 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 }
 
 func (p *WebSocketProxy) registerConnection(userID string) bool {
+	metrics.WSConnectionsActive.Inc()
+
 	maxConns := p.config.WSMaxConnections
 	if maxConns <= 0 {
 		return true
@@ -320,6 +329,7 @@ func (p *WebSocketProxy) registerConnection(userID string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.activeByUser[userID] >= maxConns {
+		metrics.WSConnectionsActive.Dec()
 		return false
 	}
 	p.activeByUser[userID]++
@@ -327,6 +337,8 @@ func (p *WebSocketProxy) registerConnection(userID string) bool {
 }
 
 func (p *WebSocketProxy) unregisterConnection(userID string) {
+	metrics.WSConnectionsActive.Dec()
+
 	maxConns := p.config.WSMaxConnections
 	if maxConns <= 0 {
 		return

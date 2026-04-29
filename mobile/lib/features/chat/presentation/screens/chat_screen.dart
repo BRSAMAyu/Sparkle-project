@@ -2781,7 +2781,11 @@ class _QuickActionChipState extends State<_QuickActionChip> {
     final hasSubtitle =
         widget.subtitle != null && widget.subtitle!.trim().isNotEmpty;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: widget.label,
+      hint: widget.subtitle,
+      child: GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) => setState(() => _isPressed = false),
       onTapCancel: () => setState(() => _isPressed = false),
@@ -2858,6 +2862,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
