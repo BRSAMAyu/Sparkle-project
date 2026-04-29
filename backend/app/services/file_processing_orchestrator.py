@@ -111,6 +111,22 @@ class FileProcessingOrchestrator:
                 file_name=file_name,
             )
 
+            # V-14: Notify Spine of file upload for signal pipeline
+            try:
+                from app.signals.spine_orchestrator import SpineOrchestrator
+                from app.core.redis_client import get_redis
+                spine = SpineOrchestrator(redis=get_redis())
+                summary = chunks[0].get("text", "")[:500] if chunks else ""
+                await spine.on_file_uploaded(
+                    user_id=str(user_id),
+                    file_id=str(file_id),
+                    filename=file_name,
+                    parsed_summary=summary,
+                    mime_type=file_record.mime_type or "application/octet-stream",
+                )
+            except Exception as spine_err:
+                logger.debug("Spine on_file_uploaded skipped: {}", spine_err)
+
             return {"status": "processed", "file_id": str(file_id)}
         except Exception as exc:
             await self._update_status(file_record, "failed", error_message=str(exc))

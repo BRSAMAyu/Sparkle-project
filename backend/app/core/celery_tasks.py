@@ -2139,6 +2139,16 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
         redis = get_redis()
         spine = SpineOrchestrator(redis=redis)
 
+        # V-14: Run signal pipeline first (generates directives + trace)
+        try:
+            await spine.on_recall_check(
+                user_id=user_id,
+                trigger_type=trigger_type,
+                **parsed_context,
+            )
+        except Exception:
+            logger.debug("Spine on_recall_check skipped for user=%s", user_id)
+
         message = await spine.build_recall_notification(
             user_id=user_id,
             trigger_type=trigger_type,
