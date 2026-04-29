@@ -567,7 +567,7 @@
 | V-5 | P1 | Aurora 偏好设置 UI 不存在 | 设置屏幕 | 🔴 待修 |
 | V-6 | P1 | 材料范围控制过于简单 (仅3态切换) | 丰富 Source Selector | 🔴 待修 |
 | V-7 | P2 | SkillExtractionService 为 stub | 提取逻辑 | 🔴 待修 |
-| V-8 | P2 | 成就信号未被 Task Generator 消费 | 消费者接线 | 🔴 待修 |
+| V-8 | P2 | 成就信号未被 Task Generator 消费 | 消费者接线 | ✅ 已修 (dce0628c) |
 | V-9 | P2 | Outcome 跟踪为只写, 无自动策略学习 | 策略更新循环 | 🔴 待修 |
 | V-10 | P2 | 截止日期阶段策略为静态无逐日转换 | 动态阶段逻辑 | 🔴 待修 |
 | V-11 | P3 | 多消息 Aurora 议程不存在 | 整个功能 | 🟡 未来增强 |
