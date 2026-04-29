@@ -1293,6 +1293,13 @@ class SpineOrchestrator:
             "spine_pipeline", self.metrics.record_signal_entered_state(),
         )
 
+        # L2 Mid Aurora: Check for escalation patterns and trigger interventions
+        l2_escalation = await resilient_redis_call(
+            "spine_pipeline",
+            self._check_l2_escalation(user_id),
+            fallback=None,
+        )
+
         # Fetch recent policy effects for shadow learning
         recent_effects = await resilient_redis_call(
             "spine_pipeline",
@@ -1312,9 +1319,17 @@ class SpineOrchestrator:
             fallback=[],
         )
 
+        pipeline_context = {
+            "source": "pipeline",
+            "aurora_decisions": aurora_decisions,
+        }
+        if l2_escalation:
+            pipeline_context["l2_escalation"] = l2_escalation
+            trace.raw_event_ids.append(f"l2:{l2_escalation['pattern_name']}")
+
         result = await self.policy_engine.evaluate(
             signal,
-            context={"source": "pipeline", "aurora_decisions": aurora_decisions},
+            context=pipeline_context,
             recent_policy_effects=recent_effects,
             strategy_beliefs=strategy_beliefs,
         )
@@ -1893,6 +1908,26 @@ class SpineOrchestrator:
             ]
         except Exception:
             return []
+
+    # ── L2 Mid Aurora: Escalation Detection ─────────────────────────────
+
+    async def _check_l2_escalation(self, user_id: str) -> dict[str, Any] | None:
+        """Check StateRegister for L2 escalation patterns.
+
+        Returns escalation result if a pattern matched, None otherwise.
+        """
+        try:
+            from app.aurora.runtime_v1.l2_intervention import L2InterventionEngine
+
+            active_states = await self._get_active_states_dicts(user_id)
+            if not active_states:
+                return None
+
+            engine = L2InterventionEngine(self.redis)
+            return await engine.check_escalation(user_id, active_states)
+        except Exception as exc:
+            logger.debug("L2 escalation check failed for user={}: {}", user_id, exc)
+            return None
 
     # ── Layer 6: ResponseDirective ─────────────────────────────────────
 

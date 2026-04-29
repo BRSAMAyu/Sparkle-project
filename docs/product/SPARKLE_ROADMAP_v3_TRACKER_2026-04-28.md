@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中, Phase 3.5 审计 P0+P1 全部修复
+## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1.3 L2 完成), Phase 3.5 审计 P0+P1 全部修复
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
@@ -183,7 +183,7 @@
 | Phase | 状态 | 开始日期 | 完成日期 |
 |-------|------|----------|----------|
 | Phase 2: Spine 深化 | ✅ 完成 | 2026-04-29 | — |
-| Phase 3: Aurora↔Spine | 🟡 推进中 | 2026-04-29 | T3.1.1 L0 rules started |
+| Phase 3: Aurora↔Spine | 🟡 推进中 | 2026-04-29 | T3.1.1-3 L0/L1/L2 完成 |
 | Phase 4: 活体验打磨 | ⬜ 未开始 | — | — |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
@@ -235,9 +235,16 @@
 | 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1**: OfflineChatMessage 模型存在但未使用, **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 | ⬜ 待修 — 见 R3 报告 |
 | 2026-04-29 | Phase 3 | Claude | T3.1.1 L0 rule-aware Aurora: deadline_pressure 自动计算 + quiet_hours 强制执行 | ✅ 已修: L0RuleEngine 新建, deadline_pressure→StateRegister, dual_core_router 消费 deadline state, quiet_hours 解析; 11 tests passed |
 | 2026-04-29 | Phase 3 | Claude | T3.1.2 L1 Light Aurora: ResponseDirective 消费 StateRegister 活跃状态调节 tone | ✅ 已修: build_response_directive 增加 active_states 参数, fatigue→low_pressure(优先), deadline→urgent, SpineOrchestrator 两处调用点传入; 6 tests passed |
+| 2026-04-29 | Phase 3 | Claude | T3.1.3 L2 Mid Aurora: 升级模式检测 + 结构性干预 | ✅ 完成: L2InterventionEngine 新建 (4 escalation patterns: knowledge_crisis/execution_collapse/exam_underwater/burnout_risk); SpineOrchestrator._check_l2_escalation 接入; Redis cooldown 1h; 25 production-grade tests passed, 965 spine tests 无回归 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P0-1**: types.py 13个重复dataclass (~500行死代码), **P0-2**: causal_trace_store 静默丢数据, **P0-3**: StateRegister 竞态条件 | ✅ 全部已修: P0-1删除509行死代码; P0-2加日志+删重复方法; P0-3 Redis pipeline原子化 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P1-4**: 3个事件路由缺失 (achievement/shop/notification→Spine), **P1-5**: L0RuleEngine未接线, **P1-6**: quality_guard仅replay | ✅ 全部已修: P1-4路由补齐; P1-5接入routing_engine; P1-6加入live pipeline |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P2-7**: AuroraEngine/Spine 双系统, **P2-8**: energy_store死代码, **P2-9**: 88个settings缺.env, **P2-10**: Stage37/39非三态, **P2-11**: CalendarSignalBridge未调用 | ⬜ 待修 — P2级别, 非阻塞 |
+
+### 测试质量升级 (🔴 横切任务)
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| TEST-Q1: 审计并升级全部已有 Spine/Aurora 单测为生产级别 | ⬜ 待修 | — | 标准: 真实场景还原 (多用户并发、Redis故障、边界值、错误数据); 覆盖 test_signal_spine/test_state_register/test_causal_trace/test_policy_engine 等核心文件; T3.1.3 已按新标准 (25 tests) |
 
 ---
 
