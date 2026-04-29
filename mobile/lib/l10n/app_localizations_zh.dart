@@ -25697,4 +25697,143 @@ class AppLocalizationsZh extends AppLocalizations {
   String userAdminAvgDurationMs(Object duration) {
     return '平均耗时 ${duration}ms';
   }
+
+  @override
+  String get planViewCurrentPlan => '当前计划';
+
+  @override
+  String get planViewNoTasksForPlan => '暂无任务';
+
+  @override
+  String get planViewNoPlanTasks => '暂无方案任务';
+
+  @override
+  String get planViewAllPlanTasks => '查看全部计划任务';
+
+  @override
+  String get planViewQuotaFull => '当前已占满 3 个活跃计划位，先停用或归档旧计划再创建新的。';
+
+  @override
+  String get planViewRecoverablePlans => '可恢复计划';
+
+  @override
+  String get planViewPlanLibrary => '计划库';
+
+  @override
+  String get planViewManageSubtitle => '把 3 个活跃计划位和任务看板放在一起管理';
+
+  @override
+  String get planViewFocusSubtitle => '已按单个计划聚焦任务，回到全部即可恢复总览';
+
+  @override
+  String get planViewPlanManagement => '计划管理';
+
+  @override
+  String planViewActiveCount(String active, String total) {
+    return '活跃 $active/$total · 全部 $total';
+  }
+
+  @override
+  String planViewCurrentFocus(String planName) {
+    return '当前聚焦：$planName';
+  }
+
+  @override
+  String get planViewViewAll => '查看全部';
+
+  @override
+  String planViewSwitchedContext(String planName) {
+    return '已切换到 $planName 作为当前计划上下文';
+  }
+
+  @override
+  String planViewDeactivated(String planName) {
+    return '已停用 $planName';
+  }
+
+  @override
+  String planViewSetPrimary(String planName) {
+    return '已将 $planName 设为主计划';
+  }
+
+  @override
+  String get planViewViewDetail => '查看详情';
+
+  @override
+  String get planViewSetCurrentPlan => '设为当前计划';
+
+  @override
+  String get planViewSetPrimaryPlan => '设为主计划';
+
+  @override
+  String get planViewUnfocus => '取消聚焦';
+
+  @override
+  String get planViewFocusTasks => '聚焦任务';
+
+  @override
+  String get planViewDeactivatePlan => '停用计划';
+
+  @override
+  String get planViewPrimaryPlan => '主计划';
+
+  @override
+  String get planViewActivePlan => '活跃中';
+
+  @override
+  String get planViewTasksFocused => '任务已聚焦';
+
+  @override
+  String planViewProgress(int percent, String taskInfo) {
+    return '进度 $percent% · $taskInfo';
+  }
+
+  @override
+  String planViewTaskCount(int count) {
+    return '$count 个任务';
+  }
+
+  @override
+  String get planViewTasksPending => '任务待生成';
+
+  @override
+  String get planViewDetail => '详情';
+
+  @override
+  String get planViewCurrentSessionBound => '当前对话已绑定';
+
+  @override
+  String get planViewSprintPlan => '冲刺计划';
+
+  @override
+  String get planViewGrowthPlan => '成长计划';
+
+  @override
+  String get planViewEmptySlot => '空闲计划位';
+
+  @override
+  String get planViewCanCreate => '可以继续新建冲刺或成长计划';
+
+  @override
+  String get planViewReleaseFirst => '先释放一个计划位再继续';
+
+  @override
+  String get planViewNewSprint => '新建冲刺';
+
+  @override
+  String get planViewNewGrowth => '新建成长';
+
+  @override
+  String get planViewHistory => '查看历史';
+
+  @override
+  String planViewRestored(String planName) {
+    return '已恢复 $planName';
+  }
+
+  @override
+  String get planViewRestore => '恢复';
+
+  @override
+  String get planViewUncategorized => '未分类';
 }

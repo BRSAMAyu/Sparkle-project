@@ -4495,7 +4495,9 @@
   "dashboardSprintDaysLeft": "冲刺剩余 {days} 天，已对齐今日任务",
   "@dashboardSprintDaysLeft": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "dashboardWhatToPush": "你现在最想推进什么？",
@@ -10693,5 +10695,108 @@
         "type": "Object"
       }
     }
-  }
+  },
+  "planViewCurrentPlan": "当前计划",
+  "planViewNoTasksForPlan": "暂无任务",
+  "planViewNoPlanTasks": "暂无方案任务",
+  "planViewAllPlanTasks": "查看全部计划任务",
+  "planViewQuotaFull": "当前已占满 3 个活跃计划位，先停用或归档旧计划再创建新的。",
+  "planViewRecoverablePlans": "可恢复计划",
+  "planViewPlanLibrary": "计划库",
+  "planViewManageSubtitle": "把 3 个活跃计划位和任务看板放在一起管理",
+  "planViewFocusSubtitle": "已按单个计划聚焦任务，回到全部即可恢复总览",
+  "planViewPlanManagement": "计划管理",
+  "planViewActiveCount": "活跃 {active}/{total} · 全部 {total}",
+  "@planViewActiveCount": {
+    "placeholders": {
+      "active": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewCurrentFocus": "当前聚焦：{planName}",
+  "@planViewCurrentFocus": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewViewAll": "查看全部",
+  "planViewSwitchedContext": "已切换到 {planName} 作为当前计划上下文",
+  "@planViewSwitchedContext": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewDeactivated": "已停用 {planName}",
+  "@planViewDeactivated": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewSetPrimary": "已将 {planName} 设为主计划",
+  "@planViewSetPrimary": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewViewDetail": "查看详情",
+  "planViewSetCurrentPlan": "设为当前计划",
+  "planViewSetPrimaryPlan": "设为主计划",
+  "planViewUnfocus": "取消聚焦",
+  "planViewFocusTasks": "聚焦任务",
+  "planViewDeactivatePlan": "停用计划",
+  "planViewPrimaryPlan": "主计划",
+  "planViewActivePlan": "活跃中",
+  "planViewTasksFocused": "任务已聚焦",
+  "planViewProgress": "进度 {percent}% · {taskInfo}",
+  "@planViewProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "taskInfo": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewTaskCount": "{count} 个任务",
+  "@planViewTaskCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planViewTasksPending": "任务待生成",
+  "planViewDetail": "详情",
+  "planViewCurrentSessionBound": "当前对话已绑定",
+  "planViewSprintPlan": "冲刺计划",
+  "planViewGrowthPlan": "成长计划",
+  "planViewEmptySlot": "空闲计划位",
+  "planViewCanCreate": "可以继续新建冲刺或成长计划",
+  "planViewReleaseFirst": "先释放一个计划位再继续",
+  "planViewNewSprint": "新建冲刺",
+  "planViewNewGrowth": "新建成长",
+  "planViewHistory": "查看历史",
+  "planViewRestored": "已恢复 {planName}",
+  "@planViewRestored": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewRestore": "恢复",
+  "planViewUncategorized": "未分类"
 }

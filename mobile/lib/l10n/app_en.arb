@@ -4502,7 +4502,9 @@
   "dashboardSprintDaysLeft": "{days} days left in sprint, today's tasks aligned",
   "@dashboardSprintDaysLeft": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "dashboardWhatToPush": "What do you want to push forward most right now?",
@@ -10693,5 +10695,108 @@
         "type": "Object"
       }
     }
-  }
+  },
+  "planViewCurrentPlan": "Current Plan",
+  "planViewNoTasksForPlan": "No Tasks",
+  "planViewNoPlanTasks": "No Plan Tasks",
+  "planViewAllPlanTasks": "View All Plan Tasks",
+  "planViewQuotaFull": "All 3 active plan slots are in use. Deactivate or archive an old plan before creating a new one.",
+  "planViewRecoverablePlans": "Recoverable Plans",
+  "planViewPlanLibrary": "Plan Library",
+  "planViewManageSubtitle": "Manage 3 active plan slots and the task board together",
+  "planViewFocusSubtitle": "Focused on a single plan's tasks. Switch back to see all.",
+  "planViewPlanManagement": "Plan Management",
+  "planViewActiveCount": "{active}/{total} active · {total} total",
+  "@planViewActiveCount": {
+    "placeholders": {
+      "active": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewCurrentFocus": "Focused on: {planName}",
+  "@planViewCurrentFocus": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewViewAll": "View All",
+  "planViewSwitchedContext": "Switched to {planName} as current plan context",
+  "@planViewSwitchedContext": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewDeactivated": "Deactivated {planName}",
+  "@planViewDeactivated": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewSetPrimary": "Set {planName} as primary plan",
+  "@planViewSetPrimary": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewViewDetail": "View Details",
+  "planViewSetCurrentPlan": "Set as Current Plan",
+  "planViewSetPrimaryPlan": "Set as Primary",
+  "planViewUnfocus": "Unfocus",
+  "planViewFocusTasks": "Focus Tasks",
+  "planViewDeactivatePlan": "Deactivate Plan",
+  "planViewPrimaryPlan": "Primary",
+  "planViewActivePlan": "Active",
+  "planViewTasksFocused": "Tasks Focused",
+  "planViewProgress": "Progress {percent}% · {taskInfo}",
+  "@planViewProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "taskInfo": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewTaskCount": "{count} tasks",
+  "@planViewTaskCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planViewTasksPending": "Tasks pending",
+  "planViewDetail": "Details",
+  "planViewCurrentSessionBound": "Chat context bound",
+  "planViewSprintPlan": "Sprint Plan",
+  "planViewGrowthPlan": "Growth Plan",
+  "planViewEmptySlot": "Empty Plan Slot",
+  "planViewCanCreate": "Create a new sprint or growth plan",
+  "planViewReleaseFirst": "Free up a slot first",
+  "planViewNewSprint": "New Sprint",
+  "planViewNewGrowth": "New Growth",
+  "planViewHistory": "History",
+  "planViewRestored": "Restored {planName}",
+  "@planViewRestored": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "planViewRestore": "Restore",
+  "planViewUncategorized": "Uncategorized"
 }

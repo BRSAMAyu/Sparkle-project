@@ -46845,6 +46845,252 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'平均耗时 {duration}ms'**
   String userAdminAvgDurationMs(Object duration);
+
+  /// No description provided for @planViewCurrentPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前计划'**
+  String get planViewCurrentPlan;
+
+  /// No description provided for @planViewNoTasksForPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无任务'**
+  String get planViewNoTasksForPlan;
+
+  /// No description provided for @planViewNoPlanTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无方案任务'**
+  String get planViewNoPlanTasks;
+
+  /// No description provided for @planViewAllPlanTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部计划任务'**
+  String get planViewAllPlanTasks;
+
+  /// No description provided for @planViewQuotaFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前已占满 3 个活跃计划位，先停用或归档旧计划再创建新的。'**
+  String get planViewQuotaFull;
+
+  /// No description provided for @planViewRecoverablePlans.
+  ///
+  /// In zh, this message translates to:
+  /// **'可恢复计划'**
+  String get planViewRecoverablePlans;
+
+  /// No description provided for @planViewPlanLibrary.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划库'**
+  String get planViewPlanLibrary;
+
+  /// No description provided for @planViewManageSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把 3 个活跃计划位和任务看板放在一起管理'**
+  String get planViewManageSubtitle;
+
+  /// No description provided for @planViewFocusSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已按单个计划聚焦任务，回到全部即可恢复总览'**
+  String get planViewFocusSubtitle;
+
+  /// No description provided for @planViewPlanManagement.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划管理'**
+  String get planViewPlanManagement;
+
+  /// No description provided for @planViewActiveCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃 {active}/{total} · 全部 {total}'**
+  String planViewActiveCount(String active, String total);
+
+  /// No description provided for @planViewCurrentFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前聚焦：{planName}'**
+  String planViewCurrentFocus(String planName);
+
+  /// No description provided for @planViewViewAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部'**
+  String get planViewViewAll;
+
+  /// No description provided for @planViewSwitchedContext.
+  ///
+  /// In zh, this message translates to:
+  /// **'已切换到 {planName} 作为当前计划上下文'**
+  String planViewSwitchedContext(String planName);
+
+  /// No description provided for @planViewDeactivated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已停用 {planName}'**
+  String planViewDeactivated(String planName);
+
+  /// No description provided for @planViewSetPrimary.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将 {planName} 设为主计划'**
+  String planViewSetPrimary(String planName);
+
+  /// No description provided for @planViewViewDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看详情'**
+  String get planViewViewDetail;
+
+  /// No description provided for @planViewSetCurrentPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为当前计划'**
+  String get planViewSetCurrentPlan;
+
+  /// No description provided for @planViewSetPrimaryPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为主计划'**
+  String get planViewSetPrimaryPlan;
+
+  /// No description provided for @planViewUnfocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消聚焦'**
+  String get planViewUnfocus;
+
+  /// No description provided for @planViewFocusTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'聚焦任务'**
+  String get planViewFocusTasks;
+
+  /// No description provided for @planViewDeactivatePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'停用计划'**
+  String get planViewDeactivatePlan;
+
+  /// No description provided for @planViewPrimaryPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'主计划'**
+  String get planViewPrimaryPlan;
+
+  /// No description provided for @planViewActivePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃中'**
+  String get planViewActivePlan;
+
+  /// No description provided for @planViewTasksFocused.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务已聚焦'**
+  String get planViewTasksFocused;
+
+  /// No description provided for @planViewProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度 {percent}% · {taskInfo}'**
+  String planViewProgress(int percent, String taskInfo);
+
+  /// No description provided for @planViewTaskCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个任务'**
+  String planViewTaskCount(int count);
+
+  /// No description provided for @planViewTasksPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务待生成'**
+  String get planViewTasksPending;
+
+  /// No description provided for @planViewDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'详情'**
+  String get planViewDetail;
+
+  /// No description provided for @planViewCurrentSessionBound.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前对话已绑定'**
+  String get planViewCurrentSessionBound;
+
+  /// No description provided for @planViewSprintPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺计划'**
+  String get planViewSprintPlan;
+
+  /// No description provided for @planViewGrowthPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长计划'**
+  String get planViewGrowthPlan;
+
+  /// No description provided for @planViewEmptySlot.
+  ///
+  /// In zh, this message translates to:
+  /// **'空闲计划位'**
+  String get planViewEmptySlot;
+
+  /// No description provided for @planViewCanCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以继续新建冲刺或成长计划'**
+  String get planViewCanCreate;
+
+  /// No description provided for @planViewReleaseFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'先释放一个计划位再继续'**
+  String get planViewReleaseFirst;
+
+  /// No description provided for @planViewNewSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建冲刺'**
+  String get planViewNewSprint;
+
+  /// No description provided for @planViewNewGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建成长'**
+  String get planViewNewGrowth;
+
+  /// No description provided for @planViewHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看历史'**
+  String get planViewHistory;
+
+  /// No description provided for @planViewRestored.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复 {planName}'**
+  String planViewRestored(String planName);
+
+  /// No description provided for @planViewRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复'**
+  String get planViewRestore;
+
+  /// No description provided for @planViewUncategorized.
+  ///
+  /// In zh, this message translates to:
+  /// **'未分类'**
+  String get planViewUncategorized;
 }
 
 class _AppLocalizationsDelegate

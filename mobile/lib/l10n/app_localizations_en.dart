@@ -26814,4 +26814,146 @@ class AppLocalizationsEn extends AppLocalizations {
   String userAdminAvgDurationMs(Object duration) {
     return 'Avg duration ${duration}ms';
   }
+
+  @override
+  String get planViewCurrentPlan => 'Current Plan';
+
+  @override
+  String get planViewNoTasksForPlan => 'No Tasks';
+
+  @override
+  String get planViewNoPlanTasks => 'No Plan Tasks';
+
+  @override
+  String get planViewAllPlanTasks => 'View All Plan Tasks';
+
+  @override
+  String get planViewQuotaFull =>
+      'All 3 active plan slots are in use. Deactivate or archive an old plan before creating a new one.';
+
+  @override
+  String get planViewRecoverablePlans => 'Recoverable Plans';
+
+  @override
+  String get planViewPlanLibrary => 'Plan Library';
+
+  @override
+  String get planViewManageSubtitle =>
+      'Manage 3 active plan slots and the task board together';
+
+  @override
+  String get planViewFocusSubtitle =>
+      'Focused on a single plan\'s tasks. Switch back to see all.';
+
+  @override
+  String get planViewPlanManagement => 'Plan Management';
+
+  @override
+  String planViewActiveCount(String active, String total) {
+    return '$active/$total active · $total total';
+  }
+
+  @override
+  String planViewCurrentFocus(String planName) {
+    return 'Focused on: $planName';
+  }
+
+  @override
+  String get planViewViewAll => 'View All';
+
+  @override
+  String planViewSwitchedContext(String planName) {
+    return 'Switched to $planName as current plan context';
+  }
+
+  @override
+  String planViewDeactivated(String planName) {
+    return 'Deactivated $planName';
+  }
+
+  @override
+  String planViewSetPrimary(String planName) {
+    return 'Set $planName as primary plan';
+  }
+
+  @override
+  String get planViewViewDetail => 'View Details';
+
+  @override
+  String get planViewSetCurrentPlan => 'Set as Current Plan';
+
+  @override
+  String get planViewSetPrimaryPlan => 'Set as Primary';
+
+  @override
+  String get planViewUnfocus => 'Unfocus';
+
+  @override
+  String get planViewFocusTasks => 'Focus Tasks';
+
+  @override
+  String get planViewDeactivatePlan => 'Deactivate Plan';
+
+  @override
+  String get planViewPrimaryPlan => 'Primary';
+
+  @override
+  String get planViewActivePlan => 'Active';
+
+  @override
+  String get planViewTasksFocused => 'Tasks Focused';
+
+  @override
+  String planViewProgress(int percent, String taskInfo) {
+    return 'Progress $percent% · $taskInfo';
+  }
+
+  @override
+  String planViewTaskCount(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String get planViewTasksPending => 'Tasks pending';
+
+  @override
+  String get planViewDetail => 'Details';
+
+  @override
+  String get planViewCurrentSessionBound => 'Chat context bound';
+
+  @override
+  String get planViewSprintPlan => 'Sprint Plan';
+
+  @override
+  String get planViewGrowthPlan => 'Growth Plan';
+
+  @override
+  String get planViewEmptySlot => 'Empty Plan Slot';
+
+  @override
+  String get planViewCanCreate => 'Create a new sprint or growth plan';
+
+  @override
+  String get planViewReleaseFirst => 'Free up a slot first';
+
+  @override
+  String get planViewNewSprint => 'New Sprint';
+
+  @override
+  String get planViewNewGrowth => 'New Growth';
+
+  @override
+  String get planViewHistory => 'History';
+
+  @override
+  String planViewRestored(String planName) {
+    return 'Restored $planName';
+  }
+
+  @override
+  String get planViewRestore => 'Restore';
+
+  @override
+  String get planViewUncategorized => 'Uncategorized';
 }
