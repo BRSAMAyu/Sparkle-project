@@ -547,14 +547,14 @@
 | DF-2 | 中 | CommunityDirective 写入但从未被消费 | Spine→prompts.py section | ✅ 已修 |
 | DF-3 | 中 | SkillDirective 写入但从未被消费 | Spine→prompts.py section | ✅ 已修 |
 | DF-4 | 中 | UXDirective 键不匹配 (orchestrator 发 `spine_ux`, Flutter 监听 `spine_ux_warning`) | WS metadata | ✅ 已修 |
-| DF-5 | 低-中 | NotificationService.consume_spine_notification_directive 死代码 | 未被调用 | 🔴 待修 |
+| DF-5 | 低-中 | NotificationService.consume_spine_notification_directive 死代码 | 未被调用 | ✅ 已修 (b69e4951) |
 | DF-6 | 低 | 成就数据渲染为单行摘要 (14表19事件→1行) | prompts.py | 🔴 待修 |
-| DF-7 | 低 | 执行引擎上下文缺少 ux/community/skill directive | execution_engine.py | 🔴 待修 |
+| DF-7 | 低 | 执行引擎上下文缺少 ux/community/skill directive | execution_engine.py | ✅ 已修 (同 DF-2/3) |
 | DF-8 | 低 | cognitive_adjustments 仅为文本注入无结构化强制 | dual_core_router | 🟡 设计层面 |
-| DF-9 | 低 | 日历 shadow 模式静默抑制无遥测 | prompts.py | 🔴 待修 |
+| DF-9 | 低 | 日历 shadow 模式静默抑制无遥测 | prompts.py | ✅ 已修 (05e9c5e6) |
 | DF-10 | 低 | State Aggregator 成就摘要仅来自DB不含事件 | state_aggregator | 🔴 待修 |
 | DF-11 | 低 | CommunitySignalBridge 事件不触发上下文刷新 | 事件→直接查询 | 🟡 架构选择 |
-| DF-12 | 极低 | spine_retrieval_directive 注入两次 | session_state + orchestrator | 🔴 待修 |
+| DF-12 | 极低 | spine_retrieval_directive 注入两次 | session_state + orchestrator | ✅ 误报: 仅注入一次 |
 
 ### R5.4 愿景 vs 实现差距 (14 issues)
 
