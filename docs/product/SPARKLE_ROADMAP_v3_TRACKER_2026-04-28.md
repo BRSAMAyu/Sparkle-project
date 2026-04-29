@@ -184,7 +184,7 @@
 |-------|------|----------|----------|
 | Phase 2: Spine 深化 | ✅ 完成 | 2026-04-29 | — |
 | Phase 3: Aurora↔Spine | ✅ 完成 | 2026-04-29 | T3.1→T3.4 全部完成, Flutter状态带真实API消费已接入 |
-| Phase 4: 活体验打磨 | 🟡 推进中 | 2026-04-29 | Phase 4.1: Flutter状态带真实API消费 ✅, 展开交互/cooldown/R3离线待做 |
+| Phase 4: 活体验打磨 | 🟡 推进中 | 2026-04-29 | Phase 4.1: Flutter状态带真实API消费 ✅, Phase 4.2: 展开交互+纠偏chip ✅, cooldown/R3离线待做 |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
@@ -251,6 +251,7 @@
 | 2026-04-29 | Phase 3.5 | Claude 语义收紧 | cooldown_can_override 从无条件 True 改为 l3_session_count_today < 3 (L3 daily_quota), 防止冷却绕过流量限制; 移除未使用的 CostController 实例化; 6 tests passed 含新 quota-exhausted 用例 |
 | 2026-04-29 | R3 O-01 | Claude 离线审计修复 | OfflineChatMessage 模型已全面接线: (1)断连/发送失败→Isar持久化, (2)重连→从DB加载pending消息并入队, (3)发送成功→markSent, (4)服务器ACK→markAcked, (5)队列溢出/失败丢弃→DB清理, (6)dispose→清理24h旧acked. 新建 OfflineMessageQueueService, flutter analyze 零错误 |
 | 2026-04-29 | Phase 4.1 | Claude Flutter状态带接入 | AuroraStatusBand 从硬编码→真实API: 新建 spineStatusBandProvider (GET /aurora/spine/status-band); AuroraBandState 扩展6态 (sensing/calibrated/riskFound/needsConfirm/calibrationAvailable/coolingDown); dashboard_screen 消费 provider 并 fallback 硬编码; 26 contract tests passed |
+| 2026-04-29 | Phase 4.2 | Claude 展开交互+纠偏chip | AuroraStatusBand→StatefulWidget: 有correction_options时tap展开显示chip列表, 无options时走onTap跳转chat; chip点击→chat路由initial_user_message; AnimatedContainer+AnimatedRotation动画; flutter analyze 0 errors |
 
 ### 测试质量升级 (🔴 横切任务)
 

@@ -435,7 +435,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 label: band?.bandSummary.isNotEmpty == true
                     ? band!.bandSummary
                     : _auroraBandLabel(dashboardState),
+                correctionOptions: band?.correctionOptions ?? [],
                 onTap: () => context.push(ChatRoutes.chat),
+                onCorrectionTap: (opt) {
+                  context.push(ChatRoutes.chat, extra: {
+                    'initial_user_message': opt.label,
+                  });
+                },
               ),
               loading: () => AuroraStatusBand(
                 state: _resolveAuroraState(dashboardState),
