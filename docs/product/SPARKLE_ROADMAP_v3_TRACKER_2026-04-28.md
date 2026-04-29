@@ -1,13 +1,13 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-28
+> **最后更新**: 2026-04-29
 > **对应 Roadmap**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
 > **用途**: 记录所有已完成、进行中、待做的工作, 支持并行推进与阶段审查
 
 ---
 
-## 当前状态: Phase 1 后端核心完成, Phase 2 已有基础设施完备
+## 当前状态: Phase 0 生产基础设施硬化完成, Phase 1 后端核心完成, Phase 2 已有基础设施完备
 
 ---
 
@@ -19,7 +19,7 @@
 | T0.1.1 nginx.conf 添加 443 + SSL | ✅ 完成 | main | HTTP→HTTPS 重定向, TLSv1.2/1.3, HSTS |
 | T0.1.2 docker-compose.prod.yml 挂载证书 | ✅ 完成 | main | SSL_CERT_DIR volume mount, 443 端口 |
 | T0.1.3 SSL 证书生成脚本 | ✅ 完成 | main | scripts/ssl/generate_dev_certs.sh |
-| T0.1.4 settings.py CORS HTTPS | ⬜ 未开始 | — | 需生产域名, 部署时配置 |
+| T0.1.4 settings.py CORS HTTPS | ✅ 完成 | main | production 强制 PRODUCTION_URL=https, CORS 默认回填生产域名且仅允许 HTTPS |
 | T0.1.5 Flutter 生产 API URL | ✅ 完成 | main | 已支持 String.fromEnvironment('API_BASE_URL'), release mode 警告 http |
 
 ### 0.2 崩溃报告 (Sentry)
@@ -30,7 +30,7 @@
 | T0.2.3 gRPC server sentry init | ✅ 完成 | main | grpc_server.py serve() |
 | T0.2.4 .env.example Sentry DSN | ✅ 完成 | main | |
 | T0.2.5 settings.py Sentry 字段 | ✅ 完成 | main | |
-| T0.2.6 Flutter Sentry init | ⬜ 未开始 | — | |
+| T0.2.6 Flutter Sentry init | ✅ 完成 | main | main.dart 读取 SENTRY_DSN/SENTRY_ENVIRONMENT/SENTRY_RELEASE dart-define |
 
 ### 0.3 秘钥启动校验
 | 任务 | 状态 | 负责人 | 备注 |
@@ -45,16 +45,16 @@
 |------|------|--------|------|
 | T0.4.1 Grafana 密码必填 | ✅ 完成 | main | :? 语法, 未设则 docker compose 报错 |
 | T0.4.2 JPush placeholder 移除 | ✅ 完成 | main | '' 默认 + jpushEffectiveEnabled guard |
-| T0.4.3 MinIO credentials 从 env | ⬜ 未开始 | — | |
+| T0.4.3 MinIO credentials 从 env | ✅ 完成 | main | docker compose/gateway/init_minio_buckets 均要求显式 env, 不回退 minioadmin |
 | T0.4.4 PRODUCTION_URL setting | ✅ 完成 | main | settings.py + .env.example |
-| T0.4.5 Grafana 8 dashboard 预配置 | ⬜ 未开始 | — | |
+| T0.4.5 Grafana 8 dashboard 预配置 | ✅ 完成 | main | provisioning 目录现有 8 个 dashboard JSON |
 
 ### 0.5 邮件服务配置
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| T0.5.1 email 发送逻辑确认 | ⬜ 未开始 | — | |
-| T0.5.2 SMTP 配置说明 | ⬜ 未开始 | — | |
-| T0.5.3 EMAIL_ENABLED 生产默认 | ⬜ 未开始 | — | |
+| T0.5.1 email 发送逻辑确认 | ✅ 完成 | main | 单测覆盖 disabled、缺 SMTP、STARTTLS 发送路径 |
+| T0.5.2 SMTP 配置说明 | ✅ 完成 | main | docs/ops/smtp_configuration.md |
+| T0.5.3 EMAIL_ENABLED 生产默认 | ✅ 完成 | main | 未显式设置时 dev=false, production=true |
 
 ---
 
@@ -134,6 +134,7 @@
 
 | 日期 | Commit | Phase | 范围 |
 |------|--------|-------|------|
+| 2026-04-29 | 276bce8b | Phase 0 | Complete production hardening — CORS HTTPS, Flutter Sentry, MinIO env, Grafana dashboards, SMTP |
 | 2026-04-29 | a9ec2ac3 | Phase 1 | Breakpoints #5/#6/#7 — structured adjustments, behavior-driven push, verification loop |
 | 2026-04-29 | e1812b92 | Phase 1 | Prometheus outcome metrics + Grafana outcome dashboard |
 | 2026-04-29 | 93b72fd4 | Phase 1 | Audit fixes — dedup outcome_recorder, async record_sent |
