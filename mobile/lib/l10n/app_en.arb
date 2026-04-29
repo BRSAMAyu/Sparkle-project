@@ -11020,5 +11020,62 @@
   "ebEncourageGreat": "Great! Keep up this momentum",
   "ebEncourageGood": "Good! A few more reviews will help",
   "ebEncourageTryAgain": "You'll get it! More reviews will help it stick",
-  "ebLoadReviewFailed": "Failed to load"
+  "ebLoadReviewFailed": "Failed to load",
+  "posterTitle": "Poster Studio",
+  "posterTypeLabel": "Poster Type",
+  "posterTemplateLabel": "Visual Template",
+  "posterPreviewLabel": "Live Preview",
+  "posterShareOrDownload": "Share or Download",
+  "posterRegenerate": "Regenerate Preview",
+  "posterPreviewGenerating": "Generating preview...",
+  "posterPreviewFailed": "Unable to generate preview. Please try again later.",
+  "posterPreviewError": "Poster preview failed, please try again later",
+  "posterPreviewErrorWith": "Poster preview failed: {error}",
+  "@posterPreviewErrorWith": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "posterUnknownError": "Unknown error",
+  "posterIdentityTitle": "Glory Identity",
+  "posterIdentitySubtitle": "Show your title, level, and signature achievement",
+  "posterIdentityPayloadTitle": "{name}'s Glory Identity",
+  "@posterIdentityPayloadTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "posterIdentityDefaultSubtitle": "Share your growth highlights with friends",
+  "posterIdentityDefaultRarity": "Glory",
+  "posterIdentityGrowing": "Growing steadily",
+  "posterGrowthTitle": "Weekly Growth",
+  "posterGrowthSubtitle": "Turn growth trends, brightness, and active plans into a battle report",
+  "posterGrowthPayloadTitle": "{name}'s Weekly Growth",
+  "@posterGrowthPayloadTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "posterGrowthPayloadSubtitle": "Level Lv.{level} · Brightness {brightness}%",
+  "@posterGrowthPayloadSubtitle": {
+    "placeholders": { "level": { "type": "int" }, "brightness": { "type": "int" } }
+  },
+  "posterGrowthDesc": "Keep up this pace — your learning momentum is rising.",
+  "posterGrowthReportType": "Growth Weekly",
+  "posterPlanTitle": "Plan Battle Report",
+  "posterPlanSubtitle": "Turn your current plan into a high-quality progress card",
+  "posterPlanDefaultTitle": "My Next Stage Plan",
+  "posterPlanDefaultSubtitle": "Break goals into tasks and push forward steadily.",
+  "posterPlanDefaultSubject": "Personal Growth",
+  "posterCapsuleTitle": "Inspiration Capsule",
+  "posterCapsuleSubtitle": "Turn your latest insight or curiosity capsule into a shareable thought card",
+  "posterCapsuleDefaultTitle": "Today's Inspiration Capsule",
+  "posterCapsuleDefaultSubtitle": "Save a new idea as a poster worth revisiting.",
+  "posterCapsuleDefaultDesc": "New insights are being generated, waiting for you to light them up.",
+  "posterCapsuleDefaultDepth": "Inspiration",
+  "posterHeroHeadline": "Turn your growth into a poster worth sharing",
+  "posterHeroDesc": "Poster Studio automatically reads your real achievements, plans, capsules, and growth data to generate high-quality posters for sharing to social platforms or saving to your album.",
+  "posterChipLivePreview": "Live Preview",
+  "posterChipDownload": "Download Image",
+  "posterChipSystemShare": "System Share",
+  "posterTemplateSuffix": "{name} Template",
+  "@posterTemplateSuffix": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "posterTemplateDefaultDesc": "Perfect for sharing your growth highlights"
+
 }

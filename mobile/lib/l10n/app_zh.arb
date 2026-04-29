@@ -11020,5 +11020,61 @@
   "ebEncourageGreat": "很好！继续保持这个势头",
   "ebEncourageGood": "不错！再多复习几次会更好",
   "ebEncourageTryAgain": "加油！多复习几次就能记住了",
-  "ebLoadReviewFailed": "加载失败"
+  "ebLoadReviewFailed": "加载失败",
+  "posterTitle": "海报工坊",
+  "posterTypeLabel": "海报类型",
+  "posterTemplateLabel": "视觉模板",
+  "posterPreviewLabel": "实时预览",
+  "posterShareOrDownload": "分享或下载",
+  "posterRegenerate": "重新生成预览",
+  "posterPreviewGenerating": "预览生成中",
+  "posterPreviewFailed": "暂时无法生成预览，请稍后重试。",
+  "posterPreviewError": "海报预览生成失败，请稍后重试",
+  "posterPreviewErrorWith": "海报预览生成失败：{error}",
+  "@posterPreviewErrorWith": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "posterUnknownError": "未知错误",
+  "posterIdentityTitle": "荣耀身份海报",
+  "posterIdentitySubtitle": "展示你的称号、等级与代表成就",
+  "posterIdentityPayloadTitle": "{name} 的荣耀身份",
+  "@posterIdentityPayloadTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "posterIdentityDefaultSubtitle": "把成长高光分享给朋友",
+  "posterIdentityDefaultRarity": "荣耀",
+  "posterIdentityGrowing": "持续成长中",
+  "posterGrowthTitle": "本周成长海报",
+  "posterGrowthSubtitle": "把成长趋势、亮度和活跃计划做成一张战报",
+  "posterGrowthPayloadTitle": "{name} 的本周成长",
+  "@posterGrowthPayloadTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "posterGrowthPayloadSubtitle": "等级 Lv.{level} · 亮度 {brightness}%",
+  "@posterGrowthPayloadSubtitle": {
+    "placeholders": { "level": { "type": "int" }, "brightness": { "type": "int" } }
+  },
+  "posterGrowthDesc": "继续保持这个节奏，你的学习势能已经在持续上升。",
+  "posterGrowthReportType": "成长周报",
+  "posterPlanTitle": "计划战报海报",
+  "posterPlanSubtitle": "把当前正在推进的计划做成一张高质感进度卡",
+  "posterPlanDefaultTitle": "我的下一阶段计划",
+  "posterPlanDefaultSubtitle": "把目标拆成任务，稳定推进。",
+  "posterPlanDefaultSubject": "个人成长",
+  "posterCapsuleTitle": "灵感胶囊海报",
+  "posterCapsuleSubtitle": "把最近一次洞察或好奇心胶囊做成可分享的思考卡片",
+  "posterCapsuleDefaultTitle": "今天的灵感胶囊",
+  "posterCapsuleDefaultSubtitle": "把一个新的想法，留成值得回看的海报。",
+  "posterCapsuleDefaultDesc": "新的洞察正在生成，等你点亮。",
+  "posterCapsuleDefaultDepth": "灵感",
+  "posterHeroHeadline": "把你的成长，做成值得分享的一张图",
+  "posterHeroDesc": "海报工坊会自动读取你的真实成就、计划、胶囊和成长数据，生成适合分享到社交平台或保存到相册的高质感海报。",
+  "posterChipLivePreview": "实时预览",
+  "posterChipDownload": "下载图片",
+  "posterChipSystemShare": "系统分享",
+  "posterTemplateSuffix": "{name} 模板",
+  "@posterTemplateSuffix": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "posterTemplateDefaultDesc": "适合分享你的成长亮点"
 }
