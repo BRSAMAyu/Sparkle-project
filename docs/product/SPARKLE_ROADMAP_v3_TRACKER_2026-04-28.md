@@ -7,7 +7,8 @@
 
 ---
 
-## 当前状态: Phase 0 生产基础设施硬化完成, Phase 1 后端核心与审查债务已收口, Card Protocol + Flutter 侧待推进, Phase 2 已有基础设施完备
+## 当前状态: Phase 0 完成, Phase 1 后端核心完成但审查发现接线缺口, Phase 2 部分已存在
+> **审查报告**: [`docs/product/SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 Critical + 4 P1 High + 3 P2 Medium
 
 ---
 
@@ -109,16 +110,54 @@
 
 ---
 
+## Phase 1.6: 审查发现的接线缺口 (🔴 审查新增 — 2026-04-29)
+
+> **来源**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md)
+> **性质**: 模块已实现但生产代码路径未接线，非代码质量问题
+
+### P0 Critical — 必须立即修复
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| C-01-FIX: OutcomeTracker 接线到生产代码 | 🔴 审查新增 | — | register_expected/record_actual 从未被生产代码调用, 整个 verification loop 是死代码 |
+| C-02-FIX: structured_adjustments 注入 prompts.py | 🔴 审查新增 | — | CognitiveAdjustment 被计算但从未到达 LLM system prompt, Breakpoint #6 核心价值未实现 |
+| C-03-FIX: multi_agent_adapter 传入 Spine context | 🔴 审查新增 | — | Expert/Multi-Agent 模式完全跳过 Spine directives, 影响该模式全部用户 |
+
+### P1 High — 重要信号缺失
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| H-01-FIX: 6 个 EventBus 事件接入 Spine | 🟡 审查新增 | — | task.abandoned, task.stuck, focus.session.completed, plan.created, srl.phase.transition, calendar.event.* |
+| H-02-FIX: Aurora→Spine 反馈接入 PolicyEngine | 🟡 审查新增 | — | feed_aurora_decision 写入 Redis 但无 Spine 策略评估读取 |
+| H-03-FIX: Spine 降级 Prometheus counter + 告警 | 🟡 审查新增 | — | Spine 异常时静默降级无监控 |
+| H-04-FIX: Context Receipt Bar 用户行动按钮 | 🟡 审查新增 | — | receipt 显示正确但缺少"按课件重讲/排除资料"等行动 |
+
+### P2 Medium
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| M-01-FIX: structured_cognitive_adjustments Flutter 解析 | 🔵 审查新增 | — | 后端字段在 Flutter 端零引用, 属于 T1.2.5 的补充 |
+| M-02-FIX: dual_core_router 消费 Spine StateRegister | 🔵 审查新增 | — | Phase 3 核心任务的前置准备 |
+
+---
+
 ## Phase 2-7: 简要索引 (详细任务在对应阶段展开时填写)
 
 | Phase | 状态 | 开始日期 | 完成日期 |
 |-------|------|----------|----------|
-| Phase 2: Spine 深化 | ⬜ 未开始 | — | — |
+| Phase 2: Spine 深化 | ⬜ 部分已存在 | — | — |
 | Phase 3: Aurora↔Spine | ⬜ 未开始 | — | — |
 | Phase 4: 活体验打磨 | ⬜ 未开始 | — | — |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
 | Phase 7: 验收上线 | ⬜ 未开始 | — | — |
+
+### Phase 2 审查更新 (🔴 2026-04-29)
+
+| Task | 原状态 | 更新 | 原因 |
+|------|--------|------|------|
+| T2.3.4 Spine Timeline API | ⬜ 未开始 | ✅ 已存在 | endpoint 已在 `aurora.py` line 447+, path: `/api/v1/aurora/spine/timeline` |
+| T2.3.5 causal_timeline_panel.dart | ⬜ 未开始 | ✅ 已存在 | widget 已实现, 调用 API, 支持 corrections |
 
 ---
 
@@ -132,6 +171,9 @@
 | 2026-04-29 | Phase 1 | Claude Review | push_scheduler UUID(user_id) 缺少 try-except, 格式异常会中断 queue 处理 | ✅ 已修: ValueError skip+delete bad key, 单测覆盖 |
 | 2026-04-29 | Phase 1 | Claude Review | learning_guard.should_learn() lines 56-57 冗余分支 | ✅ 已修: 冗余分支已删除, REVIEW 残留已移除 |
 | 2026-04-29 | Phase 1 | Claude Review | 5 个方法缺单元测试 (build_self_correction_receipt, verify_pending, get_guard_verdict 等) | ✅ 已补: verification_loop 21 tests, behavior_push 13 tests |
+| 2026-04-29 | Phase 1-2 | Claude Deep Audit | **3 P0 Critical**: OutcomeTracker 死代码, CognitiveAdjustment 未到 LLM prompt, multi_agent 跳过 Spine | ⬜ 待修 — 见审查报告 |
+| 2026-04-29 | Phase 1-2 | Claude Deep Audit | **4 P1 High**: 6 EventBus 事件绕过 Spine, Aurora→Spine 只写日志, Spine 降级无监控, Receipt 缺行动按钮 | ⬜ 待修 — 见审查报告 |
+| 2026-04-29 | Phase 2 | Claude Deep Audit | **T2.3.4/T2.3.5 已完成**: Spine Timeline API + Flutter Panel 均已存在, 无需新建 | ✅ 确认 |
 
 ---
 
