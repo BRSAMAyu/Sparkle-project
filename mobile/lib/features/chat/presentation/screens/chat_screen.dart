@@ -1165,7 +1165,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                     .auroraCalibrationJudgment,
                                             confirmQuestion: context.l10n
                                                 .auroraCalibrationConfirm,
-                                            confirmOptions: const [
+                                            confirmOptions: [
                                               context.l10n.chatMinutes30,
                                               context.l10n.chatMinutes45,
                                               context.l10n.chatMinutes60,
@@ -1373,7 +1373,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               color: DS.textTertiary,
                             ),
                           ),
-                          backgroundColor: DS.surfaceMedium,
+                          backgroundColor: DS.surfacePanel,
                           side: BorderSide.none,
                           visualDensity: VisualDensity.compact,
                         ),
