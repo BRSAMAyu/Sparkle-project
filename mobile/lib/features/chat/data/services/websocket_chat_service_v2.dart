@@ -1864,17 +1864,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         return;
       }
 
-      // 快速检查是否是pong消息（心跳响应）
-      try {
-        final jsonData = json.decode(data) as Map<String, dynamic>;
-        final type = jsonData['type'] as String?;
-        if (type == 'pong') {
-          _onPongReceived();
-          _log('💓 Pong received');
-          return; // 心跳响应，静默处理
-        }
-      } catch (_) {
-        // 解析失败，继续正常处理
+      // Fast pong check without full JSON decode (avoids main-thread overhead for large frames)
+      if (data.length < 64 && data.contains('"pong"')) {
+        _onPongReceived();
+        _log('💓 Pong received');
+        return;
       }
 
       // Small control/status frames are latency-sensitive; large text frames
