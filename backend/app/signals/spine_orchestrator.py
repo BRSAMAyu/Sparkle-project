@@ -2372,6 +2372,10 @@ class SpineOrchestrator:
         key = f"spine:retrieval_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(rd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(rd.directive_id, rd.to_dict())
+        await self._publish_directive_event("spine:retrieval_directive_channel", {
+            "user_id": user_id, "directive_id": rd.directive_id,
+            "retrieval_mode": rd.retrieval_mode if hasattr(rd, "retrieval_mode") else None,
+        })
 
     async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
         """获取用户当前 RetrievalDirective。Degraded: returns None on Redis failure."""
@@ -2428,6 +2432,14 @@ class SpineOrchestrator:
             )
         except Exception:
             logger.debug("plan_directive pub/sub publish failed for user={}", user_id, exc_info=True)
+
+    async def _publish_directive_event(self, channel: str, payload: dict) -> None:
+        """V-4: Publish directive to Redis pub/sub for downstream consumers."""
+        import json
+        try:
+            await self.redis.publish(channel, json.dumps(payload))
+        except Exception:
+            logger.debug("directive pub/sub failed on channel={}", channel, exc_info=True)
 
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
         """获取用户当前 PlanDirective。Degraded: returns None on Redis failure."""
@@ -2519,6 +2531,10 @@ class SpineOrchestrator:
         key = f"spine:ux_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(uxd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(uxd.directive_id, uxd.to_dict())
+        await self._publish_directive_event("spine:ux_directive_channel", {
+            "user_id": user_id, "directive_id": uxd.directive_id,
+            "presentation_mode": uxd.presentation_mode if hasattr(uxd, "presentation_mode") else None,
+        })
 
     async def get_ux_directive(self, user_id: str) -> UXDirective | None:
         """获取用户当前 UXDirective。Degraded: returns None on Redis failure."""
@@ -2652,6 +2668,10 @@ class SpineOrchestrator:
         key = f"spine:community_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(cd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(cd.directive_id, cd.to_dict())
+        await self._publish_directive_event("spine:community_directive_channel", {
+            "user_id": user_id, "directive_id": cd.directive_id,
+            "community_action": cd.action if hasattr(cd, "action") else None,
+        })
 
     async def get_community_directive(self, user_id: str) -> CommunityDirective | None:
         """获取用户当前 CommunityDirective。Degraded: returns None on Redis failure."""
@@ -2753,6 +2773,10 @@ class SpineOrchestrator:
         key = f"spine:skill_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(sd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(sd.directive_id, sd.to_dict())
+        await self._publish_directive_event("spine:skill_directive_channel", {
+            "user_id": user_id, "directive_id": sd.directive_id,
+            "skill_action": sd.action if hasattr(sd, "action") else None,
+        })
 
     async def get_skill_directive(self, user_id: str) -> SkillDirective | None:
         """获取用户当前 SkillDirective。Degraded: returns None on Redis failure."""
