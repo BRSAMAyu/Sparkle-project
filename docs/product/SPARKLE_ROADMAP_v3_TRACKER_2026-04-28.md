@@ -496,7 +496,7 @@
 
 | ID | 严重度 | 问题 | 文件 | 状态 |
 |----|--------|------|------|------|
-| P1-7 | P1 | SpineOrchestrator 零测试覆盖 (4357行 60方法) | `spine_orchestrator.py` | 🔴 待修 |
+| P1-7 | P1 | SpineOrchestrator 零测试覆盖 (4357行 60方法) | `spine_orchestrator.py` | ✅ 已修 (5023b308: 37 tests covering init/directives/pipeline/status band/edge cases) |
 | P1-8 | P1 | AchievementEngine threading.Lock 配 async | `achievement_engine.py` | ✅ 已修 (9e871738) |
 | P1-9 | P1 | ContractService `current_minutes=0` 丢失额外分钟 | `achievement_engine.py` | ✅ 已修 |
 | P1-10 | P1 | FocusSessionCompletedEvent 定义但从未发布到 EventBus | `event_bus.py` / signal modules | ✅ 误报: focus_service.py:178 已发布 |
