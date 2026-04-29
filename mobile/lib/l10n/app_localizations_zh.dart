@@ -22075,6 +22075,158 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simGenFailed => '模拟生成失败';
 
   @override
+  String get simStudyGroup => '学习小组';
+
+  @override
+  String get simKnowledgeDebate => '知识辩论';
+
+  @override
+  String get simHistoricalRoleplay => '历史角色扮演';
+
+  @override
+  String get simCaseAnalysis => '案例分析';
+
+  @override
+  String get simWhatIfPath => '如果路径';
+
+  @override
+  String get simConceptMapBuild => '概念图构建';
+
+  @override
+  String get simStudyGroupDesc => '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。';
+
+  @override
+  String get simKnowledgeDebateDesc => '让不同立场直接碰撞，适合验证观点、证据和边界条件。';
+
+  @override
+  String get simHistoricalRoleplayDesc => '带入人物与时代约束，让讨论像真实历史现场一样推进。';
+
+  @override
+  String get simCaseAnalysisDesc => '围绕具体案例做拆解、诊断和决策，适合实务型主题。';
+
+  @override
+  String get simWhatIfPathDesc => '比较不同学习或行动路线，适合规划、取舍与资源分配。';
+
+  @override
+  String get simConceptMapBuildDesc => '把知识点织成结构图，适合建立全局框架与连接关系。';
+
+  @override
+  String get simTopStudent => '优等生';
+
+  @override
+  String get simMidStudent => '中等生';
+
+  @override
+  String get simPracticeCoach => '练习教练';
+
+  @override
+  String get simProExpert => '正方专家';
+
+  @override
+  String get simConExpert => '反方专家';
+
+  @override
+  String get simModerator => '主持人';
+
+  @override
+  String get simEvidenceReviewer => '证据审查员';
+
+  @override
+  String get simChallenger => '追问者';
+
+  @override
+  String get simHistoryTutor => '历史导师';
+
+  @override
+  String get simKeyFigure => '关键人物';
+
+  @override
+  String get simEraObserver => '时代观察者';
+
+  @override
+  String get simStrategyAdvisor => '策略顾问';
+
+  @override
+  String get simRecorder => '记录官';
+
+  @override
+  String get simCaseTutor => '案例导师';
+
+  @override
+  String get simDiagnostician => '诊断官';
+
+  @override
+  String get simPractitioner => '实践派';
+
+  @override
+  String get simCounterExampler => '反例提出者';
+
+  @override
+  String get simDecisionRecorder => '决策记录官';
+
+  @override
+  String get simCurrentPath => '当前路线';
+
+  @override
+  String get simAggressivePath => '激进路线';
+
+  @override
+  String get simRiskObserver => '风险观察者';
+
+  @override
+  String get simResourceDispatcher => '资源调度者';
+
+  @override
+  String get simStructurer => '结构师';
+
+  @override
+  String get simConnector => '连接者';
+
+  @override
+  String get simCounterChecker => '反例检查员';
+
+  @override
+  String get simBridgeBuilder => '桥梁构建者';
+
+  @override
+  String get simBalanced => '平衡推进';
+
+  @override
+  String get simDebateStyle => '分歧碰撞';
+
+  @override
+  String get simGuided => '引导拆解';
+
+  @override
+  String get simPractical => '应用落地';
+
+  @override
+  String get simBalancedDesc => '适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。';
+
+  @override
+  String get simDebateStyleDesc => '主动放大争议和证据冲突，更适合需要碰撞观点的主题。';
+
+  @override
+  String get simGuidedDesc => '更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。';
+
+  @override
+  String get simPracticalDesc => '优先讨论行动、验证和现实约束，适合技能与方案推演。';
+
+  @override
+  String get simRecommended => '推荐场景';
+
+  @override
+  String get simGenerating => '模拟正在生成中...';
+
+  @override
+  String get simStartHint => '开始一次学习场景模拟，让角色逐轮讨论这个主题。';
+
+  @override
+  String simRound(int round) {
+    return '第 $round 轮';
+  }
+
+  @override
   String get cogMockPattern1 => '每次遇到难题就会想要刷手机，这似乎是一种逃避机制。';
 
   @override

@@ -23036,6 +23036,169 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simGenFailed => 'Simulation generation failed';
 
   @override
+  String get simStudyGroup => 'Study Group';
+
+  @override
+  String get simKnowledgeDebate => 'Knowledge Debate';
+
+  @override
+  String get simHistoricalRoleplay => 'Historical Roleplay';
+
+  @override
+  String get simCaseAnalysis => 'Case Analysis';
+
+  @override
+  String get simWhatIfPath => 'What-If Path';
+
+  @override
+  String get simConceptMapBuild => 'Concept Map';
+
+  @override
+  String get simStudyGroupDesc =>
+      'Multi-role collaborative learning around a topic. Great for covering concepts, examples, and misconceptions together.';
+
+  @override
+  String get simKnowledgeDebateDesc =>
+      'Clash of perspectives. Ideal for testing viewpoints, evidence, and boundary conditions.';
+
+  @override
+  String get simHistoricalRoleplayDesc =>
+      'Step into characters and era constraints, making discussion feel like a real historical scene.';
+
+  @override
+  String get simCaseAnalysisDesc =>
+      'Deconstruct, diagnose, and decide around specific cases. Suited for practical topics.';
+
+  @override
+  String get simWhatIfPathDesc =>
+      'Compare different learning or action paths. Good for planning, trade-offs, and resource allocation.';
+
+  @override
+  String get simConceptMapBuildDesc =>
+      'Weave knowledge points into a structured map. Ideal for building a global framework and connections.';
+
+  @override
+  String get simTopStudent => 'Top Student';
+
+  @override
+  String get simMidStudent => 'Average Student';
+
+  @override
+  String get simPracticeCoach => 'Practice Coach';
+
+  @override
+  String get simProExpert => 'Pro Expert';
+
+  @override
+  String get simConExpert => 'Con Expert';
+
+  @override
+  String get simModerator => 'Moderator';
+
+  @override
+  String get simEvidenceReviewer => 'Evidence Reviewer';
+
+  @override
+  String get simChallenger => 'Challenger';
+
+  @override
+  String get simHistoryTutor => 'History Tutor';
+
+  @override
+  String get simKeyFigure => 'Key Figure';
+
+  @override
+  String get simEraObserver => 'Era Observer';
+
+  @override
+  String get simStrategyAdvisor => 'Strategy Advisor';
+
+  @override
+  String get simRecorder => 'Recorder';
+
+  @override
+  String get simCaseTutor => 'Case Tutor';
+
+  @override
+  String get simDiagnostician => 'Diagnostician';
+
+  @override
+  String get simPractitioner => 'Practitioner';
+
+  @override
+  String get simCounterExampler => 'Counter-example Finder';
+
+  @override
+  String get simDecisionRecorder => 'Decision Recorder';
+
+  @override
+  String get simCurrentPath => 'Current Path';
+
+  @override
+  String get simAggressivePath => 'Aggressive Path';
+
+  @override
+  String get simRiskObserver => 'Risk Observer';
+
+  @override
+  String get simResourceDispatcher => 'Resource Dispatcher';
+
+  @override
+  String get simStructurer => 'Structurer';
+
+  @override
+  String get simConnector => 'Connector';
+
+  @override
+  String get simCounterChecker => 'Counter-checker';
+
+  @override
+  String get simBridgeBuilder => 'Bridge Builder';
+
+  @override
+  String get simBalanced => 'Balanced';
+
+  @override
+  String get simDebateStyle => 'Debate';
+
+  @override
+  String get simGuided => 'Guided';
+
+  @override
+  String get simPractical => 'Practical';
+
+  @override
+  String get simBalancedDesc =>
+      'Suited for most topics. Emphasizes balanced multi-role progression without any side dominating.';
+
+  @override
+  String get simDebateStyleDesc =>
+      'Actively amplifies controversy and evidence conflicts. Better for topics that need viewpoint clashes.';
+
+  @override
+  String get simGuidedDesc =>
+      'More like a tutor-led discussion. Emphasizes clarifying premises, step-by-step breakdown, and keeping users on track.';
+
+  @override
+  String get simPracticalDesc =>
+      'Prioritizes action, verification, and real-world constraints. Ideal for skills and scenario planning.';
+
+  @override
+  String get simRecommended => 'Recommended';
+
+  @override
+  String get simGenerating => 'Generating simulation...';
+
+  @override
+  String get simStartHint =>
+      'Start a learning scenario simulation and let characters discuss the topic round by round.';
+
+  @override
+  String simRound(int round) {
+    return 'Round $round';
+  }
+
+  @override
   String get cogMockPattern1 =>
       'Whenever I hit a tough problem I instinctively reach for my phone — it seems like an avoidance mechanism.';
 

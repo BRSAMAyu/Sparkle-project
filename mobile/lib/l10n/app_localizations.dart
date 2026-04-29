@@ -40333,6 +40333,306 @@ abstract class AppLocalizations {
   /// **'模拟生成失败'**
   String get simGenFailed;
 
+  /// No description provided for @simStudyGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习小组'**
+  String get simStudyGroup;
+
+  /// No description provided for @simKnowledgeDebate.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识辩论'**
+  String get simKnowledgeDebate;
+
+  /// No description provided for @simHistoricalRoleplay.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史角色扮演'**
+  String get simHistoricalRoleplay;
+
+  /// No description provided for @simCaseAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'案例分析'**
+  String get simCaseAnalysis;
+
+  /// No description provided for @simWhatIfPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'如果路径'**
+  String get simWhatIfPath;
+
+  /// No description provided for @simConceptMapBuild.
+  ///
+  /// In zh, this message translates to:
+  /// **'概念图构建'**
+  String get simConceptMapBuild;
+
+  /// No description provided for @simStudyGroupDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。'**
+  String get simStudyGroupDesc;
+
+  /// No description provided for @simKnowledgeDebateDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'让不同立场直接碰撞，适合验证观点、证据和边界条件。'**
+  String get simKnowledgeDebateDesc;
+
+  /// No description provided for @simHistoricalRoleplayDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'带入人物与时代约束，让讨论像真实历史现场一样推进。'**
+  String get simHistoricalRoleplayDesc;
+
+  /// No description provided for @simCaseAnalysisDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'围绕具体案例做拆解、诊断和决策，适合实务型主题。'**
+  String get simCaseAnalysisDesc;
+
+  /// No description provided for @simWhatIfPathDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'比较不同学习或行动路线，适合规划、取舍与资源分配。'**
+  String get simWhatIfPathDesc;
+
+  /// No description provided for @simConceptMapBuildDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'把知识点织成结构图，适合建立全局框架与连接关系。'**
+  String get simConceptMapBuildDesc;
+
+  /// No description provided for @simTopStudent.
+  ///
+  /// In zh, this message translates to:
+  /// **'优等生'**
+  String get simTopStudent;
+
+  /// No description provided for @simMidStudent.
+  ///
+  /// In zh, this message translates to:
+  /// **'中等生'**
+  String get simMidStudent;
+
+  /// No description provided for @simPracticeCoach.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习教练'**
+  String get simPracticeCoach;
+
+  /// No description provided for @simProExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'正方专家'**
+  String get simProExpert;
+
+  /// No description provided for @simConExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'反方专家'**
+  String get simConExpert;
+
+  /// No description provided for @simModerator.
+  ///
+  /// In zh, this message translates to:
+  /// **'主持人'**
+  String get simModerator;
+
+  /// No description provided for @simEvidenceReviewer.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据审查员'**
+  String get simEvidenceReviewer;
+
+  /// No description provided for @simChallenger.
+  ///
+  /// In zh, this message translates to:
+  /// **'追问者'**
+  String get simChallenger;
+
+  /// No description provided for @simHistoryTutor.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史导师'**
+  String get simHistoryTutor;
+
+  /// No description provided for @simKeyFigure.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键人物'**
+  String get simKeyFigure;
+
+  /// No description provided for @simEraObserver.
+  ///
+  /// In zh, this message translates to:
+  /// **'时代观察者'**
+  String get simEraObserver;
+
+  /// No description provided for @simStrategyAdvisor.
+  ///
+  /// In zh, this message translates to:
+  /// **'策略顾问'**
+  String get simStrategyAdvisor;
+
+  /// No description provided for @simRecorder.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录官'**
+  String get simRecorder;
+
+  /// No description provided for @simCaseTutor.
+  ///
+  /// In zh, this message translates to:
+  /// **'案例导师'**
+  String get simCaseTutor;
+
+  /// No description provided for @simDiagnostician.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断官'**
+  String get simDiagnostician;
+
+  /// No description provided for @simPractitioner.
+  ///
+  /// In zh, this message translates to:
+  /// **'实践派'**
+  String get simPractitioner;
+
+  /// No description provided for @simCounterExampler.
+  ///
+  /// In zh, this message translates to:
+  /// **'反例提出者'**
+  String get simCounterExampler;
+
+  /// No description provided for @simDecisionRecorder.
+  ///
+  /// In zh, this message translates to:
+  /// **'决策记录官'**
+  String get simDecisionRecorder;
+
+  /// No description provided for @simCurrentPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前路线'**
+  String get simCurrentPath;
+
+  /// No description provided for @simAggressivePath.
+  ///
+  /// In zh, this message translates to:
+  /// **'激进路线'**
+  String get simAggressivePath;
+
+  /// No description provided for @simRiskObserver.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险观察者'**
+  String get simRiskObserver;
+
+  /// No description provided for @simResourceDispatcher.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源调度者'**
+  String get simResourceDispatcher;
+
+  /// No description provided for @simStructurer.
+  ///
+  /// In zh, this message translates to:
+  /// **'结构师'**
+  String get simStructurer;
+
+  /// No description provided for @simConnector.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接者'**
+  String get simConnector;
+
+  /// No description provided for @simCounterChecker.
+  ///
+  /// In zh, this message translates to:
+  /// **'反例检查员'**
+  String get simCounterChecker;
+
+  /// No description provided for @simBridgeBuilder.
+  ///
+  /// In zh, this message translates to:
+  /// **'桥梁构建者'**
+  String get simBridgeBuilder;
+
+  /// No description provided for @simBalanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'平衡推进'**
+  String get simBalanced;
+
+  /// No description provided for @simDebateStyle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分歧碰撞'**
+  String get simDebateStyle;
+
+  /// No description provided for @simGuided.
+  ///
+  /// In zh, this message translates to:
+  /// **'引导拆解'**
+  String get simGuided;
+
+  /// No description provided for @simPractical.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用落地'**
+  String get simPractical;
+
+  /// No description provided for @simBalancedDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。'**
+  String get simBalancedDesc;
+
+  /// No description provided for @simDebateStyleDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'主动放大争议和证据冲突，更适合需要碰撞观点的主题。'**
+  String get simDebateStyleDesc;
+
+  /// No description provided for @simGuidedDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。'**
+  String get simGuidedDesc;
+
+  /// No description provided for @simPracticalDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先讨论行动、验证和现实约束，适合技能与方案推演。'**
+  String get simPracticalDesc;
+
+  /// No description provided for @simRecommended.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐场景'**
+  String get simRecommended;
+
+  /// No description provided for @simGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'模拟正在生成中...'**
+  String get simGenerating;
+
+  /// No description provided for @simStartHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始一次学习场景模拟，让角色逐轮讨论这个主题。'**
+  String get simStartHint;
+
+  /// No description provided for @simRound.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {round} 轮'**
+  String simRound(int round);
+
   /// No description provided for @cogMockPattern1.
   ///
   /// In zh, this message translates to:
