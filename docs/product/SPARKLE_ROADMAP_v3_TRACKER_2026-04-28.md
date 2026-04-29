@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (P2-8 PartnerCommitmentLoop 86e3a364, P2 must-haves 10/10 complete)
+> **最后更新**: 2026-04-30 (EA-6 directive dedup -103行, P2-8 PartnerCommitmentLoop)
 
 ### P0 Critical — 当前会话修复
 
@@ -653,7 +653,7 @@
 
 | ID | 文件 | 问题 | 行动 | 状态 |
 |----|------|------|------|------|
-| EA-6 | `backend/app/signals/spine_orchestrator.py` | 68 处重复代码块 (lines 3021-3163 最大块) | 提取公共方法, 消除重复 | 🟡 进行中 (5a4168e8: 99行最大块已删) |
+| EA-6 | `backend/app/signals/spine_orchestrator.py` | 68 处重复代码块 (lines 3021-3163 最大块) | 提取公共方法, 消除重复 | ✅ 已修 (40e42f1a: _get_directive helper + 8对 getter/setter 去重, -103行) |
 | EA-7 | `backend/app/signals/spine_state_register.py` | 重复辅助方法 | 合并到共享 utils | ✅ 已修 (e86b9601) |
 
 ### R6.4 CI/质量门修复
