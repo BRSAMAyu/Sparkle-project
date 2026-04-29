@@ -262,6 +262,8 @@
 | 2026-04-29 | Bug Fix | Claude 7 bugs fixed | B-001 description→guide_content field mapping; B-002 unknown status validation; B-003 batch per-task error handling; B-004 case-insensitive status; B-005 word-boundary regex; B-006 DecrQuota zero guard; B-007 Flutter l10n syntax; 72+52+27 tests pass |
 | 2026-04-29 | R4-P1-01 | Claude 成本守卫接线 | is_rag_within_budget() + record_rag_cost() 接入 graph_rag.retrieve(); is_aurora_within_budget() 接入 L3 start_aurora_core_session + L4 create_candidate |
 | 2026-04-29 | R4-P1-03 | Claude 首页纠偏遥测 | dashboard_screen onCorrectionTap/onCooldownOverride 先提交 recordStatusBandCorrection() (semantic_value/is_disconfirming) 再跳转 chat; AuroraTelemetryService 新增方法; flutter analyze 0 errors |
+| 2026-04-29 | 全系统 | 7-Agent 全面验收审计 | **P0-1**: achievement_engine._get_relevant_achievements kwargs NameError → 加 **kwargs + 透传; **P0-2**: spine_orchestrator 5处复制粘贴导致双写/指标膨胀/ID断链 → 删除重复块; **P1-2**: Event Bus retry阻塞+stale/new互斥 → 移除阻塞sleep+stale不再饿死new; **P1-4**: DocumentCitationFeedbackEvent重复类定义 → 删除死代码dataclass; **P0-4**: Go Gateway 3/17 RPC → 17/17全部实现 + injectMetadata helper |
+| 2026-04-29 | TEST-Q1 | Claude 弹性测试 | 23 production-grade resilience tests: Redis全挂/部分挂/数据损坏、并发20-100用户、边界值; 修复StateRegister Redis宕机崩溃bug; 960现有测试无回归 |
 
 ### 测试质量升级 (🔴 横切任务)
 
