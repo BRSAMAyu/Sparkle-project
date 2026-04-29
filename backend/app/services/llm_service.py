@@ -35,6 +35,7 @@ from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
 from app.services.llm.fallback import FallbackReason, llm_fallback_manager
 from app.services.llm.concurrency import llm_concurrency
+from app.core.llm_monitoring import LLMMonitor
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -157,6 +158,38 @@ class StreamChunk:
     annotations: list[dict] | None = None
 
 tracer = trace.get_tracer(__name__)
+_llm_monitor = LLMMonitor()
+
+
+def _record_token_usage(model: str, prompt_tokens: int, completion_tokens: int, source: str = "chat") -> None:
+    """Record token usage and estimated cost to Prometheus + LLMMonitor."""
+    try:
+        _llm_monitor.estimate_and_record_cost(
+            model=model, input_tokens=prompt_tokens,
+            output_tokens=completion_tokens, endpoint=source,
+        )
+    except Exception:
+        logger.debug("_record_token_usage: monitoring failed", exc_info=True)
+
+
+async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> None:
+    """Track per-user daily token usage in Redis for quota enforcement."""
+    if not user_id or total_tokens <= 0:
+        return
+    try:
+        from app.core.cache import cache_service
+        from datetime import UTC, datetime
+        date_key = datetime.now(UTC).strftime("%Y-%m-%d")
+        redis_key = f"llm_tokens:{user_id}:{date_key}"
+        r = cache_service.redis
+        await r.incrby(redis_key, total_tokens)
+        # Set 48h TTL on first write (in case key is new)
+        ttl = await r.ttl(redis_key)
+        if ttl is None or ttl < 0:
+            await r.expire(redis_key, 48 * 3600)
+    except Exception:
+        logger.debug("_track_daily_user_tokens: redis failed", exc_info=True)
+
 
 class LLMService:
     """
@@ -1031,6 +1064,11 @@ class LLMService:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
+                    _record_token_usage(
+                        selection.model_key, response.usage.prompt_tokens,
+                        response.usage.completion_tokens, source="chat_with_tools",
+                    )
+                    await _track_daily_user_tokens(user_id, response.usage.total_tokens or 0)
 
                 tool_calls_dicts = []
                 if message.tool_calls:
@@ -1133,6 +1171,10 @@ class LLMService:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
+                    _record_token_usage(
+                        selection.model_key, response.usage.prompt_tokens,
+                        response.usage.completion_tokens, source="tool_results",
+                    )
 
                 return LLMResponse(
                     content=sanitize_llm_output(
@@ -1262,6 +1304,12 @@ class LLMService:
                     span.set_attribute("llm.usage.prompt_tokens", usage_data.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", usage_data.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", usage_data.total_tokens)
+                    model_name = selection.model_key if selection else "unknown"
+                    _record_token_usage(
+                        model_name, usage_data.prompt_tokens or 0,
+                        usage_data.completion_tokens or 0, source="stream_chat",
+                    )
+                    await _track_daily_user_tokens(user_id, usage_data.total_tokens or 0)
                     yield StreamChunk(
                         type="usage",
                         prompt_tokens=usage_data.prompt_tokens,
