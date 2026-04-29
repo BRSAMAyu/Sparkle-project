@@ -57,7 +57,7 @@
 
 | 阶段 | 范围 | 状态 |
 |------|------|------|
-| Phase 2a | Python PlanService / TaskService 核心业务逻辑测试 | 待开始 |
+| Phase 2a | Python PlanService / TaskService 核心业务逻辑测试 (52个) | ✅ 完成 |
 | Phase 2b | Python Plan/Task Tools 测试升级 | 待开始 |
 | Phase 3a | Go ChatOrchestrator 聊天流程测试 | 待开始 |
 | Phase 3b | Go QuotaService 配额管理测试 | 待开始 |
@@ -83,37 +83,76 @@
 
 ### Phase 2a: Python PlanService / TaskService 核心业务逻辑测试
 
-#### 4.2a.1 PlanService 测试升级
-
-**原始测试**: `test_plan_progress_update.py` (272行)
-**问题**: 只测试了计划进度更新，未覆盖创建/归档/恢复/配额等核心业务规则
-
-**升级内容**:
-
-- [x] `test_plan_create_first_plan_auto_primary`: 第一个计划自动设为主计划
-- [x] `test_plan_create_quota_exceeded`: 配额超限拒绝创建
-- [x] `test_plan_archive_auto_selects_new_primary`: 归档主计划时自动选择新主计划
-- [x] `test_plan_restore_with_quota_check`: 恢复计划时的配额检查
-- [x] `test_plan_archive_completed_sprint`: Sprint 计划全部完成时自动归档
-- [x] `test_plan_get_by_id_ownership`: 计划归属权验证
-- [x] `test_plan_update_partial`: 部分字段更新
-
-#### 4.2a.2 TaskService 测试升级
-
-**原始测试**: `test_plan_progress_update.py` 中有部分任务测试
-**问题**: 未覆盖任务生命周期状态机、stuck 诊断、焦点进度自动完成等核心逻辑
+**文件**: `backend/tests/test_plan_task_service_production.py`
+**测试数量**: 52个
+**结果**: ✅ 全部通过
 
 **升级内容**:
 
-- [x] `test_task_create_default_estimation`: 默认估算时间和难度
-- [x] `test_task_complete_updates_plan_progress`: 完成任务自动更新计划进度
-- [x] `test_task_complete_sparks_knowledge_node`: 完成任务触发知识节点火花
-- [x] `test_task_stuck_raises_for_completed`: 已完成任务不能标记为 stuck
-- [x] `test_task_abandon_records_self_model`: 放弃任务记录自我模型
-- [x] `test_task_apply_focus_progress_auto_complete`: 焦点进度自动完成
-- [x] `test_task_reorder_deduplication`: 任务重排去重
-- [x] `test_task_confirm_batch_by_tool_result`: 批量确认工具生成的任务
-- [x] `test_task_sentiment_inference`: 完成任务的情感推断
+#### PlanService 测试 (18个)
+- ✅ `test_plan_create_first_plan_auto_primary`: 第一个计划自动设为主计划
+- ✅ `test_plan_create_second_plan_not_primary`: 第二个计划不自动设为主计划
+- ✅ `test_plan_create_defaults`: 默认阶段(DAILY)和优先级(NORMAL)
+- ✅ `test_plan_archive_sets_inactive_and_not_primary`: 归档设置 is_active=False, is_primary=False
+- ✅ `test_plan_archive_triggers_auto_primary`: 归档主计划时自动选择新主计划
+- ✅ `test_plan_archive_wrong_user_returns_none`: 归档他人计划返回 None
+- ✅ `test_plan_restore_reactivates`: 恢复归档计划
+- ✅ `test_plan_restore_active_returns_none`: 恢复活跃计划返回 None
+- ✅ `test_plan_sprint_auto_archive_on_all_complete`: Sprint 全部完成自动归档
+- ✅ `test_plan_sprint_no_auto_archive_incomplete`: Sprint 部分完成不自动归档
+- ✅ `test_plan_growth_never_auto_archives`: Growth 计划永不自动归档
+- ✅ `test_plan_update_priority`: 更新优先级
+- ✅ `test_plan_get_primary`: 获取主计划
+- ✅ `test_plan_list_archived`: 列出归档计划
+- ✅ `test_plan_list_active_excludes_archived`: 活跃计划排除归档
+- ✅ `test_plan_update_partial_fields`: 部分字段更新
+- ✅ `test_plan_get_by_id_ownership`: 计划归属权验证
+- ✅ `test_plan_progress_nonexistent_returns_none`: 不存在计划返回 None
+
+#### TaskService 测试 (34个)
+- ✅ `test_task_create_defaults`: 默认估算时间和难度
+- ✅ `test_task_create_order_decrements`: 新任务递减 order_index
+- ✅ `test_task_complete_updates_plan_progress`: 完成任务自动更新计划进度
+- ✅ `test_task_complete_sets_timestamps`: 完成任务设置状态和时间戳
+- ✅ `test_task_stuck_raises_for_completed`: 已完成任务不能标记 stuck
+- ✅ `test_task_stuck_raises_for_abandoned`: 已放弃任务不能标记 stuck
+- ✅ `test_task_stuck_sets_status_and_diagnosis`: 设置 stuck 状态和诊断信息
+- ✅ `test_task_abandon_with_reason`: 放弃带原因（前缀 "Abandoned:"）
+- ✅ `test_task_abandon_without_reason`: 放弃无原因不设置 user_note
+- ✅ `test_task_focus_auto_complete`: 焦点进度自动完成
+- ✅ `test_task_focus_no_auto_complete_under_est`: 未达估算不自动完成
+- ✅ `test_task_focus_zero_duration`: 零时长不改变
+- ✅ `test_task_focus_auto_starts_pending`: PENDING 任务自动启动
+- ✅ `test_task_focus_completed_unchanged`: 已完成任务不受影响
+- ✅ `test_task_focus_nonexistent_returns_none`: 不存在任务返回 None
+- ✅ `test_task_focus_zero_estimated_no_auto_complete`: 零估算不触发自动完成
+- ✅ `test_task_reorder_deduplicates`: 重排去重
+- ✅ `test_task_reorder_raises_for_missing`: 缺失任务抛出 ValueError
+- ✅ `test_task_reorder_empty_list`: 空列表返回空
+- ✅ `test_task_reorder_ascending_order`: 升序 order_index
+- ✅ `test_task_confirm_batch`: 批量确认工具生成任务
+- ✅ `test_task_confirm_batch_empty`: 无匹配返回空
+- ✅ `test_task_confirm_batch_skips_non_pending`: 跳过非 PENDING 任务
+- ✅ `test_task_start_sets_status`: 启动设置状态和时间戳
+- ✅ `test_task_delete_removes_and_updates_plan`: 删除触发计划重算
+- ✅ `test_task_ownership_enforced`: 归属权验证
+- ✅ `test_task_start_task_wrong_user`: 错误用户启动失败
+- ✅ `test_task_complete_task_wrong_user`: 错误用户完成失败
+- ✅ `test_sentiment_negative`: 负面情感识别
+- ✅ `test_sentiment_positive`: 正面情感识别
+- ✅ `test_sentiment_neutral`: 中性情感识别
+- ✅ `test_sentiment_negative_priority`: 负面优先于正面
+- ✅ `test_difficulty_gradient`: 梯度到难度映射
+- ✅ `test_task_summary`: 任务摘要构建
+
+#### 自我审查记录 (Phase 2a)
+
+**审查结果**: 通过（已根据审查意见修复）
+**修复内容**:
+1. 提取共享 fixture（`mock_plan_deps`, `mock_task_deps`）消除重复代码
+2. 补充 `update_priority`, `get_primary`, `list_archived` 测试
+3. 修复 `order_index` 断言使用相对顺序而非绝对值
+4. 补充 6 个缺失边界测试（空列表、零估算、已完成任务、不存在任务等）
 
 ---
 
