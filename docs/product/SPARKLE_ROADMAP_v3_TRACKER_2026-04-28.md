@@ -503,12 +503,12 @@
 | P1-12 | P1 | SpineOrchestrator 零测试 (重复 P1-7) | — | ✅ 合并到 P1-7 |
 | P1-13 | P1 | AchievementEngine sprint/contract/weekend 测试不足 | `test_achievement_engine.py` | ✅ 已修 (9a1b9f5a: 23 tests for contract creation/status/progress + weekend streak calculation) |
 | P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | ✅ 已修 |
-| P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🔴 待修 |
-| P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🔴 待修 |
+| P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🟡 长期重构 (123 方法可按 directive store/event handler/goal/session 分组提取 mixin) |
+| P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🟡 长期重构 (需与 P2-1 协同拆分) |
 | P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | ✅ 已修 (b766be2f) |
-| P2-4 | P2 | 事件消费者无背压/限流 | event consumers | 🟡 已有: count=1 消费 + MAXLEN 50000 流截断 |
+| P2-4 | P2 | 事件消费者无背压/限流 | event consumers | ✅ 已有: count=1 消费 + MAXLEN 50000 流截断 |
 | P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | ✅ 已修 (eaa1e1db) |
-| P2-6 | P2 | Redis 连接无 circuit breaker | 多文件 | 🟡 Spine 管道已有; 其余 try/except 覆盖 |
+| P2-6 | P2 | Redis 连接无 circuit breaker | 多文件 | ✅ 已有: Spine 管道 pipeline + 其余 try/except 覆盖 |
 | P2-7 | P2 | context_manager 异常处理不一致 | `context_manager.py` | ✅ 已修 (1cf2c249) |
 | P2-8 | P2 | StateRegister 无 TTL/过期清理 | `state_register.py` | ✅ 已修 (cdedb67f) |
 | P2-9 | P2 | OutcomeRecorder 无幂等保护 | `outcome_recorder.py` | ✅ 已修 (b908c7bb) |
