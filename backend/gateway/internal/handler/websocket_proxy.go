@@ -12,6 +12,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// Max client message size: 256KB. Messages larger than this are dropped.
+const maxClientMessageSize = 256 * 1024
+
 // WebSocketProxy 专门处理 WebSocket 连接代理
 // 因为 httputil.ReverseProxy 在某些情况下无法正确处理 WebSocket 升级
 type WebSocketProxy struct {
@@ -214,6 +217,18 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				}
 				errChan <- err
 				return
+			}
+			// Reject oversized messages
+			if len(data) > maxClientMessageSize {
+				p.logger.Warn("Dropping oversized client message",
+					zap.String("user_id", userID),
+					zap.Int("size", len(data)),
+					zap.Int("max", maxClientMessageSize))
+				continue
+			}
+			// Only allow text and binary message types
+			if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
+				continue
 			}
 			if err := writeMessage(&backendWriteMu, backendConn, messageType, data); err != nil {
 				p.logger.Warn("Backend write error",

@@ -82,6 +82,8 @@ class CommunityWebSocketService {
 
   WebSocketChannel? _groupChannel;
   WebSocketChannel? _personalChannel;
+  StreamSubscription<dynamic>? _groupSubscription;
+  StreamSubscription<dynamic>? _personalSubscription;
 
   // Message deduplication cache
   final Set<String> _receivedMessageIds = {};
@@ -154,7 +156,7 @@ class CommunityWebSocketService {
 
       _setGroupState(WsConnectionState.connecting);
 
-      _groupChannel!.stream.listen(
+      _groupSubscription = _groupChannel!.stream.listen(
         _handleGroupMessage,
         onError: _handleGroupError,
         onDone: _handleGroupDone,
@@ -205,7 +207,7 @@ class CommunityWebSocketService {
 
       _setPersonalState(WsConnectionState.connecting);
 
-      _personalChannel!.stream.listen(
+      _personalSubscription = _personalChannel!.stream.listen(
         _handlePersonalMessage,
         onError: _handlePersonalError,
         onDone: _handlePersonalDone,
@@ -440,6 +442,9 @@ class CommunityWebSocketService {
     _groupReconnectAttempts = 0;
     _currentGroupId = null;
 
+    await _groupSubscription?.cancel();
+    _groupSubscription = null;
+
     if (_groupChannel != null) {
       await _groupChannel!.sink.close();
       _groupChannel = null;
@@ -454,6 +459,9 @@ class CommunityWebSocketService {
     _personalReconnectTimer?.cancel();
     _personalReconnectTimer = null;
     _personalReconnectAttempts = 0;
+
+    await _personalSubscription?.cancel();
+    _personalSubscription = null;
 
     if (_personalChannel != null) {
       await _personalChannel!.sink.close();
