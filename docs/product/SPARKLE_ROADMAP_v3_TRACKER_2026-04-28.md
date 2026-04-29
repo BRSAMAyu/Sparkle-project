@@ -226,3 +226,4 @@
 | 2026-04-29 | 2520b14e | Phase 2 | H-01 EventBus lifecycle events bridge into Spine signals |
 | 2026-04-29 | 74a14d5a | Phase 2 | H-02 Aurora decisions feed PolicyEngine soft bias |
 | 2026-04-29 | 41dc30ee | Phase 2 | H-04 Context Receipt Bar corrective action chips |
+| 2026-04-29 | f77b9fe0 | Phase 2/3 | M-02 Spine StateRegister feeds dual-core routing |
