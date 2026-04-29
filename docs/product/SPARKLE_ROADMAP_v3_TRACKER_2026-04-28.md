@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-29
+> **最后更新**: 2026-04-30
 > **对应 Roadmap**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
 > **用途**: 记录所有已完成、进行中、待做的工作, 支持并行推进与阶段审查
 
@@ -13,6 +13,7 @@
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
 > **审查报告 R4**: [`SPARKLE_AUDIT_R4_FINAL_ACCEPTANCE_CODEX_2026-04-29.md`](SPARKLE_AUDIT_R4_FINAL_ACCEPTANCE_CODEX_2026-04-29.md) — Phase 6/7 生产验收复核: 压测、蓝绿、成本熔断、Aurora live 治理、首页纠偏闭环
 > **Aurora 全系统审计**: Phase 3.5 — 3 P0 + 3 P1 + 5 P2 (见下方 Phase 3.5 节)
+> **外部审计 R6**: [`SPARKLE_ROADMAP_v3_TRACKER_2026-04-28.md`](SPARKLE_ROADMAP_v3_TRACKER_2026-04-28.md#r6-外部审计-2026-04-30) — 自评修正 + 5 死代码 + 68 重复块 + CI no-op
 
 ---
 
@@ -610,3 +611,56 @@
 12. P2-17: pipeline lock 不一致
 13. P2-20: EventBus 重连
 14. P2-1/2: God class 拆分 (长期)
+
+---
+
+## R6 外部审计 (2026-04-30)
+
+> **来源**: 独立外部审计报告
+> **核心发现**: 自评分数膨胀严重 (声称 9/10 → 实际 ~5.5/10); 5 个治理模块死代码; 68 处 Spine 重复代码块; CI 多处 no-op
+
+### R6.1 诚实维度评分 (修正自评膨胀)
+
+| 维度 | 声称分数 | 修正分数 | 差距根因 | 状态 |
+|------|---------|---------|----------|------|
+| 信号流完整性 | 9 | 6 | 4/9 Directive 无消费者 | 🔴 待修 |
+| 治理执行力 | 9 | 4 | 5 个治理模块从未接入生产 | 🔴 待修 |
+| 测试真实性 | 9 | 5 | 测试 mock 过重，无集成验证 | 🔴 待修 |
+| Prompt 注入防御 | 9 | 5 | 无生产级 prompt injection 测试 | 🔴 待修 |
+| 数据最小化 | 8 | 4 | data_minimization.py 死代码 | 🔴 待修 |
+| CI 有效性 | 9 | 5 | load-test CI 为 no-op | 🔴 待修 |
+
+### R6.2 死代码治理模块 → 接线生产
+
+| ID | 模块 | 问题 | 行动 | 状态 |
+|----|------|------|------|------|
+| EA-1 | `backend/app/signals/fabrication_guard.py` | 文件存在但零生产 import | 接入 SpineOrchestrator signal pipeline, 验证调用 | 🔴 待修 |
+| EA-2 | `backend/app/signals/safety_degradation.py` | 文件存在但零生产 import | 接入 EventBus consumer group, 验证调用 | 🔴 待修 |
+| EA-3 | `backend/app/signals/high_impact_confirmation.py` | 文件存在但零生产 import | 接入 Directive actuation, 验证调用 | 🔴 待修 |
+| EA-4 | `backend/app/core/research_isolation.py` | 文件存在但零生产 import | 接入 StateAggregator write path, 验证调用 | 🔴 待修 |
+| EA-5 | `backend/app/core/data_minimization.py` | 文件存在但零生产 import | 接入 context_manager data flow, 验证调用 | 🔴 待修 |
+
+### R6.3 Spine 重复代码消除
+
+| ID | 文件 | 问题 | 行动 | 状态 |
+|----|------|------|------|------|
+| EA-6 | `backend/app/signals/spine_orchestrator.py` | 68 处重复代码块 (lines 3021-3163 最大块) | 提取公共方法, 消除重复 | 🔴 待修 |
+| EA-7 | `backend/app/signals/spine_state_register.py` | 重复辅助方法 | 合并到共享 utils | 🔴 待修 |
+
+### R6.4 CI/质量门修复
+
+| ID | 问题 | 行动 | 状态 |
+|----|------|------|------|
+| EA-8 | `.github/workflows/load-test.yml` 有 `|| true` 且无 services 启动 app | 添加 app startup 步骤, 移除 `|| true`, 使负载测试真正验证 | 🔴 待修 |
+| EA-9 | CI 覆盖率阈值不一致: env vars 设 15/40/20 但实际 config 为 14/35/15 | 统一为一致值并写入配置单一来源 | 🔴 待修 |
+| EA-10 | `.env` 包含真实 API key (LLM_API_KEY, JWT_SECRET 等) | 确认 .gitignore 覆盖, 添加 pre-commit gitleaks 检查 | 🔴 待修 |
+
+### R6.5 测试真实性提升
+
+| ID | 问题 | 行动 | 状态 |
+|----|------|------|------|
+| EA-11 | R5 审计测试 990/990 全 mock, 无真实 Redis/PG 集成测试 | 添加集成测试套件 (至少覆盖 Spine Directive 端到端) | 🔴 待修 |
+| EA-12 | 无 prompt injection 测试 | 添加 adversarial prompt 测试用例 | 🔴 待修 |
+| EA-13 | Event bus consumer 测试跳过真实 Redis | 添加 Redis Streams 集成测试 | 🔴 待修 |
+
+### R6 总计: 13 issues (6 评分修正 + 5 死代码 + 3 CI + 3 测试)
