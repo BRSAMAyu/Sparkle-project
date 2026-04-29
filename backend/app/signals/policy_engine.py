@@ -706,6 +706,8 @@ class PolicyEngine:
         self,
         decision: PolicyDecision,
         signal: ActionableSignal,
+        *,
+        active_states: list[dict[str, Any]] | None = None,
     ) -> ResponseDirective | None:
         """
         从 PolicyDecision 的 soft_biases 构建 ResponseDirective。
@@ -713,6 +715,19 @@ class PolicyEngine:
         """
         biases = decision.soft_biases
         tone = biases.get("tone", "calm_direct")
+
+        # L1: State-aware tone adjustment from active Spine states
+        if active_states:
+            for st in active_states:
+                key = str(st.get("state_key", ""))
+                conf = float(st.get("confidence", 0))
+                if conf < 0.5:
+                    continue
+                if key in ("fatigue_accumulated", "notification_fatigue", "affective_pressure") and conf >= 0.6:
+                    tone = "encouraging_low_pressure"
+                    break  # Fatigue wins over everything — user wellbeing first
+                elif key == "deadline_pressure" and conf >= 0.7:
+                    tone = "calm_urgent"
 
         # Derive must_acknowledge from signal context
         must_acknowledge: list[str] = []

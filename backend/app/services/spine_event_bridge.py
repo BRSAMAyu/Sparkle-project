@@ -20,6 +20,9 @@ SPINE_EVENT_TYPES = {
     "calendar.event.created",
     "calendar.event.updated",
     "calendar.event.deleted",
+    "notification.fatigue_detected",
+    "shop.purchase_completed",
+    "achievement.unlocked",
 }
 
 
@@ -63,6 +66,9 @@ class SpineEventBridge:
             "calendar.event.created": self._calendar_changed,
             "calendar.event.updated": self._calendar_changed,
             "calendar.event.deleted": self._calendar_changed,
+            "notification.fatigue_detected": self._notification_fatigue,
+            "shop.purchase_completed": self._shop_purchase,
+            "achievement.unlocked": self._achievement_unlocked,
         }
         return builders[event_type](event)
 
@@ -154,6 +160,25 @@ class SpineEventBridge:
             priority="medium",
         )
 
+    def _notification_fatigue(self, event: dict[str, Any]) -> ActionableSignal:
+        consecutive = int(event.get("consecutive_dismissals") or 0)
+        confidence = min(0.9, 0.5 + consecutive * 0.1)
+        return self._signal(
+            event,
+            source_system="event_bus.notification",
+            state_key="notification_fatigue",
+            claim="consecutive_notification_dismissal",
+            confidence=confidence,
+            scope="session",
+            ttl_hours=48,
+            evidence_summary=(
+                f"User dismissed {consecutive} consecutive notifications; "
+                f"type={event.get('notification_type') or 'mixed'}."
+            ),
+            possible_effects=["reduce_notification_frequency", "soften_tone", "pause_proactive_push"],
+            priority="high" if consecutive >= 4 else "medium",
+        )
+
     def _calendar_changed(self, event: dict[str, Any]) -> ActionableSignal:
         event_type = str(event.get("event_type") or "")
         title = event.get("title") or event.get("event_id") or "calendar event"
@@ -168,6 +193,39 @@ class SpineEventBridge:
             ttl_hours=72,
             evidence_summary=f"{event_type}: {title}.",
             possible_effects=["recompute_time_pressure", "adjust_plan_density", "refresh_today_tasks"],
+            priority="medium",
+        )
+
+    def _shop_purchase(self, event: dict[str, Any]) -> ActionableSignal:
+        item_name = event.get("item_name") or event.get("item_id") or "shop item"
+        amount = int(event.get("amount") or 0)
+        return self._signal(
+            event,
+            source_system="event_bus.shop",
+            state_key="reward_engagement",
+            claim="photon_spent",
+            confidence=0.6,
+            scope="day",
+            ttl_hours=24,
+            evidence_summary=f"User purchased {item_name} for {amount} photons.",
+            possible_effects=["acknowledge_reward_progress", "motivational_reinforcement"],
+            priority="low",
+        )
+
+    def _achievement_unlocked(self, event: dict[str, Any]) -> ActionableSignal:
+        name = event.get("achievement_name") or event.get("achievement_id") or "achievement"
+        rarity = event.get("rarity") or "common"
+        confidence = {"legendary": 0.9, "epic": 0.85, "rare": 0.78, "common": 0.6}.get(rarity, 0.6)
+        return self._signal(
+            event,
+            source_system="event_bus.achievement",
+            state_key="reward_engagement",
+            claim="achievement_unlocked",
+            confidence=confidence,
+            scope="session",
+            ttl_hours=12,
+            evidence_summary=f"Achievement unlocked: {name} (rarity={rarity}).",
+            possible_effects=["celebrate_milestone", "suggest_next_challenge", "reinforce_pattern"],
             priority="medium",
         )
 

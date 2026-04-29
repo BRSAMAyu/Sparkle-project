@@ -79,6 +79,9 @@ class TaskEventConsumer:
             "calendar.event.created",
             "calendar.event.updated",
             "calendar.event.deleted",
+            "achievement.unlocked",
+            "shop.purchase_completed",
+            "notification.fatigue_detected",
         }:
             await self._handle_spine_bridge_event(event)
 

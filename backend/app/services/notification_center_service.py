@@ -980,7 +980,7 @@ class NotificationCenterService:
     async def _record_interaction(
         self, user_id: UUID, notification_type: str, notification_id: UUID, action_type: str, created_at: datetime
     ):
-        """Record a notification interaction"""
+        """Record a notification interaction and detect dismissal fatigue."""
         try:
             # Calculate time to action in seconds
             time_to_action = max(0, int((_utcnow() - created_at).total_seconds()))
@@ -997,8 +997,50 @@ class NotificationCenterService:
             self.db.add(interaction)
             await self.db.flush()  # Don't commit yet, let caller handle transaction
 
+            # D-01: Detect consecutive dismissal fatigue → Spine signal
+            if action_type == "dismissed":
+                await self._check_and_emit_fatigue(user_id, notification_type)
+
         except Exception as e:
             logger.error(f"Error recording interaction: {e}")
+
+    async def _check_and_emit_fatigue(self, user_id: UUID, notification_type: str) -> None:
+        """Check for consecutive dismissals and emit fatigue event to EventBus."""
+        try:
+            cutoff = _utcnow() - timedelta(hours=24)
+            recent = await self.db.execute(
+                select(NotificationInteraction)
+                .where(
+                    NotificationInteraction.user_id == user_id,
+                    NotificationInteraction.action_time >= cutoff,
+                )
+                .order_by(desc(NotificationInteraction.action_time))
+                .limit(6)
+            )
+            rows = recent.scalars().all()
+            consecutive = 0
+            for r in rows:
+                if r.action_type == "dismissed":
+                    consecutive += 1
+                else:
+                    break
+            if consecutive >= 3:
+                from app.core.event_bus import EventBus
+                from app.core.cache import cache_service
+
+                event_bus = EventBus(cache_service.redis)
+                await event_bus.publish(
+                    stream="sparkle_events",
+                    event_type="notification.fatigue_detected",
+                    data={
+                        "user_id": str(user_id),
+                        "consecutive_dismissals": consecutive,
+                        "notification_type": notification_type,
+                    },
+                )
+                logger.info("Notification fatigue detected: user={} consecutive={}", user_id, consecutive)
+        except Exception as exc:
+            logger.debug("Fatigue check skipped: {}", exc)
 
     async def _apply_intervention_record_action(
         self,

@@ -373,7 +373,7 @@ class DualCoreRouter:
             if conf < 0.45:
                 continue
             if (
-                key in ("fatigue_accumulated", "affective_pressure", "cognitive_load")
+                key in ("fatigue_accumulated", "affective_pressure", "cognitive_load", "notification_fatigue")
                 or value in {"high_load", "high_load_detected", "overloaded", "anxious", "tense"}
             ) and conf >= 0.6:
                 spine_fatigue_detected = True
@@ -398,6 +398,24 @@ class DualCoreRouter:
                     "explanation_style",
                     "step_by_step",
                     reason="Knowledge bottleneck should slow down explanation and focus on foundational understanding.",
+                )
+            if key == "reward_engagement" and conf >= 0.55:
+                recommend_strategy(
+                    "push_vs_support",
+                    0.6,
+                    reason="Recent reward engagement indicates user is invested; moderate encouragement can sustain momentum.",
+                )
+            if key == "deadline_pressure" and conf >= 0.6:
+                execution_constraints.append("Spine 检测到截止日期压力，优先安排与截止日期相关的复习或冲刺任务。")
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Deadline pressure should focus planning into immediately actionable steps.",
+                )
+                recommend_strategy(
+                    "execution_window",
+                    "momentum_preserving",
+                    reason="Deadline pressure should preserve momentum and avoid opening new planning loops.",
                 )
 
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:

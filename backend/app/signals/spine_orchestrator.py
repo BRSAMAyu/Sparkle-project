@@ -239,7 +239,10 @@ class SpineOrchestrator:
         }
 
         if wd.get("response"):
-            response_dir = self.policy_engine.build_response_directive(decision, signal)
+            active_states = await self._get_active_states_dicts(user_id)
+            response_dir = self.policy_engine.build_response_directive(
+                decision, signal, active_states=active_states,
+            )
             if response_dir:
                 await self._store_response_directive(user_id, response_dir)
                 _collected_directive_ids["response"] = response_dir.directive_id
@@ -1341,8 +1344,11 @@ class SpineOrchestrator:
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
 
-        # Build and store ResponseDirective
-        response_dir = self.policy_engine.build_response_directive(decision, signal)
+        # Build and store ResponseDirective (L1: state-aware)
+        active_states = await self._get_active_states_dicts(user_id)
+        response_dir = self.policy_engine.build_response_directive(
+            decision, signal, active_states=active_states,
+        )
         if response_dir:
             await self._store_response_directive(user_id, response_dir)
 
@@ -1426,15 +1432,11 @@ class SpineOrchestrator:
             "user_response",
             "behavioral_change",
         ]
-        await self.trace_store._save_trace(trace)
 
-        # P0-2: Post-policy enrichment from previously orphaned modules
-        await self._enrich_pipeline_post_policy(
-            user_id=user_id,
-            signal=signal,
-            decision=decision,
-            directive=directive,
-        )
+        # Quality guard: validate signal→directive chain before finalizing trace
+        await self._run_live_quality_guard(trace)
+
+        await self.trace_store._save_trace(trace)
 
         # P0-2: Post-policy enrichment from previously orphaned modules
         await self._enrich_pipeline_post_policy(
@@ -1880,6 +1882,17 @@ class SpineOrchestrator:
     async def remove_state(self, user_id: str, state_key: str) -> None:
         """移除某状态。"""
         await self.state_register.remove_state(user_id, state_key)
+
+    async def _get_active_states_dicts(self, user_id: str) -> list[dict[str, Any]]:
+        """Get active StateRegister entries as dicts for L1 tone modulation."""
+        try:
+            entries = await self.state_register.get_active_states(user_id)
+            return [
+                {"state_key": e.state_key, "value": e.value, "confidence": e.confidence, "scope": e.scope}
+                for e in entries
+            ]
+        except Exception:
+            return []
 
     # ── Layer 6: ResponseDirective ─────────────────────────────────────
 
@@ -2602,6 +2615,37 @@ class SpineOrchestrator:
     async def get_metrics_snapshot(self) -> dict[str, Any]:
         """获取 Decision Realization Score 指标快照。"""
         return await self.metrics.snapshot()
+
+    # ── Quality Guard: live pipeline validation ────────────────────────
+
+    async def _run_live_quality_guard(self, trace: CausalTrace) -> None:
+        """Run SpineQualityGuard checks on the live pipeline trace.
+
+        Logs warnings but does NOT block the pipeline — quality issues
+        are recorded for observability, not used as gates.
+        """
+        try:
+            from app.signals.spine_quality_guard import SpineQualityGuard
+
+            trace_dict = trace.to_dict()
+            sig_check = SpineQualityGuard.check_signal_actionability([trace_dict])
+            dir_check = SpineQualityGuard.check_directive_compliance([trace_dict])
+
+            if not sig_check.get("passed", True):
+                logger.warning(
+                    "QualityGuard: signal actionability issue — trace={} issues={}",
+                    trace.trace_id, sig_check.get("issues", []),
+                )
+                await self.metrics.record_spine_degradation("quality_guard_signal")
+
+            if not dir_check.get("passed", True):
+                logger.warning(
+                    "QualityGuard: directive compliance issue — trace={} issues={}",
+                    trace.trace_id, dir_check.get("issues", []),
+                )
+                await self.metrics.record_spine_degradation("quality_guard_directive")
+        except Exception:
+            logger.debug("Quality guard skipped for trace={}", trace.trace_id, exc_info=True)
 
     # ── P0-2: Post-policy enrichment from previously orphaned modules ──
 

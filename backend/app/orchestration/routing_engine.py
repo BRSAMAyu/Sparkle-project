@@ -767,11 +767,18 @@ class RoutingEngineMixin:
         )
 
     async def _get_spine_active_states(self, user_id: str) -> list[dict[str, Any]]:
-        """Fetch active Spine StateRegister entries for routing."""
+        """Fetch active Spine StateRegister entries for routing.
+
+        Also runs L0 rule evaluations (deadline_pressure, quiet_hours) to ensure
+        StateRegister is up-to-date before the routing decision.
+        """
         redis_client = getattr(self, "redis", None)
         if redis_client is None:
             return []
         try:
+            # L0: Evaluate deadline pressure if calendar context is available
+            await self._apply_l0_rules(user_id, redis_client)
+
             register = StateRegister(redis_client)
             entries = await register.get_active_states(user_id)
             return [
@@ -785,6 +792,39 @@ class RoutingEngineMixin:
             ]
         except Exception as exc:
             logger.debug("Failed to load Spine StateRegister for dual-core routing: {}", exc)
+            return []
+
+    async def _apply_l0_rules(self, user_id: str, redis_client: Any) -> None:
+        """Run L0 deterministic rules: deadline_pressure from calendar context."""
+        try:
+            from app.aurora.runtime_v1.l0_rules import L0RuleEngine
+
+            engine = L0RuleEngine(redis_client)
+
+            # Extract upcoming deadlines from user context if available
+            deadlines = await self._get_upcoming_deadlines_for_l0(user_id)
+            if deadlines:
+                await engine.evaluate_deadline_pressure(user_id, upcoming_deadlines=deadlines)
+        except Exception as exc:
+            logger.debug("L0 rule evaluation skipped for user={}: {}", user_id, exc)
+
+    async def _get_upcoming_deadlines_for_l0(self, user_id: str) -> list[dict[str, Any]]:
+        """Extract upcoming deadlines from cache or context for L0 evaluation."""
+        try:
+            # Read cached calendar context from state aggregator
+            raw = await self.redis.get(f"state_aggregator:calendar:{user_id}")
+            if not raw:
+                return []
+            cal_data = json.loads(raw)
+            deadlines = []
+            for item in cal_data.get("upcoming_deadlines", []):
+                deadlines.append({
+                    "title": item.get("title", ""),
+                    "deadline_at": item.get("start_time") or item.get("end_time", ""),
+                    "type": "exam",
+                })
+            return deadlines[:6]
+        except Exception:
             return []
 
     async def _emit_dual_core_status(self, decision, stream_callback) -> None:

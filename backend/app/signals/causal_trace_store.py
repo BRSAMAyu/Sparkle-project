@@ -75,6 +75,7 @@ class CausalTraceStore:
     async def append_policy(self, trace_id: str, decision: PolicyDecision) -> None:
         trace = await self.get_trace(trace_id)
         if not trace:
+            logger.warning("trace {} not found for policy append", trace_id)
             return
         trace.policy_decision_id = decision.policy_decision_id
         # Policy is singular — no list append needed
@@ -88,6 +89,7 @@ class CausalTraceStore:
     async def append_directive(self, trace_id: str, directive: ExecutionDirective) -> None:
         trace = await self.get_trace(trace_id)
         if not trace:
+            logger.warning("trace {} not found for directive append", trace_id)
             return
         self._bounded_append(trace.directive_ids, directive.directive_id)
         from datetime import UTC, datetime
@@ -101,18 +103,11 @@ class CausalTraceStore:
         """Store any directive type by ID for timeline retrieval."""
         key = f"spine:directive_by_id:{directive_id}"
         await self.redis.set(key, json.dumps(data), ex=_TRACE_TTL)
-        # Store directive object for timeline retrieval
-        key = f"spine:directive_by_id:{directive.directive_id}"
-        await self.redis.set(key, json.dumps(directive.to_dict()), ex=_TRACE_TTL)
-
-    async def store_directive_by_id(self, directive_id: str, data: dict) -> None:
-        """Store any directive type by ID for timeline retrieval."""
-        key = f"spine:directive_by_id:{directive_id}"
-        await self.redis.set(key, json.dumps(data), ex=_TRACE_TTL)
 
     async def append_audit(self, trace_id: str, audit: DirectiveApplicationAudit) -> None:
         trace = await self.get_trace(trace_id)
         if not trace:
+            logger.warning("trace {} not found for audit append", trace_id)
             return
         self._bounded_append(trace.audit_ids, audit.audit_id)
         from datetime import UTC, datetime
@@ -122,6 +117,7 @@ class CausalTraceStore:
     async def append_receipt(self, trace_id: str, receipt: UserVisibleReceipt) -> None:
         trace = await self.get_trace(trace_id)
         if not trace:
+            logger.warning("trace {} not found for receipt append", trace_id)
             return
         self._bounded_append(trace.receipt_ids, receipt.receipt_id)
         from datetime import UTC, datetime
@@ -138,7 +134,7 @@ class CausalTraceStore:
             if current_count > _MAX_USER_TRACES:
                 await self.compact_old_traces(user_id)
         except Exception:
-            pass
+            logger.warning("Trace compaction failed for user={}", user_id, exc_info=True)
         await self.redis.ltrim(key, 0, _MAX_USER_TRACES - 1)
         await self.redis.expire(key, _TRACE_TTL)
 

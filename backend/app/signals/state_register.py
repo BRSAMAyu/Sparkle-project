@@ -286,11 +286,19 @@ class StateRegister:
         return retracted
 
     async def _save_state(self, user_id: str, entry: StateEntry) -> None:
-        """Persist a state entry to Redis."""
+        """Persist a state entry to Redis atomically (set + index in one pipeline)."""
         key = f"spine:state:{user_id}:{entry.state_key}"
-        await self.redis.set(key, json.dumps(entry.to_dict()), ex=entry.ttl_hours * 3600)
         index_key = f"spine:state_index:{user_id}"
-        await self.redis.sadd(index_key, entry.state_key)
+        ttl_seconds = entry.ttl_hours * 3600
+        try:
+            async with self.redis.pipeline() as pipe:
+                pipe.set(key, json.dumps(entry.to_dict()), ex=ttl_seconds)
+                pipe.sadd(index_key, entry.state_key)
+                await pipe.execute()
+        except (AttributeError, TypeError):
+            # Fallback for FakeRedis or non-pipeline clients
+            await self.redis.set(key, json.dumps(entry.to_dict()), ex=ttl_seconds)
+            await self.redis.sadd(index_key, entry.state_key)
 
     async def _remove_keys(self, user_id: str, state_keys: list[str]) -> None:
         """Remove state entries and their index entries using pipeline for batch deletes."""

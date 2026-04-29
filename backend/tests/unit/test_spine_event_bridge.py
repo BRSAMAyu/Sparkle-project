@@ -19,6 +19,9 @@ def test_spine_event_bridge_builds_signals_for_h01_events() -> None:
         "calendar.event.created": {"user_id": "u1", "event_id": "c1", "title": "midterm exam"},
         "calendar.event.updated": {"user_id": "u1", "event_id": "c1", "changes": {"title": "final exam"}},
         "calendar.event.deleted": {"user_id": "u1", "event_id": "c1"},
+        "notification.fatigue_detected": {"user_id": "u1", "consecutive_dismissals": 3},
+        "shop.purchase_completed": {"user_id": "u1", "item_name": "theme", "amount": 100},
+        "achievement.unlocked": {"user_id": "u1", "achievement_name": "first_task", "rarity": "common"},
     }
 
     assert set(samples) == SPINE_EVENT_TYPES

@@ -7,10 +7,11 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 推进中
+## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中, Phase 3.5 审计 P0+P1 全部修复
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
+> **Aurora 全系统审计**: Phase 3.5 — 3 P0 + 3 P1 + 5 P2 (见下方 Phase 3.5 节)
 
 ---
 
@@ -143,12 +144,46 @@
 
 ---
 
+## Phase 3.5: Aurora 全面审计修复 (🔴 2026-04-29)
+
+> **来源**: Aurora 全系统深度审计 (Claude Opus)
+> **范围**: 18+ 文件, 15K+ 行 Aurora 代码
+> **发现**: 3 P0 + 3 P1 + 5 P2
+
+### P0 Critical — 数据完整性
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| AUDIT-P0-1: types.py 13个重复 dataclass 定义 | ✅ 完成 | Claude | 删除13个重复定义+StateEntry损坏块, 1692→1197行, 保留from_dict/relevance_for_nodes等扩展方法; 2067 tests passed |
+| AUDIT-P0-2: causal_trace_store 静默数据丢失 | ✅ 完成 | Claude | 5个append方法加logger.warning; 移除重复store_directive_by_id; except Exception: pass→logger.warning; 2067 tests passed |
+| AUDIT-P0-3: spine_orchestrator StateRegister 竞态条件 | ✅ 完成 | Claude | _save_state 改用 Redis pipeline 原子操作 (set+sadd), 加 FakeRedis fallback; 2017 tests passed |
+
+### P1 High — 功能缺陷
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| AUDIT-P1-4: 3个事件管道路由缺失 | ✅ 完成 | Claude | task_event_consumer dispatch set 增加 achievement.unlocked/shop.purchase_completed/notification.fatigue_detected; test_spine_event_bridge 同步更新; 24 tests passed |
+| AUDIT-P1-5: L0RuleEngine 未接入生产代码 | ✅ 完成 | Claude | routing_engine._get_spine_active_states 内调用 _apply_l0_rules → L0RuleEngine.evaluate_deadline_pressure; 从 Redis 缓存读取日历上下文; 23 L0/L1 tests passed |
+| AUDIT-P1-6: spine_quality_guard 仅在replay路径调用 | ✅ 完成 | Claude | _run_signal_pipeline 在 trace 保存前调用 _run_live_quality_guard; 检查 signal_actionability + directive_compliance; 降级记录 Prometheus counter; 1995 tests passed |
+
+### P2 Medium — 架构/技术债务
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| AUDIT-P2-7: AuroraEngine 与 Spine 两套独立系统 | ⬜ 待修 | — | AuroraEngine (shadow mode) 与 SpineOrchestrator 并行运行, 无集成点; 需设计统一路由 |
+| AUDIT-P2-8: AuroraEnergyStore.resolve_energy_level() 死代码 | ⬜ 待修 | — | 方法已定义但从未被调用, L0-L4能量级别解析逻辑未使用 |
+| AUDIT-P2-9: 88个 AURORA_* settings 缺失于 .env.example | ⬜ 待修 | — | settings.py 中约88个Aurora配置项无对应.env.example条目 |
+| AUDIT-P2-10: Stage 37/39 kill switch 非三态模式 | ⬜ 待修 | — | 不遵循 off/shadow/live 三态, 无drill覆盖 |
+| AUDIT-P2-11: CalendarSignalBridge 存在但从未调用 | ⬜ 待修 | — | calendar_signal_bridge.py 已实现, 但生产代码无import |
+
+---
+
 ## Phase 2-7: 简要索引 (详细任务在对应阶段展开时填写)
 
 | Phase | 状态 | 开始日期 | 完成日期 |
 |-------|------|----------|----------|
-| Phase 2: Spine 深化 | 🟡 进行中 | 2026-04-29 | — |
-| Phase 3: Aurora↔Spine | ⬜ 未开始 | — | — |
+| Phase 2: Spine 深化 | ✅ 完成 | 2026-04-29 | — |
+| Phase 3: Aurora↔Spine | 🟡 推进中 | 2026-04-29 | T3.1.1 L0 rules started |
 | Phase 4: 活体验打磨 | ⬜ 未开始 | — | — |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
@@ -196,8 +231,13 @@
 | 2026-04-29 | Phase 2 | Codex Self Review | H-02 已有 `consume_aurora_decisions`, 但只用于 outcome attribution, PolicyEngine evaluate 前未读取 | ✅ 已修: on_task_completed/_run_signal_pipeline 均读取 Aurora decisions 并传入 PolicyEngine |
 | 2026-04-29 | Phase 2 | Codex Self Review | H-04 Context Receipt Bar 只有查看依据和 timeline, 用户发现资料不合适时无法即时纠偏 | ✅ 已修: 详情 sheet 增加 3 个行动 chip 并续发纠偏 prompt; 窄范围 analyzer passed, Flutter test 受既有全包编译错误阻塞 |
 | 2026-04-29 | Phase 3 | Claude+Codex | M-02 dual_core_router 不消费 Spine StateRegister, Phase 3 前置缺失 | ✅ 已修: RoutingEngine 读取 StateRegister, Router 消费 fatigue/cognitive_load/execution/knowledge 状态并进入 mode/debug/strategy; 38 tests passed |
-| 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ⬜ 待修 — 见 R3 报告 |
+| 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ✅ 均已修: D-01 连续dismiss→fatigue signal; D-02 shop.purchase_completed+achievement.unlocked→reward_engagement signal; 10 tests passed |
 | 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1**: OfflineChatMessage 模型存在但未使用, **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 | ⬜ 待修 — 见 R3 报告 |
+| 2026-04-29 | Phase 3 | Claude | T3.1.1 L0 rule-aware Aurora: deadline_pressure 自动计算 + quiet_hours 强制执行 | ✅ 已修: L0RuleEngine 新建, deadline_pressure→StateRegister, dual_core_router 消费 deadline state, quiet_hours 解析; 11 tests passed |
+| 2026-04-29 | Phase 3 | Claude | T3.1.2 L1 Light Aurora: ResponseDirective 消费 StateRegister 活跃状态调节 tone | ✅ 已修: build_response_directive 增加 active_states 参数, fatigue→low_pressure(优先), deadline→urgent, SpineOrchestrator 两处调用点传入; 6 tests passed |
+| 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P0-1**: types.py 13个重复dataclass (~500行死代码), **P0-2**: causal_trace_store 静默丢数据, **P0-3**: StateRegister 竞态条件 | ✅ 全部已修: P0-1删除509行死代码; P0-2加日志+删重复方法; P0-3 Redis pipeline原子化 |
+| 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P1-4**: 3个事件路由缺失 (achievement/shop/notification→Spine), **P1-5**: L0RuleEngine未接线, **P1-6**: quality_guard仅replay | ✅ 全部已修: P1-4路由补齐; P1-5接入routing_engine; P1-6加入live pipeline |
+| 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P2-7**: AuroraEngine/Spine 双系统, **P2-8**: energy_store死代码, **P2-9**: 88个settings缺.env, **P2-10**: Stage37/39非三态, **P2-11**: CalendarSignalBridge未调用 | ⬜ 待修 — P2级别, 非阻塞 |
 
 ---
 
