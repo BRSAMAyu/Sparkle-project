@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 1 后端核心完成 (T1.1-T1.4 backend done, T1.5 Card Protocol + Flutter 待 Phase 4)
+## 当前状态: Phase 1 后端核心完成, Phase 2 已有基础设施完备
 
 ---
 
@@ -126,7 +126,7 @@
 
 | 日期 | Phase | 审查类型 | 发现问题 | 修复状态 |
 |------|-------|----------|----------|----------|
-| — | — | — | — | — |
+| 2026-04-29 | Phase 1 | Opus Audit | outcome_recorder.py 重复方法定义, push_scheduler await sync method | ✅ 全部修复 |
 
 ---
 
@@ -134,4 +134,6 @@
 
 | 日期 | Commit | Phase | 范围 |
 |------|--------|-------|------|
-| — | — | — | — |
+| 2026-04-29 | a9ec2ac3 | Phase 1 | Breakpoints #5/#6/#7 — structured adjustments, behavior-driven push, verification loop |
+| 2026-04-29 | e1812b92 | Phase 1 | Prometheus outcome metrics + Grafana outcome dashboard |
+| 2026-04-29 | 93b72fd4 | Phase 1 | Audit fixes — dedup outcome_recorder, async record_sent |
