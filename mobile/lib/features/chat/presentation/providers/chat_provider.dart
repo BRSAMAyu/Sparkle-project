@@ -436,6 +436,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
         envelope[key] = value;
       }
     }
+    final structuredAdjustments =
+        _parseJsonMapList(metadata['structured_cognitive_adjustments']);
+    if (structuredAdjustments.isNotEmpty) {
+      envelope['structured_cognitive_adjustments'] = structuredAdjustments;
+      final uxTurn =
+          Map<String, dynamic>.from(envelope['ux_turn'] as Map? ?? const {});
+      envelope['ux_turn'] = {
+        ...uxTurn,
+        'structured_cognitive_adjustments': structuredAdjustments,
+      };
+    }
     return envelope;
   }
 
@@ -569,9 +580,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'reason': reason,
         'source': suggestion['source']?.toString() ?? 'execution_suggestion',
         'delegate_preference': suggestion['delegate_preference'],
-        'title': tone == 'detailed_guidance' ? S.chatAiExecutionSuitable : S.chatAiExecutionDirect,
-        'summary':
-            reason.isNotEmpty ? reason : S.chatExecutionDelegatable,
+        'title': tone == 'detailed_guidance'
+            ? S.chatAiExecutionSuitable
+            : S.chatAiExecutionDirect,
+        'summary': reason.isNotEmpty ? reason : S.chatExecutionDelegatable,
         'route': '${TaskRoutes.home}/$taskId/execute?origin=chat',
       });
     }
@@ -612,7 +624,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           : status == 'partial'
               ? S.chatExecutionPartialSummary
               : S.chatExecutionFailedSummary,
-      'next_action': status == 'success' ? S.chatViewResults : S.chatManualReview,
+      'next_action':
+          status == 'success' ? S.chatViewResults : S.chatManualReview,
       'affected_objects': affectedObjects,
       if (_parseJsonMap(validation['result_preview']) != null)
         'result_preview': _parseJsonMap(validation['result_preview']),
@@ -875,6 +888,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? accumulatedCollaboration;
     Map<String, dynamic>? accumulatedUxEnvelope;
     final accumulatedRawMetadata = <String, dynamic>{};
+    List<Map<String, dynamic>>? accumulatedStructuredAdjustments;
     Map<String, dynamic>? accumulatedOrchestrationTrace;
     Map<String, dynamic>? accumulatedModeSuggestion;
     Map<String, dynamic>? accumulatedRoutingPreview;
@@ -941,6 +955,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
         return;
       }
       upsertSourceSummaryCitations(citations);
+    }
+
+    void captureStructuredAdjustments(Map<String, dynamic>? metadata) {
+      if (metadata == null) {
+        return;
+      }
+      final adjustments =
+          _parseJsonMapList(metadata['structured_cognitive_adjustments']);
+      if (adjustments.isEmpty) {
+        return;
+      }
+      accumulatedStructuredAdjustments = adjustments;
+      accumulatedRawMetadata['structured_cognitive_adjustments'] = adjustments;
     }
 
     void flushPending({bool immediate = false}) {
@@ -1059,6 +1086,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           uxEnvelope: accumulatedUxEnvelope,
           rawMetadata:
               accumulatedRawMetadata.isNotEmpty ? accumulatedRawMetadata : null,
+          structuredCognitiveAdjustments:
+              accumulatedStructuredAdjustments ?? const [],
         );
 
         state = state.copyWith(
@@ -1083,7 +1112,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
             state.transparencyPresentationState.copyWith(
           isExpanded: false,
           isDismissed: false,
-          lastCompletedLabel: phase == ChatRunPhase.completed ? S.chatCompleted : null,
+          lastCompletedLabel:
+              phase == ChatRunPhase.completed ? S.chatCompleted : null,
           clearLastCompletedLabel: phase != ChatRunPhase.completed,
         ),
         error: errorMessage,
@@ -1207,6 +1237,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
             captureCitationMetadata(metadata['citations']);
+            captureStructuredAdjustments(metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1400,6 +1431,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
             captureCitationMetadata(metadata['citations']);
+            captureStructuredAdjustments(metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1411,8 +1443,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Extract dual_core_mode from ux_turn (lives in full_text event metadata)
           final uxTurnMap =
               accumulatedUxEnvelope?['ux_turn'] as Map<String, dynamic>?;
-          final newDualCoreMode =
-              uxTurnMap?['dual_core_mode'] as String?;
+          final newDualCoreMode = uxTurnMap?['dual_core_mode'] as String?;
           if (newDualCoreMode != null) {
             state = state.copyWith(dualCoreMode: newDualCoreMode);
           }
@@ -1606,6 +1637,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           accumulatedMeta.addAll(event.meta);
           accumulatedRawMetadata.addAll(event.meta);
           captureCitationMetadata(event.meta['citations']);
+          captureStructuredAdjustments(event.meta);
           flushPending();
         } else if (event is ReasoningStepEvent) {
           // 🆕 推理步骤事件 - Chain of Thought Visualization

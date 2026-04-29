@@ -32,6 +32,25 @@ Map<String, dynamic>? _decodeMapOrString(dynamic value) {
   return null;
 }
 
+List<Map<String, dynamic>>? _decodeMapListOrString(dynamic value) {
+  dynamic decoded = value;
+  if (value is String && value.isNotEmpty) {
+    try {
+      decoded = json.decode(value);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (decoded is List) {
+    final items = decoded
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    return items.isEmpty ? null : items;
+  }
+  return null;
+}
+
 Map<String, dynamic>? _normalizeMetadata(dynamic raw) {
   final metadata = _decodeMapOrString(raw);
   if (metadata == null) {
@@ -42,6 +61,13 @@ Map<String, dynamic>? _normalizeMetadata(dynamic raw) {
   final directUserState = _decodeUserStatePayload(normalized['user_state_v1']);
   if (directUserState != null) {
     normalized['user_state_v1'] = directUserState;
+  }
+
+  final structuredAdjustments = _decodeMapListOrString(
+    normalized['structured_cognitive_adjustments'],
+  );
+  if (structuredAdjustments != null) {
+    normalized['structured_cognitive_adjustments'] = structuredAdjustments;
   }
 
   final profileContext = _decodeMapOrString(normalized['profile_context']);
@@ -784,7 +810,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'nack':
         final messageId = data['message_id'] as String?;
         final errorCode = data['error_code'] as String? ?? 'unknown';
-        final errorMessage = data['error_message'] as String? ?? S.chatWsUnknownError;
+        final errorMessage =
+            data['error_message'] as String? ?? S.chatWsUnknownError;
         final retryAfterMs = data['retry_after_ms'] as int?;
         if (messageId != null) {
           return NackEvent(
