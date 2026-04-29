@@ -34,8 +34,10 @@ type Client struct {
 	config *config.Config
 	connMu sync.RWMutex
 
-	reconnectMu sync.Mutex
-	dialOptions []grpc.DialOption
+	reconnectMu      sync.Mutex
+	lastReconnectAt  time.Time
+	minReconnectGap  time.Duration // R5-G07: minimum gap between reconnect attempts
+	dialOptions      []grpc.DialOption
 
 	// Health checker (optional)
 	healthChecker *AgentHealthChecker
@@ -129,7 +131,6 @@ func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 			Timeout:             10 * time.Second,
 			PermitWithoutStream: true,
 		}),
-		grpc.WithBlock(),
 	}, nil
 }
 
@@ -152,6 +153,16 @@ func (c *Client) reconnect(ctx context.Context) error {
 
 	c.reconnectMu.Lock()
 	defer c.reconnectMu.Unlock()
+
+	// R5-G07: Rate-limit reconnect attempts (minimum 2s between attempts)
+	minGap := c.minReconnectGap
+	if minGap == 0 {
+		minGap = 2 * time.Second
+	}
+	if elapsed := time.Since(c.lastReconnectAt); elapsed < minGap {
+		time.Sleep(minGap - elapsed)
+	}
+	c.lastReconnectAt = time.Now()
 
 	if conn := c.currentConn(); conn != nil {
 		state := conn.GetState()

@@ -1400,6 +1400,13 @@ class EventBus:
 
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")
+                # R5-P2-20: Attempt Redis reconnection on connection errors
+                if "ConnectionError" in type(e).__name__ or "connection" in str(e).lower():
+                    try:
+                        await self.connect()
+                        logger.info("EventBus consumer reconnected to Redis")
+                    except Exception as rc_err:
+                        logger.warning(f"EventBus reconnection failed: {rc_err}")
                 await asyncio.sleep(1)  # Backoff
 
     async def get_dlq_stats(self, stream: str = "sparkle_events") -> dict[str, Any]:

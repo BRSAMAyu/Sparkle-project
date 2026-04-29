@@ -583,8 +583,8 @@ class DualCoreRouter:
                     if strong_metacognition_execution_bias
                     else "目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。"
                 ),
-                cognitive_adjustments=cognitive_adjustments[:2],
-                execution_constraints=execution_constraints[:3],
+                cognitive_adjustments=cognitive_adjustments[:5],
+                execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
             )
@@ -610,8 +610,8 @@ class DualCoreRouter:
                     procrastination_pattern=procrastination_pattern,
                     cognitive_mode_suggested=cognitive_mode_suggested,
                 ),
-                cognitive_adjustments=cognitive_adjustments[:3],
-                execution_constraints=execution_constraints[:2],
+                cognitive_adjustments=cognitive_adjustments[:5],
+                execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
             )
@@ -626,8 +626,8 @@ class DualCoreRouter:
         return DualCoreDecision(
             mode="balanced",
             reason=balanced_reason,
-            cognitive_adjustments=cognitive_adjustments[:2],
-            execution_constraints=execution_constraints[:3],
+            cognitive_adjustments=cognitive_adjustments[:5],
+            execution_constraints=execution_constraints[:5],
             routing_debug=routing_debug,
             strategy_adjustments=strategy_adjustments[:5],
         )
