@@ -81,6 +81,7 @@ class ChipSelectedTelemetryRequest(BaseModel):
     conversation_id: str | None = None
     session_id: str | None = None
     group_id: str = ""
+    freeform_text: str = ""
 
 
 # ── Existing endpoints ─────────────────────────────────────────────────────────
@@ -339,9 +340,11 @@ async def record_chip_selected(
     and disconfirming selections are especially important signal sources.
     """
     redis = cache_service.redis
+    import json as _json
+    import time
+    correction_result = None
+
     if redis is not None:
-        import json
-        import time
         telemetry_key = f"aurora:chip_telemetry:{current_user.id}"
         record = {
             "chip_id": payload.chip_id,
@@ -354,16 +357,37 @@ async def record_chip_selected(
             "conversation_id": payload.conversation_id,
             "session_id": payload.session_id,
             "group_id": payload.group_id,
+            "freeform_text": payload.freeform_text,
             "ts": time.time(),
         }
         try:
-            await redis.lpush(telemetry_key, json.dumps(record, ensure_ascii=False))
-            await redis.ltrim(telemetry_key, 0, 199)   # keep last 200 selections
+            await redis.lpush(telemetry_key, _json.dumps(record, ensure_ascii=False))
+            await redis.ltrim(telemetry_key, 0, 199)
             await redis.expire(telemetry_key, 7 * 24 * 3600)
         except Exception:
             pass
 
-    return {"recorded": True, "semantic_value": payload.semantic_value}
+        # T3.3.2-T3.3.3: Correction feedback loop
+        if payload.is_disconfirming or payload.is_freeform:
+            try:
+                from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
+                processor = CorrectionFeedbackProcessor(redis)
+                correction_result = await processor.process(
+                    user_id=str(current_user.id),
+                    semantic_value=payload.semantic_value,
+                    is_disconfirming=payload.is_disconfirming,
+                    is_freeform=payload.is_freeform,
+                    freeform_text=payload.freeform_text,
+                    telemetry_id=payload.telemetry_id,
+                    context_source=payload.context_source,
+                )
+            except Exception:
+                logger.exception("Correction feedback processing failed")
+
+    response = {"recorded": True, "semantic_value": payload.semantic_value}
+    if correction_result is not None:
+        response["correction_result"] = correction_result.to_dict()
+    return response
 
 
 # ── Signal-to-Action Spine: Receipt endpoints ──────────────────────────────────

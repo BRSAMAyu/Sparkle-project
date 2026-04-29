@@ -670,6 +670,21 @@ class ResponseBuilderMixin:
                     response_metadata["spine_goal_arbitration"] = json.dumps(
                         _goal_arb, ensure_ascii=False
                     )
+                # T3.3.1: Inject predicted reply options into response metadata
+                try:
+                    from app.aurora.runtime_v1.reply_option_injector import ReplyOptionInjector
+                    _aurora_band = response_metadata.get("aurora_band_status", "sensing")
+                    _aurora_energy = response_metadata.get("aurora_energy_level", "L1")
+                    _injector = ReplyOptionInjector()
+                    _reply_groups = _injector.generate(
+                        band_status=_aurora_band,
+                        energy_level=_aurora_energy,
+                    )
+                    _injector.inject_into_metadata(
+                        response_metadata, _reply_groups, _aurora_band,
+                    )
+                except Exception:
+                    pass
             except Exception:
                 pass
 

@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1 全部完成, T3.2 合流完成), Phase 3.5 审计 P0+P1 全部修复
+## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1 全部完成, T3.2 合流完成, T3.3 预测回答选项闭环完成), Phase 3.5 审计 P0+P1 全部修复
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
@@ -183,7 +183,7 @@
 | Phase | 状态 | 开始日期 | 完成日期 |
 |-------|------|----------|----------|
 | Phase 2: Spine 深化 | ✅ 完成 | 2026-04-29 | — |
-| Phase 3: Aurora↔Spine | 🟡 推进中 | 2026-04-29 | T3.1.1-T3.1.7 Aurora 能级全部完成 |
+| Phase 3: Aurora↔Spine | 🟡 推进中 | 2026-04-29 | T3.1→T3.3 全部完成, T3.4 状态带待做 |
 | Phase 4: 活体验打磨 | ⬜ 未开始 | — | — |
 | Phase 5: P4 平台 | ⬜ 未开始 | — | — |
 | Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
@@ -241,6 +241,7 @@
 | 2026-04-29 | Phase 3 | Claude | T3.2.1-T3.2.6 Aurora↔Spine 合流 | ✅ 完成: AuroraInputAssembler (消费 StatePacket+PolicyDecisions+Outcomes+Corrections); AuroraOutputArbitrator (proposals 通过仲裁, 不直接生效, 5个 override reasons); AuroraSelfCorrector (承认误判通过 Spine 修正); AuroraSelfModelAccessor (假设/开放问题/误判/策略信心); SpineOrchestrator 接入全部组件; 33 production-grade tests passed, 130 Aurora tests 无回归 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P0-1**: types.py 13个重复dataclass (~500行死代码), **P0-2**: causal_trace_store 静默丢数据, **P0-3**: StateRegister 竞态条件 | ✅ 全部已修: P0-1删除509行死代码; P0-2加日志+删重复方法; P0-3 Redis pipeline原子化 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P1-4**: 3个事件路由缺失 (achievement/shop/notification→Spine), **P1-5**: L0RuleEngine未接线, **P1-6**: quality_guard仅replay | ✅ 全部已修: P1-4路由补齐; P1-5接入routing_engine; P1-6加入live pipeline |
+| 2026-04-29 | Phase 3 | Claude | T3.3.1-T3.3.3 Predicted Reply Options & 纠正反馈闭环 | ✅ 完成: ReplyOptionInjector 新建 (6 band_status 选项生成 + metadata 注入); CorrectionFeedbackProcessor 新建 (disconfirmation→confidence-0.15→StateRegister+self_model 更新, 20 semantic→state_key 映射); StateRegister.lower_confidence() 新增; response_builder 注入 predicted_reply_options; /telemetry/chip-selected 接入纠正反馈; spine_orchestrator.on_user_correction 接入; 33 production-grade tests passed, 171 Aurora tests 无回归 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P2-7**: AuroraEngine/Spine 双系统, **P2-8**: energy_store死代码, **P2-9**: 88个settings缺.env, **P2-10**: Stage37/39非三态, **P2-11**: CalendarSignalBridge未调用 | ⬜ 待修 — P2级别, 非阻塞 |
 
 ### 测试质量升级 (🔴 横切任务)

@@ -53,6 +53,7 @@ from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider, CostController
+from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.aurora_spine_confluence import (
     AuroraInputAssembler,
     AuroraOutputArbitrator,
@@ -139,6 +140,7 @@ class SpineOrchestrator:
         self.aurora_arbitrator = AuroraOutputArbitrator()
         self.aurora_self_corrector = AuroraSelfCorrector(redis_client)
         self.aurora_self_model_accessor = AuroraSelfModelAccessor(redis_client)
+        self.correction_feedback = CorrectionFeedbackProcessor(redis_client)
         self.skill_extraction = SkillExtractionService()
         self.goal_type_adapter = GoalTypeAdapter()
         self.material_signal_detector = MaterialSignalDetector(redis_client)
@@ -3288,6 +3290,18 @@ class SpineOrchestrator:
                 source="user_receipt_correction",
             )
 
+
+            # T3.3.3: Feed correction back through Aurora feedback processor
+            try:
+                await self.correction_feedback.process(
+                    user_id=user_id,
+                    semantic_value=correction_type or "user_correction",
+                    is_disconfirming=True,
+                    freeform_text=f"{original_claim} → {corrected_understanding}",
+                    telemetry_id=trace_id or "",
+                )
+            except Exception:
+                pass
 
             # Store correction event for Aurora
             correction_event = {

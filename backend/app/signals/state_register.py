@@ -257,6 +257,36 @@ class StateRegister:
         except (ValueError, TypeError):
             return False
 
+    async def lower_confidence(
+        self,
+        user_id: str,
+        state_key: str,
+        amount: float = 0.15,
+        reason: str = "",
+    ) -> StateEntry | None:
+        """Lower the confidence of a state entry due to user disconfirmation.
+
+        Confidence floor is 0.05 — it never drops to zero from lowering alone.
+        Counter-evidence is recorded for audit.
+        """
+        entry = await self.get_state(user_id, state_key)
+        if entry is None:
+            return None
+
+        entry.confidence = round(max(0.05, entry.confidence - amount), 4)
+        evidence_str = f"[{datetime.now(UTC).isoformat()}] confidence lowered by {amount:.2f}: {reason}"
+        entry.counter_evidence = (
+            entry.counter_evidence + [evidence_str]
+        )[-_MAX_EVIDENCE:]
+        entry.last_updated_at = datetime.now(UTC).isoformat()
+        await self._save_state(user_id, entry)
+
+        logger.info(
+            "StateRegister: lower_confidence user={} key={} new_conf={:.2f} amount={:.2f}",
+            user_id, state_key, entry.confidence, amount,
+        )
+        return entry
+
     async def check_retractions(
         self,
         user_id: str,
