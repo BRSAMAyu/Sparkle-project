@@ -16,20 +16,17 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
 from app.models.user import User
 from app.services.personalization import get_personalization_engine
 from app.services.push_service import PushService
-from app.signals.recall_opportunity import RecallOpportunityDetector
 from app.signals.recall_notification import RecallNotificationBuilder
-
+from app.signals.recall_opportunity import RecallOpportunityDetector
 
 _RECALL_QUEUE_PREFIX = "push_scheduler:recall_queue:"
 _MAX_QUEUE_SIZE = 10
@@ -138,8 +135,6 @@ class PushScheduler:
                 if not raw_triggers:
                     continue
 
-                # REVIEW(2026-04-29): uuid.UUID(user_id) can raise ValueError on malformed key.
-                # Wrap in try-except to skip bad keys instead of crashing the entire queue loop.
                 try:
                     user = await self.db.get(User, uuid.UUID(user_id))
                 except ValueError:

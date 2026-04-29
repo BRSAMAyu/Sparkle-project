@@ -20,7 +20,6 @@ from app.signals.types import (
     _uid,
 )
 
-
 # ── 归因规则 ─────────────────────────────────────────────────────────
 # 基于 expected_outcome 和 actual_outcome 字段的固定规则归因。
 
@@ -225,19 +224,12 @@ class OutcomeRecorder:
                 rules.get("next_policy"),
             )
 
-        # REVIEW(2026-04-29): 死代码 — 上面的 harmful/needs_confirmation 检查 (lines 189-206)
-        # 已经覆盖了所有匹配路径，以下代码块永远不会执行。删除即可。
-        # See: docs/product/SPARKLE_ROADMAP_v3_CODEX_HANDOFF_2026-04-29.md §2.1
-
         return "inconclusive", 0.3, "unexpected_outcome_pattern", None
 
     @staticmethod
     def _conditions_met(conditions: dict[str, Any], actual: dict[str, Any]) -> bool:
         """检查 actual 是否满足所有 conditions。"""
-        for key, expected_value in conditions.items():
-            if actual.get(key) != expected_value:
-                return False
-        return True
+        return all(actual.get(key) == expected_value for key, expected_value in conditions.items())
 
     async def _write_policy_effect(self, record: OutcomeRecord) -> None:
         """Write a PolicyEffectLedger entry from an outcome record."""

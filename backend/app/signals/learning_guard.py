@@ -16,11 +16,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from loguru import logger
-
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.types import OutcomeRecord
-
 
 # 学习准入阈值
 _EFFECTIVE_CONFIDENCE_THRESHOLD = 0.7
@@ -52,9 +49,6 @@ class LearningGuard:
 
         if record.attribution == "insufficient":
             return False  # Don't learn from insufficient — trigger downgrade check
-
-        # REVIEW(2026-04-29): Removed redundant check for inconclusive/needs_confirmation.
-        # The final `return False` below already covers all remaining cases.
 
         return False
 

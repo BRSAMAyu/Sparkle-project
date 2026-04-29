@@ -34,16 +34,43 @@ def _make_record(**overrides) -> OutcomeRecord:
     return OutcomeRecord(**defaults)
 
 
+class _MemoryRedis:
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
+        self.lists: dict[str, list[str]] = {}
+
+    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+        self.values[key] = value
+
+    async def get(self, key: str) -> str | None:
+        return self.values.get(key)
+
+    async def lpush(self, key: str, value: str) -> None:
+        self.lists.setdefault(key, []).insert(0, value)
+
+    async def ltrim(self, key: str, start: int, end: int) -> None:
+        values = self.lists.get(key, [])
+        self.lists[key] = values[start : end + 1]
+
+    async def expire(self, key: str, seconds: int) -> None:
+        return None
+
+    async def lrange(self, key: str, start: int, end: int) -> list[str]:
+        values = self.lists.get(key, [])
+        if end == -1:
+            return values[start:]
+        return values[start : end + 1]
+
+
 # ── OutcomeTracker tests ──────────────────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_register_expected_stores_pending() -> None:
-    redis = AsyncMock()
+    redis = MagicMock()
     redis.set = AsyncMock()
-    redis.lpush = AsyncMock()
-    redis.ltrim = AsyncMock()
-    redis.expire = AsyncMock()
+    redis.pipeline.return_value = pipe = MagicMock()
+    pipe.execute = AsyncMock(return_value=[1, 1, 1])
 
     from app.signals.outcome_tracker import OutcomeTracker
     tracker = OutcomeTracker(redis)
@@ -58,6 +85,10 @@ async def test_register_expected_stores_pending() -> None:
     )
     assert outcome_id.startswith("po")
     redis.set.assert_called_once()
+    pipe.lpush.assert_called_once_with("spine:pending_outcomes:user:u1", outcome_id)
+    pipe.ltrim.assert_called_once_with("spine:pending_outcomes:user:u1", 0, 49)
+    pipe.expire.assert_called_once_with("spine:pending_outcomes:user:u1", 24 * 3600)
+    pipe.execute.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -112,6 +143,55 @@ async def test_record_actual_returns_none_if_not_found() -> None:
         actual_outcome={"completed": True},
     )
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_verify_pending_marks_unresolved_as_timeout() -> None:
+    from app.signals.outcome_tracker import OutcomeTracker
+
+    pending = {
+        "outcome_id": "po_timeout",
+        "user_id": "u1",
+        "directive_type": "push_nudge",
+        "trace_id": "trace_test_001",
+        "expected_outcome": "user_response",
+        "context": {"reason": "task_not_started"},
+        "registered_at": "2026-01-01T00:00:00Z",
+        "verification_window_hours": 48,
+        "resolved": False,
+    }
+    redis = AsyncMock()
+    redis.lrange = AsyncMock(return_value=[b"po_timeout"])
+    redis.get = AsyncMock(return_value=json.dumps(pending))
+
+    tracker = OutcomeTracker(redis)
+    with patch.object(tracker, "record_actual", new_callable=AsyncMock) as mock_record:
+        mock_record.return_value = _make_record(attribution="inconclusive", attribution_confidence=0.3)
+        resolved = await tracker.verify_pending("u1")
+
+    assert resolved == [mock_record.return_value]
+    mock_record.assert_awaited_once_with(
+        pending_outcome_id="po_timeout",
+        actual_outcome={"timeout": True, "no_observable_change": True},
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_pending_count_counts_only_unresolved() -> None:
+    from app.signals.outcome_tracker import OutcomeTracker
+
+    unresolved = {"resolved": False}
+    resolved = {"resolved": True}
+    redis = AsyncMock()
+    redis.lrange = AsyncMock(return_value=["po_open", "po_done", "po_missing"])
+    redis.get = AsyncMock(side_effect=[
+        json.dumps(unresolved),
+        json.dumps(resolved),
+        None,
+    ])
+
+    tracker = OutcomeTracker(redis)
+    assert await tracker.get_pending_count("u1") == 1
 
 
 # ── LearningGuard tests ──────────────────────────────────────────
@@ -199,6 +279,21 @@ def test_guard_verdict_inconclusive_skips() -> None:
     assert verdict["action"] == "skip"
 
 
+@pytest.mark.asyncio
+async def test_check_insufficient_streak_true_at_limit() -> None:
+    from app.signals.learning_guard import LearningGuard
+
+    guard = LearningGuard(AsyncMock())
+    with patch(
+        "app.signals.learning_guard.OutcomeRecorder.get_insufficient_count_for_policy",
+        new_callable=AsyncMock,
+    ) as mock_count:
+        mock_count.return_value = 3
+        assert await guard.check_insufficient_streak("u1", "task_policy") is True
+
+    mock_count.assert_awaited_once_with("u1", "task_policy")
+
+
 # ── OutcomeRecorder attribution tests ─────────────────────────────
 
 
@@ -246,3 +341,45 @@ def test_attribution_inconclusive_unknown_outcome_type() -> None:
         {"some_data": True},
     )
     assert attr == "inconclusive"
+
+
+@pytest.mark.asyncio
+async def test_policy_effect_helpers_round_trip_insufficient_entries() -> None:
+    from app.signals.outcome_recorder import OutcomeRecorder
+
+    redis = _MemoryRedis()
+    redis.values["spine:trace:trace_test_001"] = json.dumps({"trace_id": "trace_test_001"})
+    redis.lists["spine:user_traces:u1"] = ["trace_test_001"]
+    recorder = OutcomeRecorder(redis)
+
+    await recorder._write_policy_effect(
+        _make_record(
+            attribution="insufficient",
+            attribution_confidence=0.6,
+            actual_outcome={"user_feedback": "太难了"},
+            new_hypothesis="task_completed_but_intervention_may_be_insufficient",
+        )
+    )
+
+    effects = await recorder.get_recent_policy_effects("u1")
+    assert len(effects) == 1
+    assert effects[0].policy_key == "task_not_started"
+    assert effects[0].attribution == "insufficient"
+    assert effects[0].user_feedback_signal == "too_hard"
+    assert await recorder.get_insufficient_count_for_policy("u1", "task_not_started") == 1
+
+
+def test_build_self_correction_receipt_for_insufficient_outcome() -> None:
+    from app.signals.outcome_recorder import OutcomeRecorder
+
+    receipt = OutcomeRecorder.build_self_correction_receipt(
+        _make_record(
+            attribution="insufficient",
+            actual_outcome={"user_feedback": "太难了"},
+            new_hypothesis="task_completed_but_intervention_may_be_insufficient",
+        )
+    )
+
+    assert receipt is not None
+    assert receipt["type"] == "divine_moment_self_correction"
+    assert receipt["new_action"] == "diagnostic_check"

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.services.push_scheduler import _RECALL_QUEUE_PREFIX, PushScheduler
 from app.signals.recall_opportunity import RecallOpportunityDetector, RecallTrigger
-from app.services.push_scheduler import PushScheduler, _RECALL_QUEUE_PREFIX
 
 
 def test_undigested_material_trigger() -> None:
@@ -141,8 +141,8 @@ async def test_process_recall_queue_empty() -> None:
     redis = AsyncMock()
 
     async def _empty_iter(**kwargs):
-        return
-        yield  # noqa: unreachable — makes this an async generator
+        if False:
+            yield None
 
     redis.scan_iter = _empty_iter
     db = AsyncMock()
@@ -151,6 +151,27 @@ async def test_process_recall_queue_empty() -> None:
     stats = await scheduler.process_recall_queue()
     assert stats["processed"] == 0
     assert stats["sent"] == 0
+
+
+@pytest.mark.asyncio
+async def test_process_recall_queue_skips_invalid_user_id_key() -> None:
+    redis = AsyncMock()
+
+    async def _keys(**kwargs):
+        yield f"{_RECALL_QUEUE_PREFIX}not-a-uuid"
+
+    redis.scan_iter = _keys
+    redis.lrange = AsyncMock(return_value=[json.dumps({"trigger_type": "task_not_started"})])
+    redis.delete = AsyncMock()
+
+    db = AsyncMock()
+    scheduler = PushScheduler(db, redis=redis)
+
+    stats = await scheduler.process_recall_queue()
+
+    assert stats == {"processed": 0, "sent": 0, "skipped_cooldown": 0, "skipped_policy": 0}
+    db.get.assert_not_awaited()
+    redis.delete.assert_awaited_once_with(f"{_RECALL_QUEUE_PREFIX}not-a-uuid")
 
 
 @pytest.mark.asyncio

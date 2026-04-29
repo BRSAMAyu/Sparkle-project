@@ -22,7 +22,6 @@ from loguru import logger
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.types import CausalTrace, OutcomeRecord, _uid
 
-
 _PENDING_KEY = "spine:pending_outcomes:"
 _TRACE_KEY_PREFIX = "spine:trace:"
 _DEFAULT_TTL_HOURS = 48
@@ -73,13 +72,13 @@ class OutcomeTracker:
         ttl_seconds = verification_window_hours * 3600
         await self.redis.set(key, json.dumps(pending, ensure_ascii=False), ex=ttl_seconds)
 
-        # Also index by user for quick lookup
-        # REVIEW(2026-04-29): lpush+ltrim+expire should be in a pipeline for atomicity.
-        # See: push_scheduler.py _enqueue_trigger() for the correct pattern.
+        # Also index by user for quick lookup.
         user_index_key = f"{_PENDING_KEY}user:{user_id}"
-        await self.redis.lpush(user_index_key, outcome_id)
-        await self.redis.ltrim(user_index_key, 0, 49)
-        await self.redis.expire(user_index_key, ttl_seconds)
+        pipe = self.redis.pipeline()
+        pipe.lpush(user_index_key, outcome_id)
+        pipe.ltrim(user_index_key, 0, 49)
+        pipe.expire(user_index_key, ttl_seconds)
+        await pipe.execute()
 
         logger.debug(
             f"Registered expected outcome {outcome_id} "
@@ -187,5 +186,5 @@ class OutcomeTracker:
 
 
 def _now_iso() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).isoformat()
+    from datetime import UTC, datetime
+    return datetime.now(UTC).isoformat()
