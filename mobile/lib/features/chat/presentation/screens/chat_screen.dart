@@ -2092,12 +2092,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _reasoningModeLabel(String mode) {
     switch (mode) {
       case 'fast':
-        return '敏捷';
+        return context.l10n.chatReasoningFast;
       case 'deep':
-        return '深思';
+        return context.l10n.chatReasoningDeep;
       case 'balanced':
       default:
-        return '均衡';
+        return context.l10n.chatReasoningBalanced;
     }
   }
 
@@ -2152,7 +2152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       case 'processing':
         return context.l10n.chatProcessing;
       case 'failed':
-        return '失败';
+        return context.l10n.chatAttachmentFailed;
       default:
         return status.trim();
     }
@@ -2579,7 +2579,7 @@ class _InlineChatHistoryError extends StatelessWidget {
                 if (onRetry != null) ...[
                   const SizedBox(height: DS.md),
                   SparkleButton(
-                    label: '重试',
+                    label: context.l10n.chatRetryGeneric,
                     icon: const Icon(Icons.refresh_rounded),
                     onPressed: onRetry,
                     variant: ButtonVariant.secondary,

@@ -37843,6 +37843,36 @@ abstract class AppLocalizations {
   /// **'已就绪'**
   String get chatReady;
 
+  /// No description provided for @chatReasoningFast.
+  ///
+  /// In zh, this message translates to:
+  /// **'敏捷'**
+  String get chatReasoningFast;
+
+  /// No description provided for @chatReasoningDeep.
+  ///
+  /// In zh, this message translates to:
+  /// **'深思'**
+  String get chatReasoningDeep;
+
+  /// No description provided for @chatReasoningBalanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'均衡'**
+  String get chatReasoningBalanced;
+
+  /// No description provided for @chatAttachmentFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败'**
+  String get chatAttachmentFailed;
+
+  /// No description provided for @chatRetryGeneric.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get chatRetryGeneric;
+
   /// No description provided for @chatRetryDailyOverview.
   ///
   /// In zh, this message translates to:

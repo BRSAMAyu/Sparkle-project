@@ -20756,6 +20756,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatReady => '已就绪';
 
   @override
+  String get chatReasoningFast => '敏捷';
+
+  @override
+  String get chatReasoningDeep => '深思';
+
+  @override
+  String get chatReasoningBalanced => '均衡';
+
+  @override
+  String get chatAttachmentFailed => '失败';
+
+  @override
+  String get chatRetryGeneric => '重试';
+
+  @override
   String get chatRetryDailyOverview => '重试今日概览';
 
   @override

@@ -21651,6 +21651,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatReady => 'Ready';
 
   @override
+  String get chatReasoningFast => 'Fast';
+
+  @override
+  String get chatReasoningDeep => 'Deep';
+
+  @override
+  String get chatReasoningBalanced => 'Balanced';
+
+  @override
+  String get chatAttachmentFailed => 'Failed';
+
+  @override
+  String get chatRetryGeneric => 'Retry';
+
+  @override
   String get chatRetryDailyOverview => 'Retry today\'s overview';
 
   @override
