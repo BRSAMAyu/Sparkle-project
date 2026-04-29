@@ -12,7 +12,6 @@ import (
 )
 
 func TestQuotaService_ReserveRequest(t *testing.T) {
-	// Setup miniredis
 	s := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: s.Addr(),
@@ -24,7 +23,6 @@ func TestQuotaService_ReserveRequest(t *testing.T) {
 	uid := "user_123"
 
 	t.Run("Reserve with sufficient quota", func(t *testing.T) {
-		// Set initial quota
 		s.Set(fmt.Sprintf("user:quota:%s", uid), "10")
 
 		reqID := "req_1"
@@ -32,11 +30,9 @@ func TestQuotaService_ReserveRequest(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(9), remaining)
 
-		// Verify quota decremented
 		val, _ := s.Get(fmt.Sprintf("user:quota:%s", uid))
 		assert.Equal(t, "9", val)
 
-		// Verify request key created
 		exists := s.Exists(fmt.Sprintf("quota:request:%s:%s", uid, reqID))
 		assert.True(t, exists)
 
@@ -56,14 +52,12 @@ func TestQuotaService_ReserveRequest(t *testing.T) {
 		s.Set(fmt.Sprintf("user:quota:%s", uid), "10")
 		reqID := "req_duplicate"
 
-		// First call
 		_, err := svc.ReserveRequest(ctx, uid, reqID, time.Minute)
 		assert.NoError(t, err)
 
-		// Second call with same ID should not decrement
 		remaining, err := svc.ReserveRequest(ctx, uid, reqID, time.Minute)
 		assert.NoError(t, err)
-		assert.Equal(t, int64(9), remaining) // Should still be 9, not 8
+		assert.Equal(t, int64(9), remaining)
 	})
 
 	t.Run("Refund reservation is idempotent", func(t *testing.T) {
@@ -81,6 +75,66 @@ func TestQuotaService_ReserveRequest(t *testing.T) {
 		remaining, err = svc.RefundReservation(ctx, uid, reqID, time.Minute)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(10), remaining)
+	})
+
+	t.Run("Empty requestID returns error", func(t *testing.T) {
+		_, err := svc.ReserveRequest(ctx, uid, "", time.Minute)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "request_id is required")
+	})
+
+	t.Run("Reserve with quota exactly 1 succeeds", func(t *testing.T) {
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "1")
+		remaining, err := svc.ReserveRequest(ctx, uid, "req_exact_one", time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(0), remaining)
+	})
+}
+
+func TestQuotaService_RefundReservation(t *testing.T) {
+	s := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: s.Addr()})
+	defer rdb.Close()
+
+	svc := NewQuotaService(rdb)
+	ctx := context.Background()
+	uid := "user_refund"
+
+	t.Run("Refund without prior reserve increments quota", func(t *testing.T) {
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "5")
+		remaining, err := svc.RefundReservation(ctx, uid, "never_reserved", time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), remaining)
+	})
+
+	t.Run("Empty requestID returns error", func(t *testing.T) {
+		_, err := svc.RefundReservation(ctx, uid, "", time.Minute)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "request_id is required")
+	})
+}
+
+func TestQuotaService_DcrQuota(t *testing.T) {
+	s := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: s.Addr()})
+	defer rdb.Close()
+
+	svc := NewQuotaService(rdb)
+	ctx := context.Background()
+	uid := "user_decr"
+
+	t.Run("Decrements from initial value", func(t *testing.T) {
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "5")
+		remaining, err := svc.DecrQuota(ctx, uid)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(4), remaining)
+	})
+
+	t.Run("Goes negative without safeguard", func(t *testing.T) {
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "0")
+		remaining, err := svc.DecrQuota(ctx, uid)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(-1), remaining)
 	})
 }
 
@@ -103,7 +157,6 @@ func TestQuotaService_RecordUsage(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, ok)
 
-		// Verify tokens added
 		val, _ := s.Get(dayKey)
 		assert.Equal(t, "100", val)
 	})
@@ -112,24 +165,123 @@ func TestQuotaService_RecordUsage(t *testing.T) {
 		reqID := "req_usage_dup"
 		dayKey := fmt.Sprintf("llm_tokens:%s:%s", uid, time.Now().Format("2006-01-02"))
 
-		// First call
 		svc.RecordUsage(ctx, uid, reqID, 50, time.Minute)
 
-		// Verify key exists
 		key := fmt.Sprintf("usage:request:%s:%s", uid, reqID)
 		assert.True(t, s.Exists(key), "Request key should exist after first call")
 
-		// Second call
 		ok, err := svc.RecordUsage(ctx, uid, reqID, 50, time.Minute)
 		assert.NoError(t, err)
-		assert.False(t, ok) // Should return false as it was already recorded
+		assert.False(t, ok)
 
-		// Verify tokens are 100 + 50 = 150 (from prev test + this test's first call)
-		// Wait, miniredis is shared? No, different keys or I need to flush.
-		// Actually I reused 's' but different keys/reqIDs.
-		// Previous test used user_456 but distinct reqID.
-		// dayKey is same. 100 (prev) + 50 (this) = 150.
 		val, _ := s.Get(dayKey)
 		assert.Equal(t, "150", val)
+	})
+
+	t.Run("Empty requestID returns false without error", func(t *testing.T) {
+		ok, err := svc.RecordUsage(ctx, uid, "", 100, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+}
+
+func TestQuotaService_RecordUsageSegment(t *testing.T) {
+	s := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: s.Addr()})
+	defer rdb.Close()
+
+	svc := NewQuotaService(rdb)
+	ctx := context.Background()
+	uid := "user_segment"
+	dayKey := fmt.Sprintf("llm_tokens:%s:%s", uid, time.Now().Format("2006-01-02"))
+	year, week := time.Now().ISOWeek()
+	weekKey := fmt.Sprintf("llm_tokens:%s:week:%d:%02d", uid, year, week)
+
+	t.Run("Records first segment", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "req_seg_1", 1, 200, time.Minute)
+		assert.NoError(t, err)
+		assert.True(t, ok)
+
+		val, _ := s.Get(dayKey)
+		assert.Equal(t, "200", val)
+
+		wVal, _ := s.Get(weekKey)
+		assert.Equal(t, "200", wVal)
+
+		segKey := fmt.Sprintf("usage:segment:%s:req_seg_1:1", uid)
+		assert.True(t, s.Exists(segKey))
+	})
+
+	t.Run("Same segment is idempotent", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "req_seg_1", 1, 200, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok)
+
+		val, _ := s.Get(dayKey)
+		assert.Equal(t, "200", val)
+	})
+
+	t.Run("Different segment of same request is recorded", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "req_seg_1", 2, 150, time.Minute)
+		assert.NoError(t, err)
+		assert.True(t, ok)
+
+		val, _ := s.Get(dayKey)
+		assert.Equal(t, "350", val)
+	})
+
+	t.Run("Empty requestID returns false", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "", 1, 100, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("Zero segment returns false", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "req_seg_2", 0, 100, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("Negative segment returns false", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "req_seg_2", -1, 100, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("Zero tokens returns false", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "req_seg_3", 1, 0, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("Negative tokens returns false", func(t *testing.T) {
+		ok, err := svc.RecordUsageSegment(ctx, uid, "req_seg_3", 1, -50, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+}
+
+func TestQuotaService_GetDailyUsage(t *testing.T) {
+	s := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: s.Addr()})
+	defer rdb.Close()
+
+	svc := NewQuotaService(rdb)
+	ctx := context.Background()
+	uid := "user_daily"
+
+	t.Run("Returns zero when no usage", func(t *testing.T) {
+		usage, err := svc.GetDailyUsage(ctx, uid)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(0), usage)
+	})
+
+	t.Run("Returns recorded daily usage", func(t *testing.T) {
+		dayKey := fmt.Sprintf("llm_tokens:%s:%s", uid, time.Now().Format("2006-01-02"))
+		s.Set(dayKey, "350")
+
+		usage, err := svc.GetDailyUsage(ctx, uid)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(350), usage)
 	})
 }
