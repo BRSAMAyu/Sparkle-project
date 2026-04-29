@@ -37,6 +37,12 @@ from app.signals.exam_sprint_policy import ExamSprintPolicyService
 from app.signals.goal_type_adapter import GoalTypeAdapter
 from app.signals.goal_world_graph import GoalWorldGraphService
 from app.signals.growth_chronicle import GrowthChronicleService
+from app.signals.intervention_episode import (
+    ContextSignature,
+    EvidenceQuality,
+    InterventionEpisode,
+    InterventionEpisodeLedger,
+)
 from app.signals.learning_base import LearningBase
 from app.signals.material_signal import MaterialSignalDetector
 from app.signals.mistake_signal import MistakeSignalDetector
@@ -1550,6 +1556,14 @@ class SpineOrchestrator:
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
 
+        # T5.1.2: Generate research-grade InterventionEpisode
+        episode = await self._generate_episode(
+            user_id=user_id, signal=signal, decision=decision,
+            directive=directive, trace=trace,
+        )
+        if episode is not None:
+            await self._store_episode(user_id, episode)
+
         # Build and store ResponseDirective (L1: state-aware)
         active_states = await self._get_active_states_dicts(user_id)
         response_dir = self.policy_engine.build_response_directive(
@@ -2094,6 +2108,111 @@ class SpineOrchestrator:
             ]
         except Exception:
             return []
+
+    # ── T5.1.2: Research-Grade InterventionEpisode Generation ──────────
+
+    async def _generate_episode(
+        self,
+        *,
+        user_id: str,
+        signal: ActionableSignal,
+        decision: PolicyDecision,
+        directive,
+        trace: CausalTrace,
+    ) -> InterventionEpisode | None:
+        """Build a research-grade InterventionEpisode from the current pipeline state.
+
+        Maps StateRegister entries → ContextSignature (9 dimensions),
+        extracts candidate policies from the decision, and creates
+        an episode with propensity scoring metadata.
+        """
+        try:
+            # Build ContextSignature from StateRegister + signal
+            states = await self.state_register.get_active_states(user_id)
+            state_map = {s.state_key: s.value for s in states}
+
+            goal_mode = state_map.get("goal_mode", "standard")
+            deadline_pressure = "low"
+            if "deadline_pressure" in state_map:
+                deadline_pressure = state_map["deadline_pressure"]
+            elif decision.risk_level in ("critical", "high"):
+                deadline_pressure = "high"
+
+            deadline_phase = ""
+            raw_days = await self.redis.get(f"spine:exam_sprint:{user_id}:deadline_days")
+            if raw_days:
+                try:
+                    days = int(raw_days if isinstance(raw_days, str) else raw_days.decode())
+                    deadline_phase = f"D-{days}"
+                except (ValueError, AttributeError):
+                    pass
+
+            cognitive_load = state_map.get("cognitive_load", "")
+            affective_pressure = state_map.get("affective_pressure", "")
+
+            ctx = ContextSignature(
+                goal_mode=goal_mode,
+                deadline_phase=deadline_phase,
+                deadline_pressure=deadline_pressure,
+                knowledge_bottleneck=signal.state_key if signal.state_key.startswith("knowledge_transfer") else state_map.get("knowledge_bottleneck", ""),
+                failure_type=signal.claim,
+                cognitive_load=cognitive_load if cognitive_load in ("low", "medium", "high") else ("medium" if signal.priority == "high" else "low"),
+                affective_pressure=affective_pressure if affective_pressure in ("calm", "tense", "anxious", "fatigued") else "",
+                source_availability=state_map.get("source_material", ""),
+                user_id=user_id,
+                goal_id=state_map.get("goal_id", ""),
+            )
+
+            # Candidate policies: primary + secondary + common alternatives
+            candidates = [decision.primary_strategy]
+            if decision.secondary_strategy:
+                candidates.append(decision.secondary_strategy)
+            # Add generic alternatives for propensity scoring
+            for alt in ("reduce_pace", "reinforce_without_overpressure", "simplify_task"):
+                if alt not in candidates:
+                    candidates.append(alt)
+
+            # Selection probability: uniform over candidates if no experiment running
+            sel_prob = 1.0 / len(candidates) if len(candidates) > 1 else 1.0
+
+            # Determine domain from goal mode
+            domain = "exam_sprint" if goal_mode == "exam_rescue" else goal_mode or "standard"
+
+            episode = InterventionEpisodeLedger.create_episode(
+                user_id=user_id,
+                goal_id=ctx.goal_id,
+                domain=domain,
+                context_signature=ctx,
+                candidate_policies=candidates,
+                selected_policy=decision.primary_strategy,
+                selection_reason=decision.reasoning_summary[:200] if decision.reasoning_summary else signal.evidence_summary[:200],
+                selection_mode="rule_based",
+                selection_confidence=signal.confidence,
+                selection_probability=sel_prob,
+                risk_level=decision.risk_level,
+                directive_ids=[directive.directive_id],
+            )
+
+            return episode
+        except Exception:
+            logger.warning("_generate_episode failed for user={}", user_id, exc_info=True)
+            return None
+
+    async def _store_episode(self, user_id: str, episode: InterventionEpisode) -> None:
+        """Persist InterventionEpisode to Redis for research-grade evaluation."""
+        try:
+            import json
+            key = f"spine:episode:{user_id}:{episode.episode_id}"
+            await self.redis.set(key, json.dumps(episode.to_dict()), ex=90 * 24 * 3600)
+            # Also append to user's episode index (most recent 100)
+            await self.redis.rpush(
+                f"spine:episodes:{user_id}",
+                episode.episode_id,
+            )
+            await self.redis.ltrim(f"spine:episodes:{user_id}", -100, -1)
+            await self.redis.expire(f"spine:episodes:{user_id}", 90 * 24 * 3600)
+        except Exception:
+            logger.warning("_store_episode failed for user={}", user_id, exc_info=True)
 
     # ── L2 Mid Aurora: Escalation Detection ─────────────────────────────
 

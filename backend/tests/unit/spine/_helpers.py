@@ -50,7 +50,10 @@ class FakeRedis:
 
     async def ltrim(self, key: str, start: int, stop: int) -> None:
         data = self._lists.get(key, [])
-        self._lists[key] = data[start:stop + 1]
+        if stop == -1:
+            self._lists[key] = data[start:]
+        else:
+            self._lists[key] = data[start:stop + 1]
 
     async def expire(self, key: str, seconds: int) -> None:
         pass
@@ -174,9 +177,15 @@ def _make_redis_mock():
     redis.srem = _srem
     redis.incr = _incr
     redis.expire = _expire
+    async def _rpush(key, value):
+        redis._store.setdefault(f"__list__{key}", [])
+        if isinstance(redis._store[f"__list__{key}"], list):
+            redis._store[f"__list__{key}"].append(value)
+
     redis.lpush = AsyncMock()
     redis.lrange = AsyncMock(return_value=[])
     redis.ltrim = AsyncMock()
+    redis.rpush = _rpush
     return redis
 
 
