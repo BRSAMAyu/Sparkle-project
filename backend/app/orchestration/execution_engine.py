@@ -1550,6 +1550,12 @@ class ExecutionEngineMixin:
             "session_adaptation": session_adaptation_context,
             "context_focus": (user_context_payload or {}).get("context_focus"),
             "context_briefing_note": (user_context_payload or {}).get("context_briefing_note"),
+            # C-03-FIX: Pass Spine directives to multi-agent adapter
+            "spine_response_directive": state.context_data.get("spine_response_directive"),
+            "spine_chronicle_summary": state.context_data.get("spine_chronicle_summary"),
+            "spine_fatigue_context": state.context_data.get("spine_fatigue_context"),
+            # Dual-core routing prompt instruction (structured adjustments text)
+            "dual_core_prompt_instruction": state.context_data.get("dual_core_prompt_instruction"),
         }
         full_text_parts: list[str] = []
         full_text_override = ""
