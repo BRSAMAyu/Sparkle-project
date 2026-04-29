@@ -22227,6 +22227,135 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get docCleanerSelectFileFirst => '请先选择一个文件';
+
+  @override
+  String get docCleanerResultCopied => '清洗结果已复制';
+
+  @override
+  String get docCleanerTitle => '文档清洗';
+
+  @override
+  String get docCleanerSubtitle =>
+      '把扫描件、讲义和课件整理成可读文本。支持真实 GLM OCR 链路，适合笔记沉淀和资料预处理。';
+
+  @override
+  String get docCleanerOcrOn => 'OCR 已开启';
+
+  @override
+  String get docCleanerPlainText => '纯文本清洗';
+
+  @override
+  String get docCleanerSupportFormats => '支持 PDF / DOCX / PPTX / 图片';
+
+  @override
+  String get docCleanerFileSelected => '文件已选';
+
+  @override
+  String get docCleanerEngine => '引擎';
+
+  @override
+  String get docCleanerSkipOcr => '跳过 OCR';
+
+  @override
+  String get docCleanerScanOcrHint => '扫描件建议启用 GLM OCR';
+
+  @override
+  String get docCleanerFileSize => '文件体积';
+
+  @override
+  String get docCleanerNoFile => '未选择文件';
+
+  @override
+  String get docCleanerCurrentFile => '当前待处理文件';
+
+  @override
+  String get docCleanerFileSelectTitle => '文件选择';
+
+  @override
+  String get docCleanerFileSelectSubtitle =>
+      '先选文件，再决定是否启用 OCR。识别结果会自动回流到文档清洗任务。';
+
+  @override
+  String get docCleanerClickSelect => '点击选择文件';
+
+  @override
+  String get docCleanerSupportedTypes =>
+      '支持 PDF、DOCX、PPTX、JPG、PNG、WebP；扫描件推荐开启 OCR。';
+
+  @override
+  String get docCleanerDocFile => '文档文件';
+
+  @override
+  String get docCleanerChangeFile => '更换文件';
+
+  @override
+  String get docCleanerChange => '更换';
+
+  @override
+  String get docCleanerStrategyTitle => '处理策略';
+
+  @override
+  String get docCleanerStrategySubtitle => '扫描件建议开启 OCR；源文件已有文字层时可关闭 OCR 提升速度。';
+
+  @override
+  String get docCleanerEnableOcr => '启用 OCR 识别';
+
+  @override
+  String get docCleanerLocalFast => '本地快速';
+
+  @override
+  String get docCleanerStartClean => '开始 AI 清洗';
+
+  @override
+  String get docCleanerProcessingTitle => '处理中';
+
+  @override
+  String get docCleanerProcessingSubtitle => '正在上传、解析和清洗文档，进度会实时更新。';
+
+  @override
+  String get docCleanerSuccessTitle => '清洗成功';
+
+  @override
+  String get docCleanerSuccessSubtitle => '结果已经整理完毕，你可以复制、发送或继续做下一轮处理。';
+
+  @override
+  String get docCleanerCharCount => '字符数';
+
+  @override
+  String get docCleanerMode => '模式';
+
+  @override
+  String get docCleanerDeepSummary => '深度摘要';
+
+  @override
+  String get docCleanerFullClean => '全量清洗';
+
+  @override
+  String get docCleanerFullPreview => '全文预览';
+
+  @override
+  String get docCleanerSendChat => '发送到对话';
+
+  @override
+  String get docCleanerUseResult => '使用结果';
+
+  @override
+  String get docCleanerCopySummary => '复制摘要';
+
+  @override
+  String get docCleanerFailedTitle => '清洗失败';
+
+  @override
+  String get docCleanerFailedSubtitle => '链路已经返回错误信息，可以直接重试或更换文件。';
+
+  @override
+  String get docCleanerIncompleteTitle => '当前任务未完成';
+
+  @override
+  String get docCleanerRetry => '重新尝试';
+
+  @override
   String get cogMockPattern1 => '每次遇到难题就会想要刷手机，这似乎是一种逃避机制。';
 
   @override

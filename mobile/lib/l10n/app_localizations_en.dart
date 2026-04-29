@@ -23199,6 +23199,140 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get docCleanerSelectFileFirst => 'Please select a file first';
+
+  @override
+  String get docCleanerResultCopied => 'Cleaning result copied';
+
+  @override
+  String get docCleanerTitle => 'Document Cleaner';
+
+  @override
+  String get docCleanerSubtitle =>
+      'Clean scanned documents, lecture notes, and slides into readable text. Supports real GLM OCR pipeline, ideal for note consolidation and material preprocessing.';
+
+  @override
+  String get docCleanerOcrOn => 'OCR Enabled';
+
+  @override
+  String get docCleanerPlainText => 'Plain Text Clean';
+
+  @override
+  String get docCleanerSupportFormats => 'Supports PDF / DOCX / PPTX / Images';
+
+  @override
+  String get docCleanerFileSelected => 'File selected';
+
+  @override
+  String get docCleanerEngine => 'Engine';
+
+  @override
+  String get docCleanerSkipOcr => 'Skip OCR';
+
+  @override
+  String get docCleanerScanOcrHint =>
+      'GLM OCR recommended for scanned documents';
+
+  @override
+  String get docCleanerFileSize => 'File Size';
+
+  @override
+  String get docCleanerNoFile => 'No file selected';
+
+  @override
+  String get docCleanerCurrentFile => 'Current file to process';
+
+  @override
+  String get docCleanerFileSelectTitle => 'File Selection';
+
+  @override
+  String get docCleanerFileSelectSubtitle =>
+      'Select a file first, then decide whether to enable OCR. Recognition results will flow back to the cleaning task automatically.';
+
+  @override
+  String get docCleanerClickSelect => 'Click to select file';
+
+  @override
+  String get docCleanerSupportedTypes =>
+      'Supports PDF, DOCX, PPTX, JPG, PNG, WebP. OCR recommended for scanned documents.';
+
+  @override
+  String get docCleanerDocFile => 'Document file';
+
+  @override
+  String get docCleanerChangeFile => 'Change file';
+
+  @override
+  String get docCleanerChange => 'Change';
+
+  @override
+  String get docCleanerStrategyTitle => 'Processing Strategy';
+
+  @override
+  String get docCleanerStrategySubtitle =>
+      'Enable OCR for scanned documents. Disable OCR when the source already has a text layer for faster processing.';
+
+  @override
+  String get docCleanerEnableOcr => 'Enable OCR recognition';
+
+  @override
+  String get docCleanerLocalFast => 'Local Fast';
+
+  @override
+  String get docCleanerStartClean => 'Start AI Cleaning';
+
+  @override
+  String get docCleanerProcessingTitle => 'Processing';
+
+  @override
+  String get docCleanerProcessingSubtitle =>
+      'Uploading, parsing, and cleaning the document. Progress updates in real time.';
+
+  @override
+  String get docCleanerSuccessTitle => 'Cleaning Complete';
+
+  @override
+  String get docCleanerSuccessSubtitle =>
+      'Results are ready. You can copy, send, or continue with another round.';
+
+  @override
+  String get docCleanerCharCount => 'Characters';
+
+  @override
+  String get docCleanerMode => 'Mode';
+
+  @override
+  String get docCleanerDeepSummary => 'Deep Summary';
+
+  @override
+  String get docCleanerFullClean => 'Full Clean';
+
+  @override
+  String get docCleanerFullPreview => 'Full Preview';
+
+  @override
+  String get docCleanerSendChat => 'Send to Chat';
+
+  @override
+  String get docCleanerUseResult => 'Use Result';
+
+  @override
+  String get docCleanerCopySummary => 'Copy Summary';
+
+  @override
+  String get docCleanerFailedTitle => 'Cleaning Failed';
+
+  @override
+  String get docCleanerFailedSubtitle =>
+      'The pipeline returned an error. You can retry or change the file.';
+
+  @override
+  String get docCleanerIncompleteTitle => 'Task Incomplete';
+
+  @override
+  String get docCleanerRetry => 'Retry';
+
+  @override
   String get cogMockPattern1 =>
       'Whenever I hit a tough problem I instinctively reach for my phone — it seems like an avoidance mechanism.';
 

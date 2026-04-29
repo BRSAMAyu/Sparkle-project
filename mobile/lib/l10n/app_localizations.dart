@@ -40633,6 +40633,258 @@ abstract class AppLocalizations {
   /// **'第 {round} 轮'**
   String simRound(int round);
 
+  /// No description provided for @docCleanerSelectFileFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先选择一个文件'**
+  String get docCleanerSelectFileFirst;
+
+  /// No description provided for @docCleanerResultCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'清洗结果已复制'**
+  String get docCleanerResultCopied;
+
+  /// No description provided for @docCleanerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'文档清洗'**
+  String get docCleanerTitle;
+
+  /// No description provided for @docCleanerSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把扫描件、讲义和课件整理成可读文本。支持真实 GLM OCR 链路，适合笔记沉淀和资料预处理。'**
+  String get docCleanerSubtitle;
+
+  /// No description provided for @docCleanerOcrOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'OCR 已开启'**
+  String get docCleanerOcrOn;
+
+  /// No description provided for @docCleanerPlainText.
+  ///
+  /// In zh, this message translates to:
+  /// **'纯文本清洗'**
+  String get docCleanerPlainText;
+
+  /// No description provided for @docCleanerSupportFormats.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持 PDF / DOCX / PPTX / 图片'**
+  String get docCleanerSupportFormats;
+
+  /// No description provided for @docCleanerFileSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件已选'**
+  String get docCleanerFileSelected;
+
+  /// No description provided for @docCleanerEngine.
+  ///
+  /// In zh, this message translates to:
+  /// **'引擎'**
+  String get docCleanerEngine;
+
+  /// No description provided for @docCleanerSkipOcr.
+  ///
+  /// In zh, this message translates to:
+  /// **'跳过 OCR'**
+  String get docCleanerSkipOcr;
+
+  /// No description provided for @docCleanerScanOcrHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫描件建议启用 GLM OCR'**
+  String get docCleanerScanOcrHint;
+
+  /// No description provided for @docCleanerFileSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件体积'**
+  String get docCleanerFileSize;
+
+  /// No description provided for @docCleanerNoFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'未选择文件'**
+  String get docCleanerNoFile;
+
+  /// No description provided for @docCleanerCurrentFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前待处理文件'**
+  String get docCleanerCurrentFile;
+
+  /// No description provided for @docCleanerFileSelectTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件选择'**
+  String get docCleanerFileSelectTitle;
+
+  /// No description provided for @docCleanerFileSelectSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选文件，再决定是否启用 OCR。识别结果会自动回流到文档清洗任务。'**
+  String get docCleanerFileSelectSubtitle;
+
+  /// No description provided for @docCleanerClickSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击选择文件'**
+  String get docCleanerClickSelect;
+
+  /// No description provided for @docCleanerSupportedTypes.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持 PDF、DOCX、PPTX、JPG、PNG、WebP；扫描件推荐开启 OCR。'**
+  String get docCleanerSupportedTypes;
+
+  /// No description provided for @docCleanerDocFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'文档文件'**
+  String get docCleanerDocFile;
+
+  /// No description provided for @docCleanerChangeFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'更换文件'**
+  String get docCleanerChangeFile;
+
+  /// No description provided for @docCleanerChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'更换'**
+  String get docCleanerChange;
+
+  /// No description provided for @docCleanerStrategyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理策略'**
+  String get docCleanerStrategyTitle;
+
+  /// No description provided for @docCleanerStrategySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫描件建议开启 OCR；源文件已有文字层时可关闭 OCR 提升速度。'**
+  String get docCleanerStrategySubtitle;
+
+  /// No description provided for @docCleanerEnableOcr.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用 OCR 识别'**
+  String get docCleanerEnableOcr;
+
+  /// No description provided for @docCleanerLocalFast.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地快速'**
+  String get docCleanerLocalFast;
+
+  /// No description provided for @docCleanerStartClean.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始 AI 清洗'**
+  String get docCleanerStartClean;
+
+  /// No description provided for @docCleanerProcessingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理中'**
+  String get docCleanerProcessingTitle;
+
+  /// No description provided for @docCleanerProcessingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在上传、解析和清洗文档，进度会实时更新。'**
+  String get docCleanerProcessingSubtitle;
+
+  /// No description provided for @docCleanerSuccessTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'清洗成功'**
+  String get docCleanerSuccessTitle;
+
+  /// No description provided for @docCleanerSuccessSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'结果已经整理完毕，你可以复制、发送或继续做下一轮处理。'**
+  String get docCleanerSuccessSubtitle;
+
+  /// No description provided for @docCleanerCharCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'字符数'**
+  String get docCleanerCharCount;
+
+  /// No description provided for @docCleanerMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'模式'**
+  String get docCleanerMode;
+
+  /// No description provided for @docCleanerDeepSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度摘要'**
+  String get docCleanerDeepSummary;
+
+  /// No description provided for @docCleanerFullClean.
+  ///
+  /// In zh, this message translates to:
+  /// **'全量清洗'**
+  String get docCleanerFullClean;
+
+  /// No description provided for @docCleanerFullPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'全文预览'**
+  String get docCleanerFullPreview;
+
+  /// No description provided for @docCleanerSendChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送到对话'**
+  String get docCleanerSendChat;
+
+  /// No description provided for @docCleanerUseResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用结果'**
+  String get docCleanerUseResult;
+
+  /// No description provided for @docCleanerCopySummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制摘要'**
+  String get docCleanerCopySummary;
+
+  /// No description provided for @docCleanerFailedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'清洗失败'**
+  String get docCleanerFailedTitle;
+
+  /// No description provided for @docCleanerFailedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'链路已经返回错误信息，可以直接重试或更换文件。'**
+  String get docCleanerFailedSubtitle;
+
+  /// No description provided for @docCleanerIncompleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前任务未完成'**
+  String get docCleanerIncompleteTitle;
+
+  /// No description provided for @docCleanerRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新尝试'**
+  String get docCleanerRetry;
+
   /// No description provided for @cogMockPattern1.
   ///
   /// In zh, this message translates to:
