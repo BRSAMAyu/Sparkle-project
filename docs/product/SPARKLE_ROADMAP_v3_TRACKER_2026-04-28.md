@@ -634,10 +634,10 @@
 
 | ID | 模块 | 问题 | 行动 | 状态 |
 |----|------|------|------|------|
-| EA-1 | `backend/app/signals/fabrication_guard.py` | 文件存在但零生产 import | 接入 SpineOrchestrator signal pipeline, 验证调用 | 🔴 待修 |
-| EA-2 | `backend/app/signals/safety_degradation.py` | 文件存在但零生产 import | 接入 EventBus consumer group, 验证调用 | 🔴 待修 |
-| EA-3 | `backend/app/signals/high_impact_confirmation.py` | 文件存在但零生产 import | 接入 Directive actuation, 验证调用 | 🔴 待修 |
-| EA-4 | `backend/app/core/research_isolation.py` | 文件存在但零生产 import | 接入 StateAggregator write path, 验证调用 | 🔴 待修 |
+| EA-1 | `backend/app/signals/fabrication_guard.py` | 文件存在但零生产 import | 接入 SpineOrchestrator signal pipeline, 验证调用 | ✅ 已修 (8973526f) |
+| EA-2 | `backend/app/signals/safety_degradation.py` | 文件存在但零生产 import | 接入 EventBus consumer group, 验证调用 | ✅ 已修 (8973526f) |
+| EA-3 | `backend/app/signals/high_impact_confirmation.py` | 文件存在但零生产 import | 接入 Directive actuation, 验证调用 | ✅ 已修 (8973526f) |
+| EA-4 | `backend/app/core/research_isolation.py` | 文件存在但零生产 import | 接入 StateAggregator write path, 验证调用 | ✅ 已修 (8973526f) |
 | EA-5 | `backend/app/core/data_minimization.py` | 文件存在但零生产 import | 接入 context_manager data flow, 验证调用 | ✅ 已修 (9260ce74, 同P2-10) |
 
 ### R6.3 Spine 重复代码消除
