@@ -22436,6 +22436,115 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gdKnowledgeBase => '知识库';
 
   @override
+  String get fpTitle => '好友详情';
+
+  @override
+  String get fpDefaultName => '好友';
+
+  @override
+  String get fpPartnerGoals => '伙伴目标';
+
+  @override
+  String get fpNoSyncedGoals => '还没有同步目标';
+
+  @override
+  String get fpChat => '聊天';
+
+  @override
+  String get fpEnterWorkbench => '进入工作台';
+
+  @override
+  String get fpViewAchievements => '去看成就';
+
+  @override
+  String get fpInviteAccountability => '发起责任伙伴';
+
+  @override
+  String get fpEnterPartnerWorkbench => '进入伙伴工作台';
+
+  @override
+  String get fpInviteDialogTitle => '发起责任伙伴邀请';
+
+  @override
+  String fpInviteMessage(String name) {
+    return '邀请 $name 成为你的责任伙伴';
+  }
+
+  @override
+  String get fpMyGoal => '我的目标';
+
+  @override
+  String get fpCheckinFrequency => '打卡频率:';
+
+  @override
+  String get fpEveryDay => '每天';
+
+  @override
+  String fpEveryNDays(int n) {
+    return '每 $n 天';
+  }
+
+  @override
+  String get fpCancel => '取消';
+
+  @override
+  String get fpSendInvite => '发送邀请';
+
+  @override
+  String get fpGoalRequired => '请填写目标';
+
+  @override
+  String get fpInviteSent => '责任伙伴邀请已发送！';
+
+  @override
+  String fpInviteFailed(String error) {
+    return '发送失败: $error';
+  }
+
+  @override
+  String get fpAccountabilityRelation => '责任伙伴关系';
+
+  @override
+  String get fpFriendRelation => '好友关系';
+
+  @override
+  String fpDaysTogether(int days) {
+    return '一起 $days 天';
+  }
+
+  @override
+  String fpMyStreak(int days) {
+    return '我 $days 天';
+  }
+
+  @override
+  String fpPartnerStreak(int days) {
+    return 'TA $days 天';
+  }
+
+  @override
+  String get fpGrowTogether => '伙伴共成长';
+
+  @override
+  String fpAchievementSummary(int my, int partner) {
+    return '我解锁了 $my 个责任伙伴成就，TA 解锁了 $partner 个。';
+  }
+
+  @override
+  String get fpMotivationSummary => '激励摘要';
+
+  @override
+  String fpStreakLeaderboard(String myRank, String partnerRank) {
+    return '连续打卡榜：你第 $myRank，TA 第 $partnerRank。';
+  }
+
+  @override
+  String get fpRecentShares => '最近共享';
+
+  @override
+  String get fpSharedContent => '已分享内容';
+
+  @override
   String get simSocratic => '苏格拉底对话';
 
   @override

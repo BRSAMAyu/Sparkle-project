@@ -40981,6 +40981,192 @@ abstract class AppLocalizations {
   /// **'知识库'**
   String get gdKnowledgeBase;
 
+  /// No description provided for @fpTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友详情'**
+  String get fpTitle;
+
+  /// No description provided for @fpDefaultName.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友'**
+  String get fpDefaultName;
+
+  /// No description provided for @fpPartnerGoals.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴目标'**
+  String get fpPartnerGoals;
+
+  /// No description provided for @fpNoSyncedGoals.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有同步目标'**
+  String get fpNoSyncedGoals;
+
+  /// No description provided for @fpChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天'**
+  String get fpChat;
+
+  /// No description provided for @fpEnterWorkbench.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入工作台'**
+  String get fpEnterWorkbench;
+
+  /// No description provided for @fpViewAchievements.
+  ///
+  /// In zh, this message translates to:
+  /// **'去看成就'**
+  String get fpViewAchievements;
+
+  /// No description provided for @fpInviteAccountability.
+  ///
+  /// In zh, this message translates to:
+  /// **'发起责任伙伴'**
+  String get fpInviteAccountability;
+
+  /// No description provided for @fpEnterPartnerWorkbench.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入伙伴工作台'**
+  String get fpEnterPartnerWorkbench;
+
+  /// No description provided for @fpInviteDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'发起责任伙伴邀请'**
+  String get fpInviteDialogTitle;
+
+  /// No description provided for @fpInviteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'邀请 {name} 成为你的责任伙伴'**
+  String fpInviteMessage(String name);
+
+  /// No description provided for @fpMyGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的目标'**
+  String get fpMyGoal;
+
+  /// No description provided for @fpCheckinFrequency.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡频率:'**
+  String get fpCheckinFrequency;
+
+  /// No description provided for @fpEveryDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天'**
+  String get fpEveryDay;
+
+  /// No description provided for @fpEveryNDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'每 {n} 天'**
+  String fpEveryNDays(int n);
+
+  /// No description provided for @fpCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get fpCancel;
+
+  /// No description provided for @fpSendInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送邀请'**
+  String get fpSendInvite;
+
+  /// No description provided for @fpGoalRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写目标'**
+  String get fpGoalRequired;
+
+  /// No description provided for @fpInviteSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'责任伙伴邀请已发送！'**
+  String get fpInviteSent;
+
+  /// No description provided for @fpInviteFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败: {error}'**
+  String fpInviteFailed(String error);
+
+  /// No description provided for @fpAccountabilityRelation.
+  ///
+  /// In zh, this message translates to:
+  /// **'责任伙伴关系'**
+  String get fpAccountabilityRelation;
+
+  /// No description provided for @fpFriendRelation.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友关系'**
+  String get fpFriendRelation;
+
+  /// No description provided for @fpDaysTogether.
+  ///
+  /// In zh, this message translates to:
+  /// **'一起 {days} 天'**
+  String fpDaysTogether(int days);
+
+  /// No description provided for @fpMyStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'我 {days} 天'**
+  String fpMyStreak(int days);
+
+  /// No description provided for @fpPartnerStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'TA {days} 天'**
+  String fpPartnerStreak(int days);
+
+  /// No description provided for @fpGrowTogether.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴共成长'**
+  String get fpGrowTogether;
+
+  /// No description provided for @fpAchievementSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'我解锁了 {my} 个责任伙伴成就，TA 解锁了 {partner} 个。'**
+  String fpAchievementSummary(int my, int partner);
+
+  /// No description provided for @fpMotivationSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'激励摘要'**
+  String get fpMotivationSummary;
+
+  /// No description provided for @fpStreakLeaderboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续打卡榜：你第 {myRank}，TA 第 {partnerRank}。'**
+  String fpStreakLeaderboard(String myRank, String partnerRank);
+
+  /// No description provided for @fpRecentShares.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近共享'**
+  String get fpRecentShares;
+
+  /// No description provided for @fpSharedContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'已分享内容'**
+  String get fpSharedContent;
+
   /// No description provided for @simSocratic.
   ///
   /// In zh, this message translates to:

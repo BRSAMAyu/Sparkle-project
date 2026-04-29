@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
@@ -42,7 +43,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: Text(widget.displayName ?? '好友详情'),
+          title: Text(widget.displayName ?? context.l10n.fpTitle),
         ),
         child: FutureBuilder<FriendProfileDetail>(
           future: _profileFuture,
@@ -56,7 +57,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                 FriendProfileDetail(
                   user: UserBrief(
                     id: widget.userId,
-                    username: widget.displayName ?? '好友',
+                    username: widget.displayName ?? context.l10n.fpDefaultName,
                     nickname: widget.displayName,
                   ),
                   friendship: const <String, dynamic>{},
@@ -171,12 +172,12 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             SparkleStaggerItem(
               index: 2,
               child: _SimplePanel(
-                title: '伙伴目标',
+                title: context.l10n.fpPartnerGoals,
                 icon: Icons.flag_outlined,
                 body: Text(
                   (accountability['partner_goal'] ??
                           accountability['initiator_goal'] ??
-                          '还没有同步目标')
+                          context.l10n.fpNoSyncedGoals)
                       .toString(),
                   style: DS.bodyMedium,
                 ),
@@ -202,7 +203,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               children: [
                 Expanded(
                   child: CustomButton.primary(
-                    text: '聊天',
+                    text: context.l10n.fpChat,
                     icon: Icons.chat_bubble_outline,
                     onPressed: () {
                       context.push(
@@ -214,7 +215,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                 const SizedBox(width: DS.md),
                 Expanded(
                   child: CustomButton.secondary(
-                    text: canOpenDashboard ? '进入工作台' : '去看成就',
+                    text: canOpenDashboard ? context.l10n.fpEnterWorkbench : context.l10n.fpViewAchievements,
                     icon: canOpenDashboard
                         ? Icons.handshake_outlined
                         : Icons.emoji_events_outlined,
@@ -239,7 +240,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             child: SizedBox(
               width: double.infinity,
               child: CustomButton.secondary(
-                text: canInviteAccountability ? '发起责任伙伴' : '进入伙伴工作台',
+                text: canInviteAccountability ? context.l10n.fpInviteAccountability : context.l10n.fpEnterPartnerWorkbench,
                 icon: Icons.handshake_outlined,
                 onPressed: () {
                   if (canInviteAccountability) {
@@ -272,29 +273,29 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: const Text('发起责任伙伴邀请'),
+          title: Text(context.l10n.fpInviteDialogTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '邀请 ${user.displayName} 成为你的责任伙伴',
+                context.l10n.fpInviteMessage(user.displayName),
                 style: TextStyle(color: DS.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: DS.spacing16),
               TextField(
                 controller: goalController,
-                decoration: const InputDecoration(
-                  labelText: '我的目标',
+                decoration: InputDecoration(
+                  labelText: context.l10n.fpMyGoal,
                   hintText: context.l10n.communityFriendGoalHint,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 maxLines: 2,
               ),
               const SizedBox(height: DS.spacing16),
-              const Text(
-                '打卡频率:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                context.l10n.fpCheckinFrequency,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: DS.xs),
               Wrap(
@@ -302,7 +303,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                 children: [1, 2, 3, 7].map((d) {
                   final selected = checkInDays == d;
                   return FilterChip(
-                    label: Text(d == 1 ? '每天' : '每 $d 天'),
+                    label: Text(d == 1 ? context.l10n.fpEveryDay : context.l10n.fpEveryNDays(d)),
                     selected: selected,
                     onSelected: (_) => setState(() => checkInDays = d),
                   );
@@ -313,11 +314,11 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
+              child: Text(context.l10n.fpCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('发送邀请'),
+              child: Text(context.l10n.fpSendInvite),
             ),
           ],
         ),
@@ -327,7 +328,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
     if (confirmed != true) return;
     final goal = goalController.text.trim();
     if (goal.isEmpty) {
-      if (context.mounted) AppFeedback.info(context, '请填写目标');
+      if (context.mounted) AppFeedback.info(context, context.l10n.fpGoalRequired);
       return;
     }
 
@@ -339,10 +340,10 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
           );
       ref.invalidate(accountabilityOverviewProvider);
       if (context.mounted) {
-        AppFeedback.success(context, '责任伙伴邀请已发送！');
+        AppFeedback.success(context, context.l10n.fpInviteSent);
       }
     } catch (e) {
-      if (context.mounted) AppFeedback.error(context, '发送失败: $e');
+      if (context.mounted) AppFeedback.error(context, context.l10n.fpInviteFailed(e.toString()));
     }
   }
 }
@@ -386,7 +387,7 @@ class _RelationshipPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  hasAccountability ? '责任伙伴关系' : '好友关系',
+                  hasAccountability ? context.l10n.fpAccountabilityRelation : context.l10n.fpFriendRelation,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -398,41 +399,41 @@ class _RelationshipPanel extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _InfoChip('一起 ${relationshipSummary['days_together'] ?? 0} 天'),
-                _InfoChip('我 ${relationshipSummary['my_streak_days'] ?? 0} 天'),
+                _InfoChip(context.l10n.fpDaysTogether((relationshipSummary['days_together'] ?? 0) as int)),
+                _InfoChip(context.l10n.fpMyStreak((relationshipSummary['my_streak_days'] ?? 0) as int)),
                 _InfoChip(
-                  'TA ${relationshipSummary['partner_streak_days'] ?? 0} 天',
+                  context.l10n.fpPartnerStreak((relationshipSummary['partner_streak_days'] ?? 0) as int),
                 ),
               ],
             ),
             if (achievementsSummary.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(
-                '伙伴共成长',
+                context.l10n.fpGrowTogether,
                 style: DS.labelLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: 6),
               Text(
-                '我解锁了 ${achievementsSummary['my_total_unlocked'] ?? 0} 个责任伙伴成就，TA 解锁了 ${achievementsSummary['partner_total_unlocked'] ?? 0} 个。',
+                context.l10n.fpAchievementSummary((achievementsSummary['my_total_unlocked'] ?? 0) as int, (achievementsSummary['partner_total_unlocked'] ?? 0) as int),
                 style: DS.bodySmall.copyWith(color: DS.textSecondary),
               ),
             ],
             if (leaderboardSummary.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(
-                '激励摘要',
+                context.l10n.fpMotivationSummary,
                 style: DS.labelLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: 6),
               Text(
-                '连续打卡榜：你第 ${(leaderboardSummary['streak'] as Map?)?['my_rank'] ?? '-'}，TA 第 ${(leaderboardSummary['streak'] as Map?)?['partner_rank'] ?? '-'}。',
+                context.l10n.fpStreakLeaderboard('${(leaderboardSummary['streak'] as Map?)?['my_rank'] ?? '-'}', '${(leaderboardSummary['streak'] as Map?)?['partner_rank'] ?? '-'}'),
                 style: DS.bodySmall.copyWith(color: DS.textSecondary),
               ),
             ],
             if (recentShares.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(
-                '最近共享',
+                context.l10n.fpRecentShares,
                 style: DS.labelLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: 6),
@@ -453,7 +454,7 @@ class _RelationshipPanel extends StatelessWidget {
                           ),
                           Expanded(
                             child: Text(
-                              share['title']?.toString() ?? '已分享内容',
+                              share['title']?.toString() ?? context.l10n.fpSharedContent,
                               style: DS.bodySmall
                                   .copyWith(color: DS.textSecondary),
                             ),

@@ -23411,6 +23411,115 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gdKnowledgeBase => 'Knowledge Base';
 
   @override
+  String get fpTitle => 'Friend Profile';
+
+  @override
+  String get fpDefaultName => 'Friend';
+
+  @override
+  String get fpPartnerGoals => 'Partner Goals';
+
+  @override
+  String get fpNoSyncedGoals => 'No synced goals yet';
+
+  @override
+  String get fpChat => 'Chat';
+
+  @override
+  String get fpEnterWorkbench => 'Open Workbench';
+
+  @override
+  String get fpViewAchievements => 'View Achievements';
+
+  @override
+  String get fpInviteAccountability => 'Invite Accountability Partner';
+
+  @override
+  String get fpEnterPartnerWorkbench => 'Open Partner Workbench';
+
+  @override
+  String get fpInviteDialogTitle => 'Invite Accountability Partner';
+
+  @override
+  String fpInviteMessage(String name) {
+    return 'Invite $name to be your accountability partner';
+  }
+
+  @override
+  String get fpMyGoal => 'My Goal';
+
+  @override
+  String get fpCheckinFrequency => 'Check-in frequency:';
+
+  @override
+  String get fpEveryDay => 'Daily';
+
+  @override
+  String fpEveryNDays(int n) {
+    return 'Every $n days';
+  }
+
+  @override
+  String get fpCancel => 'Cancel';
+
+  @override
+  String get fpSendInvite => 'Send Invite';
+
+  @override
+  String get fpGoalRequired => 'Please enter your goal';
+
+  @override
+  String get fpInviteSent => 'Accountability partner invite sent!';
+
+  @override
+  String fpInviteFailed(String error) {
+    return 'Send failed: $error';
+  }
+
+  @override
+  String get fpAccountabilityRelation => 'Accountability Partner';
+
+  @override
+  String get fpFriendRelation => 'Friend';
+
+  @override
+  String fpDaysTogether(int days) {
+    return '$days days together';
+  }
+
+  @override
+  String fpMyStreak(int days) {
+    return 'Me: $days days';
+  }
+
+  @override
+  String fpPartnerStreak(int days) {
+    return 'Them: $days days';
+  }
+
+  @override
+  String get fpGrowTogether => 'Growing Together';
+
+  @override
+  String fpAchievementSummary(int my, int partner) {
+    return 'I unlocked $my accountability achievements, they unlocked $partner.';
+  }
+
+  @override
+  String get fpMotivationSummary => 'Motivation Summary';
+
+  @override
+  String fpStreakLeaderboard(String myRank, String partnerRank) {
+    return 'Streak leaderboard: You #$myRank, Them #$partnerRank.';
+  }
+
+  @override
+  String get fpRecentShares => 'Recent Shares';
+
+  @override
+  String get fpSharedContent => 'Shared content';
+
+  @override
   String get simSocratic => 'Socratic Dialogue';
 
   @override
