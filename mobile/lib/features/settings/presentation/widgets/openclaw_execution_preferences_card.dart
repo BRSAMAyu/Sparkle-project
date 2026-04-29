@@ -4,32 +4,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-
-const Map<String, String> _modeLabels = <String, String>{
-  'cautious': '谨慎模式',
-  'balanced': '平衡模式',
-  'autonomous': '信任模式',
-  'custom': '自定义',
-};
-
-const Map<String, String> _ruleLabels = <String, String>{
-  'browser_read': '浏览器读取',
-  'browser_write': '浏览器写入',
-  'file_read': '文件读取',
-  'file_write': '文件写入',
-  'file_delete': '文件删除',
-  'shell_exec': '终端执行',
-  'shell_read': '终端只读',
-  'install': '安装类操作',
-  'send': '发送/提交',
-};
-
-const Map<String, String> _ruleOptionLabels = <String, String>{
-  'auto': '自动',
-  'confirm': context.l10n.settingsConfirm,
-  'skip': '跳过',
-  'reject': '拒绝',
-};
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class OpenClawExecutionPreferencesCard extends ConsumerStatefulWidget {
   const OpenClawExecutionPreferencesCard({super.key});
@@ -52,14 +27,44 @@ class _OpenClawExecutionPreferencesCardState
     return parsed;
   }
 
+  Map<String, String> _modeLabels(AppLocalizations l) => {
+        'cautious': l.execPrefCautious,
+        'balanced': l.execPrefBalanced,
+        'autonomous': l.execPrefAutonomous,
+        'custom': l.execPrefCustom,
+      };
+
+  Map<String, String> _ruleLabels(AppLocalizations l) => {
+        'browser_read': l.execPrefBrowserRead,
+        'browser_write': l.execPrefBrowserWrite,
+        'file_read': l.execPrefFileRead,
+        'file_write': l.execPrefFileWrite,
+        'file_delete': l.execPrefFileDelete,
+        'shell_exec': l.execPrefShellExec,
+        'shell_read': l.execPrefShellRead,
+        'install': l.execPrefInstall,
+        'send': l.execPrefSend,
+      };
+
+  Map<String, String> _ruleOptionLabels(AppLocalizations l) => {
+        'auto': l.execPrefAuto,
+        'confirm': l.settingsConfirm,
+        'skip': l.execPrefSkip,
+        'reject': l.execPrefReject,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final service = ref.watch(openClawExecutionPreferencesProvider);
     final current = service.preferences;
     if (!_dirty || _draft == null) {
       _draft = current;
     }
     final draft = _draft ?? current;
+    final modeLabels = _modeLabels(l);
+    final ruleLabels = _ruleLabels(l);
+    final ruleOptions = _ruleOptionLabels(l);
 
     return GraphiteCardSurface(
       child: Column(
@@ -69,7 +74,7 @@ class _OpenClawExecutionPreferencesCardState
             children: [
               Expanded(
                 child: Text(
-                  '执行偏好',
+                  l.execPrefTitle,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -87,7 +92,7 @@ class _OpenClawExecutionPreferencesCardState
           Text(
             draft.summary.isNotEmpty
                 ? draft.summary
-                : '你可以决定哪些动作自动执行，哪些动作仍然要你亲自确认。',
+                : l.execPrefDescription,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.45,
@@ -104,7 +109,7 @@ class _OpenClawExecutionPreferencesCardState
           Wrap(
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
-            children: _modeLabels.entries
+            children: modeLabels.entries
                 .map(
                   (entry) => ChoiceChip(
                     label: Text(entry.value),
@@ -121,7 +126,7 @@ class _OpenClawExecutionPreferencesCardState
           ),
           const SizedBox(height: DS.spacing10),
           Text(
-            _modeDescription(draft.mode),
+            _modeDescription(l, draft.mode),
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.45,
@@ -129,7 +134,7 @@ class _OpenClawExecutionPreferencesCardState
           ),
           if (draft.mode == 'custom') ...[
             const SizedBox(height: DS.spacing8),
-            ..._ruleLabels.entries.map(
+            ...ruleLabels.entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing10),
                 child: Column(
@@ -152,7 +157,7 @@ class _OpenClawExecutionPreferencesCardState
                         isDense: true,
                         border: OutlineInputBorder(),
                       ),
-                      items: _ruleOptionLabels.entries
+                      items: ruleOptions.entries
                           .map(
                             (option) => DropdownMenuItem<String>(
                               value: option.key,
@@ -182,9 +187,9 @@ class _OpenClawExecutionPreferencesCardState
           SwitchListTile.adaptive(
             value: draft.autoExtendTimeout,
             contentPadding: EdgeInsets.zero,
-            title: Text(context.l10n.settingsAutoExtend),
+            title: Text(l.settingsAutoExtend),
             subtitle: Text(
-              '长耗时任务接近超时时，优先尝试自动续期。',
+              l.execPrefAutoExtendDesc,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             onChanged: (value) {
@@ -197,9 +202,9 @@ class _OpenClawExecutionPreferencesCardState
           SwitchListTile.adaptive(
             value: draft.trustAutoUpgrade,
             contentPadding: EdgeInsets.zero,
-            title: Text(context.l10n.settingsAutoSuggestTrust),
+            title: Text(l.settingsAutoSuggestTrust),
             subtitle: Text(
-              '当某类动作长期稳定成功时，Sparkle 会建议减少确认频率。',
+              l.execPrefTrustUpgradeDesc,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             onChanged: (value) {
@@ -211,7 +216,7 @@ class _OpenClawExecutionPreferencesCardState
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '通知级别',
+            l.execPrefNotificationLevel,
             style: DS.bodySmall.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
@@ -227,10 +232,10 @@ class _OpenClawExecutionPreferencesCardState
               isDense: true,
               border: OutlineInputBorder(),
             ),
-            items: const [
-              DropdownMenuItem(value: 'all', child: Text(context.l10n.settingsAllNotifications)),
-              DropdownMenuItem(value: 'essential', child: Text(context.l10n.settingsCriticalOnly)),
-              DropdownMenuItem(value: 'silent', child: Text(context.l10n.settingsQuietMode)),
+            items: [
+              DropdownMenuItem(value: 'all', child: Text(l.settingsAllNotifications)),
+              DropdownMenuItem(value: 'essential', child: Text(l.settingsCriticalOnly)),
+              DropdownMenuItem(value: 'silent', child: Text(l.settingsQuietMode)),
             ],
             onChanged: (value) {
               if (value == null) {
@@ -244,7 +249,7 @@ class _OpenClawExecutionPreferencesCardState
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '执行预算',
+            l.execPrefBudgetTitle,
             style: DS.bodySmall.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
@@ -252,7 +257,7 @@ class _OpenClawExecutionPreferencesCardState
           ),
           const SizedBox(height: DS.spacing6),
           Text(
-            '预算会在真正执行前生效。留空表示不限制；下面会显示当前已用 tokens。',
+            l.execPrefBudgetDescription,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.45,
@@ -270,9 +275,9 @@ class _OpenClawExecutionPreferencesCardState
                       draft.executionBudget.dailyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: context.l10n.settingsDailyLimit,
+                    labelText: l.settingsDailyLimit,
                     helperText:
-                        '已用 ${draft.executionBudget.dailyUsed} tokens',
+                        l.execPrefTokensUsed(draft.executionBudget.dailyUsed),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -296,9 +301,8 @@ class _OpenClawExecutionPreferencesCardState
                       draft.executionBudget.monthlyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: context.l10n.settingsMonthlyLimit,
-                    helperText:
-                        '已用 ${draft.executionBudget.monthlyUsed} tokens',
+                    labelText: l.settingsMonthlyLimit,
+                    helperText: l.execPrefTokensUsed(draft.executionBudget.monthlyUsed),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -317,7 +321,7 @@ class _OpenClawExecutionPreferencesCardState
           if (draft.recommendations.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '系统建议',
+              l.execPrefSystemSuggestion,
               style: DS.bodySmall.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -337,7 +341,7 @@ class _OpenClawExecutionPreferencesCardState
                   ),
                 ),
                 child: Text(
-                  '${_modeLabels[item.recommendedMode] ?? item.recommendedMode} · ${item.reason}',
+                  '${modeLabels[item.recommendedMode] ?? item.recommendedMode} · ${item.reason}',
                   style: DS.bodySmall.copyWith(
                     color: DS.textPrimary,
                     height: 1.4,
@@ -365,11 +369,11 @@ class _OpenClawExecutionPreferencesCardState
                           _dirty = false;
                         });
                         messenger.showSnackBar(
-                          SparkleSnackBar.success(context.l10n.settingsPreferencesSaved),
+                          SparkleSnackBar.success(l.settingsPreferencesSaved),
                         );
                       }
                     },
-              child: Text(_dirty ? context.l10n.settingsSavePreferences : '当前已同步'),
+              child: Text(_dirty ? l.settingsSavePreferences : l.execPrefSynced),
             ),
           ),
         ],
@@ -377,16 +381,16 @@ class _OpenClawExecutionPreferencesCardState
     );
   }
 
-  String _modeDescription(String mode) {
+  String _modeDescription(AppLocalizations l, String mode) {
     switch (mode) {
       case 'cautious':
-        return '尽量每一步都先确认，更适合刚开始使用远程执行时。';
+        return l.execPrefCautiousDesc;
       case 'autonomous':
-        return '低到中风险动作默认自动完成，只在危险动作前打断。';
+        return l.execPrefAutonomousDesc;
       case 'custom':
-        return '按动作类型单独指定自动、确认、跳过或拒绝。';
+        return l.execPrefCustomDesc;
       default:
-        return '读取类动作自动执行，写入和高风险动作保持确认。';
+        return l.execPrefBalancedDesc;
     }
   }
 }
