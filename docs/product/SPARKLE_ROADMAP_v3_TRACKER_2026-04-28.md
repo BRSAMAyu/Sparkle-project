@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (L4 async fix, EA-6 dedup -103行, P2-8 PartnerCommitmentLoop; 2448 aurora/spine/signal tests pass)
+> **最后更新**: 2026-04-30 (F-03 friends_screen 37 strings i18n'd, 84 total; all P0/P1/P2 code items resolved)
 
 ### P0 Critical — 当前会话修复
 
@@ -533,7 +533,7 @@
 | G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
 | F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已修 (a6c81d07) |
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已修 (17a49bd5) |
-| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🟡 进行中 (plan_view 39→47/60 done, a2ccfd9a) |
+| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🟡 进行中 (47+37=84 strings i18n'd across plan+friends screens, 452060a0) |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
 | G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | ✅ 已修 (4c6301aa) |
 | G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | ✅ 已修 (b45925d2) |
