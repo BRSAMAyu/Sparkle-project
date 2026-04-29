@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.models.card_protocol import CardLifecycleStatus, CardType, EdgeType
+from app.models.card_protocol import BindingMode, CardLifecycleStatus, CardType, EdgeType
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.card_protocol.legacy_adapter import PlanAdapter, TaskAdapter
@@ -138,3 +138,58 @@ async def test_occurrence_events_use_consistent_status_change_contract(db_sessio
     assert status_payloads[0]["new_status"] == OccurrenceStatus.DEFERRED.value
     assert status_payloads[1]["old_status"] == OccurrenceStatus.DEFERRED.value
     assert status_payloads[1]["new_status"] == OccurrenceStatus.COMPLETED.value
+
+
+@pytest.mark.asyncio
+async def test_card_service_facade_manages_edges_snapshots_and_soft_delete(db_session, test_user):
+    fake_bus = FakeEventBus()
+    service = CardService(db_session, fake_bus)
+    plan = await service.create_card(
+        card_type=CardType.PLAN,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"name": "Card facade plan"},
+        lifecycle_status=CardLifecycleStatus.ACTIVE,
+    )
+    task = await service.create_card(
+        card_type=CardType.TASK,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"title": "Card facade task"},
+        lifecycle_status=CardLifecycleStatus.ACTIVE,
+    )
+
+    edge = await service.create_edge(
+        from_card_id=plan.id,
+        to_card_id=task.id,
+        edge_type=EdgeType.CONTAINS,
+        binding_mode=BindingMode.OWNED,
+        order_index=1000,
+    )
+    await db_session.commit()
+
+    children = await service.get_children(plan.id, edge_type=EdgeType.CONTAINS)
+    parents = await service.get_parents(task.id, edge_type=EdgeType.CONTAINS)
+    assert [(item.id, item.order_index) for item, _ in children] == [(edge.id, 1000)]
+    assert [parent.id for _, parent in parents] == [plan.id]
+
+    first_snapshot = await service.create_snapshot(card_id=plan.id, include_children=True, max_depth=2)
+    second_snapshot = await service.create_snapshot(card_id=plan.id, include_children=False, max_depth=1)
+    await db_session.commit()
+
+    snapshots = await service.get_snapshots(plan.id)
+    latest = await service.get_latest_snapshot(plan.id)
+    assert [snapshot.id for snapshot in snapshots[:2]] == [second_snapshot.id, first_snapshot.id]
+    assert latest is not None
+    assert latest.id == second_snapshot.id
+
+    deleted = await service.delete_card(task.id)
+    await db_session.commit()
+
+    assert deleted is True
+    assert await service.get_card(task.id) is None
+    assert await service.get_children(plan.id, edge_type=EdgeType.CONTAINS) == []
+
+    event_types = [event_type for event_type, _ in fake_bus.events]
+    assert "card_edge.created" in event_types
+    assert "card.deleted" in event_types

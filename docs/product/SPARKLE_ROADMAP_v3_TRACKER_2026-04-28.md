@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 后端核心完成但审查发现接线缺口, Phase 2 部分已存在
+## 当前状态: Phase 0 完成, Phase 1 Card Protocol 收尾中, Phase 1.6 审查接线缺口待修, Phase 2 部分已存在
 > **审查报告**: [`docs/product/SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 Critical + 4 P1 High + 3 P2 Medium
 
 ---
@@ -101,7 +101,7 @@
 ### 1.5 Card Protocol 迁移
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| T1.5.1 card_service.py 完善 | ⬜ 未开始 | — | |
+| T1.5.1 card_service.py 完善 | ✅ 完成 | main | CardService 补齐软删除/恢复、CardEdge 关系门面、CardSnapshot 创建与版本查询; 14 Card Protocol tests passed, ruff passed |
 | T1.5.2 planning_workflow Card 写入 | ⬜ 未开始 | — | |
 | T1.5.3 TaskOccurrence 从 Card 生成 | ⬜ 未开始 | — | |
 | T1.5.4 InterventionRecord 记录 | ⬜ 未开始 | — | |
@@ -174,6 +174,7 @@
 | 2026-04-29 | Phase 1-2 | Claude Deep Audit | **3 P0 Critical**: OutcomeTracker 死代码, CognitiveAdjustment 未到 LLM prompt, multi_agent 跳过 Spine | ⬜ 待修 — 见审查报告 |
 | 2026-04-29 | Phase 1-2 | Claude Deep Audit | **4 P1 High**: 6 EventBus 事件绕过 Spine, Aurora→Spine 只写日志, Spine 降级无监控, Receipt 缺行动按钮 | ⬜ 待修 — 见审查报告 |
 | 2026-04-29 | Phase 2 | Claude Deep Audit | **T2.3.4/T2.3.5 已完成**: Spine Timeline API + Flutter Panel 均已存在, 无需新建 | ✅ 确认 |
+| 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.1 CardService 需成为 Card CRUD/Edge/Snapshot 稳定入口, 避免上层直接拼多服务 | ✅ 已修: 增加薄门面与版本查询, 14 Card Protocol tests + ruff 通过 |
 
 ---
 
