@@ -57,11 +57,35 @@ class NudgeService:
 
         # 2. Send Push Notification (Real-time)
         try:
-            # Generate push content dict
-            content_dict = {
-                "title": "Sparkle Insight",
-                "body": message
-            }
+            # Check if Spine has a behavior-driven NotificationDirective for this user
+            spine_directive = None
+            try:
+                from app.core.cache import cache_service
+                if cache_service.redis:
+                    from app.signals.spine_orchestrator import SpineOrchestrator
+                    spine = SpineOrchestrator(cache_service.redis)
+                    spine_directive = await spine.get_notification_directive(user_id)
+            except Exception:
+                logger.debug("Spine NotificationDirective check failed (non-fatal)", exc_info=True)
+
+            if spine_directive:
+                # Behavior-driven notification: use spine content
+                content_dict = {
+                    "title": "Sparkle",
+                    "body": message,
+                }
+                extra_data = {
+                    "spine_trigger": spine_directive.trigger,
+                    "message_strategy": spine_directive.message_strategy,
+                    "value_reason": context.get("value_reason", ""),
+                }
+            else:
+                # Time-based fallback: use nudge content
+                content_dict = {
+                    "title": "Sparkle Insight",
+                    "body": message,
+                }
+                extra_data = {}
 
             from app.models.user import User
             from app.services.personalization import get_personalization_engine
@@ -75,13 +99,14 @@ class NudgeService:
                  # Calling the private _send_push method with the correct signature
                  await self.push_service._send_push(
                     user=user,
-                    trigger_type="nudge",
+                    trigger_type=spine_directive.trigger if spine_directive else "nudge",
                     content=content_dict,
                     data={
                         "type": "nudge",
                         "nudge_type": nudge_type,
                         "notification_id": str(notification.id),
-                        **context
+                        **extra_data,
+                        **context,
                     },
                     policy=policy
                  )
