@@ -254,6 +254,14 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				errChan <- err
 				return
 			}
+			// G-04: Validate backend message size before forwarding to client
+			if len(data) > int(readLimit) {
+				p.logger.Warn("Backend message exceeds limit, dropping",
+					zap.String("user_id", userID),
+					zap.Int("size", len(data)),
+					zap.Int64("limit", readLimit))
+				continue
+			}
 			if err := writeMessage(&clientWriteMu, clientConn, messageType, data); err != nil {
 				p.logger.Warn("Client write error",
 					zap.String("user_id", userID),
