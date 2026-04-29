@@ -174,7 +174,7 @@ class ContextOrchestrator:
                 elif isinstance(parsed, dict):
                     existing = [parsed]
         except Exception as exc:
-            logger.warning(f"Failed to read achievement progress context cache: {exc}")
+            logger.warning("Failed to read achievement progress context cache: {}", exc)
 
         merged = [payload]
         for item in existing:
@@ -194,7 +194,7 @@ class ContextOrchestrator:
             )
             await cls._maybe_await(redis_client.delete(f"user:context:snapshot:{user_id}"))
         except Exception as exc:
-            logger.warning(f"Failed to write achievement progress context cache: {exc}")
+            logger.warning("Failed to write achievement progress context cache: {}", exc)
 
     def _get_error_book_service(self, db_session: AsyncSession | None = None) -> ErrorBookService:
         db = db_session or self.db
@@ -373,7 +373,7 @@ class ContextOrchestrator:
             service = MemoryService(db_session or self.db)
             rows = await service.get_recent_episodic(user_id, limit=limit)
         except Exception as exc:
-            logger.warning(f"Failed to load past session memory: {exc}")
+            logger.warning("Failed to load past session memory: {}", exc)
             return []
 
         memories: list[dict[str, Any]] = []
@@ -406,7 +406,8 @@ class ContextOrchestrator:
             keys = []
             try:
                 keys = await self.redis.keys(pattern)
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to query spine model claim keys: {}", exc)
                 return []
             if not keys:
                 return []
@@ -416,11 +417,12 @@ class ContextOrchestrator:
                     raw = await self.redis.get(key)
                     if raw:
                         claims.append(json.loads(raw))
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Failed to parse spine model claim key={}: {}", key, exc)
                     continue
             return claims
         except Exception as exc:
-            logger.debug(f"spine model claims read skipped: {exc}")
+            logger.warning("Spine model claims read skipped: {}", exc)
             return []
 
     async def _get_capsule_preferences(
@@ -432,12 +434,12 @@ class ContextOrchestrator:
         try:
             favorite_preferences = await CapsuleFavoriteService().get_preferences(user_id, db)
         except Exception as exc:
-            logger.warning(f"Failed to load capsule preferences: {exc}")
+            logger.warning("Failed to load capsule preferences: {}", exc)
             favorite_preferences = {}
         try:
             stored_preferences = await self._get_profile_capsule_preferences(user_id, db)
         except Exception as exc:
-            logger.warning(f"Failed to load stored capsule preferences: {exc}")
+            logger.warning("Failed to load stored capsule preferences: {}", exc)
             stored_preferences = {}
         return self._merge_capsule_preferences(stored_preferences, favorite_preferences)
 
@@ -498,7 +500,7 @@ class ContextOrchestrator:
 
     def _handle_result(self, result, name: str, default: Any) -> Any:
         if isinstance(result, Exception):
-            logger.error(f"Failed to gather {name} context: {result}")
+            logger.error("Failed to gather {} context: {}", name, result)
             return default
         return result
 
@@ -512,7 +514,7 @@ class ContextOrchestrator:
                 json_data = json.loads(data)
                 return CognitiveContext(**json_data)
         except Exception as e:
-            logger.warning(f"Cache get failed for user context: {e}")
+            logger.warning("Cache get failed for user context: {}", e)
         return None
 
     async def _get_recent_achievement_progress_events(self, user_id: str) -> list[dict[str, Any]]:
@@ -544,7 +546,7 @@ class ContextOrchestrator:
                 )
             return events
         except Exception as exc:
-            logger.warning(f"Failed to load achievement progress context events: {exc}")
+            logger.warning("Failed to load achievement progress context events: {}", exc)
             return []
 
     async def _cache_context(self, user_id: str, context: CognitiveContext):
@@ -555,7 +557,7 @@ class ContextOrchestrator:
             data = context.model_dump_json()
             await self.redis.setex(key, self.CACHE_TTL_SECONDS, data)
         except Exception as e:
-            logger.warning(f"Cache set failed for user context: {e}")
+            logger.warning("Cache set failed for user context: {}", e)
 
     # --- Sub-fetchers ---
 
@@ -844,7 +846,7 @@ class ContextOrchestrator:
             prefs = await self._get_preference_service().get_preferences(UUID(user_id))
             return prefs.version or 0
         except Exception as e:
-            logger.warning(f"Failed to get preference version for {user_id}: {e}")
+            logger.warning("Failed to get preference version for {}: {}", user_id, e)
             return 0
 
     async def _get_community_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
