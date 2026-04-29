@@ -22971,6 +22971,266 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visualTapToggle => 'Tap to Toggle';
 
   @override
+  String get visualPrestigeEmpty =>
+      'No prestige set yet — unlock and equip a set for a more striking look.';
+
+  @override
+  String get visualCurrentPrestigeSet => 'Current Prestige Set';
+
+  @override
+  String get visualUnlocked => 'Unlocked';
+
+  @override
+  String get visualLocked => 'Locked';
+
+  @override
+  String visualCollectedCount(int owned, int total) {
+    return '$owned/$total Collected';
+  }
+
+  @override
+  String get visualBundleIncomplete =>
+      'Haven\'t collected all pieces of this prestige set';
+
+  @override
+  String get visualBundleEquipped => 'Prestige set equipped';
+
+  @override
+  String get visualBundleUnequipped => 'Prestige set removed';
+
+  @override
+  String visualStyleCount(int count) {
+    return '$count Styles';
+  }
+
+  @override
+  String visualOwnedCount(int unlocked, int total) {
+    return 'Owned $unlocked / $total';
+  }
+
+  @override
+  String visualCurrentView(String label) {
+    return 'Viewing: $label';
+  }
+
+  @override
+  String visualSlotSwitched(int count) {
+    return 'Switched to this slot, $count styles available';
+  }
+
+  @override
+  String get visualSortPrestige => 'Most Flauntable';
+
+  @override
+  String get visualSortBySet => 'By Set';
+
+  @override
+  String get visualOneClickEquip => 'Equip All';
+
+  @override
+  String get execPrefTitle => 'Execution Preferences';
+
+  @override
+  String get execPrefDescription =>
+      'You decide which actions run automatically and which ones still need your confirmation.';
+
+  @override
+  String get execPrefCautious => 'Cautious';
+
+  @override
+  String get execPrefBalanced => 'Balanced';
+
+  @override
+  String get execPrefAutonomous => 'Trusted';
+
+  @override
+  String get execPrefCustom => 'Custom';
+
+  @override
+  String get execPrefCautiousDesc =>
+      'Confirm every step — best when you\'re just starting with remote execution.';
+
+  @override
+  String get execPrefAutonomousDesc =>
+      'Low-to-medium risk actions run automatically; only dangerous ones pause for confirmation.';
+
+  @override
+  String get execPrefCustomDesc =>
+      'Specify auto, confirm, skip, or reject per action type.';
+
+  @override
+  String get execPrefBalancedDesc =>
+      'Read actions run automatically; writes and high-risk actions require confirmation.';
+
+  @override
+  String get execPrefBrowserRead => 'Browser Read';
+
+  @override
+  String get execPrefBrowserWrite => 'Browser Write';
+
+  @override
+  String get execPrefFileRead => 'File Read';
+
+  @override
+  String get execPrefFileWrite => 'File Write';
+
+  @override
+  String get execPrefFileDelete => 'File Delete';
+
+  @override
+  String get execPrefShellExec => 'Terminal Execute';
+
+  @override
+  String get execPrefShellRead => 'Terminal Read-Only';
+
+  @override
+  String get execPrefInstall => 'Install Actions';
+
+  @override
+  String get execPrefSend => 'Send / Submit';
+
+  @override
+  String get execPrefAuto => 'Auto';
+
+  @override
+  String get execPrefSkip => 'Skip';
+
+  @override
+  String get execPrefReject => 'Reject';
+
+  @override
+  String get execPrefAutoExtendDesc =>
+      'When long-running tasks approach timeout, try auto-extending first.';
+
+  @override
+  String get execPrefTrustUpgradeDesc =>
+      'When an action type has a stable success record, Sparkle will suggest reducing confirmation frequency.';
+
+  @override
+  String get execPrefNotificationLevel => 'Notification Level';
+
+  @override
+  String get execPrefBudgetTitle => 'Execution Budget';
+
+  @override
+  String get execPrefBudgetDescription =>
+      'Budgets take effect before actual execution. Leave empty for no limit; current token usage shown below.';
+
+  @override
+  String execPrefTokensUsed(int count) {
+    return '$count tokens used';
+  }
+
+  @override
+  String get execPrefSystemSuggestion => 'System Suggestion';
+
+  @override
+  String get execPrefSynced => 'Already in sync';
+
+  @override
+  String lpTarget(String name) {
+    return 'Target: $name';
+  }
+
+  @override
+  String get lpMainPath => 'Main Path';
+
+  @override
+  String lpLoadFailed(String error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get lpGenMethod => 'Generation Method';
+
+  @override
+  String get lpGenMethodDesc =>
+      'Quick task paths don\'t count against your plan quota — great for generating a few actionable task cards right away. Full plans create formal proposals.';
+
+  @override
+  String get lpGenerating => 'Generating...';
+
+  @override
+  String get lpOptionalNodes => 'Recommended Extensions';
+
+  @override
+  String get lpOptionalNodesDesc =>
+      'These nodes aren\'t required prerequisites, but you can choose to include them in your study plan.';
+
+  @override
+  String lpCreatingTask(String name) {
+    return 'Creating task card for \"$name\"...';
+  }
+
+  @override
+  String get lpTaskCreated => 'Task card created';
+
+  @override
+  String lpGeneratingPlan(String name) {
+    return 'Generating study plan for \"$name\"...';
+  }
+
+  @override
+  String get lpPlanGenerated => 'Study plan generated';
+
+  @override
+  String get lpGeneratingFullPath =>
+      'Generating full learning path plan — this may take a few seconds...';
+
+  @override
+  String get lpGeneratingTaskPath => 'Generating an executable task path...';
+
+  @override
+  String get lpTaskPathGenerated => 'Task path generated';
+
+  @override
+  String get lpStatusMastered => 'Mastered';
+
+  @override
+  String get lpStatusUnlocked => 'Available';
+
+  @override
+  String get lpStatusLocked => 'Locked';
+
+  @override
+  String get lpRelationApplication => 'Application';
+
+  @override
+  String get lpRelationEvolution => 'Advanced';
+
+  @override
+  String get lpRelationComposition => 'Composition';
+
+  @override
+  String get lpRelationRelated => 'Related';
+
+  @override
+  String get lpSourceLlm => 'AI Recommended';
+
+  @override
+  String get lpSourceSeed => 'Preset';
+
+  @override
+  String get lpSourceUser => 'User Added';
+
+  @override
+  String get lpTargetNodeDesc =>
+      'This is the target node of the current learning path.';
+
+  @override
+  String get lpNormalNodeDesc =>
+      'You can create a task around this node, or merge it into a study plan.';
+
+  @override
+  String get lpLoadingRelatedTasks => 'Loading related tasks...';
+
+  @override
+  String get lpNoRelatedTasks => 'No related tasks yet.';
+
+  @override
+  String get lpRelatedTasks => 'Related Tasks';
+
+  @override
   String get simSocratic => 'Socratic Dialogue';
 
   @override
@@ -27560,4 +27820,381 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebLoadReviewFailed => 'Failed to load';
+
+  @override
+  String get posterTitle => 'Poster Studio';
+
+  @override
+  String get posterTypeLabel => 'Poster Type';
+
+  @override
+  String get posterTemplateLabel => 'Visual Template';
+
+  @override
+  String get posterPreviewLabel => 'Live Preview';
+
+  @override
+  String get posterShareOrDownload => 'Share or Download';
+
+  @override
+  String get posterRegenerate => 'Regenerate Preview';
+
+  @override
+  String get posterPreviewGenerating => 'Generating preview...';
+
+  @override
+  String get posterPreviewFailed =>
+      'Unable to generate preview. Please try again later.';
+
+  @override
+  String get posterPreviewError =>
+      'Poster preview failed, please try again later';
+
+  @override
+  String posterPreviewErrorWith(String error) {
+    return 'Poster preview failed: $error';
+  }
+
+  @override
+  String get posterUnknownError => 'Unknown error';
+
+  @override
+  String get posterIdentityTitle => 'Glory Identity';
+
+  @override
+  String get posterIdentitySubtitle =>
+      'Show your title, level, and signature achievement';
+
+  @override
+  String posterIdentityPayloadTitle(String name) {
+    return '$name\'s Glory Identity';
+  }
+
+  @override
+  String get posterIdentityDefaultSubtitle =>
+      'Share your growth highlights with friends';
+
+  @override
+  String get posterIdentityDefaultRarity => 'Glory';
+
+  @override
+  String get posterIdentityGrowing => 'Growing steadily';
+
+  @override
+  String get posterGrowthTitle => 'Weekly Growth';
+
+  @override
+  String get posterGrowthSubtitle =>
+      'Turn growth trends, brightness, and active plans into a battle report';
+
+  @override
+  String posterGrowthPayloadTitle(String name) {
+    return '$name\'s Weekly Growth';
+  }
+
+  @override
+  String posterGrowthPayloadSubtitle(int level, int brightness) {
+    return 'Level Lv.$level · Brightness $brightness%';
+  }
+
+  @override
+  String get posterGrowthDesc =>
+      'Keep up this pace — your learning momentum is rising.';
+
+  @override
+  String get posterGrowthReportType => 'Growth Weekly';
+
+  @override
+  String get posterPlanTitle => 'Plan Battle Report';
+
+  @override
+  String get posterPlanSubtitle =>
+      'Turn your current plan into a high-quality progress card';
+
+  @override
+  String get posterPlanDefaultTitle => 'My Next Stage Plan';
+
+  @override
+  String get posterPlanDefaultSubtitle =>
+      'Break goals into tasks and push forward steadily.';
+
+  @override
+  String get posterPlanDefaultSubject => 'Personal Growth';
+
+  @override
+  String get posterCapsuleTitle => 'Inspiration Capsule';
+
+  @override
+  String get posterCapsuleSubtitle =>
+      'Turn your latest insight or curiosity capsule into a shareable thought card';
+
+  @override
+  String get posterCapsuleDefaultTitle => 'Today\'s Inspiration Capsule';
+
+  @override
+  String get posterCapsuleDefaultSubtitle =>
+      'Save a new idea as a poster worth revisiting.';
+
+  @override
+  String get posterCapsuleDefaultDesc =>
+      'New insights are being generated, waiting for you to light them up.';
+
+  @override
+  String get posterCapsuleDefaultDepth => 'Inspiration';
+
+  @override
+  String get posterHeroHeadline =>
+      'Turn your growth into a poster worth sharing';
+
+  @override
+  String get posterHeroDesc =>
+      'Poster Studio automatically reads your real achievements, plans, capsules, and growth data to generate high-quality posters for sharing to social platforms or saving to your album.';
+
+  @override
+  String get posterChipLivePreview => 'Live Preview';
+
+  @override
+  String get posterChipDownload => 'Download Image';
+
+  @override
+  String get posterChipSystemShare => 'System Share';
+
+  @override
+  String posterTemplateSuffix(String name) {
+    return '$name Template';
+  }
+
+  @override
+  String get posterTemplateDefaultDesc =>
+      'Perfect for sharing your growth highlights';
+
+  @override
+  String gmMembersTitle(String groupName) {
+    return '$groupName - Members';
+  }
+
+  @override
+  String get gmTabMembers => 'Members';
+
+  @override
+  String get gmTabLeaderboard => 'Leaderboard';
+
+  @override
+  String get gmLoadFailed => 'Load failed';
+
+  @override
+  String get gmLoadMembersFailed =>
+      'Failed to load members, please try again later';
+
+  @override
+  String get gmTabFlame => 'Flame';
+
+  @override
+  String get gmTabCheckin => 'Check-in';
+
+  @override
+  String get gmTabTasks => 'Tasks';
+
+  @override
+  String gmFlameValue(int count) {
+    return '$count flame';
+  }
+
+  @override
+  String gmDayValue(int count) {
+    return '$count days';
+  }
+
+  @override
+  String gmTaskValue(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String get gmMute => 'Mute';
+
+  @override
+  String get gmSendWarning => 'Send Warning';
+
+  @override
+  String get gmKick => 'Remove from Group';
+
+  @override
+  String gmKickConfirm(String name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get gmKickConfirmMsg => 'This member will be removed from the group.';
+
+  @override
+  String gmKicked(String name) {
+    return '$name has been removed';
+  }
+
+  @override
+  String gmActionFailed(String error) {
+    return 'Action failed: $error';
+  }
+
+  @override
+  String get gmCancel => 'Cancel';
+
+  @override
+  String get gmConfirm => 'Confirm';
+
+  @override
+  String gmMuteTitle(String name) {
+    return 'Mute $name';
+  }
+
+  @override
+  String get gmMuteDuration => 'Mute duration:';
+
+  @override
+  String get gm24Hours => '24 hours';
+
+  @override
+  String gmMinutes(int m) {
+    return '$m minutes';
+  }
+
+  @override
+  String get gmMuteReason => 'Mute reason (optional)';
+
+  @override
+  String get gmConfirmMute => 'Confirm Mute';
+
+  @override
+  String gmMuted(String name) {
+    return '$name has been muted';
+  }
+
+  @override
+  String gmWarnTitle(String name) {
+    return 'Warn $name';
+  }
+
+  @override
+  String get gmWarnReason => 'Warning reason';
+
+  @override
+  String get gmSendWarningBtn => 'Send Warning';
+
+  @override
+  String get gmWarnReasonRequired => 'Please enter a warning reason';
+
+  @override
+  String gmWarned(String name) {
+    return 'Warning sent to $name';
+  }
+
+  @override
+  String skillLoadFailed(String error) {
+    return 'Skills load failed: $error';
+  }
+
+  @override
+  String get skillTitle => 'My Skills';
+
+  @override
+  String get skillFromDraft => 'Generate from draft';
+
+  @override
+  String get skillNewSkill => 'New skill';
+
+  @override
+  String get skillTabMySkills => 'My Skills';
+
+  @override
+  String get skillTabSharedCatalog => 'Shared Catalog';
+
+  @override
+  String get skillEmptyMy => 'No skills created yet';
+
+  @override
+  String get skillEmptyShared => 'Shared catalog is empty';
+
+  @override
+  String get skillIntroTitle => 'Save the approaches that work for you';
+
+  @override
+  String get skillIntroDesc =>
+      'Create manually, import from chat drafts, enable/disable, edit, delete, share, or fork from the anonymous catalog.';
+
+  @override
+  String get skillEdit => 'Edit';
+
+  @override
+  String get skillDelete => 'Delete';
+
+  @override
+  String get skillShare => 'Share';
+
+  @override
+  String get skillUnshare => 'Unshare';
+
+  @override
+  String get skillForkToMy => 'Fork to My Skills';
+
+  @override
+  String get skillSaved => 'Skill saved';
+
+  @override
+  String skillSaveFailed(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String skillActionFailed(String error) {
+    return 'Action failed: $error';
+  }
+
+  @override
+  String get skillEditorNew => 'New Skill';
+
+  @override
+  String get skillEditorEdit => 'Edit Skill';
+
+  @override
+  String get skillEditorName => 'Name';
+
+  @override
+  String get skillEditorTemplate => 'Pattern Template';
+
+  @override
+  String get skillEditorExamples => 'Examples (one per line)';
+
+  @override
+  String get skillCancel => 'Cancel';
+
+  @override
+  String get skillSave => 'Save';
+
+  @override
+  String get skillDraftDefaultConsent =>
+      'Do it this way from now on, remember this pattern';
+
+  @override
+  String get skillDraftTitle => 'Generate from Draft';
+
+  @override
+  String get skillDraftConsentLabel => 'Explicit consent text';
+
+  @override
+  String get skillDraftUserMessage => 'User\'s original words';
+
+  @override
+  String get skillDraftAiReply => 'AI reply';
+
+  @override
+  String get skillDraftGenerating => 'Generating...';
+
+  @override
+  String get skillDraftGenerate => 'Generate Draft';
+
+  @override
+  String skillDraftFailed(String error) {
+    return 'Draft generation failed: $error';
+  }
 }

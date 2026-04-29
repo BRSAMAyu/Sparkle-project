@@ -22012,6 +22012,252 @@ class AppLocalizationsZh extends AppLocalizations {
   String get visualTapToggle => '点按切换';
 
   @override
+  String get visualPrestigeEmpty => '当前还没有成型的荣耀套装，去解锁并装备一组更有存在感的外观吧。';
+
+  @override
+  String get visualCurrentPrestigeSet => '当前荣耀套装';
+
+  @override
+  String get visualUnlocked => '已解锁';
+
+  @override
+  String get visualLocked => '待征服';
+
+  @override
+  String visualCollectedCount(int owned, int total) {
+    return '$owned/$total 已集齐';
+  }
+
+  @override
+  String get visualBundleIncomplete => '还没有集齐这套荣耀装扮的部件';
+
+  @override
+  String get visualBundleEquipped => '已装备荣耀套装';
+
+  @override
+  String get visualBundleUnequipped => '已卸下整套荣耀装扮';
+
+  @override
+  String visualStyleCount(int count) {
+    return '$count 种风格';
+  }
+
+  @override
+  String visualOwnedCount(int unlocked, int total) {
+    return '已拥有 $unlocked / $total';
+  }
+
+  @override
+  String visualCurrentView(String label) {
+    return '当前查看: $label';
+  }
+
+  @override
+  String visualSlotSwitched(int count) {
+    return '已切换到该槽位，共 $count 个可选样式';
+  }
+
+  @override
+  String get visualSortPrestige => '最值得炫耀';
+
+  @override
+  String get visualSortBySet => '按套装';
+
+  @override
+  String get visualOneClickEquip => '一键穿戴';
+
+  @override
+  String get execPrefTitle => '执行偏好';
+
+  @override
+  String get execPrefDescription => '你可以决定哪些动作自动执行，哪些动作仍然要你亲自确认。';
+
+  @override
+  String get execPrefCautious => '谨慎模式';
+
+  @override
+  String get execPrefBalanced => '平衡模式';
+
+  @override
+  String get execPrefAutonomous => '信任模式';
+
+  @override
+  String get execPrefCustom => '自定义';
+
+  @override
+  String get execPrefCautiousDesc => '尽量每一步都先确认，更适合刚开始使用远程执行时。';
+
+  @override
+  String get execPrefAutonomousDesc => '低到中风险动作默认自动完成，只在危险动作前打断。';
+
+  @override
+  String get execPrefCustomDesc => '按动作类型单独指定自动、确认、跳过或拒绝。';
+
+  @override
+  String get execPrefBalancedDesc => '读取类动作自动执行，写入和高风险动作保持确认。';
+
+  @override
+  String get execPrefBrowserRead => '浏览器读取';
+
+  @override
+  String get execPrefBrowserWrite => '浏览器写入';
+
+  @override
+  String get execPrefFileRead => '文件读取';
+
+  @override
+  String get execPrefFileWrite => '文件写入';
+
+  @override
+  String get execPrefFileDelete => '文件删除';
+
+  @override
+  String get execPrefShellExec => '终端执行';
+
+  @override
+  String get execPrefShellRead => '终端只读';
+
+  @override
+  String get execPrefInstall => '安装类操作';
+
+  @override
+  String get execPrefSend => '发送/提交';
+
+  @override
+  String get execPrefAuto => '自动';
+
+  @override
+  String get execPrefSkip => '跳过';
+
+  @override
+  String get execPrefReject => '拒绝';
+
+  @override
+  String get execPrefAutoExtendDesc => '长耗时任务接近超时时，优先尝试自动续期。';
+
+  @override
+  String get execPrefTrustUpgradeDesc => '当某类动作长期稳定成功时，Sparkle 会建议减少确认频率。';
+
+  @override
+  String get execPrefNotificationLevel => '通知级别';
+
+  @override
+  String get execPrefBudgetTitle => '执行预算';
+
+  @override
+  String get execPrefBudgetDescription =>
+      '预算会在真正执行前生效。留空表示不限制；下面会显示当前已用 tokens。';
+
+  @override
+  String execPrefTokensUsed(int count) {
+    return '已用 $count tokens';
+  }
+
+  @override
+  String get execPrefSystemSuggestion => '系统建议';
+
+  @override
+  String get execPrefSynced => '当前已同步';
+
+  @override
+  String lpTarget(String name) {
+    return '目标：$name';
+  }
+
+  @override
+  String get lpMainPath => '主干路径';
+
+  @override
+  String lpLoadFailed(String error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get lpGenMethod => '生成方式';
+
+  @override
+  String get lpGenMethodDesc => '快速任务路径不会占用计划额度，适合先生成几张可以立刻执行的任务卡；完整计划会创建正式方案。';
+
+  @override
+  String get lpGenerating => '正在生成...';
+
+  @override
+  String get lpOptionalNodes => '推荐拓展节点';
+
+  @override
+  String get lpOptionalNodesDesc => '这些节点不是必须前置，但可以由你决定是否一并纳入学习计划。';
+
+  @override
+  String lpCreatingTask(String name) {
+    return '正在为「$name」创建任务卡...';
+  }
+
+  @override
+  String get lpTaskCreated => '任务卡已创建';
+
+  @override
+  String lpGeneratingPlan(String name) {
+    return '正在为「$name」生成学习计划，请稍候...';
+  }
+
+  @override
+  String get lpPlanGenerated => '学习计划已生成';
+
+  @override
+  String get lpGeneratingFullPath => '正在生成完整学习路径计划，这可能需要十几秒...';
+
+  @override
+  String get lpGeneratingTaskPath => '正在生成可立即执行的任务路径...';
+
+  @override
+  String get lpTaskPathGenerated => '任务路径已生成';
+
+  @override
+  String get lpStatusMastered => '已掌握';
+
+  @override
+  String get lpStatusUnlocked => '可学习';
+
+  @override
+  String get lpStatusLocked => '待解锁';
+
+  @override
+  String get lpRelationApplication => '应用';
+
+  @override
+  String get lpRelationEvolution => '进阶';
+
+  @override
+  String get lpRelationComposition => '组成';
+
+  @override
+  String get lpRelationRelated => '相关';
+
+  @override
+  String get lpSourceLlm => 'AI推荐';
+
+  @override
+  String get lpSourceSeed => '预设';
+
+  @override
+  String get lpSourceUser => '用户添加';
+
+  @override
+  String get lpTargetNodeDesc => '这是当前学习路径的目标节点。';
+
+  @override
+  String get lpNormalNodeDesc => '你可以围绕这个节点单独建任务，或把它并入学习计划。';
+
+  @override
+  String get lpLoadingRelatedTasks => '正在加载关联任务...';
+
+  @override
+  String get lpNoRelatedTasks => '当前还没有关联任务。';
+
+  @override
+  String get lpRelatedTasks => '关联任务';
+
+  @override
   String get simSocratic => '苏格拉底对话';
 
   @override
@@ -26413,4 +26659,365 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ebLoadReviewFailed => '加载失败';
+
+  @override
+  String get posterTitle => '海报工坊';
+
+  @override
+  String get posterTypeLabel => '海报类型';
+
+  @override
+  String get posterTemplateLabel => '视觉模板';
+
+  @override
+  String get posterPreviewLabel => '实时预览';
+
+  @override
+  String get posterShareOrDownload => '分享或下载';
+
+  @override
+  String get posterRegenerate => '重新生成预览';
+
+  @override
+  String get posterPreviewGenerating => '预览生成中';
+
+  @override
+  String get posterPreviewFailed => '暂时无法生成预览，请稍后重试。';
+
+  @override
+  String get posterPreviewError => '海报预览生成失败，请稍后重试';
+
+  @override
+  String posterPreviewErrorWith(String error) {
+    return '海报预览生成失败：$error';
+  }
+
+  @override
+  String get posterUnknownError => '未知错误';
+
+  @override
+  String get posterIdentityTitle => '荣耀身份海报';
+
+  @override
+  String get posterIdentitySubtitle => '展示你的称号、等级与代表成就';
+
+  @override
+  String posterIdentityPayloadTitle(String name) {
+    return '$name 的荣耀身份';
+  }
+
+  @override
+  String get posterIdentityDefaultSubtitle => '把成长高光分享给朋友';
+
+  @override
+  String get posterIdentityDefaultRarity => '荣耀';
+
+  @override
+  String get posterIdentityGrowing => '持续成长中';
+
+  @override
+  String get posterGrowthTitle => '本周成长海报';
+
+  @override
+  String get posterGrowthSubtitle => '把成长趋势、亮度和活跃计划做成一张战报';
+
+  @override
+  String posterGrowthPayloadTitle(String name) {
+    return '$name 的本周成长';
+  }
+
+  @override
+  String posterGrowthPayloadSubtitle(int level, int brightness) {
+    return '等级 Lv.$level · 亮度 $brightness%';
+  }
+
+  @override
+  String get posterGrowthDesc => '继续保持这个节奏，你的学习势能已经在持续上升。';
+
+  @override
+  String get posterGrowthReportType => '成长周报';
+
+  @override
+  String get posterPlanTitle => '计划战报海报';
+
+  @override
+  String get posterPlanSubtitle => '把当前正在推进的计划做成一张高质感进度卡';
+
+  @override
+  String get posterPlanDefaultTitle => '我的下一阶段计划';
+
+  @override
+  String get posterPlanDefaultSubtitle => '把目标拆成任务，稳定推进。';
+
+  @override
+  String get posterPlanDefaultSubject => '个人成长';
+
+  @override
+  String get posterCapsuleTitle => '灵感胶囊海报';
+
+  @override
+  String get posterCapsuleSubtitle => '把最近一次洞察或好奇心胶囊做成可分享的思考卡片';
+
+  @override
+  String get posterCapsuleDefaultTitle => '今天的灵感胶囊';
+
+  @override
+  String get posterCapsuleDefaultSubtitle => '把一个新的想法，留成值得回看的海报。';
+
+  @override
+  String get posterCapsuleDefaultDesc => '新的洞察正在生成，等你点亮。';
+
+  @override
+  String get posterCapsuleDefaultDepth => '灵感';
+
+  @override
+  String get posterHeroHeadline => '把你的成长，做成值得分享的一张图';
+
+  @override
+  String get posterHeroDesc =>
+      '海报工坊会自动读取你的真实成就、计划、胶囊和成长数据，生成适合分享到社交平台或保存到相册的高质感海报。';
+
+  @override
+  String get posterChipLivePreview => '实时预览';
+
+  @override
+  String get posterChipDownload => '下载图片';
+
+  @override
+  String get posterChipSystemShare => '系统分享';
+
+  @override
+  String posterTemplateSuffix(String name) {
+    return '$name 模板';
+  }
+
+  @override
+  String get posterTemplateDefaultDesc => '适合分享你的成长亮点';
+
+  @override
+  String gmMembersTitle(String groupName) {
+    return '$groupName - 成员';
+  }
+
+  @override
+  String get gmTabMembers => '成员列表';
+
+  @override
+  String get gmTabLeaderboard => '排行榜';
+
+  @override
+  String get gmLoadFailed => '加载失败';
+
+  @override
+  String get gmLoadMembersFailed => '加载成员失败，请稍后重试';
+
+  @override
+  String get gmTabFlame => '火焰';
+
+  @override
+  String get gmTabCheckin => '打卡';
+
+  @override
+  String get gmTabTasks => '任务';
+
+  @override
+  String gmFlameValue(int count) {
+    return '$count 火焰';
+  }
+
+  @override
+  String gmDayValue(int count) {
+    return '$count 天';
+  }
+
+  @override
+  String gmTaskValue(int count) {
+    return '$count 任务';
+  }
+
+  @override
+  String get gmMute => '禁言';
+
+  @override
+  String get gmSendWarning => '发出警告';
+
+  @override
+  String get gmKick => '移出群组';
+
+  @override
+  String gmKickConfirm(String name) {
+    return '移出 $name？';
+  }
+
+  @override
+  String get gmKickConfirmMsg => '该成员将被移出群组。';
+
+  @override
+  String gmKicked(String name) {
+    return '$name 已被移出群组';
+  }
+
+  @override
+  String gmActionFailed(String error) {
+    return '操作失败: $error';
+  }
+
+  @override
+  String get gmCancel => '取消';
+
+  @override
+  String get gmConfirm => '确认';
+
+  @override
+  String gmMuteTitle(String name) {
+    return '禁言 $name';
+  }
+
+  @override
+  String get gmMuteDuration => '禁言时长：';
+
+  @override
+  String get gm24Hours => '24小时';
+
+  @override
+  String gmMinutes(int m) {
+    return '$m 分钟';
+  }
+
+  @override
+  String get gmMuteReason => '禁言原因（可选）';
+
+  @override
+  String get gmConfirmMute => '确认禁言';
+
+  @override
+  String gmMuted(String name) {
+    return '$name 已被禁言';
+  }
+
+  @override
+  String gmWarnTitle(String name) {
+    return '警告 $name';
+  }
+
+  @override
+  String get gmWarnReason => '警告原因';
+
+  @override
+  String get gmSendWarningBtn => '发出警告';
+
+  @override
+  String get gmWarnReasonRequired => '请输入警告原因';
+
+  @override
+  String gmWarned(String name) {
+    return '已向 $name 发出警告';
+  }
+
+  @override
+  String skillLoadFailed(String error) {
+    return '我的方式加载失败: $error';
+  }
+
+  @override
+  String get skillTitle => '我的方式';
+
+  @override
+  String get skillFromDraft => '从草稿生成';
+
+  @override
+  String get skillNewSkill => '新建方式';
+
+  @override
+  String get skillTabMySkills => '我的方式';
+
+  @override
+  String get skillTabSharedCatalog => '共享目录';
+
+  @override
+  String get skillEmptyMy => '还没有沉淀任何 Skill';
+
+  @override
+  String get skillEmptyShared => '共享目录暂时为空';
+
+  @override
+  String get skillIntroTitle => '把你认可的处理方式沉淀下来';
+
+  @override
+  String get skillIntroDesc => '你可以手动新建、从对话草稿导入、启用/停用、编辑、删除、共享或从匿名目录 fork。';
+
+  @override
+  String get skillEdit => '编辑';
+
+  @override
+  String get skillDelete => '删除';
+
+  @override
+  String get skillShare => '共享';
+
+  @override
+  String get skillUnshare => '撤回共享';
+
+  @override
+  String get skillForkToMy => 'Fork 到我的方式';
+
+  @override
+  String get skillSaved => '已保存我的方式';
+
+  @override
+  String skillSaveFailed(String error) {
+    return '保存失败: $error';
+  }
+
+  @override
+  String skillActionFailed(String error) {
+    return '操作失败: $error';
+  }
+
+  @override
+  String get skillEditorNew => '新建方式';
+
+  @override
+  String get skillEditorEdit => '编辑方式';
+
+  @override
+  String get skillEditorName => '名称';
+
+  @override
+  String get skillEditorTemplate => '处理模板';
+
+  @override
+  String get skillEditorExamples => '示例（每行一条）';
+
+  @override
+  String get skillCancel => '取消';
+
+  @override
+  String get skillSave => '保存';
+
+  @override
+  String get skillDraftDefaultConsent => '以后这样做，记住这种方式';
+
+  @override
+  String get skillDraftTitle => '从草稿生成';
+
+  @override
+  String get skillDraftConsentLabel => '显式同意文本';
+
+  @override
+  String get skillDraftUserMessage => '用户原话';
+
+  @override
+  String get skillDraftAiReply => 'AI 回复';
+
+  @override
+  String get skillDraftGenerating => '生成中...';
+
+  @override
+  String get skillDraftGenerate => '生成草稿';
+
+  @override
+  String skillDraftFailed(String error) {
+    return '草稿生成失败: $error';
+  }
 }
