@@ -1,7 +1,16 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (V-9/V-10/V-14 fixed, R5 vision gaps closing)
+> **最后更新**: 2026-04-30 (P2-8 PartnerCommitmentLoop 86e3a364, P2 must-haves 10/10 complete)
+
+### P0 Critical — 当前会话修复
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| P0-1: WebSocket 重连丢上下文 | ✅ 已修 (5855b859) | Claude | Flutter 重连带 session_id query param + Go gateway 转发 + chat_orchestrator 日志 |
+| P0-2: (已完成) | ✅ 已修 | — | P0-2 内容已在之前会话完成 |
+| P0-3: 25个Aurora从未生产运行 | ✅ 已验证 | Claude | 47个 kill switch 全部默认 live, 71个 binding, drill 脚本已补齐 |
+| P0-4: 632 commits未合入main | 🟡 待决定 | — | 需用户/产品决策: merge 或 squash-merge roadmapv3→main |
 > **对应 Roadmap**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
 > **用途**: 记录所有已完成、进行中、待做的工作, 支持并行推进与阶段审查
 
