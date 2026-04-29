@@ -412,6 +412,9 @@
 
 ## Phase 8: 愿景验收清单差距修复 (🔴 2026-04-30)
 
+> **二次验收 (2026-04-30)**: 7 Agent 一审 + 3 Agent 二审 + 逐行验证 P0 关键代码
+> **修复进度**: P0 3/5→5/5 (OBS007+去重), P1 8/8→11/11 (compose+cache+event), P2 3/10→5/10 (requeue+logging)
+
 > **来源**: 全系统愿景验收审查 (`docs/product/critical_files/愿景验收清单`)
 > **范围**: 845 行 ~400 项清单逐项审查
 > **通过线**: Critical 100% ≥4分, Core 90% ≥4分, Experience 85% ≥4分
@@ -437,7 +440,13 @@
 
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| GAP-OBS007: 统一错误分类体系 | 🟡 修复中 | Claude | OBS-007: 无 warning/degraded/critical 分类; 需创建 error_taxonomy.py |
+| GAP-OBS007: 统一错误分类体系 | ✅ 已修复 | Claude | error_taxonomy.py + 6 处 spine_orchestrator 集成 + 19 测试 |
+| GAP-OBS008: 禁止吞异常 (P2-N5) | ✅ 已修复 | Claude | 14 处 silent except → debug logging; spine_orchestrator error taxonomy |
+| P0-NEW: spine 去重不完整 | ✅ 已修复 | Claude | 8 处重复调用移除: 5 store_directive + _apply_model_writes + on_user_correction + build_return_case_file + 重复方法定义 |
+| P1-N1: Toxiproxy 在 prod compose | ✅ 已修复 | Claude | 移除 toxiproxy + toxiproxy_init 服务; gateway 直连 agent:50051 |
+| P1-N2: 监控端口暴露 | ✅ 已修复 | Claude | Prometheus/Grafana/Loki/Tempo/Alertmanager 端口绑定 127.0.0.1 |
+| P1-N3: AchievementEngine 无锁缓存 | ✅ 已修复 | Claude | threading.Lock 保护 _achievement_cache 写入 |
+| P2-N3: EventBus requeue 消息丢失 | ✅ 已修复 | Claude | xadd-before-xack 替代 ack-before-xadd |
 | GAP-GOV012: Research Mode 隔离 | ⬜ 待修复 | — | GOV-012: 研究模式未与生产数据隔离 |
 | GAP-GOV016: 安全降级模式 | ⬜ 待修复 | — | GOV-016: 无自动安全降级; 异常不触发能力缩减 |
 | GAP-GOV017: 误导防止 | ⬜ 待修复 | — | GOV-017: 无验证管道防止系统虚构来源/范围 |
@@ -454,7 +463,7 @@
 | GAP-GOV013: 数据最小化审查 | ⬜ 待修复 | — | GOV-013: 无系统化敏感数据收集审查 |
 | GAP-GOV015: 用户透明统一界面 | ⬜ 待修复 | — | GOV-015: 透明性碎片化, 无统一仪表板 |
 | GAP-GOV019: 权限隔离测试 | ⬜ 待修复 | — | GOV-019: 最小权限未系统测试 |
-| GAP-OBS008: 禁止吞异常 | ⬜ 待修复 | — | OBS-008: 关键路径无 systematic enforcement |
+| GAP-OBS008: 禁止吞异常 | ✅ 部分修复 | Claude | OBS-008: 14 处 silent except → debug logging; 关键服务已覆盖; 非关键路径保留 |
 | GAP-OBS012: 压测入CI | ⬜ 待修复 | — | OBS-012: 压测能力存在但未入CI |
 | GAP-OBS013: 成本预测测试 | ⬜ 待修复 | — | OBS-013: 成本追踪但无预算门禁 |
 | GAP-MAGIC005: 低收益阻止前端 | ⬜ 待修复 | — | MAGIC-005: 后端存在, 前端 widget 缺失 |
