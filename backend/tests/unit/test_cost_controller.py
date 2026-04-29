@@ -108,6 +108,24 @@ class TestBudgetCircuitBreaker:
             await breaker.record_spend(CostCategory.LLM, 1.0, operation="chat")
 
     @pytest.mark.asyncio
+    async def test_check_budget_without_redis_degrades_open(self):
+        from app.core.cost_controller import BudgetCircuitBreaker, CostCategory
+
+        with _patch_cache(None):
+            breaker = BudgetCircuitBreaker(budgets={CostCategory.AURORA: 5.0})
+            within = await breaker.check_budget(CostCategory.AURORA)
+
+        assert within is True
+
+    @pytest.mark.asyncio
+    async def test_record_spend_without_redis_is_graceful(self):
+        from app.core.cost_controller import BudgetCircuitBreaker, CostCategory
+
+        with _patch_cache(None):
+            breaker = BudgetCircuitBreaker()
+            await breaker.record_spend(CostCategory.RAG, 0.1, operation="pgvector_search")
+
+    @pytest.mark.asyncio
     async def test_zero_budget_always_within(self):
         from app.core.cost_controller import BudgetCircuitBreaker, CostCategory
 

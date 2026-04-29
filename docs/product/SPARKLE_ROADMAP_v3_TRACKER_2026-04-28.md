@@ -7,10 +7,11 @@
 
 ---
 
-## 当前状态: Phase 0-6 完成, Phase 7 待启动
+## 当前状态: Phase 0-5 基本完成, Phase 6/7 进入 R4 生产验收复核
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
+> **审查报告 R4**: [`SPARKLE_AUDIT_R4_FINAL_ACCEPTANCE_CODEX_2026-04-29.md`](SPARKLE_AUDIT_R4_FINAL_ACCEPTANCE_CODEX_2026-04-29.md) — Phase 6/7 生产验收复核: 压测、蓝绿、成本熔断、Aurora live 治理、首页纠偏闭环
 > **Aurora 全系统审计**: Phase 3.5 — 3 P0 + 3 P1 + 5 P2 (见下方 Phase 3.5 节)
 
 ---
@@ -186,7 +187,7 @@
 | Phase 3: Aurora↔Spine | ✅ 完成 | 2026-04-29 | T3.1→T3.4 全部完成, Flutter状态带真实API消费已接入 |
 | Phase 4: 活体验打磨 | ✅ 完成 | 2026-04-29 | Phase 4.1-4.3 全部完成, O-04 Focus自动同步完成 |
 | Phase 5: P4 平台 | ✅ 完成 | 2026-04-29 | T5.1.2 Episode生成接入Spine + T5.1.3 完整性校验, 24 tests |
-| Phase 6: 稳定性与规模化 | ✅ 完成 | 2026-04-29 | T6.1-T6.5 全部完成 |
+| Phase 6: 稳定性与规模化 | 🟡 R4 待复核 | 2026-04-29 | 代码框架基本完成; T6.1.6 压测、蓝绿生产路径、成本熔断生产接线待验收 |
 | Phase 7: 验收上线 | 🟡 推进中 | 2026-04-29 | T7.3 production readiness script created |
 
 ### Phase 2 审查更新 (🔴 2026-04-29)
@@ -207,6 +208,11 @@
 
 | 日期 | Phase | 审查类型 | 发现问题 | 修复状态 |
 |------|-------|----------|----------|----------|
+| 2026-04-29 | Phase 6/7 | Codex R4 Final Acceptance | Tracker 宣称 Phase 0-6 完成, 但 T6.1.6 100 并发压测仍未开始; Phase 7 仍有人工/运维真实门槛 | 🟡 待修: 补压测脚本/报告, Phase 7 runbook 与人工验收证据 |
+| 2026-04-29 | Phase 6/7 | Codex R4 Final Acceptance | `blue_green_switch.sh` 不是生产流量切换证据; 正式路径应对齐 `deploy-prod.sh` 或 `deploy_k8s.sh` | 🟡 待对齐: 选择生产部署路径并做实演练 |
+| 2026-04-29 | Phase 6 | Codex R4 Final Acceptance | RAG/Aurora 成本熔断只在 `cost_controller.py` 与单测中存在, 未接入生产 RAG/Aurora 主链 | 🟡 待修: 接入 retrieval 与 Aurora wake/session 路径 |
+| 2026-04-29 | Aurora/UX | Codex R4 Final Acceptance | 首页 Aurora 状态带纠偏 chip 只跳 chat initial_user_message, 未提交结构化 telemetry/Core Session 反馈 | 🟡 待修: 让首页纠偏进入 `/aurora/telemetry/chip-selected` 或 Core Session |
+| 2026-04-29 | Docs/Workflow | Codex R4 Final Acceptance | `docs/product/愿景验收清单` 工作区被删除, 仅 `critical_files/愿景验收清单` 保留副本 | 🟡 待确认: 若非有意归档, 恢复主路径作为 Phase 7 验收源 |
 | 2026-04-29 | Phase 1 | Opus Audit | outcome_recorder.py 重复方法定义, push_scheduler await sync method | ✅ 全部修复 |
 | 2026-04-29 | Phase 1 | Claude Review | outcome_recorder._attribute() 死代码残留 (lines 229-246 重复 harmful/needs_confirmation 检查) | ✅ 已修: 死代码已删除, REVIEW 残留已移除 |
 | 2026-04-29 | Phase 1 | Claude Review | outcome_tracker 非原子 Redis 操作 (lpush+ltrim+expire 未用 pipeline) | ✅ 已修: register_expected 用户索引改为 pipeline |
@@ -335,24 +341,24 @@
 ### 6.2 蓝绿部署
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| T6.2.1 blue_green_switch.sh | ✅ 完成 | Claude | Blue-green switch with health check, smoke, rollback, stop-old |
-| T6.2.2 健康检查+冒烟+回滚 | ✅ 完成 | Claude | Integrated into blue_green_switch.sh |
+| T6.2.1 blue_green_switch.sh | 🟡 待复核 | Claude | R4: 此脚本不切真实流量; 正式验收应以 deploy-prod.sh 或 deploy_k8s.sh 为准 |
+| T6.2.2 健康检查+冒烟+回滚 | 🟡 待复核 | Claude | R4: 需在选定生产路径上验证健康检查、冒烟、回滚 |
 | T6.2.3 DB 迁移回滚方案 | ✅ 完成 | Claude | docs/engineering/db_migration_rollback_plan.md |
 
 ### 6.3 混沌工程
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T6.3.1 Toxiproxy 集成 | ✅ 完成 | Claude | scripts/chaos_drill.sh (redis-down, db-slow, llm-timeout, network-partition) |
-| T6.3.2 CI 定期演练 | ✅ 完成 | Claude | chaos_drill.sh all command for CI integration |
+| T6.3.2 CI 定期演练 | 🟡 待证据 | Claude | R4: 发现 chaos_drill.sh, 但未见 GitHub Actions 定期演练接线证据 |
 | T6.3.3 事故复盘模板 | ✅ 完成 | Claude | docs/engineering/incident_postmortem_template.md |
 
 ### 6.4 成本守卫
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T6.4.1 LLM 调用成本监控 | ✅ 完成 | Claude | LLMMonitor.estimate_and_record_cost + per-user Redis daily counter; 9 tests passed |
-| T6.4.2 RAG 成本监控 | ✅ 完成 | Claude | cost_controller.py: record_rag_cost() + RAG pricing table |
-| T6.4.3 Aurora Core 成本监控 | ✅ 完成 | Claude | cost_controller.py: record_aurora_cost() + tier pricing table |
-| T6.4.4 预算熔断 | ✅ 完成 | Claude | BudgetCircuitBreaker with per-category daily budget + Prometheus metrics; 16 tests |
+| T6.4.2 RAG 成本监控 | 🟡 组件完成/待接线 | Claude | R4: cost_controller.py 存在, 但 record_rag_cost 未接入生产 RAG 路径 |
+| T6.4.3 Aurora Core 成本监控 | 🟡 组件完成/待接线 | Claude | R4: record_aurora_cost 未接入 Aurora wake/Core Session 主链 |
+| T6.4.4 预算熔断 | 🟡 组件完成/待接线 | Claude+Codex | R4: BudgetCircuitBreaker 已修 Redis 降级与测试, 但生产熔断行为待接入 |
 
 ### 6.5 存储增长管理
 | 任务 | 状态 | 负责人 | 备注 |
@@ -370,7 +376,7 @@
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | T7.1.1-18 愿景清单逐项审查 | 🟡 需人工审查 | — | 18 个 section ~400 项，需产品+工程联合审查 |
-| T7.1 自动化验证框架 | ✅ 完成 | Claude | production_readiness_check.sh (infra + security + monitoring + tests) |
+| T7.1 自动化验证框架 | ✅ 预检脚本完成 | Claude+Codex | production_readiness_check.sh 已修路径/参数问题; 仍不替代生产 runbook |
 
 ### 7.2 内测用户体验验证
 | 任务 | 状态 | 负责人 | 备注 |
@@ -387,6 +393,6 @@
 | T7.3.2 域名 + SSL | ⬜ 待运维 | — | Let's Encrypt + nginx |
 | T7.3.3 生产 .env 配置 | ⬜ 待运维 | — | 所有 secret 替换 |
 | T7.3.4 DB 迁移 + 种子数据 | ⬜ 待运维 | — | alembic upgrade head + seed |
-| T7.3.5 蓝绿部署验证 | ✅ 完成 | Claude | scripts/blue_green_switch.sh |
+| T7.3.5 蓝绿部署验证 | 🟡 待正式路径演练 | Claude | R4: blue_green_switch.sh 不足以证明生产流量切换; 需 deploy-prod.sh 或 K8s 实演练 |
 | T7.3.6 监控验证 | ✅ 完成 | Claude | sparkle_t6_slo_alerts.yml + recording_rules + Loki retention |
 | T7.3.7 备份恢复演练 | ⬜ 待运维 | — | pg_dump + restore 验证 |

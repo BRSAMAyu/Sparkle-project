@@ -10,14 +10,11 @@ blocks expensive operations when daily budget is exceeded.
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
 
 from loguru import logger
 from prometheus_client import Counter, Gauge
-
 
 # ── Prometheus Metrics ─────────────────────────────────────────────────
 
@@ -103,23 +100,31 @@ class BudgetCircuitBreaker:
 
     async def _get_daily_spend(self, category: CostCategory) -> float:
         redis = self._get_redis()
+        if redis is None:
+            return 0.0
         date_key = datetime.now(UTC).strftime("%Y-%m-%d")
         key = self._BUDGET_KEY.format(category=category, date=date_key)
-        raw = await redis.get(key)
-        return float(raw) if raw else 0.0
+        try:
+            raw = await redis.get(key)
+            return float(raw) if raw else 0.0
+        except Exception:
+            logger.debug("cost_controller: failed to read daily spend", exc_info=True)
+            return 0.0
 
     async def record_spend(self, category: CostCategory, amount_usd: float, operation: str = "") -> None:
         """Record a cost spend and update daily counter."""
         if amount_usd <= 0:
             return
+        COST_ESTIMATED_TOTAL.labels(category=category, operation=operation).inc(amount_usd)
         try:
             redis = self._get_redis()
+            if redis is None:
+                return
             date_key = datetime.now(UTC).strftime("%Y-%m-%d")
             key = self._BUDGET_KEY.format(category=category, date=date_key)
             await redis.incrbyfloat(key, amount_usd)
             await redis.expire(key, 48 * 3600)
 
-            COST_ESTIMATED_TOTAL.labels(category=category, operation=operation).inc(amount_usd)
             current = await self._get_daily_spend(category)
             COST_DAILY_SPEND_USD.labels(category=category).set(current)
         except Exception:
