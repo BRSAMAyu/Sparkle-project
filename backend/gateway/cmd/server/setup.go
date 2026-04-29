@@ -421,7 +421,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 	authMiddleware := middleware.AuthMiddleware(cfg, rdb)
 	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
-	apiRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 30, 60)
+	apiRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 15, 30)
 	adminRateLimit := middleware.AdminRateLimitMiddleware(rdb)
 	internalRateLimit := middleware.InternalRateLimitMiddleware(rdb)
 
