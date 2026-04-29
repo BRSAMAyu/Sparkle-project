@@ -87,6 +87,7 @@ class LearningGuard:
         """
         if self.should_retract(record):
             receipt = OutcomeRecorder.build_self_correction_receipt(record)
+            self._record_metric("retract_and_apologize")
             return {
                 "should_learn": False,
                 "should_retract": True,
@@ -96,6 +97,7 @@ class LearningGuard:
             }
 
         if self.should_learn(record):
+            self._record_metric("write_to_policy")
             return {
                 "should_learn": True,
                 "should_retract": False,
@@ -106,6 +108,7 @@ class LearningGuard:
                 ),
             }
 
+        self._record_metric("skip")
         return {
             "should_learn": False,
             "should_retract": False,
@@ -115,3 +118,11 @@ class LearningGuard:
                 f"does not meet learning threshold"
             ),
         }
+
+    @staticmethod
+    def _record_metric(action: str) -> None:
+        try:
+            from app.core.business_metrics import SPINE_OUTCOME_LEARNING_GUARD_TOTAL
+            SPINE_OUTCOME_LEARNING_GUARD_TOTAL.labels(action=action).inc()
+        except Exception:
+            pass

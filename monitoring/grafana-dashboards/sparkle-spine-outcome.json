@@ -1,0 +1,147 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "title": "Outcome Attribution Distribution",
+      "type": "piechart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (attribution) (increase(sparkle_spine_outcome_attribution_total[1h]))",
+          "legendFormat": "{{attribution}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" } },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Outcome Attribution Rate (per directive)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (directive_type) (increase(sparkle_spine_outcome_attribution_total{attribution=\"effective\"}[1h]))",
+          "legendFormat": "{{directive_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Learning Guard Verdicts",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "increase(sparkle_spine_outcome_learning_guard_total{action=\"write_to_policy\"}[1h])",
+          "legendFormat": "learned"
+        },
+        {
+          "expr": "increase(sparkle_spine_outcome_learning_guard_total{action=\"skip\"}[1h])",
+          "legendFormat": "skipped"
+        },
+        {
+          "expr": "increase(sparkle_spine_outcome_learning_guard_total{action=\"retract_and_apologize\"}[1h])",
+          "legendFormat": "retracted"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Directive Audit Compliance",
+      "type": "gauge",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(increase(sparkle_spine_directive_audit_total{compliant=\"true\"}[1h])) / sum(increase(sparkle_spine_directive_audit_total[1h]))",
+          "legendFormat": "compliance"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.8 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Recall Push Throughput",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(sparkle_spine_outcome_attribution_total{directive_type=~\"push_nudge|recall\"}[24h]))",
+          "legendFormat": "24h total"
+        }
+      ]
+    },
+    {
+      "title": "Harmful Outcomes (24h)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(sparkle_spine_outcome_attribution_total{attribution=\"harmful\"}[24h]))",
+          "legendFormat": "harmful"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Policy Retractions (24h)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(sparkle_spine_outcome_learning_guard_total{action=\"retract_and_apologize\"}[24h]))",
+          "legendFormat": "retractions"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["sparkle", "spine", "outcome"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Sparkle Spine Outcome Tracker",
+  "uid": "sparkle-spine-outcome",
+  "version": 1
+}

@@ -138,6 +138,15 @@ class OutcomeRecorder:
             record.attribution, record.attribution_confidence,
         )
 
+        try:
+            from app.core.business_metrics import SPINE_OUTCOME_ATTRIBUTION_TOTAL
+            SPINE_OUTCOME_ATTRIBUTION_TOTAL.labels(
+                directive_type=intervention,
+                attribution=record.attribution,
+            ).inc()
+        except Exception:
+            pass
+
         return record
 
     async def get_outcome(self, outcome_id: str) -> OutcomeRecord | None:

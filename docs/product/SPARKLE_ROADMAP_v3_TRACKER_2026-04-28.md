@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 进行中 (11/18 完成, 非阻塞项留待后续)
+## 当前状态: Phase 1 后端核心完成 (T1.1-T1.4 backend done, T1.5 Card Protocol + Flutter 待 Phase 4)
 
 ---
 

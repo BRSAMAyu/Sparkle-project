@@ -577,6 +577,28 @@ STATE_ESTIMATOR_LATENCY = get_or_create_metric(
     []
 )
 
+# ========== Spine Outcome Metrics ==========
+SPINE_OUTCOME_ATTRIBUTION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_spine_outcome_attribution_total',
+    'Spine outcome attributions by type',
+    ['directive_type', 'attribution']
+)
+
+SPINE_OUTCOME_LEARNING_GUARD_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_spine_outcome_learning_guard_total',
+    'Learning guard verdicts',
+    ['action']
+)
+
+SPINE_DIRECTIVE_AUDIT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_spine_directive_audit_total',
+    'Directive audit outcomes',
+    ['directive_type', 'compliant']
+)
+
 # ========== Decorators and Tools ==========
 def track_routing_decision(method: str):
     """Routing decision tracking decorator"""
