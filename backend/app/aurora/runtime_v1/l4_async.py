@@ -153,7 +153,7 @@ class L4AsyncEngine:
     def __init__(self, redis_client: Any):
         self.redis = redis_client
 
-    def create_candidate(
+    async def create_candidate(
         self,
         *,
         user_id: str,

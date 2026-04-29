@@ -61,9 +61,10 @@ class TestL4CandidateCreation:
         self.redis = AsyncMock()
         self.engine = L4AsyncEngine(self.redis)
 
-    def test_valid_candidate_created(self):
+    @pytest.mark.asyncio
+    async def test_valid_candidate_created(self):
         """Standard candidate with sufficient episodes."""
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="strategy_effectiveness",
             current_policy="worked_example",
@@ -78,9 +79,10 @@ class TestL4CandidateCreation:
         assert candidate.domain == "strategy"
         assert candidate.user_id == "user_abc"
 
-    def test_unknown_analysis_type_returns_none(self):
+    @pytest.mark.asyncio
+    async def test_unknown_analysis_type_returns_none(self):
         """Invalid analysis type is rejected."""
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="nonexistent_type",
             current_policy="a",
@@ -89,10 +91,10 @@ class TestL4CandidateCreation:
         )
         assert candidate is None
 
-    def test_insufficient_episodes_returns_none(self):
+    @pytest.mark.asyncio
+    async def test_insufficient_episodes_returns_none(self):
         """Below min_episodes for analysis type → None."""
-        # strategy_effectiveness needs 5 episodes
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="strategy_effectiveness",
             current_policy="a",
@@ -101,20 +103,22 @@ class TestL4CandidateCreation:
         )
         assert candidate is None
 
-    def test_exact_min_episodes_accepted(self):
+    @pytest.mark.asyncio
+    async def test_exact_min_episodes_accepted(self):
         """Exactly at min_episodes → accepted."""
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="strategy_effectiveness",
             current_policy="a",
             proposed_policy="b",
-            episode_count=5,  # exact min
+            episode_count=5,
         )
         assert candidate is not None
 
-    def test_confidence_clamped_to_01(self):
+    @pytest.mark.asyncio
+    async def test_confidence_clamped_to_01(self):
         """Confidence > 1.0 is clamped to 1.0."""
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="mistake_cluster",
             current_policy="a",
@@ -125,9 +129,10 @@ class TestL4CandidateCreation:
         assert candidate is not None
         assert candidate.confidence == 1.0
 
-    def test_negative_confidence_clamped_to_zero(self):
+    @pytest.mark.asyncio
+    async def test_negative_confidence_clamped_to_zero(self):
         """Negative confidence is clamped to 0.0."""
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="mistake_cluster",
             current_policy="a",
@@ -138,9 +143,10 @@ class TestL4CandidateCreation:
         assert candidate is not None
         assert candidate.confidence == 0.0
 
-    def test_domain_defaults_from_analysis_type(self):
+    @pytest.mark.asyncio
+    async def test_domain_defaults_from_analysis_type(self):
         """If no domain specified, uses default from analysis type config."""
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="achievement_feedback",
             current_policy="a",
@@ -150,9 +156,10 @@ class TestL4CandidateCreation:
         assert candidate is not None
         assert candidate.domain == "achievement"
 
-    def test_explicit_domain_overrides_default(self):
+    @pytest.mark.asyncio
+    async def test_explicit_domain_overrides_default(self):
         """Explicit domain takes precedence over default."""
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="user_abc",
             analysis_type="achievement_feedback",
             current_policy="a",
@@ -204,7 +211,7 @@ class TestL4CandidatePersistence:
     async def test_store_failure_returns_false(self):
         """Redis write failure returns False, doesn't crash."""
         self.redis.set.side_effect = Exception("Redis down")
-        candidate = self.engine.create_candidate(
+        candidate = await self.engine.create_candidate(
             user_id="u1",
             analysis_type="behavior_trend",
             current_policy="a",
