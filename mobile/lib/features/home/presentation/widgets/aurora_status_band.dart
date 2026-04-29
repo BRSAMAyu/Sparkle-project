@@ -13,16 +13,22 @@ class AuroraStatusBand extends StatefulWidget {
     required this.state,
     this.label,
     this.correctionOptions = const [],
+    this.cooldownRemainingSeconds,
+    this.cooldownCanOverride = false,
     this.onTap,
     this.onCorrectionTap,
+    this.onCooldownOverride,
     super.key,
   });
 
   final AuroraBandState state;
   final String? label;
   final List<CorrectionOption> correctionOptions;
+  final int? cooldownRemainingSeconds;
+  final bool cooldownCanOverride;
   final VoidCallback? onTap;
   final ValueChanged<CorrectionOption>? onCorrectionTap;
+  final VoidCallback? onCooldownOverride;
 
   static AuroraBandState mapBandStatus(AuroraBandStatus status) => switch (status) {
       AuroraBandStatus.sensing => AuroraBandState.sensing,
@@ -48,11 +54,13 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
   Widget build(BuildContext context) {
     final config = _stateConfig;
     final hasCorrections = widget.correctionOptions.isNotEmpty;
+    final isCooling = widget.state == AuroraBandState.coolingDown &&
+        widget.cooldownRemainingSeconds != null;
 
     return GestureDetector(
       onTap: () {
         SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
-        if (hasCorrections) {
+        if (hasCorrections || isCooling) {
           setState(() => _expanded = !_expanded);
         } else {
           widget.onTap?.call();
@@ -124,37 +132,91 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                 ),
               ],
             ),
-            if (_expanded && hasCorrections) ...[
-              const SizedBox(height: 8),
-              const Divider(height: 1, thickness: 0.5),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: widget.correctionOptions.map((opt) {
-                  return ActionChip(
-                    label: Text(
-                      opt.label,
-                      style: DS.labelSmall.copyWith(fontSize: 11),
+            if (_expanded) ...[
+              if (hasCorrections) ...[
+                const SizedBox(height: 8),
+                const Divider(height: 1, thickness: 0.5),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: widget.correctionOptions.map((opt) {
+                    return ActionChip(
+                      label: Text(
+                        opt.label,
+                        style: DS.labelSmall.copyWith(fontSize: 11),
+                      ),
+                      onPressed: () {
+                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                        widget.onCorrectionTap?.call(opt);
+                      },
+                      backgroundColor: DS.surfaceHigh,
+                      side: BorderSide(
+                        color: opt.isDisconfirming
+                            ? DS.warning.withValues(alpha: 0.3)
+                            : DS.borderSubtle,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+              if (widget.state == AuroraBandState.coolingDown &&
+                  widget.cooldownRemainingSeconds != null) ...[
+                const SizedBox(height: 8),
+                const Divider(height: 1, thickness: 0.5),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.timer_outlined, size: 14, color: DS.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatCooldown(widget.cooldownRemainingSeconds!),
+                      style: DS.labelSmall.copyWith(
+                        color: DS.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
-                    onPressed: () {
-                      SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
-                      widget.onCorrectionTap?.call(opt);
-                    },
-                    backgroundColor: DS.surfaceHigh,
-                    side: BorderSide(
-                      color: opt.isDisconfirming
-                          ? DS.warning.withValues(alpha: 0.3)
-                          : DS.borderSubtle,
-                    ),
-                  );
-                }).toList(),
-              ),
+                    const Spacer(),
+                    if (widget.cooldownCanOverride)
+                      TextButton(
+                        onPressed: () {
+                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          widget.onCooldownOverride?.call();
+                        },
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          '快速校准',
+                          style: DS.labelSmall.copyWith(
+                            color: DS.brandPrimary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ],
           ],
         ),
       ),
     );
+  }
+
+  String _formatCooldown(int seconds) {
+    if (seconds <= 0) return '即将恢复';
+    if (seconds < 60) return '$seconds秒后恢复';
+    final minutes = seconds ~/ 60;
+    if (minutes < 60) return '$minutes分钟后恢复';
+    final hours = minutes ~/ 60;
+    final remainMinutes = minutes % 60;
+    return '$hours小时$remainMinutes分钟后恢复';
   }
 
   _AuroraBandConfig get _stateConfig {

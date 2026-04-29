@@ -436,10 +436,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ? band!.bandSummary
                     : _auroraBandLabel(dashboardState),
                 correctionOptions: band?.correctionOptions ?? [],
+                cooldownRemainingSeconds: band?.cooldownRemainingSeconds,
+                cooldownCanOverride: band?.cooldownCanOverride ?? false,
                 onTap: () => context.push(ChatRoutes.chat),
                 onCorrectionTap: (opt) {
                   context.push(ChatRoutes.chat, extra: {
                     'initial_user_message': opt.label,
+                  });
+                },
+                onCooldownOverride: () {
+                  context.push(ChatRoutes.chat, extra: {
+                    'initial_user_message': '快速校准',
                   });
                 },
               ),
