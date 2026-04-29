@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (EA-6 directive dedup -103行, P2-8 PartnerCommitmentLoop)
+> **最后更新**: 2026-04-30 (L4 async fix, EA-6 dedup -103行, P2-8 PartnerCommitmentLoop; 2448 aurora/spine/signal tests pass)
 
 ### P0 Critical — 当前会话修复
 
