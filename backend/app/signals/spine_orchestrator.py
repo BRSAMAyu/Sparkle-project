@@ -2865,6 +2865,30 @@ class SpineOrchestrator:
         )
         await self.metrics.record_outcome_recorded(effective=record.attribution == "effective")
 
+        # V-9: Auto strategy learning — update belief from outcome
+        if user_id and record.intervention:
+            try:
+                beliefs = await self._load_strategy_beliefs(user_id)
+                outcome_label = "success" if record.attribution == "effective" else "failure"
+                matched = [b for b in beliefs if b.strategy_key == record.intervention]
+                if matched:
+                    updated = self.learning_base.update_belief(
+                        matched[0], outcome_label,
+                    )
+                    beliefs = [updated if b.strategy_key == record.intervention else b for b in beliefs]
+                else:
+                    from app.signals.learning_base import StrategyBelief
+                    new_belief = StrategyBelief(
+                        strategy_key=record.intervention,
+                        alpha=2.0 if outcome_label == "success" else 1.0,
+                        beta=1.0 if outcome_label == "success" else 2.0,
+                        evidence_count=1,
+                    )
+                    beliefs.append(new_belief)
+                await self._persist_strategy_beliefs(user_id, beliefs)
+            except Exception:
+                logger.debug("Auto strategy learning failed for user={}", user_id, exc_info=True)
+
         # v2.4: Record experiment trial with real outcome
         try:
             if user_id:
