@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 Card Protocol T1.5.1-T1.5.3 已验证, Phase 1.6 审查接线缺口待修, Phase 2 部分已存在
+## 当前状态: Phase 0 完成, Phase 1 Card Protocol T1.5.1-T1.5.4 已验证, Phase 1.6 审查接线缺口待修, Phase 2 部分已存在
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-02 ✅ 已修, C-01/C-03 ❌ 仍待修
 
@@ -105,7 +105,7 @@
 | T1.5.1 card_service.py 完善 | ✅ 完成 | main | CardService 补齐软删除/恢复、CardEdge 关系门面、CardSnapshot 创建与版本查询; 14 Card Protocol tests passed, ruff passed |
 | T1.5.2 planning_workflow Card 写入 | ✅ 完成 | main | planning_workflow 经 PlanService/TaskService 双写 Card; 新增服务路径验收测试, phase1 5 tests passed |
 | T1.5.3 TaskOccurrence 从 Card 生成 | ✅ 完成 | main | PhaseService/TemporalEngine 已从 Task Card 生成 Occurrence; phaseb 8 tests passed |
-| T1.5.4 InterventionRecord 记录 | ⬜ 未开始 | — | |
+| T1.5.4 InterventionRecord 记录 | ✅ 完成 | main | InterventionService 自适应干预双写 InterventionRecord 并回填旧 request; 9 tests passed, ruff passed |
 | T1.5.5 Flutter Card 模型适配 | ⬜ 未开始 | — | |
 | T1.5.6 双写一致性校验 | ⬜ 未开始 | — | |
 
@@ -179,6 +179,7 @@
 | 2026-04-29 | Phase 1 | Claude R2 验收 | C-01 ❌ OutcomeTracker 仍未接线, C-03 ❌ multi_agent_adapter 仍未传 Spine | ⬜ 待修 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.1 CardService 需成为 Card CRUD/Edge/Snapshot 稳定入口, 避免上层直接拼多服务 | ✅ 已修: 增加薄门面与版本查询, 14 Card Protocol tests + ruff 通过 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.2/T1.5.3 不应重复写 Card 逻辑, 应验收 planning_workflow 使用的 PlanService/TaskService 双写路径 | ✅ 已证实: 新增服务路径测试 + phaseb TaskOccurrence 测试通过 |
+| 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.4 旧 InterventionService 自适应干预未直接写 Card Protocol InterventionRecord | ✅ 已修: 双写记录、旧 request 回填 record_id、投递成功后标记 DELIVERED |
 
 ---
 
@@ -196,3 +197,4 @@
 | 2026-04-29 | b0a0cb95 | Phase 1 | T1.1.5 Flutter push open routing — task/goal/recall contexts |
 | 2026-04-29 | 6a8f8f3d | Phase 1 | T1.2.5 Flutter WebSocket structured cognitive adjustments |
 | 2026-04-29 | d329c3b2 | Phase 1.5 | T1.5.1 CardService facade — CRUD delete/restore, edge facade, snapshot versions |
+| 2026-04-29 | cba418cd | Phase 1.5 | T1.5.2-T1.5.3 planning/task card projection verification |

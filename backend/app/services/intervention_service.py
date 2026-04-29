@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timezone, datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import httpx
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,14 +28,14 @@ from app.schemas.intervention import (
     InterventionLevel,
     InterventionRequestCreate,
 )
-from app.services.template_registry import TemplateRegistry
-from app.services.template_service import TemplateService
 from app.services.aurora_stage29_srl_kill_switch_service import (
     AuroraStage29SRLKillSwitchService,
 )
 from app.services.aurora_stage30_metacognition_kill_switch_service import (
     AuroraStage30MetacognitionKillSwitchService,
 )
+from app.services.template_registry import TemplateRegistry
+from app.services.template_service import TemplateService
 from app.state_aggregator.service import StateAggregatorService
 
 _NON_SILENT_LEVELS = {
@@ -44,8 +45,19 @@ _NON_SILENT_LEVELS = {
 }
 
 
+def _coerce_uuid(value: Any) -> UUID | None:
+    if value in (None, "", "null"):
+        return None
+    if isinstance(value, UUID):
+        return value
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass
@@ -397,6 +409,16 @@ class InterventionService:
             payload=payload,
             default_timezone=None,
         )
+        card_record = await self._record_card_protocol_intervention(
+            request=request,
+            user_id=user_id,
+            trigger_event=trigger_event,
+            urgency=urgency,
+            context=context,
+            intent_type=intent.intent_type,
+            delivery_method=payload.delivery_method,
+            content_version=selected.variant_id or selected.template_id or "1",
+        )
 
         await fsm.register_intervention(
             user_id=user_id,
@@ -408,7 +430,136 @@ class InterventionService:
         delivery = await self.deliver_intervention_realtime(
             user_id, request, rendered_message
         )
+        if card_record and delivery.delivered:
+            try:
+                from app.services.intervention_record_service import InterventionRecordService
+
+                await InterventionRecordService(self.db).mark_delivered(card_record.id)
+                await self.db.commit()
+            except Exception as exc:
+                logger.warning("Failed to mark card-protocol intervention delivered: {}", exc)
         return request, delivery
+
+    async def _record_card_protocol_intervention(
+        self,
+        *,
+        request: InterventionRequest,
+        user_id: UUID,
+        trigger_event: str,
+        urgency: float,
+        context: dict[str, Any],
+        intent_type: str | None,
+        delivery_method: str | None,
+        content_version: str = "1",
+    ):
+        """Dual-write Aurora interventions into the Card Protocol tracking layer."""
+        try:
+            from app.models.card_protocol import (
+                Card,
+            )
+            from app.services.intervention_record_service import InterventionRecordService
+
+            async def owned_card_id(raw: Any) -> UUID | None:
+                card_id = _coerce_uuid(raw)
+                if not card_id:
+                    return None
+                card = await self.db.get(Card, card_id)
+                if not card or card.owner_id != user_id or card.is_deleted:
+                    return None
+                return card_id
+
+            plan_card_id = await owned_card_id(context.get("plan_card_id"))
+            phase_card_id = await owned_card_id(context.get("phase_card_id"))
+            knowledge_card_id = await owned_card_id(context.get("knowledge_card_id"))
+            task_occurrence_id = _coerce_uuid(context.get("task_occurrence_id"))
+
+            record = await InterventionRecordService(self.db).create_record(
+                user_id=user_id,
+                trigger_type=self._map_card_trigger_type(trigger_event, context),
+                delivery_strategy=self._map_card_delivery_strategy(urgency, intent_type),
+                delivery_channel=self._map_card_delivery_channel(delivery_method),
+                plan_card_id=plan_card_id,
+                phase_card_id=phase_card_id,
+                task_occurrence_id=task_occurrence_id,
+                knowledge_card_id=knowledge_card_id,
+                trigger_source_ref=str(context.get("edge_state_id") or trigger_event or request.id)[:128],
+                diagnosis_payload={
+                    "legacy_intervention_request_id": str(request.id),
+                    "trigger_event": trigger_event,
+                    "intent_type": intent_type,
+                    "urgency": urgency,
+                    "topic": request.topic,
+                    "context": {
+                        key: str(value) if isinstance(value, UUID) else value
+                        for key, value in dict(context or {}).items()
+                        if key
+                        in {
+                            "plan_card_id",
+                            "phase_card_id",
+                            "task_occurrence_id",
+                            "knowledge_card_id",
+                            "legacy_plan_id",
+                            "edge_state_id",
+                            "explanation",
+                            "topic",
+                        }
+                    },
+                },
+                content_version=content_version,
+            )
+            request.content = {
+                **(request.content or {}),
+                "card_protocol_intervention_record_id": str(record.id),
+            }
+            await self.db.flush()
+            await self.db.commit()
+            await self.db.refresh(request)
+            return record
+        except Exception as exc:
+            logger.warning("Card-protocol intervention dual-write failed for {}: {}", request.id, exc)
+            await self.db.rollback()
+            return None
+
+    @staticmethod
+    def _map_card_trigger_type(trigger_event: str, context: dict[str, Any]):
+        from app.models.card_protocol import InterventionTriggerType
+
+        raw = f"{trigger_event} {context.get('trigger_type') or ''} {context.get('topic') or ''}".lower()
+        if "concept" in raw or "knowledge" in raw or "gap" in raw:
+            return InterventionTriggerType.CONCEPT_GAP
+        if "risk" in raw or "health" in raw or "plan" in raw:
+            return InterventionTriggerType.PLAN_RISK
+        if "overload" in raw or "too_much" in raw:
+            return InterventionTriggerType.OVERLOAD
+        if "align" in raw or "misalign" in raw:
+            return InterventionTriggerType.MISALIGNMENT
+        return InterventionTriggerType.STALL_PATTERN
+
+    @staticmethod
+    def _map_card_delivery_strategy(urgency: float, intent_type: str | None):
+        from app.models.card_protocol import DeliveryStrategy
+
+        raw = str(intent_type or "").lower()
+        if "restart" in raw or "micro" in raw:
+            return DeliveryStrategy.MICRO_RESTART
+        if urgency >= 0.85:
+            return DeliveryStrategy.DIRECT
+        if urgency <= 0.4:
+            return DeliveryStrategy.CURIOUS
+        return DeliveryStrategy.SUPPORTIVE
+
+    @staticmethod
+    def _map_card_delivery_channel(delivery_method: str | None):
+        from app.models.card_protocol import DeliveryChannel
+
+        raw = str(delivery_method or "").lower()
+        if "push" in raw:
+            return DeliveryChannel.PUSH
+        if "focus" in raw:
+            return DeliveryChannel.FOCUS_MODE
+        if "chat" in raw:
+            return DeliveryChannel.CHAT
+        return DeliveryChannel.IN_APP
 
     async def deliver_intervention_realtime(
         self,
