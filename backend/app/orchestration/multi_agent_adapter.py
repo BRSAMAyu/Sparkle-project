@@ -11,7 +11,6 @@ full planning/execution workflows while keeping backward-compatible entrypoints.
 
 from __future__ import annotations
 
-
 import uuid
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any
@@ -42,7 +41,7 @@ if TYPE_CHECKING:
 class MultiAgentWorkflowAdapter:
     """Mode workflow adapter that reuses planner/executor/validator pipeline."""
 
-    def __init__(self, orchestrator: "ChatOrchestrator"):
+    def __init__(self, orchestrator: ChatOrchestrator):
         self.orchestrator = orchestrator
         self.logger = logger
         self.llm_service = llm_service
@@ -268,6 +267,9 @@ class MultiAgentWorkflowAdapter:
                 context_data.get("context_briefing_note") or user_context.get("context_briefing_note") or ""
             ),
             chat_mode=chat_mode,
+            spine_response_directive=context_data.get("spine_response_directive"),
+            spine_chronicle_summary=context_data.get("spine_chronicle_summary"),
+            spine_fatigue_context=context_data.get("spine_fatigue_context"),
         )
         document_context = str(
             context_data.get("document_context") or user_context.get("document_context") or ""
@@ -464,20 +466,23 @@ class MultiAgentWorkflowAdapter:
                 context_data.get("context_briefing_note") or user_context.get("context_briefing_note") or ""
             ),
             chat_mode=chat_mode,
+            spine_response_directive=context_data.get("spine_response_directive"),
+            spine_chronicle_summary=context_data.get("spine_chronicle_summary"),
+            spine_fatigue_context=context_data.get("spine_fatigue_context"),
         )
         document_context = str(
             context_data.get("document_context") or user_context.get("document_context") or ""
         ).strip()
         if document_context:
             base_prompt += f"\n\n## Retrieved Documents\n{document_context}"
-        
+
         mode_fallback_header = "## Mode Fallback Explanation" if locale == "en" else "## 模式回退说明"
         mode_fallback_text = (
             f"You are currently in {chat_mode} mode, but no executable plan was formed this round."
             if locale == "en"
             else f"你当前处于 {chat_mode} 模式，但本轮未形成可执行计划。"
         )
-        
+
         system = f"{base_prompt}\n\n{mode_fallback_header}\n{mode_fallback_text}"
         if preamble:
             system += f"\n{preamble}"
@@ -549,7 +554,7 @@ class MultiAgentWorkflowAdapter:
 
 
 async def execute_multi_agent_workflow(
-    orchestrator: "ChatOrchestrator",
+    orchestrator: ChatOrchestrator,
     chat_mode: str,
     message: str,
     user_id: str,

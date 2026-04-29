@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 Card Protocol 完成, Phase 1.6 审查接线缺口待修 (1 P0), Phase 2 部分已存在
+## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 部分已存在
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-02 ✅ 已修, C-01/C-03 ❌ 仍待修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
@@ -123,7 +123,7 @@
 |------|------|--------|------|
 | C-01-FIX: OutcomeTracker 接线到生产代码 | ✅ 完成 | Codex | SpineOrchestrator 注册预期, TaskEventConsumer 回填实际行为, SchedulerService 6h 过窗验证; 26 tests passed |
 | C-02-FIX: structured_adjustments 注入 prompts.py | ✅ R2 验证通过 | — | prompt_instruction property 自动转为文本经 dual_core_instruction 参数注入, 机制正确 |
-| C-03-FIX: multi_agent_adapter 传入 Spine context | 🔴 审查新增 | — | Expert/Multi-Agent 模式完全跳过 Spine directives, 影响该模式全部用户 |
+| C-03-FIX: multi_agent_adapter 传入 Spine context | ✅ 完成 | Codex | synthesis/fallback 两条 multi-agent prompt 路径均传入 spine_response_directive、chronicle、fatigue context; 2 tests passed |
 
 ### P1 High — 重要信号缺失
 
@@ -177,12 +177,13 @@
 | 2026-04-29 | Phase 1-2 | Claude Deep Audit | **4 P1 High**: 6 EventBus 事件绕过 Spine, Aurora→Spine 只写日志, Spine 降级无监控, Receipt 缺行动按钮 | ⬜ 待修 — 见审查报告 |
 | 2026-04-29 | Phase 2 | Claude Deep Audit | **T2.3.4/T2.3.5 已完成**: Spine Timeline API + Flutter Panel 均已存在, 无需新建 | ✅ 确认 |
 | 2026-04-29 | Phase 1 | Claude R2 验收 | C-02 ✅ 已修 (prompt_instruction property 机制), M-01 ✅ (T1.2.5 Flutter 管道) | ✅ 验收通过 |
-| 2026-04-29 | Phase 1 | Claude R2 验收 | C-01 ❌ OutcomeTracker 仍未接线, C-03 ❌ multi_agent_adapter 仍未传 Spine | C-01 ✅ 已修; C-03 ⬜ 待修 |
+| 2026-04-29 | Phase 1 | Claude R2 验收 | C-01 ❌ OutcomeTracker 仍未接线, C-03 ❌ multi_agent_adapter 仍未传 Spine | ✅ 已修: C-01/C-03 均完成 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.1 CardService 需成为 Card CRUD/Edge/Snapshot 稳定入口, 避免上层直接拼多服务 | ✅ 已修: 增加薄门面与版本查询, 14 Card Protocol tests + ruff 通过 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.2/T1.5.3 不应重复写 Card 逻辑, 应验收 planning_workflow 使用的 PlanService/TaskService 双写路径 | ✅ 已证实: 新增服务路径测试 + phaseb TaskOccurrence 测试通过 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.4 旧 InterventionService 自适应干预未直接写 Card Protocol InterventionRecord | ✅ 已修: 双写记录、旧 request 回填 record_id、投递成功后标记 DELIVERED |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.5 Flutter 统一实体卡只识别 legacy/entity_card, 不识别 /cards/search 的 Card Protocol payload | ✅ 已修: CardProtocolRef + PLAN/TASK metadata 兼容解析 |
 | 2026-04-29 | Phase 1.6 | Codex Self Review | C-01 初版会在同一个 task.completed 事件里先注册再立刻解析当前 pending, 且 verify_pending 未等待验证窗口 | ✅ 已修: 行为回填改为解析旧 pending, pending 过窗才 timeout, 统一 OutcomeTracker API |
+| 2026-04-29 | Phase 1.6 | Codex Self Review | C-03 需要覆盖 multi-agent synthesis 与 fallback 两条 prompt 构造路径, 不能只改一处 | ✅ 已修: 两处 build_system_prompt 均透传 Spine context, 新增 2 条回归测试 |
 | 2026-04-29 | Phase 1.5 | Codex Self Review | T1.5.6 双写迁移缺少可重复运行的一致性检查入口 | ✅ 已修: 后端 validator + CLI, 覆盖缺失投影/重复/孤儿/缺 Edge |
 | 2026-04-29 | 全系统 | Claude R3 数据审计 | **D-01 P1**: Notification 交互历史未接入 AI, **D-02 P1**: Photon 消费模式未接入 AI | ⬜ 待修 — 见 R3 报告 |
 | 2026-04-29 | 全系统 | Claude R3 离线审计 | **O-01 P1**: OfflineChatMessage 模型存在但未使用, **O-02/03/04 P2**: CRDT/任务/Focus 离线缺失 | ⬜ 待修 — 见 R3 报告 |
