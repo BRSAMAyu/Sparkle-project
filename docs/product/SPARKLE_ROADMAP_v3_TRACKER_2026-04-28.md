@@ -644,7 +644,7 @@
 
 | ID | 文件 | 问题 | 行动 | 状态 |
 |----|------|------|------|------|
-| EA-6 | `backend/app/signals/spine_orchestrator.py` | 68 处重复代码块 (lines 3021-3163 最大块) | 提取公共方法, 消除重复 | 🔴 待修 |
+| EA-6 | `backend/app/signals/spine_orchestrator.py` | 68 处重复代码块 (lines 3021-3163 最大块) | 提取公共方法, 消除重复 | 🟡 进行中 (5a4168e8: 99行最大块已删) |
 | EA-7 | `backend/app/signals/spine_state_register.py` | 重复辅助方法 | 合并到共享 utils | ✅ 已修 (e86b9601) |
 
 ### R6.4 CI/质量门修复
