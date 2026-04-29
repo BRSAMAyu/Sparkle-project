@@ -2413,6 +2413,21 @@ class SpineOrchestrator:
         key = f"spine:plan_directive:{user_id}:latest"
         await self.redis.set(key, json.dumps(pd.to_dict()), ex=72 * 3600)
         await self.trace_store.store_directive_by_id(pd.directive_id, pd.to_dict())
+        # V-8: Publish plan_directive event for downstream consumers (task generator, replanner)
+        try:
+            from datetime import datetime, UTC as _UTC
+            await self.redis.publish(
+                "spine:plan_directive_channel",
+                json.dumps({
+                    "user_id": user_id,
+                    "directive_id": pd.directive_id,
+                    "action": pd.action if hasattr(pd, "action") else None,
+                    "plan_id": pd.plan_id if hasattr(pd, "plan_id") else None,
+                    "timestamp": datetime.now(_UTC).isoformat(),
+                }),
+            )
+        except Exception:
+            logger.debug("plan_directive pub/sub publish failed for user={}", user_id, exc_info=True)
 
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
         """获取用户当前 PlanDirective。Degraded: returns None on Redis failure."""
