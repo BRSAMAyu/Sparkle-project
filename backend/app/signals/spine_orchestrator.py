@@ -156,6 +156,16 @@ class SpineOrchestrator:
         self.goal_graph = GoalWorldGraphService(redis_client)
         self.goal_arbitrator = MultiGoalArbitrator(redis_client)
 
+        # EA-1~EA-4: Governance modules — wired into production pipeline
+        from app.signals.fabrication_guard import check_response_for_fabrication
+        from app.signals.safety_degradation import SafetyDegradationManager
+        from app.signals.high_impact_confirmation import HighImpactConfirmationFramework
+        from app.core.research_isolation import ResearchIsolationGuard
+        self._fabrication_scanner = check_response_for_fabrication
+        self._safety_degradation = SafetyDegradationManager(redis_client)
+        self._high_impact_confirmation = HighImpactConfirmationFramework()
+        self._research_isolation = ResearchIsolationGuard()
+
     async def on_task_completed(
         self,
         *,
@@ -1491,6 +1501,17 @@ class SpineOrchestrator:
             pipeline_context["l2_escalation"] = l2_escalation
             trace.raw_event_ids.append(f"l2:{l2_escalation['pattern_name']}")
 
+        # EA-2: Safety degradation gate — check level before policy evaluation
+        safety_level = await resilient_redis_call(
+            "spine_pipeline",
+            self._safety_degradation.get_current_level(user_id),
+            fallback=None,
+        )
+        if safety_level is not None and safety_level.value != "normal":
+            restricted = self._safety_degradation.get_restricted_capabilities(safety_level)
+            pipeline_context["safety_restricted_capabilities"] = restricted
+            logger.debug("Safety degradation active for user={}: level={}, restricted={}", user_id, safety_level.value, restricted)
+
         result = await self.policy_engine.evaluate(
             signal,
             context=pipeline_context,
@@ -1511,6 +1532,21 @@ class SpineOrchestrator:
 
         # GOV-016: Force receipt visibility for high-impact low-confidence signals
         # (handled after policy evaluation)
+
+        # EA-3: High-impact confirmation gate
+        if self._high_impact_confirmation.is_high_impact(
+            directive_type=directive.directive_type if hasattr(directive, "directive_type") else "response",
+            risk_level=decision.risk_level if hasattr(decision, "risk_level") else "low",
+            user_correction_count=0,
+            claim_confidence=signal.confidence if hasattr(signal, "confidence") else 0.8,
+        ):
+            confirm_req = self._high_impact_confirmation.build_confirmation_request(
+                user_id=user_id,
+                directive=directive.to_dict() if hasattr(directive, "to_dict") else {"directive_id": "unknown"},
+                reason=f"High-impact directive (risk={decision.risk_level if hasattr(decision, 'risk_level') else 'unknown'})",
+            )
+            trace.raw_event_ids.append(f"confirm:{confirm_req.request_id}")
+            pipeline_context["requires_confirmation"] = confirm_req.request_id
 
         await self.trace_store.append_policy(trace.trace_id, decision)
         await self.trace_store.append_directive(trace.trace_id, directive)
@@ -1538,6 +1574,15 @@ class SpineOrchestrator:
         )
         if response_dir:
             await self._store_response_directive(user_id, response_dir)
+            # EA-1: Fabrication guard — scan response text for unverifiable claims
+            try:
+                response_text = response_dir.message if hasattr(response_dir, "message") else ""
+                flagged = self._fabrication_scanner(response_text)
+                if flagged:
+                    logger.warning("FabricationGuard: flagged {} pattern(s) in response for user={}", len(flagged), user_id)
+                    trace.raw_event_ids.append(f"fabrication:{len(flagged)}")
+            except Exception:
+                logger.debug("Fabrication scan failed for user={}", user_id, exc_info=True)
 
         # Build and store NotificationDirective
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
@@ -1593,10 +1638,29 @@ class SpineOrchestrator:
             trace.directive_ids.append(skill_dir.directive_id)
 
         if decision.visibility == "receipt":
+            # EA-4: Research isolation — filter PII from receipt if research context
+            receipt_message = directive.user_visible_reason
+            try:
+                research_ctx_key = f"spine:research_context:{user_id}"
+                raw_ctx = await self.redis.get(research_ctx_key)
+                if raw_ctx:
+                    import json as _json
+                    ctx_data = _json.loads(raw_ctx)
+                    if ctx_data.get("is_research"):
+                        rctx = self._research_isolation.create_research_context(
+                            study_id=ctx_data.get("study_id", "unknown"),
+                        )
+                        filtered = self._research_isolation.filter_pii_fields(
+                            {"message": receipt_message}, rctx,
+                        )
+                        receipt_message = filtered.get("message", receipt_message)
+            except Exception:
+                logger.debug("Research isolation filter failed for user={}", user_id, exc_info=True)
+
             receipt = UserVisibleReceipt(
                 receipt_id=_uid("rcpt"),
                 receipt_type="strategy_adjustment",
-                message=directive.user_visible_reason,
+                message=receipt_message,
                 actions=["confirm", "correct", "dismiss"],
                 related_state_keys=[signal.state_key],
             )
