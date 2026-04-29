@@ -23231,6 +23231,105 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lpRelatedTasks => 'Related Tasks';
 
   @override
+  String get ptTitle => 'Transfer Photons';
+
+  @override
+  String get ptGuestWarning =>
+      'Guest mode doesn\'t support transfers. Please register to access full features.';
+
+  @override
+  String get ptCurrentBalance => 'Current Balance';
+
+  @override
+  String get ptRecipientId => 'Recipient ID';
+
+  @override
+  String get ptRecipientIdHint => 'Enter user ID';
+
+  @override
+  String get ptRecipientIdRequired => 'Please enter a recipient ID';
+
+  @override
+  String get ptAmount => 'Amount';
+
+  @override
+  String get ptAmountHint => 'Enter transfer amount';
+
+  @override
+  String get ptAmountRequired => 'Please enter an amount';
+
+  @override
+  String get ptAmountInvalid => 'Please enter a valid amount';
+
+  @override
+  String get ptInsufficientBalance => 'Insufficient balance';
+
+  @override
+  String get ptAmountExceedLimit =>
+      'Single transfer cannot exceed 10,000 photons';
+
+  @override
+  String get ptMessageOptional => 'Message (Optional)';
+
+  @override
+  String get ptMessageHint => 'Say something...';
+
+  @override
+  String get ptConfirmTransfer => 'Confirm Transfer';
+
+  @override
+  String get ptCannotUndo => 'Transfers cannot be undone';
+
+  @override
+  String get ptLimitNote => 'Maximum 10,000 photons per transfer';
+
+  @override
+  String get ptVerifyRecipient => 'Please verify the recipient ID is correct';
+
+  @override
+  String get ptSelectAmount => 'Select Amount';
+
+  @override
+  String get ptConfirmDialogTitle => 'Confirm Transfer';
+
+  @override
+  String ptRecipientLabel(String id) {
+    return 'Recipient ID: $id';
+  }
+
+  @override
+  String ptAmountLabel(int amount) {
+    return 'Amount: $amount Photons';
+  }
+
+  @override
+  String ptRemainingLabel(int balance) {
+    return 'Remaining: $balance Photons';
+  }
+
+  @override
+  String ptMessageLabel(String message) {
+    return 'Message: $message';
+  }
+
+  @override
+  String get ptConfirmWarning => 'Transfers cannot be undone. Continue?';
+
+  @override
+  String get ptCancel => 'Cancel';
+
+  @override
+  String get ptConfirm => 'Confirm';
+
+  @override
+  String get ptSuccess => 'Transfer successful';
+
+  @override
+  String ptFailed(String error) {
+    return 'Transfer failed: $error';
+  }
+
+  @override
   String get simSocratic => 'Socratic Dialogue';
 
   @override

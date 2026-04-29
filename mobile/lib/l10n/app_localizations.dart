@@ -40657,6 +40657,180 @@ abstract class AppLocalizations {
   /// **'关联任务'**
   String get lpRelatedTasks;
 
+  /// No description provided for @ptTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账光子'**
+  String get ptTitle;
+
+  /// No description provided for @ptGuestWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'访客模式不支持转账功能，请注册账户体验完整功能'**
+  String get ptGuestWarning;
+
+  /// No description provided for @ptCurrentBalance.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前余额'**
+  String get ptCurrentBalance;
+
+  /// No description provided for @ptRecipientId.
+  ///
+  /// In zh, this message translates to:
+  /// **'接收人ID'**
+  String get ptRecipientId;
+
+  /// No description provided for @ptRecipientIdHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入用户ID'**
+  String get ptRecipientIdHint;
+
+  /// No description provided for @ptRecipientIdRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入接收人ID'**
+  String get ptRecipientIdRequired;
+
+  /// No description provided for @ptAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账数量'**
+  String get ptAmount;
+
+  /// No description provided for @ptAmountHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入转账数量'**
+  String get ptAmountHint;
+
+  /// No description provided for @ptAmountRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入转账数量'**
+  String get ptAmountRequired;
+
+  /// No description provided for @ptAmountInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的数量'**
+  String get ptAmountInvalid;
+
+  /// No description provided for @ptInsufficientBalance.
+  ///
+  /// In zh, this message translates to:
+  /// **'余额不足'**
+  String get ptInsufficientBalance;
+
+  /// No description provided for @ptAmountExceedLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'单次转账不能超过10000光子'**
+  String get ptAmountExceedLimit;
+
+  /// No description provided for @ptMessageOptional.
+  ///
+  /// In zh, this message translates to:
+  /// **'附言（可选）'**
+  String get ptMessageOptional;
+
+  /// No description provided for @ptMessageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'说点什么...'**
+  String get ptMessageHint;
+
+  /// No description provided for @ptConfirmTransfer.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认转账'**
+  String get ptConfirmTransfer;
+
+  /// No description provided for @ptCannotUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账后无法撤销'**
+  String get ptCannotUndo;
+
+  /// No description provided for @ptLimitNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'单次转账上限10000光子'**
+  String get ptLimitNote;
+
+  /// No description provided for @ptVerifyRecipient.
+  ///
+  /// In zh, this message translates to:
+  /// **'请确认接收人ID正确'**
+  String get ptVerifyRecipient;
+
+  /// No description provided for @ptSelectAmount.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择金额'**
+  String get ptSelectAmount;
+
+  /// No description provided for @ptConfirmDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认转账'**
+  String get ptConfirmDialogTitle;
+
+  /// No description provided for @ptRecipientLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'接收人ID：{id}'**
+  String ptRecipientLabel(String id);
+
+  /// No description provided for @ptAmountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账数量：{amount} 光子'**
+  String ptAmountLabel(int amount);
+
+  /// No description provided for @ptRemainingLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余余额：{balance} 光子'**
+  String ptRemainingLabel(int balance);
+
+  /// No description provided for @ptMessageLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'附言：{message}'**
+  String ptMessageLabel(String message);
+
+  /// No description provided for @ptConfirmWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账后无法撤销，确认继续？'**
+  String get ptConfirmWarning;
+
+  /// No description provided for @ptCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get ptCancel;
+
+  /// No description provided for @ptConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认'**
+  String get ptConfirm;
+
+  /// No description provided for @ptSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账成功'**
+  String get ptSuccess;
+
+  /// No description provided for @ptFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'转账失败：{error}'**
+  String ptFailed(String error);
+
   /// No description provided for @simSocratic.
   ///
   /// In zh, this message translates to:

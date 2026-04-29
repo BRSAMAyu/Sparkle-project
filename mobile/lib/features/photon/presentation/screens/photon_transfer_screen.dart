@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
@@ -43,7 +44,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('转账光子'),
+        title: Text(context.l10n.ptTitle),
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(DS.xl),
@@ -69,7 +70,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       const SizedBox(width: DS.sm),
                       Expanded(
                         child: Text(
-                          '访客模式不支持转账功能，请注册账户体验完整功能',
+                          context.l10n.ptGuestWarning,
                           style: TextStyle(color: DS.warning),
                         ),
                       ),
@@ -94,7 +95,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '当前余额',
+                            context.l10n.ptCurrentBalance,
                             style: TextStyle(
                               color: DS.neutral0.withValues(alpha: 0.9),
                               fontSize: 14,
@@ -125,7 +126,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '接收人ID',
+                      context.l10n.ptRecipientId,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -133,14 +134,14 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _recipientIdController,
-                      decoration: const InputDecoration(
-                        hintText: '请输入用户ID',
+                      decoration: InputDecoration(
+                        hintText: context.l10n.ptRecipientIdHint,
                         prefixIcon: Icon(Icons.person_outline),
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return '请输入接收人ID';
+                          return context.l10n.ptRecipientIdRequired;
                         }
                         return null;
                       },
@@ -158,7 +159,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '转账数量',
+                      context.l10n.ptAmount,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -168,7 +169,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       controller: _amountController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        hintText: '请输入转账数量',
+                        hintText: context.l10n.ptAmountHint,
                         prefixIcon: const Icon(Icons.flash_on_outlined),
                         suffixIcon: SparkleIconButton(
                           variant: ButtonVariant.ghost,
@@ -187,17 +188,17 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return '请输入转账数量';
+                          return context.l10n.ptAmountRequired;
                         }
                         final amount = int.tryParse(value);
                         if (amount == null || amount <= 0) {
-                          return '请输入有效的数量';
+                          return context.l10n.ptAmountInvalid;
                         }
                         if (amount > currentBalance) {
-                          return '余额不足';
+                          return context.l10n.ptInsufficientBalance;
                         }
                         if (amount > 10000) {
-                          return '单次转账不能超过10000光子';
+                          return context.l10n.ptAmountExceedLimit;
                         }
                         return null;
                       },
@@ -215,7 +216,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '附言（可选）',
+                      context.l10n.ptMessageOptional,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -225,8 +226,8 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       controller: _messageController,
                       maxLines: 3,
                       maxLength: 200,
-                      decoration: const InputDecoration(
-                        hintText: '说点什么...',
+                      decoration: InputDecoration(
+                        hintText: context.l10n.ptMessageHint,
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -243,7 +244,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                   width: double.infinity,
                   height: 48,
                   child: SparkleButton(
-                    label: '确认转账',
+                    label: context.l10n.ptConfirmTransfer,
                     expand: true,
                     onPressed: isGuestMode || _isTransferring
                         ? null
@@ -279,7 +280,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const Expanded(child: Text('转账后无法撤销')),
+                      Expanded(child: Text(context.l10n.ptCannotUndo)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -294,7 +295,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const Expanded(child: Text('单次转账上限10000光子')),
+                      Expanded(child: Text(context.l10n.ptLimitNote)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -309,7 +310,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const Expanded(child: Text('请确认接收人ID正确')),
+                      Expanded(child: Text(context.l10n.ptVerifyRecipient)),
                     ],
                   ),
                 ],
@@ -333,7 +334,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '选择金额',
+              context.l10n.ptSelectAmount,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: DS.lg),
@@ -377,27 +378,27 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认转账'),
+        title: Text(context.l10n.ptConfirmDialogTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('接收人ID：$recipientId'),
+            Text(context.l10n.ptRecipientLabel(recipientId)),
             const SizedBox(height: DS.sm),
-            Text('转账数量：$amount 光子'),
+            Text(context.l10n.ptAmountLabel(amount)),
             const SizedBox(height: DS.sm),
-            Text('剩余余额：${currentBalance - amount} 光子'),
+            Text(context.l10n.ptRemainingLabel(currentBalance - amount)),
             if (_messageController.text.isNotEmpty) ...[
               const SizedBox(height: DS.sm),
-              Text('附言：${_messageController.text}'),
+              Text(context.l10n.ptMessageLabel(_messageController.text)),
             ],
             const SizedBox(height: DS.lg),
-            const Text('转账后无法撤销，确认继续？'),
+            Text(context.l10n.ptConfirmWarning),
           ],
         ),
         actions: [
           SparkleButton.ghost(
-            label: '取消',
+            label: context.l10n.ptCancel,
             onPressed: () {
               unawaited(
                 SensoryFeedbackService.emit(
@@ -408,7 +409,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
             },
           ),
           SparkleButton(
-            label: '确认',
+            label: context.l10n.ptConfirm,
             onPressed: () {
               unawaited(
                 SensoryFeedbackService.emit(
@@ -443,14 +444,14 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
         );
-        AppFeedback.success(context, '转账成功');
+        AppFeedback.success(context, context.l10n.ptSuccess);
         // Refresh balance
         ref.read(photonBalanceProvider.notifier).refreshBalance();
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '转账失败：$e');
+        AppFeedback.error(context, context.l10n.ptFailed(e.toString()));
       }
     } finally {
       if (mounted) {

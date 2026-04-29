@@ -22258,6 +22258,103 @@ class AppLocalizationsZh extends AppLocalizations {
   String get lpRelatedTasks => '关联任务';
 
   @override
+  String get ptTitle => '转账光子';
+
+  @override
+  String get ptGuestWarning => '访客模式不支持转账功能，请注册账户体验完整功能';
+
+  @override
+  String get ptCurrentBalance => '当前余额';
+
+  @override
+  String get ptRecipientId => '接收人ID';
+
+  @override
+  String get ptRecipientIdHint => '请输入用户ID';
+
+  @override
+  String get ptRecipientIdRequired => '请输入接收人ID';
+
+  @override
+  String get ptAmount => '转账数量';
+
+  @override
+  String get ptAmountHint => '请输入转账数量';
+
+  @override
+  String get ptAmountRequired => '请输入转账数量';
+
+  @override
+  String get ptAmountInvalid => '请输入有效的数量';
+
+  @override
+  String get ptInsufficientBalance => '余额不足';
+
+  @override
+  String get ptAmountExceedLimit => '单次转账不能超过10000光子';
+
+  @override
+  String get ptMessageOptional => '附言（可选）';
+
+  @override
+  String get ptMessageHint => '说点什么...';
+
+  @override
+  String get ptConfirmTransfer => '确认转账';
+
+  @override
+  String get ptCannotUndo => '转账后无法撤销';
+
+  @override
+  String get ptLimitNote => '单次转账上限10000光子';
+
+  @override
+  String get ptVerifyRecipient => '请确认接收人ID正确';
+
+  @override
+  String get ptSelectAmount => '选择金额';
+
+  @override
+  String get ptConfirmDialogTitle => '确认转账';
+
+  @override
+  String ptRecipientLabel(String id) {
+    return '接收人ID：$id';
+  }
+
+  @override
+  String ptAmountLabel(int amount) {
+    return '转账数量：$amount 光子';
+  }
+
+  @override
+  String ptRemainingLabel(int balance) {
+    return '剩余余额：$balance 光子';
+  }
+
+  @override
+  String ptMessageLabel(String message) {
+    return '附言：$message';
+  }
+
+  @override
+  String get ptConfirmWarning => '转账后无法撤销，确认继续？';
+
+  @override
+  String get ptCancel => '取消';
+
+  @override
+  String get ptConfirm => '确认';
+
+  @override
+  String get ptSuccess => '转账成功';
+
+  @override
+  String ptFailed(String error) {
+    return '转账失败：$error';
+  }
+
+  @override
   String get simSocratic => '苏格拉底对话';
 
   @override
