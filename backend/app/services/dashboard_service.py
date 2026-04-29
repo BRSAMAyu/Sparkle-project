@@ -1,9 +1,11 @@
 
 from __future__ import annotations
-from datetime import timezone, datetime, timedelta
+
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +23,7 @@ from app.services.insight_copy import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class DashboardService:
@@ -118,6 +120,11 @@ class DashboardService:
             "growth_signal": growth_dashboard.get("growth_signal"),
             "active_plan_progress": growth_dashboard.get("active_plan_progress"),
         }
+
+        # T4.1: Spine/Aurora status integration
+        spine_data = await self._get_spine_status(user_id)
+        if spine_data:
+            payload["spine"] = spine_data
         await cache_service.set(
             cache_key,
             payload,
@@ -351,3 +358,27 @@ class DashboardService:
             "type": weather,  # sunny, cloudy, rainy, meteor
             "condition": condition
         }
+
+    async def _get_spine_status(self, user_id: UUID) -> dict | None:
+        """Fetch Spine/Aurora status band for dashboard integration (T4.1)."""
+        try:
+            redis_client = cache_service.redis
+            if redis_client is None:
+                return None
+
+            from app.signals.spine_orchestrator import SpineOrchestrator
+
+            orchestrator = SpineOrchestrator(redis_client=redis_client)
+            summary = await orchestrator.get_status_band_summary(str(user_id))
+            return {
+                "band_status": summary.get("band_status", "sensing"),
+                "band_label": summary.get("band_label", ""),
+                "band_summary": summary.get("band_summary", ""),
+                "band_severity": summary.get("band_severity", "none"),
+                "band_energy": summary.get("band_energy", "L0"),
+                "active_claims": summary.get("active_claims", []),
+                "correction_options": summary.get("correction_options", []),
+            }
+        except Exception as e:
+            logger.warning("Dashboard spine status fetch failed for user {}: {}", user_id, e)
+            return None

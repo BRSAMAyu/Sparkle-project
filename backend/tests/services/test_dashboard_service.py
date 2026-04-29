@@ -166,3 +166,123 @@ async def test_get_recent_anxiety_level_uses_aggregate_counts():
     assert len(seen_queries) == 2
     assert "count(" in seen_queries[0]
     assert "sentiment" in seen_queries[1]
+
+
+# ── T4.1: Spine/Aurora Dashboard Integration Tests ──────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_spine_status_returns_band_data():
+    """Spine status band data is included in dashboard response."""
+    db = AsyncMock()
+    service = DashboardService(db)
+    user_id = uuid4()
+    user = MagicMock(flame_level=3, flame_brightness=0.75)
+
+    service._get_user = AsyncMock(return_value=user)
+    service._get_active_sprint = AsyncMock(return_value=None)
+    service._get_active_growth = AsyncMock(return_value=None)
+    service._calculate_weather = AsyncMock(return_value={"type": "sunny", "condition": "晴朗"})
+    service._get_next_actions = AsyncMock(return_value=[])
+    service._get_cognitive_summary = AsyncMock(return_value={"status": "empty"})
+    service._get_today_focus_minutes = AsyncMock(return_value=0)
+    service._get_today_completed_tasks = AsyncMock(return_value=0)
+
+    mock_summary = {
+        "band_status": "calibrated",
+        "band_label": "已校准",
+        "band_summary": "系统已了解你的学习状态",
+        "band_severity": "info",
+        "band_energy": "L1",
+        "active_claims": ["goal_mode:exam_rescue"],
+        "correction_options": [{"label": "调整目标", "semantic_value": "adjust_goal"}],
+    }
+
+    with (
+        patch("app.services.dashboard_service.cache_service") as mock_cache,
+        patch("app.services.dashboard_service.GrowthDashboardService") as mock_growth_cls,
+    ):
+        mock_cache.get = AsyncMock(return_value=None)
+        mock_cache.set = AsyncMock()
+        mock_cache.redis = MagicMock()
+        mock_growth_cls.return_value.build_snapshot = AsyncMock(return_value={})
+
+        with patch("app.signals.spine_orchestrator.SpineOrchestrator") as mock_orch_cls:
+            mock_orch = AsyncMock()
+            mock_orch.get_status_band_summary = AsyncMock(return_value=mock_summary)
+            mock_orch_cls.return_value = mock_orch
+
+            result = await service.get_dashboard_status(user_id)
+
+    assert result["spine"]["band_status"] == "calibrated"
+    assert result["spine"]["band_label"] == "已校准"
+    assert result["spine"]["band_severity"] == "info"
+    assert result["spine"]["active_claims"] == ["goal_mode:exam_rescue"]
+    assert len(result["spine"]["correction_options"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_spine_status_returns_none_when_no_redis():
+    """Dashboard gracefully degrades when Redis is not initialized."""
+    db = AsyncMock()
+    service = DashboardService(db)
+
+    with patch("app.services.dashboard_service.cache_service") as mock_cache:
+        mock_cache.redis = None
+        result = await service._get_spine_status(uuid4())
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_spine_status_returns_none_on_exception():
+    """Dashboard does not crash if Spine orchestrator fails."""
+    db = AsyncMock()
+    service = DashboardService(db)
+
+    with patch("app.services.dashboard_service.cache_service") as mock_cache:
+        mock_cache.redis = MagicMock()
+        with patch("app.signals.spine_orchestrator.SpineOrchestrator") as mock_orch_cls:
+            mock_orch_cls.side_effect = RuntimeError("Redis connection refused")
+            result = await service._get_spine_status(uuid4())
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_dashboard_payload_backward_compatible_with_spine():
+    """Full dashboard payload includes all legacy fields plus spine data."""
+    db = AsyncMock()
+    service = DashboardService(db)
+    user_id = uuid4()
+    user = MagicMock(flame_level=2, flame_brightness=0.5)
+
+    service._get_user = AsyncMock(return_value=user)
+    service._get_active_sprint = AsyncMock(return_value=None)
+    service._get_active_growth = AsyncMock(return_value=None)
+    service._calculate_weather = AsyncMock(return_value={"type": "cloudy", "condition": "进度落后"})
+    service._get_next_actions = AsyncMock(return_value=[{"id": "t1", "title": "复习热力学"}])
+    service._get_cognitive_summary = AsyncMock(return_value={"status": "active"})
+    service._get_today_focus_minutes = AsyncMock(return_value=30)
+    service._get_today_completed_tasks = AsyncMock(return_value=2)
+
+    with (
+        patch("app.services.dashboard_service.cache_service") as mock_cache,
+        patch("app.services.dashboard_service.GrowthDashboardService") as mock_growth_cls,
+    ):
+        mock_cache.get = AsyncMock(return_value=None)
+        mock_cache.set = AsyncMock()
+        mock_cache.redis = None  # No Redis → spine is None
+        mock_growth_cls.return_value.build_snapshot = AsyncMock(return_value={})
+
+        result = await service.get_dashboard_status(user_id)
+
+    # Legacy fields all present
+    assert "weather" in result
+    assert "flame" in result
+    assert "sprint" in result
+    assert "growth" in result
+    assert "next_actions" in result
+    assert "cognitive" in result
+    # Spine key exists but is None (graceful degradation)
+    assert result.get("spine") is None
