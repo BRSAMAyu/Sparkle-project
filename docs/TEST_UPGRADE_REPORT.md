@@ -79,6 +79,7 @@
 | B-004 | `entity_cards.py:147` | `build_task_entity_card` 的 `execution_state` 检查使用大写 `{"IN_PROGRESS", "COMPLETED"}`，如果传入小写 status 会误判为 `draft`。 | 低 | 待修复 |
 | B-005 | `plan_tools.py:531` | `_match_learning_path_node_id` 使用 `node_ref.name.lower() in haystack` 做子串匹配，短名称如 "A" 会误匹配到包含 "a" 的任何文本。 | 低 | 待修复 |
 | B-006 | `quota.go:23-32` | `DecrQuota` 无下限保护，配额可递减为负数。Lua 脚本 `DECR` 无条件递减。对比 `ReserveRequest` 有 `current <= 0` 检查。 | 中 | 待修复 |
+| B-007 | `profile_front_door_card.dart:225,291` | Flutter 编译错误：`claim` 和 `onAction` final 字段未在构造函数中初始化，阻止整个 Flutter 测试套件运行。 | 中 | 待修复 |
 
 ---
 
@@ -394,7 +395,7 @@
 | Python | 低拟真度（mock 返回值、断言 success=True） | 124个生产级测试 | 5个 (B-001~B-005) |
 | Go | 缺少方法覆盖 | 27个子测试 | 1个 (B-006) |
 | Flutter | — | 已有高质量测试 | — |
-| **合计** | | **151个测试** | **6个代码问题** |
+| **合计** | | **151个测试** | **7个代码问题** |
 
 ### 新增测试文件
 
@@ -414,6 +415,7 @@
 | B-004 | 低 | `entity_cards.py:147` | 状态大小写敏感 |
 | B-005 | 低 | `plan_tools.py:531` | 节点名子串误匹配 |
 | B-006 | 中 | `quota.go:23-32` | 配额可递减为负数 |
+| B-007 | 中 | `profile_front_door_card.dart` | Flutter 编译错误阻止测试运行 |
 
 ### 后续建议
 
