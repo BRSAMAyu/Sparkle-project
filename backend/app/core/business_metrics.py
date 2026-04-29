@@ -606,6 +606,13 @@ SPINE_DEGRADATION_TOTAL = get_or_create_metric(
     ['surface', 'reason']
 )
 
+AURORA_SHADOW_SUPPRESSION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_aurora_shadow_suppression_total',
+    'Times an Aurora subsystem was suppressed in shadow mode',
+    ['subsystem']
+)
+
 
 def record_spine_degradation(surface: str, error: BaseException | str | None = None) -> None:
     """Record a best-effort Spine degradation event without breaking the caller."""

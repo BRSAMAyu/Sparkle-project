@@ -3433,6 +3433,13 @@ def _render_user_context_content(
             lines.append("【考试紧迫度】")
             urgency_label = "紧急" if urgency.get("urgent") else "一般"
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
+    elif calendar_mode == "shadow" and calendar_lines:
+        # DF-9: Telemetry for shadow mode suppression
+        try:
+            from app.core.business_metrics import AURORA_SHADOW_SUPPRESSION_TOTAL
+            AURORA_SHADOW_SUPPRESSION_TOTAL.labels(subsystem="calendar").inc()
+        except Exception:
+            pass
 
     # --- Inline snapshot from canonical insight state ---
     inline_snapshot = normalized.get("_inline_snapshot")
