@@ -9470,6 +9470,23 @@
   "docCleanerFailedSubtitle": "链路已经返回错误信息，可以直接重试或更换文件。",
   "docCleanerIncompleteTitle": "当前任务未完成",
   "docCleanerRetry": "重新尝试",
+  "seedCatFewShot": "Few Shot",
+  "seedCatTeaching": "教学内容",
+  "seedCatReplyTemplate": "回复模板",
+  "seedCatCustom": "自定义",
+  "seedVisPrivate": "私有",
+  "seedVisPublic": "公开",
+  "seedVisOfficial": "官方",
+  "seedTypeExample": "示例",
+  "seedTypeExercise": "练习",
+  "seedTypeKnowledge": "知识点",
+  "seedTypeTemplate": "模板",
+  "seedTypeFlashcard": "闪卡",
+  "seedDiffBeginner": "初级",
+  "seedDiffIntermediate": "中级",
+  "seedDiffAdvanced": "高级",
+  "seedDiffExpert": "专家",
+  "seedCatFewShotFull": "Few-shot示例",
   "cogMockPattern1": "每次遇到难题就会想要刷手机，这似乎是一种逃避机制。",
   "cogMockPattern2": "完成高数作业后感到非常有成就感，这种正反馈很重要。",
   "cogMockPattern3": "今天原本计划背单词，但是被社团活动打断了，需要调整计划弹性。",
@@ -9675,7 +9692,14 @@
   "memSkip": "跳过",
   "seedDetailFailed": "种子库详情加载失败，请稍后再试",
   "seedStateFailed": "种子库状态加载失败，请稍后再试",
-  "seedCreateFailed": "创建失败：$e",
+  "seedCreateFailed": "创建失败：{e}",
+  "@seedCreateFailed": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
   "seedCreateTitle": "创建种子库",
   "seedNameLabel": "名称",
   "seedNameHint": "输入种子库名称",

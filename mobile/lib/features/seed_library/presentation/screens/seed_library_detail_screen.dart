@@ -205,12 +205,12 @@ class _SeedLibraryDetailScreenState
                         spacing: DS.spacing8,
                         children: [
                           Chip(
-                            label: Text(library.category.displayName),
+                            label: Text(library.categoryLabel(context.l10n)),
                             backgroundColor:
                                 Theme.of(context).colorScheme.primaryContainer,
                           ),
                           Chip(
-                            label: Text(library.visibility.displayName),
+                            label: Text(library.visibility.label(context.l10n)),
                             backgroundColor:
                                 library.visibility == LibraryVisibility.official
                                     ? DS.warningAccent
@@ -687,7 +687,7 @@ class _SeedLibraryDetailScreenState
                             context,
                             resourceType: 'seed_item',
                             resourceId: item.id,
-                            title: item.title ?? item.itemTypeDisplayName,
+                            title: item.title ?? item.itemTypeLabel(context.l10n),
                             subtitle: item.content,
                           );
                         },
@@ -824,7 +824,7 @@ class _SeedLibraryDetailScreenState
                   ),
                   ...ItemType.values.map(
                     (itemType) => FilterChip(
-                      label: Text(itemType.displayName),
+                      label: Text(itemType.label(context.l10n)),
                       selected: _selectedItemType == itemType,
                       onSelected: (_) {
                         setSheetState(() {
@@ -855,7 +855,7 @@ class _SeedLibraryDetailScreenState
                   ),
                   ...DifficultyLevel.values.map(
                     (difficulty) => FilterChip(
-                      label: Text(difficulty.displayName),
+                      label: Text(difficulty.label(context.l10n)),
                       selected: _selectedDifficulty == difficulty,
                       onSelected: (_) {
                         setSheetState(() {
@@ -1027,7 +1027,7 @@ class _SeedLibraryDetailScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.title ?? item.itemTypeDisplayName,
+                  item.title ?? item.itemTypeLabel(context.l10n),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: DS.spacing8),
@@ -1035,10 +1035,10 @@ class _SeedLibraryDetailScreenState
                   spacing: DS.spacing8,
                   runSpacing: DS.spacing8,
                   children: [
-                    Chip(label: Text(item.itemTypeDisplayName)),
+                    Chip(label: Text(item.itemTypeLabel(context.l10n))),
                     if (item.subject != null) Chip(label: Text(item.subject!)),
-                    if (item.difficultyLevelDisplayName != null)
-                      Chip(label: Text(item.difficultyLevelDisplayName!)),
+                    if (item.difficultyLevel != null)
+                      Chip(label: Text(item.difficultyLevelLabel(context.l10n)!)),
                     ...?item.tags?.map((tag) => Chip(label: Text(tag))),
                   ],
                 ),
@@ -1245,7 +1245,7 @@ class _SeedLibraryDetailScreenState
                         .map(
                           (type) => DropdownMenuItem(
                             value: type,
-                            child: Text(type.displayName),
+                            child: Text(type.label(context.l10n)),
                           ),
                         )
                         .toList(),
@@ -1296,7 +1296,7 @@ class _SeedLibraryDetailScreenState
                       ...DifficultyLevel.values.map(
                         (level) => DropdownMenuItem(
                           value: level,
-                          child: Text(level.displayName),
+                          child: Text(level.label(context.l10n)),
                         ),
                       ),
                     ],

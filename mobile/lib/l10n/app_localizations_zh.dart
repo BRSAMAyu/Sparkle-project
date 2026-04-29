@@ -22356,6 +22356,57 @@ class AppLocalizationsZh extends AppLocalizations {
   String get docCleanerRetry => '重新尝试';
 
   @override
+  String get seedCatFewShot => 'Few Shot';
+
+  @override
+  String get seedCatTeaching => '教学内容';
+
+  @override
+  String get seedCatReplyTemplate => '回复模板';
+
+  @override
+  String get seedCatCustom => '自定义';
+
+  @override
+  String get seedVisPrivate => '私有';
+
+  @override
+  String get seedVisPublic => '公开';
+
+  @override
+  String get seedVisOfficial => '官方';
+
+  @override
+  String get seedTypeExample => '示例';
+
+  @override
+  String get seedTypeExercise => '练习';
+
+  @override
+  String get seedTypeKnowledge => '知识点';
+
+  @override
+  String get seedTypeTemplate => '模板';
+
+  @override
+  String get seedTypeFlashcard => '闪卡';
+
+  @override
+  String get seedDiffBeginner => '初级';
+
+  @override
+  String get seedDiffIntermediate => '中级';
+
+  @override
+  String get seedDiffAdvanced => '高级';
+
+  @override
+  String get seedDiffExpert => '专家';
+
+  @override
+  String get seedCatFewShotFull => 'Few-shot示例';
+
+  @override
   String get cogMockPattern1 => '每次遇到难题就会想要刷手机，这似乎是一种逃避机制。';
 
   @override
@@ -22990,7 +23041,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedStateFailed => '种子库状态加载失败，请稍后再试';
 
   @override
-  String get seedCreateFailed => '创建失败：\$e';
+  String seedCreateFailed(String e) {
+    return '创建失败：$e';
+  }
 
   @override
   String get seedCreateTitle => '创建种子库';

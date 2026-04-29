@@ -40885,6 +40885,108 @@ abstract class AppLocalizations {
   /// **'重新尝试'**
   String get docCleanerRetry;
 
+  /// No description provided for @seedCatFewShot.
+  ///
+  /// In zh, this message translates to:
+  /// **'Few Shot'**
+  String get seedCatFewShot;
+
+  /// No description provided for @seedCatTeaching.
+  ///
+  /// In zh, this message translates to:
+  /// **'教学内容'**
+  String get seedCatTeaching;
+
+  /// No description provided for @seedCatReplyTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复模板'**
+  String get seedCatReplyTemplate;
+
+  /// No description provided for @seedCatCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义'**
+  String get seedCatCustom;
+
+  /// No description provided for @seedVisPrivate.
+  ///
+  /// In zh, this message translates to:
+  /// **'私有'**
+  String get seedVisPrivate;
+
+  /// No description provided for @seedVisPublic.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开'**
+  String get seedVisPublic;
+
+  /// No description provided for @seedVisOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'官方'**
+  String get seedVisOfficial;
+
+  /// No description provided for @seedTypeExample.
+  ///
+  /// In zh, this message translates to:
+  /// **'示例'**
+  String get seedTypeExample;
+
+  /// No description provided for @seedTypeExercise.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习'**
+  String get seedTypeExercise;
+
+  /// No description provided for @seedTypeKnowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识点'**
+  String get seedTypeKnowledge;
+
+  /// No description provided for @seedTypeTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'模板'**
+  String get seedTypeTemplate;
+
+  /// No description provided for @seedTypeFlashcard.
+  ///
+  /// In zh, this message translates to:
+  /// **'闪卡'**
+  String get seedTypeFlashcard;
+
+  /// No description provided for @seedDiffBeginner.
+  ///
+  /// In zh, this message translates to:
+  /// **'初级'**
+  String get seedDiffBeginner;
+
+  /// No description provided for @seedDiffIntermediate.
+  ///
+  /// In zh, this message translates to:
+  /// **'中级'**
+  String get seedDiffIntermediate;
+
+  /// No description provided for @seedDiffAdvanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'高级'**
+  String get seedDiffAdvanced;
+
+  /// No description provided for @seedDiffExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家'**
+  String get seedDiffExpert;
+
+  /// No description provided for @seedCatFewShotFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'Few-shot示例'**
+  String get seedCatFewShotFull;
+
   /// No description provided for @cogMockPattern1.
   ///
   /// In zh, this message translates to:
@@ -42118,8 +42220,8 @@ abstract class AppLocalizations {
   /// No description provided for @seedCreateFailed.
   ///
   /// In zh, this message translates to:
-  /// **'创建失败：\$e'**
-  String get seedCreateFailed;
+  /// **'创建失败：{e}'**
+  String seedCreateFailed(String e);
 
   /// No description provided for @seedCreateTitle.
   ///

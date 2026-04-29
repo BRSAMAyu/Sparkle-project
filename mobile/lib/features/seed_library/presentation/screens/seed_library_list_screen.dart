@@ -163,7 +163,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                   children: [
                     if (_selectedCategory != null)
                       Chip(
-                        label: Text(_selectedCategory!.displayName),
+                        label: Text(_selectedCategory!.label(context.l10n)),
                         deleteIcon: const Icon(Icons.close, size: 18),
                         onDeleted: () {
                           setState(() {
@@ -174,7 +174,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                       ),
                     if (_selectedVisibility != null)
                       Chip(
-                        label: Text(_selectedVisibility!.displayName),
+                        label: Text(_selectedVisibility!.label(context.l10n)),
                         deleteIcon: const Icon(Icons.close, size: 18),
                         onDeleted: () {
                           setState(() {
@@ -330,7 +330,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                 children: LibraryCategory.values.map((category) {
                   final isSelected = _selectedCategory == category;
                   return FilterChip(
-                    label: Text(category.displayName),
+                    label: Text(category.label(context.l10n)),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {
@@ -349,7 +349,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                 children: LibraryVisibility.values.map((visibility) {
                   final isSelected = _selectedVisibility == visibility;
                   return FilterChip(
-                    label: Text(visibility.displayName),
+                    label: Text(visibility.label(context.l10n)),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {

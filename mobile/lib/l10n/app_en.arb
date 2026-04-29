@@ -10103,6 +10103,23 @@
   "docCleanerFailedSubtitle": "The pipeline returned an error. You can retry or change the file.",
   "docCleanerIncompleteTitle": "Task Incomplete",
   "docCleanerRetry": "Retry",
+  "seedCatFewShot": "Few Shot",
+  "seedCatTeaching": "Teaching Content",
+  "seedCatReplyTemplate": "Reply Template",
+  "seedCatCustom": "Custom",
+  "seedVisPrivate": "Private",
+  "seedVisPublic": "Public",
+  "seedVisOfficial": "Official",
+  "seedTypeExample": "Example",
+  "seedTypeExercise": "Exercise",
+  "seedTypeKnowledge": "Knowledge Point",
+  "seedTypeTemplate": "Template",
+  "seedTypeFlashcard": "Flashcard",
+  "seedDiffBeginner": "Beginner",
+  "seedDiffIntermediate": "Intermediate",
+  "seedDiffAdvanced": "Advanced",
+  "seedDiffExpert": "Expert",
+  "seedCatFewShotFull": "Few-shot Example",
   "cogMockPattern1": "Whenever I hit a tough problem I instinctively reach for my phone — it seems like an avoidance mechanism.",
   "cogMockPattern2": "Finishing advanced math homework gives a real sense of achievement. This positive feedback matters.",
   "cogMockPattern3": "Planned to memorize vocab today but club activities got in the way. Need more schedule flexibility.",
@@ -10308,7 +10325,14 @@
   "memSkip": "Skip",
   "seedDetailFailed": "Failed to load seed library details. Please try again.",
   "seedStateFailed": "Failed to load seed library state. Please try again.",
-  "seedCreateFailed": "Create failed: $e",
+  "seedCreateFailed": "Create failed: {e}",
+  "@seedCreateFailed": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
   "seedCreateTitle": "Create Seed Library",
   "seedNameLabel": "Name",
   "seedNameHint": "Enter seed library name",

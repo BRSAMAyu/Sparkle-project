@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Seed Item Card Widget
 /// Displays a seed item in a card format
@@ -59,7 +60,7 @@ class SeedItemCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              item.title ?? _getItemTypeDisplayName(),
+                              item.title ?? _getItemTypeDisplayName(context.l10n),
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -87,7 +88,7 @@ class SeedItemCard extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                item.difficultyLevelDisplayName!,
+                                item.difficultyLevelLabel(context.l10n)!,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: DS.fontWeightSemibold,
@@ -180,23 +181,23 @@ class SeedItemCard extends StatelessWidget {
                     },
                     itemBuilder: (context) => [
                       if (onShare != null)
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'share',
                           child: Row(
                             children: [
-                              Icon(Icons.share_outlined, size: 18),
-                              SizedBox(width: DS.spacing12),
+                              const Icon(Icons.share_outlined, size: 18),
+                              const SizedBox(width: DS.spacing12),
                               Text(context.l10n.seedShare),
                             ],
                           ),
                         ),
                       if (onEdit != null)
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'edit',
                           child: Row(
                             children: [
-                              Icon(Icons.edit, size: 18),
-                              SizedBox(width: DS.spacing12),
+                              const Icon(Icons.edit, size: 18),
+                              const SizedBox(width: DS.spacing12),
                               Text(context.l10n.seedEdit),
                             ],
                           ),
@@ -250,7 +251,7 @@ class SeedItemCard extends StatelessWidget {
     }
   }
 
-  String _getItemTypeDisplayName() => item.itemTypeDisplayName;
+  String _getItemTypeDisplayName(AppLocalizations l10n) => item.itemTypeLabel(l10n);
 
   Color _getDifficultyColor() {
     switch (item.difficultyLevel) {

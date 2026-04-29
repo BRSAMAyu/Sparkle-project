@@ -3,6 +3,7 @@
 library;
 
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 part 'seed_library_model.g.dart';
 
@@ -56,63 +57,39 @@ enum DifficultyLevel {
 
 /// Extensions for enumerations
 extension LibraryCategoryExtension on LibraryCategory {
-  String get displayName {
-    switch (this) {
-      case LibraryCategory.fewShot:
-        return 'Few Shot';
-      case LibraryCategory.teachingContent:
-        return '教学内容';
-      case LibraryCategory.replyTemplate:
-        return '回复模板';
-      case LibraryCategory.custom:
-        return '自定义';
-    }
-  }
+  String label(AppLocalizations l10n) => switch (this) {
+    LibraryCategory.fewShot => l10n.seedCatFewShot,
+    LibraryCategory.teachingContent => l10n.seedCatTeaching,
+    LibraryCategory.replyTemplate => l10n.seedCatReplyTemplate,
+    LibraryCategory.custom => l10n.seedCatCustom,
+  };
 }
 
 extension LibraryVisibilityExtension on LibraryVisibility {
-  String get displayName {
-    switch (this) {
-      case LibraryVisibility.private:
-        return '私有';
-      case LibraryVisibility.public:
-        return '公开';
-      case LibraryVisibility.official:
-        return '官方';
-    }
-  }
+  String label(AppLocalizations l10n) => switch (this) {
+    LibraryVisibility.private => l10n.seedVisPrivate,
+    LibraryVisibility.public => l10n.seedVisPublic,
+    LibraryVisibility.official => l10n.seedVisOfficial,
+  };
 }
 
 extension ItemTypeExtension on ItemType {
-  String get displayName {
-    switch (this) {
-      case ItemType.example:
-        return '示例';
-      case ItemType.exercise:
-        return '练习';
-      case ItemType.knowledge:
-        return '知识点';
-      case ItemType.template:
-        return '模板';
-      case ItemType.flashcard:
-        return '闪卡';
-    }
-  }
+  String label(AppLocalizations l10n) => switch (this) {
+    ItemType.example => l10n.seedTypeExample,
+    ItemType.exercise => l10n.seedTypeExercise,
+    ItemType.knowledge => l10n.seedTypeKnowledge,
+    ItemType.template => l10n.seedTypeTemplate,
+    ItemType.flashcard => l10n.seedTypeFlashcard,
+  };
 }
 
 extension DifficultyLevelExtension on DifficultyLevel {
-  String get displayName {
-    switch (this) {
-      case DifficultyLevel.beginner:
-        return '初级';
-      case DifficultyLevel.intermediate:
-        return '中级';
-      case DifficultyLevel.advanced:
-        return '高级';
-      case DifficultyLevel.expert:
-        return '专家';
-    }
-  }
+  String label(AppLocalizations l10n) => switch (this) {
+    DifficultyLevel.beginner => l10n.seedDiffBeginner,
+    DifficultyLevel.intermediate => l10n.seedDiffIntermediate,
+    DifficultyLevel.advanced => l10n.seedDiffAdvanced,
+    DifficultyLevel.expert => l10n.seedDiffExpert,
+  };
 }
 
 /// Seed Library model
@@ -183,31 +160,14 @@ class SeedLibrary {
 
   Map<String, dynamic> toJson() => _$SeedLibraryToJson(this);
 
-  /// Get display name for category
-  String get categoryDisplayName {
-    switch (category) {
-      case LibraryCategory.fewShot:
-        return 'Few-shot示例';
-      case LibraryCategory.teachingContent:
-        return '教学内容';
-      case LibraryCategory.replyTemplate:
-        return '回复模板';
-      case LibraryCategory.custom:
-        return '自定义';
-    }
-  }
+  String categoryLabel(AppLocalizations l10n) => switch (category) {
+    LibraryCategory.fewShot => l10n.seedCatFewShotFull,
+    LibraryCategory.teachingContent => l10n.seedCatTeaching,
+    LibraryCategory.replyTemplate => l10n.seedCatReplyTemplate,
+    LibraryCategory.custom => l10n.seedCatCustom,
+  };
 
-  /// Get display name for visibility
-  String get visibilityDisplayName {
-    switch (visibility) {
-      case LibraryVisibility.private:
-        return '私有';
-      case LibraryVisibility.public:
-        return '公开';
-      case LibraryVisibility.official:
-        return '官方';
-    }
-  }
+  String visibilityLabel(AppLocalizations l10n) => visibility.label(l10n);
 
   /// Check if library is editable by user
   bool get isEditable =>
@@ -308,36 +268,10 @@ class SeedItem {
 
   Map<String, dynamic> toJson() => _$SeedItemToJson(this);
 
-  /// Get display name for item type
-  String get itemTypeDisplayName {
-    switch (itemType) {
-      case ItemType.example:
-        return '示例';
-      case ItemType.exercise:
-        return '练习';
-      case ItemType.knowledge:
-        return '知识点';
-      case ItemType.template:
-        return '模板';
-      case ItemType.flashcard:
-        return '抽认卡';
-    }
-  }
+  String itemTypeLabel(AppLocalizations l10n) => itemType.label(l10n);
 
-  /// Get display name for difficulty level
-  String? get difficultyLevelDisplayName {
-    if (difficultyLevel == null) return null;
-    switch (difficultyLevel!) {
-      case DifficultyLevel.beginner:
-        return '初级';
-      case DifficultyLevel.intermediate:
-        return '中级';
-      case DifficultyLevel.advanced:
-        return '高级';
-      case DifficultyLevel.expert:
-        return '专家';
-    }
-  }
+  String? difficultyLevelLabel(AppLocalizations l10n) =>
+      difficultyLevel?.label(l10n);
 
   SeedItem copyWith({
     String? id,

@@ -128,7 +128,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                   index: 0,
                   child: TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.seedNameLabel,
                       hintText: context.l10n.seedNameHint,
                       border: OutlineInputBorder(),
@@ -147,7 +147,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                   index: 1,
                   child: TextFormField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.seedDescLabel,
                       hintText: context.l10n.seedDescHint,
                       border: OutlineInputBorder(),
@@ -174,7 +174,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                         children: LibraryCategory.values.map((category) {
                           final isSelected = _selectedCategory == category;
                           return ChoiceChip(
-                            label: Text(category.displayName),
+                            label: Text(category.label(context.l10n)),
                             selected: isSelected,
                             onSelected: (selected) {
                               unawaited(
@@ -213,7 +213,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                         children: LibraryVisibility.values.map((visibility) {
                           final isSelected = _selectedVisibility == visibility;
                           return ChoiceChip(
-                            label: Text(visibility.displayName),
+                            label: Text(visibility.label(context.l10n)),
                             selected: isSelected,
                             onSelected: (selected) {
                               unawaited(
@@ -250,7 +250,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     Expanded(
                       child: TextField(
                         controller: _tagsController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: context.l10n.seedTagHint,
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(

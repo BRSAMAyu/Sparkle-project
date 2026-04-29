@@ -23333,6 +23333,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get docCleanerRetry => 'Retry';
 
   @override
+  String get seedCatFewShot => 'Few Shot';
+
+  @override
+  String get seedCatTeaching => 'Teaching Content';
+
+  @override
+  String get seedCatReplyTemplate => 'Reply Template';
+
+  @override
+  String get seedCatCustom => 'Custom';
+
+  @override
+  String get seedVisPrivate => 'Private';
+
+  @override
+  String get seedVisPublic => 'Public';
+
+  @override
+  String get seedVisOfficial => 'Official';
+
+  @override
+  String get seedTypeExample => 'Example';
+
+  @override
+  String get seedTypeExercise => 'Exercise';
+
+  @override
+  String get seedTypeKnowledge => 'Knowledge Point';
+
+  @override
+  String get seedTypeTemplate => 'Template';
+
+  @override
+  String get seedTypeFlashcard => 'Flashcard';
+
+  @override
+  String get seedDiffBeginner => 'Beginner';
+
+  @override
+  String get seedDiffIntermediate => 'Intermediate';
+
+  @override
+  String get seedDiffAdvanced => 'Advanced';
+
+  @override
+  String get seedDiffExpert => 'Expert';
+
+  @override
+  String get seedCatFewShotFull => 'Few-shot Example';
+
+  @override
   String get cogMockPattern1 =>
       'Whenever I hit a tough problem I instinctively reach for my phone — it seems like an avoidance mechanism.';
 
@@ -23990,7 +24041,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to load seed library state. Please try again.';
 
   @override
-  String get seedCreateFailed => 'Create failed: \$e';
+  String seedCreateFailed(String e) {
+    return 'Create failed: $e';
+  }
 
   @override
   String get seedCreateTitle => 'Create Seed Library';
