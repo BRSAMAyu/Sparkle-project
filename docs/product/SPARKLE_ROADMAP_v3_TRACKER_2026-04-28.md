@@ -501,7 +501,7 @@
 | P1-9 | P1 | ContractService `current_minutes=0` 丢失额外分钟 | `achievement_engine.py` | ✅ 已修 |
 | P1-10 | P1 | FocusSessionCompletedEvent 定义但从未发布到 EventBus | `event_bus.py` / signal modules | ✅ 误报: focus_service.py:178 已发布 |
 | P1-12 | P1 | SpineOrchestrator 零测试 (重复 P1-7) | — | ✅ 合并到 P1-7 |
-| P1-13 | P1 | AchievementEngine sprint/contract/weekend 测试不足 | `test_achievement_engine.py` | 🔴 待修 |
+| P1-13 | P1 | AchievementEngine sprint/contract/weekend 测试不足 | `test_achievement_engine.py` | ✅ 已修 (9a1b9f5a: 23 tests for contract creation/status/progress + weekend streak calculation) |
 | P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | ✅ 已修 |
 | P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | 🔴 待修 |
 | P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🔴 待修 |
