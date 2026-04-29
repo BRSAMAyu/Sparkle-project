@@ -407,3 +407,68 @@
 | T7.3.5 蓝绿部署验证 | 🟡 待正式路径演练 | Claude | R4: blue_green_switch.sh 不足以证明生产流量切换; 需 deploy-prod.sh 或 K8s 实演练 |
 | T7.3.6 监控验证 | ✅ 完成 | Claude | sparkle_t6_slo_alerts.yml + recording_rules + Loki retention |
 | T7.3.7 备份恢复演练 | ⬜ 待运维 | — | pg_dump + restore 验证 |
+
+---
+
+## Phase 8: 愿景验收清单差距修复 (🔴 2026-04-30)
+
+> **来源**: 全系统愿景验收审查 (`docs/product/critical_files/愿景验收清单`)
+> **范围**: 845 行 ~400 项清单逐项审查
+> **通过线**: Critical 100% ≥4分, Core 90% ≥4分, Experience 85% ≥4分
+
+### 已通过区段 (无需修复)
+
+| 区段 | 分数范围 | 结论 |
+|------|----------|------|
+| SPINE-001~020 | 4-5 | Causal Control Spine 完整 |
+| METRIC-001~010 | 4-5 | 10 核心指标全部实现 |
+| AUR-001~049 | 4-5 | Aurora L0-L4 + 状态带完整 |
+| GOV-003 记忆控制 | 4 | GET/PUT /memory/settings 已实现 |
+| GOV-014 审计日志 | 5 | SecurityAuditLog 等完善 |
+| GOV-018 医疗边界 | 4 | 年龄门控 + 临床边界 |
+| LEARN-006 反标签化 | 4 | metacognition_guard.py 正则防护 |
+| GROW-005 GrowthChronicle | 4 | 完整 CRUD + 用户确认 + weekly summary |
+| MAGIC-001~004 | 4-5 | 看见坚持/承认误判/知道不用资料/记得时间 |
+| OBS-006 Runbook | 5 | incident_response.md 完整 |
+| OBS-016 Rollback | 5 | Kill switch 全面 |
+| OBS-017 Canary/Shadow | 5 | 三态治理完整 |
+
+### Score 2 差距 — 必须修复
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| GAP-OBS007: 统一错误分类体系 | 🟡 修复中 | Claude | OBS-007: 无 warning/degraded/critical 分类; 需创建 error_taxonomy.py |
+| GAP-GOV012: Research Mode 隔离 | ⬜ 待修复 | — | GOV-012: 研究模式未与生产数据隔离 |
+| GAP-GOV016: 安全降级模式 | ⬜ 待修复 | — | GOV-016: 无自动安全降级; 异常不触发能力缩减 |
+| GAP-GOV017: 误导防止 | ⬜ 待修复 | — | GOV-017: 无验证管道防止系统虚构来源/范围 |
+| GAP-OBS009: Fake vs Prod 测试 | ⬜ 待修复 | — | OBS-009: FakeRedis/测试替身与生产差异无专门测试 |
+| GAP-OBS011: 场景回归门禁 | ⬜ 待修复 | — | OBS-011: SparkleGoalBench 不阻止发布 |
+| GAP-UX009: 社群页聚焦 | ⬜ 待修复 | — | UX-009: 社群页非目标聚焦 (Flutter) |
+| GAP-UX010: 设置页管理 | ⬜ 待修复 | — | UX-010: 缺记忆/社群/资料权限管理入口 (Flutter) |
+
+### Score 3 差距 — 应修复
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| GAP-GOV010: 高影响判断确认框架 | ⬜ 待修复 | — | GOV-010: 确认散布各处, 无统一框架 |
+| GAP-GOV013: 数据最小化审查 | ⬜ 待修复 | — | GOV-013: 无系统化敏感数据收集审查 |
+| GAP-GOV015: 用户透明统一界面 | ⬜ 待修复 | — | GOV-015: 透明性碎片化, 无统一仪表板 |
+| GAP-GOV019: 权限隔离测试 | ⬜ 待修复 | — | GOV-019: 最小权限未系统测试 |
+| GAP-OBS008: 禁止吞异常 | ⬜ 待修复 | — | OBS-008: 关键路径无 systematic enforcement |
+| GAP-OBS012: 压测入CI | ⬜ 待修复 | — | OBS-012: 压测能力存在但未入CI |
+| GAP-OBS013: 成本预测测试 | ⬜ 待修复 | — | OBS-013: 成本追踪但无预算门禁 |
+| GAP-MAGIC005: 低收益阻止前端 | ⬜ 待修复 | — | MAGIC-005: 后端存在, 前端 widget 缺失 |
+| GAP-UX001: 首页目标聚焦 | ⬜ 待修复 | — | UX-001: 首页需验证目标导向 |
+| GAP-UX005: 星图页体验 | ⬜ 待修复 | — | UX-005: 图谱集成需验证 |
+
+### KG 知识星图差距 (🔴 2026-04-30)
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| GAP-KG002: 非学习节点类型 | ⬜ 待修复 | — | KG-002: 仅 KnowledgeNode, 缺 CapabilityNode/ArtifactNode/HabitNode 等 (Score 1) |
+| GAP-KG007: 社群错因展示 | ⬜ 待修复 | — | KG-007: 节点无匿名共性错因 UI (Score 2) |
+| GAP-KG008: CRDT 掌握度同步 | ⬜ 待修复 | — | KG-008: CRDT 仅图结构, 掌握度非 CRDT (Score 2) |
+| GAP-KG009: 可解释路径 | ⬜ 待修复 | — | KG-009: 无"为什么今天排这个节点" UI (Score 2) |
+| GAP-KG001: 节点属性补全 | ⬜ 待修复 | — | KG-001: 缺 exam_weight/difficulty/trainability/mistakes 字段 (Score 3) |
+| GAP-KG004: 节点优先级持久化 | ⬜ 待修复 | — | KG-004: 优先级运行时计算, 不持久化 (Score 3) |
+| GAP-KG005: 错因聚类挂节点 | ⬜ 待修复 | — | KG-005: 错因聚类存在但未绑定到具体节点 (Score 3) |

@@ -14,6 +14,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
 from app.aurora.runtime_v1.aurora_spine_confluence import (
     AuroraInputAssembler,
     AuroraOutputArbitrator,
@@ -617,8 +618,9 @@ class SpineOrchestrator:
 
             return band_status, band_label, band_summary, band_energy, cooldown_remaining, cooldown_can_override
 
-        except Exception:
-            logger.warning("SpineOrchestrator: _compute_6state_band failed for user={}", user_id, exc_info=True)
+        except Exception as _band_err:
+            _ce = classify_error(_band_err, component="spine_6state_band", category=ErrorCategory.AURORA)
+            logger.warning("SpineOrchestrator: _compute_6state_band failed for user={} [{}]", user_id, _ce.severity.value)
             return "sensing", "轻量感知中", "Aurora 正在轻量感知，参考当前上下文优化回复。", "L0", None, False
 
     async def _build_correction_options(
@@ -1391,8 +1393,11 @@ class SpineOrchestrator:
             if not locked:
                 logger.debug("Pipeline skipped: concurrent run for user={}", user_id)
                 return None
-        except Exception:
-            logger.warning("_run_signal_pipeline: redis failed", exc_info=True)
+        except Exception as _lock_err:
+            _ce = classify_error(_lock_err, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
+            logger.warning("Pipeline lock failed: {} [{}]", _lock_err, _ce.severity.value)
+            if _ce.severity == ErrorSeverity.CRITICAL:
+                logger.error("Critical Redis failure in pipeline lock for user={}", user_id)
 
         # STAB-006: Auto-increment 24h interaction counter for FatigueGuard
         try:
@@ -1400,8 +1405,9 @@ class SpineOrchestrator:
             _ic = await self.redis.incr(_ik)
             if _ic == 1:
                 await self.redis.expire(_ik, 24 * 3600)
-        except Exception:
-            logger.warning("_run_signal_pipeline: redis failed", exc_info=True)
+        except Exception as _count_err:
+            _ce = classify_error(_count_err, component="spine_interaction_counter", category=ErrorCategory.REDIS, severity=ErrorSeverity.WARNING)
+            logger.warning("Interaction counter failed: {} [{}]", _count_err, _ce.severity.value)
 
         trace = await resilient_redis_call(
             "spine_pipeline", self.trace_store.create_trace(),
@@ -1411,8 +1417,8 @@ class SpineOrchestrator:
             logger.warning("Spine pipeline skipped: trace creation failed for user={}", user_id)
             try:
                 await self.redis.delete(lock_key)
-            except Exception:
-                logger.warning("_run_signal_pipeline: redis failed", exc_info=True)
+            except Exception as _del_err:
+                classify_error(_del_err, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
             return None
 
         if event_ids:
@@ -1489,8 +1495,8 @@ class SpineOrchestrator:
             await self.trace_store._save_trace(trace)
             try:
                 await self.redis.delete(f"spine:pipeline_lock:{user_id}")
-            except Exception:
-                logger.warning("_run_signal_pipeline: redis failed", exc_info=True)
+            except Exception as _unlock_err:
+                classify_error(_unlock_err, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
             return trace
 
         decision, directive = result
@@ -1628,8 +1634,8 @@ class SpineOrchestrator:
         # Release pipeline lock
         try:
             await self.redis.delete(f"spine:pipeline_lock:{user_id}")
-        except Exception:
-            logger.warning("_run_signal_pipeline: redis failed", exc_info=True)
+        except Exception as _final_unlock:
+            classify_error(_final_unlock, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
         return trace
 
     # ── P0-1 Integration: FirstMinuteSnapshot / ExamRescue ─────────────
