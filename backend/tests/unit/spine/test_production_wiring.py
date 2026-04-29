@@ -235,10 +235,11 @@ def test_exam_sprint_phase_d0():
 
 
 def test_exam_sprint_should_activate():
-    """should_activate only for exam_rescue <= 7 days."""
+    """should_activate for exam_rescue <= 30 days."""
     from app.signals.exam_sprint_policy import ExamSprintPolicyService
     assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=7)
-    assert not ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=14)
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=14)
+    assert not ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=31)
     assert not ExamSprintPolicyService.should_activate(goal_mode="normal", days_to_deadline=3)
     assert not ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=None)
 
@@ -359,11 +360,12 @@ def test_exam_sprint_phase_past_deadline():
 
 
 def test_exam_sprint_should_activate():
-    """should_activate only true for exam_rescue + <=7 days."""
+    """should_activate true for exam_rescue + <=30 days."""
     from app.signals.exam_sprint_policy import ExamSprintPolicyService
     assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=7) is True
     assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=0) is True
-    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=8) is False
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=8) is True
+    assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=31) is False
     assert ExamSprintPolicyService.should_activate(goal_mode="standard", days_to_deadline=3) is False
     assert ExamSprintPolicyService.should_activate(goal_mode="exam_rescue", days_to_deadline=None) is False
 

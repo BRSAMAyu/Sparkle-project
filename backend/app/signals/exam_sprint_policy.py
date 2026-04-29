@@ -5,7 +5,8 @@ Stage: Signal-to-Action Spine P0-6
 
 ExamSprintPolicy — Deadline-phase adaptive strategy.
 
-Maps days-to-deadline (D-7→D-0) to progressive constraints per Final Spec Section 6.4:
+Maps days-to-deadline (D-30→D-0) to progressive constraints per Final Spec Section 6.4:
+  D-30 to D-8: Foundation building (broad study, new chapters ok)
   D-7 to D-5: Build minimum passing path
   D-4 to D-3: Main bottleneck training
   D-2:        High-frequency error repair
@@ -23,7 +24,7 @@ from loguru import logger
 
 @dataclass
 class ExamSprintPhase:
-    phase_id: str                 # build_path / bottleneck_training / error_repair / survival / final_review
+    phase_id: str                 # foundation / build_path / bottleneck_training / error_repair / survival / final_review
     days_range: tuple[int, int]   # (days_left, days_left) inclusive
     max_task_duration_min: int
     allow_new_chapters: bool
@@ -66,6 +67,17 @@ class ExamSprintDirective:
 # ── Phase definitions per Final Spec Section 6.4 ────────────────────────
 
 _PHASE_TABLE: list[ExamSprintPhase] = [
+    ExamSprintPhase(
+        phase_id="foundation",
+        days_range=(8, 30),
+        max_task_duration_min=60,
+        allow_new_chapters=True,
+        prefer_high_yield_review=False,
+        retrieval_mode="targeted_source_rag",
+        difficulty_cap=4,
+        tone="calm_direct",
+        task_type_bias="mixed",
+    ),
     ExamSprintPhase(
         phase_id="build_path",
         days_range=(5, 7),
@@ -181,7 +193,7 @@ class ExamSprintPolicyService:
         """Check if ExamSprintPolicy should be active."""
         if days_to_deadline is None:
             return False
-        return goal_mode == "exam_rescue" and days_to_deadline <= 7
+        return goal_mode == "exam_rescue" and days_to_deadline <= 30
 
     # ── Galaxy 掌握度 → 任务难度映射 (v1.1 Section 8.3) ─────────────
 
