@@ -189,7 +189,17 @@ class Settings(BaseSettings):
     @classmethod
     def assemble_cors_origins(cls, v):
         if isinstance(v, str):
-            return [i.strip() for i in v.split(",")]
+            value = v.strip()
+            if not value:
+                return []
+            if value.startswith("["):
+                try:
+                    parsed = json.loads(value)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except json.JSONDecodeError:
+                    pass
+            return [i.strip() for i in value.split(",") if i.strip()]
         return v
 
     # JWT Settings
@@ -350,7 +360,7 @@ class Settings(BaseSettings):
     AURORA_STAGE40_CALENDAR_MODE: str = "live"  # off | shadow | live
 
     # Email (SMTP)
-    EMAIL_ENABLED: bool = False
+    EMAIL_ENABLED: Optional[bool] = None
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
@@ -973,8 +983,28 @@ class Settings(BaseSettings):
         if env in ("prod", "production") and not self.DATABASE_URL:
             raise ValueError("DATABASE_URL must be set in production")
 
-        if env in ("prod", "production") and "*" in self.BACKEND_CORS_ORIGINS:
-            raise ValueError("BACKEND_CORS_ORIGINS cannot include '*' in production")
+        if self.EMAIL_ENABLED is None:
+            self.EMAIL_ENABLED = env in ("prod", "production")
+
+        if env in ("prod", "production"):
+            production_url = (self.PRODUCTION_URL or "").strip().rstrip("/")
+            if not production_url:
+                raise ValueError("PRODUCTION_URL must be set in production for HTTPS links and CORS")
+            parsed_production_url = urlparse(production_url)
+            if parsed_production_url.scheme != "https" or not parsed_production_url.netloc:
+                raise ValueError("PRODUCTION_URL must be an HTTPS URL in production")
+            self.PRODUCTION_URL = production_url
+
+            cors_origins = [origin.strip().rstrip("/") for origin in self.BACKEND_CORS_ORIGINS if origin.strip()]
+            if not cors_origins:
+                cors_origins = [production_url]
+            if "*" in cors_origins:
+                raise ValueError("BACKEND_CORS_ORIGINS cannot include '*' in production")
+            for origin in cors_origins:
+                parsed_origin = urlparse(origin)
+                if parsed_origin.scheme != "https" or not parsed_origin.netloc:
+                    raise ValueError("BACKEND_CORS_ORIGINS must contain only HTTPS origins in production")
+            self.BACKEND_CORS_ORIGINS = cors_origins
 
         # Production secret validation: critical credentials must not be empty
         if env in ("prod", "production"):
@@ -1000,7 +1030,22 @@ class Settings(BaseSettings):
                 v and not any(v.startswith(p) for p in _placeholder_prefixes) for v in _llm_keys.values()
             )
             if not _has_any_llm:
-                raise ValueError("At least one LLM API key must be set in production (LLM_API_KEY, ZHIPU_API_KEY, or DEEPSEEK_API_KEY)")
+                raise ValueError(
+                    "At least one LLM API key must be set in production (LLM_API_KEY, ZHIPU_API_KEY, or DEEPSEEK_API_KEY)"
+                )
+
+            if self.EMAIL_ENABLED:
+                _required_email = {
+                    "SMTP_HOST": self.SMTP_HOST,
+                    "SMTP_USER": self.SMTP_USER,
+                    "SMTP_PASSWORD": self.SMTP_PASSWORD,
+                    "EMAIL_FROM": self.EMAIL_FROM,
+                }
+                for _name, _val in _required_email.items():
+                    if not _val or any(_val.startswith(p) for p in _placeholder_prefixes):
+                        raise ValueError(f"{_name} must be set when EMAIL_ENABLED=true in production")
+                if self.SMTP_PORT < 1 or self.SMTP_PORT > 65535:
+                    raise ValueError("SMTP_PORT must be a valid TCP port")
 
         if self.WS_ALLOW_QUERY_TOKEN is None:
             self.WS_ALLOW_QUERY_TOKEN = env not in ("prod", "production")

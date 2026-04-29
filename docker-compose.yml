@@ -79,8 +79,8 @@ services:
       - "${SPARKLE_MINIO_API_PORT:-9000}:9000"
       - "${SPARKLE_MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
     volumes:
       - sparkle_minio_data:/data
     deploy:
@@ -360,10 +360,11 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - AGENT_ADDRESS=sparkle_agent:50051
       - BACKEND_URL=http://sparkle_api:8000
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
-      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
-      - MINIO_USE_SSL=false
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
+      - MINIO_BUCKET=${MINIO_BUCKET:-sparkle-files}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - JWT_SECRET=${JWT_SECRET}
 
     depends_on:

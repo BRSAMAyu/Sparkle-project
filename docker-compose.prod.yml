@@ -103,6 +103,13 @@ services:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - ENVIRONMENT=production
       - SERVICE_ROLE=api
+      - EMAIL_ENABLED=${EMAIL_ENABLED:-true}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Sparkle}
       - ENABLE_AURORA_RUNTIME_V1=true
       - AURORA_BAYESIAN_MODE=live
       - AURORA_IDIOGRAPHIC_MODE=live
@@ -251,8 +258,8 @@ services:
     command: server /data --console-address ":9001"
     restart: unless-stopped
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
     volumes:
       - ./minio_data:/data
     networks:

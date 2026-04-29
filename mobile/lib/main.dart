@@ -59,6 +59,32 @@ void main() async {
 
     // Initialize SharedPrefs
     final prefs = await SharedPreferences.getInstance();
+    const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+    const sentryEnvironment = String.fromEnvironment(
+      'SENTRY_ENVIRONMENT',
+      defaultValue: 'production',
+    );
+    const sentryRelease = String.fromEnvironment('SENTRY_RELEASE');
+    const sentryTracesSampleRateRaw = String.fromEnvironment(
+      'SENTRY_TRACES_SAMPLE_RATE',
+      defaultValue: '0.1',
+    );
+    const sentryPerformanceEnabled = bool.fromEnvironment(
+      'SENTRY_PERFORMANCE_ENABLED',
+      defaultValue: true,
+    );
+    const sentryCrashReportingEnabled = bool.fromEnvironment(
+      'SENTRY_CRASH_REPORTING_ENABLED',
+      defaultValue: true,
+    );
+    await PerformanceMonitor().initialize(
+      sentryDsn: sentryDsn,
+      environment: sentryEnvironment,
+      release: sentryRelease,
+      tracesSampleRate: double.tryParse(sentryTracesSampleRateRaw) ?? 0.1,
+      enablePerformanceMonitoring: sentryPerformanceEnabled,
+      enableCrashReporting: sentryCrashReportingEnabled,
+    );
     await PerformanceService.instance.hydratePreferences(prefs);
     PerformanceService.instance.startMonitoring();
 

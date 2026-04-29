@@ -100,8 +100,8 @@ def test_trigger_to_actionable_signal() -> None:
 
 @pytest.mark.asyncio
 async def test_enqueue_session_end_recall_counts_triggers() -> None:
-    redis = AsyncMock()
-    redis.pipeline.return_value = pipe = AsyncMock()
+    redis = MagicMock()
+    redis.pipeline.return_value = pipe = MagicMock()
     pipe.execute = AsyncMock(return_value=[1, 1, 1])
 
     db = AsyncMock()

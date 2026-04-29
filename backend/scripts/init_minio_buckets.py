@@ -49,9 +49,11 @@ def _ensure_bucket(s3_client, bucket: str, region: str) -> None:
 
 def ensure_buckets(buckets: Iterable[str]) -> None:
     endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
-    access_key = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-    secret_key = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    access_key = os.getenv("MINIO_ACCESS_KEY", "")
+    secret_key = os.getenv("MINIO_SECRET_KEY", "")
     region = os.getenv("MINIO_REGION", "")
+    if not access_key or not secret_key:
+        raise RuntimeError("MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be set")
 
     client = boto3.client(
         "s3",
