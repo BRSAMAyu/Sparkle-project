@@ -33,7 +33,7 @@ type wsTicketPayload struct {
 func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Debug logging for real device testing
-		log.Printf("[WsAuth] Request to %s from %s, Origin: %s, Upgrade: %s",
+		log.Printf("[WsAuth] Request to %s from %s, Origin: %s",
 			c.Request.URL.Path, c.ClientIP(), c.GetHeader("Origin"), c.GetHeader("Upgrade"))
 
 		authHeader := c.GetHeader("Authorization")
@@ -60,7 +60,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		// Support JWT token via query param (for clients that can't send custom headers, like Flutter)
 		if cfg.AllowWsQueryToken {
 			if queryToken := c.Query("token"); queryToken != "" {
-				log.Printf("[WsAuth] Attempting JWT query validation, AllowWsQueryToken=%v", cfg.AllowWsQueryToken)
+				log.Printf("[WsAuth] Attempting JWT query validation, AllowWsQueryToken=%v (token omitted from log)", cfg.AllowWsQueryToken)
 				userID, isAdmin, err := validateJWT(cfg, rdb, queryToken)
 				if err != nil {
 					log.Printf("[WsAuth] JWT query validation failed: %v", err)
