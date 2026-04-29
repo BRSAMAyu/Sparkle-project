@@ -2441,6 +2441,16 @@ class SpineOrchestrator:
         except Exception:
             logger.debug("directive pub/sub failed on channel={}", channel, exc_info=True)
 
+
+    async def _store_directive(
+        self, user_id: str, directive_type: str, directive: Any,
+    ) -> None:
+        """Generic directive persistence: Redis set + trace store."""
+        import json
+        key = f"spine:{directive_type}_directive:{user_id}:latest"
+        await self.redis.set(key, json.dumps(directive.to_dict()), ex=72 * 3600)
+        await self.trace_store.store_directive_by_id(directive.directive_id, directive.to_dict())
+
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
         """获取用户当前 PlanDirective。Degraded: returns None on Redis failure."""
         try:
@@ -2456,10 +2466,7 @@ class SpineOrchestrator:
     # ── Layer 6: ModelWriteDirective ────────────────────────────────────
 
     async def _store_model_write_directive(self, user_id: str, mwd: ModelWriteDirective) -> None:
-        import json
-        key = f"spine:model_write_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(mwd.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(mwd.directive_id, mwd.to_dict())
+        await self._store_directive(user_id, "model_write", mwd)
 
     async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
         """获取用户当前 ModelWriteDirective。Degraded: returns None on Redis failure."""
@@ -3202,105 +3209,6 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
 
-        # 8. P4 counterfactual evaluation: store policy decision for later analysis
-        try:
-            from datetime import datetime as _dt
-            decision_record = {
-                "strategy": decision.primary_strategy,
-                "signal_claim": signal.claim,
-                "signal_confidence": signal.confidence,
-                "risk_level": decision.risk_level,
-                "timestamp": _dt.now(UTC).isoformat(),
-            }
-            await self.redis.rpush(
-                f"spine:policy_decisions:{user_id}",
-                json.dumps(decision_record),
-            )
-            await self.redis.ltrim(f"spine:policy_decisions:{user_id}", -100, -1)
-            await self.redis.expire(f"spine:policy_decisions:{user_id}", 90 * 24 * 3600)
-        except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
-
-        # 9. P4 quality guard: signal quality + directive compliance checks
-        try:
-            from app.signals.spine_quality_guard import SpineQualityGuard
-            traces = await self.trace_store.get_user_traces(user_id, limit=20)
-            if traces:
-                trace_dicts = []
-                for t in traces:
-                    td = t.to_dict() if hasattr(t, "to_dict") else {}
-                    td["had_policy_decision"] = bool(getattr(t, "policy_decision_id", ""))
-                    td["had_directive"] = bool(getattr(t, "directive_ids", []))
-                    trace_dicts.append(td)
-                sig_check = SpineQualityGuard.check_signal_actionability(trace_dicts)
-                dir_check = SpineQualityGuard.check_directive_compliance(trace_dicts)
-                violations = []
-                for chk in (sig_check, dir_check):
-                    if not chk.passed:
-                        violations.append(chk.to_dict() if hasattr(chk, "to_dict") else {"name": chk.check_name, "score": chk.score})
-                if violations:
-                    await self.redis.set(
-                        f"spine:quality_violations:{user_id}:latest",
-                        json.dumps({"violations": violations}),
-                        ex=24 * 3600,
-                    )
-        except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
-
-        # 10. P4 research mode: gap detection for continuous improvement
-        try:
-            from app.signals.research_mode import GapDetector
-            quality_health = "healthy"
-            quality_score = 1.0
-            systemic_issues: list[str] = []
-            raw_violations = await self.redis.get(f"spine:quality_violations:{user_id}:latest")
-            if raw_violations:
-                viol_data = json.loads(raw_violations if isinstance(raw_violations, str) else raw_violations.decode())
-                quality_health = "at_risk"
-                quality_score = 0.5
-                systemic_issues = [v.get("name", "unknown") for v in viol_data.get("violations", [])]
-            proposals = GapDetector.from_quality_report(
-                quality_health=quality_health,
-                quality_score=quality_score,
-                systemic_issues=systemic_issues,
-            )
-            if proposals:
-                await self.redis.set(
-                    f"spine:research_gaps:{user_id}:latest",
-                    json.dumps([p.to_dict() if hasattr(p, "to_dict") else p for p in proposals[:5]]),
-                    ex=24 * 3600,
-                )
-        except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
-
-        # 11. P4 safe experiment: bandit suggestion for strategy selection
-        try:
-            from app.signals.intervention_episode import ContextSignature
-            from app.signals.safe_experiment_platform import SafeBanditController
-            ctx_sig = ContextSignature(
-                goal_mode="standard",
-                failure_type=signal.claim,
-                cognitive_load="medium" if signal.priority == "high" else "low",
-                user_id=user_id,
-            )
-            candidate_strategies = [decision.primary_strategy, "reduce_pace", "reinforce_without_overpressure"]
-            bandit = SafeBanditController()
-            result = bandit.select_action(
-                candidate_actions=candidate_strategies,
-                context=ctx_sig,
-                risk_level=decision.risk_level or "low",
-            )
-            if result and result.get("selected_action") != decision.primary_strategy:
-                await self.redis.set(
-                    f"spine:bandit_suggestion:{user_id}:latest",
-                    json.dumps({
-                        "suggested_strategy": result["selected_action"],
-                        "reason": result.get("reason", ""),
-                    }),
-                    ex=24 * 3600,
-                )
-        except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
 
     # ── Aurora → Spine Return Path ────────────────────────────────────
 
