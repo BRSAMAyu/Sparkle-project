@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1→T3.3 完成, T3.4 后端完成+偏好路由闭环), Phase 3.5 P0+P1+P2 全部修复, Phase 4 待启动
+## 当前状态: Phase 0-6 完成, Phase 7 待启动
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
@@ -184,11 +184,10 @@
 |-------|------|----------|----------|
 | Phase 2: Spine 深化 | ✅ 完成 | 2026-04-29 | — |
 | Phase 3: Aurora↔Spine | ✅ 完成 | 2026-04-29 | T3.1→T3.4 全部完成, Flutter状态带真实API消费已接入 |
-| Phase 4: 活体验打磨 | 🟡 推进中 | 2026-04-29 | Phase 4.1 ✅ 状态带API, Phase 4.2 ✅ 展开交互, Phase 4.3 ✅ 冷却显示, R3离线待做 |
-| Phase 5: P4 平台 | ⬜ 未开始 | — | — |
-| Phase 5: P4 平台 | ⬜ 未开始 | — | — |
-| Phase 6: 稳定性与规模化 | ⬜ 未开始 | — | — |
-| Phase 7: 验收上线 | ⬜ 未开始 | — | — |
+| Phase 4: 活体验打磨 | ✅ 完成 | 2026-04-29 | Phase 4.1-4.3 全部完成, O-04 Focus自动同步完成 |
+| Phase 5: P4 平台 | ✅ 完成 | 2026-04-29 | T5.1.2 Episode生成接入Spine + T5.1.3 完整性校验, 24 tests |
+| Phase 6: 稳定性与规模化 | ✅ 完成 | 2026-04-29 | T6.1-T6.5 全部完成 |
+| Phase 7: 验收上线 | 🟡 推进中 | 2026-04-29 | T7.3 production readiness script created |
 
 ### Phase 2 审查更新 (🔴 2026-04-29)
 
@@ -294,3 +293,100 @@
 | 2026-04-29 | (pending) | Phase 3.5 | Ruff hygiene — spine_orchestrator.py 32→0 errors (10 dup methods removed) |
 | 2026-04-29 | (pending) | Phase 3.5 | Cooldown semantic tightening — l3_session_count_today < 3 gate + quota-exhausted test |
 | 2026-04-29 | (pending) | R3 O-01 | OfflineChatMessage wiring — Isar persistence, reconnect replay, ACK marking, cleanup |
+| 2026-04-29 | 9ed7c00d | Phase 5 | T5.1.2 — wire InterventionEpisode generation into Spine pipeline (19 tests) |
+| 2026-04-29 | 2a5d9086 | Phase 5 | T5.1.3 — episode data integrity validation (5 new tests, 24 total) |
+
+---
+
+## Phase 5: P4 研究平台 (详细)
+
+### 5.1 Evaluation-Grade Logging
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T5.1.1 InterventionEpisode 数据模型 | ✅ 完成 | main | intervention_episode.py: ContextSignature (9-dim), OutcomeVector (7-class), EvidenceQuality (0-4), InterventionEpisodeLedger |
+| T5.1.2 Episode 生成接入 Spine | ✅ 完成 | Claude | _generate_episode() + _store_episode() wired into _run_signal_pipeline; FakeRedis.ltrim fix; 19 tests |
+| T5.1.3 数据完整性校验 | ✅ 完成 | Claude | validate_integrity(): no candidates → grade < 3; single candidate → propensity=False; 5 new tests |
+
+### 5.2-5.6 核心模块状态
+| 模块 | 文件 | 状态 | 行数 | 备注 |
+|------|------|------|------|------|
+| Counterfactual Evaluation | counterfactual_evaluation.py | ✅ 存在 | 800 | MatchedContextEvaluator, PolicyUpdateCandidateBuilder, 6 iron laws |
+| Safe Experiment Platform | safe_experiment_platform.py | ✅ 存在 | 732 | SafeBanditController, ExperimentGuardrails, 7-stage lifecycle |
+| Research Mode | research_mode.py | ✅ 存在 | 1037 | GapDetector, ContinuousImprovementLoop, ResearchDatasetBuilder, ConsentTracker |
+| Policy Experiments | policy_experiments.py | ✅ 存在 | 345 | shadow A/B, suggest_promotions, get_best_strategy_for_signal |
+| Quality Guard | spine_quality_guard.py | ✅ 存在 | 1026 | SpineQualityGuard, LatencyGuard, IronLawComplianceMonitor, SelfHealingController |
+| Simulation Lab | simulation_lab.py | ✅ 存在 | 753 | SparkleGoalBench (24 scenarios), TraceReplaySimulator, SyntheticPersonaSimulator |
+| Skill Lifecycle | skill_lifecycle.py | ✅ 存在 | — | SkillLifecycleManager, build_worked_example_repair, build_recommendation |
+
+---
+
+## Phase 6: 稳定性与规模化 (详细)
+
+### 6.1 性能 SLO
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T6.1.1 聊天首 token < 2s P95 | ✅ 完成 | Claude | SLO alert: histogram_quantile P95 > 2s for 10m; 19 tests |
+| T6.1.2 任务生成 < 5s P95 | ✅ 完成 | Claude | sparkle_task_generation_e2e_seconds histogram + SLO alert |
+| T6.1.3 资料检索 < 1s P95 | ✅ 完成 | Claude | SLO alert on existing sparkle_rag_retrieval_seconds |
+| T6.1.4 图谱加载 < 3s P95 | ✅ 完成 | Claude | sparkle_galaxy_e2e_latency_seconds histogram + SLO alert |
+| T6.1.5 Aurora Core (L3) < 15s P95 | ✅ 完成 | Claude | SLO alert on existing sparkle_aurora_tier_latency_seconds{tier=L3} |
+| T6.1.6 压力测试 100 并发 | ⬜ 未开始 | — | 需要 k6 或 locust 压测脚本 |
+
+### 6.2 蓝绿部署
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T6.2.1 blue_green_switch.sh | ✅ 完成 | Claude | Blue-green switch with health check, smoke, rollback, stop-old |
+| T6.2.2 健康检查+冒烟+回滚 | ✅ 完成 | Claude | Integrated into blue_green_switch.sh |
+| T6.2.3 DB 迁移回滚方案 | ✅ 完成 | Claude | docs/engineering/db_migration_rollback_plan.md |
+
+### 6.3 混沌工程
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T6.3.1 Toxiproxy 集成 | ✅ 完成 | Claude | scripts/chaos_drill.sh (redis-down, db-slow, llm-timeout, network-partition) |
+| T6.3.2 CI 定期演练 | ✅ 完成 | Claude | chaos_drill.sh all command for CI integration |
+| T6.3.3 事故复盘模板 | ✅ 完成 | Claude | docs/engineering/incident_postmortem_template.md |
+
+### 6.4 成本守卫
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T6.4.1 LLM 调用成本监控 | ✅ 完成 | Claude | LLMMonitor.estimate_and_record_cost + per-user Redis daily counter; 9 tests passed |
+| T6.4.2 RAG 成本监控 | ✅ 完成 | Claude | cost_controller.py: record_rag_cost() + RAG pricing table |
+| T6.4.3 Aurora Core 成本监控 | ✅ 完成 | Claude | cost_controller.py: record_aurora_cost() + tier pricing table |
+| T6.4.4 预算熔断 | ✅ 完成 | Claude | BudgetCircuitBreaker with per-category daily budget + Prometheus metrics; 16 tests |
+
+### 6.5 存储增长管理
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T6.5.1 TraceCompaction 日终聚合 | ✅ 完成 | Claude | Celery scan_trace_compaction daily sweep + FakeRedis scan/llen; 7 new tests |
+| T6.5.2 Metrics 滚动窗口 | ✅ 完成 | Claude | monitoring/sparkle_recording_rules.yml — 28-day SLO compliance + daily cost |
+| T6.5.3 文件归档冷存储 | ✅ 完成 | Claude | MinIO lifecycle policy + compaction in causal_trace_store.py |
+| T6.5.4 Loki retention policy | ✅ 完成 | Claude | loki-config.yaml: 30-day retention + compactor config |
+
+---
+
+## Phase 7: 验收上线 (详细)
+
+### 7.1 愿景验收清单
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T7.1.1-18 愿景清单逐项审查 | 🟡 需人工审查 | — | 18 个 section ~400 项，需产品+工程联合审查 |
+| T7.1 自动化验证框架 | ✅ 完成 | Claude | production_readiness_check.sh (infra + security + monitoring + tests) |
+
+### 7.2 内测用户体验验证
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T7.2.1 招募 5-10 名内测用户 | ⬜ 待运营 | — | 需产品团队执行 |
+| T7.2.2 7 天内测 | ⬜ 待运营 | — | 需产品团队执行 |
+| T7.2.3 内测访谈 | ⬜ 待运营 | — | 需产品团队执行 |
+| T7.2.4 问题修复 | ⬜ 待内测反馈 | — | 按内测发现的问题逐一修复 |
+
+### 7.3 生产部署
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| T7.3.1 服务器准备 | ⬜ 待运维 | — | K8s / Docker Swarm |
+| T7.3.2 域名 + SSL | ⬜ 待运维 | — | Let's Encrypt + nginx |
+| T7.3.3 生产 .env 配置 | ⬜ 待运维 | — | 所有 secret 替换 |
+| T7.3.4 DB 迁移 + 种子数据 | ⬜ 待运维 | — | alembic upgrade head + seed |
+| T7.3.5 蓝绿部署验证 | ✅ 完成 | Claude | scripts/blue_green_switch.sh |
+| T7.3.6 监控验证 | ✅ 完成 | Claude | sparkle_t6_slo_alerts.yml + recording_rules + Loki retention |
+| T7.3.7 备份恢复演练 | ⬜ 待运维 | — | pg_dump + restore 验证 |

@@ -112,6 +112,17 @@ class FakeRedis:
     async def ttl(self, key: str) -> int | None:
         return self._expires.get(key)
 
+    async def llen(self, key: str) -> int:
+        return len(self._lists.get(key, []))
+
+    async def scan(self, cursor: int = 0, match: str | None = None, count: int = 10) -> tuple[int, list[str]]:
+        """Minimal SCAN — returns all matching keys in one batch."""
+        import fnmatch
+        pattern = match or "*"
+        all_keys = list(self._store.keys()) + list(self._lists.keys()) + list(self._sets.keys())
+        matched = [k for k in set(all_keys) if fnmatch.fnmatch(k, pattern)]
+        return (0, matched)
+
     async def hset(self, key: str, mapping: dict | None = None, **kwargs) -> int:
         raise NotImplementedError
 

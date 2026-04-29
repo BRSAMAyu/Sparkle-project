@@ -31,3 +31,11 @@ def setup_periodic_tasks(sender, **kwargs):
         aggregate_community_error_patterns.s(),
         name='aggregate-community-errors-every-6h'
     )
+
+    # Trace compaction daily sweep — compact traces beyond retention window
+    from app.core.celery_tasks import scan_trace_compaction
+    sender.add_periodic_task(
+        86400.0,
+        scan_trace_compaction.s(),
+        name='scan-trace-compaction-every-day'
+    )

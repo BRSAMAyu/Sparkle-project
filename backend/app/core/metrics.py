@@ -831,3 +831,21 @@ SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS = get_or_create_metric(
     "End-to-end latency for the Stage 21 skill share pipeline",
     buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0],
 )
+
+# ============ Phase 6: Performance SLO Metrics ============
+
+GALAXY_E2E_LATENCY = get_or_create_metric(
+    Histogram,
+    "sparkle_galaxy_e2e_latency_seconds",
+    "End-to-end Galaxy service request latency",
+    ["operation"],
+    buckets=[0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0],
+)
+
+TASK_GENERATION_E2E_LATENCY = get_or_create_metric(
+    Histogram,
+    "sparkle_task_generation_e2e_seconds",
+    "End-to-end task generation latency (from request to task cards ready)",
+    ["source"],
+    buckets=[0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0],
+)

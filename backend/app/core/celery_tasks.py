@@ -2394,6 +2394,49 @@ def compact_user_traces(self, user_id: str):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_trace_compaction")
+def scan_trace_compaction(self, limit: int = 500):
+    """Phase 6 / T6.5.1: Daily scan — dispatch compact_user_traces for active users."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        # Scan all user trace index keys
+        cursor = 0
+        dispatched = 0
+        while True:
+            cursor, keys = await redis.scan(
+                cursor=cursor, match="spine:user_traces:*", count=100,
+            )
+            for key in keys:
+                key_str = key if isinstance(key, str) else key.decode()
+                count = await redis.llen(key_str)
+                if count <= 50:
+                    continue
+                # Extract user_id from key: spine:user_traces:{user_id}
+                user_id = key_str.split(":")[-1]
+                celery_app.send_task(
+                    "app.core.celery_tasks.compact_user_traces",
+                    args=(user_id,),
+                    queue="default",
+                )
+                dispatched += 1
+                if dispatched >= limit:
+                    break
+            if cursor == 0 or dispatched >= limit:
+                break
+
+        logger.info("Trace compaction scan: %d users dispatched", dispatched)
+        return {"dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_trace_compaction failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300)
+
+
 # =============================================================================
 # Spine v2.5: Community Cohort Signal Injection
 # =============================================================================
