@@ -74,6 +74,8 @@ class OutcomeTracker:
         await self.redis.set(key, json.dumps(pending, ensure_ascii=False), ex=ttl_seconds)
 
         # Also index by user for quick lookup
+        # REVIEW(2026-04-29): lpush+ltrim+expire should be in a pipeline for atomicity.
+        # See: push_scheduler.py _enqueue_trigger() for the correct pattern.
         user_index_key = f"{_PENDING_KEY}user:{user_id}"
         await self.redis.lpush(user_index_key, outcome_id)
         await self.redis.ltrim(user_index_key, 0, 49)

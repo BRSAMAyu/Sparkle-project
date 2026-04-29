@@ -138,7 +138,14 @@ class PushScheduler:
                 if not raw_triggers:
                     continue
 
-                user = await self.db.get(User, uuid.UUID(user_id))
+                # REVIEW(2026-04-29): uuid.UUID(user_id) can raise ValueError on malformed key.
+                # Wrap in try-except to skip bad keys instead of crashing the entire queue loop.
+                try:
+                    user = await self.db.get(User, uuid.UUID(user_id))
+                except ValueError:
+                    logger.warning(f"Skipping invalid user_id in recall queue: {user_id}")
+                    await self.redis.delete(key)
+                    continue
                 if not user:
                     await self.redis.delete(key)
                     continue

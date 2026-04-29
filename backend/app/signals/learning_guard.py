@@ -53,8 +53,8 @@ class LearningGuard:
         if record.attribution == "insufficient":
             return False  # Don't learn from insufficient — trigger downgrade check
 
-        if record.attribution in ("inconclusive", "needs_confirmation"):
-            return False
+        # REVIEW(2026-04-29): Removed redundant check for inconclusive/needs_confirmation.
+        # The final `return False` below already covers all remaining cases.
 
         return False
 

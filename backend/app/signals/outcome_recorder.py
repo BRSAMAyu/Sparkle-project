@@ -225,25 +225,9 @@ class OutcomeRecorder:
                 rules.get("next_policy"),
             )
 
-        # Check harmful conditions (OUT-004)
-        harmful_conds = rules.get("harmful_conditions")
-        if harmful_conds and self._conditions_met(harmful_conds, actual_outcome):
-            return (
-                "harmful",
-                0.8,
-                "intervention_caused_harm",
-                "immediate_retraction_and_apology",
-            )
-
-        # Check needs_confirmation conditions
-        nc_conds = rules.get("needs_confirmation_conditions")
-        if nc_conds and self._conditions_met(nc_conds, actual_outcome):
-            return (
-                "needs_confirmation",
-                0.5,
-                "ambiguous_outcome_needs_confirmation",
-                None,
-            )
+        # REVIEW(2026-04-29): 死代码 — 上面的 harmful/needs_confirmation 检查 (lines 189-206)
+        # 已经覆盖了所有匹配路径，以下代码块永远不会执行。删除即可。
+        # See: docs/product/SPARKLE_ROADMAP_v3_CODEX_HANDOFF_2026-04-29.md §2.1
 
         return "inconclusive", 0.3, "unexpected_outcome_pattern", None
 
