@@ -1060,14 +1060,15 @@ class EventBus:
         retry_payload["_failed_at"] = datetime.now(timezone.utc).isoformat()
         retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
 
-        # Ack original BEFORE requeue to prevent duplicate processing
-        # if xadd succeeds but xack fails.
-        await self.redis.xack(stream, group_name, message_id)
+        # Requeue FIRST, then ack. If ack fails the message may be
+        # reprocessed (idempotent consumers handle this), but the
+        # retry payload is never lost.
         await self.redis.xadd(
             stream,
             self._serialize_stream_body(retry_payload),
             maxlen=self.retry_stream_maxlen,
         )
+        await self.redis.xack(stream, group_name, message_id)
         delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
         logger.warning(
             "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} delay_ms={} error={}",
