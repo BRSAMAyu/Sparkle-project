@@ -53,6 +53,13 @@ from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.aurora_core_session import AuroraCoreSessionService, SessionClosure, StatePatch, PolicyChange
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider, CostController
+from app.aurora.runtime_v1.aurora_spine_confluence import (
+    AuroraInputAssembler,
+    AuroraOutputArbitrator,
+    AuroraProposal,
+    AuroraSelfCorrector,
+    AuroraSelfModelAccessor,
+)
 from app.signals.types import (
     ActionableStatePacket,
     ActionableSignal,
@@ -128,6 +135,10 @@ class SpineOrchestrator:
         self.l3_engine = L3FullCoreEngine(redis_client)
         self.energy_decider = EnergyLevelDecider()
         self.cost_controller = CostController()
+        self.aurora_input_assembler = AuroraInputAssembler(redis_client)
+        self.aurora_arbitrator = AuroraOutputArbitrator()
+        self.aurora_self_corrector = AuroraSelfCorrector(redis_client)
+        self.aurora_self_model_accessor = AuroraSelfModelAccessor(redis_client)
         self.skill_extraction = SkillExtractionService()
         self.goal_type_adapter = GoalTypeAdapter()
         self.material_signal_detector = MaterialSignalDetector(redis_client)

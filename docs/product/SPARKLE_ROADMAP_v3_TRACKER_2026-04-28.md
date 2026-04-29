@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1.1-T3.1.7 Aurora 能级全部完成), Phase 3.5 审计 P0+P1 全部修复
+## 当前状态: Phase 0 完成, Phase 1 完成, Phase 2 完成, Phase 3 推进中 (T3.1 全部完成, T3.2 合流完成), Phase 3.5 审计 P0+P1 全部修复
 > **审查报告 R1**: [`SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md`](SPARKLE_AUDIT_R1_SIGNAL_FLOW_2026-04-29.md) — 3 P0 + 4 P1 + 3 P2
 > **审查报告 R2**: [`SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md`](SPARKLE_AUDIT_R2_CODEX_VERIFICATION_2026-04-29.md) — P0 复查: C-01/C-02/C-03 ✅ 均已修
 > **审查报告 R3**: [`SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md`](SPARKLE_AUDIT_R3_DATA_UTILIZATION_OFFLINE_2026-04-29.md) — 2 P1 + 3 P2 (数据利用+离线缺口)
@@ -238,6 +238,7 @@
 | 2026-04-29 | Phase 3 | Claude | T3.1.3 L2 Mid Aurora: 升级模式检测 + 结构性干预 | ✅ 完成: L2InterventionEngine 新建 (4 escalation patterns: knowledge_crisis/execution_collapse/exam_underwater/burnout_risk); SpineOrchestrator._check_l2_escalation 接入; Redis cooldown 1h; 25 production-grade tests passed, 965 spine tests 无回归 |
 | 2026-04-29 | Phase 3 | Claude | T3.1.4 L3 Full Aurora Core: 交互式建模会话 | ✅ 完成: L3FullCoreEngine 新建 (8 wake conditions + priority ordering + session lifecycle state machine); AuroraCoreSessionService 增加 pause/resume/transition_session; AuroraWakeJudge 扩展 5 个新唤醒条件; SpineOrchestrator 接入 L3 engine + pause/resume/health check; 62 production-grade tests passed, 39 aurora tests 无回归 |
 | 2026-04-29 | Phase 3 | Claude | T3.1.5-T3.1.7 L4 Async + 能级决策 + 成本控制 | ✅ 完成: L4AsyncEngine 新建 (6 analysis types, shadow→simulation→promoted lifecycle, PolicyUpdateCandidate pattern); EnergyLevelDecider 新建 (L0-L3 每轮决策 + upgrade_reason 写入 CausalTrace); CostController 新建 (L3/L4 quota + cooldown + fallback); CausalTrace 新增 aurora_energy_level/aurora_upgrade_reason 字段; 43 production-grade tests passed |
+| 2026-04-29 | Phase 3 | Claude | T3.2.1-T3.2.6 Aurora↔Spine 合流 | ✅ 完成: AuroraInputAssembler (消费 StatePacket+PolicyDecisions+Outcomes+Corrections); AuroraOutputArbitrator (proposals 通过仲裁, 不直接生效, 5个 override reasons); AuroraSelfCorrector (承认误判通过 Spine 修正); AuroraSelfModelAccessor (假设/开放问题/误判/策略信心); SpineOrchestrator 接入全部组件; 33 production-grade tests passed, 130 Aurora tests 无回归 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P0-1**: types.py 13个重复dataclass (~500行死代码), **P0-2**: causal_trace_store 静默丢数据, **P0-3**: StateRegister 竞态条件 | ✅ 全部已修: P0-1删除509行死代码; P0-2加日志+删重复方法; P0-3 Redis pipeline原子化 |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P1-4**: 3个事件路由缺失 (achievement/shop/notification→Spine), **P1-5**: L0RuleEngine未接线, **P1-6**: quality_guard仅replay | ✅ 全部已修: P1-4路由补齐; P1-5接入routing_engine; P1-6加入live pipeline |
 | 2026-04-29 | Phase 3.5 | Claude Aurora全系统审计 | **P2-7**: AuroraEngine/Spine 双系统, **P2-8**: energy_store死代码, **P2-9**: 88个settings缺.env, **P2-10**: Stage37/39非三态, **P2-11**: CalendarSignalBridge未调用 | ⬜ 待修 — P2级别, 非阻塞 |
