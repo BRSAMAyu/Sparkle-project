@@ -526,16 +526,16 @@
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已修 (17a49bd5) |
 | F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🔴 待修 |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
-| G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | 🔴 待修 |
+| G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | ✅ 已修 (4c6301aa) |
 | G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | 🔴 待修 |
-| G-04 | P1 | WS 后端→客户端消息无验证 | `websocket_proxy.go:244-264` | 🔴 待修 |
-| G-05 | P1 | WS Auth 中间件查询 token 模式日志风险 | `ws_auth.go:37,63,71` | 🔴 待修 |
-| F-05 | P2 | _GoalChip 触摸目标 ~32px < 44px | `dashboard_screen.dart:1362` | 🔴 待修 |
-| F-06 | P2 | _AuroraQuickTrigger 触摸目标 ~26px | `chat_screen.dart:3312` | 🔴 待修 |
+| G-04 | P1 | WS 后端→客户端消息无验证 | `websocket_proxy.go:244-264` | ✅ 已修 (50542478) |
+| G-05 | P1 | WS Auth 中间件查询 token 模式日志风险 | `ws_auth.go:37,63,71` | ✅ 已修 (4721a232) |
+| F-05 | P2 | _GoalChip 触摸目标 ~32px < 44px | `dashboard_screen.dart:1362` | ✅ 已修 (be0b2c22) |
+| F-06 | P2 | _AuroraQuickTrigger 触摸目标 ~26px | `chat_screen.dart:3312` | ✅ 已修 (be0b2c22) |
 | F-07 | P2 | _QuickActionChip 无 Semantics 标签 | `chat_screen.dart:2778` | 🔴 待修 |
-| F-08 | P2 | 错误状态 10 秒静默自动清除 | `chat_screen.dart:179-194` | 🔴 待修 |
+| F-08 | P2 | 错误状态 10 秒静默自动清除 | `chat_screen.dart:179-194` | ✅ 已修 (be0b2c22) |
 | F-09 | P2 | Dashboard provider 错误不自动重试 | `dashboard_provider.dart:407` | 🔴 待修 |
-| F-10 | P2 | Growth provider 静默吞异常 | `dashboard_screen.dart:113-132` | 🔴 待修 |
+| F-10 | P2 | Growth provider 静默吞异常 | `dashboard_screen.dart:113-132` | ✅ 已修 (be0b2c22) |
 | G-06 | P2 | gRPC WithBlock() 导致启动挂起 | `client.go:75,132,171` | ✅ 已修: 移除WithBlock |
 | G-07 | P2 | gRPC 重连无指数退避 | `client.go:191-207` | ✅ 已修: 2s最小间隔 |
 
