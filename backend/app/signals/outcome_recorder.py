@@ -93,10 +93,28 @@ class OutcomeRecorder:
     ) -> OutcomeRecord:
         """
         记录干预的实际结果，执行归因分析。
+        Idempotent: if an outcome already exists for this trace+intervention,
+        returns the existing record instead of creating a duplicate.
 
         Returns:
             OutcomeRecord with attribution filled in.
         """
+        import json as _json
+
+        # Idempotency guard: check if outcome already recorded for this trace+intervention
+        idem_key = f"spine:outcome_idem:{trace.trace_id}:{intervention}"
+        try:
+            existing_id = await self.redis.get(idem_key)
+            if existing_id:
+                existing = await self.get_outcome(existing_id)
+                if existing:
+                    logger.debug(
+                        "OutcomeRecorder idempotent skip: trace={} intervention={} existing={}",
+                        trace.trace_id, intervention, existing_id,
+                    )
+                    return existing
+        except Exception:
+            logger.debug("OutcomeRecorder idem check failed, proceeding", exc_info=True)
         attribution, confidence, hypothesis, next_policy = self._attribute(
             expected_outcome, actual_outcome,
         )
@@ -118,6 +136,12 @@ class OutcomeRecorder:
         import json
         key = f"spine:outcome:{record.outcome_id}"
         await self.redis.set(key, json.dumps(record.to_dict()), ex=720 * 3600)  # 30 days
+
+        # Set idempotency marker (same TTL as outcome)
+        try:
+            await self.redis.set(idem_key, record.outcome_id, nx=True, ex=720 * 3600)
+        except Exception:
+            logger.debug("OutcomeRecorder idem marker set failed", exc_info=True)
 
         # Write PolicyEffectLedger entry for learning loop
         if record.attribution not in ("inconclusive", "needs_confirmation"):
