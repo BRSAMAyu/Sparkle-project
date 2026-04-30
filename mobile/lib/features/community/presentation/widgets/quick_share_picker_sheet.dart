@@ -237,7 +237,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
             id: task.id,
             title: task.title,
             subtitle:
-                '${_taskStatusLabel(task.status)} · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
+                context.l10n.communityTaskStatusMinutes(_taskStatusLabel(task.status), task.actualMinutes ?? task.estimatedMinutes),
             contentType: ShareableContentType.taskCompletion,
             icon: Icons.task_alt,
             iconColor: DS.success,
