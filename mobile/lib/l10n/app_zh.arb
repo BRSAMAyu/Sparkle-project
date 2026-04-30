@@ -11460,5 +11460,17 @@
   "calTaskTypeTask": "任务",
   "calTaskTypeTodo": "待办",
   "calTaskWithDue": "{type} · {due}",
-  "@calTaskWithDue": { "placeholders": { "type": { "type": "String" }, "due": { "type": "String" } } }
+  "@calTaskWithDue": { "placeholders": { "type": { "type": "String" }, "due": { "type": "String" } } },
+  "picEstimatedHours": "预计学习时长: {hours} 小时",
+  "@picEstimatedHours": { "placeholders": { "hours": { "type": "String" } } },
+  "picRiskScore": "风险指数: {score}/100",
+  "@picRiskScore": { "placeholders": { "score": { "type": "String" } } },
+  "picChurnRisk": "流失风险: {level}",
+  "@picChurnRisk": { "placeholders": { "level": { "type": "String" } } },
+  "picMinutesLater": "约 {minutes} 分钟后",
+  "@picMinutesLater": { "placeholders": { "minutes": { "type": "int" } } },
+  "picTodayTime": "今天 {time}",
+  "@picTodayTime": { "placeholders": { "time": { "type": "String" } } },
+  "picTomorrowTime": "明天 {time}",
+  "@picTomorrowTime": { "placeholders": { "time": { "type": "String" } } }
 }

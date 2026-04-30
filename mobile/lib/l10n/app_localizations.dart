@@ -50116,6 +50116,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{type} · {due}'**
   String calTaskWithDue(String type, String due);
+
+  /// No description provided for @picEstimatedHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计学习时长: {hours} 小时'**
+  String picEstimatedHours(String hours);
+
+  /// No description provided for @picRiskScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险指数: {score}/100'**
+  String picRiskScore(String score);
+
+  /// No description provided for @picChurnRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'流失风险: {level}'**
+  String picChurnRisk(String level);
+
+  /// No description provided for @picMinutesLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'约 {minutes} 分钟后'**
+  String picMinutesLater(int minutes);
+
+  /// No description provided for @picTodayTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天 {time}'**
+  String picTodayTime(String time);
+
+  /// No description provided for @picTomorrowTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'明天 {time}'**
+  String picTomorrowTime(String time);
 }
 
 class _AppLocalizationsDelegate

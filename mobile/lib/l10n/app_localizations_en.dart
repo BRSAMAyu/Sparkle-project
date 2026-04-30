@@ -28690,4 +28690,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String calTaskWithDue(String type, String due) {
     return '$type · $due';
   }
+
+  @override
+  String picEstimatedHours(String hours) {
+    return 'Estimated study time: $hours hours';
+  }
+
+  @override
+  String picRiskScore(String score) {
+    return 'Risk index: $score/100';
+  }
+
+  @override
+  String picChurnRisk(String level) {
+    return 'Churn risk: $level';
+  }
+
+  @override
+  String picMinutesLater(int minutes) {
+    return 'In about $minutes minutes';
+  }
+
+  @override
+  String picTodayTime(String time) {
+    return 'Today $time';
+  }
+
+  @override
+  String picTomorrowTime(String time) {
+    return 'Tomorrow $time';
+  }
 }

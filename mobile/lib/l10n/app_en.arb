@@ -11460,5 +11460,17 @@
   "calTaskTypeTask": "Task",
   "calTaskTypeTodo": "To-Do",
   "calTaskWithDue": "{type} · {due}",
-  "@calTaskWithDue": { "placeholders": { "type": { "type": "String" }, "due": { "type": "String" } } }
+  "@calTaskWithDue": { "placeholders": { "type": { "type": "String" }, "due": { "type": "String" } } },
+  "picEstimatedHours": "Estimated study time: {hours} hours",
+  "@picEstimatedHours": { "placeholders": { "hours": { "type": "String" } } },
+  "picRiskScore": "Risk index: {score}/100",
+  "@picRiskScore": { "placeholders": { "score": { "type": "String" } } },
+  "picChurnRisk": "Churn risk: {level}",
+  "@picChurnRisk": { "placeholders": { "level": { "type": "String" } } },
+  "picMinutesLater": "In about {minutes} minutes",
+  "@picMinutesLater": { "placeholders": { "minutes": { "type": "int" } } },
+  "picTodayTime": "Today {time}",
+  "@picTodayTime": { "placeholders": { "time": { "type": "String" } } },
+  "picTomorrowTime": "Tomorrow {time}",
+  "@picTomorrowTime": { "placeholders": { "time": { "type": "String" } } }
 }

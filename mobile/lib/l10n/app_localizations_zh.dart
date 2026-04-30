@@ -27505,4 +27505,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String calTaskWithDue(String type, String due) {
     return '$type · $due';
   }
+
+  @override
+  String picEstimatedHours(String hours) {
+    return '预计学习时长: $hours 小时';
+  }
+
+  @override
+  String picRiskScore(String score) {
+    return '风险指数: $score/100';
+  }
+
+  @override
+  String picChurnRisk(String level) {
+    return '流失风险: $level';
+  }
+
+  @override
+  String picMinutesLater(int minutes) {
+    return '约 $minutes 分钟后';
+  }
+
+  @override
+  String picTodayTime(String time) {
+    return '今天 $time';
+  }
+
+  @override
+  String picTomorrowTime(String time) {
+    return '明天 $time';
+  }
 }

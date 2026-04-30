@@ -115,7 +115,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                   children: [
                     Text(context.l10n.insPredictNext, style: TextStyle(fontSize: 12)),
                     Text(
-                      _formatDateTime(nextActiveTime),
+                      _formatDateTime(context, nextActiveTime),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -131,7 +131,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         ],
 
         // Dropout Risk
-        _buildRiskIndicator(dropoutRisk),
+        _buildRiskIndicator(context, dropoutRisk),
       ],
     );
   }
@@ -235,7 +235,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             ),
             const SizedBox(width: DS.spacing8),
             Text(
-              '预计学习时长: ${estimatedHours.toStringAsFixed(1)} 小时',
+              context.l10n.picEstimatedHours(estimatedHours.toStringAsFixed(1)),
               style: const TextStyle(fontSize: DS.fontSizeSm),
             ),
           ],
@@ -325,7 +325,7 @@ class PredictiveInsightsCard extends StatelessWidget {
 
         // Risk Score
         Text(
-          '风险指数: ${riskScore.toInt()}/100',
+          context.l10n.picRiskScore(riskScore.toInt().toString()),
           style: TextStyle(
             fontSize: DS.fontSizeSm,
             color: _getRiskColor(riskLevel),
@@ -448,7 +448,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         ),
       );
 
-  Widget _buildRiskIndicator(String risk) => Container(
+  Widget _buildRiskIndicator(BuildContext context, String risk) => Container(
         padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           color: _getRiskColor(risk).withValues(alpha: 0.1),
@@ -459,7 +459,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             Icon(_getRiskIcon(risk), color: _getRiskColor(risk), size: 16),
             const SizedBox(width: DS.sm),
             Text(
-              '流失风险: ${_getRiskLevelText(risk)}',
+              context.l10n.picChurnRisk(_getRiskLevelText(risk)),
               style: TextStyle(fontSize: 12, color: _getRiskColor(risk)),
             ),
           ],
@@ -467,16 +467,16 @@ class PredictiveInsightsCard extends StatelessWidget {
       );
 
   // Helper Methods
-  String _formatDateTime(DateTime dt) {
+  String _formatDateTime(BuildContext context, DateTime dt) {
     final now = DateTime.now();
     final diff = dt.difference(now);
 
     if (diff.inHours < 1) {
-      return '约 ${diff.inMinutes} 分钟后';
+      return context.l10n.picMinutesLater(diff.inMinutes);
     } else if (diff.inHours < 24) {
-      return '今天 ${DateFormat('HH:mm').format(dt)}';
+      return context.l10n.picTodayTime(DateFormat('HH:mm').format(dt));
     } else if (diff.inDays == 1) {
-      return '明天 ${DateFormat('HH:mm').format(dt)}';
+      return context.l10n.picTomorrowTime(DateFormat('HH:mm').format(dt));
     } else {
       return DateFormat('MM-dd HH:mm').format(dt);
     }
