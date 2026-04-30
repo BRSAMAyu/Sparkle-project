@@ -17,3 +17,5 @@
 - `backend/app/services/traits_guardrails.py`
 - `backend/app/services/traits_nlp_observer_service.py`
 - `backend/app/services/understanding_benchmark_evaluator.py`
+- `backend/app/services/card_protocol/consistency_validator.py`
+- `backend/app/services/jpush_sender_service.py`

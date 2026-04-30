@@ -1,3 +1,4 @@
+# rule-at: orphan-by-design Standalone JPush REST client, activated by push_service.py when JPUSH_ENABLED=True
 """
 JPush Sender Service
 

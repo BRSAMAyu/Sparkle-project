@@ -1,3 +1,4 @@
+# rule-at: orphan-by-design CardProtocol v2 validation utility, consumed by future migration scripts
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
