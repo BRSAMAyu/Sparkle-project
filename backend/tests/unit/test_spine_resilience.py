@@ -397,6 +397,8 @@ class TestPolicyEngineResilience:
         try:
             result = await engine.evaluate(signal)
             assert result is not None
+            assert isinstance(result, tuple)
+            assert len(result) == 2
         except Exception:
             pass  # Graceful degradation
 
@@ -421,6 +423,7 @@ class TestPolicyEngineResilience:
                 )
                 result = await engine.evaluate(signal)
                 assert result is not None
+                assert isinstance(result, tuple)
             except Exception:
                 pass
 

@@ -52,8 +52,7 @@ def test_compose_fast_interaction_copy_includes_prompts(orchestrator):
                 prompts=["Confirm email", "Set password"],
             ))
 
-            # Should include prompts in the generated text
-            assert result is not None
+            assert result == "Generated response"
             mock_llm.assert_called_once()
 
 

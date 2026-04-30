@@ -165,6 +165,7 @@ class TestGetPlanState:
 
         # Verify result
         assert result is not None
+        assert result.plan_id == plan_id
 
     @pytest.mark.asyncio
     async def test_returns_none_when_not_found(self, service, mock_db, mock_redis):
