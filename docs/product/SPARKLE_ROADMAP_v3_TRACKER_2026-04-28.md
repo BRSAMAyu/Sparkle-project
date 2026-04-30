@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (R7-1/2/3 closed: Aurora correction fidelity, k6 CI services, cost recording; 3 P1 reopen items resolved)
+> **最后更新**: 2026-04-30 (R7 all resolved, F-03 i18n focus+community widgets, test quality upgrade COMPLETE)
 
 ### P0 Critical — 当前会话修复
 
@@ -533,7 +533,7 @@
 | G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
 | F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已验证零中文残留 (所有字符串已用 context.l10n.* 模式) |
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已验证零中文UI残留 (仅注释含中文) |
-| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 22+ files | 🟡 进行中 (564 strings i18n'd across 22 files; 8 pre-existing ARB metadata fixes; insights module 19/19 done) |
+| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 22+ files | 🟡 进行中 (590+ strings i18n'd across 27 files; focus 8+community 8 converted; 4 new ARB keys) |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
 | G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | ✅ 已修 (4c6301aa) |
 | G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | ✅ 已修 (b45925d2) |
