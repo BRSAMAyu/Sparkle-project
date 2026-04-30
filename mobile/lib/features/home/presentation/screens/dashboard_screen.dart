@@ -485,6 +485,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     semanticValue: opt.semanticValue,
                     isDisconfirming: opt.isDisconfirming,
                     bandStatus: band?.bandStatus.protocolValue ?? '',
+                    isFreeform: opt.isFreeform,
                   ));
                   if (opt.isFreeform) {
                     context.push(ChatRoutes.chat, extra: {
