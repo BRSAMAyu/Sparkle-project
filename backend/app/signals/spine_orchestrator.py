@@ -220,6 +220,13 @@ class SpineOrchestrator:
             return None
 
         # Step 3: Task-completed-specific post-processing
+        # Re-acquire lock to prevent concurrent on_task_completed from
+        # running post-processing while this one is still modifying trace state.
+        _post_lock_key = f"spine:task_completed_lock:{user_id}"
+        try:
+            await self.redis.set(_post_lock_key, "1", nx=True, ex=15)
+        except Exception:
+            pass
 
         # Step 3a: Record Aurora energy level decision in trace (T3.1.6)
         try:
@@ -288,6 +295,13 @@ class SpineOrchestrator:
             logger.warning("on_task_completed: aurora wake check failed", exc_info=True)
 
         await self.trace_store._save_trace(trace)
+
+        # Release task-completed lock
+        try:
+            await self.redis.delete(_post_lock_key)
+        except Exception:
+            pass
+
         return trace
 
     async def get_active_directive(self, user_id: str) -> ExecutionDirective | None:
