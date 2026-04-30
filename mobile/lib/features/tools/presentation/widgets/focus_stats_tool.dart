@@ -71,7 +71,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
       ),
       heroChips: [
         ToolHeroChip(
-          label: context.l10n.toolsStatsStreak,
+          label: context.l10n.toolsStatsStreak(state.streakDays),
           accentColor: accent,
           icon: Icons.local_fire_department_rounded,
         ),

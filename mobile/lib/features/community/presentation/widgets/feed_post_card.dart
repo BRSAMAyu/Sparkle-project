@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class FeedPostCard extends StatelessWidget {
   const FeedPostCard({required this.post, super.key, this.onLike});

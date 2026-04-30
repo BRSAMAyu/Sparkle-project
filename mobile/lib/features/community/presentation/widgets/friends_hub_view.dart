@@ -270,7 +270,7 @@ class _PartnerHero extends ConsumerWidget {
                         Text(
                           relationshipSummary == null
                               ? context.l10n.communityWorkspaceReady
-                              : context.l10n.communityTogetherDays(relationshipSummary['days_together'] ?? 0),
+                              : context.l10n.communityTogetherDays((relationshipSummary['days_together'] as num?)?.toInt() ?? 0),
                           style: DS.bodySmall.copyWith(color: DS.textSecondary),
                         ),
                       ],
@@ -285,16 +285,16 @@ class _PartnerHero extends ConsumerWidget {
                 children: [
                   _MetricChip(
                     label: context.l10n.communityMe,
-                    value: context.l10n.communityMyStreakDays(relationshipSummary?['my_streak_days'] ?? 0),
+                    value: context.l10n.communityMyStreakDays((relationshipSummary?['my_streak_days'] as num?)?.toInt() ?? 0),
                   ),
                   _MetricChip(
                     label: 'TA',
                     value:
-                        context.l10n.communityPartnerStreakDays(relationshipSummary?['partner_streak_days'] ?? 0),
+                        context.l10n.communityPartnerStreakDays((relationshipSummary?['partner_streak_days'] as num?)?.toInt() ?? 0),
                   ),
                   _MetricChip(
-                    label: context.l10n.communityTotalCheckins.split('{count}').first.trim(),
-                    value: context.l10n.communityTotalCheckins(relationshipSummary?['total_checkins'] ?? 0),
+                    label: '合计',
+                    value: context.l10n.communityTotalCheckins((relationshipSummary?['total_checkins'] as num?)?.toInt() ?? 0),
                   ),
                 ],
               ),

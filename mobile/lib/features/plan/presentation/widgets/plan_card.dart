@@ -171,7 +171,7 @@ class _PlanCardState extends State<PlanCard> {
                   if (payload.taskCount != null)
                     _buildInfoPill(
                       Icons.task_alt_outlined,
-                      context.l10n.planTaskCount(payload.taskCount),
+                      context.l10n.planTaskCount(payload.taskCount!),
                     ),
                 ],
               ),

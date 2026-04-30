@@ -25302,6 +25302,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get communityTotalCheckinsLabel => '总打卡';
+
+  @override
   String get communityChat => '聊天';
 
   @override

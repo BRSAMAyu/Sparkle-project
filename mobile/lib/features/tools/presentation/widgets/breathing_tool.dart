@@ -832,7 +832,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                   children: List.generate(
                     _durations.length,
                     (index) => ToolChoiceChip(
-                      label: context.l10n.toolsBreathDurationMin,
+                      label: context.l10n.toolsBreathDurationMin(_durations[index]),
                       selected: _selectedDurationIndex == index,
                       onTap: () => unawaited(_updateDuration(index)),
                       accentColor: accent,

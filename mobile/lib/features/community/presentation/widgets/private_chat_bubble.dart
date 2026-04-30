@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -15,7 +16,6 @@ import 'package:sparkle/features/community/presentation/widgets/share_cards/shar
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
   const PrivateChatBubble({required this.message, super.key});

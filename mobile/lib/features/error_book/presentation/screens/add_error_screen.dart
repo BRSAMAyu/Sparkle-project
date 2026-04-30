@@ -377,7 +377,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             title: Text(context.l10n.ebEditError),
           ),
           child: Center(
-            child: Text(context.l10n.ebLoadError(error.toString())),
+            child: Text(context.l10n.ebLoadErrorFailed(error.toString())),
           ),
         ),
       );

@@ -202,12 +202,12 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             compactHeader: true,
             heroChips: [
               ToolHeroChip(
-                label: context.l10n.toolsWbTotalCount,
+                label: context.l10n.toolsWbTotalCount(totalCount),
                 accentColor: DS.success,
                 icon: Icons.bookmarks_rounded,
               ),
               ToolHeroChip(
-                label: context.l10n.toolsWbDueCount,
+                label: context.l10n.toolsWbDueCount(dueCount),
                 accentColor: DS.success,
                 icon: Icons.schedule_rounded,
               ),

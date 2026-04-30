@@ -192,7 +192,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   ListTile(
                     leading: Icon(Icons.flag_outlined, color: DS.error),
                     title: Text(
-                      context.l10n.communityReport,  # TODO: i18n - this is inside a Text widget already using style
+                      context.l10n.communityReport, // TODO: i18n - this is inside a Text widget already using style
                       style: TextStyle(color: DS.error),
                     ),
                     onTap: () {

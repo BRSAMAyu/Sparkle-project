@@ -150,8 +150,11 @@ class _SprintCompletionScreenState
 
   String _buildShareText(SprintCompletionSummary summary) =>
       context.l10n.planSprintShareText(
-      
-      ;
+        summary.masteredNodesCount,
+        summary.repairedErrorsCount,
+        summary.completedTasksCount,
+        summary.strongestArea,
+      );
 
   void _invalidateLinkedViews() {
     ref.invalidate(learningPortfolioProvider);

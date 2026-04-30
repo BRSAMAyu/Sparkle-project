@@ -402,9 +402,9 @@ class _PortfolioEntryCard extends StatelessWidget {
                 _DetailChip(label: _scoreLabel(context, entry)),
                 _DetailChip(label: _modeLabel(context, entry.sprintMode)),
                 if (entry.resultRating != null)
-                  _DetailChip(label: context.l10n.planPortfolioResultRating(entry.resultRating)),
+                  _DetailChip(label: context.l10n.planPortfolioResultRating(entry.resultRating!)),
                 if (entry.selfRating != null)
-                  _DetailChip(label: context.l10n.planPortfolioSelfRating(entry.selfRating)),
+                  _DetailChip(label: context.l10n.planPortfolioSelfRating(entry.selfRating!)),
               ],
             ),
             const SizedBox(height: DS.spacing12),

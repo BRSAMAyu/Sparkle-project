@@ -510,14 +510,14 @@ class _FieldChangeTile extends StatelessWidget {
           if ((field['previous']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing4),
             Text(
-              context.l10n.taskPreviousValue(field['previous']),
+              context.l10n.taskPreviousValue(field['previous'] as Object),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
           ],
           if ((field['current']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing2),
             Text(
-              context.l10n.taskCurrentValue(field['current']),
+              context.l10n.taskCurrentValue(field['current'] as Object),
               style: DS.bodySmall.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightMedium,

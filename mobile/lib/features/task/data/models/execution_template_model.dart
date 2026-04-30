@@ -1,3 +1,4 @@
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 
 ExecutionMode _parseTemplateExecutionMode(String? value) {
@@ -52,13 +53,13 @@ class ExecutionTemplateModel {
   String get modeLabel {
     switch (executionMode) {
       case ExecutionMode.human:
-        return S.taskModeHuman;
+        return 'Manual';
       case ExecutionMode.agent:
         return 'AI';
       case ExecutionMode.hybrid:
-        return S.taskModeHybrid;
+        return 'Hybrid';
       case ExecutionMode.unknown:
-        return S.taskModeUnknown;
+        return 'Unknown';
     }
   }
 }

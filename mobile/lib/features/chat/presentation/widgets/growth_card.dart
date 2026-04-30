@@ -53,7 +53,7 @@ class _GrowthCardState extends State<GrowthCard>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
     _controller.forward();
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.achievement);
+    SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementCommon);
   }
 
   @override

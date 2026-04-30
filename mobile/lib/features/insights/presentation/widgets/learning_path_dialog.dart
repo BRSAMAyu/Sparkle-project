@@ -456,7 +456,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     try {
       final task = await ref.read(taskRepositoryProvider).createTask(
             TaskCreate(
-              title: context.l10n.insLearnNode,
+              title: context.l10n.insLearnNode(node.name),
               type: TaskType.learning,
               estimatedMinutes: 25,
               difficulty: 2,

@@ -850,8 +850,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           : const Icon(Icons.check),
                       label: Text(
                         _isSubmitting
-                            ? Text(_isEditMode ? context.l10n.taskSaving : l10n.taskCreating)
-                            : Text(_isEditMode ? context.l10n.taskSaveChanges : l10n.taskCreateAction),
+                            ? (_isEditMode ? context.l10n.taskSaving : l10n.taskCreating)
+                            : (_isEditMode ? context.l10n.taskSaveChanges : l10n.taskCreateAction),
                       ),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),

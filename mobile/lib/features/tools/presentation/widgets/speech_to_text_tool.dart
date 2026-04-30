@@ -54,7 +54,7 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: hasText ? context.l10n.toolsSttCharCount : context.l10n.toolsSttRecordingInfo,
+          label: hasText ? context.l10n.toolsSttCharCount(_charCount) : context.l10n.toolsSttRecordingInfo,
           accentColor: accent,
           icon: Icons.graphic_eq_rounded,
         ),

@@ -10442,6 +10442,7 @@
   "@communityPartnerStreakDays": { "placeholders": { "count": { "type": "int" } } },
   "communityTotalCheckins": "{count} 次",
   "@communityTotalCheckins": { "placeholders": { "count": { "type": "int" } } },
+  "communityTotalCheckinsLabel": "总打卡",
   "communityChat": "聊天",
   "communityRemind": "提醒",
   "communityWorkshop": "工作台",

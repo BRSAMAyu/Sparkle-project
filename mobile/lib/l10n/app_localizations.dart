@@ -46186,6 +46186,12 @@ abstract class AppLocalizations {
   /// **'{count} 次'**
   String communityTotalCheckins(int count);
 
+  /// No description provided for @communityTotalCheckinsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'总打卡'**
+  String get communityTotalCheckinsLabel;
+
   /// No description provided for @communityChat.
   ///
   /// In zh, this message translates to:

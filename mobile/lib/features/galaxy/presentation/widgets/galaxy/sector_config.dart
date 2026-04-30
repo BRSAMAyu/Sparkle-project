@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 /// Sector visual style configuration tuned for the galaxy canvas.
@@ -160,7 +161,7 @@ class SectorConfig {
       keywords: const ['设计', '音乐', '绘画', '文学', 'ACG'],
     ),
     SectorEnum.civilization: SectorStyle(
-      name: S.galaxySectorCivilization,
+      name: 'Civilization',
       darkPrimaryColor: const Color(0xFFD6A45A),
       lightPrimaryColor: const Color(0xFFA86A23),
       baseAngle: _sectorSweep * 3,
@@ -168,7 +169,7 @@ class SectorConfig {
       keywords: const ['历史', '经济', '政治', '社会学', '法律'],
     ),
     SectorEnum.life: SectorStyle(
-      name: S.galaxySectorLife,
+      name: 'Life',
       darkPrimaryColor: const Color(0xFF58B37D),
       lightPrimaryColor: const Color(0xFF328458),
       baseAngle: _sectorSweep * 4,
@@ -176,7 +177,7 @@ class SectorConfig {
       keywords: const ['健身', '烹饪', '医学', '心理', '理财'],
     ),
     SectorEnum.wisdom: SectorStyle(
-      name: S.galaxySectorWisdom,
+      name: 'Wisdom',
       darkPrimaryColor: const Color(0xFFAD86D7),
       lightPrimaryColor: const Color(0xFF6D469A),
       baseAngle: _sectorSweep * 5,

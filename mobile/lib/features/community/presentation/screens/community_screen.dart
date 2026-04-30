@@ -3,15 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Selected feed filter index (0 = Global, 1 = My Squad, 2 = Following)
 final _communityFeedFilterProvider = StateProvider<int>((ref) => 0);

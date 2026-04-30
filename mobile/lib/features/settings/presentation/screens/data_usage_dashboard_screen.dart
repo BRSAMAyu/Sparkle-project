@@ -129,7 +129,7 @@ class _DataCard extends StatelessWidget {
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(DS.radiusMd),
+        borderRadius: BorderRadius.circular(DS.radius12),
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
@@ -159,7 +159,7 @@ class _DataCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary12,
-                        borderRadius: BorderRadius.circular(DS.radiusSm),
+                        borderRadius: BorderRadius.circular(DS.radius8),
                       ),
                       child: Text(t, style: TextStyle(fontSize: 11, color: DS.brandPrimary)),
                     ))

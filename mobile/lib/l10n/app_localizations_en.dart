@@ -26395,6 +26395,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get communityTotalCheckinsLabel => 'Total check-ins';
+
+  @override
   String get communityChat => 'Chat';
 
   @override

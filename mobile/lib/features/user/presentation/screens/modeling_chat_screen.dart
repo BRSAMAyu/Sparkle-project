@@ -705,7 +705,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
             ..add(
               ErrorEvent(
                 code: 'PLANNING_TIMEOUT',
-                message: context.l10n.userPlanTimeoutMessage,,
+                message: context.l10n.userPlanTimeoutMessage,
                 retryable: true,
               ),
             )

@@ -455,7 +455,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                                     children: List.generate(
                                       5,
                                       (index) => ToolChoiceChip(
-                                        label: context.l10n.toolsTransStarCount,
+                                        label: context.l10n.toolsTransStarCount(index + 1),
                                         selected: _currentRating == index + 1,
                                         onTap: () => _updateRating(index + 1),
                                         accentColor: accent,

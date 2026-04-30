@@ -1140,7 +1140,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   children: [
                     _buildCollapsibleHeader(
                       icon: Icons.auto_awesome_outlined,
-                      title: __isZh ? 'Aurora 沟通偏好' : 'Aurora Preferences',
+                      title: _isZh ? 'Aurora 沟通偏好' : 'Aurora Preferences',
                       subtitle: _isZh
                           ? '控制 Aurora 如何与你互动'
                           : 'Control how Aurora interacts with you',

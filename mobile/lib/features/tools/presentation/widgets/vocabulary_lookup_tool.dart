@@ -334,7 +334,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                 spacing: DS.spacing8,
                                 runSpacing: DS.spacing8,
                                 children: [
-                                  _buildMetaChip(context.l10n.toolsVocabEntryCount),
+                                  _buildMetaChip(context.l10n.toolsVocabEntryCount(package.entryCount)),
                                   _buildMetaChip(package.packageScope),
                                   if (package.sizeBytes != null)
                                     _buildMetaChip(

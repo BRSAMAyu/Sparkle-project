@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class TransparencyFloatingCapsule extends StatelessWidget {
   const TransparencyFloatingCapsule({
