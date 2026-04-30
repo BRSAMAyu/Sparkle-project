@@ -208,18 +208,18 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           _ServiceDetailTile(
             title: 'PostgreSQL',
             lines: [
-              '探针延迟 ${((database['probe_latency_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}ms',
-              '连接池 ${database['pool_size'] ?? '-'} / 溢出 ${database['max_overflow'] ?? '-'}',
-              '超时 ${database['pool_timeout_seconds'] ?? '-'}s',
+              '${I18nService.instance.isChinese ? '探针延迟' : 'Probe latency'} ${((database['probe_latency_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}ms',
+              '${I18nService.instance.isChinese ? '连接池' : 'Pool'} ${database['pool_size'] ?? '-'} / ${I18nService.instance.isChinese ? '溢出' : 'overflow'} ${database['max_overflow'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '超时' : 'Timeout'} ${database['pool_timeout_seconds'] ?? '-'}s',
             ],
           ),
           const SizedBox(height: DS.spacing8),
           _ServiceDetailTile(
             title: 'Redis',
             lines: [
-              '状态 ${redis['status'] ?? '-'}',
-              '内存 ${redis['used_memory_human'] ?? '-'} / 峰值 ${redis['used_memory_peak_human'] ?? '-'}',
-              '客户端 ${redis['connected_clients'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '状态' : 'Status'} ${redis['status'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '内存' : 'Memory'} ${redis['used_memory_human'] ?? '-'} / ${I18nService.instance.isChinese ? '峰值' : 'Peak'} ${redis['used_memory_peak_human'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '客户端' : 'Clients'} ${redis['connected_clients'] ?? '-'}',
             ],
           ),
           const SizedBox(height: DS.spacing8),
@@ -233,9 +233,9 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           _ServiceDetailTile(
             title: 'Disk',
             lines: [
-              '已用 ${disk['used_gb'] ?? '-'} GB / 空闲 ${disk['free_gb'] ?? '-'} GB',
-              '总量 ${disk['total_gb'] ?? '-'} GB',
-              '使用率 ${((disk['used_ratio_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
+              '${I18nService.instance.isChinese ? '已用' : 'Used'} ${disk['used_gb'] ?? '-'} GB / ${I18nService.instance.isChinese ? '空闲' : 'Free'} ${disk['free_gb'] ?? '-'} GB',
+              '${I18nService.instance.isChinese ? '总量' : 'Total'} ${disk['total_gb'] ?? '-'} GB',
+              '${I18nService.instance.isChinese ? '使用率' : 'Usage'} ${((disk['used_ratio_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
             ],
           ),
         ],
@@ -368,10 +368,10 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                     child: _ServiceDetailTile(
                       title: item['event_type']?.toString() ?? 'unknown',
                       lines: [
-                        '总量 ${item['count'] ?? 0}',
-                        '错误 ${item['error_count'] ?? 0} / 崩溃 ${item['crash_count'] ?? 0}',
-                        '成功率 ${item['success_rate_percent'] ?? 0}%',
-                        '平均耗时 ${item['avg_duration_ms'] ?? 0}ms',
+                        '${I18nService.instance.isChinese ? '总量' : 'Total'} ${item['count'] ?? 0}',
+                        '${I18nService.instance.isChinese ? '错误' : 'Errors'} ${item['error_count'] ?? 0} / ${I18nService.instance.isChinese ? '崩溃' : 'Crashes'} ${item['crash_count'] ?? 0}',
+                        '${I18nService.instance.isChinese ? '成功率' : 'Success rate'} ${item['success_rate_percent'] ?? 0}%',
+                        '${I18nService.instance.isChinese ? '平均耗时' : 'Avg duration'} ${item['avg_duration_ms'] ?? 0}ms',
                       ],
                     ),
                   ),
@@ -380,7 +380,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           if (recentEvents.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '最近事件',
+              I18nService.instance.isChinese ? '最近事件' : 'Recent Events',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -517,10 +517,10 @@ class _TelemetryTrendSummary extends StatelessWidget {
       spacing: DS.spacing8,
       runSpacing: DS.spacing8,
       children: [
-        _MetricChip(label: '窗口事件', value: '$totalEvents'),
-        _MetricChip(label: '窗口错误', value: '$totalErrors'),
+        _MetricChip(label: I18nService.instance.isChinese ? '窗口事件' : 'Window events', value: '$totalEvents'),
+        _MetricChip(label: I18nService.instance.isChinese ? '窗口错误' : 'Window errors', value: '$totalErrors'),
         _MetricChip(
-          label: '加权平均耗时',
+          label: I18nService.instance.isChinese ? '加权平均耗时' : 'Weighted avg duration',
           value: '${averageDuration.toStringAsFixed(0)}ms',
         ),
       ],
