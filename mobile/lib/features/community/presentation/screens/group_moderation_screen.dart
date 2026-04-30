@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -90,7 +91,10 @@ class _GroupModerationScreenState
       AppFeedback.success(context, 'Settings saved');
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '保存失败: $e');
+      AppFeedback.error(
+        context,
+        I18nService.instance.isChinese ? '保存失败: $e' : 'Save failed: $e',
+      );
     }
   }
 
@@ -122,7 +126,10 @@ class _GroupModerationScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('加载失败: $e', style: TextStyle(color: DS.error)),
+              Text(
+                I18nService.instance.isChinese ? '加载失败: $e' : 'Load failed: $e',
+                style: TextStyle(color: DS.error),
+              ),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
                 label: 'Retry',
@@ -207,7 +214,9 @@ class _GroupModerationScreenState
                         if (_slowModeSeconds > 0) ...[
                           const SizedBox(height: DS.spacing8),
                           Text(
-                            '发言间隔: $_slowModeSeconds 秒',
+                            I18nService.instance.isChinese
+                                ? '发言间隔: $_slowModeSeconds 秒'
+                                : 'Slow mode: $_slowModeSeconds s',
                             style: TextStyle(color: DS.textSecondary),
                           ),
                           Slider(
@@ -215,7 +224,9 @@ class _GroupModerationScreenState
                             min: 5,
                             max: 300,
                             divisions: 59,
-                            label: '$_slowModeSeconds 秒',
+                            label: I18nService.instance.isChinese
+                                ? '$_slowModeSeconds 秒'
+                                : '$_slowModeSeconds s',
                             onChanged: (v) =>
                                 setState(() => _slowModeSeconds = v.toInt()),
                           ),
@@ -242,8 +253,10 @@ class _GroupModerationScreenState
                                 fontWeight: FontWeight.bold,
                                 fontSize: DS.fontSizeBase,),),
                         const SizedBox(height: DS.spacing8),
-                        const Text(
-                          '包含以下关键词的消息将被自动屏蔽',
+                        Text(
+                          I18nService.instance.isChinese
+                              ? '包含以下关键词的消息将被自动屏蔽'
+                              : 'Messages with these keywords will be auto-blocked',
                           style: TextStyle(fontSize: DS.fontSizeSm),
                         ),
                         const SizedBox(height: DS.spacing12),
