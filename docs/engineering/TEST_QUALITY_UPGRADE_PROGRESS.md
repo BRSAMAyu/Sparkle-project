@@ -37,8 +37,8 @@
 - **Coverage**: handler 39.2%, middleware 30.1%, agent 35.7%, **total 12.4%** (was 10.7%)
 
 ### M3: Python Mock→Integration — IN PROGRESS
-- [ ] Audit top-20 most-critical mock test files
-- [ ] Convert to real SQLite/Redis where possible
+- [x] Audit top-20 most-critical mock test files
+- [ ] Convert to real SQLite/Redis where possible (14 real Redis tests added: distributed_lock + event_bus)
 - [x] Partial: enhance `assert result is not None` → structural assertions (15 instances in test_spine_orchestrator, test_policy_engine)
 - [x] Eliminate remaining `assert result is not None` (~10 bare instances across 6 files)
 - [x] Eliminate bare `assert_called_once` (37 truly bare across 20 files → all enhanced)
@@ -85,3 +85,4 @@
 | 14:10 | e0bc0b69 | M3: enhance 10 bare asserts in 6 files |
 | 14:25 | f40d642c | M3: eliminate 37 bare assert_called_once across 20 files |
 | 14:45 | 954e70ca | M4: add 34 orchestrator real engine tests (59 total) |
+| 15:00 | b0da40c1 | M3: add 14 real Redis integration tests (lock + event bus) |
