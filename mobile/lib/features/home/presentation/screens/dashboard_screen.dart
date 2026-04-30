@@ -484,11 +484,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     label: opt.label,
                     semanticValue: opt.semanticValue,
                     isDisconfirming: opt.isDisconfirming,
-                    bandStatus: band?.bandStatus.name ?? '',
+                    bandStatus: band?.bandStatus.protocolValue ?? '',
                   ));
-                  context.push(ChatRoutes.chat, extra: {
-                    'initial_user_message': opt.label,
-                  });
+                  if (opt.isFreeform) {
+                    context.push(ChatRoutes.chat, extra: {
+                      'initial_user_message': '',
+                      'aurora_correction': {
+                        'type': 'freeform',
+                        'semantic_value': opt.semanticValue,
+                        'band_status': band?.bandStatus.protocolValue ?? '',
+                        'is_disconfirming': opt.isDisconfirming,
+                      },
+                    });
+                  } else {
+                    context.push(ChatRoutes.chat, extra: {
+                      'initial_user_message': opt.label,
+                      'aurora_correction': {
+                        'type': 'chip',
+                        'semantic_value': opt.semanticValue,
+                        'band_status': band?.bandStatus.protocolValue ?? '',
+                        'is_disconfirming': opt.isDisconfirming,
+                      },
+                    });
+                  }
                 },
                 onCooldownOverride: () {
                   final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
@@ -496,10 +514,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     label: context.l10n.dashboardQuickCalibration,
                     semanticValue: 'quick_calibration',
                     isDisconfirming: false,
-                    bandStatus: band?.bandStatus.name ?? '',
+                    bandStatus: band?.bandStatus.protocolValue ?? '',
                   ));
                   context.push(ChatRoutes.chat, extra: {
                     'initial_user_message': context.l10n.dashboardQuickCalibration,
+                    'aurora_correction': {
+                      'type': 'cooldown_override',
+                      'semantic_value': 'quick_calibration',
+                      'band_status': band?.bandStatus.protocolValue ?? '',
+                    },
                   });
                 },
               ),

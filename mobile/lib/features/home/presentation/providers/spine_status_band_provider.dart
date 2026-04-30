@@ -9,7 +9,17 @@ enum AuroraBandStatus {
   riskFound,
   needsConfirm,
   calibrationAvailable,
-  coolingDown,
+  coolingDown;
+
+  /// Protocol value sent to backend (snake_case, matching API format).
+  String get protocolValue => switch (this) {
+        AuroraBandStatus.sensing => 'sensing',
+        AuroraBandStatus.calibrated => 'calibrated',
+        AuroraBandStatus.riskFound => 'risk_found',
+        AuroraBandStatus.needsConfirm => 'needs_confirm',
+        AuroraBandStatus.calibrationAvailable => 'calibration_available',
+        AuroraBandStatus.coolingDown => 'cooling_down',
+      };
 }
 
 /// Typed model for GET /aurora/spine/status-band response.
