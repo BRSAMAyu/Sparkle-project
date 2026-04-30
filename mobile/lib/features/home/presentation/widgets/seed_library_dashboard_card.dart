@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Seed Library Dashboard Card
 /// Displays featured libraries and subscription stats
@@ -52,7 +53,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
                   color: DS.success,
                   size: iconSize,
                 ),
-                // 官方徽章
+                // Official badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacing6,
@@ -63,7 +64,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '官方',
+                    I18nService.instance.isChinese ? '官方' : 'Official',
                     style: context.sparkleTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 9,
@@ -76,7 +77,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             const Spacer(),
             // Title
             Text(
-              '种子库',
+              I18nService.instance.isChinese ? '种子库' : 'Seed Library',
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
                 fontWeight: FontWeight.bold,
@@ -88,7 +89,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             const SizedBox(height: DS.xs),
             // Subtitle
             Text(
-              '知识内容仓库',
+              I18nService.instance.isChinese ? '知识内容仓库' : 'Knowledge repository',
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -96,7 +97,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             SizedBox(height: dense ? DS.spacing4 : DS.spacing6),
             // Stats
             Text(
-              '3 个官方库 · 社区精选',
+              I18nService.instance.isChinese ? '3 个官方库 · 社区精选' : '3 official libs · Community picks',
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.4,

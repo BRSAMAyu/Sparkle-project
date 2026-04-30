@@ -11,6 +11,7 @@ import 'package:sparkle/features/translation/data/services/knowledge_integration
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Lightweight popover for word/phrase translation
 ///
@@ -123,7 +124,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
             _isSaving = false;
           });
 
-          AppFeedback.success(context, '已加入生词卡，24小时后复习');
+          AppFeedback.success(context, I18nService.instance.isChinese ? '已加入生词卡，24小时后复习' : 'Added to flashcards, review in 24h');
           ref
             ..invalidate(galaxyRepositoryProvider)
             ..invalidate(enhancedGalaxyRepositoryProvider)
@@ -267,7 +268,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
           const SizedBox(width: DS.sm),
           Expanded(
             child: Text(
-              '翻译失败',
+              I18nService.instance.isChinese ? '翻译失败' : 'Translation failed',
               style: TextStyle(fontSize: 14, color: DS.error),
             ),
           ),

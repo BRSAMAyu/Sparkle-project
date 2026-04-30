@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -102,7 +103,7 @@ class CompactStatusBar extends StatelessWidget {
                                             weatherPresentation,
                                             weatherSummary,
                                           )
-                                        : '今天适合保持节奏',
+                                        : I18nService.instance.isChinese ? '今天适合保持节奏' : 'Keep your rhythm today',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: context.sparkleTypography.labelSmall
@@ -191,10 +192,11 @@ class CompactStatusBar extends StatelessWidget {
     WeatherPresentationData presentation,
     String weatherSummary,
   ) {
+    final zh = I18nService.instance.isChinese;
     if (weatherSummary.trim().isNotEmpty) {
-      return '今天适合${presentation.compactHint}，$weatherSummary';
+      return zh ? '今天适合${presentation.compactHint}，$weatherSummary' : 'Great for ${presentation.compactHint}, $weatherSummary';
     }
-    return '今天适合${presentation.compactHint}';
+    return zh ? '今天适合${presentation.compactHint}' : 'Great for ${presentation.compactHint}';
   }
 }
 

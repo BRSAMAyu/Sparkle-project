@@ -18,12 +18,13 @@ class HomeActivePlanStatus {
     final planMap = _asStringKeyedMap(json['plan']) ??
         _asStringKeyedMap(json['active_plan']) ??
         json;
+    final zh = I18nService.instance.isChinese;
 
     return HomeActivePlanStatus(
       id: _asString(planMap['id'] ?? json['id']),
       name: _asString(
         planMap['name'] ?? planMap['title'] ?? json['name'] ?? json['title'],
-        fallback: '当前计划',
+        fallback: zh ? '当前计划' : 'Current Plan',
       ),
       healthScore: _normalizeScore(
         _asDouble(
@@ -51,9 +52,10 @@ class HomeActivePlanStatus {
   final String? currentPhase;
 
   String get phaseLabel {
+    final zh = I18nService.instance.isChinese;
     final value = currentPhase?.trim();
     if (value == null || value.isEmpty) {
-      return '进行中';
+      return zh ? '进行中' : 'In Progress';
     }
     if (value.toLowerCase().startsWith('phase')) {
       return value;
@@ -152,28 +154,31 @@ class HomeBottleneck {
     this.relatedTaskIds = const [],
   });
 
-  factory HomeBottleneck.fromJson(Map<String, dynamic> json) => HomeBottleneck(
-        id: _asString(json['id'] ?? json['bottleneck_id']),
-        topic: _asString(
-          json['knowledge_point'] ??
-              json['topic'] ??
-              json['concept'] ??
-              json['name'] ??
-              json['title'],
-          fallback: '这个知识点',
-        ),
-        severity: _asString(json['severity'], fallback: 'medium')
-            .trim()
-            .toLowerCase(),
-        knowledgeNodeId: _asNullableString(
-          json['knowledge_node_id'] ?? json['knowledgeNodeId'],
-        ),
-        relatedTaskIds: _asStringList(
-          json['related_task_ids'] ??
-              json['relatedTaskIds'] ??
-              json['task_ids'],
-        ),
-      );
+  factory HomeBottleneck.fromJson(Map<String, dynamic> json) {
+    final zh = I18nService.instance.isChinese;
+    return HomeBottleneck(
+      id: _asString(json['id'] ?? json['bottleneck_id']),
+      topic: _asString(
+        json['knowledge_point'] ??
+            json['topic'] ??
+            json['concept'] ??
+            json['name'] ??
+            json['title'],
+        fallback: zh ? '这个知识点' : 'This topic',
+      ),
+      severity: _asString(json['severity'], fallback: 'medium')
+          .trim()
+          .toLowerCase(),
+      knowledgeNodeId: _asNullableString(
+        json['knowledge_node_id'] ?? json['knowledgeNodeId'],
+      ),
+      relatedTaskIds: _asStringList(
+        json['related_task_ids'] ??
+            json['relatedTaskIds'] ??
+            json['task_ids'],
+      ),
+    );
+  }
 
   final String id;
   final String topic;
@@ -247,8 +252,11 @@ class HomeDailyContextLine {
 
   factory HomeDailyContextLine.fallback() {
     final now = DateTime.now();
+    final zh = I18nService.instance.isChinese;
     return HomeDailyContextLine(
-      text: '早上好，今天先从一小步开始，把节奏找回来就很好。',
+      text: zh
+          ? '早上好，今天先从一小步开始，把节奏找回来就很好。'
+          : 'Good morning. Start with a small step today and find your rhythm.',
       source: 'local_rule',
       date: _dateKey(now),
       generatedAt: now,

@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, this.initialToken});
@@ -84,10 +85,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SparkleStaggerItem(
+                  SparkleStaggerItem(
                     index: 0,
                     child: Text(
-                      '请输入邮件中的重置码，并设置一个新的登录密码。',
+                      I18nService.instance.isChinese ? '请输入邮件中的重置码，并设置一个新的登录密码。' : 'Enter the reset code from the email and set a new password.',
                     ),
                   ),
                   const SizedBox(height: DS.spacing24),
@@ -102,7 +103,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)
-                            ? '请输入重置码'
+                            ? (I18nService.instance.isChinese ? '请输入重置码' : 'Enter the reset code')
                             : null,
                     ),
                   ),
@@ -135,7 +136,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.length < 6) {
-                        return '密码至少需要 6 位';
+                        return I18nService.instance.isChinese ? '密码至少需要 6 位' : 'Password must be at least 6 characters';
                       }
                       return null;
                     },
@@ -173,7 +174,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     ),
                     validator: (value) {
                       if (value != _passwordController.text) {
-                        return '两次输入的密码不一致';
+                        return I18nService.instance.isChinese ? '两次输入的密码不一致' : 'Passwords do not match';
                       }
                       return null;
                     },

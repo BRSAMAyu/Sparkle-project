@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Inline translation block for sentences/paragraphs
 ///
@@ -122,7 +123,9 @@ class _InlineTranslationBlockState
                     ),
                     const SizedBox(width: DS.spacing4),
                     Text(
-                      _isExpanded ? '隐藏译文' : '显示译文',
+                      _isExpanded
+                          ? (I18nService.instance.isChinese ? '隐藏译文' : 'Hide Translation')
+                          : (I18nService.instance.isChinese ? '显示译文' : 'Show Translation'),
                       style: TextStyle(
                         fontSize: 13,
                         color: DS.brandPrimaryConst,
@@ -196,7 +199,7 @@ class _InlineTranslationBlockState
             const SizedBox(width: DS.sm),
             Expanded(
               child: Text(
-                '翻译失败，请重试',
+                I18nService.instance.isChinese ? '翻译失败，请重试' : 'Translation failed, please retry',
                 style: TextStyle(fontSize: 14, color: DS.error),
               ),
             ),

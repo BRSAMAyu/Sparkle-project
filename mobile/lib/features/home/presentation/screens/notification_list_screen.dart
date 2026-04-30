@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/navigation/route_resilience.dart';
-import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 
@@ -25,12 +26,13 @@ class NotificationListScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),
-        title: const Text('Notifications'),
+        title: Text(I18nService.instance.isChinese ? 'Notifications' : 'Notifications'),
       ),
       child: notificationsAsync.when(
         data: (notifications) {
           if (notifications.isEmpty) {
-            return const Center(
+            final zh = I18nService.instance.isChinese;
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(DS.spacing24),
                 child: Column(
@@ -38,10 +40,10 @@ class NotificationListScreen extends ConsumerWidget {
                   children: [
                     Icon(Icons.notifications_none_rounded, size: 48),
                     SizedBox(height: DS.spacing12),
-                    Text('No new notifications'),
+                    Text(zh ? '暂无新通知' : 'No new notifications'),
                     SizedBox(height: DS.spacing6),
                     Text(
-                      'Study reminders and weekly reports will appear here when they need your attention.',
+                      zh ? '学习提醒和周报需要您关注时，会显示在这里。' : 'Study reminders and weekly reports will appear here when they need your attention.',
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -68,7 +70,7 @@ class NotificationListScreen extends ConsumerWidget {
               Icon(Icons.notifications_off_outlined,
                   size: 48, color: DS.textSecondary),
               const SizedBox(height: DS.spacing12),
-              Text('加载通知失败，请稍后重试', style: TextStyle(color: DS.textSecondary)),
+              Text(I18nService.instance.isChinese ? '加载通知失败，请稍后重试' : 'Failed to load notifications. Please try again later.', style: TextStyle(color: DS.textSecondary)),
             ],
           ),
         ),

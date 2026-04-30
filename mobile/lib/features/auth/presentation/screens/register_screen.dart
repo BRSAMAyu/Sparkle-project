@@ -9,6 +9,7 @@ import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -39,7 +40,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       if (!_acceptedTos || !_acceptedPrivacy) {
-        AppFeedback.info(context, '请先同意用户协议与隐私政策');
+        AppFeedback.info(context, I18nService.instance.isChinese ? '请先同意用户协议与隐私政策' : 'Please agree to the Terms of Service and Privacy Policy first');
         return;
       }
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));

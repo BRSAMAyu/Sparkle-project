@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart'
@@ -579,11 +580,11 @@ class _NotificationAnalyticsScreenState
             runSpacing: DS.spacing8,
             children: [
               _buildTrendMetricChip(
-                  '查看', trends.fold(0, (sum, item) => sum + item.viewed)),
+                  I18nService.instance.isChinese ? '查看' : 'Viewed', trends.fold(0, (sum, item) => sum + item.viewed)),
               _buildTrendMetricChip(
-                  '接受', trends.fold(0, (sum, item) => sum + item.accepted)),
+                  I18nService.instance.isChinese ? '接受' : 'Accepted', trends.fold(0, (sum, item) => sum + item.accepted)),
               _buildTrendMetricChip(
-                  '开始', trends.fold(0, (sum, item) => sum + item.acted)),
+                  I18nService.instance.isChinese ? '开始' : 'Acted', trends.fold(0, (sum, item) => sum + item.acted)),
             ],
           ),
         ],
