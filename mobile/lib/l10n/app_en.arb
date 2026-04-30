@@ -11410,5 +11410,31 @@
   "skillDraftFailed": "Draft generation failed: {error}",
   "@skillDraftFailed": {
     "placeholders": { "error": { "type": "String" } }
-  }
+  },
+  "gdTitle": "Community Square",
+  "gdCalibrate": "Calibrate for You",
+  "gdCalibrateDesc": "Tell us whether these recommended groups match your interests, and the system will keep optimizing.",
+  "gdPublicDir": "Public Groups Directory",
+  "gdResultCount": "{count} results",
+  "@gdResultCount": { "placeholders": { "count": { "type": "int" } } },
+  "gdEmpty": "No groups match your filters. Try different tags, sorting, or create one.",
+  "gdClearFilters": "Clear Filters",
+  "gdFeedbackSuccess": "Feedback submitted. Recommendations will keep improving.",
+  "gdFeedbackFailed": "Submission failed: {e}",
+  "@gdFeedbackFailed": { "placeholders": { "e": { "type": "String" } } },
+  "gdSearchHint": "Search groups, courses, or topics",
+  "gdSortHot": "Hot",
+  "gdSortLatest": "Latest",
+  "gdSortRandom": "Random",
+  "gdTypeAll": "All",
+  "gdTypeSquad": "Study",
+  "gdTypeSprint": "Sprint",
+  "gdEnterChat": "Enter Chat",
+  "gdApplyJoin": "Apply",
+  "gdJoin": "Join",
+  "gdGroupStats": "{members} members · {checkins} check-ins today · Flame {flame}",
+  "@gdGroupStats": { "placeholders": { "members": { "type": "int" }, "checkins": { "type": "int" }, "flame": { "type": "String" } } },
+  "gdPublicGroup": "Public Group",
+  "gdActivityScore": "Activity {score}",
+  "@gdActivityScore": { "placeholders": { "score": { "type": "String" } } }
 }

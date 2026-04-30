@@ -11410,5 +11410,31 @@
   "skillDraftFailed": "草稿生成失败: {error}",
   "@skillDraftFailed": {
     "placeholders": { "error": { "type": "String" } }
-  }
+  },
+  "gdTitle": "社群广场",
+  "gdCalibrate": "待你校准",
+  "gdCalibrateDesc": "告诉我们这些推荐社群是否真的对口，系统会继续优化发现结果。",
+  "gdPublicDir": "公开社群目录",
+  "gdResultCount": "{count} 个结果",
+  "@gdResultCount": { "placeholders": { "count": { "type": "int" } } },
+  "gdEmpty": "暂时没有符合条件的社群，换个标签、排序或直接创建一个吧。",
+  "gdClearFilters": "清空筛选",
+  "gdFeedbackSuccess": "反馈已提交，社群推荐会继续变聪明",
+  "gdFeedbackFailed": "提交失败: {e}",
+  "@gdFeedbackFailed": { "placeholders": { "e": { "type": "String" } } },
+  "gdSearchHint": "搜索感兴趣的社群、课程或主题",
+  "gdSortHot": "热度",
+  "gdSortLatest": "最新",
+  "gdSortRandom": "随机",
+  "gdTypeAll": "全部",
+  "gdTypeSquad": "学习",
+  "gdTypeSprint": "冲刺",
+  "gdEnterChat": "进入聊天",
+  "gdApplyJoin": "申请加入",
+  "gdJoin": "加入",
+  "gdGroupStats": "{members} 人 · 今日 {checkins} 打卡 · 火苗 {flame}",
+  "@gdGroupStats": { "placeholders": { "members": { "type": "int" }, "checkins": { "type": "int" }, "flame": { "type": "String" } } },
+  "gdPublicGroup": "公开社群",
+  "gdActivityScore": "热度分 {score}",
+  "@gdActivityScore": { "placeholders": { "score": { "type": "String" } } }
 }

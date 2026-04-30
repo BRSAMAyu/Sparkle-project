@@ -28551,4 +28551,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String skillDraftFailed(String error) {
     return 'Draft generation failed: $error';
   }
+
+  @override
+  String get gdTitle => 'Community Square';
+
+  @override
+  String get gdCalibrate => 'Calibrate for You';
+
+  @override
+  String get gdCalibrateDesc =>
+      'Tell us whether these recommended groups match your interests, and the system will keep optimizing.';
+
+  @override
+  String get gdPublicDir => 'Public Groups Directory';
+
+  @override
+  String gdResultCount(int count) {
+    return '$count results';
+  }
+
+  @override
+  String get gdEmpty =>
+      'No groups match your filters. Try different tags, sorting, or create one.';
+
+  @override
+  String get gdClearFilters => 'Clear Filters';
+
+  @override
+  String get gdFeedbackSuccess =>
+      'Feedback submitted. Recommendations will keep improving.';
+
+  @override
+  String gdFeedbackFailed(String e) {
+    return 'Submission failed: $e';
+  }
+
+  @override
+  String get gdSearchHint => 'Search groups, courses, or topics';
+
+  @override
+  String get gdSortHot => 'Hot';
+
+  @override
+  String get gdSortLatest => 'Latest';
+
+  @override
+  String get gdSortRandom => 'Random';
+
+  @override
+  String get gdTypeAll => 'All';
+
+  @override
+  String get gdTypeSquad => 'Study';
+
+  @override
+  String get gdTypeSprint => 'Sprint';
+
+  @override
+  String get gdApplyJoin => 'Apply';
+
+  @override
+  String get gdJoin => 'Join';
+
+  @override
+  String gdGroupStats(int members, int checkins, String flame) {
+    return '$members members · $checkins check-ins today · Flame $flame';
+  }
+
+  @override
+  String get gdPublicGroup => 'Public Group';
+
+  @override
+  String gdActivityScore(String score) {
+    return 'Activity $score';
+  }
 }

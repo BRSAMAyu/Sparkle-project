@@ -49899,6 +49899,132 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'草稿生成失败: {error}'**
   String skillDraftFailed(String error);
+
+  /// No description provided for @gdTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群广场'**
+  String get gdTitle;
+
+  /// No description provided for @gdCalibrate.
+  ///
+  /// In zh, this message translates to:
+  /// **'待你校准'**
+  String get gdCalibrate;
+
+  /// No description provided for @gdCalibrateDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'告诉我们这些推荐社群是否真的对口，系统会继续优化发现结果。'**
+  String get gdCalibrateDesc;
+
+  /// No description provided for @gdPublicDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开社群目录'**
+  String get gdPublicDir;
+
+  /// No description provided for @gdResultCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个结果'**
+  String gdResultCount(int count);
+
+  /// No description provided for @gdEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时没有符合条件的社群，换个标签、排序或直接创建一个吧。'**
+  String get gdEmpty;
+
+  /// No description provided for @gdClearFilters.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空筛选'**
+  String get gdClearFilters;
+
+  /// No description provided for @gdFeedbackSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已提交，社群推荐会继续变聪明'**
+  String get gdFeedbackSuccess;
+
+  /// No description provided for @gdFeedbackFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败: {e}'**
+  String gdFeedbackFailed(String e);
+
+  /// No description provided for @gdSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索感兴趣的社群、课程或主题'**
+  String get gdSearchHint;
+
+  /// No description provided for @gdSortHot.
+  ///
+  /// In zh, this message translates to:
+  /// **'热度'**
+  String get gdSortHot;
+
+  /// No description provided for @gdSortLatest.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新'**
+  String get gdSortLatest;
+
+  /// No description provided for @gdSortRandom.
+  ///
+  /// In zh, this message translates to:
+  /// **'随机'**
+  String get gdSortRandom;
+
+  /// No description provided for @gdTypeAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get gdTypeAll;
+
+  /// No description provided for @gdTypeSquad.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习'**
+  String get gdTypeSquad;
+
+  /// No description provided for @gdTypeSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺'**
+  String get gdTypeSprint;
+
+  /// No description provided for @gdApplyJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'申请加入'**
+  String get gdApplyJoin;
+
+  /// No description provided for @gdJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入'**
+  String get gdJoin;
+
+  /// No description provided for @gdGroupStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'{members} 人 · 今日 {checkins} 打卡 · 火苗 {flame}'**
+  String gdGroupStats(int members, int checkins, String flame);
+
+  /// No description provided for @gdPublicGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开社群'**
+  String get gdPublicGroup;
+
+  /// No description provided for @gdActivityScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'热度分 {score}'**
+  String gdActivityScore(String score);
 }
 
 class _AppLocalizationsDelegate

@@ -27370,4 +27370,75 @@ class AppLocalizationsZh extends AppLocalizations {
   String skillDraftFailed(String error) {
     return '草稿生成失败: $error';
   }
+
+  @override
+  String get gdTitle => '社群广场';
+
+  @override
+  String get gdCalibrate => '待你校准';
+
+  @override
+  String get gdCalibrateDesc => '告诉我们这些推荐社群是否真的对口，系统会继续优化发现结果。';
+
+  @override
+  String get gdPublicDir => '公开社群目录';
+
+  @override
+  String gdResultCount(int count) {
+    return '$count 个结果';
+  }
+
+  @override
+  String get gdEmpty => '暂时没有符合条件的社群，换个标签、排序或直接创建一个吧。';
+
+  @override
+  String get gdClearFilters => '清空筛选';
+
+  @override
+  String get gdFeedbackSuccess => '反馈已提交，社群推荐会继续变聪明';
+
+  @override
+  String gdFeedbackFailed(String e) {
+    return '提交失败: $e';
+  }
+
+  @override
+  String get gdSearchHint => '搜索感兴趣的社群、课程或主题';
+
+  @override
+  String get gdSortHot => '热度';
+
+  @override
+  String get gdSortLatest => '最新';
+
+  @override
+  String get gdSortRandom => '随机';
+
+  @override
+  String get gdTypeAll => '全部';
+
+  @override
+  String get gdTypeSquad => '学习';
+
+  @override
+  String get gdTypeSprint => '冲刺';
+
+  @override
+  String get gdApplyJoin => '申请加入';
+
+  @override
+  String get gdJoin => '加入';
+
+  @override
+  String gdGroupStats(int members, int checkins, String flame) {
+    return '$members 人 · 今日 $checkins 打卡 · 火苗 $flame';
+  }
+
+  @override
+  String get gdPublicGroup => '公开社群';
+
+  @override
+  String gdActivityScore(String score) {
+    return '热度分 $score';
+  }
 }
