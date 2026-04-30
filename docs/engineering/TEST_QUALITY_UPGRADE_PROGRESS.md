@@ -40,16 +40,18 @@
 - [ ] Audit top-20 most-critical mock test files
 - [ ] Convert to real SQLite/Redis where possible
 - [x] Partial: enhance `assert result is not None` → structural assertions (15 instances in test_spine_orchestrator, test_policy_engine)
-- [ ] Eliminate remaining `assert result is not None` (~206 instances)
-- [ ] Eliminate bare `assert_called_once` (82 instances)
+- [x] Eliminate remaining `assert result is not None` (~10 bare instances across 6 files)
+- [x] Eliminate bare `assert_called_once` (37 truly bare across 20 files → all enhanced)
 - [ ] Verify all converted tests pass
 
-### M4: Orchestrator Real Engine
-- [ ] Create orchestrator integration test harness
-- [ ] Test FSM state transitions with real LLM mock (structure-validated)
-- [ ] Test tool invocation chain
-- [ ] Test prompt assembly with real context injection
-- [ ] Test dual-core routing with real router
+### M4: Orchestrator Real Engine — IN PROGRESS
+- [x] Create orchestrator integration test harness
+- [x] Test FSM state transitions with real LLM mock (structure-validated)
+- [x] Test tool invocation chain
+- [x] Test prompt assembly with real context injection
+- [x] Test dual-core routing with real router
+- [ ] Test dual-core routing with aurora preferences
+- **59 real engine tests** (34 new + 25 existing), 0 mocks on system-under-test
 
 ### M5: Flutter Compilation Fix — DONE
 - [x] Fix 573→0 lib/features/ compilation errors across 100+ files
@@ -80,3 +82,6 @@
 | 13:10 | 3da8637 | M5: fix srl_phase_display_test unused import |
 | 13:30 | 1a135e7 | M3: enhance 15 bare asserts in spine_orchestrator + policy_engine |
 | 13:40 | f6b1504 | M2: chat_history 18 tests — coverage expansion |
+| 14:10 | e0bc0b69 | M3: enhance 10 bare asserts in 6 files |
+| 14:25 | f40d642c | M3: eliminate 37 bare assert_called_once across 20 files |
+| 14:45 | 954e70ca | M4: add 34 orchestrator real engine tests (59 total) |
