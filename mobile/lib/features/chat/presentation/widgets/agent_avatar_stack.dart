@@ -152,7 +152,7 @@ class AgentInfo {
     required this.color,
   });
 
-  factory AgentInfo.fromType(String type) {
+  static AgentInfo fromType(BuildContext context, String type) {
     switch (type.toLowerCase()) {
       case 'math':
         return AgentInfo(

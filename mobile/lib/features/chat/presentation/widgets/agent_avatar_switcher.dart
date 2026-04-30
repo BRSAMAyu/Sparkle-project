@@ -48,7 +48,7 @@ class AgentConfig {
   final String animation;
 
   /// 获取指定AgentType的配置
-  static AgentConfig forType(AgentType type) {
+  static AgentConfig forType(AgentType type, BuildContext context) {
     switch (type) {
       case AgentType.orchestrator:
         return AgentConfig(
@@ -166,7 +166,7 @@ class AgentAvatarSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final config = AgentConfig.forType(agentType);
+    final config = AgentConfig.forType(agentType, context);
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 500),
@@ -297,7 +297,7 @@ class AgentStatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final config = AgentConfig.forType(agentType);
+    final config = AgentConfig.forType(agentType, context);
     final theme = Theme.of(context);
 
     return Container(

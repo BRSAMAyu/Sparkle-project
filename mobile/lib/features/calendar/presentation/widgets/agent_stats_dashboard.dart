@@ -48,7 +48,7 @@ class AgentStatsDashboard extends StatelessWidget {
           const SizedBox(height: DS.xl),
 
           // Overall Stats Cards
-          _buildOverallStats(theme, overall),
+          _buildOverallStats(context, theme, overall),
           const SizedBox(height: DS.xl),
 
           // Usage Pie Chart
@@ -60,7 +60,7 @@ class AgentStatsDashboard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: DS.lg),
-            _buildUsagePieChart(theme, byAgent),
+            _buildUsagePieChart(context, theme, byAgent),
             const SizedBox(height: DS.xl),
           ],
 
@@ -73,14 +73,14 @@ class AgentStatsDashboard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: DS.lg),
-            ...byAgent.take(5).map((agent) => _buildAgentCard(theme, agent)),
+            ...byAgent.take(5).map((agent) => _buildAgentCard(context, theme, agent)),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildOverallStats(ThemeData theme, Map<String, dynamic> overall) =>
+  Widget _buildOverallStats(BuildContext context, ThemeData theme, Map<String, dynamic> overall) =>
       Row(
         children: [
           Expanded(
@@ -154,14 +154,14 @@ class AgentStatsDashboard extends StatelessWidget {
         ),
       );
 
-  Widget _buildUsagePieChart(ThemeData theme, List<dynamic> byAgent) =>
+  Widget _buildUsagePieChart(BuildContext context, ThemeData theme, List<dynamic> byAgent) =>
       SizedBox(
         height: 250,
         child: PieChart(
           PieChartData(
             sections: byAgent.take(6).map((agent) {
               final agentType = _parseAgentType(agent['agent_type'] as String);
-              final config = AgentConfig.forType(agentType);
+              final config = AgentConfig.forType(agentType, context);
               final count = agent['count'] as int;
 
               return PieChartSectionData(
@@ -183,9 +183,9 @@ class AgentStatsDashboard extends StatelessWidget {
         ),
       );
 
-  Widget _buildAgentCard(ThemeData theme, dynamic agentData) {
+  Widget _buildAgentCard(BuildContext context, ThemeData theme, dynamic agentData) {
     final agentType = _parseAgentType(agentData['agent_type'] as String);
-    final config = AgentConfig.forType(agentType);
+    final config = AgentConfig.forType(agentType, context);
     final count = agentData['count'] as int;
     final avgDuration = agentData['avg_duration_ms'] as int? ?? 0;
     final successRate = agentData['success_rate'] as num? ?? 100;
