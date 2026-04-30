@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 // Mock needed dependencies
 class MockChatNotifier extends ChatNotifier {
@@ -54,6 +54,8 @@ class FakeChatRepository extends Fake implements ChatRepository {
 class FakeRef extends Fake implements Ref {}
 
 void main() {
+  setUp(setUpI18nForTesting);
+
   testWidgets('ChatScreen scrolls to bottom (0.0) when new message arrives',
       (WidgetTester tester) async {
     // Initialize SharedPreferences and ViewStorageService
@@ -68,10 +70,7 @@ void main() {
         overrides: [
           chatProvider.overrideWith((ref) => mockChatNotifier),
         ],
-        child: const MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),home: ChatScreen(),),
+        child: testMaterialApp(home: const ChatScreen()),
       ),
     );
 

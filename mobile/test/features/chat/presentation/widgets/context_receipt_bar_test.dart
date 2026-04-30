@@ -11,10 +11,7 @@ void main() {
     String? selectedPrompt;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ContextReceiptBar(
             rawMetadata: const {
               'context_receipt': {
@@ -28,8 +25,7 @@ void main() {
             },
             onActionSelected: (prompt) => selectedPrompt = prompt,
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('已优先引用课件'));

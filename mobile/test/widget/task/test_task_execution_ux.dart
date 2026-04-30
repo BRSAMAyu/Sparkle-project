@@ -10,7 +10,7 @@ import 'package:sparkle/features/task/presentation/widgets/stuck_help_sheet.dart
 import 'package:sparkle/features/task/presentation/widgets/task_guide_panel.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/test/shared/i18n_test_helper.dart';
+import '../../shared/i18n_test_helper.dart';
 
 abstract class _AuroraChatCallback {
   void call(String message);
@@ -336,25 +336,15 @@ void main() {
   });
 }
 
-Widget _materialHost(Widget child) => MaterialApp(
-      theme: AppThemes.lightTheme,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'),
-      home: Scaffold(body: child),
-    );
+Widget _materialHost(Widget child) => testMaterialApp(theme: AppThemes.lightTheme,
+      home: Scaffold(body: child),);
 
 Widget _executionHost(TaskModel task) => ProviderScope(
       overrides: [
         activeTaskProvider.overrideWith((ref) => task),
       ],
-      child: MaterialApp(
-        theme: AppThemes.lightTheme,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: const TaskExecutionScreen(),
-      ),
+      child: testMaterialApp(theme: AppThemes.lightTheme,
+        home: const TaskExecutionScreen(),),
     );
 
 Widget _executionRouterHost(TaskModel task) {

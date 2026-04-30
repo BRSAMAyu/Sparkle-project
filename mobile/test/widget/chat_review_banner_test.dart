@@ -159,9 +159,6 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
           home: ChatScreen(
             initialExtraContext: {
               'review_node': 'cn.tcp_flow',

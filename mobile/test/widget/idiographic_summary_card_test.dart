@@ -62,14 +62,12 @@ void main() {
     expect(parsed, isNotNull);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: IdiographicSummaryCard(
             summaryLines: (parsed!['summaryLines'] as List<dynamic>).cast<String>(),
             disclaimerText: parsed['disclaimerText'] as String,
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('近期关联观察'), findsOneWidget);

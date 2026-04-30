@@ -268,9 +268,6 @@ Widget _buildTestApp(_FakeUserRepository repository) => ProviderScope(
       ],
       child: testMaterialApp(
         home: UserPersonaScreen(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: Locale('zh'),
       ),
     );
 

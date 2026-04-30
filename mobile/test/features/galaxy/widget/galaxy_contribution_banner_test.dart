@@ -18,14 +18,12 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: GalaxyContributionBanner(
               isDarkMode: true,
               stats: stats,
             ),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('0 个节点'), findsNWidgets(3));
@@ -42,14 +40,12 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: GalaxyContributionBanner(
               isDarkMode: true,
               stats: UserGalaxyContribution.empty,
             ),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('开始你的第一次学习'), findsOneWidget);

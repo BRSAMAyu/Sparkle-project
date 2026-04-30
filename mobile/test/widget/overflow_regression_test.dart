@@ -310,14 +310,6 @@ Future<void> _pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       child: testMaterialApp(
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
         home: Scaffold(body: child),
       ),
     ),

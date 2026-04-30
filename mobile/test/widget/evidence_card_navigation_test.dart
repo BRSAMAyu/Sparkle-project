@@ -190,8 +190,7 @@ void main() {
 
   testWidgets('unsupported evidence stays non-routable', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: EvidenceCard(
             item: EvidenceResolveItem(
               type: 'summary',
@@ -206,8 +205,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('去星图看'), findsNothing);

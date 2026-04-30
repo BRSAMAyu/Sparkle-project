@@ -8,11 +8,9 @@ void main() {
   setUp(setUpI18nForTesting);
   testWidgets('shows consolidated label when archived', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: WorkingMemoryBadge(consolidated: true),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('已归档到长期记忆'), findsOneWidget);
@@ -20,11 +18,9 @@ void main() {
 
   testWidgets('shows session label when not archived', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: WorkingMemoryBadge(consolidated: false),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('当前 session'), findsOneWidget);

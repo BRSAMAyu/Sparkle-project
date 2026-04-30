@@ -15,8 +15,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: SingleChildScrollView(
             child: Column(
               children: [
@@ -28,8 +27,7 @@ void main() {
               ],
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('最近没有需要继续挂在前台的工作记忆，先按当前节奏推进就好。'), findsOneWidget);

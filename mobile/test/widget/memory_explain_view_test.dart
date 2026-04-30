@@ -191,9 +191,6 @@ void main() {
           memoryApiServiceProvider.overrideWithValue(_HistoryStubService()),
         ],
         child: testMaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: MemoryDetailScreen(
             args: MemoryDetailArgs.preference(preference),
           ),
@@ -229,9 +226,6 @@ void main() {
           memoryApiServiceProvider.overrideWithValue(_HistoryStubService()),
         ],
         child: testMaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: MemoryDetailScreen(
             args: MemoryDetailArgs.preference(preference),
           ),

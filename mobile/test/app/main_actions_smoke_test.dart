@@ -379,7 +379,7 @@ Future<void> _pumpPage(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: testMaterialApp(
+      child: MaterialApp(
         theme: AppThemes.lightTheme,
         darkTheme: AppThemes.darkTheme,
         localizationsDelegates: const [

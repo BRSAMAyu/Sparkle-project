@@ -9,8 +9,7 @@ void main() {
   setUp(setUpI18nForTesting);
   testWidgets('ActiveSkillsCard renders activated skill chips', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ActiveSkillsCard(
             summary: UserStateFieldEnvelope(
               value: Stage35ActiveSkillsSummary(
@@ -29,8 +28,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('当前激活技能'), findsOneWidget);

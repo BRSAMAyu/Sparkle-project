@@ -191,9 +191,6 @@ void main() {
         ],
         child: testMaterialApp(
           home: MemorySettingsScreen(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
         ),
       ),
     );

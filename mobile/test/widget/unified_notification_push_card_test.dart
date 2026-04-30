@@ -30,11 +30,7 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: UnifiedNotificationCard(
             notification: notification,
             onRead: () {},
@@ -42,8 +38,7 @@ void main() {
             onPushDismiss: () => dismissTapped = true,
             onPushDisableCategory: () => disableTapped = true,
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('这次不用了'), findsOneWidget);

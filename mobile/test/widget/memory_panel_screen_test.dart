@@ -229,9 +229,6 @@ void main() {
         ],
         child: testMaterialApp(
           home: MemoryPanelScreen(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
         ),
       ),
     );
@@ -259,9 +256,6 @@ void main() {
         ],
         child: testMaterialApp(
           home: MemoryPanelScreen(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
         ),
       ),
     );

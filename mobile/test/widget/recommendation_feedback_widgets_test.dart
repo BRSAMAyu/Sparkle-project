@@ -28,15 +28,13 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppThemes.lightTheme,
+      testMaterialApp(theme: AppThemes.lightTheme,
         home: Scaffold(
           body: RecommendationFeedbackPromptCard(
             prompt: prompt,
             onRespond: () {},
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('看看这位责任伙伴候选人是否合拍'), findsOneWidget);
@@ -63,12 +61,10 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppThemes.lightTheme,
+      testMaterialApp(theme: AppThemes.lightTheme,
         home: Scaffold(
           body: RecommendationFeedbackInsightCard(insight: insight),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('你的社群推荐偏好'), findsOneWidget);

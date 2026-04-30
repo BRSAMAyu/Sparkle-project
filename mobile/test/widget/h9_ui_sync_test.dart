@@ -286,8 +286,6 @@ Widget _buildApp({
   return ProviderScope(
     overrides: overrides,
     child: testMaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
       home: child,
     ),
   );

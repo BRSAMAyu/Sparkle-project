@@ -317,7 +317,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const ProviderScope(
+        ProviderScope(
           child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
@@ -411,7 +411,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const ProviderScope(
+        ProviderScope(
           child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
@@ -584,7 +584,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const ProviderScope(
+        ProviderScope(
           child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),

@@ -193,9 +193,6 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
           home: ChatScreen(),
         ),
       ),
@@ -241,9 +238,6 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
           home: ChatScreen(),
         ),
       ),

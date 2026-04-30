@@ -12,8 +12,7 @@ void main() {
   ) async {
     String? tapped;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: UnresolvedConflictsSection(
             items: [
               UnresolvedConflictItem(
@@ -37,8 +36,7 @@ void main() {
             onSelectRight: (item) async => tapped = 'right:${item.id}',
             onSelectNone: (item) async => tapped = 'none:${item.id}',
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('待你确认'), findsOneWidget);

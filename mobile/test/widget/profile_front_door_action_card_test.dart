@@ -43,9 +43,6 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: Scaffold(
             body: SingleChildScrollView(
               child: ActionCard(
@@ -121,11 +118,7 @@ void main() {
     String? capturedPrompt;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: SingleChildScrollView(
             child: ActionCard(
               action: WidgetPayload(
@@ -162,8 +155,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('展开'));
@@ -187,9 +179,6 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: Scaffold(
             body: SingleChildScrollView(
               child: ActionCard(

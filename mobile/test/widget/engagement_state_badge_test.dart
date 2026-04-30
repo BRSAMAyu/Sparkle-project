@@ -9,8 +9,7 @@ void main() {
   setUp(setUpI18nForTesting);
   testWidgets('EngagementStateBadge renders engagement chips', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: EngagementStateBadge(
             state: UserStateFieldEnvelope(
               value: Stage35EngagementState(
@@ -20,8 +19,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('参与状态'), findsOneWidget);

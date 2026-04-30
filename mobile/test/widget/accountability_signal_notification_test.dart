@@ -56,19 +56,14 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: UnifiedNotificationCard(
             notification: notification,
             onRead: () {},
             onDelete: () {},
             onAccountabilityEncourage: () => encourageTapped = true,
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(notification.isAccountabilityStruggleAlert, isTrue);
@@ -101,18 +96,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: UnifiedNotificationCard(
             notification: notification,
             onRead: () {},
             onDelete: () {},
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(notification.canSendAccountabilityEncouragement, isFalse);

@@ -12,8 +12,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ForesightCard(
             hint: UserStateFieldEnvelope(
               value: ForesightHintSummaryItem(
@@ -33,8 +32,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('前瞻提示'), findsOneWidget);

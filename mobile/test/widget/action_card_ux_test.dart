@@ -12,11 +12,7 @@ void main() {
     String? receivedPrompt;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
               type: 'next_actions',
@@ -37,8 +33,7 @@ void main() {
               }
             },
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('展开'));
@@ -54,11 +49,7 @@ void main() {
 
   testWidgets('source summary renders evidence cards', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
               type: 'source_summary',
@@ -74,8 +65,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('展开'));
@@ -91,11 +81,7 @@ void main() {
     String? receivedPrompt;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
               type: 'blocked_input_request',
@@ -110,8 +96,7 @@ void main() {
               receivedPrompt = payload['prompt']?.toString();
             },
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('要定位错因，我还需要题目证据'), findsOneWidget);
@@ -127,11 +112,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
               type: 'evolution_card',
@@ -148,8 +129,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('系统正在根据你的反馈继续调整'), findsOneWidget);
@@ -167,11 +147,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
               type: 'progress_card',
@@ -193,8 +169,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.textContaining('你这周完成了 8 个任务'), findsOneWidget);
@@ -215,11 +190,7 @@ void main() {
     String? freeText;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ActionCard(
             action: WidgetPayload(
               type: 'reflection_card',
@@ -234,8 +205,7 @@ void main() {
               freeText = payload['free_text']?.toString();
             },
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('概念没理解'));

@@ -142,9 +142,6 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -189,9 +186,6 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -230,9 +224,6 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -287,9 +278,6 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -321,9 +309,6 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
             home: Scaffold(
               body: Center(
                 child: SizedBox(

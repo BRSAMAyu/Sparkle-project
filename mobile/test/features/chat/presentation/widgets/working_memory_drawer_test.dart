@@ -60,7 +60,7 @@ void main() {
 
   testWidgets('drawer stays hidden without session id', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(

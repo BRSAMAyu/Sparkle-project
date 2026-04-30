@@ -92,9 +92,6 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          locale: Locale('zh'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
           home: SyncCenterScreen(),
         ),
       ),

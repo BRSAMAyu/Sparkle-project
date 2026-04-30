@@ -24,10 +24,7 @@ void main() {
     var shared = 0;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
+      testMaterialApp(home: Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: FilledButton(
@@ -44,8 +41,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('open'));
@@ -63,10 +59,7 @@ void main() {
   testWidgets('achievement unlock dialog closes from close action',
       (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
+      testMaterialApp(home: Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: FilledButton(
@@ -80,8 +73,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('open'));
@@ -104,10 +96,7 @@ void main() {
     var viewed = 0;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
+      testMaterialApp(home: Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: FilledButton(
@@ -124,8 +113,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('open'));

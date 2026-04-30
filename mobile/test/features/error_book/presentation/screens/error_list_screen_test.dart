@@ -26,9 +26,6 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const ErrorListScreen(),
         ),
       ),
@@ -82,9 +79,6 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const ErrorListScreen(),
         ),
       ),

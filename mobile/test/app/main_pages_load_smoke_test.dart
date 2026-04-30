@@ -199,13 +199,6 @@ Future<void> _pumpPage(
     UncontrolledProviderScope(
       container: container,
       child: testMaterialApp(
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
         home: page,
       ),
     ),

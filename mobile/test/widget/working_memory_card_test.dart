@@ -11,8 +11,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: WorkingMemoryCard(
             snapshot: UserStateFieldEnvelope(
               value: Stage35WorkingMemorySnapshot(
@@ -29,8 +28,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('工作记忆快照'), findsOneWidget);

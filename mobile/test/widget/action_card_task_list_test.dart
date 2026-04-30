@@ -35,13 +35,9 @@ void main() {
 
     // 2. Act: Pump the ActionCard with Sparkle theme extension
     await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.light().copyWith(
+      testMaterialApp(theme: ThemeData.light().copyWith(
           extensions: [SparkleThemeExtension.light()],
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
         home: Scaffold(
           body: SingleChildScrollView(
             child: Padding(
@@ -52,8 +48,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
     // Use pump instead of pumpAndSettle — card has repeating shimmer animation
     await tester.pump();

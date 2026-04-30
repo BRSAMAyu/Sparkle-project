@@ -11,18 +11,13 @@ void main() {
   Widget buildTestWidget({
     required List<WidgetPayload> actions,
     required bool isLatestMessage,
-  }) => MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-      home: Scaffold(
+  }) => testMaterialApp(home: Scaffold(
         body: AssistantMessageMetadataTray(
           actions: actions,
           isLatestMessage: isLatestMessage,
           status: 'IDLE',
         ),
-      ),
-    );
+      ),);
 
   testWidgets('next actions only renders for latest assistant message',
       (tester) async {

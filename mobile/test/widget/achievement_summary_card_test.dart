@@ -11,8 +11,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: AchievementSummaryCard(
             summary: UserStateFieldEnvelope(
               value: Stage35AchievementSummary(
@@ -35,8 +34,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('成就摘要'), findsOneWidget);

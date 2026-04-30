@@ -146,8 +146,7 @@ void main() {
     addTearDown(mastery.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: Column(
             children: [
               ValueListenableBuilder<int>(
@@ -167,8 +166,7 @@ void main() {
               ),
             ],
           ),
-        ),
-      ),
+        ),),
     );
 
     final initialNode = tester.widget<ColoredBox>(

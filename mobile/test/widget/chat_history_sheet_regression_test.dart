@@ -100,14 +100,6 @@ void main() {
           chatProvider.overrideWith((ref) => notifier),
         ],
         child: testMaterialApp(
-          localizationsDelegates: const [
-            ...AppLocalizations.localizationsDelegates,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const ChatScreen(),
         ),
       ),

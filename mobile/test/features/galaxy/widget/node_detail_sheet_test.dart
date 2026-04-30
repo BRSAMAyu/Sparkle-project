@@ -82,7 +82,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: testMaterialApp(
           home: Scaffold(
             body: NodeDetailSheet(

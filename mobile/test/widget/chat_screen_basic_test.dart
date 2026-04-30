@@ -240,7 +240,7 @@ void main() {
       testWidgets('Empty chat shows appropriate message',
           (WidgetTester tester) async {
         await tester.pumpWidget(
-          const ProviderScope(
+          ProviderScope(
             child: testMaterialApp(
               home: Scaffold(
                 body: Center(
@@ -257,7 +257,7 @@ void main() {
       testWidgets('Message with special characters displays',
           (WidgetTester tester) async {
         await tester.pumpWidget(
-          const ProviderScope(
+          ProviderScope(
             child: testMaterialApp(
               home: Scaffold(
                 body: Text('Message with 中文 and emoji 😀'),
@@ -274,7 +274,7 @@ void main() {
             'This is a very long message that should wrap to multiple lines when displayed in the chat interface';
 
         await tester.pumpWidget(
-          const ProviderScope(
+          ProviderScope(
             child: testMaterialApp(
               home: Scaffold(
                 body: SizedBox(
@@ -438,7 +438,7 @@ void main() {
     group('Loading States', () {
       testWidgets('Loading indicator appears', (WidgetTester tester) async {
         await tester.pumpWidget(
-          const ProviderScope(
+          ProviderScope(
             child: testMaterialApp(
               home: Scaffold(
                 body: Center(
@@ -454,7 +454,7 @@ void main() {
 
       testWidgets('Error message displays', (WidgetTester tester) async {
         await tester.pumpWidget(
-          const ProviderScope(
+          ProviderScope(
             child: testMaterialApp(
               home: Scaffold(
                 body: Center(
@@ -496,7 +496,7 @@ void main() {
 
       testWidgets('Input field has label', (WidgetTester tester) async {
         await tester.pumpWidget(
-          const ProviderScope(
+          ProviderScope(
             child: testMaterialApp(
               home: Scaffold(
                 body: TextField(

@@ -24,16 +24,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('zh'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: Center(
             child: SizedBox(
               width: 420,
@@ -47,8 +38,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.pump(const Duration(milliseconds: 50));

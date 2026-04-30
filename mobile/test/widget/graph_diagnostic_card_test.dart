@@ -15,11 +15,7 @@ void main() {
     String? prompted;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: SingleChildScrollView(
             child: ActionCard(
               action: WidgetPayload(
@@ -57,8 +53,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('最弱点'), findsOneWidget);

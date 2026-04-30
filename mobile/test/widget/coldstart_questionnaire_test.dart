@@ -21,15 +21,13 @@ void main() {
   testWidgets('coldstart questionnaire renders title and options',
       (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: TraitsColdstartQuestionnaire(
             questions: questions,
             onSubmit: (_) async {},
             onSkip: () async {},
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('初始画像'), findsOneWidget);
@@ -41,8 +39,7 @@ void main() {
       (tester) async {
     Map<String, String>? submitted;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: TraitsColdstartQuestionnaire(
             questions: questions,
             onSubmit: (answers) async {
@@ -50,8 +47,7 @@ void main() {
             },
             onSkip: () async {},
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('先搭结构再行动'));
@@ -65,8 +61,7 @@ void main() {
   testWidgets('coldstart questionnaire triggers skip action', (tester) async {
     var skipped = false;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: TraitsColdstartQuestionnaire(
             questions: questions,
             onSubmit: (_) async {},
@@ -74,8 +69,7 @@ void main() {
               skipped = true;
             },
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.widgetWithText(TextButton, '跳过'));
@@ -88,8 +82,7 @@ void main() {
       (tester) async {
     final completer = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: TraitsColdstartQuestionnaire(
             questions: questions,
             onSubmit: (_) async {
@@ -97,8 +90,7 @@ void main() {
             },
             onSkip: () async {},
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('保存'));

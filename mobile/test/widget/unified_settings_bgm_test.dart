@@ -56,16 +56,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: testMaterialApp(
-          localizationsDelegates: [
-            ...AppLocalizations.localizationsDelegates,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
           home: UnifiedSettingsScreen(),
         ),
       ),

@@ -45,13 +45,9 @@ void main() {
     ExamSprintDashboardData data, {
     VoidCallback? onRecordResult,
   }) {
-    return MaterialApp(
-      theme: ThemeData.light().copyWith(
+    return testMaterialApp(theme: ThemeData.light().copyWith(
         extensions: [SparkleThemeExtension.light()],
       ),
-      locale: const Locale('zh'),
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: Scaffold(
         body: SingleChildScrollView(
           child: ExamSprintDashboardCard(
@@ -59,8 +55,7 @@ void main() {
             onRecordResult: onRecordResult,
           ),
         ),
-      ),
-    );
+      ),);
   }
 
   group('F14 — Animated Pass Probability Ring', () {

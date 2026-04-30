@@ -119,18 +119,14 @@ class _TestHarness extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
+  Widget build(BuildContext context) => testMaterialApp(home: Scaffold(
           body: Center(
             child: SizedBox(
               width: 420,
               child: child,
             ),
           ),
-        ),
-      );
+        ),);
 }
 
 ErrorRecord _buildErrorRecord({

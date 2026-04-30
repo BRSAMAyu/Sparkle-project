@@ -128,9 +128,6 @@ Widget _buildHarness({
 }) {
   return ProviderScope(
     child: testMaterialApp(
-      locale: const Locale('zh'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Center(
           child: SizedBox(

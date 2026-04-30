@@ -30,9 +30,6 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const TaskListScreen(),
         ),
       ),
@@ -61,9 +58,6 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const TaskListScreen(),
         ),
       ),

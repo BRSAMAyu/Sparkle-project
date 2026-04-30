@@ -11,8 +11,7 @@ void main() {
     var hidden = false;
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: MetacognitionPanelCard(
             cards: const [
               {
@@ -27,8 +26,7 @@ void main() {
               hidden = true;
             },
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('自我认识'), findsOneWidget);

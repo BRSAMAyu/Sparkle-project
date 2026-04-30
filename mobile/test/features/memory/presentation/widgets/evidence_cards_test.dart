@@ -42,11 +42,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('event · evt-1'), findsOneWidget);
@@ -69,11 +67,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Subject: MATH101'), findsOneWidget);
@@ -95,11 +91,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Name: Photosynthesis'), findsOneWidget);
@@ -121,11 +115,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Title: Complete assignment'), findsOneWidget);
@@ -147,11 +139,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Date: 2026-03-30'), findsOneWidget);
@@ -173,11 +163,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Focus: deep'), findsOneWidget);
@@ -202,11 +190,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Performance: remembered'), findsOneWidget);
@@ -223,11 +209,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Contains personal information'), findsOneWidget);
@@ -241,11 +225,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('无法解析证据'), findsOneWidget);
@@ -266,11 +248,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       // Should show truncated value with ellipsis
@@ -287,11 +267,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('证据记录'), findsOneWidget);
@@ -305,11 +283,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('OK'), findsOneWidget);
@@ -331,11 +307,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('已隐藏'), findsOneWidget);
@@ -356,11 +330,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('缺失'), findsOneWidget);
@@ -382,11 +354,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('证据记录'), findsOneWidget);
@@ -406,11 +376,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('Timestamp: -'), findsOneWidget);
@@ -420,11 +388,9 @@ void main() {
   group('MemoryEvidenceBadge Tests', () {
     testWidgets('should render OK badge with success color', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.ok),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('OK'), findsOneWidget);
@@ -440,11 +406,9 @@ void main() {
 
     testWidgets('should render redacted badge with warning color', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.redacted),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('已隐藏'), findsOneWidget);
@@ -455,11 +419,9 @@ void main() {
 
     testWidgets('should render missing badge with error color', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.missing),
-          ),
-        ),
+          ),),
       );
 
       expect(find.text('缺失'), findsOneWidget);
@@ -470,11 +432,9 @@ void main() {
 
     testWidgets('should have rounded border shape', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.ok),
-          ),
-        ),
+          ),),
       );
 
       final chip = tester.widget<Chip>(find.byType(Chip));
@@ -483,8 +443,7 @@ void main() {
 
     testWidgets('should work in different contexts', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: Row(
               children: const [
                 MemoryEvidenceBadge(status: MemoryEvidenceStatus.ok),
@@ -492,8 +451,7 @@ void main() {
                 MemoryEvidenceBadge(status: MemoryEvidenceStatus.redacted),
               ],
             ),
-          ),
-        ),
+          ),),
       );
 
       expect(find.byType(Chip), findsNWidgets(3));
@@ -534,8 +492,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -578,8 +534,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -613,8 +567,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -679,8 +631,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -723,8 +673,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -762,8 +710,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -794,8 +740,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -846,8 +790,6 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
@@ -1156,11 +1098,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        testMaterialApp(home: Scaffold(
             body: EvidenceCard(item: item),
-          ),
-        ),
+          ),),
       );
 
       // Find the status badge (it's a private class _StatusBadge, but we can find the Chip)
@@ -1175,8 +1115,6 @@ void main() {
         UncontrolledProviderScope(
           container: ProviderContainer(),
           child: testMaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
