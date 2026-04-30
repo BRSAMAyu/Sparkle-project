@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
@@ -7,7 +9,6 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
-import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:uuid/uuid.dart';
 
 const String kCommunityAgentUserId = 'sparkle_agent';
@@ -140,11 +141,13 @@ String buildGroupAgentPrompt({
       )
       .join('\n');
 
-  final name = groupName ?? '学习小组';
-  return '''
+  final name = groupName ?? (I18nService.instance.isChinese ? '学习小组' : 'Study Group');
+  final zh = I18nService.instance.isChinese;
+  if (zh) {
+    return '''
 你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。
 你的任务是产出一条最终可直接发送到群里的中文消息。
-只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。
+只输出消息正文本身，不要解释，不要加前言，不要写”我来帮你””你可以这样发””建议发送”，不要使用项目符号或备注，不要冒充系统说明。
 语气自然、简洁、友好，像群成员会直接发出去的话。
 如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。
 
@@ -152,6 +155,20 @@ String buildGroupAgentPrompt({
 $contextLines
 
 用户问题:
+$input
+''';
+  }
+  return '''
+You are Sparkle's built-in group chat AI assistant, helping in the group “$name”.
+Your task is to produce a single message ready to send directly in the group.
+Output only the message body — no explanations, no preambles, no “I can help” or “You could say” or “Suggested reply”, no bullet points or notes, no system impersonation.
+Tone: natural, concise, friendly — like something a group member would actually send.
+If you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.
+
+Recent conversation:
+$contextLines
+
+User question:
 $input
 ''';
 }
@@ -173,11 +190,13 @@ String buildPrivateAgentPrompt({
       )
       .join('\n');
 
-  final name = friendName ?? '好友';
-  return '''
+  final name = friendName ?? (I18nService.instance.isChinese ? '好友' : 'Friend');
+  final zh = I18nService.instance.isChinese;
+  if (zh) {
+    return '''
 你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。
 你的任务是产出一条最终可直接发送给对方的中文私聊回复。
-只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。
+只输出回复正文本身，不要解释，不要加前言，不要写”我来帮你””你可以这样回””建议回复”，不要附带分析或备注。
 语气自然、礼貌、克制，像我会直接按下发送的内容。
 如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。
 
@@ -187,20 +206,41 @@ $contextLines
 用户问题:
 $input
 ''';
+  }
+  return '''
+You are Sparkle's built-in private chat AI assistant, helping with my conversation with “$name”.
+Your task is to produce a single private reply ready to send directly.
+Output only the reply body — no explanations, no preambles, no “I can help” or “You could reply” or “Suggested reply”, no analysis or notes.
+Tone: natural, polite, restrained — like something I would actually hit send on.
+If you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.
+
+Recent conversation:
+$contextLines
+
+User question:
+$input
+''';
 }
 
 String buildGroupAssistantPresetPrompt(
   String preset, {
   String? groupName,
 }) {
-  final name = groupName ?? '学习小组';
+  final zh = I18nService.instance.isChinese;
+  final name = groupName ?? (zh ? '学习小组' : 'Study Group');
   switch (preset) {
     case 'summary':
-      return '请基于最近群聊内容，为「$name」生成一段可直接发到群里的快速总结，包含当前讨论焦点和下一步。';
+      return zh
+          ? '请基于最近群聊内容，为「$name」生成一段可直接发到群里的快速总结，包含当前讨论焦点和下一步。'
+          : 'Based on recent group chat, generate a quick summary for "$name" that can be sent directly, including current discussion focus and next steps.';
     case 'reminder':
-      return '请基于最近群聊内容，为「$name」生成一段可直接发到群里的简短提醒，推动成员继续行动，语气自然。';
+      return zh
+          ? '请基于最近群聊内容，为「$name」生成一段可直接发到群里的简短提醒，推动成员继续行动，语气自然。'
+          : 'Based on recent group chat, generate a brief reminder for "$name" to push members to keep acting, with a natural tone.';
     case 'consensus':
-      return '请基于最近群聊内容，为「$name」生成一段可直接发到群里的共识总结，明确大家已经一致的结论和下一步。';
+      return zh
+          ? '请基于最近群聊内容，为「$name」生成一段可直接发到群里的共识总结，明确大家已经一致的结论和下一步。'
+          : 'Based on recent group chat, generate a consensus summary for "$name" that clarifies agreed conclusions and next steps.';
     default:
       return preset;
   }
@@ -210,18 +250,29 @@ String buildPrivateAssistantPresetPrompt(
   String preset, {
   String? friendName,
 }) {
-  final name = friendName ?? '好友';
+  final zh = I18nService.instance.isChinese;
+  final name = friendName ?? (zh ? '好友' : 'Friend');
   switch (preset) {
     case 'polish_reply':
-      return '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的自然回复，要求简洁、友好、准确承接上下文。';
+      return zh
+          ? '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的自然回复，要求简洁、友好、准确承接上下文。'
+          : 'Based on recent chat, help me generate a natural reply to send directly to "$name" — concise, friendly, and contextually accurate.';
     case 'gentle_reminder':
-      return '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的温和提醒，不催促、不生硬。';
+      return zh
+          ? '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的温和提醒，不催促、不生硬。'
+          : 'Based on recent chat, help me generate a gentle reminder for "$name" — no pushing, not blunt.';
     case 'schedule_sync':
-      return '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的时间协调消息，用于约定下一步或确认安排。';
+      return zh
+          ? '请根据最近私聊内容，帮我生成一条可以直接发给「$name」的时间协调消息，用于约定下一步或确认安排。'
+          : 'Based on recent chat, help me generate a scheduling message for "$name" to align on next steps or confirm plans.';
     case 'summary':
-      return '请根据最近私聊内容，生成一段简短总结，帮我看清我和「$name」目前已经确认了什么、还缺什么，要求直接可读、可执行。';
+      return zh
+          ? '请根据最近私聊内容，生成一段简短总结，帮我看清我和「$name」目前已经确认了什么、还缺什么，要求直接可读、可执行。'
+          : 'Based on recent chat, generate a brief summary showing what "$name" and I have confirmed and what\'s still pending — direct, readable, actionable.';
     case 'next_step':
-      return '请根据最近私聊内容，帮我提炼出最值得现在就发送给「$name」的一条下一步推进消息，要求明确、自然、可执行。';
+      return zh
+          ? '请根据最近私聊内容，帮我提炼出最值得现在就发送给「$name」的一条下一步推进消息，要求明确、自然、可执行。'
+          : 'Based on recent chat, extract the most worthwhile next-step message to send "$name" right now — clear, natural, actionable.';
     default:
       return preset;
   }
@@ -255,20 +306,35 @@ String _fallbackGroupAgentOutput(
       .map((msg) => _compressContent(msg.content ?? ''))
       .toList();
 
+  final zh = I18nService.instance.isChinese;
   if (lines.isEmpty) {
     return switch (preset) {
-      'summary' => '我先帮大家收一下：目前还没有形成完整讨论，可以先补充目标、难点和下一步安排。',
-      'reminder' => '提醒一下，大家可以先明确各自负责的事项和完成时间，这样后续推进会更顺。',
-      'consensus' => '目前还没有形成稳定共识，建议先确认目标、分工和时间点，再继续推进。',
-      _ => '我先帮你整理成一句更清楚的话：把目标、当前进度和下一步写出来会更容易推进。',
+      'summary' => zh
+          ? '我先帮大家收一下：目前还没有形成完整讨论，可以先补充目标、难点和下一步安排。'
+          : 'Let me summarize: no full discussion yet. Let\'s start by sharing goals, blockers, and next steps.',
+      'reminder' => zh
+          ? '提醒一下，大家可以先明确各自负责的事项和完成时间，这样后续推进会更顺。'
+          : 'Quick reminder: let\'s clarify who owns what and when it\'s due — it\'ll make progress smoother.',
+      'consensus' => zh
+          ? '目前还没有形成稳定共识，建议先确认目标、分工和时间点，再继续推进。'
+          : 'No stable consensus yet. Let\'s confirm goals, division of work, and timelines before pushing forward.',
+      _ => zh
+          ? '我先帮你整理成一句更清楚的话：把目标、当前进度和下一步写出来会更容易推进。'
+          : 'Let me rephrase that more clearly: writing down goals, current progress, and next steps will help move things forward.',
     };
   }
 
-  final joined = lines.join('；');
+  final joined = lines.join(zh ? '；' : '; ');
   return switch (preset) {
-    'summary' => '我先快速总结一下：$joined。当前重点是先把下一步动作说清楚并开始推进。',
-    'reminder' => '提醒一下：$joined。建议现在先各自确认下一步并同步进度。',
-    'consensus' => '目前大家比较一致的是：$joined。可以按这个方向继续推进。',
+    'summary' => zh
+        ? '我先快速总结一下：$joined。当前重点是先把下一步动作说清楚并开始推进。'
+        : 'Quick summary: $joined. The focus now is clarifying next actions and getting started.',
+    'reminder' => zh
+        ? '提醒一下：$joined。建议现在先各自确认下一步并同步进度。'
+        : 'Reminder: $joined. Let\'s each confirm our next step and sync progress.',
+    'consensus' => zh
+        ? '目前大家比较一致的是：$joined。可以按这个方向继续推进。'
+        : 'Everyone agrees on: $joined. Let\'s keep pushing in this direction.',
     _ => joined,
   };
 }
@@ -278,7 +344,8 @@ String _fallbackPrivateAgentOutput(
   List<PrivateMessageInfo> recentMessages,
   String? friendName,
 ) {
-  final name = friendName ?? '你';
+  final zh = I18nService.instance.isChinese;
+  final name = friendName ?? (zh ? '你' : 'you');
   final lines = recentMessages
       .where((msg) => msg.content != null && msg.content!.trim().isNotEmpty)
       .where((msg) => !isPrivateAgentMessage(msg))
@@ -286,14 +353,20 @@ String _fallbackPrivateAgentOutput(
       .map((msg) => _compressContent(msg.content ?? ''))
       .toList();
 
-  final context = lines.isEmpty ? '' : '我结合我们刚才聊的内容看，';
+  final context = lines.isEmpty ? '' : (zh ? '我结合我们刚才聊的内容看，' : 'Based on what we just discussed, ');
   return switch (preset) {
-    'polish_reply' => '${context}可以这样回$name：我这边看到了，我们按这个方向继续，我稍后给你一个更明确的进展。',
-    'gentle_reminder' =>
-      '${context}可以这样提醒$name：想跟你确认一下这件事的进度，如果方便的话我们今天把下一步也一起定下来。',
-    'schedule_sync' =>
-      '${context}可以这样发给$name：我们把下一步时间对一下吧，你这两天什么时候方便，我这边可以配合安排。',
-    _ => lines.isEmpty ? '我先帮你整理成一句更自然的回复。' : lines.join('；'),
+    'polish_reply' => zh
+        ? '${context}可以这样回$name：我这边看到了，我们按这个方向继续，我稍后给你一个更明确的进展。'
+        : '${context}You could reply to $name: "Got it, let\'s keep going in this direction — I\'ll follow up with a clearer update soon."',
+    'gentle_reminder' => zh
+        ? '${context}可以这样提醒$name：想跟你确认一下这件事的进度，如果方便的话我们今天把下一步也一起定下来。'
+        : '${context}You could gently remind $name: "Just checking on the progress — if convenient, let\'s nail down the next step today."',
+    'schedule_sync' => zh
+        ? '${context}可以这样发给$name：我们把下一步时间对一下吧，你这两天什么时候方便，我这边可以配合安排。'
+        : '${context}You could send to $name: "Let\'s align on timing for the next step. When are you free in the next couple of days?"',
+    _ => lines.isEmpty
+        ? (zh ? '我先帮你整理成一句更自然的回复。' : 'Let me help rephrase that more naturally.')
+        : lines.join(zh ? '；' : '; '),
   };
 }
 
