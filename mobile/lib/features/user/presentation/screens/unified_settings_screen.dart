@@ -28,6 +28,7 @@ import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 const Map<String, Set<String>> _notificationTypeAliases = {
   'reminder': {
@@ -94,8 +95,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   double _ambientVolume = 0.5;
   Timer? _learningPrefsDebounce;
 
-  bool get _isZh =>
-      WidgetsBinding.instance.platformDispatcher.locale.languageCode == 'zh';
   String? _learningPreferenceStatus;
   bool _learningPreferenceStatusIsError = false;
 
@@ -1140,8 +1139,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   children: [
                     _buildCollapsibleHeader(
                       icon: Icons.auto_awesome_outlined,
-                      title: _isZh ? 'Aurora 沟通偏好' : 'Aurora Preferences',
-                      subtitle: _isZh
+                      title: I18nService.instance.isChinese ? 'Aurora 沟通偏好' : 'Aurora Preferences',
+                      subtitle: I18nService.instance.isChinese
                           ? '控制 Aurora 如何与你互动'
                           : 'Control how Aurora interacts with you',
                       expanded: _auroraPrefsExpanded,
@@ -1159,15 +1158,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildAuroraPrefSegmented(
-                                  label: _isZh ? '分析深度' : 'Analysis Depth',
+                                  label: I18nService.instance.isChinese ? '分析深度' : 'Analysis Depth',
                                   options: [
                                     (
-                                      _isZh ? '少分析我' : 'Light',
+                                      I18nService.instance.isChinese ? '少分析我' : 'Light',
                                       'light',
                                       Icons.insights_outlined,
                                     ),
                                     (
-                                      _isZh ? '多分析我' : 'Deep',
+                                      I18nService.instance.isChinese ? '多分析我' : 'Deep',
                                       'deep',
                                       Icons.psychology_outlined,
                                     ),
@@ -1180,15 +1179,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
-                                  label: _isZh ? '沟通方式' : 'Directness',
+                                  label: I18nService.instance.isChinese ? '沟通方式' : 'Directness',
                                   options: [
                                     (
-                                      _isZh ? '直接安排我' : 'Direct',
+                                      I18nService.instance.isChinese ? '直接安排我' : 'Direct',
                                       'direct',
                                       Icons.fast_forward_outlined,
                                     ),
                                     (
-                                      _isZh ? '引导我' : 'Guided',
+                                      I18nService.instance.isChinese ? '引导我' : 'Guided',
                                       'guided',
                                       Icons.tour_outlined,
                                     ),
@@ -1202,15 +1201,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
                                   label:
-                                      _isZh ? '解释详细程度' : 'Explanation Level',
+                                      I18nService.instance.isChinese ? '解释详细程度' : 'Explanation Level',
                                   options: [
                                     (
-                                      _isZh ? '多解释原因' : 'Detailed',
+                                      I18nService.instance.isChinese ? '多解释原因' : 'Detailed',
                                       'detailed',
                                       Icons.article_outlined,
                                     ),
                                     (
-                                      _isZh ? '简洁' : 'Brief',
+                                      I18nService.instance.isChinese ? '简洁' : 'Brief',
                                       'brief',
                                       Icons.short_text_outlined,
                                     ),
@@ -1224,15 +1223,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
                                   label:
-                                      _isZh ? '压力提醒风格' : 'Pressure Style',
+                                      I18nService.instance.isChinese ? '压力提醒风格' : 'Pressure Style',
                                   options: [
                                     (
-                                      _isZh ? '不用压力提醒' : 'Gentle',
+                                      I18nService.instance.isChinese ? '不用压力提醒' : 'Gentle',
                                       'gentle',
                                       Icons.spa_outlined,
                                     ),
                                     (
-                                      _isZh ? '可用压力' : 'Motivating',
+                                      I18nService.instance.isChinese ? '可用压力' : 'Motivating',
                                       'motivating',
                                       Icons.fitness_center_outlined,
                                     ),
@@ -1252,7 +1251,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             error: (_, __) => Padding(
                               padding: const EdgeInsets.all(DS.spacing16),
                               child: Text(
-                                _isZh ? '加载偏好失败' : 'Failed to load preferences',
+                                I18nService.instance.isChinese ? '加载偏好失败' : 'Failed to load preferences',
                                 style: DS.bodySmall
                                     .copyWith(color: DS.textSecondary),
                               ),

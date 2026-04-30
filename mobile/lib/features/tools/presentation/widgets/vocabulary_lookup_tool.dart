@@ -13,6 +13,7 @@ import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_pro
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/vocabulary/data/services/offline_dictionary_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class VocabularyLookupTool extends ConsumerStatefulWidget {
   const VocabularyLookupTool({
@@ -248,14 +249,14 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '离线词典包',
+                  I18nService.instance.isChinese ? '离线词典包' : 'Offline Dictionary Packages',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: DS.spacing8),
                 Text(
-                  '优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。',
+                  I18nService.instance.isChinese ? '优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。' : 'Prefer local Oxford dictionary to reduce network dependency and cloud server load.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                     height: 1.5,
@@ -309,7 +310,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                         borderRadius: DS.borderRadiusFull,
                                       ),
                                       child: Text(
-                                        '已安装',
+                                        I18nService.instance.isChinese ? '已安装' : 'Installed',
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
                                           color: DS.prismBlue,
@@ -322,7 +323,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                               const SizedBox(height: DS.spacing6),
                               Text(
                                 package.description.isEmpty
-                                    ? 'Oxford 优先离线词典包'
+                                    ? (I18nService.instance.isChinese ? 'Oxford 优先离线词典包' : 'Oxford Preferred Offline Dictionary Package')
                                     : package.description,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: DS.textSecondary,
@@ -342,7 +343,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                     ),
                                   if (installed != null)
                                     _buildMetaChip(
-                                      '安装于 ${_formatInstalledAt(installed.installedAt)}',
+                                      '${I18nService.instance.isChinese ? '安装于' : 'Installed'} ${_formatInstalledAt(installed.installedAt)}',
                                     ),
                                 ],
                               ),
@@ -352,7 +353,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                   Expanded(
                                     child: SparkleButton(
                                       label:
-                                          installed != null ? '重新下载' : '下载到本地',
+                                          installed != null ? (I18nService.instance.isChinese ? '重新下载' : 'Redownload') : (I18nService.instance.isChinese ? '下载到本地' : 'Download Locally'),
                                       onPressed: _isDownloadingDictionary
                                           ? null
                                           : () async {
@@ -432,15 +433,15 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         ),
         ToolHeroChip(
           label: state.associations.isEmpty
-              ? '等待关联词'
-              : '${state.associations.length} 个关联词',
+              ? (I18nService.instance.isChinese ? '等待关联词' : 'Waiting for associations')
+              : '${state.associations.length} ${I18nService.instance.isChinese ? '个关联词' : 'associations'}',
           accentColor: accent,
           icon: Icons.hub_rounded,
         ),
         ToolHeroChip(
           label: _installedPackageCount > 0
-              ? '$_installedPackageCount 个离线词典包'
-              : '未下载离线词典',
+              ? '$_installedPackageCount ${I18nService.instance.isChinese ? '个离线词典包' : 'offline dictionaries'}'
+              : (I18nService.instance.isChinese ? '未下载离线词典' : 'No offline dictionary'),
           accentColor: accent,
           icon: _installedPackageCount > 0
               ? Icons.download_done_rounded
@@ -607,7 +608,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                                 child: Text(
                                                   compact
                                                       ? partOfSpeech
-                                                      : '词性 · $partOfSpeech',
+                                                      : '${I18nService.instance.isChinese ? '词性' : 'Part of Speech'} · $partOfSpeech',
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
@@ -632,7 +633,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           const SizedBox(height: DS.spacing16),
                           if (definitions != null) ...[
                             Text(
-                              '释义',
+                              I18nService.instance.isChinese ? '释义' : 'Definitions',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -647,7 +648,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           if (examples is List && examples.isNotEmpty) ...[
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              '词典例句',
+                              I18nService.instance.isChinese ? '词典例句' : 'Dictionary Examples',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -696,7 +697,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           if (state.exampleSentence != null) ...[
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              '模型生成例句',
+                              I18nService.instance.isChinese ? '模型生成例句' : 'Model Generated Example',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -720,7 +721,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           if (state.associations.isNotEmpty) ...[
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              '关联词汇',
+                              I18nService.instance.isChinese ? '关联词汇' : 'Related Words',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
