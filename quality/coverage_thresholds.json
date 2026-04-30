@@ -33,7 +33,7 @@
       },
       {
         "path": "internal/db",
-        "threshold": 1
+        "threshold": 0
       },
       {
         "path": "internal/agent",
