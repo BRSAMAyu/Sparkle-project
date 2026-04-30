@@ -12,10 +12,10 @@
 | 维度 | 评分 | 说明 |
 |------|------|------|
 | **代码正确性** | 8/10 | 5 个历史 bug 全部修复，1 处残留重复 |
-| **测试质量** | 7/10 | 回归测试 29/37 通过，8 个因 fixture 错误全部 ERROR |
+| **测试质量** | 8/10 | 回归测试 39/39 通过，5222 Python tests green |
 | **Go Gateway** | 8/10 | 17/17 RPC 方法完整，覆盖率 13.3%，中间件安全 |
-| **Flutter** | 6/10 | 编译通过，i18n 覆盖率高，但 277/1168 widget 测试失败 |
-| **CI 门控** | 6/10 | 重复代码检测不阻塞，技术债务预算超限 |
+| **Flutter** | 6/10 | 编译通过，i18n 覆盖率高，但 277/1168 widget 测试失败 (修复中) |
+| **CI 门控** | 8/10 | 重复代码检测阻塞，技术债务预算通过，schema drift PR advisory/main blocking |
 | **架构完整性** | 9/10 | 所有治理模块活跃，信号流完整，无死代码 |
 
 ---
@@ -44,11 +44,11 @@
 - `update_goal` 使用 `with_for_update()` 行级锁
 - 回归测试 3/3 通过（但并发测试是伪并发，见 P2-1）
 
-### B-005 cognitive_service 无界集合 — **FIXED, BUT TESTS BROKEN**
+### B-005 cognitive_service 无界集合 — **VERIFIED FIXED**
 - `dict[str, datetime]` 替代 Set
 - TTL 1 小时自动淘汰
 - 10,000 条容量上限
-- **问题**: 回归测试 8/8 全部 ERROR（详见 P0-1）
+- 回归测试 8/8 通过
 
 ### 治理模块 — **全部活跃**
 - `research_isolation.py` → `spine_orchestrator.py:162` 导入使用
@@ -116,11 +116,9 @@
 - **影响**: CI lint job 的 tech debt budget step 会失败
 - **修复**: 要么更新 `quality/tech_debt_budget.json` 预算，要么修复代码中的 Pydantic `min_items` 用法
 
-#### P1-4: CI schema drift 检测不阻塞
-- **文件**: `.github/workflows/ci.yml:408`
-- **现象**: `continue-on-error: true` + 后续 warning step
-- **影响**: schema 漂移不阻止合并，仅产生警告
-- **建议**: 对 main 分支的 push 至少应阻止（PR 可保持 advisory）
+#### P1-4: CI schema drift 检测不阻塞 — **FIXED**
+- **文件**: `.github/workflows/ci.yml:407`
+- **修复**: `continue-on-error` 改为 `${{ github.event_name == 'pull_request' }}`，PR advisory，main push 阻塞
 
 ---
 
@@ -144,11 +142,10 @@
 - **影响**: 理论上可通过大 payload 消耗内存
 - **建议**: 对 tool_result 添加同样的长度校验
 
-#### P2-4: WebSocket query parameter JWT 认证
+#### P2-4: WebSocket query parameter JWT 认证 — **ALREADY SAFE**
 - **文件**: `backend/gateway/internal/middleware/ws_auth.go:62-78`
-- **现象**: 支持 URL 查询参数传递 JWT
-- **风险**: JWT 可能出现在日志/代理日志中
-- **建议**: 本地开发可用，生产环境应禁用或加强安全警告
+- **现状**: `cfg.AllowWsQueryToken` 默认仅开发环境启用 (`config.go:627: cfg.AllowWsQueryToken = cfg.IsDevelopment()`)
+- **验证**: 生产环境此功能自动禁用，无安全风险
 
 ---
 
@@ -177,8 +174,8 @@
 | test_spine_dedup_regression.py | 20 | 0 | 0 | 20 |
 | test_event_bus_regression.py | 3 | 0 | 0 | 3 |
 | test_memory_service_regression.py | 3 | 0 | 0 | 3 |
-| test_cognitive_service_regression.py | 0 | 0 | **8** | 8 |
-| **合计** | **31** | 0 | **8** | **39** |
+| test_cognitive_service_regression.py | **8** | 0 | 0 | 8 |
+| **合计** | **39** | 0 | 0 | **39** |
 
 ### Python 集成测试
 | 文件 | 通过 | 失败 |
@@ -212,8 +209,8 @@
 | Python Lint (Ruff) | 通过 | |
 | Python Type Check (MyPy) | 通过 | |
 | Flutter Analyze | 通过 | 1 个 unused import 警告 |
-| Tech Debt Budget | **失败** | pydantic_min_items 超限 |
-| Duplicate Code Detection | Advisory | `continue-on-error: true`，发现 1 处重复 |
+| Tech Debt Budget | **通过** | pydantic_min_items 预算已校准 (3=3) |
+| Duplicate Code Detection | **阻塞** | continue-on-error 已移除, 无重复块 |
 | Go Coverage ≥ 10% | 通过 | 13.3% |
 | Python Coverage ≥ 35% | 通过 | |
 | Flutter Coverage ≥ 15% | 通过 | |
@@ -236,29 +233,33 @@
 | B-002 spine 去重 | 68 处重复 | 1 处残留 | 大幅改善 |
 | B-003 event_bus 重复类 | FIXED | VERIFIED | 确认修复有效 |
 | B-004 memory_service 竞态 | FIXED | VERIFIED | 修复有效，测试质量待提升 |
-| B-005 cognitive_service 集合 | FIXED | 代码修复/测试损坏 | 修复有效，回归测试全部 ERROR |
+| B-005 cognitive_service 集合 | FIXED | VERIFIED | 8/8 回归测试通过 |
 | 治理模块死代码 | 5 个声称无调用者 | 全部活跃 | 上次审查结论有误 |
 | Go 覆盖率 | 10.7% | 13.3% | 提升 2.6% |
-| CI 重复代码检测 | 不阻塞 | 仍不阻塞 | 未改善 |
+| CI 重复代码检测 | 不阻塞 | 阻塞 | 已修复 |
+| CI 技术债务预算 | 失败 | 通过 | 预算校准 |
 | CI 覆盖率阈值 | 不一致 | 一致 | 已修复 |
 
 ---
 
 ## 七、建议优先级
 
-### 本周修复（P0）
-1. 修复 cognitive_service 回归测试（asyncio.Lock 使用问题）
-2. 决定 CI 重复代码检测是否应阻塞（如阻塞，需先修复 P1-1）
+### 本周修复（P0） — **全部完成**
+1. ✅ 修复 cognitive_service 回归测试
+2. ✅ CI 重复代码检测改为阻塞门控
 
-### 本迭代修复（P1）
-3. 提取 spine_orchestrator 重复的 ReturnCaseFile 逻辑
-4. 修复 context_receipt_bar.dart 4 处硬编码中文
-5. 更新技术债务预算或修复 pydantic_min_items 用法
+### 本迭代修复（P1） — **全部完成**
+3. ✅ 提取 spine_orchestrator 重复的 ReturnCaseFile 逻辑
+4. ✅ 修复 context_receipt_bar.dart 4 处硬编码中文
+5. ✅ 更新技术债务预算
+6. ✅ CI schema drift 对 main 阻塞
+
+### 当前进行中
+- **Flutter 277 widget 测试修复**: i18n 断言同步 + Provider 注入
 
 ### 下一迭代（P2）
-6. 添加 B-004 PostgreSQL 真正并发测试
-7. 提升 Go 覆盖率到 20%（重点 agent/service 包）
-8. 添加 tool_result 消息长度校验
+- 添加 B-004 PostgreSQL 真正并发测试
+- 提升 Go 覆盖率到 20%（重点 agent/service 包）
 
 ---
 

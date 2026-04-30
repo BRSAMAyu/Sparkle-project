@@ -404,7 +404,7 @@ jobs:
 
       - name: Compare Schema Dump
         id: schema_dump_compare
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         env:
           PGPASSWORD: password
         run: |
