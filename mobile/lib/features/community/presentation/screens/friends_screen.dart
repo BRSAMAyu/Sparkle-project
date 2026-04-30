@@ -64,7 +64,6 @@ class FriendRequestsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
@@ -89,7 +88,6 @@ class FriendsDiscoverScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(

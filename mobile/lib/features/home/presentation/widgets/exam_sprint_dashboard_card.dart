@@ -235,7 +235,6 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
   @override
   Widget build(BuildContext context) {
     final data = widget.data;
-    final isChinese = widget.isChinese;
     final tipText = data.sleepGuardHint;
 
     return AnimatedBuilder(

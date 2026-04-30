@@ -622,14 +622,6 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     });
   }
 
-  void _pushFromRoot(String location, {required BuildContext fallbackContext}) {
-    final navigationContext = navigatorKey.currentContext ?? fallbackContext;
-    if (!navigationContext.mounted) {
-      return;
-    }
-    unawaited(navigationContext.push(location));
-  }
-
   static String _statusLabel(AppLocalizations l, String status) {
     switch (status) {
       case 'mastered':
