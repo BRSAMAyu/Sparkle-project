@@ -14,7 +14,7 @@
 | **代码正确性** | 8/10 | 5 个历史 bug 全部修复，1 处残留重复 |
 | **测试质量** | 7/10 | 回归测试 29/37 通过，8 个因 fixture 错误全部 ERROR |
 | **Go Gateway** | 8/10 | 17/17 RPC 方法完整，覆盖率 13.3%，中间件安全 |
-| **Flutter** | 8/10 | 编译通过，i18n 覆盖率高，4 处遗漏中文硬编码 |
+| **Flutter** | 6/10 | 编译通过，i18n 覆盖率高，但 277/1168 widget 测试失败 |
 | **CI 门控** | 6/10 | 重复代码检测不阻塞，技术债务预算超限 |
 | **架构完整性** | 9/10 | 所有治理模块活跃，信号流完整，无死代码 |
 
@@ -69,12 +69,9 @@
 - **原因**: fixture 使用 `async with _VECTOR_RUNTIME_STATE_LOCK:` 但 `_VECTOR_RUNTIME_STATE_LOCK` 是 `asyncio.Lock()`，fixture 的异步上下文管理器协议未被正确处理
 - **修复**: 修复 fixture 的 async lock 使用方式，8/8 tests now pass
 
-#### P0-2: 重复代码检测 CI 不阻塞 — **BY DESIGN**
-- **文件**: `.github/workflows/ci.yml:83`
-- **现象**: `continue-on-error: true` 导致重复代码检测结果被忽略
-- **当前状态**: `check_duplicate_code_blocks.py` 发现 1 处重复，但 CI 仍通过
-- **影响**: 新的重复代码可以静默进入 main 分支
-- **修复**: 改为 `continue-on-error: false`，或在 CI 注释中说明为何保留 advisory 模式
+#### P0-2: 重复代码检测 CI 不阻塞 — **FIXED**
+- **修复**: 移除 continue-on-error, 重复代码检测现为阻塞门控
+- **验证**: check_duplicate_code_blocks.py 通过, spine_orchestrator 无重复块
 
 ---
 
@@ -196,8 +193,14 @@
 - **分布**: handler 35%, middleware 34%, service 21.7%, agent/db/worker 0%
 
 ### Flutter 测试
+- **结果**: 882 passed, 9 skipped, **277 failed**（76% 通过率）
 - 编译通过，`flutter analyze` 仅有 1 个 unused import 警告
 - F-03 i18n 双语转换 50+ 文件，模式一致正确
+- **277 个失败分析**: 绝大多数在 widget 测试中，失败模式为：
+  - Provider/L10n 未正确注入导致 `NullPointerException`
+  - i18n 双语转换后部分 widget 测试断言的中文文本已变更
+  - `modeling_chat_screen_test.dart` 有 4+ 异常（Aurora 消息去重测试）
+- Service 层测试（如 `community_websocket_service_test.dart`）13/13 全部通过
 
 ---
 

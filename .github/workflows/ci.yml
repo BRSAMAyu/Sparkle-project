@@ -80,7 +80,6 @@ jobs:
 
       - name: Detect Duplicate Code Blocks
         run: python3 scripts/check_duplicate_code_blocks.py backend/app/signals/spine_orchestrator.py
-        continue-on-error: true
 
   # ==================== JOB 1B: RULE GUARDS ====================
   all-rule-guards:
