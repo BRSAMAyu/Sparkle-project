@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/calendar_preview_provider.dart';
@@ -61,6 +62,7 @@ class TaskPreviewPanel extends ConsumerWidget {
     DateTime selectedDate,
     AsyncValue<List<TaskModel>> tasksAsync,
   ) {
+    final zh = I18nService.instance.isChinese;
     final today = DateTime.now();
     final isToday = _DateUtils.isSameDay(selectedDate, today);
 
@@ -75,7 +77,11 @@ class TaskPreviewPanel extends ConsumerWidget {
               Row(
                 children: [
                   Text(
-                    isToday ? '今天' : DateFormat('M月d日', 'zh_CN').format(selectedDate),
+                    isToday
+                        ? (zh ? '今天' : 'Today')
+                        : (zh
+                            ? DateFormat('M月d日', 'zh_CN').format(selectedDate)
+                            : DateFormat('MMM d', 'en_US').format(selectedDate)),
                     style: context.sparkleTypography.titleLarge.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                       color: DS.textPrimary,
@@ -94,7 +100,7 @@ class TaskPreviewPanel extends ConsumerWidget {
               ),
               const SizedBox(height: DS.spacing4),
               Text(
-                '$taskCount 个任务',
+                zh ? '$taskCount 个任务' : '$taskCount task${taskCount == 1 ? '' : 's'}',
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -165,7 +171,9 @@ class TaskPreviewPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) => Container(
+  Widget _buildEmptyState(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
       child: Column(
         children: [
@@ -176,14 +184,14 @@ class TaskPreviewPanel extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '今天没有任务',
+            zh ? '今天没有任务' : 'No tasks today',
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            '享受你的自由时间',
+            zh ? '享受你的自由时间' : 'Enjoy your free time',
             style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textTertiary,
             ),
@@ -191,6 +199,7 @@ class TaskPreviewPanel extends ConsumerWidget {
         ],
       ),
     );
+  }
 
   Widget _buildLoadingState() => const SizedBox(
       height: 120,
@@ -199,18 +208,23 @@ class TaskPreviewPanel extends ConsumerWidget {
       ),
     );
 
-  Widget _buildErrorState(BuildContext context) => Container(
+  Widget _buildErrorState(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
       child: Text(
-        '加载任务失败，请稍后重试',
+        zh ? '加载任务失败，请稍后重试' : 'Failed to load tasks, please try again later',
         style: context.sparkleTypography.bodyMedium.copyWith(
           color: DS.error,
         ),
         textAlign: TextAlign.center,
       ),
     );
+  }
 
-  Widget _buildViewAllLink(BuildContext context, DateTime date, int totalCount) => InkWell(
+  Widget _buildViewAllLink(BuildContext context, DateTime date, int totalCount) {
+    final zh = I18nService.instance.isChinese;
+    return InkWell(
       onTap: () => context.push('/calendar?date=${date.toIso8601String()}'),
       borderRadius: DS.borderRadius8,
       child: Container(
@@ -222,7 +236,7 @@ class TaskPreviewPanel extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '查看全部 $totalCount 个任务',
+              zh ? '查看全部 $totalCount 个任务' : 'View all $totalCount task${totalCount == 1 ? '' : 's'}',
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.brandPrimaryConst,
                 fontWeight: DS.fontWeightMedium,
@@ -238,9 +252,13 @@ class TaskPreviewPanel extends ConsumerWidget {
         ),
       ),
     );
+  }
 
   String _getWeekdayName(DateTime date) {
-    const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    final zh = I18nService.instance.isChinese;
+    final weekdays = zh
+        ? ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+        : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return weekdays[date.weekday - 1];
   }
 }
@@ -252,24 +270,27 @@ class _StreakStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final (label, icon, color, subtitle) = switch (record.status) {
       StreakDayStatus.active => (
-          '已打卡',
+          zh ? '已打卡' : 'Checked',
           Icons.local_fire_department_rounded,
           DS.semanticSuccess,
-          record.sourceEvent == null ? '这一天有实际完成记录。' : '来源：${record.sourceEvent}',
+          record.sourceEvent == null
+              ? (zh ? '这一天有实际完成记录。' : 'Completed on this day.')
+              : (zh ? '来源：${record.sourceEvent}' : 'From: ${record.sourceEvent}'),
         ),
       StreakDayStatus.frozen => (
-          '保护中',
+          zh ? '保护中' : 'Protected',
           Icons.ac_unit_rounded,
           DS.semanticWarning,
-          '这一天使用了连击保护，没有直接断签。',
+          zh ? '这一天使用了连击保护，没有直接断签。' : 'Streak protection used, no streak break.',
         ),
       StreakDayStatus.missed => (
-          '未打卡',
+          zh ? '未打卡' : 'Missed',
           Icons.event_busy_rounded,
           DS.textSecondary,
-          '这一天没有形成有效打卡记录。',
+          zh ? '这一天没有形成有效打卡记录。' : 'No valid check-in recorded on this day.',
         ),
     };
 
