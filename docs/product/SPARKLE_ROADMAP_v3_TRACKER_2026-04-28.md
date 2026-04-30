@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (F-03 i18n 70+ files, ~1300 strings bilingual; added: insights screens, growth narrative model, focus widgets, visual_elements, auth screens, legal docs, notification center, home providers/widgets, translation widgets, calendar stats, user repo/persona, mirofish milestones, community main, exam sprint)
+> **最后更新**: 2026-04-30 (F-03 i18n COMPLETE: 85+ files, ~1500 strings; R7 P1-2 telemetry fix; achievement_badge.dart l10n fix; dart analyze 0 errors)
 
 ### P0 Critical — 当前会话修复
 
@@ -533,7 +533,7 @@
 | G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
 | F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已验证零中文残留 (所有字符串已用 context.l10n.* 模式) |
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已验证零中文UI残留 (仅注释含中文) |
-| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 70+ files | 🟡 进行中 (~1300 strings i18n'd across 70+ files; latest batch: insights overview/forecast, growth narrative model, focus repository/mindfulness/reflection, visual_elements repo/recommendation/card/preview, auth register/reset_password/legal/auth_provider, notification_center repo/model/analytics, translation inline/popover, home providers (notification/home_growth/spine_status/exam_sprint), home widgets (notification_list/compact_status/bottleneck_alert/seed_library_card), community main_screen, calendar stats, user repo/persona, mirofish milestones; search keyword & parse-marker files intentionally skipped) |
+| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 85+ files | ✅ 完成 (~1500 strings i18n'd across 85+ files; dart analyze 0 errors; search keyword & parse-marker files intentionally skipped) |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
 | G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | ✅ 已修 (4c6301aa) |
 | G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | ✅ 已修 (b45925d2) |
