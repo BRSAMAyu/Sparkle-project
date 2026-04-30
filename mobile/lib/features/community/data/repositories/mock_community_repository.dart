@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -74,7 +75,9 @@ class MockCommunityRepository implements CommunityRepository {
           myStreakDays: 7,
           partnerStreakDays: 5,
           lastCheckinAt: DateTime.now().subtract(const Duration(hours: 2)),
-          goalPreview: '每天同步一个主任务和一个轻复盘动作',
+          goalPreview: I18nService.instance.isChinese
+              ? '每天同步一个主任务和一个轻复盘动作'
+              : 'Sync one main task and one light review action daily',
         ),
       ),
       FriendshipInfo(
@@ -92,7 +95,9 @@ class MockCommunityRepository implements CommunityRepository {
           partnerCheckedInToday: false,
           myStreakDays: 0,
           partnerStreakDays: 0,
-          goalPreview: '一起把周末节律和复盘稳定下来',
+          goalPreview: I18nService.instance.isChinese
+              ? '一起把周末节律和复盘稳定下来'
+              : 'Stabilize weekend rhythm and reviews together',
         ),
       ),
       FriendshipInfo(
@@ -114,10 +119,13 @@ class MockCommunityRepository implements CommunityRepository {
     ];
 
     // Restore Groups
+    final zh = I18nService.instance.isChinese;
     final sprintGroup = GroupInfo(
       id: 'group_sprint_001',
-      name: '晚间语言复盘屋',
-      description: '下班下课后一起做精读、跟说和短复盘，适合想慢慢找回表达节奏的人。',
+      name: zh ? '晚间语言复盘屋' : 'Evening Language Review House',
+      description: zh
+          ? '下班下课后一起做精读、跟说和短复盘，适合想慢慢找回表达节奏的人。'
+          : 'Do intensive reading, shadowing, and short reviews together after work/class. Suitable for those who want to gradually regain their expression rhythm.',
       type: GroupType.sprint,
       focusTags: ['Language', 'English', 'Speaking'],
       memberCount: 45,
@@ -134,8 +142,10 @@ class MockCommunityRepository implements CommunityRepository {
 
     final studyGroup = GroupInfo(
       id: 'group_study_001',
-      name: '理工理解力自习组',
-      description: '一起复盘课堂概念、错题和公式，不求卷时长，先把理解说清楚。',
+      name: zh ? '理工理解力自习组' : 'STEM Comprehension Study Group',
+      description: zh
+          ? '一起复盘课堂概念、错题和公式，不求卷时长，先把理解说清楚。'
+          : 'Review classroom concepts, errors, and formulas together. Not about grinding hours, but getting understanding clear.',
       type: GroupType.squad,
       focusTags: ['Academic', 'Math', 'Science'],
       memberCount: 28,
@@ -151,8 +161,10 @@ class MockCommunityRepository implements CommunityRepository {
     );
     final aiGroup = GroupInfo(
       id: 'group_ai_001',
-      name: '作品集慢慢长出来',
-      description: '给跨领域学习者一个稳定更新作品集、表达方向和互相看初稿的空间。',
+      name: zh ? '作品集慢慢长出来' : 'Portfolio Growth Space',
+      description: zh
+          ? '给跨领域学习者一个稳定更新作品集、表达方向和互相看初稿的空间。'
+          : 'A space for cross-disciplinary learners to steadily update portfolios, refine direction, and review each other\'s drafts.',
       type: GroupType.squad,
       focusTags: ['Career', 'Portfolio', 'Creative'],
       memberCount: 33,
@@ -167,8 +179,10 @@ class MockCommunityRepository implements CommunityRepository {
     );
     final mathGroup = GroupInfo(
       id: 'group_math_001',
-      name: '周末恢复实验室',
-      description: '一起讨论睡眠、运动和如何避免周末散掉，帮自己把节律重新接上。',
+      name: zh ? '周末恢复实验室' : 'Weekend Recovery Lab',
+      description: zh
+          ? '一起讨论睡眠、运动和如何避免周末散掉，帮自己把节律重新接上。'
+          : 'Discuss sleep, exercise, and how to avoid weekend dispersion. Help yourself reconnect your rhythm.',
       type: GroupType.sprint,
       focusTags: ['Wellness', 'Recovery', 'Habit'],
       memberCount: 19,
@@ -181,7 +195,7 @@ class MockCommunityRepository implements CommunityRepository {
       createdAt: DateTime.now().subtract(const Duration(days: 6)),
       updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
       deadline: DateTime.now().add(const Duration(days: 24)),
-      sprintGoal: '一起完成周末节律重置',
+      sprintGoal: zh ? '一起完成周末节律重置' : 'Complete weekend rhythm reset together',
     );
     _mockGroups = [sprintGroup, studyGroup, aiGroup, mathGroup];
 
@@ -192,7 +206,9 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: alice,
-          content: '今晚先从 10 分钟轻输出开始，谁也不用一上来就满电。',
+          content: zh
+              ? '今晚先从 10 分钟轻输出开始，谁也不用一上来就满电。'
+              : 'Start with 10 minutes of light output tonight. No one needs to be fully charged right away.',
           createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
           updatedAt: DateTime.now(),
           readBy: [alice.id, charlie.id, diana.id, bob.id, eva.id],
@@ -201,13 +217,13 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.planShare,
           sender: me,
-          content: '把我的冲刺计划分享给大家',
+          content: zh ? '把我的冲刺计划分享给大家' : 'Sharing my sprint plan with everyone',
           createdAt: DateTime.now().subtract(const Duration(minutes: 28)),
           updatedAt: DateTime.now(),
           contentData: {
             'resource_type': 'plan',
-            'resource_title': '晚间语言复盘计划',
-            'resource_summary': '精读 + 跟说 + 5 分钟短复盘',
+            'resource_title': zh ? '晚间语言复盘计划' : 'Evening Language Review Plan',
+            'resource_summary': zh ? '精读 + 跟说 + 5 分钟短复盘' : 'Intensive reading + Shadowing + 5-min short review',
             'resource_meta': {
               'progress': 0.42,
               'target_date': DateTime.now()
@@ -215,7 +231,7 @@ class MockCommunityRepository implements CommunityRepository {
                   .toIso8601String(),
               'subject': 'Language',
             },
-            'comment': '需要的话一起进度对齐',
+            'comment': zh ? '需要的话一起进度对齐' : 'Align progress together if needed',
           },
           readBy: [alice.id, charlie.id],
         ),
@@ -223,7 +239,9 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: charlie,
-          content: '今天终于开口录完一版英文自我介绍，虽然还磕巴，但没有逃掉。',
+          content: zh
+              ? '今天终于开口录完一版英文自我介绍，虽然还磕巴，但没有逃掉。'
+              : 'Finally recorded an English self-introduction today. Still stuttering a bit, but I didn\'t bail.',
           createdAt: DateTime.now().subtract(const Duration(minutes: 25)),
           updatedAt: DateTime.now(),
           readBy: [alice.id, diana.id, bob.id],
@@ -232,7 +250,9 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: me,
-          content: '我今晚也先从低门槛版本开始，感觉这样更能坚持。',
+          content: zh
+              ? '我今晚也先从低门槛版本开始，感觉这样更能坚持。'
+              : 'I\'ll also start with the low-barrier version tonight. Feels more sustainable this way.',
           createdAt: DateTime.now().subtract(const Duration(minutes: 20)),
           updatedAt: DateTime.now(),
           readBy: [
@@ -249,7 +269,7 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.checkin,
           sender: diana,
-          content: '完成今日语言打卡',
+          content: zh ? '完成今日语言打卡' : 'Completed today\'s language check-in',
           createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
           updatedAt: DateTime.now(),
           contentData: {'flame_power': 120, 'today_duration': 60, 'streak': 7},
@@ -259,7 +279,9 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: alice,
-          content: '厉害，连续把节奏接住最不容易。',
+          content: zh
+              ? '厉害，连续把节奏接住最不容易。'
+              : 'Impressive. Keeping the rhythm going consistently is the hardest part.',
           createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
           updatedAt: DateTime.now(),
           readBy: [diana.id],
@@ -270,7 +292,9 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: charlie,
-          content: '有人愿意一起对一题统计学错题吗？我老是把“样本量不够”和“样本偏差”混在一起。',
+          content: zh
+              ? '有人愿意一起对一题统计学错题吗？我老是把”样本量不够”和”样本偏差”混在一起。'
+              : 'Anyone want to work through a statistics error together? I keep mixing up “insufficient sample size” and “sampling bias”.',
           createdAt: DateTime.now().subtract(const Duration(hours: 2)),
           updatedAt: DateTime.now(),
           readBy: [alice.id, me.id],
@@ -279,16 +303,20 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.capsuleShare,
           sender: alice,
-          content: '分享一个好奇心胶囊',
+          content: zh ? '分享一个好奇心胶囊' : 'Sharing a curiosity capsule',
           createdAt:
               DateTime.now().subtract(const Duration(hours: 1, minutes: 40)),
           updatedAt: DateTime.now(),
           contentData: {
             'resource_type': 'curiosity_capsule',
-            'resource_title': '为什么“回忆”比反复重读更能记住内容',
-            'resource_summary': '主动检索比重复看起来更费力，但正因为费力才更能留下记忆...',
-            'resource_meta': {'related_subject': '学习策略'},
-            'comment': '我觉得这条很适合理工错题回看时用',
+            'resource_title': zh
+                ? '为什么”回忆”比反复重读更能记住内容'
+                : 'Why “retrieval” remembers content better than repeated rereading',
+            'resource_summary': zh
+                ? '主动检索比重复看起来更费力，但正因为费力才更能留下记忆...'
+                : 'Active retrieval feels more effortful than repetition, but precisely because it\'s effortful, it sticks better...',
+            'resource_meta': {'related_subject': zh ? '学习策略' : 'Learning Strategies'},
+            'comment': zh ? '我觉得这条很适合理工错题回看时用' : 'I think this is great for reviewing STEM errors',
           },
           readBy: [charlie.id],
         ),
@@ -296,7 +324,9 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: me,
-          content: '我最近的做法是先问“这个结论为什么不能代表总体”，这样就不容易只盯着数量了。',
+          content: zh
+              ? '我最近的做法是先问”这个结论为什么不能代表总体”，这样就不容易只盯着数量了。'
+              : 'My recent approach is to first ask “why can\'t this conclusion represent the population”—that way I don\'t fixate on sample size alone.',
           createdAt:
               DateTime.now().subtract(const Duration(hours: 1, minutes: 50)),
           updatedAt: DateTime.now(),
@@ -306,7 +336,9 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(),
           messageType: MessageType.text,
           sender: alice,
-          content: '我刚好有一张“抽样偏差 vs 样本量”的对照图，整理完发群里。',
+          content: zh
+              ? '我刚好有一张”抽样偏差 vs 样本量”的对照图，整理完发群里。'
+              : 'I happen to have a comparison chart of “sampling bias vs sample size”. Will share once I\'ve organized it.',
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
           updatedAt: DateTime.now(),
           readBy: [charlie.id, me.id, diana.id],
@@ -326,7 +358,9 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(minutes: 8)),
           createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
           updatedAt: DateTime.now(),
-          content: '今晚只求先开口，不求一上来就完整。',
+          content: zh
+              ? '今晚只求先开口，不求一上来就完整。'
+              : 'Tonight just aim to start speaking. Don\'t expect to be complete right away.',
         ),
         PrivateMessageInfo(
           id: 'pm_alice_2',
@@ -337,7 +371,9 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(minutes: 5)),
           createdAt: DateTime.now().subtract(const Duration(minutes: 8)),
           updatedAt: DateTime.now(),
-          content: '收到，我先做 10 分钟跟说，再看看要不要补一小段复盘。',
+          content: zh
+              ? '收到，我先做 10 分钟跟说，再看看要不要补一小段复盘。'
+              : 'Got it. I\'ll do 10 minutes of shadowing first, then see if I need to add a short review.',
         ),
         PrivateMessageInfo(
           id: 'pm_alice_3',
@@ -348,7 +384,9 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(minutes: 3)),
           createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
           updatedAt: DateTime.now(),
-          content: '需要的话我可以帮你听第一版录音，不用等你准备得很完美。',
+          content: zh
+              ? '需要的话我可以帮你听第一版录音，不用等你准备得很完美。'
+              : 'If needed, I can listen to your first recording. No need to wait until it\'s perfect.',
         ),
       ],
       charlie.id: [
@@ -360,7 +398,9 @@ class MockCommunityRepository implements CommunityRepository {
           isRead: false,
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
           updatedAt: DateTime.now(),
-          content: '明天下午一起去图书馆吗？我想把作品集首页的第一屏重写一下。',
+          content: zh
+              ? '明天下午一起去图书馆吗？我想把作品集首页的第一屏重写一下。'
+              : 'Want to go to the library together tomorrow afternoon? I want to rewrite the first screen of my portfolio homepage.',
         ),
         PrivateMessageInfo(
           id: 'pm_charlie_2',
@@ -370,13 +410,15 @@ class MockCommunityRepository implements CommunityRepository {
           isRead: false,
           createdAt: DateTime.now().subtract(const Duration(minutes: 50)),
           updatedAt: DateTime.now(),
-          content: '分享一个认知棱镜',
+          content: zh ? '分享一个认知棱镜' : 'Sharing a cognitive prism',
           contentData: {
             'resource_type': 'cognitive_prism_pattern',
-            'resource_title': '计划谬误',
-            'resource_summary': '我经常低估任务复杂度，导致计划频繁延期...',
+            'resource_title': zh ? '计划谬误' : 'Planning Fallacy',
+            'resource_summary': zh
+                ? '我经常低估任务复杂度，导致计划频繁延期...'
+                : 'I often underestimate task complexity, leading to frequent plan delays...',
             'resource_meta': {'pattern_type': 'cognitive', 'frequency': 5},
-            'comment': '想听听你的建议',
+            'comment': zh ? '想听听你的建议' : 'Would love your advice',
           },
         ),
       ],
@@ -390,7 +432,9 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(days: 1)),
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
           updatedAt: DateTime.now(),
-          content: '上次你提到的作品集结构，我帮你顺手整理成了一个提纲。',
+          content: zh
+              ? '上次你提到的作品集结构，我帮你顺手整理成了一个提纲。'
+              : 'The portfolio structure you mentioned last time—I\'ve organized it into an outline for you.',
         ),
         PrivateMessageInfo(
           id: 'pm_diana_2',
@@ -401,13 +445,15 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now().subtract(const Duration(hours: 4)),
           createdAt: DateTime.now().subtract(const Duration(hours: 6)),
           updatedAt: DateTime.now(),
-          content: '分享一个认知碎片',
+          content: zh ? '分享一个认知碎片' : 'Sharing a cognitive fragment',
           contentData: {
             'resource_type': 'cognitive_fragment',
-            'resource_title': '拖延的触发点',
-            'resource_summary': '我发现只要任务没有明确的下一步，就会开始刷手机...',
+            'resource_title': zh ? '拖延的触发点' : 'Procrastination Triggers',
+            'resource_summary': zh
+                ? '我发现只要任务没有明确的下一步，就会开始刷手机...'
+                : 'I found that whenever a task lacks clear next steps, I start scrolling my phone...',
             'resource_meta': {'source_type': 'capsule', 'severity': 2},
-            'comment': '帮我看看有没有更好的拆解方式',
+            'comment': zh ? '帮我看看有没有更好的拆解方式' : 'Help me see if there\'s a better way to break it down',
           },
         ),
       ],
@@ -420,8 +466,12 @@ class MockCommunityRepository implements CommunityRepository {
         itemId: 'user_alice',
         stage: RecommendationFeedbackStage.immediate,
         triggerAction: 'friend_match_view',
-        title: '这位责任伙伴推荐对你来说够契合吗？',
-        subtitle: '给相似度、互补性和舒适度打个分，系统会据此微调你的匹配权重。',
+        title: zh
+            ? '这位责任伙伴推荐对你来说够契合吗？'
+            : 'Is this accountability partner recommendation a good fit for you?',
+        subtitle: zh
+            ? '给相似度、互补性和舒适度打个分，系统会据此微调你的匹配权重。'
+            : 'Rate similarity, complementarity, and comfort. The system will fine-tune your matching weights accordingly.',
         dueAt: DateTime.now().subtract(const Duration(hours: 2)),
         strategy: 'compatibility',
         target: 'accountability',
@@ -434,8 +484,12 @@ class MockCommunityRepository implements CommunityRepository {
         itemId: 'group_ai_001',
         stage: RecommendationFeedbackStage.immediate,
         triggerAction: 'reco_view',
-        title: '这个社群推荐真的对口吗？',
-        subtitle: '从兴趣匹配、活跃度和氛围三个角度告诉我们感受。',
+        title: zh
+            ? '这个社群推荐真的对口吗？'
+            : 'Is this community recommendation really on target?',
+        subtitle: zh
+            ? '从兴趣匹配、活跃度和氛围三个角度告诉我们感受。'
+            : 'Tell us your feelings from three angles: interest match, activity, and atmosphere.',
         dueAt: DateTime.now().subtract(const Duration(minutes: 90)),
         group: _toGroupListItem(aiGroup),
         reasonTags: const ['tag_overlap', 'trending'],
@@ -1001,8 +1055,9 @@ class MockCommunityRepository implements CommunityRepository {
     FriendMatchStrategy strategy = FriendMatchStrategy.compatibility,
     FriendRecommendationTarget target =
         FriendRecommendationTarget.accountability,
-  }) async =>
-      (strategy == FriendMatchStrategy.complementary
+  }) async {
+    final zh = I18nService.instance.isChinese;
+    return (strategy == FriendMatchStrategy.complementary
               ? [
                   FriendRecommendation(
                     user:
@@ -1044,14 +1099,22 @@ class MockCommunityRepository implements CommunityRepository {
                     user: _mockUsers
                         .firstWhere((user) => user.id == 'user_alice'),
                     matchScore: 0.94,
-                    matchReasons: const [
-                      '你们关注的学习主题高度重合',
-                      '学习节奏和专注偏好比较接近',
-                      '你们已经是好友，建立责任伙伴关系会更顺手',
-                    ],
+                    matchReasons: zh
+                        ? const [
+                            '你们关注的学习主题高度重合',
+                            '学习节奏和专注偏好比较接近',
+                            '你们已经是好友，建立责任伙伴关系会更顺手',
+                          ]
+                        : const [
+                            'Your learning topics highly overlap',
+                            'Similar learning rhythm and focus preferences',
+                            'Already friends—building an accountability partnership will be smoother',
+                          ],
                     strategy: strategy.name,
                     target: target.name,
-                    summary: '契合度很高，适合直接发展成核心责任伙伴。',
+                    summary: zh
+                        ? '契合度很高，适合直接发展成核心责任伙伴。'
+                        : 'Highly compatible—suitable for developing directly into a core accountability partner.',
                     relationshipStatus: 'accepted',
                     isExistingFriend: true,
                     canInviteAccountability: true,
@@ -1066,13 +1129,20 @@ class MockCommunityRepository implements CommunityRepository {
                     user: _mockUsers
                         .firstWhere((user) => user.id == 'user_charlie'),
                     matchScore: 0.86,
-                    matchReasons: const [
-                      '你们在相同社群里有共同经历',
-                      '你们处理学习任务的方式比较契合',
-                    ],
+                    matchReasons: zh
+                        ? const [
+                            '你们在相同社群里有共同经历',
+                            '你们处理学习任务的方式比较契合',
+                          ]
+                        : const [
+                            'Shared experiences in the same communities',
+                            'Your approaches to learning tasks align well',
+                          ],
                     strategy: strategy.name,
                     target: target.name,
-                    summary: '已有默契基础，适合深入协作。',
+                    summary: zh
+                        ? '已有默契基础，适合深入协作。'
+                        : 'Already have a rapport foundation—suitable for deeper collaboration.',
                     relationshipStatus: 'accepted',
                     isExistingFriend: true,
                     canInviteAccountability: true,
@@ -1086,6 +1156,7 @@ class MockCommunityRepository implements CommunityRepository {
                 ])
           .take(limit)
           .toList();
+  }
 
   @override
   Future<void> sendFriendRecommendationFeedback({
@@ -1109,6 +1180,7 @@ class MockCommunityRepository implements CommunityRepository {
     List<String>? selectedStrengths,
     String? freeText,
   }) async {
+    final zh = I18nService.instance.isChinese;
     if (promptId != null) {
       _mockFeedbackPrompts.removeWhere((prompt) => prompt.promptId == promptId);
     }
@@ -1128,7 +1200,7 @@ class MockCommunityRepository implements CommunityRepository {
       positiveSignals: selectedStrengths ?? const [],
       negativeSignals: [
         ...?selectedIssues,
-        if ((freeText ?? '').contains('不够相似')) 'too_dissimilar',
+        if ((freeText ?? '').contains(zh ? '不够相似' : 'not similar enough')) 'too_dissimilar',
       ],
       featureBoosts: {
         'subject_overlap':
@@ -1441,6 +1513,7 @@ class MockCommunityRepository implements CommunityRepository {
     List<String>? selectedStrengths,
     String? freeText,
   }) async {
+    final zh = I18nService.instance.isChinese;
     if (promptId != null) {
       _mockFeedbackPrompts.removeWhere((prompt) => prompt.promptId == promptId);
     }
@@ -1460,7 +1533,7 @@ class MockCommunityRepository implements CommunityRepository {
       positiveSignals: selectedStrengths ?? const [],
       negativeSignals: [
         ...?selectedIssues,
-        if ((freeText ?? '').contains('标签不准')) 'want_more_tag_match',
+        if ((freeText ?? '').contains(zh ? '标签不准' : 'inaccurate tags')) 'want_more_tag_match',
       ],
       featureBoosts: {
         'tag_score':

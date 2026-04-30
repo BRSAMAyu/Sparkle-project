@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -11,7 +12,6 @@ import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class ExamSprintSetupScreen extends ConsumerStatefulWidget {
   const ExamSprintSetupScreen({super.key});
@@ -22,14 +22,17 @@ class ExamSprintSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
-  static const List<String> _subjectSuggestions = <String>[
-    '计算机网络',
-    '操作系统',
-    '数据库',
-    '高数',
-    '线代',
-    '英语',
-  ];
+  static List<String> get _subjectSuggestions {
+    final zh = I18nService.instance.isChinese;
+    return <String>[
+      zh ? '计算机网络' : 'Computer Networks',
+      zh ? '操作系统' : 'Operating Systems',
+      zh ? '数据库' : 'Databases',
+      zh ? '高数' : 'Calculus',
+      zh ? '线代' : 'Linear Algebra',
+      zh ? '英语' : 'English',
+    ];
+  }
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _subjectController = TextEditingController();
@@ -699,25 +702,26 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
 
   List<String> _chapterSuggestionsFor(String subject) {
     final normalized = subject.toLowerCase();
-    if (normalized.contains('计算机网络') || normalized.contains('计网')) {
-      return const <String>['物理层', '数据链路层', '网络层', '传输层', '应用层'];
+    final zh = I18nService.instance.isChinese;
+    if (normalized.contains('计算机网络') || normalized.contains('计网') || normalized.contains('computer net')) {
+      return zh ? ['物理层', '数据链路层', '网络层', '传输层', '应用层'] : ['Physical Layer', 'Data Link', 'Network Layer', 'Transport', 'Application'];
     }
-    if (normalized.contains('操作系统')) {
-      return const <String>['进程线程', '同步互斥', '内存管理', '文件系统', '死锁'];
+    if (normalized.contains('操作系统') || normalized.contains('operating')) {
+      return zh ? ['进程线程', '同步互斥', '内存管理', '文件系统', '死锁'] : ['Processes & Threads', 'Sync & Mutex', 'Memory Mgmt', 'File System', 'Deadlock'];
     }
-    if (normalized.contains('数据库')) {
-      return const <String>['ER 模型', 'SQL', '范式', '事务', '索引'];
+    if (normalized.contains('数据库') || normalized.contains('database')) {
+      return zh ? ['ER 模型', 'SQL', '范式', '事务', '索引'] : ['ER Model', 'SQL', 'Normal Forms', 'Transactions', 'Indexes'];
     }
-    if (normalized.contains('高数')) {
-      return const <String>['极限连续', '导数微分', '积分', '级数', '微分方程'];
+    if (normalized.contains('高数') || normalized.contains('calculus')) {
+      return zh ? ['极限连续', '导数微分', '积分', '级数', '微分方程'] : ['Limits', 'Derivatives', 'Integrals', 'Series', 'Diff Equations'];
     }
-    if (normalized.contains('线代')) {
-      return const <String>['矩阵', '行列式', '向量组', '特征值', '二次型'];
+    if (normalized.contains('线代') || normalized.contains('linear')) {
+      return zh ? ['矩阵', '行列式', '向量组', '特征值', '二次型'] : ['Matrices', 'Determinants', 'Vectors', 'Eigenvalues', 'Quadratic Forms'];
     }
-    if (normalized.contains('英语')) {
-      return const <String>['词汇', '长难句', '阅读', '翻译', '写作'];
+    if (normalized.contains('英语') || normalized.contains('english')) {
+      return zh ? ['词汇', '长难句', '阅读', '翻译', '写作'] : ['Vocabulary', 'Long Sentences', 'Reading', 'Translation', 'Writing'];
     }
-    return const <String>['第一章', '第二章', '第三章', '第四章', '第五章'];
+    return zh ? ['第一章', '第二章', '第三章', '第四章', '第五章'] : ['Chapter 1', 'Chapter 2', 'Chapter 3', 'Chapter 4', 'Chapter 5'];
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
@@ -22,10 +23,7 @@ class OpenClawHubCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isTightCard = compact || dense;
-    final isChinese = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
+    final isChinese = I18nService.instance.isChinese;
     final connection = ref.watch(openClawConnectionProvider);
     final taskState = ref.watch(taskListProvider);
     final hasExecutionPermissionIssue = connection.hasExecutionPermissionIssue;

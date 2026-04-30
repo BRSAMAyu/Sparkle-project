@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 
@@ -192,7 +193,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         child: Text(
-                          '快速校准',
+                          I18nService.instance.isChinese ? '快速校准' : 'Quick Calibration',
                           style: DS.labelSmall.copyWith(
                             color: DS.brandPrimary,
                             fontSize: 11,
@@ -210,21 +211,23 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
   }
 
   String _formatCooldown(int seconds) {
-    if (seconds <= 0) return '即将恢复';
-    if (seconds < 60) return '$seconds秒后恢复';
+    final zh = I18nService.instance.isChinese;
+    if (seconds <= 0) return zh ? '即将恢复' : 'Resuming soon';
+    if (seconds < 60) return zh ? '$seconds秒后恢复' : 'Resuming in $seconds sec';
     final minutes = seconds ~/ 60;
-    if (minutes < 60) return '$minutes分钟后恢复';
+    if (minutes < 60) return zh ? '$minutes分钟后恢复' : 'Resuming in $minutes min';
     final hours = minutes ~/ 60;
     final remainMinutes = minutes % 60;
-    return '$hours小时$remainMinutes分钟后恢复';
+    return zh ? '$hours小时$remainMinutes分钟后恢复' : 'Resuming in $hours hr $remainMinutes min';
   }
 
   _AuroraBandConfig get _stateConfig {
+    final zh = I18nService.instance.isChinese;
     switch (widget.state) {
       case AuroraBandState.sensing:
         return _AuroraBandConfig(
           icon: Icons.wifi_tethering_rounded,
-          title: 'Aurora · 轻量感知中',
+          title: zh ? 'Aurora · 轻量感知中' : 'Aurora · Lightweight Sensing',
           iconColor: DS.textTertiary,
           iconBgColor: DS.surfaceSecondary,
           bgColor: DS.surfaceHigh,
@@ -233,7 +236,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.calibrated:
         return _AuroraBandConfig(
           icon: Icons.check_circle_outline,
-          title: 'Aurora · 已校准',
+          title: zh ? 'Aurora · 已校准' : 'Aurora · Calibrated',
           iconColor: DS.success,
           iconBgColor: DS.success.withValues(alpha: 0.1),
           bgColor: DS.success.withValues(alpha: 0.04),
@@ -242,7 +245,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.riskDetected:
         return _AuroraBandConfig(
           icon: Icons.shield_outlined,
-          title: 'Aurora · 发现策略风险',
+          title: zh ? 'Aurora · 发现策略风险' : 'Aurora · Strategy Risk Detected',
           iconColor: DS.warning,
           iconBgColor: DS.warning.withValues(alpha: 0.1),
           bgColor: DS.warning.withValues(alpha: 0.04),
@@ -251,7 +254,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.needsConfirmation:
         return _AuroraBandConfig(
           icon: Icons.help_outline,
-          title: 'Aurora · 需要确认一个判断',
+          title: zh ? 'Aurora · 需要确认一个判断' : 'Aurora · Confirmation Needed',
           iconColor: DS.brandPrimary,
           iconBgColor: DS.brandPrimary.withValues(alpha: 0.1),
           bgColor: DS.brandPrimary.withValues(alpha: 0.04),
@@ -260,7 +263,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.calibrationAvailable:
         return _AuroraBandConfig(
           icon: Icons.tune_rounded,
-          title: 'Aurora · 深度校准可用',
+          title: zh ? 'Aurora · 深度校准可用' : 'Aurora · Deep Calibration Available',
           iconColor: DS.info,
           iconBgColor: DS.info.withValues(alpha: 0.1),
           bgColor: DS.info.withValues(alpha: 0.04),
@@ -269,7 +272,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.coolingDown:
         return _AuroraBandConfig(
           icon: Icons.ac_unit_rounded,
-          title: 'Aurora · 冷却中',
+          title: zh ? 'Aurora · 冷却中' : 'Aurora · Cooling Down',
           iconColor: DS.textTertiary,
           iconBgColor: DS.surfaceSecondary,
           bgColor: DS.surfaceHigh,
@@ -278,7 +281,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.sourceAware:
         return _AuroraBandConfig(
           icon: Icons.menu_book_outlined,
-          title: 'Aurora · 已参考当前任务资料',
+          title: zh ? 'Aurora · 已参考当前任务资料' : 'Aurora · Referenced Current Task Materials',
           iconColor: DS.info,
           iconBgColor: DS.info.withValues(alpha: 0.1),
           bgColor: DS.info.withValues(alpha: 0.04),
@@ -287,7 +290,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.noSourcesUsed:
         return _AuroraBandConfig(
           icon: Icons.auto_awesome_outlined,
-          title: 'Aurora · 本轮未调用课件',
+          title: zh ? 'Aurora · 本轮未调用课件' : 'Aurora · No Materials Used This Round',
           iconColor: DS.textTertiary,
           iconBgColor: DS.surfaceSecondary,
           bgColor: DS.surfaceHigh,
@@ -296,7 +299,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.strategyActive:
         return _AuroraBandConfig(
           icon: Icons.trending_up_rounded,
-          title: 'Aurora · 策略已激活',
+          title: zh ? 'Aurora · 策略已激活' : 'Aurora · Strategy Active',
           iconColor: DS.success,
           iconBgColor: DS.success.withValues(alpha: 0.1),
           bgColor: DS.success.withValues(alpha: 0.04),
