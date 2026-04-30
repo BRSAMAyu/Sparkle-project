@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (F-03 i18n COMPLETE: 85+ files, ~1500 strings; R7 P1-2 telemetry fix; achievement_badge.dart l10n fix; dart analyze 0 errors)
+> **最后更新**: 2026-05-01 (Flutter test recovery: 902/1094 pass, 192 fail; R5 audit items P2-17/P2-3/P2-9/P2-10/F-01/F-02 all DONE; T3.4 preferences 36 tests green; tracker updated)
 
 ### P0 Critical — 当前会话修复
 
@@ -311,11 +311,11 @@
 | 2026-04-29 | 74a14d5a | Phase 2 | H-02 Aurora decisions feed PolicyEngine soft bias |
 | 2026-04-29 | 41dc30ee | Phase 2 | H-04 Context Receipt Bar corrective action chips |
 | 2026-04-29 | f77b9fe0 | Phase 2/3 | M-02 Spine StateRegister feeds dual-core routing |
-| 2026-04-29 | (pending) | Phase 3.5 | P2-9/10/11 audit cleanup — settings, kill switch tri-state, CalendarSignalBridge wiring |
-| 2026-04-29 | (pending) | Phase 3 | T3.4 gap closure — RoutingEngine reads AuroraUserPreferences→DualCoreRoutingInput |
-| 2026-04-29 | (pending) | Phase 3.5 | Ruff hygiene — spine_orchestrator.py 32→0 errors (10 dup methods removed) |
-| 2026-04-29 | (pending) | Phase 3.5 | Cooldown semantic tightening — l3_session_count_today < 3 gate + quota-exhausted test |
-| 2026-04-29 | (pending) | R3 O-01 | OfflineChatMessage wiring — Isar persistence, reconnect replay, ACK marking, cleanup |
+| 2026-04-29 | ✅ 已修 | Phase 3.5 | P2-9/10/11 audit cleanup — settings补全, kill switch三态, CalendarSignalBridge接入 |
+| 2026-04-29 | ✅ 已修 | Phase 3 | T3.4 gap closure — AuroraUserPreferencesService + RoutingEngine消费 + API endpoints + 36 tests pass |
+| 2026-04-29 | ✅ 已修 | Phase 3.5 | Ruff hygiene — spine_orchestrator.py ruff check clean (0 errors) |
+| 2026-04-29 | ✅ 已修 | Phase 3.5 | Cooldown semantic — l3_session_count_today < 3 gate + quota-exhausted test (test_t34) |
+| 2026-04-29 | ✅ 已修 | R3 O-01 | OfflineChatMessage wiring — Isar persistence, reconnect replay, ACK marking, cleanup |
 | 2026-04-29 | 9ed7c00d | Phase 5 | T5.1.2 — wire InterventionEpisode generation into Spine pipeline (19 tests) |
 | 2026-04-29 | 2a5d9086 | Phase 5 | T5.1.3 — episode data integrity validation (5 new tests, 24 total) |
 | 2026-04-29 | 58c5d290 | 全系统 | P1-5/P2-5/P2-9 — CI Go version, WS message validation, Flutter subscription leak |
