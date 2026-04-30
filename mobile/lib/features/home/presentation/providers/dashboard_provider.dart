@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 
@@ -122,10 +123,10 @@ class FlameData {
     required this.brightness,
     required this.todayFocusMinutes,
     this.tasksCompleted = 0,
-    this.nudgeMessage = '保持专注，继续前行',
-  });
+    String? nudgeMessage,
+  }) : nudgeMessage = nudgeMessage ?? (I18nService.instance.isChinese ? '保持专注，继续前行' : 'Stay focused, keep going');
   final int level;
-  final double brightness; // 🔧 修复：改为double以匹配后端返回的0.0-1.0范围值
+  final double brightness;
   final int todayFocusMinutes;
   final int tasksCompleted;
   final String nudgeMessage;
@@ -452,7 +453,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         tasksCompleted: _asInt(flameMap['tasks_completed']),
         nudgeMessage: _asString(
           flameMap['nudge_message'],
-          fallback: '保持专注，继续前行',
+          fallback: I18nService.instance.isChinese ? '保持专注，继续前行' : 'Stay focused, keep going',
         ),
       );
 
@@ -609,7 +610,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
                   .where((item) => item.trim().isNotEmpty)
                   .toList(),
               timeframeLabel:
-                  _asString(whatChangedMap['timeframe_label'], fallback: '最近'),
+                  _asString(whatChangedMap['timeframe_label'], fallback: I18nService.instance.isChinese ? '最近' : 'Recent'),
             );
 
       final nextMoveMap =
