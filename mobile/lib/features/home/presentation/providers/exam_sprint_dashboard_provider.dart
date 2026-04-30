@@ -31,7 +31,7 @@ class ExamSprintDashboardData {
   factory ExamSprintDashboardData.fromJson(Map<String, dynamic> json) =>
       ExamSprintDashboardData(
         planId: _asString(json['plan_id']),
-        planName: _asString(json['plan_name'], fallback: '考试冲刺'),
+        planName: _asString(json['plan_name'], fallback: I18nService.instance.isChinese ? '考试冲刺' : 'Exam Sprint'),
         subject: _asString(json['subject']),
         daysLeft: _asInt(json['days_left']),
         targetMode: _asNullableString(json['target_mode']),
