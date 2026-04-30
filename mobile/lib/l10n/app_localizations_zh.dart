@@ -27535,4 +27535,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String picTomorrowTime(String time) {
     return '明天 $time';
   }
+
+  @override
+  String lioRecommendedSeeds(int count) {
+    return '$count 个推荐场景';
+  }
+
+  @override
+  String get lioStartNewSim => '可立即开始一轮新模拟';
+
+  @override
+  String lioRecentAnalysis(int count) {
+    return '最近一次共分析 $count 个知识点';
+  }
+
+  @override
+  String get lioBuildConclusion => '沉淀一轮学习后的关键结论';
+
+  @override
+  String get lioNoSimYet => '暂未生成最近仿真';
+
+  @override
+  String lioRecentUpdate(String desc) {
+    return '最近更新 · $desc';
+  }
+
+  @override
+  String get lioNoTheaterYet => '暂未生成最近推演';
+
+  @override
+  String get lioNoReportYet => '暂未生成最近报告';
+
+  @override
+  String lioMastery(String percent) {
+    return '掌握度 $percent%';
+  }
 }

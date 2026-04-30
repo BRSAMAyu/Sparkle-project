@@ -11472,5 +11472,18 @@
   "picTodayTime": "Today {time}",
   "@picTodayTime": { "placeholders": { "time": { "type": "String" } } },
   "picTomorrowTime": "Tomorrow {time}",
-  "@picTomorrowTime": { "placeholders": { "time": { "type": "String" } } }
+  "@picTomorrowTime": { "placeholders": { "time": { "type": "String" } } },
+  "lioRecommendedSeeds": "{count} recommended scenarios",
+  "@lioRecommendedSeeds": { "placeholders": { "count": { "type": "int" } } },
+  "lioStartNewSim": "Start a new simulation now",
+  "lioRecentAnalysis": "Last analysis covered {count} knowledge points",
+  "@lioRecentAnalysis": { "placeholders": { "count": { "type": "int" } } },
+  "lioBuildConclusion": "Summarize key takeaways after a learning round",
+  "lioNoSimYet": "No recent simulation generated yet",
+  "lioRecentUpdate": "Recently updated · {desc}",
+  "@lioRecentUpdate": { "placeholders": { "desc": { "type": "String" } } },
+  "lioNoTheaterYet": "No recent prediction generated yet",
+  "lioNoReportYet": "No recent report generated yet",
+  "lioMastery": "Mastery {percent}%",
+  "@lioMastery": { "placeholders": { "percent": { "type": "String" } } }
 }

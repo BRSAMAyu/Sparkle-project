@@ -11472,5 +11472,18 @@
   "picTodayTime": "今天 {time}",
   "@picTodayTime": { "placeholders": { "time": { "type": "String" } } },
   "picTomorrowTime": "明天 {time}",
-  "@picTomorrowTime": { "placeholders": { "time": { "type": "String" } } }
+  "@picTomorrowTime": { "placeholders": { "time": { "type": "String" } } },
+  "lioRecommendedSeeds": "{count} 个推荐场景",
+  "@lioRecommendedSeeds": { "placeholders": { "count": { "type": "int" } } },
+  "lioStartNewSim": "可立即开始一轮新模拟",
+  "lioRecentAnalysis": "最近一次共分析 {count} 个知识点",
+  "@lioRecentAnalysis": { "placeholders": { "count": { "type": "int" } } },
+  "lioBuildConclusion": "沉淀一轮学习后的关键结论",
+  "lioNoSimYet": "暂未生成最近仿真",
+  "lioRecentUpdate": "最近更新 · {desc}",
+  "@lioRecentUpdate": { "placeholders": { "desc": { "type": "String" } } },
+  "lioNoTheaterYet": "暂未生成最近推演",
+  "lioNoReportYet": "暂未生成最近报告",
+  "lioMastery": "掌握度 {percent}%",
+  "@lioMastery": { "placeholders": { "percent": { "type": "String" } } }
 }

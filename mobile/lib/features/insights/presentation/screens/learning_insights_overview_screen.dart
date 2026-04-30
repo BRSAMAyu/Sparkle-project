@@ -111,14 +111,15 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
               _InsightModuleCard(
                 title: context.l10n.insSimLabel,
                 subtitle: _simulationTitle(
+                  context,
                   latestSimulation,
                   fallbackSeed: topSeed,
                 ),
                 status: latestSimulation != null
-                    ? _simulationStatus(latestSimulation)
+                    ? _simulationStatus(context, latestSimulation)
                     : simulationState.recommendedSeeds.isNotEmpty
-                        ? '${simulationState.recommendedSeeds.length} 个推荐场景'
-                        : '可立即开始一轮新模拟',
+                        ? context.l10n.lioRecommendedSeeds(simulationState.recommendedSeeds.length)
+                        : context.l10n.lioStartNewSim,
                 accent: DS.accent,
                 icon: Icons.groups_rounded,
                 highlighted: initialPanel == panelSimulation,
@@ -129,7 +130,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                         : '开始模拟',
                 onPressed: () => context.push(
                   latestSimulation != null
-                      ? _simulationLocation(latestSimulation)
+                      ? _simulationLocation(context, latestSimulation)
                       : topSeed != null
                           ? '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(topSeed.topic)}&scenario_key=${Uri.encodeComponent(topSeed.suggestedScenario)}'
                           : SimulationRoutes.simulation,
@@ -138,23 +139,23 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
               const SizedBox(height: DS.spacing12),
               _InsightModuleCard(
                 title: context.l10n.insTheaterLabel,
-                subtitle: _theaterTitle(latestTheater),
-                status: _theaterStatus(latestTheater),
+                subtitle: _theaterTitle(context, latestTheater),
+                status: _theaterStatus(context, latestTheater),
                 accent: DS.info,
                 icon: Icons.auto_graph_rounded,
                 highlighted: initialPanel == panelTheater,
                 buttonLabel: context.l10n.insOpenSim,
                 onPressed: () => context.push(
-                  _theaterLocation(latestTheater),
+                  _theaterLocation(context, latestTheater),
                 ),
               ),
               const SizedBox(height: DS.spacing12),
               _InsightModuleCard(
                 title: context.l10n.insReportLabel,
                 subtitle: latestReportPayload?.mastery.isNotEmpty ?? false
-                    ? '最近一次共分析 ${latestReportPayload!.mastery.length} 个知识点'
-                    : '沉淀一轮学习后的关键结论',
-                status: _reportStatus(latestReportPayload),
+                    ? context.l10n.lioRecentAnalysis(latestReportPayload!.mastery.length)
+                    : context.l10n.lioBuildConclusion,
+                status: _reportStatus(context, latestReportPayload),
                 accent: DS.success,
                 icon: Icons.article_outlined,
                 highlighted: initialPanel == panelReport,
@@ -242,7 +243,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     );
   }
 
-  String _theaterTitle(Map<String, dynamic>? latestTheater) {
+  String _theaterTitle(BuildContext context, Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
       return '把一个目标拆成多条学习路径';
     }
@@ -255,6 +256,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
   }
 
   String _simulationTitle(
+    BuildContext context,
     Map<String, dynamic>? latestSimulation, {
     required SimulationSeedModel? fallbackSeed,
   }) {
@@ -274,32 +276,32 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     return latestSimulation['title']?.toString() ?? context.l10n.insContinueLearnSim;
   }
 
-  String _simulationStatus(Map<String, dynamic>? latestSimulation) {
+  String _simulationStatus(BuildContext context, Map<String, dynamic>? latestSimulation) {
     if (latestSimulation == null) {
-      return '暂未生成最近仿真';
+      return context.l10n.lioNoSimYet;
     }
-    return '最近更新 · ${latestSimulation['description']?.toString() ?? context.l10n.insHasContinue}';
+    return context.l10n.lioRecentUpdate(latestSimulation['description']?.toString() ?? context.l10n.insHasContinue);
   }
 
-  String _theaterStatus(Map<String, dynamic>? latestTheater) {
+  String _theaterStatus(BuildContext context, Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
-      return '暂未生成最近推演';
+      return context.l10n.lioNoTheaterYet;
     }
-    return '最近更新 · ${latestTheater['description']?.toString() ?? context.l10n.insHasContinue}';
+    return context.l10n.lioRecentUpdate(latestTheater['description']?.toString() ?? context.l10n.insHasContinue);
   }
 
-  String _reportStatus(LearningReport? report) {
+  String _reportStatus(BuildContext context, LearningReport? report) {
     if (report == null || report.mastery.isEmpty) {
-      return '暂未生成最近报告';
+      return context.l10n.lioNoReportYet;
     }
     final avg = report.mastery
             .map((item) => item.masteryScore)
             .fold<double>(0, (sum, value) => sum + value) /
         report.mastery.length;
-    return '掌握度 ${avg.round()}%';
+    return context.l10n.lioMastery(avg.round().toString());
   }
 
-  String _simulationLocation(Map<String, dynamic>? latestSimulation) {
+  String _simulationLocation(BuildContext context, Map<String, dynamic>? latestSimulation) {
     if (latestSimulation == null) {
       return SimulationRoutes.simulation;
     }
@@ -313,7 +315,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     return SimulationRoutes.simulation;
   }
 
-  String _theaterLocation(Map<String, dynamic>? latestTheater) {
+  String _theaterLocation(BuildContext context, Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
       return TheaterRoutes.theater;
     }

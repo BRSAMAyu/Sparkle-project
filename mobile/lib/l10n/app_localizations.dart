@@ -50152,6 +50152,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'明天 {time}'**
   String picTomorrowTime(String time);
+
+  /// No description provided for @lioRecommendedSeeds.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个推荐场景'**
+  String lioRecommendedSeeds(int count);
+
+  /// No description provided for @lioStartNewSim.
+  ///
+  /// In zh, this message translates to:
+  /// **'可立即开始一轮新模拟'**
+  String get lioStartNewSim;
+
+  /// No description provided for @lioRecentAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近一次共分析 {count} 个知识点'**
+  String lioRecentAnalysis(int count);
+
+  /// No description provided for @lioBuildConclusion.
+  ///
+  /// In zh, this message translates to:
+  /// **'沉淀一轮学习后的关键结论'**
+  String get lioBuildConclusion;
+
+  /// No description provided for @lioNoSimYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未生成最近仿真'**
+  String get lioNoSimYet;
+
+  /// No description provided for @lioRecentUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近更新 · {desc}'**
+  String lioRecentUpdate(String desc);
+
+  /// No description provided for @lioNoTheaterYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未生成最近推演'**
+  String get lioNoTheaterYet;
+
+  /// No description provided for @lioNoReportYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未生成最近报告'**
+  String get lioNoReportYet;
+
+  /// No description provided for @lioMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度 {percent}%'**
+  String lioMastery(String percent);
 }
 
 class _AppLocalizationsDelegate

@@ -28720,4 +28720,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String picTomorrowTime(String time) {
     return 'Tomorrow $time';
   }
+
+  @override
+  String lioRecommendedSeeds(int count) {
+    return '$count recommended scenarios';
+  }
+
+  @override
+  String get lioStartNewSim => 'Start a new simulation now';
+
+  @override
+  String lioRecentAnalysis(int count) {
+    return 'Last analysis covered $count knowledge points';
+  }
+
+  @override
+  String get lioBuildConclusion =>
+      'Summarize key takeaways after a learning round';
+
+  @override
+  String get lioNoSimYet => 'No recent simulation generated yet';
+
+  @override
+  String lioRecentUpdate(String desc) {
+    return 'Recently updated · $desc';
+  }
+
+  @override
+  String get lioNoTheaterYet => 'No recent prediction generated yet';
+
+  @override
+  String get lioNoReportYet => 'No recent report generated yet';
+
+  @override
+  String lioMastery(String percent) {
+    return 'Mastery $percent%';
+  }
 }
