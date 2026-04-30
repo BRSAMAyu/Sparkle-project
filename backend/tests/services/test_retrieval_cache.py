@@ -76,8 +76,11 @@ async def test_hybrid_search_cache_hit():
         assert len(results) == 1
         assert results[0].node.name == "Cached Node"
         assert results[0].similarity == 1.0
-        
+
         mock_service.get_with_lock.assert_called_once()
+        call_kwargs = mock_service.get_with_lock.call_args.kwargs
+        assert call_kwargs["query"] == "test query"
+        assert "factory_func" in call_kwargs
 
 @pytest.mark.asyncio
 async def test_hybrid_search_cache_miss():
@@ -112,3 +115,5 @@ async def test_hybrid_search_cache_miss():
                     # Verify
                     assert len(results) == 0 # Empty result because we mocked empty search
                     mock_service.get_with_lock.assert_called_once()
+                    miss_kwargs = mock_service.get_with_lock.call_args.kwargs
+                    assert miss_kwargs["query"] == "new query"

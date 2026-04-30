@@ -132,8 +132,12 @@ class TestTrackLatencyDecorator:
                 with pytest.raises(ValueError):
                     await test_func()
 
-                # Verify error was logged
+                # Verify error was logged with correct module/method info
                 mock_logger.error.assert_called_once()
+                error_msg = mock_logger.error.call_args[0][0]
+                assert "test_module.test_method" in error_msg
+                assert "test error" in error_msg
+                assert "TraceID" in error_msg  # async path includes trace ID
 
     def test_sync_function_success(self):
         """Test decorator with sync function that succeeds"""
@@ -154,8 +158,11 @@ class TestTrackLatencyDecorator:
             with pytest.raises(ValueError):
                 test_func()
 
-            # Verify error was logged
+            # Verify error was logged with correct module/method info
             mock_logger.error.assert_called_once()
+            error_msg = mock_logger.error.call_args[0][0]
+            assert "test_module.test_method" in error_msg
+            assert "sync error" in error_msg
 
 
 class TestMetricLabelUpdates:

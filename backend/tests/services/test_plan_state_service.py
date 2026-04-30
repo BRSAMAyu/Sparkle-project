@@ -124,14 +124,19 @@ class TestGetPlanState:
 
         result = await service.get_plan_state(user_id, plan_id)
 
-        # Verify cache was checked
-        mock_redis.get.assert_called_once()
+        # Verify cache was checked with correct key
+        cache_key = f"{PLAN_STATE_CACHE_PREFIX}{plan_id}"
+        mock_redis.get.assert_called_once_with(cache_key)
 
-        # Verify DB was queried
+        # Verify DB was queried (execute was called with a select statement)
         mock_db.execute.assert_called_once()
+        db_result = mock_db.execute.call_args[0][0]
+        assert db_result is not None  # SQL select statement was passed
 
-        # Verify cache was updated
-        mock_redis.setex.assert_called_once()
+        # Verify cache was updated with correct TTL
+        setex_args = mock_redis.setex.call_args[0]
+        assert setex_args[0] == cache_key  # cache key
+        assert setex_args[1] == PLAN_STATE_CACHE_TTL  # TTL
 
         # Verify result
         assert result is not None
@@ -160,8 +165,10 @@ class TestGetPlanState:
         # Verify cache was NOT checked
         mock_redis.get.assert_not_called()
 
-        # Verify DB was queried
+        # Verify DB was queried (bypassed cache, went straight to DB)
         mock_db.execute.assert_called_once()
+        db_result = mock_db.execute.call_args[0][0]
+        assert db_result is not None  # SQL select statement was passed
 
         # Verify result
         assert result is not None
@@ -205,8 +212,10 @@ class TestGetPlanState:
 
         result = await service.get_plan_state(different_user_id, plan_id)
 
-        # Verify DB was queried after cache mismatch
+        # Verify DB was queried after cache mismatch (user_id didn't match)
         mock_db.execute.assert_called_once()
+        db_result = mock_db.execute.call_args[0][0]
+        assert db_result is not None  # SQL select statement was passed
         assert result is None
 
 
@@ -409,6 +418,8 @@ class TestOnTaskCompleted:
             # Verify upsert was called with updated task_index
             mock_upsert.assert_called_once()
             call_args = mock_upsert.call_args
+            assert call_args.kwargs["user_id"] == user_id
+            assert call_args.kwargs["plan_id"] == plan_id
             patch_arg = call_args.kwargs["patch"]
             assert patch_arg["task_index"]["completed"] == 6
             assert str(task_id) in patch_arg["task_index"]["last_completed_task_id"]
@@ -513,6 +524,9 @@ class TestAppendFeedback:
 
             mock_upsert.assert_called_once()
             call_args = mock_upsert.call_args
+            # Verify upsert was called with correct user_id and plan_id
+            assert call_args.kwargs["user_id"] == user_id
+            assert call_args.kwargs["plan_id"] == plan_id
             patch_arg = call_args.kwargs["patch"]
 
             feedback = patch_arg["feedback_log"]

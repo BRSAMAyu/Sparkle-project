@@ -356,7 +356,7 @@ class TestUserPreferencesCRUD:
         assert prefs["aurora_directness"] == "direct"
         assert prefs["aurora_explanation_level"] == "brief"
         assert prefs["aurora_pressure_style"] == "gentle"
-        mock_db.commit.assert_called_once()
+        mock_db.commit.assert_called_once_with()
 
     @pytest.mark.asyncio
     async def test_update_rejects_invalid_enum_values(self):
@@ -424,7 +424,10 @@ class TestUserPreferencesCRUD:
 
         assert prefs["aurora_directness"] == "direct"
         mock_db.add.assert_called_once()
-        mock_db.commit.assert_called_once()
+        added_obj = mock_db.add.call_args[0][0]
+        assert added_obj.user_id == "user_1"
+        assert "aurora_directness" in added_obj.explicit
+        mock_db.commit.assert_called_once_with()
 
     @pytest.mark.asyncio
     async def test_db_failure_during_get_returns_defaults(self):
@@ -456,7 +459,7 @@ class TestUserPreferencesCRUD:
         service = AuroraUserPreferencesService(mock_db)
         prefs = await service.update("user_1", {"aurora_directness": "direct"})
 
-        mock_db.rollback.assert_called_once()
+        mock_db.rollback.assert_called_once_with()
         assert "aurora_directness" in prefs  # returns defaults on failure
 
     @pytest.mark.asyncio

@@ -96,7 +96,12 @@ async def test_purchase_item_success():
     assert result["success"] is True
     assert result["item_id"] == str(item.id)
     service._grant_item_to_user.assert_called_once()
+    grant_args = service._grant_item_to_user.call_args
+    assert grant_args[0][1] is item  # second positional arg is the ShopItem
     service.photon_service.record_transaction.assert_called_once()
+    tx_kwargs = service.photon_service.record_transaction.call_args.kwargs
+    assert tx_kwargs["transaction_type"] == "purchase"
+    assert tx_kwargs["amount"] < 0  # purchase is a deduction
 
 
 @pytest.mark.asyncio

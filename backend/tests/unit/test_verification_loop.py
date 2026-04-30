@@ -85,6 +85,9 @@ async def test_register_expected_stores_pending() -> None:
     )
     assert outcome_id.startswith("po")
     pipe.set.assert_called_once()
+    set_args = pipe.set.call_args[0]
+    assert set_args[0].startswith("spine:pending_outcomes:")  # key stores the pending outcome
+    assert outcome_id in set_args[0]
     pipe.lpush.assert_called_once_with("spine:pending_outcomes:user:u1", outcome_id)
     pipe.ltrim.assert_called_once_with("spine:pending_outcomes:user:u1", 0, 49)
     pipe.expire.assert_called_once_with("spine:pending_outcomes:user:u1", 24 * 3600)
@@ -128,6 +131,10 @@ async def test_record_actual_resolves_pending() -> None:
     assert result is not None
     assert result.attribution == "effective"
     mock_record.assert_called_once()
+    record_kwargs = mock_record.call_args.kwargs
+    assert record_kwargs["actual_outcome"] == {"completed": True}
+    assert record_kwargs["expected_outcome"] == "task_started_and_completed"
+    assert record_kwargs["intervention"] == "push_nudge"
 
 
 @pytest.mark.asyncio

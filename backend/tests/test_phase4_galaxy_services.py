@@ -116,8 +116,13 @@ class TestGalaxyFeedbackService:
             metadata={"test": "data"}
         )
 
-        # Verify db.add was called
+        # Verify db.add was called with a valid feedback record
         mock_db.add.assert_called_once()
+        added_obj = mock_db.add.call_args[0][0]
+        assert added_obj.user_id == user_id
+        assert added_obj.trigger_node_id == node_id
+        assert added_obj.implicit_score == 0.8
+
         # Verify db.commit was called (note: mock_db.commit is an AsyncMock, not a coroutine)
         mock_db.commit.assert_called_once()
 
@@ -313,18 +318,20 @@ class TestGalaxyStreamingService:
             reason="test"
         )
 
-        # Verify send_personal_message was called
+        # Verify send_personal_message was called with correct user_id and message structure
         mock_ws_manager.send_personal_message.assert_called_once()
 
         # Get the message that was sent
         call_args = mock_ws_manager.send_personal_message.call_args
         message = call_args[0][0]
+        sent_user_id = call_args[0][1]
 
         assert message["type"] == "galaxy.mastery_updated"
         assert message["data"]["node_id"] == str(node_id)
         assert message["data"]["old_mastery"] == 10
         assert message["data"]["new_mastery"] == 20
         assert message["data"]["delta"] == 10
+        assert sent_user_id == str(user_id)
 
     @pytest.mark.asyncio
     async def test_broadcast_node_unlocked(self, streaming_service, mock_ws_manager):
@@ -342,10 +349,12 @@ class TestGalaxyStreamingService:
 
         call_args = mock_ws_manager.send_personal_message.call_args
         message = call_args[0][0]
+        sent_user_id = call_args[0][1]
 
         assert message["type"] == "galaxy.node_unlocked"
         assert message["data"]["node_id"] == str(node_id)
         assert message["data"]["node_name"] == "Test Node"
+        assert sent_user_id == str(user_id)
 
     @pytest.mark.asyncio
     async def test_broadcast_level_up(self, streaming_service, mock_ws_manager):
@@ -364,10 +373,12 @@ class TestGalaxyStreamingService:
 
         call_args = mock_ws_manager.send_personal_message.call_args
         message = call_args[0][0]
+        sent_user_id = call_args[0][1]
 
         assert message["type"] == "galaxy.level_up"
         assert message["data"]["old_level"] == 2
         assert message["data"]["new_level"] == 3
+        assert sent_user_id == str(user_id)
 
     @pytest.mark.asyncio
     async def test_broadcast_batch_update(self, streaming_service, mock_ws_manager):
@@ -388,9 +399,11 @@ class TestGalaxyStreamingService:
 
         call_args = mock_ws_manager.send_personal_message.call_args
         message = call_args[0][0]
+        sent_user_id = call_args[0][1]
 
         assert message["type"] == "galaxy.batch_update"
         assert message["data"]["count"] == 2
+        assert sent_user_id == str(user_id)
 
     @pytest.mark.asyncio
     async def test_on_mastery_updated_event(self, streaming_service, mock_ws_manager):

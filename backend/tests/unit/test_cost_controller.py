@@ -94,7 +94,15 @@ class TestBudgetCircuitBreaker:
             await breaker.record_spend(CostCategory.RAG, 0.5, operation="pgvector_search")
 
         mock_redis.incrbyfloat.assert_called_once()
+        # Verify incrbyfloat was called with correct amount
+        incr_args = mock_redis.incrbyfloat.call_args[0]
+        assert incr_args[1] == 0.5  # amount matches the spend recorded
+        assert "rag" in incr_args[0]  # key contains category name
+
         mock_redis.expire.assert_called_once()
+        # Verify expire was called with 48-hour TTL
+        expire_args = mock_redis.expire.call_args[0]
+        assert expire_args[1] == 48 * 3600  # 48 hours in seconds
 
     @pytest.mark.asyncio
     async def test_record_spend_failure_graceful(self):

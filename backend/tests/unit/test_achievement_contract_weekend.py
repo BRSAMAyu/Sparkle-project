@@ -128,6 +128,11 @@ class TestContractCreation:
 
         contract = await service.create_contract("u1", study_minutes=30, days=7, photon_stake=100)
         db.add.assert_called_once()
+        added_contract = db.add.call_args[0][0]
+        assert added_contract.user_id == "u1"
+        assert added_contract.target_study_minutes == 30
+        assert added_contract.target_days == 7
+        assert added_contract.photon_stake == 100
 
     @pytest.mark.asyncio
     async def test_rejects_duplicate_active(self):

@@ -78,6 +78,9 @@ class TestHybridSearchLogic:
             )
 
             mock_cache_service.get_with_lock.assert_called_once()
+            call_kwargs = mock_cache_service.get_with_lock.call_args.kwargs
+            assert call_kwargs["knowledge_version"] == "tsms:123456"
+            assert "factory_func" in call_kwargs
 
 
 class TestSemanticSearchNodes:
@@ -164,6 +167,8 @@ class TestKnowledgeVersion:
             result = await service._get_knowledge_version()
 
             mock_cache.get.assert_called_once()
+            cache_key = mock_cache.get.call_args[0][0]
+            assert "knowledge" in cache_key and "version" in cache_key
             assert result == "tsms:123456"
 
 
