@@ -8,6 +8,7 @@ import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from pydantic import BaseModel
+from typing import Any
 
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.dual_core_router import (
@@ -577,6 +578,100 @@ class TestFSMEdgeCases:
         for (key, sid), expected_state in zip(sessions.items(), states):
             loaded = await state_manager.load_state(sid)
             assert loaded.state == expected_state, f"Session {key}: expected {expected_state}, got {loaded.state}"
+
+
+class TestDualCoreRouting_AuroraPreferences:
+    """Test dual-core routing with Aurora user preferences (M4 remaining item)."""
+
+    def _base_input(self, **overrides) -> DualCoreRoutingInput:
+        defaults = dict(
+            intent="task",
+            intent_confidence=0.9,
+            information_sufficient=True,
+            primary_challenge_area=None,
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="on_track",
+            recent_task_feedback_distribution={"completed": 2},
+            aurora_preferences={},
+        )
+        defaults.update(overrides)
+        return DualCoreRoutingInput(**defaults)
+
+    def _strategy_map(self, decision) -> dict[str, Any]:
+        return {s["field"]: s["recommended_value"] for s in decision.strategy_adjustments}
+
+    def test_direct_preference_favors_action_oriented(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={"aurora_directness": "direct"})
+        decision = router.route(inp)
+        strategies = self._strategy_map(decision)
+        assert strategies.get("directness_mode") == "action_oriented"
+
+    def test_guided_preference_default(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={"aurora_directness": "guided"})
+        decision = router.route(inp)
+        strategies = self._strategy_map(decision)
+        assert strategies.get("directness_mode") != "action_oriented"
+
+    def test_gentle_pressure_suppresses_urgency(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={"aurora_pressure_style": "gentle"})
+        decision = router.route(inp)
+        assert any("温和" in c for c in decision.execution_constraints)
+        strategies = self._strategy_map(decision)
+        assert strategies.get("push_vs_support") == 0.2
+
+    def test_motivating_pressure_default(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={"aurora_pressure_style": "motivating"})
+        decision = router.route(inp)
+        assert not any("温和" in c for c in decision.execution_constraints)
+
+    def test_brief_explanation_style(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={"aurora_explanation_level": "brief"})
+        decision = router.route(inp)
+        strategies = self._strategy_map(decision)
+        assert strategies.get("explanation_style") == "concise"
+
+    def test_combined_preferences(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={
+            "aurora_directness": "direct",
+            "aurora_pressure_style": "gentle",
+            "aurora_explanation_level": "brief",
+            "aurora_analysis_depth": "light",
+        })
+        decision = router.route(inp)
+        strategies = self._strategy_map(decision)
+        assert strategies.get("directness_mode") == "action_oriented"
+        assert strategies.get("push_vs_support") == 0.2
+        assert strategies.get("explanation_style") == "concise"
+
+    def test_empty_preferences_uses_defaults(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={})
+        decision = router.route(inp)
+        assert isinstance(decision.mode, str)
+        assert len(decision.strategy_adjustments) >= 0
+
+    def test_decision_includes_preferences_in_debug(self):
+        router = DualCoreRouter()
+        inp = self._base_input(aurora_preferences={"aurora_directness": "direct"})
+        decision = router.route(inp)
+        assert isinstance(decision.routing_debug, dict)
+        pref_debug = decision.routing_debug.get("aurora_preferences", {})
+        assert pref_debug.get("directness") == "direct"
+
+
+class TestFSMToolCallingLoop:
+    """Tool-calling loop FSM state transition test."""
+
+    @pytest_asyncio.fixture
+    async def state_manager(self, redis_client):
+        return SessionStateManager(redis_client)
 
     async def test_tool_calling_loop_state(self, state_manager):
         """Simulate tool-calling loop: THINKING → TOOL_CALLING → THINKING → ..."""

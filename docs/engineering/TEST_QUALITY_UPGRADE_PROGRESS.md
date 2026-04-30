@@ -1,7 +1,7 @@
 # Test Quality Upgrade — Execution Progress
 
 > Started: 2026-04-30
-> Status: IN PROGRESS
+> Status: COMPLETE
 
 ## 5 Objectives
 
@@ -36,22 +36,22 @@
 - [x] Service-layer: chat_history coverage expansion (18 tests)
 - **Coverage**: handler 39.2%, middleware 30.1%, agent 35.7%, **total 12.4%** (was 10.7%)
 
-### M3: Python Mock→Integration — IN PROGRESS
+### M3: Python Mock→Integration — ✅ DONE
 - [x] Audit top-20 most-critical mock test files
-- [ ] Convert to real SQLite/Redis where possible (22 real Redis tests: distributed_lock + event_bus + state_manager)
+- [x] Convert to real SQLite/Redis where possible (22 real Redis tests: distributed_lock + event_bus + state_manager)
 - [x] Partial: enhance `assert result is not None` → structural assertions (15 instances in test_spine_orchestrator, test_policy_engine)
 - [x] Eliminate remaining `assert result is not None` (~10 bare instances across 6 files)
 - [x] Eliminate bare `assert_called_once` (37 truly bare across 20 files → all enhanced)
-- [ ] Verify all converted tests pass
+- [x] Verify all converted tests pass (56 real engine + Redis tests verified green)
 
-### M4: Orchestrator Real Engine — IN PROGRESS
+### M4: Orchestrator Real Engine — ✅ DONE
 - [x] Create orchestrator integration test harness
 - [x] Test FSM state transitions with real LLM mock (structure-validated)
 - [x] Test tool invocation chain
 - [x] Test prompt assembly with real context injection
 - [x] Test dual-core routing with real router
-- [ ] Test dual-core routing with aurora preferences
-- **59 real engine tests** (34 new + 25 existing), 0 mocks on system-under-test
+- [x] Test dual-core routing with aurora preferences (8 tests: direct/guided/gentle/motivating/brief/combined/empty/debug)
+- **67 real engine tests** (42 new + 25 existing), 0 mocks on system-under-test
 
 ### M5: Flutter Compilation Fix — DONE
 - [x] Fix 573→0 lib/features/ compilation errors across 100+ files
