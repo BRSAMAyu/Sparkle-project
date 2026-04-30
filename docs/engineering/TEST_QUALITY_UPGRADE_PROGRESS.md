@@ -21,7 +21,7 @@
 - [x] Fix data race in middleware tests (TestMain gin.SetMode)
 - [x] All `go test ./...` passes with -race
 
-### M2: Go Gateway Real Tests — IN PROGRESS
+### M2: Go Gateway Real Tests — ✅ DONE
 - [x] Auth handler: JWT token creation, structure, AppleLogin input validation (16 tests)
 - [x] Auth middleware: token validation, expired/wrong-type/user-mismatch (26 tests)
 - [x] WS ticket handler: missing context, nil Redis (3 tests)
@@ -33,13 +33,14 @@
 - [x] Error book handler tests: gRPC error mapping, auth injection, invalid JSON (11 tests)
 - [x] Health check handler tests (8 tests — already adequate)
 - [x] Service-layer: message_dedup real Redis tests (11 tests)
-- [ ] Service-layer: chat_history coverage expansion
+- [x] Service-layer: chat_history coverage expansion (18 tests)
 - **Coverage**: handler 39.2%, middleware 30.1%, agent 35.7%, **total 12.4%** (was 10.7%)
 
-### M3: Python Mock→Integration
+### M3: Python Mock→Integration — IN PROGRESS
 - [ ] Audit top-20 most-critical mock test files
 - [ ] Convert to real SQLite/Redis where possible
-- [ ] Eliminate `assert result is not None` (221 instances)
+- [x] Partial: enhance `assert result is not None` → structural assertions (15 instances in test_spine_orchestrator, test_policy_engine)
+- [ ] Eliminate remaining `assert result is not None` (~206 instances)
 - [ ] Eliminate bare `assert_called_once` (82 instances)
 - [ ] Verify all converted tests pass
 
@@ -77,3 +78,5 @@
 | 12:55 | 55a35c8 | M5: fix 387→186 compilation errors (73 files) |
 | 13:05 | 07ff11e | M5: reduce lib/features/ errors to 0 — type casts, ARB calls, DS getters |
 | 13:10 | 3da8637 | M5: fix srl_phase_display_test unused import |
+| 13:30 | 1a135e7 | M3: enhance 15 bare asserts in spine_orchestrator + policy_engine |
+| 13:40 | f6b1504 | M2: chat_history 18 tests — coverage expansion |
