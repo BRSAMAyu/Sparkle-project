@@ -9,7 +9,9 @@ class OfflineMessageQueueService {
 
   final LocalDatabase _localDb;
 
-  bool get _isReady => _localDb.isar.isOpen;
+  Isar? get _isar => _localDb.isarOrNull;
+
+  bool get _isReady => _isar?.isOpen == true;
 
   /// Persist a message to the offline queue (status = pending).
   Future<void> enqueue({
@@ -22,7 +24,8 @@ class OfflineMessageQueueService {
     String? chatMode,
     String? nickname,
   }) async {
-    if (!_isReady) return;
+    final db = _isar;
+    if (db == null || !db.isOpen) return;
     final msg = OfflineChatMessageExtension.create(
       requestId: requestId,
       sessionId: sessionId,
@@ -33,39 +36,42 @@ class OfflineMessageQueueService {
       chatMode: chatMode,
       nickname: nickname,
     );
-    await _localDb.isar.writeTxn(() async {
-      await _localDb.offlineChatMessages.putByRequestId(msg);
+    await db.writeTxn(() async {
+      await db.offlineChatMessages.putByRequestId(msg);
     });
   }
 
   /// Mark a message as sent (sink accepted it, waiting for server ACK).
   Future<void> markSent(String requestId) async {
-    if (!_isReady) return;
-    final msg = await _localDb.offlineChatMessages.getByRequestId(requestId);
+    final db = _isar;
+    if (db == null || !db.isOpen) return;
+    final msg = await db.offlineChatMessages.getByRequestId(requestId);
     if (msg != null) {
       msg.markAsSent();
-      await _localDb.isar.writeTxn(() async {
-        await _localDb.offlineChatMessages.putByRequestId(msg);
+      await db.writeTxn(() async {
+        await db.offlineChatMessages.putByRequestId(msg);
       });
     }
   }
 
   /// Mark a message as acked by server.
   Future<void> markAcked(String requestId, {String? serverMessageId}) async {
-    if (!_isReady) return;
-    final msg = await _localDb.offlineChatMessages.getByRequestId(requestId);
+    final db = _isar;
+    if (db == null || !db.isOpen) return;
+    final msg = await db.offlineChatMessages.getByRequestId(requestId);
     if (msg != null) {
       msg.markAsAcked(serverMessageId ?? requestId);
-      await _localDb.isar.writeTxn(() async {
-        await _localDb.offlineChatMessages.putByRequestId(msg);
+      await db.writeTxn(() async {
+        await db.offlineChatMessages.putByRequestId(msg);
       });
     }
   }
 
   /// Load all pending messages (not yet sent), ordered by creation time.
   Future<List<OfflineChatMessage>> loadPending() async {
-    if (!_isReady) return <OfflineChatMessage>[];
-    final results = await _localDb.offlineChatMessages
+    final db = _isar;
+    if (db == null || !db.isOpen) return <OfflineChatMessage>[];
+    final results = await db.offlineChatMessages
         .filter()
         .statusEqualTo(OfflineMessageStatus.pending)
         .findAll();
@@ -76,14 +82,16 @@ class OfflineMessageQueueService {
 
   /// Remove a message from the offline queue.
   Future<void> remove(String requestId) async {
-    if (!_isReady) return;
-    await _localDb.offlineChatMessages.deleteByRequestId(requestId);
+    final db = _isar;
+    if (db == null || !db.isOpen) return;
+    await db.offlineChatMessages.deleteByRequestId(requestId);
   }
 
   /// Count pending messages for the given user.
   Future<int> pendingCount(String userId) async {
-    if (!_isReady) return 0;
-    return _localDb.offlineChatMessages
+    final db = _isar;
+    if (db == null || !db.isOpen) return 0;
+    return db.offlineChatMessages
         .filter()
         .userIdEqualTo(userId)
         .and()
@@ -93,9 +101,10 @@ class OfflineMessageQueueService {
 
   /// Delete acked messages older than 24 hours.
   Future<void> cleanupOldAcked() async {
-    if (!_isReady) return;
+    final db = _isar;
+    if (db == null || !db.isOpen) return;
     final cutoff = DateTime.now().subtract(const Duration(hours: 24));
-    final old = await _localDb.offlineChatMessages
+    final old = await db.offlineChatMessages
         .filter()
         .statusEqualTo(OfflineMessageStatus.acked)
         .and()
@@ -103,8 +112,8 @@ class OfflineMessageQueueService {
         .ackedAtLessThan(cutoff)
         .findAll();
     if (old.isNotEmpty) {
-      await _localDb.isar.writeTxn(() async {
-        await _localDb.offlineChatMessages.deleteAll(
+      await db.writeTxn(() async {
+        await db.offlineChatMessages.deleteAll(
           old.map((OfflineChatMessage e) => e.id).toList(),
         );
       });
