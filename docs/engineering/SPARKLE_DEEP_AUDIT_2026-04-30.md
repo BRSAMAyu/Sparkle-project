@@ -190,13 +190,20 @@
 - **分布**: handler 35%, middleware 34%, service 21.7%, agent/db/worker 0%
 
 ### Flutter 测试
-- **结果**: 757 passed, 7 skipped, **255 failed**（75% → 修复中）
+- **结果**: ~960 passed, 9 skipped, **~190 failed**（83% → 修复中）
 - 编译通过，`flutter analyze` 0 errors
 - F-03 i18n 双语转换 85+ 文件，模式一致正确
-- **修复进展**: 109 个测试文件已注入 i18n setUp，22 个失败已修复
-  - 创建 `test/shared/i18n_test_helper.dart` 提供 `setUpI18nForTesting()` + `testMaterialApp()`
-  - 失败模式 1: I18nService 默认英文 → setUp 强制中文 ✅ 已修
-  - 失败模式 2: context.l10n 无 delegates → testMaterialApp 注入 ✅ 进行中
+- **修复进展**: 4 轮修复，从 277 失败 → 190 失败（恢复 87 个测试）
+  - Wave 1: 109 个测试文件注入 i18n setUp
+  - Wave 2: 49 个文件 MaterialApp→testMaterialApp 批量替换
+  - Wave 3: 23 个文件去除 locale: 重复参数 + 修复损坏 import
+  - Wave 4: 12 个 MaterialApp.router 添加 l10n delegates
+  - Wave 5: 修复 mastery delta 断言、plan_detail locale、photon i18n setup
+- **剩余失败分布**: ~190 个
+  - ~40 文本/i18n 不匹配（context.l10n 返回不同格式）
+  - ~100 Isar LateInitializationError（LocalDatabase.isar 未初始化）
+  - ~30 Provider/State 错误、RenderFlex 溢出、测试数据不匹配
+  - ~20 其他（超时、导航、onboarding 状态）
 - Service 层测试全部通过
 
 ---
