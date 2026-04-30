@@ -4,7 +4,6 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 final examSprintRepositoryProvider = Provider<ExamSprintRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -37,7 +36,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? S.planSprintSubmitFailed);
+      throw Exception(e.message ?? 'Submit failed');
     }
   }
 
@@ -55,7 +54,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? S.planSprintSubmitFailed);
+      throw Exception(e.message ?? 'Submit failed');
     }
   }
 
@@ -80,7 +79,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? S.planSprintSubmitFailed);
+      throw Exception(e.message ?? 'Submit failed');
     }
   }
 
@@ -111,7 +110,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? S.planPortfolioLoadFailedMsg);
+      throw Exception(e.message ?? 'Failed to load learning portfolio');
     }
   }
 }

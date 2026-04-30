@@ -18421,17 +18421,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get intentJustNow => '刚刚更新';
 
   @override
-  String intentMinutesAgo(Object count) {
+  String intentMinutesAgo(int count) {
     return '$count 分钟前';
   }
 
   @override
-  String intentHoursAgo(Object count) {
+  String intentHoursAgo(int count) {
     return '$count 小时前';
   }
 
   @override
-  String intentDaysAgo(Object count) {
+  String intentDaysAgo(int count) {
     return '$count 天前';
   }
 
@@ -20426,7 +20426,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatGrowthNotNeeded => '不需要';
 
   @override
-  String chatGrowthStreakDays(Object days) {
+  String chatGrowthStreakDays(int days) {
     return '$days 天';
   }
 
@@ -21021,22 +21021,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatStrategyCheckpoint => '检查点';
 
   @override
-  String chatStrategyDailyHours(Object hours, Object method) {
+  String chatStrategyDailyHours(String hours, String method) {
     return '每天 $hours 小时 · $method';
   }
 
   @override
-  String chatStrategyMethod(Object method) {
+  String chatStrategyMethod(String method) {
     return '方法：$method';
   }
 
   @override
-  String chatStrategyPhaseOutput(Object output) {
+  String chatStrategyPhaseOutput(String output) {
     return '阶段产出：$output';
   }
 
   @override
   String get chatStrategySuggestPace => '我建议先按这个节奏推进';
+
+  @override
+  String get chatStrategyCollapse => '收起';
+
+  @override
+  String get chatStrategyExpand => '展开';
+
+  @override
+  String get chatStrategyPhaseLabel => '阶段';
+
+  @override
+  String get chatStrategyContinue => '继续';
 
   @override
   String get chatStreamAdjustStrategy => '帮我调整策略';
@@ -21283,7 +21295,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsCountDown => '倒计时';
 
   @override
-  String get toolsMinutesCount => '\$minutes 分钟';
+  String toolsMinutesCount(int minutes) {
+    return '$minutes 分钟';
+  }
 
   @override
   String get toolsReset => '重置';
@@ -21295,7 +21309,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsSwitchToStopwatch => '切到正计时';
 
   @override
-  String get toolsFocusSaveFailed => '专注记录保存失败：\$e';
+  String toolsFocusSaveFailed(Object e) {
+    return '专注记录保存失败：$e';
+  }
 
   @override
   String get toolsFocusNotificationBody => '专注时段已经结束，回来收尾并记录这次投入。';
@@ -21308,12 +21324,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String toolsFocusRecorded(Object durationMinutes) {
-    return '本次专注 \$durationMinutes 分钟，已记录到本地专注统计。';
+    return '本次专注 $durationMinutes 分钟，已记录到本地专注统计。';
   }
 
   @override
   String toolsFocusReward(Object durationMinutes, Object flameEarned) {
-    return '本次专注 \$durationMinutes 分钟，获得 \$flameEarned 点火苗奖励。';
+    return '本次专注 $durationMinutes 分钟，获得 $flameEarned 点火苗奖励。';
   }
 
   @override
@@ -21381,7 +21397,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsBreathConfig => '练习配置';
 
   @override
-  String toolsBreathDurationMin(Object duration) {
+  String toolsBreathDurationMin(int duration) {
     return '$duration 分钟';
   }
 
@@ -21457,10 +21473,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsTransFailed => '翻译失败';
 
   @override
-  String get toolsTransError => '翻译出错: \$e';
+  String toolsTransError(String e) {
+    return '翻译出错: $e';
+  }
 
   @override
-  String get toolsTransAddWordFailed => '加入单词本失败: \$e';
+  String toolsTransAddWordFailed(String e) {
+    return '加入单词本失败: $e';
+  }
 
   @override
   String get toolsTransTitle => '翻译';
@@ -21514,7 +21534,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsTransWaitingDesc => '点击下方翻译按钮后，结果会显示在这里。';
 
   @override
-  String toolsTransStarCount(Object count) {
+  String toolsTransStarCount(int count) {
     return '$count 星';
   }
 
@@ -21544,7 +21564,9 @@ class AppLocalizationsZh extends AppLocalizations {
       '面向真实记录场景的轻量转写台。单次录音最长 30 秒，直接调用当前已接通的 GLM ASR 链路。';
 
   @override
-  String get toolsSttCharCount => '已捕获 \$_charCount 字';
+  String toolsSttCharCount(Object _charCount) {
+    return '已捕获 $_charCount 字';
+  }
 
   @override
   String get toolsSttRecordingInfo => '30 秒单次录音';
@@ -21586,7 +21608,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsWbSetImportance => '设置重要程度';
 
   @override
-  String get toolsWbStarCount => '\$starValue 星';
+  String toolsWbStarCount(int starValue) {
+    return '$starValue 星';
+  }
 
   @override
   String get toolsWbCancel => '取消';
@@ -21601,10 +21625,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsWbSubtitle => '把查词结果变成可复习资产。支持搜索、重要度筛选和快闪式复习。';
 
   @override
-  String get toolsWbTotalCount => '\$totalCount 个词条';
+  String toolsWbTotalCount(Object totalCount) {
+    return '$totalCount 个词条';
+  }
 
   @override
-  String get toolsWbDueCount => '\$dueCount 个待复习';
+  String toolsWbDueCount(Object dueCount) {
+    return '$dueCount 个待复习';
+  }
 
   @override
   String get toolsWbTotal => '总词条';
@@ -21682,7 +21710,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsNotesWaiting => '等待记录';
 
   @override
-  String get toolsNotesCharCount => '\$_charCount 字';
+  String toolsNotesCharCount(Object _charCount) {
+    return '$_charCount 字';
+  }
 
   @override
   String get toolsNotesCharLabel => '字数';
@@ -21775,7 +21805,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsFlashSelectSubject => '选择科目';
 
   @override
-  String toolsVocabEntryCount(Object count) {
+  String toolsVocabEntryCount(int count) {
     return '$count 词条';
   }
 
@@ -21851,7 +21881,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsStatsWaitingData => '等待数据';
 
   @override
-  String get toolsStatsRecentCount => '\$totalSessions 条最近记录';
+  String toolsStatsRecentCount(Object totalSessions) {
+    return '$totalSessions 条最近记录';
+  }
 
   @override
   String get toolsStatsTodayFocus => '今日专注';
@@ -23140,10 +23172,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get insCreateFailed => '创建失败：\$e';
+  String insCreateFailed(String e) {
+    return '创建失败：$e';
+  }
 
   @override
-  String get insGenFailed => '生成失败：\$e';
+  String insGenFailed(String e) {
+    return '生成失败：$e';
+  }
 
   @override
   String get insTargetNode => '目标节点';
@@ -23319,7 +23355,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebBadParams => '请求参数错误';
 
   @override
-  String get ebImageUploadFailed => '图片上传失败: \$e';
+  String ebImageUploadFailed(String e) {
+    return '图片上传失败: $e';
+  }
 
   @override
   String get ebRemove => '移除';
@@ -23337,7 +23375,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebAddError => '添加错题';
 
   @override
-  String get ebLoadErrorFailed => '加载错题失败: \$error';
+  String ebLoadErrorFailed(String error) {
+    return '加载错题失败: $error';
+  }
 
   @override
   String get ebSaving => '保存中...';
@@ -23403,7 +23443,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebViewAnalysis => '查看 AI 分析';
 
   @override
-  String get ebSubmitFailed => '提交失败: \$e';
+  String ebSubmitFailed(Object e) {
+    return '提交失败: $e';
+  }
 
   @override
   String get ebBack => '返回';
@@ -23493,10 +23535,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memNotEnabled => '记忆控制未启用';
 
   @override
-  String get memLoadSettingsFailed => '加载记忆设置失败: \$e';
+  String memLoadSettingsFailed(String e) {
+    return '加载记忆设置失败: $e';
+  }
 
   @override
-  String get memSaveFailed => '保存失败: \$e';
+  String memSaveFailed(String e) {
+    return '保存失败: $e';
+  }
 
   @override
   String get memBack => '返回';
@@ -23772,7 +23818,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transSaveFailed => '保存失败，请重试';
 
   @override
-  String get transUnknownError => '未知错误: \$e';
+  String transUnknownError(String e) {
+    return '未知错误: $e';
+  }
 
   @override
   String get transSaved => '已保存';
@@ -23787,7 +23835,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraObserving => 'Aurora · 观察中';
 
   @override
-  String get auroraFeedbackFailed => '提交校准反馈失败：\$error';
+  String auroraFeedbackFailed(String error) {
+    return '提交校准反馈失败：$error';
+  }
 
   @override
   String get auroraConfirm => '确认';
@@ -24784,8 +24834,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planSprintShareOpened => '分享已打开';
 
   @override
-  String planSprintShareText(Object completedTasks, Object masteredNodes,
-      Object repairedErrors, Object strongestArea) {
+  String planSprintShareText(int masteredNodes, int repairedErrors,
+      int completedTasks, String strongestArea) {
     return '我的 7 天备考冲刺完成：掌握 $masteredNodes 个知识节点，修复 $repairedErrors 个错误模式，完成 $completedTasks 个任务。最强项：$strongestArea。#Sparkle备考';
   }
 
@@ -24841,7 +24891,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planSprintRecheck => '重新检查';
 
   @override
-  String planTaskCount(Object count) {
+  String planTaskCount(int count) {
     return '$count 个任务';
   }
 
@@ -24904,12 +24954,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planPortfolioGalaxySummary => 'Galaxy 掌握度摘要';
 
   @override
-  String planPortfolioResultRating(Object rating) {
+  String planPortfolioResultRating(int rating) {
     return '结果评分 $rating/5';
   }
 
   @override
-  String planPortfolioSelfRating(Object rating) {
+  String planPortfolioSelfRating(int rating) {
     return '自评 $rating/10';
   }
 
@@ -25206,7 +25256,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityCorePartner => '核心责任伙伴';
 
   @override
-  String communityPendingInvitesCount(Object count) {
+  String communityPendingInvitesCount(int count) {
     return '你有 $count 条伙伴邀请待处理';
   }
 
@@ -25229,7 +25279,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityWorkspaceReady => '伙伴工作台已准备好';
 
   @override
-  String communityTogetherDays(Object count) {
+  String communityTogetherDays(int count) {
     return '一起坚持了 $count 天';
   }
 
@@ -25237,17 +25287,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityMe => '我';
 
   @override
-  String communityMyStreakDays(Object count) {
+  String communityMyStreakDays(int count) {
     return '$count 天连胜';
   }
 
   @override
-  String communityPartnerStreakDays(Object count) {
+  String communityPartnerStreakDays(int count) {
     return '$count 天连胜';
   }
 
   @override
-  String communityTotalCheckins(Object count) {
+  String communityTotalCheckins(int count) {
     return '$count 次';
   }
 
@@ -25261,7 +25311,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityWorkshop => '工作台';
 
   @override
-  String communityPartnerRequestCount(Object count) {
+  String communityPartnerRequestCount(int count) {
     return '$count 条责任伙伴/好友请求待处理';
   }
 
@@ -25716,7 +25766,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。';
 
   @override
-  String communityNudgeFailed(Object error) {
+  String communityNudgeFailed(String error) {
     return '提醒失败: $error';
   }
 
@@ -27593,4 +27643,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String wgnNextWeekGoal(String suggestion) {
     return '下周目标：$suggestion';
   }
+
+  @override
+  String get galaxySectorRational => '理性';
+
+  @override
+  String get galaxySectorCreation => '创造';
+
+  @override
+  String get galaxySectorInspiration => '灵感';
+
+  @override
+  String get galaxySectorDarkMatter => '暗物质';
+
+  @override
+  String get planSprintSubmitFailed => '冲刺提交失败，请重试';
+
+  @override
+  String get planPortfolioLoadFailedMsg => '加载学习组合失败';
+
+  @override
+  String get planPortfolioRetry => '重试';
+
+  @override
+  String get planGuideAiNotReturn => 'AI 未返回结果，请重试';
+
+  @override
+  String get planViewDetails => '查看详情';
+
+  @override
+  String get toolsPlanLinked => '计划结束时间';
+
+  @override
+  String get ebLoadError => '加载错题失败，请重试';
 }

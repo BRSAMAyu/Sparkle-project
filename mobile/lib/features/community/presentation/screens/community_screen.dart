@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Selected feed filter index (0 = Global, 1 = My Squad, 2 = Following)
 final _communityFeedFilterProvider = StateProvider<int>((ref) => 0);
@@ -244,14 +245,14 @@ class _GoalFocusSection extends StatelessWidget {
             icon: Icons.school_outlined,
             title: 'Common Mistakes',
             subtitle: 'See what others struggled with on the same topics',
-            onTap: () => context.push(CommunityRoutes.errorInsights),
+            onTap: () => context.push('${CommunityRoutes.home}/error-insights'),
           ),
           const SizedBox(height: DS.sm),
           _GoalFocusCard(
             icon: Icons.star_outline_rounded,
             title: 'Top Resources',
             subtitle: 'Highest-rated materials from your cohort',
-            onTap: () => context.push(CommunityRoutes.topResources),
+            onTap: () => context.push('${CommunityRoutes.home}/top-resources'),
           ),
         ],
       ),
@@ -281,7 +282,7 @@ class _GoalFocusCard extends StatelessWidget {
         padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-          borderRadius: BorderRadius.circular(DS.radiusMd),
+          borderRadius: BorderRadius.circular(DS.radius12),
           border: Border.all(color: DS.borderSubtle),
         ),
         child: Row(
@@ -291,7 +292,7 @@ class _GoalFocusCard extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: DS.brandPrimary12,
-                borderRadius: BorderRadius.circular(DS.radiusSm),
+                borderRadius: BorderRadius.circular(DS.radius8),
               ),
               child: Icon(icon, size: 20, color: DS.brandPrimary),
             ),

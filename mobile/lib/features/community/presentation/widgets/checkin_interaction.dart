@@ -216,18 +216,18 @@ class CheckinInteraction extends StatelessWidget {
                 CircleAvatar(
                   radius: 10,
                   child: Text(
-                      _encouragementAuthor(encouragement)[0].toUpperCase(),),
+                      _encouragementAuthor(context, encouragement)[0].toUpperCase(),),
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  _encouragementAuthor(encouragement),
+                  _encouragementAuthor(context, encouragement),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                 ),
                 const Spacer(),
                 Text(
-                  _formatTime(encouragement.createdAt),
+                  _formatTime(context, encouragement.createdAt),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -244,7 +244,7 @@ class CheckinInteraction extends StatelessWidget {
       ),
     );
 
-  String _encouragementAuthor(EncouragementMessage encouragement) {
+  String _encouragementAuthor(BuildContext context, EncouragementMessage encouragement) {
     if (encouragement.authorName.isNotEmpty) {
       return encouragement.authorName;
     }
@@ -262,9 +262,9 @@ class CheckinInteraction extends StatelessWidget {
           controller: controller,
           maxLines: 3,
           maxLength: 500,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: context.l10n.communityWriteEncouragement,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
@@ -287,7 +287,7 @@ class CheckinInteraction extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime time) {
+  String _formatTime(BuildContext context, DateTime time) {
     final now = DateTime.now();
     final difference = now.difference(time);
 
@@ -324,7 +324,7 @@ class EncouragementMessage {
   factory EncouragementMessage.fromJson(Map<String, dynamic> json) => EncouragementMessage(
       id: json['id'] as String,
       authorId: json['user_id'] as String,
-      authorName: json['author_name'] as String? ?? context.l10n.communityPartnerFallback,
+      authorName: json['author_name'] as String? ?? '伙伴',
       message: json['message'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -501,7 +501,7 @@ class CheckinWithInteraction {
   factory CheckinWithInteraction.fromJson(Map<String, dynamic> json) => CheckinWithInteraction(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      authorName: json['author_name'] as String? ?? context.l10n.communityUserFallback,
+      authorName: json['author_name'] as String? ?? '用户',
       content: json['content'] as String,
       likes: json['likes'] as int? ?? 0,
       encouragements: (json['encouragements'] as List? ?? [])

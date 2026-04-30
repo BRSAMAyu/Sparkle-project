@@ -108,7 +108,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                                   .setDisplayMode(value),
                             );
                           },
-                          items: const [
+                          items: [
                             DropdownMenuItem(
                               value: TransparencyDisplayMode.collapsedFloating,
                               child: Text(context.l10n.settingsCollapseFloating),

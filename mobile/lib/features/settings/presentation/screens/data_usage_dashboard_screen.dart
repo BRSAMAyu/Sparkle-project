@@ -141,7 +141,7 @@ class _DataCard extends StatelessWidget {
               const SizedBox(width: DS.spacing8),
               Text(
                 title,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: DS.textPrimary),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: DS.textPrimary),
               ),
             ],
           ),
@@ -187,7 +187,7 @@ class _ControlTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: DS.textSecondary),
-      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: DS.textPrimary)),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: DS.textPrimary)),
       subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: DS.textTertiary)),
     );
   }

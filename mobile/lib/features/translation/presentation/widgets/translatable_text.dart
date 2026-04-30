@@ -172,7 +172,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                   _handleTextSelection(selection);
                   editableTextState.hideToolbar();
                 },
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.translate, size: 16),
@@ -190,7 +190,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                   Clipboard.setData(ClipboardData(text: selectedText));
                   editableTextState.hideToolbar();
                 },
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.copy, size: 16),

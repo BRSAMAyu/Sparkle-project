@@ -311,7 +311,7 @@ class ProfileScreen extends ConsumerWidget {
     final coldstartCompletedAt =
         userInsightState['traits_coldstart_completed_at']?.toString();
     final traits = TraitsPriorCard.fromProfileContext(profileContext);
-    final srlPhase = SrlPhaseBadgeCard.fromProfileContext(profileContext);
+    final srlPhase = SrlPhaseBadgeCard.fromProfileContext(context, profileContext);
 
     return Column(
       children: [

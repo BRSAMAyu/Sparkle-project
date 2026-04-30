@@ -12,6 +12,7 @@ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_reposi
 import 'package:sparkle/features/galaxy/presentation/providers/node_source_materials_provider.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 typedef NodeReviewContextCallback = void Function(
   Map<String, dynamic> initialContext,
@@ -432,15 +433,15 @@ class _HistoryContent extends StatelessWidget {
   static String _relativeTime(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inDays >= 1) {
-      return context.l10n.galaxyNodeDaysAgo(diff.inDays);
+      return S.galaxyNodeDaysAgo(diff.inDays);
     }
     if (diff.inHours >= 1) {
-      return context.l10n.galaxyNodeHoursAgo(diff.inHours);
+      return S.galaxyNodeHoursAgo(diff.inHours);
     }
     if (diff.inMinutes >= 1) {
-      return context.l10n.galaxyNodeMinutesAgo(diff.inMinutes);
+      return S.galaxyNodeMinutesAgo(diff.inMinutes);
     }
-    return context.l10n.galaxyNodeJustNow;
+    return S.galaxyNodeJustNow;
   }
 }
 
@@ -1392,7 +1393,7 @@ class _SourceMaterialsCopy {
             'uploaded. It will appear here after processing and attachment.',
       );
     }
-    return const _SourceMaterialsCopy._(
+    return _SourceMaterialsCopy._(
       title: context.l10n.galaxyNodeSourceAssets,
       personalBadge: context.l10n.galaxyNodePersonalBadge,
       systemBadge: context.l10n.galaxyNodeNoPersonalNote,

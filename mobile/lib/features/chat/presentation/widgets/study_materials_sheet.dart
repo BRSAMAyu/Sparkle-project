@@ -6,6 +6,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Source Tray — full-featured material selection sheet.
 ///
@@ -399,14 +400,14 @@ class _SourceRow extends StatelessWidget {
   }
 
   String get _relevanceLabel {
-    if (!isEnabled) return context.l10n.chatStudyClosed;
+    if (!isEnabled) return S.chatStudyClosed;
     switch (relevance) {
       case _SourceRelevance.high:
-        return context.l10n.chatStudyHighRelevance;
+        return S.chatStudyHighRelevance;
       case _SourceRelevance.medium:
-        return context.l10n.chatStudyMediumRelevance;
+        return S.chatStudyMediumRelevance;
       case _SourceRelevance.low:
-        return context.l10n.chatStudyNotAnalyzed;
+        return S.chatStudyNotAnalyzed;
     }
   }
 

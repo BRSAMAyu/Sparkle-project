@@ -1,5 +1,6 @@
-class ExamSprintScopeContext {
 import 'package:sparkle/core/services/i18n_service.dart';
+
+class ExamSprintScopeContext {
   ExamSprintScopeContext({
     this.text,
     this.fileIds = const <String>[],

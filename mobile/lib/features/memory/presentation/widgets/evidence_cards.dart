@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class EvidenceCard extends StatelessWidget {
   const EvidenceCard({
@@ -133,7 +134,7 @@ class EvidenceCard extends StatelessWidget {
       if (nodeId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/galaxy/node/$nodeId',
-          label: context.l10n.memGoGalaxy,
+          label: S.memGoGalaxy,
         );
       }
     }
@@ -144,7 +145,7 @@ class EvidenceCard extends StatelessWidget {
       if (errorId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/errors/$errorId',
-          label: context.l10n.memGoErrorBook,
+          label: S.memGoErrorBook,
         );
       }
     }
@@ -155,7 +156,7 @@ class EvidenceCard extends StatelessWidget {
       if (errorId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/errors/$errorId',
-          label: context.l10n.memBackToErrorBook,
+          label: S.memBackToErrorBook,
         );
       }
     }
@@ -166,7 +167,7 @@ class EvidenceCard extends StatelessWidget {
       if (sessionId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/chat?session_id=$sessionId',
-          label: context.l10n.memOpenRelatedChat,
+          label: S.memOpenRelatedChat,
         );
       }
     }
@@ -176,7 +177,7 @@ class EvidenceCard extends StatelessWidget {
       if (sessionId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/chat?session_id=$sessionId',
-          label: context.l10n.memOpenOriginalChat,
+          label: S.memOpenOriginalChat,
         );
       }
     }

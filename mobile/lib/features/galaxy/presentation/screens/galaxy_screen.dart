@@ -3708,7 +3708,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       context.l10n.galaxyNoMasteryTitle,
                       style: TextStyle(
                         color: Colors.white,

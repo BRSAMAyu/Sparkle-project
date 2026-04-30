@@ -25,20 +25,23 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
   late final PageController _pageController;
   late int _currentMonthPage;
 
-  static const _monthKeys = <String>[
-    'communityMonthLabel1',
-    'communityMonthLabel2',
-    'communityMonthLabel3',
-    'communityMonthLabel4',
-    'communityMonthLabel5',
-    'communityMonthLabel6',
-    'communityMonthLabel7',
-    'communityMonthLabel8',
-    'communityMonthLabel9',
-    'communityMonthLabel10',
-    'communityMonthLabel11',
-    'communityMonthLabel12',
-  ];
+  List<String> _monthLabels(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      l10n.communityMonthLabel1,
+      l10n.communityMonthLabel2,
+      l10n.communityMonthLabel3,
+      l10n.communityMonthLabel4,
+      l10n.communityMonthLabel5,
+      l10n.communityMonthLabel6,
+      l10n.communityMonthLabel7,
+      l10n.communityMonthLabel8,
+      l10n.communityMonthLabel9,
+      l10n.communityMonthLabel10,
+      l10n.communityMonthLabel11,
+      l10n.communityMonthLabel12,
+    ];
+  }
 
   @override
   void initState() {
@@ -121,7 +124,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
                 padding: EdgeInsets.only(right: index == 11 ? 0 : 8),
                 child: ChoiceChip(
                   selected: selected,
-                  label: Text('${_monthLabels[index]} · $count天'),
+                  label: Text('${_monthLabels(context)[index]} · $count天'),
                   onSelected: (_) {
                     unawaited(
                       _pageController.animateToPage(
@@ -277,7 +280,7 @@ class MonthlyHeatmap extends StatelessWidget {
   final int year;
   final List<Map<String, dynamic>> heatmap;
 
-  List<String> get _weekdayLabels => [
+  List<String> _weekdayLabels(BuildContext context) => [
         context.l10n.communityWeekdayMon,
         context.l10n.communityWeekdayTue,
         context.l10n.communityWeekdayWed,
@@ -309,7 +312,7 @@ class MonthlyHeatmap extends StatelessWidget {
               (index) => Expanded(
                 child: Center(
                   child: Text(
-                    _weekdayLabels[index],
+                    _weekdayLabels(context)[index],
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

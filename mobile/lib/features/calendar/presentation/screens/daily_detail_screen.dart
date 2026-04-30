@@ -788,7 +788,7 @@ class DailyDetailScreen extends ConsumerWidget {
                     const SizedBox(height: DS.spacing16),
                     TextField(
                       controller: titleController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: context.l10n.calTitle,
                         border: OutlineInputBorder(),
                       ),
@@ -812,7 +812,7 @@ class DailyDetailScreen extends ConsumerWidget {
                     ),
                     TextField(
                       controller: locationController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: context.l10n.calLocation,
                         border: OutlineInputBorder(),
                       ),
@@ -821,19 +821,19 @@ class DailyDetailScreen extends ConsumerWidget {
                     TextField(
                       controller: descController,
                       maxLines: 3,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: context.l10n.calDescription,
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(height: DS.spacing12),
+                    SizedBox(height: DS.spacing12),
                     DropdownButtonFormField<int>(
                       initialValue: reminderMinutes,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: context.l10n.calReminderLabel,
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
+                      items: [
                         DropdownMenuItem(value: 0, child: Text(context.l10n.calAtStart)),
                         DropdownMenuItem(value: 5, child: Text(context.l10n.cal5MinBefore)),
                         DropdownMenuItem(value: 15, child: Text(context.l10n.cal15MinBefore)),

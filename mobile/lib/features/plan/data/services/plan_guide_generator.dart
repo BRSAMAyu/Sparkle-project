@@ -7,7 +7,6 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_draft.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 final planGuideGeneratorProvider =
     Provider<PlanGuideGenerator>(PlanGuideGenerator.new);
@@ -80,7 +79,7 @@ class PlanGuideGenerator {
 
     final content = buffer.toString().trim();
     if (content.isEmpty) {
-      throw Exception(S.planGuideAiNotReturn);
+      throw Exception('AI did not return a plan guide');
     }
     return content;
   }

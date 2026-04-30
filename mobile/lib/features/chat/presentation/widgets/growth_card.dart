@@ -104,7 +104,7 @@ class _GrowthCardState extends State<GrowthCard>
                     Expanded(
                       child: Text(
                         widget.title,
-                        style: DS.titleSmall.copyWith(color: DS.textPrimary),
+                        style: DS.titleMedium.copyWith(color: DS.textPrimary),
                       ),
                     ),
                     if (widget.streakDays > 0)
@@ -176,7 +176,7 @@ class _GrowthCardState extends State<GrowthCard>
                           color: isDismiss ? DS.textSecondary : DS.success,
                         ),
                         backgroundColor: isDismiss
-                            ? DS.surfaceMedium
+                            ? DS.surfaceSecondary
                             : DS.success.withValues(alpha: 0.1),
                         side: BorderSide(
                           color: isDismiss

@@ -173,7 +173,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
           ),
           const SizedBox(height: DS.spacing16),
           SegmentedButton<TaskGuidanceAudience>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: TaskGuidanceAudience.human,
                 label: Text(context.l10n.taskGuidanceForSelf),
@@ -216,7 +216,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                   label: guidance.policyVersion,
                 ),
               if (stale)
-                const _MetaPill(
+                _MetaPill(
                   icon: Icons.warning_amber_rounded,
                   label: context.l10n.taskGuidanceStaleRefresh,
                   tone: _MetaTone.warning,

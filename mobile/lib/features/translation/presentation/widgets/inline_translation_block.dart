@@ -171,7 +171,7 @@ class _InlineTranslationBlockState
           color: DS.neutral100,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Row(
+        child: Row(
           children: [
             SizedBox(
               width: 16,

@@ -15,6 +15,7 @@ import 'package:sparkle/features/community/presentation/widgets/share_cards/shar
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
   const PrivateChatBubble({required this.message, super.key});

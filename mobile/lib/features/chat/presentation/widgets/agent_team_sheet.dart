@@ -572,7 +572,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
                 TextField(
                   controller: promptController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: context.l10n.chatTeamSystemPrompt,
                     alignLabelWithHint: true,
                   ),

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 /// Sector visual style configuration tuned for the galaxy canvas.
@@ -137,7 +136,7 @@ class SectorConfig {
 
   static final Map<SectorEnum, SectorStyle> styles = {
     SectorEnum.cosmos: SectorStyle(
-      name: S.galaxySectorRational,
+      name: 'Rational',
       darkPrimaryColor: const Color(0xFF7EAEE0),
       lightPrimaryColor: const Color(0xFF3D6EA2),
       baseAngle: 0.0,
@@ -145,7 +144,7 @@ class SectorConfig {
       keywords: const ['数学', '物理', '化学', '天文', '逻辑学'],
     ),
     SectorEnum.tech: SectorStyle(
-      name: S.galaxySectorCreation,
+      name: 'Creation',
       darkPrimaryColor: const Color(0xFF48C1C9),
       lightPrimaryColor: const Color(0xFF2D7C86),
       baseAngle: _sectorSweep,
@@ -153,7 +152,7 @@ class SectorConfig {
       keywords: const ['计算机', '工程', 'AI', '建筑', '制造'],
     ),
     SectorEnum.art: SectorStyle(
-      name: S.galaxySectorInspiration,
+      name: 'Inspiration',
       darkPrimaryColor: const Color(0xFFD97B9E),
       lightPrimaryColor: const Color(0xFFA74E72),
       baseAngle: _sectorSweep * 2,
@@ -185,7 +184,7 @@ class SectorConfig {
       keywords: const ['哲学', '宗教', '方法论', '元认知'],
     ),
     SectorEnum.voidSector: SectorStyle(
-      name: S.galaxySectorDarkMatter,
+      name: 'Dark Matter',
       darkPrimaryColor: const Color(0xFF7B8399),
       lightPrimaryColor: const Color(0xFF9199AD),
       baseAngle: _sectorSweep * 6,

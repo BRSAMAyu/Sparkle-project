@@ -3,6 +3,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Widget for displaying a plan progress share card preview
 ///
@@ -260,7 +261,7 @@ class PlanShareCard extends StatelessWidget {
                           constraints: const BoxConstraints(maxWidth: 160),
                           child: TextButton.icon(
                             icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
-                            label: const Text(
+                            label: Text(
                               context.l10n.communityShareAdoptPlan,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -327,9 +328,9 @@ class PlanShareCard extends StatelessWidget {
     final diff = date.difference(now);
 
     if (diff.inDays < 0) {
-      return context.l10n.communityShareExpired;
+      return S.communityShareExpired;
     } else if (diff.inDays == 0) {
-      return context.l10n.communityShareToday;
+      return S.communityShareToday;
     } else if (diff.inDays < 7) {
       return '${diff.inDays}天后';
     } else {

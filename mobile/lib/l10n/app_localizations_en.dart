@@ -19229,17 +19229,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get intentJustNow => 'just now';
 
   @override
-  String intentMinutesAgo(Object count) {
+  String intentMinutesAgo(int count) {
     return '$count min ago';
   }
 
   @override
-  String intentHoursAgo(Object count) {
+  String intentHoursAgo(int count) {
     return '$count hr ago';
   }
 
   @override
-  String intentDaysAgo(Object count) {
+  String intentDaysAgo(int count) {
     return '$count d ago';
   }
 
@@ -21299,7 +21299,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatGrowthNotNeeded => 'Not needed';
 
   @override
-  String chatGrowthStreakDays(Object days) {
+  String chatGrowthStreakDays(int days) {
     return '$days d';
   }
 
@@ -21935,22 +21935,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatStrategyCheckpoint => 'Checkpoint';
 
   @override
-  String chatStrategyDailyHours(Object hours, Object method) {
+  String chatStrategyDailyHours(String hours, String method) {
     return '${hours}h/day · $method';
   }
 
   @override
-  String chatStrategyMethod(Object method) {
+  String chatStrategyMethod(String method) {
     return 'Method: $method';
   }
 
   @override
-  String chatStrategyPhaseOutput(Object output) {
+  String chatStrategyPhaseOutput(String output) {
     return 'Phase output: $output';
   }
 
   @override
   String get chatStrategySuggestPace => 'I suggest following this pace first';
+
+  @override
+  String get chatStrategyCollapse => 'Collapse';
+
+  @override
+  String get chatStrategyExpand => 'Expand';
+
+  @override
+  String get chatStrategyPhaseLabel => 'Phase';
+
+  @override
+  String get chatStrategyContinue => 'Continue';
 
   @override
   String get chatStreamAdjustStrategy => 'Help me adjust strategy';
@@ -22203,7 +22215,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsCountDown => 'Countdown';
 
   @override
-  String get toolsMinutesCount => '\$minutes min';
+  String toolsMinutesCount(int minutes) {
+    return '$minutes min';
+  }
 
   @override
   String get toolsReset => 'Reset';
@@ -22215,7 +22229,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsSwitchToStopwatch => 'Switch to Stopwatch';
 
   @override
-  String get toolsFocusSaveFailed => 'Failed to save focus session: \$e';
+  String toolsFocusSaveFailed(Object e) {
+    return 'Failed to save focus session: $e';
+  }
 
   @override
   String get toolsFocusNotificationBody =>
@@ -22305,7 +22321,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsBreathConfig => 'Practice Setup';
 
   @override
-  String toolsBreathDurationMin(Object duration) {
+  String toolsBreathDurationMin(int duration) {
     return '$duration min';
   }
 
@@ -22385,10 +22401,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsTransFailed => 'Translation Failed';
 
   @override
-  String get toolsTransError => 'Translation error: \$e';
+  String toolsTransError(String e) {
+    return 'Translation error: $e';
+  }
 
   @override
-  String get toolsTransAddWordFailed => 'Failed to add to wordbook: \$e';
+  String toolsTransAddWordFailed(String e) {
+    return 'Failed to add to wordbook: $e';
+  }
 
   @override
   String get toolsTransTitle => 'Translator';
@@ -22447,7 +22467,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tap Translate below to see the result here.';
 
   @override
-  String toolsTransStarCount(Object count) {
+  String toolsTransStarCount(int count) {
     return '$count star';
   }
 
@@ -22478,7 +22498,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Lightweight transcription for real capture scenarios. Max 30 s per recording, powered by GLM ASR.';
 
   @override
-  String get toolsSttCharCount => '\$_charCount chars captured';
+  String toolsSttCharCount(Object _charCount) {
+    return '$_charCount chars captured';
+  }
 
   @override
   String get toolsSttRecordingInfo => '30 s per recording';
@@ -22523,7 +22545,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsWbSetImportance => 'Set Importance';
 
   @override
-  String get toolsWbStarCount => '\$starValue star';
+  String toolsWbStarCount(int starValue) {
+    return '$starValue star';
+  }
 
   @override
   String get toolsWbCancel => 'Cancel';
@@ -22539,10 +22563,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Turn lookups into reviewable assets. Search, filter by importance, flash-card review.';
 
   @override
-  String get toolsWbTotalCount => '\$totalCount entries';
+  String toolsWbTotalCount(Object totalCount) {
+    return '$totalCount entries';
+  }
 
   @override
-  String get toolsWbDueCount => '\$dueCount due for review';
+  String toolsWbDueCount(Object dueCount) {
+    return '$dueCount due for review';
+  }
 
   @override
   String get toolsWbTotal => 'Total';
@@ -22623,7 +22651,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsNotesWaiting => 'Waiting';
 
   @override
-  String get toolsNotesCharCount => '\$_charCount chars';
+  String toolsNotesCharCount(Object _charCount) {
+    return '$_charCount chars';
+  }
 
   @override
   String get toolsNotesCharLabel => 'Characters';
@@ -22721,7 +22751,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsFlashSelectSubject => 'Select Subject';
 
   @override
-  String toolsVocabEntryCount(Object count) {
+  String toolsVocabEntryCount(int count) {
     return '$count entries';
   }
 
@@ -22802,7 +22832,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsStatsWaitingData => 'Waiting for data';
 
   @override
-  String get toolsStatsRecentCount => '\$totalSessions recent sessions';
+  String toolsStatsRecentCount(Object totalSessions) {
+    return '$totalSessions recent sessions';
+  }
 
   @override
   String get toolsStatsTodayFocus => 'Today\'s Focus';
@@ -24142,10 +24174,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get insCreateFailed => 'Create failed: \$e';
+  String insCreateFailed(String e) {
+    return 'Create failed: $e';
+  }
 
   @override
-  String get insGenFailed => 'Generate failed: \$e';
+  String insGenFailed(String e) {
+    return 'Generate failed: $e';
+  }
 
   @override
   String get insTargetNode => 'Target Node';
@@ -24321,7 +24357,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebBadParams => 'Invalid request parameters';
 
   @override
-  String get ebImageUploadFailed => 'Image upload failed: \$e';
+  String ebImageUploadFailed(String e) {
+    return 'Image upload failed: $e';
+  }
 
   @override
   String get ebRemove => 'Remove';
@@ -24339,7 +24377,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebAddError => 'Add Error';
 
   @override
-  String get ebLoadErrorFailed => 'Failed to load error: \$error';
+  String ebLoadErrorFailed(String error) {
+    return 'Failed to load error: $error';
+  }
 
   @override
   String get ebSaving => 'Saving...';
@@ -24407,7 +24447,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebViewAnalysis => 'View AI Analysis';
 
   @override
-  String get ebSubmitFailed => 'Submit failed: \$e';
+  String ebSubmitFailed(Object e) {
+    return 'Submit failed: $e';
+  }
 
   @override
   String get ebBack => 'Back';
@@ -24497,10 +24539,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memNotEnabled => 'Memory control is not enabled';
 
   @override
-  String get memLoadSettingsFailed => 'Failed to load memory settings: \$e';
+  String memLoadSettingsFailed(String e) {
+    return 'Failed to load memory settings: $e';
+  }
 
   @override
-  String get memSaveFailed => 'Save failed: \$e';
+  String memSaveFailed(String e) {
+    return 'Save failed: $e';
+  }
 
   @override
   String get memBack => 'Back';
@@ -24793,7 +24839,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transSaveFailed => 'Save failed, please retry';
 
   @override
-  String get transUnknownError => 'Unknown error: \$e';
+  String transUnknownError(String e) {
+    return 'Unknown error: $e';
+  }
 
   @override
   String get transSaved => 'Saved';
@@ -24808,7 +24856,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraObserving => 'Aurora · Observing';
 
   @override
-  String get auroraFeedbackFailed => 'Calibration feedback failed: \$error';
+  String auroraFeedbackFailed(String error) {
+    return 'Calibration feedback failed: $error';
+  }
 
   @override
   String get auroraConfirm => 'Confirm';
@@ -25863,8 +25913,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planSprintShareOpened => 'Share opened';
 
   @override
-  String planSprintShareText(Object completedTasks, Object masteredNodes,
-      Object repairedErrors, Object strongestArea) {
+  String planSprintShareText(int masteredNodes, int repairedErrors,
+      int completedTasks, String strongestArea) {
     return 'My 7-day exam sprint is done: mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks. Strongest area: $strongestArea. #SparkleExam';
   }
 
@@ -25922,7 +25972,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planSprintRecheck => 'Recheck';
 
   @override
-  String planTaskCount(Object count) {
+  String planTaskCount(int count) {
     return '$count tasks';
   }
 
@@ -25988,12 +26038,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planPortfolioGalaxySummary => 'Galaxy Mastery Summary';
 
   @override
-  String planPortfolioResultRating(Object rating) {
+  String planPortfolioResultRating(int rating) {
     return 'Result Rating $rating/5';
   }
 
   @override
-  String planPortfolioSelfRating(Object rating) {
+  String planPortfolioSelfRating(int rating) {
     return 'Self Rating $rating/10';
   }
 
@@ -26298,7 +26348,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityCorePartner => 'Accountability Partner';
 
   @override
-  String communityPendingInvitesCount(Object count) {
+  String communityPendingInvitesCount(int count) {
     return 'You have $count pending partner invitations';
   }
 
@@ -26322,7 +26372,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityWorkspaceReady => 'Partner workspace is ready';
 
   @override
-  String communityTogetherDays(Object count) {
+  String communityTogetherDays(int count) {
     return 'Together for $count days';
   }
 
@@ -26330,17 +26380,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityMe => 'Me';
 
   @override
-  String communityMyStreakDays(Object count) {
+  String communityMyStreakDays(int count) {
     return '${count}d streak';
   }
 
   @override
-  String communityPartnerStreakDays(Object count) {
+  String communityPartnerStreakDays(int count) {
     return '${count}d streak';
   }
 
   @override
-  String communityTotalCheckins(Object count) {
+  String communityTotalCheckins(int count) {
     return '$count times';
   }
 
@@ -26354,7 +26404,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityWorkshop => 'Workshop';
 
   @override
-  String communityPartnerRequestCount(Object count) {
+  String communityPartnerRequestCount(int count) {
     return '$count partner/friend requests pending';
   }
 
@@ -26826,7 +26876,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Just nudged. Won\'t resend during cooldown. Notification will be delivered in-app and shown when they\'re online.';
 
   @override
-  String communityNudgeFailed(Object error) {
+  String communityNudgeFailed(String error) {
     return 'Nudge failed: $error';
   }
 
@@ -28781,4 +28831,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String wgnNextWeekGoal(String suggestion) {
     return 'Next week goal: $suggestion';
   }
+
+  @override
+  String get galaxySectorRational => 'Rational';
+
+  @override
+  String get galaxySectorCreation => 'Creation';
+
+  @override
+  String get galaxySectorInspiration => 'Inspiration';
+
+  @override
+  String get galaxySectorDarkMatter => 'Dark Matter';
+
+  @override
+  String get planSprintSubmitFailed =>
+      'Sprint submission failed, please try again';
+
+  @override
+  String get planPortfolioLoadFailedMsg => 'Failed to load learning portfolio';
+
+  @override
+  String get planPortfolioRetry => 'Retry';
+
+  @override
+  String get planGuideAiNotReturn =>
+      'AI did not return a result, please try again';
+
+  @override
+  String get planViewDetails => 'View details';
+
+  @override
+  String get toolsPlanLinked => 'Planned end time';
+
+  @override
+  String get ebLoadError => 'Failed to load errors, please try again';
 }

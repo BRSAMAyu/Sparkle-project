@@ -84,21 +84,21 @@ class MilestoneCelebrationPayload {
   final String shareHashtag;
 
   String get unitLabel => switch (milestoneId) {
-        'knowledge_explorer_50' => context.l10n.achievementMilestoneUnitNodes,
-        'sprint_veteran' => context.l10n.achievementMilestoneUnitSprints,
-        _ => context.l10n.achievementMilestoneUnitDays,
+        'knowledge_explorer_50' => S.achievementMilestoneUnitNodes,
+        'sprint_veteran' => S.achievementMilestoneUnitSprints,
+        _ => S.achievementMilestoneUnitDays,
       };
 
   String get headline => switch (milestoneId) {
-        'knowledge_explorer_50' => context.l10n.achievementMilestoneHeadlineNodes,
-        'sprint_veteran' => context.l10n.achievementMilestoneHeadlineSprints,
-        _ => context.l10n.achievementMilestoneHeadlineDefault,
+        'knowledge_explorer_50' => S.achievementMilestoneHeadlineNodes,
+        'sprint_veteran' => S.achievementMilestoneHeadlineSprints,
+        _ => S.achievementMilestoneHeadlineDefault,
       };
 
   String get subheadline => switch (milestoneId) {
-        'knowledge_explorer_50' => context.l10n.achievementMilestoneSubheadlineNodes,
-        'sprint_veteran' => context.l10n.achievementMilestoneSubheadlineSprints,
-        _ => context.l10n.achievementMilestoneSubheadlineDefault,
+        'knowledge_explorer_50' => S.achievementMilestoneSubheadlineNodes,
+        'sprint_veteran' => S.achievementMilestoneSubheadlineSprints,
+        _ => S.achievementMilestoneSubheadlineDefault,
       };
 
   String get badgeLabel => switch (milestoneId) {
@@ -115,7 +115,7 @@ class MilestoneCelebrationPayload {
       };
 
   static String _defaultShareHashtag(String milestoneId) =>
-      milestoneId == '30_day_learner' ? context.l10n.achievementMilestoneHashtag30Day : context.l10n.achievementMilestoneHashtagDefault;
+      milestoneId == '30_day_learner' ? S.achievementMilestoneHashtag30Day : S.achievementMilestoneHashtagDefault;
 }
 
 class MilestoneCelebrationScreen extends ConsumerStatefulWidget {

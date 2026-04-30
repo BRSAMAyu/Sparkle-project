@@ -478,7 +478,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       TextField(
                         controller: _controller,
                         focusNode: _focusNode,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: context.l10n.toolsVocabInputHint,
                           prefixIcon: Icon(Icons.menu_book_rounded),
                         ),
@@ -503,7 +503,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       child: TextField(
                         controller: _controller,
                         focusNode: _focusNode,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: context.l10n.toolsVocabInputHint,
                           prefixIcon: Icon(Icons.menu_book_rounded),
                         ),

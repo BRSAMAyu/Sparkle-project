@@ -156,7 +156,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _InfoRow(
+                  _InfoRow(
                     icon: Icons.lock_outline_rounded,
                     title: context.l10n.userPrivacyReminder,
                     body: context.l10n.userPrivacyReminderBody,

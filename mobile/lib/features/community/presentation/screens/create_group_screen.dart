@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class CreateGroupScreen extends ConsumerStatefulWidget {
   const CreateGroupScreen({super.key});
@@ -304,7 +305,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       const SizedBox(height: DS.spacing16),
                       TextFormField(
                         controller: _goalController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: '冲刺目标',
                           hintText: context.l10n.communityCreateGroupGoalHint,
                           border: OutlineInputBorder(),

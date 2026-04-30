@@ -328,7 +328,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
                 controller: _tabController,
                 labelColor: DS.brandPrimary,
                 indicatorColor: DS.brandPrimary,
-                tabs: const [
+                tabs: [
                   Tab(icon: Icon(Icons.emoji_events), text: context.l10n.communityTabAchievements),
                   Tab(icon: Icon(Icons.flag), text: context.l10n.communityTabPlans),
                   Tab(icon: Icon(Icons.task_alt), text: context.l10n.communityTabTasks),

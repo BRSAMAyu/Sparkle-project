@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class ForesightCard extends StatelessWidget {
   const ForesightCard({required this.hint, super.key});
@@ -75,11 +76,11 @@ class ForesightCard extends StatelessWidget {
   String _labelForDim(String dim) {
     switch (dim) {
       case 'execution_stability':
-        return context.l10n.userStabilityScore;
+        return S.userStabilityScore;
       case 'schedule_fit':
-        return context.l10n.userRhythmFit;
+        return S.userRhythmFit;
       case 'overload_risk':
-        return context.l10n.userOverloadRisk;
+        return S.userOverloadRisk;
       default:
         return dim;
     }

@@ -233,7 +233,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                   controller: _inputController,
                                   enabled: !_skipInFlight,
                                   onSubmitted: (_) => _handleSubmit(),
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     hintText: context.l10n.userInputPlaceholder,
                                   ),
                                 ),

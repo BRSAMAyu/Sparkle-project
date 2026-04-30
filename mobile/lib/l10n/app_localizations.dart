@@ -33611,19 +33611,19 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 分钟前'**
-  String intentMinutesAgo(Object count);
+  String intentMinutesAgo(int count);
 
   /// No description provided for @intentHoursAgo.
   ///
   /// In zh, this message translates to:
   /// **'{count} 小时前'**
-  String intentHoursAgo(Object count);
+  String intentHoursAgo(int count);
 
   /// No description provided for @intentDaysAgo.
   ///
   /// In zh, this message translates to:
   /// **'{count} 天前'**
-  String intentDaysAgo(Object count);
+  String intentDaysAgo(int count);
 
   /// No description provided for @intentRecentCategorySignal.
   ///
@@ -37241,7 +37241,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{days} 天'**
-  String chatGrowthStreakDays(Object days);
+  String chatGrowthStreakDays(int days);
 
   /// No description provided for @chatHistoryOpenTimeout.
   ///
@@ -38321,25 +38321,49 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'每天 {hours} 小时 · {method}'**
-  String chatStrategyDailyHours(Object hours, Object method);
+  String chatStrategyDailyHours(String hours, String method);
 
   /// No description provided for @chatStrategyMethod.
   ///
   /// In zh, this message translates to:
   /// **'方法：{method}'**
-  String chatStrategyMethod(Object method);
+  String chatStrategyMethod(String method);
 
   /// No description provided for @chatStrategyPhaseOutput.
   ///
   /// In zh, this message translates to:
   /// **'阶段产出：{output}'**
-  String chatStrategyPhaseOutput(Object output);
+  String chatStrategyPhaseOutput(String output);
 
   /// No description provided for @chatStrategySuggestPace.
   ///
   /// In zh, this message translates to:
   /// **'我建议先按这个节奏推进'**
   String get chatStrategySuggestPace;
+
+  /// No description provided for @chatStrategyCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get chatStrategyCollapse;
+
+  /// No description provided for @chatStrategyExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开'**
+  String get chatStrategyExpand;
+
+  /// No description provided for @chatStrategyPhaseLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段'**
+  String get chatStrategyPhaseLabel;
+
+  /// No description provided for @chatStrategyContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get chatStrategyContinue;
 
   /// No description provided for @chatStreamAdjustStrategy.
   ///
@@ -38788,8 +38812,8 @@ abstract class AppLocalizations {
   /// No description provided for @toolsMinutesCount.
   ///
   /// In zh, this message translates to:
-  /// **'\$minutes 分钟'**
-  String get toolsMinutesCount;
+  /// **'{minutes} 分钟'**
+  String toolsMinutesCount(int minutes);
 
   /// No description provided for @toolsReset.
   ///
@@ -38812,8 +38836,8 @@ abstract class AppLocalizations {
   /// No description provided for @toolsFocusSaveFailed.
   ///
   /// In zh, this message translates to:
-  /// **'专注记录保存失败：\$e'**
-  String get toolsFocusSaveFailed;
+  /// **'专注记录保存失败：{e}'**
+  String toolsFocusSaveFailed(Object e);
 
   /// No description provided for @toolsFocusNotificationBody.
   ///
@@ -38836,13 +38860,13 @@ abstract class AppLocalizations {
   /// No description provided for @toolsFocusRecorded.
   ///
   /// In zh, this message translates to:
-  /// **'本次专注 \$durationMinutes 分钟，已记录到本地专注统计。'**
+  /// **'本次专注 {durationMinutes} 分钟，已记录到本地专注统计。'**
   String toolsFocusRecorded(Object durationMinutes);
 
   /// No description provided for @toolsFocusReward.
   ///
   /// In zh, this message translates to:
-  /// **'本次专注 \$durationMinutes 分钟，获得 \$flameEarned 点火苗奖励。'**
+  /// **'本次专注 {durationMinutes} 分钟，获得 {flameEarned} 点火苗奖励。'**
   String toolsFocusReward(Object durationMinutes, Object flameEarned);
 
   /// No description provided for @toolsOpenDuration.
@@ -38975,7 +38999,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{duration} 分钟'**
-  String toolsBreathDurationMin(Object duration);
+  String toolsBreathDurationMin(int duration);
 
   /// No description provided for @toolsBreathContinue.
   ///
@@ -39118,14 +39142,14 @@ abstract class AppLocalizations {
   /// No description provided for @toolsTransError.
   ///
   /// In zh, this message translates to:
-  /// **'翻译出错: \$e'**
-  String get toolsTransError;
+  /// **'翻译出错: {e}'**
+  String toolsTransError(String e);
 
   /// No description provided for @toolsTransAddWordFailed.
   ///
   /// In zh, this message translates to:
-  /// **'加入单词本失败: \$e'**
-  String get toolsTransAddWordFailed;
+  /// **'加入单词本失败: {e}'**
+  String toolsTransAddWordFailed(String e);
 
   /// No description provided for @toolsTransTitle.
   ///
@@ -39233,7 +39257,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 星'**
-  String toolsTransStarCount(Object count);
+  String toolsTransStarCount(int count);
 
   /// No description provided for @toolsTransWordbookLink.
   ///
@@ -39286,8 +39310,8 @@ abstract class AppLocalizations {
   /// No description provided for @toolsSttCharCount.
   ///
   /// In zh, this message translates to:
-  /// **'已捕获 \$_charCount 字'**
-  String get toolsSttCharCount;
+  /// **'已捕获 {_charCount} 字'**
+  String toolsSttCharCount(Object _charCount);
 
   /// No description provided for @toolsSttRecordingInfo.
   ///
@@ -39370,8 +39394,8 @@ abstract class AppLocalizations {
   /// No description provided for @toolsWbStarCount.
   ///
   /// In zh, this message translates to:
-  /// **'\$starValue 星'**
-  String get toolsWbStarCount;
+  /// **'{starValue} 星'**
+  String toolsWbStarCount(int starValue);
 
   /// No description provided for @toolsWbCancel.
   ///
@@ -39400,14 +39424,14 @@ abstract class AppLocalizations {
   /// No description provided for @toolsWbTotalCount.
   ///
   /// In zh, this message translates to:
-  /// **'\$totalCount 个词条'**
-  String get toolsWbTotalCount;
+  /// **'{totalCount} 个词条'**
+  String toolsWbTotalCount(Object totalCount);
 
   /// No description provided for @toolsWbDueCount.
   ///
   /// In zh, this message translates to:
-  /// **'\$dueCount 个待复习'**
-  String get toolsWbDueCount;
+  /// **'{dueCount} 个待复习'**
+  String toolsWbDueCount(Object dueCount);
 
   /// No description provided for @toolsWbTotal.
   ///
@@ -39562,8 +39586,8 @@ abstract class AppLocalizations {
   /// No description provided for @toolsNotesCharCount.
   ///
   /// In zh, this message translates to:
-  /// **'\$_charCount 字'**
-  String get toolsNotesCharCount;
+  /// **'{_charCount} 字'**
+  String toolsNotesCharCount(Object _charCount);
 
   /// No description provided for @toolsNotesCharLabel.
   ///
@@ -39737,7 +39761,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 词条'**
-  String toolsVocabEntryCount(Object count);
+  String toolsVocabEntryCount(int count);
 
   /// No description provided for @toolsVocabRemove.
   ///
@@ -39880,8 +39904,8 @@ abstract class AppLocalizations {
   /// No description provided for @toolsStatsRecentCount.
   ///
   /// In zh, this message translates to:
-  /// **'\$totalSessions 条最近记录'**
-  String get toolsStatsRecentCount;
+  /// **'{totalSessions} 条最近记录'**
+  String toolsStatsRecentCount(Object totalSessions);
 
   /// No description provided for @toolsStatsTodayFocus.
   ///
@@ -42322,14 +42346,14 @@ abstract class AppLocalizations {
   /// No description provided for @insCreateFailed.
   ///
   /// In zh, this message translates to:
-  /// **'创建失败：\$e'**
-  String get insCreateFailed;
+  /// **'创建失败：{e}'**
+  String insCreateFailed(String e);
 
   /// No description provided for @insGenFailed.
   ///
   /// In zh, this message translates to:
-  /// **'生成失败：\$e'**
-  String get insGenFailed;
+  /// **'生成失败：{e}'**
+  String insGenFailed(String e);
 
   /// No description provided for @insTargetNode.
   ///
@@ -42652,8 +42676,8 @@ abstract class AppLocalizations {
   /// No description provided for @ebImageUploadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'图片上传失败: \$e'**
-  String get ebImageUploadFailed;
+  /// **'图片上传失败: {e}'**
+  String ebImageUploadFailed(String e);
 
   /// No description provided for @ebRemove.
   ///
@@ -42688,8 +42712,8 @@ abstract class AppLocalizations {
   /// No description provided for @ebLoadErrorFailed.
   ///
   /// In zh, this message translates to:
-  /// **'加载错题失败: \$error'**
-  String get ebLoadErrorFailed;
+  /// **'加载错题失败: {error}'**
+  String ebLoadErrorFailed(String error);
 
   /// No description provided for @ebSaving.
   ///
@@ -42820,8 +42844,8 @@ abstract class AppLocalizations {
   /// No description provided for @ebSubmitFailed.
   ///
   /// In zh, this message translates to:
-  /// **'提交失败: \$e'**
-  String get ebSubmitFailed;
+  /// **'提交失败: {e}'**
+  String ebSubmitFailed(Object e);
 
   /// No description provided for @ebBack.
   ///
@@ -43000,14 +43024,14 @@ abstract class AppLocalizations {
   /// No description provided for @memLoadSettingsFailed.
   ///
   /// In zh, this message translates to:
-  /// **'加载记忆设置失败: \$e'**
-  String get memLoadSettingsFailed;
+  /// **'加载记忆设置失败: {e}'**
+  String memLoadSettingsFailed(String e);
 
   /// No description provided for @memSaveFailed.
   ///
   /// In zh, this message translates to:
-  /// **'保存失败: \$e'**
-  String get memSaveFailed;
+  /// **'保存失败: {e}'**
+  String memSaveFailed(String e);
 
   /// No description provided for @memBack.
   ///
@@ -43552,8 +43576,8 @@ abstract class AppLocalizations {
   /// No description provided for @transUnknownError.
   ///
   /// In zh, this message translates to:
-  /// **'未知错误: \$e'**
-  String get transUnknownError;
+  /// **'未知错误: {e}'**
+  String transUnknownError(String e);
 
   /// No description provided for @transSaved.
   ///
@@ -43582,8 +43606,8 @@ abstract class AppLocalizations {
   /// No description provided for @auroraFeedbackFailed.
   ///
   /// In zh, this message translates to:
-  /// **'提交校准反馈失败：\$error'**
-  String get auroraFeedbackFailed;
+  /// **'提交校准反馈失败：{error}'**
+  String auroraFeedbackFailed(String error);
 
   /// No description provided for @auroraConfirm.
   ///
@@ -45359,8 +45383,8 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'我的 7 天备考冲刺完成：掌握 {masteredNodes} 个知识节点，修复 {repairedErrors} 个错误模式，完成 {completedTasks} 个任务。最强项：{strongestArea}。#Sparkle备考'**
-  String planSprintShareText(Object completedTasks, Object masteredNodes,
-      Object repairedErrors, Object strongestArea);
+  String planSprintShareText(int masteredNodes, int repairedErrors,
+      int completedTasks, String strongestArea);
 
   /// No description provided for @planSprintBack.
   ///
@@ -45463,7 +45487,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 个任务'**
-  String planTaskCount(Object count);
+  String planTaskCount(int count);
 
   /// No description provided for @planShareCard.
   ///
@@ -45565,13 +45589,13 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'结果评分 {rating}/5'**
-  String planPortfolioResultRating(Object rating);
+  String planPortfolioResultRating(int rating);
 
   /// No description provided for @planPortfolioSelfRating.
   ///
   /// In zh, this message translates to:
   /// **'自评 {rating}/10'**
-  String planPortfolioSelfRating(Object rating);
+  String planPortfolioSelfRating(int rating);
 
   /// No description provided for @planPortfolioWeakestTitle.
   ///
@@ -46094,7 +46118,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'你有 {count} 条伙伴邀请待处理'**
-  String communityPendingInvitesCount(Object count);
+  String communityPendingInvitesCount(int count);
 
   /// No description provided for @communityPartnerDescription.
   ///
@@ -46136,7 +46160,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'一起坚持了 {count} 天'**
-  String communityTogetherDays(Object count);
+  String communityTogetherDays(int count);
 
   /// No description provided for @communityMe.
   ///
@@ -46148,19 +46172,19 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 天连胜'**
-  String communityMyStreakDays(Object count);
+  String communityMyStreakDays(int count);
 
   /// No description provided for @communityPartnerStreakDays.
   ///
   /// In zh, this message translates to:
   /// **'{count} 天连胜'**
-  String communityPartnerStreakDays(Object count);
+  String communityPartnerStreakDays(int count);
 
   /// No description provided for @communityTotalCheckins.
   ///
   /// In zh, this message translates to:
   /// **'{count} 次'**
-  String communityTotalCheckins(Object count);
+  String communityTotalCheckins(int count);
 
   /// No description provided for @communityChat.
   ///
@@ -46184,7 +46208,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 条责任伙伴/好友请求待处理'**
-  String communityPartnerRequestCount(Object count);
+  String communityPartnerRequestCount(int count);
 
   /// No description provided for @communityViewRequests.
   ///
@@ -46976,7 +47000,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'提醒失败: {error}'**
-  String communityNudgeFailed(Object error);
+  String communityNudgeFailed(String error);
 
   /// No description provided for @communityShareProgress.
   ///
@@ -50236,6 +50260,72 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'下周目标：{suggestion}'**
   String wgnNextWeekGoal(String suggestion);
+
+  /// No description provided for @galaxySectorRational.
+  ///
+  /// In zh, this message translates to:
+  /// **'理性'**
+  String get galaxySectorRational;
+
+  /// No description provided for @galaxySectorCreation.
+  ///
+  /// In zh, this message translates to:
+  /// **'创造'**
+  String get galaxySectorCreation;
+
+  /// No description provided for @galaxySectorInspiration.
+  ///
+  /// In zh, this message translates to:
+  /// **'灵感'**
+  String get galaxySectorInspiration;
+
+  /// No description provided for @galaxySectorDarkMatter.
+  ///
+  /// In zh, this message translates to:
+  /// **'暗物质'**
+  String get galaxySectorDarkMatter;
+
+  /// No description provided for @planSprintSubmitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺提交失败，请重试'**
+  String get planSprintSubmitFailed;
+
+  /// No description provided for @planPortfolioLoadFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载学习组合失败'**
+  String get planPortfolioLoadFailedMsg;
+
+  /// No description provided for @planPortfolioRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get planPortfolioRetry;
+
+  /// No description provided for @planGuideAiNotReturn.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 未返回结果，请重试'**
+  String get planGuideAiNotReturn;
+
+  /// No description provided for @planViewDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看详情'**
+  String get planViewDetails;
+
+  /// No description provided for @toolsPlanLinked.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划结束时间'**
+  String get toolsPlanLinked;
+
+  /// No description provided for @ebLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载错题失败，请重试'**
+  String get ebLoadError;
 }
 
 class _AppLocalizationsDelegate

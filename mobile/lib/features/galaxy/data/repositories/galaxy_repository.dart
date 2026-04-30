@@ -181,7 +181,7 @@ class GalaxyRepository {
   }) async {
     if (DemoDataService.isDemoMode) {
       return _sanitizeExpansionCandidates(
-        const NodeExpansionCandidatesResponse(
+        NodeExpansionCandidatesResponse(
           triggerNodeId: '',
           promptVersion: 'demo',
           candidates: <NodeExpansionCandidate>[

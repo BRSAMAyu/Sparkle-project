@@ -94,7 +94,7 @@ class _ThemeModeSection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionIntro(
+          _SectionIntro(
             title: context.l10n.userThemeMode,
             description: context.l10n.userThemeModeHint,
           ),
@@ -194,7 +194,7 @@ class _BrandPresetSection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionIntro(
+          _SectionIntro(
             title: context.l10n.userBrandPresets,
             description: context.l10n.userBrandPresetsHint,
           ),
@@ -307,7 +307,7 @@ class _ColorPreviewSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionIntro(
+        _SectionIntro(
           title: context.l10n.userColorPreview,
           description: context.l10n.userColorPreviewHint,
         ),

@@ -216,7 +216,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
                           maxLines: null,
                           expands: true,
                           textAlignVertical: TextAlignVertical.top,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: context.l10n.toolsNotesHint,
                             border: InputBorder.none,
                           ),

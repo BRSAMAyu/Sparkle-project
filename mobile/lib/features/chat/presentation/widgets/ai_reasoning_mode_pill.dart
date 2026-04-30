@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class AiReasoningModePill extends ConsumerWidget {
   const AiReasoningModePill({super.key});
@@ -254,14 +255,14 @@ class _ReasoningModeVisuals {
       case 'fast':
         return _ReasoningModeVisuals(
           label: '敏捷',
-          caption: context.l10n.chatModeFastDesc,
+          caption: S.chatModeFastDesc,
           icon: Icons.flash_on_rounded,
           color: DS.warning,
         );
       case 'deep':
         return _ReasoningModeVisuals(
           label: '深思',
-          caption: context.l10n.chatModeStrongAnalysisDesc,
+          caption: S.chatModeStrongAnalysisDesc,
           icon: Icons.psychology_alt_rounded,
           color: DS.info,
         );
@@ -269,7 +270,7 @@ class _ReasoningModeVisuals {
       default:
         return _ReasoningModeVisuals(
           label: '均衡',
-          caption: context.l10n.chatModeBalancedDesc,
+          caption: S.chatModeBalancedDesc,
           icon: Icons.tune_rounded,
           color: DS.success,
         );

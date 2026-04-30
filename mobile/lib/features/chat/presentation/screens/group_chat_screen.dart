@@ -119,7 +119,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   context.l10n.chatGroupForwardToGroup,
                   style: TextStyle(
                       fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
@@ -194,7 +194,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     context.l10n.chatGroupReportMessage,
                     style: TextStyle(
                         fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
@@ -226,7 +226,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   const SizedBox(height: DS.spacing8),
                   TextField(
                     controller: descController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: context.l10n.chatGroupReportAdditionalNote,
                       border: OutlineInputBorder(),
                     ),

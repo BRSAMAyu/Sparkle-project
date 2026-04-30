@@ -64,7 +64,7 @@ class MemoryRoutes {
               return buildSparkleTransitionPage(
                 state: state,
                 motionToken: SparkleMotionToken.scene,
-                child: const Scaffold(
+                child: Scaffold(
                   body: Center(child: Text(context.l10n.memDetailMissing)),
                 ),
               );

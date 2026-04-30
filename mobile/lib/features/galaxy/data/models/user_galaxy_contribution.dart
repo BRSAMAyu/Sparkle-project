@@ -1,5 +1,6 @@
-class GalaxyContributionNodeItem {
 import 'package:sparkle/core/services/i18n_service.dart';
+
+class GalaxyContributionNodeItem {
   const GalaxyContributionNodeItem({
     required this.nodeId,
     required this.nodeName,

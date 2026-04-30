@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 责任伙伴成就徽章组件
 class AchievementBadge extends StatelessWidget {
@@ -192,9 +193,9 @@ class AchievementBadge extends StatelessWidget {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return context.l10n.communityShareTodayDate;
+      return S.communityShareTodayDate;
     } else if (difference.inDays == 1) {
-      return context.l10n.communityShareYesterday;
+      return S.communityShareYesterday;
     } else if (difference.inDays < 7) {
       return '${difference.inDays}天前';
     } else if (difference.inDays < 30) {

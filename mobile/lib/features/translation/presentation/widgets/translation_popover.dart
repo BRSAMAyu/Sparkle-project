@@ -249,7 +249,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         ),
       );
 
-  Widget _buildLoading() => const Row(
+  Widget _buildLoading() => Row(
         children: [
           SizedBox(
             width: 16,

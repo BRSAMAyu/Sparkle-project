@@ -85,7 +85,7 @@ class BreathingTool extends ConsumerStatefulWidget {
 class _BreathingToolState extends ConsumerState<BreathingTool>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const List<int> _durations = [1, 3, 5, 8];
-  static const List<_BreathingPattern> _patterns = [
+  static List<_BreathingPattern> _patternsFor(BuildContext context) => [
     _BreathingPattern(
       label: '4-7-8',
       description: context.l10n.toolsBreathQuickDesc,
@@ -134,7 +134,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   String? _lastAnnouncementKey;
   DateTime? _sessionAnchorAt;
 
-  _BreathingPattern get _pattern => _patterns[_selectedPatternIndex];
+  _BreathingPattern get _pattern => _patternsFor(context)[_selectedPatternIndex];
   int get _selectedDurationMinutes => _durations[_selectedDurationIndex];
   int get _targetSessionSeconds => _selectedDurationMinutes * 60;
 
@@ -232,7 +232,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     final prefs = await SharedPreferences.getInstance();
     final savedPatternIndex =
         (prefs.getInt(_prefsPatternKey) ?? _selectedPatternIndex)
-            .clamp(0, _patterns.length - 1);
+            .clamp(0, _patternsFor(context).length - 1);
     final savedDurationIndex =
         (prefs.getInt(_prefsDurationKey) ?? _selectedDurationIndex)
             .clamp(0, _durations.length - 1);
@@ -272,7 +272,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
 
       final patternIndex =
           ((json['selectedPatternIndex'] as num?)?.toInt() ?? savedPatternIndex)
-              .clamp(0, _patterns.length - 1);
+              .clamp(0, _patternsFor(context).length - 1);
       final durationIndex = ((json['selectedDurationIndex'] as num?)?.toInt() ??
               savedDurationIndex)
           .clamp(0, _durations.length - 1);
@@ -816,9 +816,9 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                   spacing: DS.spacing10,
                   runSpacing: DS.spacing10,
                   children: List.generate(
-                    _patterns.length,
+                    _patternsFor(context).length,
                     (index) => ToolChoiceChip(
-                      label: _patterns[index].label,
+                      label: _patternsFor(context)[index].label,
                       selected: _selectedPatternIndex == index,
                       onTap: () => unawaited(_updatePattern(index)),
                       accentColor: accent,

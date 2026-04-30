@@ -7,8 +7,8 @@ import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
-import 'package:sparkle/core/services/task_notification_scheduler.dart'
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show
         TaskNotificationScheduler,
         taskNotificationSchedulerProvider,

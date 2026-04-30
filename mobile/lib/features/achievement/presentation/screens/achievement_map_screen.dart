@@ -15,6 +15,7 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_milestone_badge.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class AchievementMapScreen extends ConsumerStatefulWidget {
   const AchievementMapScreen({super.key});
@@ -269,7 +270,7 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
   }
 
   String _displayStateLabel(String state) {
-    final l10n = context.l10n;
+    final l10n = S;
     switch (state) {
       case 'unlocked':
         return l10n.achievementMapStateUnlocked;

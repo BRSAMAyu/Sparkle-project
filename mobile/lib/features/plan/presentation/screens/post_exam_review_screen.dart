@@ -96,7 +96,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                             ),
                             controller: _resultDescriptionController,
                             textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: context.l10n.planExamScoreLabel,
                               hintText: context.l10n.planExamScoreHint,
                               prefixIcon: Icon(Icons.query_stats_outlined),
@@ -115,7 +115,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                         maxLines: 5,
                         minLines: 3,
                         textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: context.l10n.planExamChallengeLabel,
                           alignLabelWithHint: true,
                         ),
@@ -132,7 +132,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                         maxLines: 5,
                         minLines: 3,
                         textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: context.l10n.planExamStrategyLabel,
                           alignLabelWithHint: true,
                         ),
@@ -149,7 +149,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                         maxLines: 4,
                         minLines: 2,
                         textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: context.l10n.planExamFutureLabel,
                           hintText: context.l10n.planExamFutureHint,
                           alignLabelWithHint: true,

@@ -11,6 +11,7 @@ import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class ExamSprintSetupScreen extends ConsumerStatefulWidget {
   const ExamSprintSetupScreen({super.key});
@@ -83,7 +84,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                     TextFormField(
                       controller: _subjectController,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: context.l10n.planSprintStep1Hint,
                         prefixIcon: Icon(Icons.menu_book_outlined),
                       ),
@@ -196,7 +197,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                       controller: _scopeController,
                       maxLines: 5,
                       minLines: 4,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: context.l10n.planSprintStep4Hint,
                         alignLabelWithHint: true,
                       ),
@@ -730,8 +731,8 @@ class _TargetModeOption {
   final String label;
 }
 
-const List<_TargetModeOption> _targetOptions = <_TargetModeOption>[
-  _TargetModeOption(value: 'pass', label: context.l10n.planSprintTargetPass),
-  _TargetModeOption(value: 'hold', label: context.l10n.planSprintTargetHold),
-  _TargetModeOption(value: 'high_score', label: context.l10n.planSprintTargetHighScore),
+List<_TargetModeOption> _targetOptions = <_TargetModeOption>[
+  _TargetModeOption(value: 'pass', label: S.planSprintTargetPass),
+  _TargetModeOption(value: 'hold', label: S.planSprintTargetHold),
+  _TargetModeOption(value: 'high_score', label: S.planSprintTargetHighScore),
 ];

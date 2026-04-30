@@ -106,7 +106,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                     .toList(growable: false);
 
                 if (coreNodes.isEmpty && optionalNodes.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(context.l10n.insNoPrereq),
                   );
                 }

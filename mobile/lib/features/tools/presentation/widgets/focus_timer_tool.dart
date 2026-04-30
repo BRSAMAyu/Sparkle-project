@@ -564,7 +564,7 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
                     : '${estimatedEnd.hour.toString().padLeft(2, '0')}:${estimatedEnd.minute.toString().padLeft(2, '0')}',
                 accentColor: accent,
                 icon: Icons.event_available_rounded,
-                caption: estimatedEnd == null ? context.l10n.toolsPauseManually : context.l10n.toolsPlan衔接,
+                caption: estimatedEnd == null ? context.l10n.toolsPauseManually : context.l10n.toolsPlanLinked,
               ),
             ],
           ),

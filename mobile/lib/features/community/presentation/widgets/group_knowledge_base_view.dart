@@ -190,7 +190,7 @@ class _GroupKnowledgeBaseViewState
                   const SizedBox(height: DS.spacing16),
                   TextField(
                     controller: categoryController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.communityCategory,
                       hintText: context.l10n.communityCategoryHint,
                     ),
@@ -199,7 +199,7 @@ class _GroupKnowledgeBaseViewState
                   TextField(
                     controller: descriptionController,
                     maxLines: 4,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.communityDescription,
                       hintText: context.l10n.communityDescriptionHint,
                     ),
@@ -356,7 +356,7 @@ class _GroupKnowledgeBaseViewState
                                   label: context.l10n.communityDownloadsCount(file.downloadCount),
                                 ),
                                 if (_isOfficial(file))
-                                  const _MetaChip(
+                                  _MetaChip(
                                     icon: Icons.star_rounded,
                                     label: context.l10n.communityOfficialFile,
                                     accentColor: Color(0xFFE0A800),
@@ -903,7 +903,7 @@ class _KnowledgeBaseListCard extends StatelessWidget {
                   _InlinePill(label: file.category!, icon: Icons.folder_outlined),
                 if (isInGalaxy) ...[
                   const SizedBox(width: DS.spacing8),
-                  const _InlinePill(
+                  _InlinePill(
                     label: context.l10n.communityGroupGalaxy,
                     icon: Icons.auto_awesome_outlined,
                   ),
@@ -1051,7 +1051,7 @@ class _KnowledgeBaseGridCard extends StatelessWidget {
                     icon: Icons.download_outlined,
                   ),
                   if (isInGalaxy)
-                    const _InlinePill(
+                    _InlinePill(
                       label: context.l10n.communityGroupGalaxy,
                       icon: Icons.auto_awesome_outlined,
                     ),

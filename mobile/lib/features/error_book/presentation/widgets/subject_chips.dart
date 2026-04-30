@@ -15,7 +15,7 @@ class Subject {
   final IconData icon;
   final Color color;
 
-  static final List<Subject> all = [
+  static List<Subject> all(BuildContext context) => [
     Subject(
       code: 'math',
       label: context.l10n.ebMath,
@@ -60,9 +60,9 @@ class Subject {
     ),
   ];
 
-  static Subject? findByCode(String code) {
+  static Subject? findByCode(BuildContext context, String code) {
     try {
-      return all.firstWhere((s) => s.code == code);
+      return all(context).firstWhere((s) => s.code == code);
     } catch (_) {
       return null;
     }
@@ -97,7 +97,7 @@ class SubjectFilterChips extends StatelessWidget {
               ),
             ),
             // 各科目
-            ...Subject.all.map(
+            ...Subject.all(context).map(
               (subject) => Padding(
                 padding: const EdgeInsets.only(right: DS.spacing8),
                 child: FilterChip(
@@ -127,7 +127,7 @@ class SubjectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subject = Subject.findByCode(subjectCode);
+    final subject = Subject.findByCode(context, subjectCode);
     if (subject == null) {
       return const SizedBox.shrink();
     }

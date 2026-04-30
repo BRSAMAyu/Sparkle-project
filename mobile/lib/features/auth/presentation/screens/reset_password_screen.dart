@@ -95,10 +95,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     index: 1,
                     child: TextFormField(
                     controller: _tokenController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: context.l10n.authResetCode,
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.mark_email_read_outlined),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.mark_email_read_outlined),
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)

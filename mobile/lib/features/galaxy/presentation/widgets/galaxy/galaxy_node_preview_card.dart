@@ -3,6 +3,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class GalaxyNodePreviewCard extends StatelessWidget {
   const GalaxyNodePreviewCard({
@@ -409,7 +410,7 @@ class _ReviewUrgencyCallout extends StatelessWidget {
 
   String _buildReviewMessage() {
     if (isChinese) {
-      return context.l10n.galaxyPreviewHighMastery(node.masteryScore);
+      return S.galaxyPreviewHighMastery(node.masteryScore);
     }
     return 'Your last mastery here was ${node.masteryScore}/100. Based on your study rhythm, now is a good time to reinforce it.';
   }
@@ -418,15 +419,15 @@ class _ReviewUrgencyCallout extends StatelessWidget {
     if (isChinese) {
       switch (node.reviewUrgencyReason) {
         case 'recent_errors':
-          return context.l10n.galaxyPreviewErrorReturn;
+          return S.galaxyPreviewErrorReturn;
         case 'review_window':
           return daysSince > 0
-              ? context.l10n.galaxyPreviewReviewWindow(daysSince)
-              : context.l10n.galaxyPreviewReviewReady;
+              ? S.galaxyPreviewReviewWindow(daysSince)
+              : S.galaxyPreviewReviewReady;
         case 'low_mastery':
-          return context.l10n.galaxyPreviewUnstable;
+          return S.galaxyPreviewUnstable;
         default:
-          return context.l10n.galaxyPreviewReLight;
+          return S.galaxyPreviewReLight;
       }
     }
 

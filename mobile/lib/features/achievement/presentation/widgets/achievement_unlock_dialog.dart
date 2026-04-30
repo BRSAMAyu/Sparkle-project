@@ -1482,7 +1482,7 @@ class MilestoneInfo {
       final percentage = newMilestone * 25;
       return MilestoneInfo(
         milestoneType: '$percentage%',
-        description: context.l10n.achievementUnlockMilestoneProgress(percentage),
+        description: S.achievementUnlockMilestoneProgress(percentage),
         reward: _getMilestoneReward(percentage),
         progressPercentage: newProgress,
       );
@@ -1498,13 +1498,13 @@ class MilestoneInfo {
   static String? _getMilestoneReward(int percentage) {
     switch (percentage) {
       case 25:
-        return context.l10n.achievementUnlockPhotonReward10;
+        return S.achievementUnlockPhotonReward10;
       case 50:
-        return context.l10n.achievementUnlockPhotonReward25;
+        return S.achievementUnlockPhotonReward25;
       case 75:
-        return context.l10n.achievementUnlockPhotonReward50;
+        return S.achievementUnlockPhotonReward50;
       case 100:
-        return context.l10n.achievementUnlockPhotonReward100;
+        return S.achievementUnlockPhotonReward100;
       default:
         return null;
     }

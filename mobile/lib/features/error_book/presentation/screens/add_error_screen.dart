@@ -442,7 +442,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               const SizedBox(height: DS.spacing24),
               TextFormField(
                 controller: _chapterController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: context.l10n.ebChapterOptional,
                   hintText: context.l10n.ebChapterHint,
                   border: OutlineInputBorder(),
@@ -456,7 +456,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _questionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: context.l10n.ebQuestionContent,
                   hintText: context.l10n.ebQuestionHint,
                   border: OutlineInputBorder(),
@@ -471,7 +471,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _userAnswerController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: context.l10n.ebYourAnswer,
                   hintText: context.l10n.ebYourAnswerHint,
                   border: OutlineInputBorder(),
@@ -493,7 +493,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _correctAnswerController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: context.l10n.ebCorrectAnswer,
                   hintText: context.l10n.ebCorrectAnswerHint,
                   border: OutlineInputBorder(),

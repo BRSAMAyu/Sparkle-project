@@ -354,7 +354,7 @@ class _PortfolioEntryCard extends StatelessWidget {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: DS.spacing6),
             child: Text(
-              _statusLine(entry),
+              _statusLine(context, entry),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
           ),
@@ -399,8 +399,8 @@ class _PortfolioEntryCard extends StatelessWidget {
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
               children: [
-                _DetailChip(label: _scoreLabel(entry)),
-                _DetailChip(label: _modeLabel(entry.sprintMode)),
+                _DetailChip(label: _scoreLabel(context, entry)),
+                _DetailChip(label: _modeLabel(context, entry.sprintMode)),
                 if (entry.resultRating != null)
                   _DetailChip(label: context.l10n.planPortfolioResultRating(entry.resultRating)),
                 if (entry.selfRating != null)
@@ -611,10 +611,10 @@ class _LoadMoreButton extends StatelessWidget {
   }
 }
 
-String _statusLine(LearningPortfolioEntry entry) {
-  final mode = _modeLabel(entry.sprintMode);
+String _statusLine(BuildContext context, LearningPortfolioEntry entry) {
+  final mode = _modeLabel(context, entry.sprintMode);
   if (entry.isCompleted) {
-    final completedOn = _formatDate(entry.completedAt ?? entry.targetDate);
+    final completedOn = _formatDate(context, entry.completedAt ?? entry.targetDate);
     return '$mode（已完成，$completedOn）';
   }
   if (entry.isActive) {
@@ -629,7 +629,7 @@ String _statusLine(LearningPortfolioEntry entry) {
   return '$mode · 计划中';
 }
 
-String _scoreLabel(LearningPortfolioEntry entry) {
+String _scoreLabel(BuildContext context, LearningPortfolioEntry entry) {
   if ((entry.resultDescription ?? '').trim().isNotEmpty) {
     return entry.resultDescription!;
   }
@@ -639,7 +639,7 @@ String _scoreLabel(LearningPortfolioEntry entry) {
   return context.l10n.planPortfolioScorePending;
 }
 
-String _modeLabel(String? sprintMode) {
+String _modeLabel(BuildContext context, String? sprintMode) {
   switch (sprintMode) {
     case 'last_24h_cram':
       return context.l10n.planMode24h;
@@ -654,7 +654,7 @@ String _modeLabel(String? sprintMode) {
   }
 }
 
-String _formatDate(DateTime? value) {
+String _formatDate(BuildContext context, DateTime? value) {
   if (value == null) {
     return context.l10n.planDateTbd;
   }

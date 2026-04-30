@@ -286,7 +286,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     labelColor: DS.textPrimary,
                     unselectedLabelColor: DS.textSecondary,
                     dividerColor: Colors.transparent,
-                    tabs: const [
+                    tabs: [
                       Tab(text: context.l10n.toolsWbDue),
                       Tab(text: context.l10n.toolsWbAll),
                     ],

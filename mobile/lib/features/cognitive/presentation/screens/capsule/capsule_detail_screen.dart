@@ -79,7 +79,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
       child: detailState.when(
         data: (c) {
           if (c == null) {
-            return const EmptyState(
+            return EmptyState(
               title: context.l10n.cogCapsuleUnavailable,
               description: context.l10n.cogCapsuleUnavailableDesc,
               icon: Icons.auto_awesome_outlined,

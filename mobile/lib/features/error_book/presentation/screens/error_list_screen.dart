@@ -562,7 +562,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               children: [
                 TextField(
                   controller: chapterController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: context.l10n.ebChapter,
                     hintText: context.l10n.ebChapterFilterHint,
                     prefixIcon: Icon(Icons.folder_outlined),

@@ -3,6 +3,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class WorkingMemoryCard extends StatelessWidget {
   const WorkingMemoryCard({required this.snapshot, super.key});
@@ -79,7 +80,7 @@ class WorkingMemoryCard extends StatelessWidget {
     final parts = <String>[
       item.subjectType,
       '提及 ${item.mentionCount} 次',
-      if (item.consolidated) context.l10n.userConsolidated else context.l10n.userStillInForeground,
+      if (item.consolidated) S.userConsolidated else S.userStillInForeground,
     ];
     if (item.lastSeenAt != null) {
       parts.add(DateFormat('M月d日 HH:mm').format(item.lastSeenAt!));

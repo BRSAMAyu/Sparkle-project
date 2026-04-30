@@ -390,7 +390,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: context.l10n.toolsTransInputHint,
                       border: InputBorder.none,
                     ),

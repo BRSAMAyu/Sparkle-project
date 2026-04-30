@@ -3,6 +3,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Widget for displaying a knowledge node share card preview
 ///
@@ -320,10 +321,10 @@ class NodeShareCard extends StatelessWidget {
 
   String _getMasteryLabel() {
     if (masteryLevel == null) return '';
-    if (masteryLevel! >= 0.9) return context.l10n.communityShareMastered;
-    if (masteryLevel! >= 0.7) return context.l10n.communityShareProficient;
-    if (masteryLevel! >= 0.4) return context.l10n.communityShareLearningStatus;
-    return context.l10n.communityShareBeginner;
+    if (masteryLevel! >= 0.9) return S.communityShareMastered;
+    if (masteryLevel! >= 0.7) return S.communityShareProficient;
+    if (masteryLevel! >= 0.4) return S.communityShareLearningStatus;
+    return S.communityShareBeginner;
   }
 
   Widget _buildStat(String label, String value, IconData icon) => Row(
