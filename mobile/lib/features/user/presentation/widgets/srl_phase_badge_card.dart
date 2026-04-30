@@ -13,6 +13,7 @@ class SrlPhaseBadgeCard extends StatelessWidget {
   final String helperText;
 
   static Map<String, String>? fromProfileContext(
+    BuildContext context,
     Map<String, dynamic> profileContext,
   ) {
     final userInsightState =
@@ -24,11 +25,11 @@ class SrlPhaseBadgeCard extends StatelessWidget {
     }
     return {
       'phase': currentPhase,
-      'helperText': _helperFor(currentPhase),
+      'helperText': _helperFor(context, currentPhase),
     };
   }
 
-  static String _helperFor(String phase) {
+  static String _helperFor(BuildContext context, String phase) {
     switch (phase.toUpperCase()) {
       case 'FORETHOUGHT':
         return context.l10n.userSRLPlanHint;
@@ -41,7 +42,7 @@ class SrlPhaseBadgeCard extends StatelessWidget {
     }
   }
 
-  String get _label {
+  String _label(BuildContext context) {
     switch (phase.toUpperCase()) {
       case 'FORETHOUGHT':
         return context.l10n.userSRLPlanning;
@@ -84,7 +85,7 @@ class SrlPhaseBadgeCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                _label,
+                _label(context),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: color,
                       fontWeight: DS.fontWeightBold,

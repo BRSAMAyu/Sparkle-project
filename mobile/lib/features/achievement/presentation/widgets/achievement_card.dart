@@ -575,8 +575,8 @@ class AchievementCard extends StatelessWidget {
         RarityColorProvider.getColor(achievement.achievement.rarity);
     final rarityGradient =
         RarityColorProvider.getGradient(achievement.achievement.rarity);
-    final rewardPreview = _rewardPreviewLabels();
-    final categoryLabel = _categoryLabel();
+    final rewardPreview = _rewardPreviewLabels(context);
+    final categoryLabel = _categoryLabel(context);
     final progressValue = achievement.userProgress?.progressValue;
     final progressTarget = achievement.userProgress?.progressTarget;
 
@@ -1075,7 +1075,7 @@ class AchievementCard extends StatelessWidget {
         ),
       );
 
-  List<String> _rewardPreviewLabels() {
+  List<String> _rewardPreviewLabels(BuildContext context) {
     final rewards = achievement.achievement.rewardConfig ?? const [];
     final labels = <String>[];
 
@@ -1100,7 +1100,7 @@ class AchievementCard extends StatelessWidget {
     return labels.toSet().toList();
   }
 
-  String _categoryLabel() {
+  String _categoryLabel(BuildContext context) {
     switch (achievement.achievement.type) {
       case AchievementType.streak:
         return context.l10n.achievementCardCategoryStreak;

@@ -60,10 +60,10 @@ class TraitsPriorCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(_labelFor(item['dim']?.toString() ?? '')),
+                      child: Text(_labelFor(context, item['dim']?.toString() ?? '')),
                     ),
                     Text(
-                      _summaryForValue((item['value'] as num?)?.toDouble() ?? 0.0),
+                      _summaryForValue(context, (item['value'] as num?)?.toDouble() ?? 0.0),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -79,7 +79,7 @@ class TraitsPriorCard extends StatelessWidget {
     );
   }
 
-  static String _labelFor(String dim) {
+  static String _labelFor(BuildContext context, String dim) {
     switch (dim) {
       case 'openness':
         return context.l10n.userTraitOpenness;
@@ -96,7 +96,7 @@ class TraitsPriorCard extends StatelessWidget {
     }
   }
 
-  static String _summaryForValue(double value) {
+  static String _summaryForValue(BuildContext context, double value) {
     if (value >= 0.35) return context.l10n.userTraitLevelHigh;
     if (value <= -0.35) return context.l10n.userTraitLevelLow;
     return context.l10n.userTraitLevelNeutral;

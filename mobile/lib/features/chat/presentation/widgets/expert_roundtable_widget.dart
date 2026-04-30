@@ -26,7 +26,7 @@ class AssistantAgentBadge extends StatelessWidget {
     final color = _hexToColor(colorHex) ?? DS.brandPrimary;
     return ChatAccessoryPill(
       icon: _iconForName(iconName),
-      label: displayName ?? _labelForAgent(agentId),
+      label: displayName ?? _labelForAgent(context, agentId),
       accentColor: color,
       onTap: onTap,
     );
@@ -226,7 +226,7 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
         if (complexityTier != null && complexityTier!.isNotEmpty)
           ChatAccessoryPill(
             icon: Icons.auto_graph_rounded,
-            label: _complexityLabel(complexityTier!),
+            label: _complexityLabel(context, complexityTier!),
             onTap: onExpand,
           ),
       ],
@@ -279,7 +279,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
         children: [
           Row(
             children: [
-              const ChatAccessoryPill(
+              ChatAccessoryPill(
                 icon: Icons.forum_rounded,
                 label: context.l10n.chatRoundtableExpertCollab,
                 selected: true,
@@ -333,12 +333,12 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
                   ChatAccessoryPill(
                     icon: Icons.auto_graph_rounded,
                     label:
-                        '${_complexityLabel(complexityTier!)}${complexityScore == null ? '' : ' ${(complexityScore! * 100).round()}%'}',
+                        '${_complexityLabel(context, complexityTier!)}${complexityScore == null ? '' : ' ${(complexityScore! * 100).round()}%'}',
                   ),
                 if (etaMin != null || etaMax != null)
                   ChatAccessoryPill(
                     icon: Icons.schedule_rounded,
-                    label: _etaLabel(etaMin, etaMax),
+                    label: _etaLabel(context, etaMin, etaMax),
                   ),
               ],
             ),
@@ -372,7 +372,7 @@ class _TurnCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _hexToColor(turn['color']?.toString()) ?? DS.brandPrimary;
     final label = turn['display_name']?.toString() ??
-        _labelForAgent(turn['agent_id']?.toString() ?? '');
+        _labelForAgent(context, turn['agent_id']?.toString() ?? '');
     final content = turn['content']?.toString() ?? '';
     return Container(
       padding: const EdgeInsets.all(10),
@@ -409,7 +409,7 @@ class _TurnCard extends StatelessWidget {
   }
 }
 
-String _etaLabel(int? etaMin, int? etaMax) {
+String _etaLabel(BuildContext context, int? etaMin, int? etaMax) {
   final low = etaMin ?? etaMax;
   final high = etaMax ?? etaMin;
   if (low == null || high == null) return context.l10n.chatRoundtableEstimatedProcessing;
@@ -417,7 +417,7 @@ String _etaLabel(int? etaMin, int? etaMax) {
   return '$low-$high s';
 }
 
-String _complexityLabel(String tier) {
+String _complexityLabel(BuildContext context, String tier) {
   switch (tier) {
     case 'high':
       return context.l10n.chatRoundtableHighComplexity;
@@ -428,7 +428,7 @@ String _complexityLabel(String tier) {
   }
 }
 
-String _labelForAgent(String raw) {
+String _labelForAgent(BuildContext context, String raw) {
   switch (raw) {
     case 'galaxy_guide':
       return context.l10n.chatRoundtableGalaxyNavigator;

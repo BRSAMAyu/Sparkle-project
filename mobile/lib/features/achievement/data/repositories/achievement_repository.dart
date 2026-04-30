@@ -457,10 +457,10 @@ class AchievementRepository {
   Future<List<ShareTemplateInfo>> getShareTemplates() async {
     if (DemoDataService.isDemoMode) {
       return [
-        ShareTemplateInfo(id: 'cosmic', name: S.current.achievementShareTemplateCosmic),
-        ShareTemplateInfo(id: 'minimal', name: S.current.achievementShareTemplateMinimal),
-        ShareTemplateInfo(id: 'neon', name: S.current.achievementShareTemplateNeon),
-        ShareTemplateInfo(id: 'elegant', name: S.current.achievementShareTemplateElegant),
+        ShareTemplateInfo(id: 'cosmic', name: achievementShareTemplateCosmic),
+        ShareTemplateInfo(id: 'minimal', name: achievementShareTemplateMinimal),
+        ShareTemplateInfo(id: 'neon', name: achievementShareTemplateNeon),
+        ShareTemplateInfo(id: 'elegant', name: achievementShareTemplateElegant),
       ];
     }
 
@@ -568,8 +568,8 @@ class AchievementRepository {
           AchievementWithProgress(
             achievement: AchievementModel(
               id: 'streak_7',
-              name: S.current.achievementDemoStreak7Name,
-              description: S.current.achievementDemoStreak7Desc,
+              name: achievementDemoStreak7Name,
+              description: achievementDemoStreak7Desc,
               iconUrl: '/icons/streak_7.png',
               type: AchievementType.streak,
               rarity: AchievementRarity.common,
@@ -592,8 +592,8 @@ class AchievementRepository {
           AchievementWithProgress(
             achievement: AchievementModel(
               id: 'streak_30',
-              name: S.current.achievementDemoStreak30Name,
-              description: S.current.achievementDemoStreak30Desc,
+              name: achievementDemoStreak30Name,
+              description: achievementDemoStreak30Desc,
               iconUrl: '/icons/streak_30.png',
               type: AchievementType.streak,
               rarity: AchievementRarity.rare,
@@ -615,8 +615,8 @@ class AchievementRepository {
           AchievementWithProgress(
             achievement: AchievementModel(
               id: 'nodes_100',
-              name: S.current.achievementDemoNodes100Name,
-              description: S.current.achievementDemoNodes100Desc,
+              name: achievementDemoNodes100Name,
+              description: achievementDemoNodes100Desc,
               iconUrl: '/icons/nodes_100.png',
               type: AchievementType.nodeExplore,
               rarity: AchievementRarity.rare,
@@ -653,7 +653,7 @@ class AchievementRepository {
       // === Streak Achievements (左上区域) ===
       AchievementMapNode(
         id: 'streak_3',
-        name: S.current.achievementDemoStreak3Name,
+        name: achievementDemoStreak3Name,
         rarity: AchievementRarity.common,
         category: 'streak',
         position: {'x': 80, 'y': 150},
@@ -662,7 +662,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_7',
-        name: S.current.achievementDemoStreak7Name,
+        name: achievementDemoStreak7Name,
         rarity: AchievementRarity.common,
         category: 'streak',
         position: {'x': 80, 'y': 280},
@@ -672,7 +672,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_14',
-        name: S.current.achievementDemoStreak14Name,
+        name: achievementDemoStreak14Name,
         rarity: AchievementRarity.rare,
         category: 'streak',
         position: {'x': 80, 'y': 410},
@@ -682,7 +682,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_30',
-        name: S.current.achievementDemoStreak30Name,
+        name: achievementDemoStreak30Name,
         rarity: AchievementRarity.rare,
         category: 'streak',
         position: {'x': 80, 'y': 540},
@@ -692,7 +692,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_100',
-        name: S.current.achievementDemoStreak100Name,
+        name: achievementDemoStreak100Name,
         rarity: AchievementRarity.epic,
         category: 'streak',
         position: {'x': 80, 'y': 670},
@@ -704,7 +704,7 @@ class AchievementRepository {
       // === Mastery Achievements (中间区域) ===
       AchievementMapNode(
         id: 'mastery_first',
-        name: S.current.achievementDemoMasteryFirstName,
+        name: achievementDemoMasteryFirstName,
         rarity: AchievementRarity.common,
         category: 'mastery',
         position: {'x': 280, 'y': 150},
@@ -713,7 +713,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'mastery_10',
-        name: S.current.achievementDemoMastery10Name,
+        name: achievementDemoMastery10Name,
         rarity: AchievementRarity.rare,
         category: 'mastery',
         position: {'x': 280, 'y': 280},
@@ -723,7 +723,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'mastery_50',
-        name: S.current.achievementDemoMastery50Name,
+        name: achievementDemoMastery50Name,
         rarity: AchievementRarity.epic,
         category: 'mastery',
         position: {'x': 280, 'y': 410},
@@ -733,7 +733,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'mastery_100',
-        name: S.current.achievementDemoMastery100Name,
+        name: achievementDemoMastery100Name,
         rarity: AchievementRarity.legendary,
         category: 'mastery',
         position: {'x': 280, 'y': 540},
@@ -745,7 +745,7 @@ class AchievementRepository {
       // === Exploration Achievements (右侧区域) ===
       AchievementMapNode(
         id: 'explore_10',
-        name: S.current.achievementDemoExplore10Name,
+        name: achievementDemoExplore10Name,
         rarity: AchievementRarity.common,
         category: 'exploration',
         position: {'x': 480, 'y': 150},
@@ -754,7 +754,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'explore_50',
-        name: S.current.achievementDemoExplore50Name,
+        name: achievementDemoExplore50Name,
         rarity: AchievementRarity.rare,
         category: 'exploration',
         position: {'x': 480, 'y': 280},
@@ -764,7 +764,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'explore_100',
-        name: S.current.achievementDemoExplore100Name,
+        name: achievementDemoExplore100Name,
         rarity: AchievementRarity.epic,
         category: 'exploration',
         position: {'x': 480, 'y': 410},
@@ -774,7 +774,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'explore_500',
-        name: S.current.achievementDemoExplore500Name,
+        name: achievementDemoExplore500Name,
         rarity: AchievementRarity.legendary,
         category: 'exploration',
         position: {'x': 480, 'y': 540},
@@ -786,7 +786,7 @@ class AchievementRepository {
       // === Hidden/Special Achievements (底部隐藏区域) ===
       AchievementMapNode(
         id: 'night_owl',
-        name: S.current.achievementDemoNightOwlName,
+        name: achievementDemoNightOwlName,
         rarity: AchievementRarity.epic,
         category: 'hidden',
         position: {'x': 180, 'y': 700},
@@ -796,7 +796,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'early_bird',
-        name: S.current.achievementDemoEarlyBirdName,
+        name: achievementDemoEarlyBirdName,
         rarity: AchievementRarity.rare,
         category: 'hidden',
         position: {'x': 380, 'y': 700},
@@ -830,10 +830,10 @@ class AchievementRepository {
     ];
 
     final categories = <Map<String, dynamic>>[
-      {'id': 'streak', 'name': S.current.achievementDemoCategoryStreak, 'count': 5},
-      {'id': 'mastery', 'name': S.current.achievementDemoCategoryMastery, 'count': 4},
-      {'id': 'exploration', 'name': S.current.achievementDemoCategoryExploration, 'count': 4},
-      {'id': 'hidden', 'name': S.current.achievementDemoCategoryHidden, 'count': 2},
+      {'id': 'streak', 'name': achievementDemoCategoryStreak, 'count': 5},
+      {'id': 'mastery', 'name': achievementDemoCategoryMastery, 'count': 4},
+      {'id': 'exploration', 'name': achievementDemoCategoryExploration, 'count': 4},
+      {'id': 'hidden', 'name': achievementDemoCategoryHidden, 'count': 2},
     ];
 
     return AchievementMapData(
@@ -847,8 +847,8 @@ class AchievementRepository {
         skins: [
           GalaxySkin(
             id: 'default',
-            name: S.current.achievementDemoSkinDefaultName,
-            description: S.current.achievementDemoSkinDefaultDesc,
+            name: achievementDemoSkinDefaultName,
+            description: achievementDemoSkinDefaultDesc,
             rarity: AchievementRarity.common,
             sortOrder: 0,
             createdAt: DateTime.now(),
@@ -858,8 +858,8 @@ class AchievementRepository {
           ),
           GalaxySkin(
             id: 'nebula_purple',
-            name: S.current.achievementDemoSkinNebulaName,
-            description: S.current.achievementDemoSkinNebulaDesc,
+            name: achievementDemoSkinNebulaName,
+            description: achievementDemoSkinNebulaDesc,
             rarity: AchievementRarity.rare,
             sortOrder: 1,
             createdAt: DateTime.now(),
@@ -867,8 +867,8 @@ class AchievementRepository {
           ),
           GalaxySkin(
             id: 'cyberpunk',
-            name: S.current.achievementDemoSkinCyberpunkName,
-            description: S.current.achievementDemoSkinCyberpunkDesc,
+            name: achievementDemoSkinCyberpunkName,
+            description: achievementDemoSkinCyberpunkDesc,
             rarity: AchievementRarity.legendary,
             sortOrder: 2,
             createdAt: DateTime.now(),
@@ -881,15 +881,15 @@ class AchievementRepository {
   List<UserTitle> _getDemoTitles() => [
         UserTitle(
           titleId: 'early_explorer',
-          titleName: S.current.achievementDemoTitleEarlyExplorer,
-          titleDisplay: S.current.achievementDemoTitleEarlyExplorer,
+          titleName: achievementDemoTitleEarlyExplorer,
+          titleDisplay: achievementDemoTitleEarlyExplorer,
           unlockedAt: DateTime.now().subtract(const Duration(days: 7)),
           isEquipped: true,
         ),
         UserTitle(
           titleId: 'week_warrior',
-          titleName: S.current.achievementDemoTitleWeeklyWarrior,
-          titleDisplay: S.current.achievementDemoTitleWeeklyWarrior,
+          titleName: achievementDemoTitleWeeklyWarrior,
+          titleDisplay: achievementDemoTitleWeeklyWarrior,
           unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
       ];
@@ -922,8 +922,8 @@ class AchievementRepository {
         AchievementWithProgress(
           achievement: AchievementModel(
             id: 'streak_30',
-            name: S.current.achievementDemoStreak30Name,
-            description: S.current.achievementProgressDescription30,
+            name: achievementDemoStreak30Name,
+            description: achievementProgressDescription30,
             iconUrl: '/icons/streak_30.png',
             type: AchievementType.streak,
             rarity: AchievementRarity.rare,
@@ -945,8 +945,8 @@ class AchievementRepository {
         AchievementWithProgress(
           achievement: AchievementModel(
             id: 'nodes_100',
-            name: S.current.achievementDemoExplore100Name,
-            description: S.current.achievementProgressDescription100,
+            name: achievementDemoExplore100Name,
+            description: achievementProgressDescription100,
             iconUrl: '/icons/nodes_100.png',
             type: AchievementType.nodeExplore,
             rarity: AchievementRarity.rare,

@@ -368,7 +368,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationCurrentState,
-                  _labelForInteractionState(interactionState),
+                  _labelForInteractionState(context, interactionState),
                 ),
               ],
               if (notification.isIntervention && outcomeStatus != null) ...[
@@ -376,7 +376,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationVerificationResult,
-                  _labelForOutcomeStatus(outcomeStatus),
+                  _labelForOutcomeStatus(context, outcomeStatus),
                 ),
               ],
               if (notification.isIntervention &&
@@ -396,7 +396,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationParameterAdjustment,
-                  _buildParameterCompilationSummary(parameterCompilation),
+                  _buildParameterCompilationSummary(context, parameterCompilation),
                 ),
               ],
               if (notification.isIntervention && evidence.isNotEmpty) ...[
@@ -404,7 +404,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationVerificationEvidence,
-                  _buildEvidenceSummary(evidence),
+                  _buildEvidenceSummary(context, evidence),
                 ),
               ],
               if (notification.isPush) ...[
@@ -418,7 +418,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationReminderCategory,
-                  _labelForPushCategory(notification.pushCategory),
+                  _labelForPushCategory(context, notification.pushCategory),
                 ),
                 if (notification.retractableUntil != null) ...[
                   const SizedBox(height: 8),
@@ -465,7 +465,7 @@ class UnifiedNotificationCard extends StatelessWidget {
         ],
       );
 
-  String _labelForInteractionState(String state) {
+  String _labelForInteractionState(BuildContext context, String state) {
     switch (state) {
       case 'seen':
         return context.l10n.notificationInteractionSeen;
@@ -484,7 +484,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     }
   }
 
-  String _labelForOutcomeStatus(String status) {
+  String _labelForOutcomeStatus(BuildContext context, String status) {
     switch (status) {
       case 'EFFECTIVE':
       case 'effective':
@@ -503,7 +503,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     }
   }
 
-  String _buildParameterCompilationSummary(Map<String, dynamic> compilation) {
+  String _buildParameterCompilationSummary(BuildContext context, Map<String, dynamic> compilation) {
     final result = compilation['result'] as String? ?? 'unknown';
     final affected = compilation['affected_task_count'] as int? ?? 0;
     final inserted = compilation['inserted_task_count'] as int? ?? 0;
@@ -511,7 +511,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     return context.l10n.notificationCompilationSummary(result, affected, inserted, hidden);
   }
 
-  String _buildEvidenceSummary(Map<String, dynamic> evidence) {
+  String _buildEvidenceSummary(BuildContext context, Map<String, dynamic> evidence) {
     final improvement = evidence['improvement'];
     if (improvement is Map) {
       final map = Map<String, dynamic>.from(improvement);
@@ -531,7 +531,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     return context.l10n.notificationEvidenceRecorded;
   }
 
-  String _labelForPushCategory(String? category) {
+  String _labelForPushCategory(BuildContext context, String? category) {
     switch (category) {
       case 'commitment_follow_up':
         return context.l10n.notificationPushCategoryCommitmentFollowUp;
