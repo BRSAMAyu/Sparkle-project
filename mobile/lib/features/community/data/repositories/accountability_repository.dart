@@ -1,9 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/mock_community_repository.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
@@ -18,7 +19,8 @@ class AccountabilityRepository {
   AccountabilityRepository(this._apiClient);
   final ApiClient _apiClient;
 
-  String _extractApiError(Object error, {String fallback = '请求失败'}) {
+  String _extractApiError(Object error, {String? fallback}) {
+    final fb = fallback ?? (I18nService.instance.isChinese ? '请求失败' : 'Request failed');
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map<String, dynamic>) {
@@ -39,7 +41,7 @@ class AccountabilityRepository {
         return error.message!.trim();
       }
     }
-    return fallback;
+    return fb;
   }
 
   static const _demoCurrentUserId = MockCommunityRepository.currentUserId;
@@ -72,12 +74,13 @@ class AccountabilityRepository {
       flameLevel: 15,
     );
 
+    final zh = I18nService.instance.isChinese;
     final activePartnership = AccountabilityPartnershipInfo(
       id: 'demo_core_partner',
       initiatorId: _demoCurrentUserId,
       partnerId: alice.id,
-      initiatorGoal: '每天同步一个主任务和一个轻复盘动作',
-      partnerGoal: '每天给伙伴一句具体反馈，帮助对方稳住节奏',
+      initiatorGoal: zh ? '每天同步一个主任务和一个轻复盘动作' : 'Sync one main task and a quick reflection each day',
+      partnerGoal: zh ? '每天给伙伴一句具体反馈，帮助对方稳住节奏' : 'Give your partner specific feedback daily to help them stay on track',
       checkInDays: 1,
       status: AccountabilityStatus.active,
       createdAt: now.subtract(const Duration(days: 18)),
@@ -94,7 +97,7 @@ class AccountabilityRepository {
       id: 'demo_pending_partner',
       initiatorId: charlie.id,
       partnerId: _demoCurrentUserId,
-      initiatorGoal: '一起把周末节律和复盘稳定下来',
+      initiatorGoal: zh ? '一起把周末节律和复盘稳定下来' : 'Let\'s stabilize weekend routines and reflections together',
       checkInDays: 2,
       status: AccountabilityStatus.pending,
       createdAt: now.subtract(const Duration(days: 1)),
@@ -109,7 +112,7 @@ class AccountabilityRepository {
           id: 'demo_checkin_partner',
           partnershipId: activePartnership.id,
           userId: alice.id,
-          content: '上午把英语自我介绍改短了一版，顺手把你昨天说的“关键词提纲”做成了卡片。',
+          content: zh ? '上午把英语自我介绍改短了一版，顺手把你昨天说的”关键词提纲”做成了卡片。' : 'Shortened the English self-intro this morning, and turned your “keyword outline” into cards.',
           mood: 5,
           minutes: 50,
           createdAt: now.subtract(const Duration(hours: 2)),
@@ -118,7 +121,7 @@ class AccountabilityRepository {
             EncouragementMessage(
               id: 'demo_encourage_1',
               userId: _demoCurrentUserId,
-              message: '这条复盘很扎实，晚上我也按这个模板跟进。',
+              message: zh ? '这条复盘很扎实，晚上我也按这个模板跟进。' : 'Solid reflection — I\'ll follow the same template tonight.',
               createdAt: now.subtract(const Duration(hours: 1, minutes: 30)),
             ),
           ],
@@ -128,7 +131,7 @@ class AccountabilityRepository {
           id: 'demo_checkin_me',
           partnershipId: activePartnership.id,
           userId: _demoCurrentUserId,
-          content: '完成了积分换元复盘和一轮英语跟说，今天没有追求做很多，但节奏比较稳。',
+          content: zh ? '完成了积分换元复盘和一轮英语跟说，今天没有追求做很多，但节奏比较稳。' : 'Finished integration review and one round of English speaking. Didn\'t push for volume today, but the rhythm felt solid.',
           mood: 4,
           minutes: 65,
           createdAt: now.subtract(const Duration(hours: 5)),
@@ -273,9 +276,9 @@ class AccountabilityRepository {
         );
         return AccountabilityPartnershipInfo.fromJson(data);
       }
-      throw Exception('操作失败，请稍后重试');
+      throw Exception(I18nService.instance.isChinese ? '操作失败，请稍后重试' : 'Operation failed, please try again later');
     } on DioException catch (error) {
-      throw Exception(_extractApiError(error, fallback: '操作失败，请稍后重试'));
+      throw Exception(_extractApiError(error, fallback: I18nService.instance.isChinese ? '操作失败，请稍后重试' : 'Operation failed, please try again later'));
     }
   }
 
@@ -296,7 +299,7 @@ class AccountabilityRepository {
       return data
           .map(
             (e) => AccountabilityPartnershipInfo.fromJson(
-                e as Map<String, dynamic>),
+                e as Map<String, dynamic>,),
           )
           .toList();
     }
@@ -305,6 +308,7 @@ class AccountabilityRepository {
 
   Future<AccountabilityOverviewInfo> getOverview() async {
     if (DemoDataService.isDemoMode) {
+      final zh = I18nService.instance.isChinese;
       final partnerships = _demoActiveFirstPartnerships();
       final active =
           partnerships.cast<AccountabilityPartnershipInfo?>().firstWhere(
@@ -322,21 +326,21 @@ class AccountabilityRepository {
           'total_unlocked': 2,
           'partner_total_unlocked': 1,
         },
-        leaderboardSummary: const {
+        leaderboardSummary: {
           'friends': {
-            'title': '好友榜',
+            'title': zh ? '好友榜' : 'Friends',
             'my_rank': 4,
             'partner_rank': 2,
-            'my_score_label': '1,280 火苗',
-            'partner_score_label': '1,420 火苗',
+            'my_score_label': zh ? '1,280 火苗' : '1,280 Sparks',
+            'partner_score_label': zh ? '1,420 火苗' : '1,420 Sparks',
           },
           'weekly': {
-            'title': '本周进步榜',
+            'title': zh ? '本周进步榜' : 'Weekly Progress',
             'my_rank': 5,
             'partner_rank': 3,
           },
           'streak': {
-            'title': '连续打卡榜',
+            'title': zh ? '连续打卡榜' : 'Streak Board',
             'my_rank': 6,
             'partner_rank': 4,
           },
@@ -347,7 +351,7 @@ class AccountabilityRepository {
                 'slot_type': 'core',
                 'status': 'active',
                 'partner_id': active.partnerId,
-                'partner_name': active.partner?.displayName ?? '责任伙伴',
+                'partner_name': active.partner?.displayName ?? (zh ? '责任伙伴' : 'Accountability Partner'),
                 'days_together': 18,
                 'my_streak_days': active.myStreakDays ?? 0,
                 'partner_streak_days': active.partnerStreakDays ?? 0,
@@ -367,8 +371,8 @@ class AccountabilityRepository {
             : [
                 AccountabilityInAppHintInfo(
                   id: 'demo_hint_partner_watch',
-                  message: '${active.partner?.displayName ?? '责任伙伴'} 正在看着你，加油',
-                  senderName: active.partner?.displayName ?? '责任伙伴',
+                  message: '${active.partner?.displayName ?? (zh ? '责任伙伴' : 'Accountability Partner')} ${zh ? '正在看着你，加油' : 'is watching — keep going!'}',
+                  senderName: active.partner?.displayName ?? (zh ? '责任伙伴' : 'Accountability Partner'),
                   senderId: active.partnerId,
                   partnershipId: active.id,
                   createdAt:
@@ -390,6 +394,7 @@ class AccountabilityRepository {
 
   Future<AccountabilityDashboardInfo> getDashboard(String partnershipId) async {
     if (DemoDataService.isDemoMode) {
+      final zh = I18nService.instance.isChinese;
       _ensureDemoState();
       final partnership = _demoPartnerships?.firstWhere(
         (item) => item.id == partnershipId,
@@ -422,12 +427,12 @@ class AccountabilityRepository {
           'year': DateTime.now().year,
           'heatmap': demoService.demoAccountabilityHeatmap,
         },
-        achievements: const {
+        achievements: {
           'achievements': [
             {
               'id': 'accountability_first_partnership',
-              'name': '第一次并肩前进',
-              'description': '成功建立第一个责任伙伴关系',
+              'name': zh ? '第一次并肩前进' : 'First Side by Side',
+              'description': zh ? '成功建立第一个责任伙伴关系' : 'Successfully established your first accountability partnership',
               'icon': '🤝',
               'points': 20,
               'unlocked': true,
@@ -435,8 +440,8 @@ class AccountabilityRepository {
             },
             {
               'id': 'accountability_streak_7',
-              'name': '七日共进',
-              'description': '在责任伙伴关系中连续7天打卡',
+              'name': zh ? '七日共进' : '7-Day Streak Together',
+              'description': zh ? '在责任伙伴关系中连续7天打卡' : 'Check in for 7 consecutive days in a partnership',
               'icon': '🔥',
               'points': 50,
               'unlocked': true,
@@ -445,22 +450,22 @@ class AccountabilityRepository {
           ],
           'my_achievements': [
             'accountability_first_partnership',
-            'accountability_streak_7'
+            'accountability_streak_7',
           ],
           'partner_achievements': ['accountability_first_partnership'],
           'my_total_unlocked': 2,
           'partner_total_unlocked': 1,
         },
-        leaderboardSummary: const {
-          'friends': {'title': '好友榜', 'my_rank': 4, 'partner_rank': 2},
-          'weekly': {'title': '本周进步榜', 'my_rank': 5, 'partner_rank': 3},
-          'streak': {'title': '连续打卡榜', 'my_rank': 6, 'partner_rank': 4},
+        leaderboardSummary: {
+          'friends': {'title': zh ? '好友榜' : 'Friends', 'my_rank': 4, 'partner_rank': 2},
+          'weekly': {'title': zh ? '本周进步榜' : 'Weekly Progress', 'my_rank': 5, 'partner_rank': 3},
+          'streak': {'title': zh ? '连续打卡榜' : 'Streak Board', 'my_rank': 6, 'partner_rank': 4},
         },
         relationshipSummary: {
           'slot_type': 'core',
           'status': partnership.status.name,
           'partner_id': partnership.partnerId,
-          'partner_name': partnership.partner?.displayName ?? '责任伙伴',
+          'partner_name': partnership.partner?.displayName ?? (zh ? '责任伙伴' : 'Accountability Partner'),
           'days_together': 18,
           'my_streak_days': partnership.myStreakDays ?? 0,
           'partner_streak_days': partnership.partnerStreakDays ?? 0,
@@ -468,18 +473,18 @@ class AccountabilityRepository {
               (_demoTimelineByPartnership?[partnershipId] ?? const []).length,
           'last_checkin_at': partnership.lastCheckinAt?.toIso8601String(),
         },
-        recentShares: const [
+        recentShares: [
           {
             'id': 'demo_share_1',
             'resource_type': 'achievement',
-            'title': '7 天连续打卡成就',
-            'comment': '今晚一起把 14 天也拿下',
+            'title': zh ? '7 天连续打卡成就' : '7-Day Check-in Streak',
+            'comment': zh ? '今晚一起把 14 天也拿下' : 'Let\'s hit 14 days tonight',
           },
           {
             'id': 'demo_share_2',
             'resource_type': 'plan',
-            'title': '本周英语冲刺计划',
-            'comment': '我把复盘节奏也塞进去了',
+            'title': zh ? '本周英语冲刺计划' : 'This Week\'s English Sprint Plan',
+            'comment': zh ? '我把复盘节奏也塞进去了' : 'I added reflection rhythm into it too',
           },
         ],
         quickActions: {
@@ -762,8 +767,8 @@ class AccountabilityRepository {
         'partner_id': 'user_alice',
         'cooldown_seconds': 7200,
         'message': trimmedMessage?.isNotEmpty ?? false
-            ? '已提醒伙伴：$trimmedMessage'
-            : '已提醒伙伴查看今天的目标',
+            ? (I18nService.instance.isChinese ? '已提醒伙伴：$trimmedMessage' : 'Partner nudged: $trimmedMessage')
+            : (I18nService.instance.isChinese ? '已提醒伙伴查看今天的目标' : 'Partner nudged to check today\'s goals'),
       };
     }
 
@@ -794,19 +799,20 @@ class AccountabilityRepository {
 
   Future<Map<String, dynamic>> getAchievements() async {
     if (DemoDataService.isDemoMode) {
-      return const {
+      final zh = I18nService.instance.isChinese;
+      return {
         'achievements': [
           {
             'id': 'accountability_first_partnership',
-            'name': '第一次并肩前进',
-            'description': '成功建立第一个责任伙伴关系',
+            'name': zh ? '第一次并肩前进' : 'First Side by Side',
+            'description': zh ? '成功建立第一个责任伙伴关系' : 'Successfully established your first accountability partnership',
             'icon': '🤝',
             'points': 20,
           },
           {
             'id': 'accountability_streak_7',
-            'name': '七日共进',
-            'description': '在责任伙伴关系中连续7天打卡',
+            'name': zh ? '七日共进' : '7-Day Streak Together',
+            'description': zh ? '在责任伙伴关系中连续7天打卡' : 'Check in for 7 consecutive days in a partnership',
             'icon': '🔥',
             'points': 50,
           },
