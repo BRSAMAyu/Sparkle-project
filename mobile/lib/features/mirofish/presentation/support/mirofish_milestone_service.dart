@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -67,58 +68,58 @@ class MirofishMilestoneService {
       case MirofishMilestoneKind.firstSimulation:
         return AchievementUnlockEvent(
           achievementId: 'mirofish_first_simulation',
-          name: '仿真开场',
+          name: I18nService.instance.isChinese ? '仿真开场' : 'Simulation Debut',
           rarity: AchievementRarity.rare,
           unlockedAt: now,
           visualEffectType: VisualEffectType.gravityWave,
-          rewardPreview: const <String>[
-            '解锁仿真高光样式',
-            '后续可继续沉淀为报告或推演',
+          rewardPreview: <String>[
+            I18nService.instance.isChinese ? '解锁仿真高光样式' : 'Unlock simulation highlight style',
+            I18nService.instance.isChinese ? '后续可继续沉淀为报告或推演' : 'Can be archived as reports or simulations later',
           ],
-          surfacePreview: const <String>[
-            '学习场景模拟',
-            '互动讨论时间线',
+          surfacePreview: <String>[
+            I18nService.instance.isChinese ? '学习场景模拟' : 'Learning scenario simulation',
+            I18nService.instance.isChinese ? '互动讨论时间线' : 'Interactive discussion timeline',
           ],
-          gloryLines: const <String>[
-            '你第一次把知识点拉进了真实讨论现场。',
+          gloryLines: <String>[
+            I18nService.instance.isChinese ? '你第一次把知识点拉进了真实讨论现场。' : 'You brought knowledge into real discussion for the first time.',
           ],
         );
       case MirofishMilestoneKind.firstTheater:
         return AchievementUnlockEvent(
           achievementId: 'mirofish_first_theater',
-          name: '路径预演者',
+          name: I18nService.instance.isChinese ? '路径预演者' : 'Path Rehearser',
           rarity: AchievementRarity.epic,
           unlockedAt: now,
           visualEffectType: VisualEffectType.supernova,
-          rewardPreview: const <String>[
-            '解锁剧场时间轴视角',
-            '支持路径采纳与回填校准',
+          rewardPreview: <String>[
+            I18nService.instance.isChinese ? '解锁剧场时间轴视角' : 'Unlock theater timeline perspective',
+            I18nService.instance.isChinese ? '支持路径采纳与回填校准' : 'Support path adoption and backfill calibration',
           ],
-          surfacePreview: const <String>[
-            '知识推演剧场',
-            'What-If 分支对比',
+          surfacePreview: <String>[
+            I18nService.instance.isChinese ? '知识推演剧场' : 'Knowledge deduction theater',
+            I18nService.instance.isChinese ? 'What-If 分支对比' : 'What-If branch comparison',
           ],
-          gloryLines: const <String>[
-            '你已经点亮第一张可探索的学习未来地图。',
+          gloryLines: <String>[
+            I18nService.instance.isChinese ? '你已经点亮第一张可探索的学习未来地图。' : 'You lit up the first explorable map of learning future.',
           ],
         );
       case MirofishMilestoneKind.firstReport:
         return AchievementUnlockEvent(
           achievementId: 'mirofish_first_report',
-          name: '洞察归档员',
+          name: I18nService.instance.isChinese ? '洞察归档员' : 'Insight Archiver',
           rarity: AchievementRarity.rare,
           unlockedAt: now,
           visualEffectType: VisualEffectType.nebulaTransform,
-          rewardPreview: const <String>[
-            '解锁诊断仪表盘视角',
-            '可直接把发现转成行动入口',
+          rewardPreview: <String>[
+            I18nService.instance.isChinese ? '解锁诊断仪表盘视角' : 'Unlock diagnostic dashboard perspective',
+            I18nService.instance.isChinese ? '可直接把发现转成行动入口' : 'Can convert discoveries into action entry points',
           ],
-          surfacePreview: const <String>[
-            '学习分析报告',
-            '趋势对比与行动建议',
+          surfacePreview: <String>[
+            I18nService.instance.isChinese ? '学习分析报告' : 'Learning analysis report',
+            I18nService.instance.isChinese ? '趋势对比与行动建议' : 'Trend comparison and action suggestions',
           ],
-          gloryLines: const <String>[
-            '你已经拥有第一份可回看的学习洞察档案。',
+          gloryLines: <String>[
+            I18nService.instance.isChinese ? '你已经拥有第一份可回看的学习洞察档案。' : 'You now have the first reviewable learning insight archive.',
           ],
         );
     }

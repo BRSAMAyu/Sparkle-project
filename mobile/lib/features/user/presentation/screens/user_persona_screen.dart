@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
@@ -270,7 +271,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   _buildAsyncSection(
                     ref,
                     context,
-                    title: 'Inferred Preferences',
+                    title: I18nService.instance.isChinese ? '推断偏好' : 'Inferred Preferences',
                     asyncValue: inferredPreferencesAsync,
                     builder: (items) => items
                         .map(
@@ -283,7 +284,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   _buildAsyncSection(
                     ref,
                     context,
-                    title: 'Active Policies',
+                    title: I18nService.instance.isChinese ? '活跃策略' : 'Active Policies',
                     asyncValue: activePoliciesAsync,
                     builder: (items) =>
                         items.map((item) => _policyRow(l10n, item)).toList(),
@@ -294,12 +295,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             ),
             _buildCollapsibleSection(
               sectionKey: 'context',
-              title: 'Context Snapshot',
-              subtitle: '底层上下文快照，默认收起，必要时再展开',
+              title: I18nService.instance.isChinese ? '上下文快照' : 'Context Snapshot',
+              subtitle: I18nService.instance.isChinese ? '底层上下文快照，默认收起，必要时再展开' : 'Low-level context snapshot, collapsed by default',
               child: _buildAsyncSection(
                 ref,
                 context,
-                title: 'Context Snapshot',
+                title: I18nService.instance.isChinese ? '上下文快照' : 'Context Snapshot',
                 asyncValue: profileContextAsync,
                 builder: (data) => _buildContextSummaryRows(l10n, data),
                 onRetry: () => ref.invalidate(profileContextProvider),
@@ -758,7 +759,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         children: [
           _metadataRow(
             l10n,
-            '$label: ${_formatValue(value)}（${overridden ? l10n.personaManualOverride : sourceLabel}）',
+            '$label: ${_formatValue(value)}(${overridden ? l10n.personaManualOverride : sourceLabel})',
             metadata,
           ),
           Padding(
@@ -1289,12 +1290,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 ref.invalidate(inferredPreferencesProvider);
                 ref.invalidate(activePoliciesProvider);
                 if (context.mounted) {
-                  AppFeedback.success(context, '偏好已更新');
+                  AppFeedback.success(context, I18nService.instance.isChinese ? '偏好已更新' : 'Preference updated');
                   Navigator.of(context).pop();
                 }
               } catch (error) {
                 if (context.mounted) {
-                  AppFeedback.error(context, '偏好更新失败：${_friendlyError(error)}');
+                  AppFeedback.error(context, I18nService.instance.isChinese ? '偏好更新失败：${_friendlyError(error)}' : 'Preference update failed: ${_friendlyError(error)}');
                 }
               }
             },
@@ -1337,11 +1338,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         ref.invalidate(inferredPreferencesProvider);
         ref.invalidate(activePoliciesProvider);
         if (context.mounted) {
-          AppFeedback.success(context, '已回滚到上一版本');
+          AppFeedback.success(context, I18nService.instance.isChinese ? '已回滚到上一版本' : 'Rolled back to previous version');
         }
       } catch (error) {
         if (context.mounted) {
-          AppFeedback.error(context, '回滚失败：${_friendlyError(error)}');
+          AppFeedback.error(context, I18nService.instance.isChinese ? '回滚失败：${_friendlyError(error)}' : 'Rollback failed: ${_friendlyError(error)}');
         }
       }
     }
@@ -1423,14 +1424,14 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   ref.invalidate(profileContextProvider);
                   ref.invalidate(activePoliciesProvider);
                   if (context.mounted) {
-                    AppFeedback.success(context, '目标已更新');
+                    AppFeedback.success(context, I18nService.instance.isChinese ? '目标已更新' : 'Goal updated');
                     Navigator.of(context).pop();
                   }
                 } catch (error) {
                   if (context.mounted) {
                     AppFeedback.error(
                       context,
-                      '目标更新失败：${_friendlyError(error)}',
+                      I18nService.instance.isChinese ? '目标更新失败：${_friendlyError(error)}' : 'Goal update failed: ${_friendlyError(error)}',
                     );
                   }
                 }
@@ -1527,12 +1528,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 ref.invalidate(inferredPreferencesProvider);
                 ref.invalidate(activePoliciesProvider);
                 if (context.mounted) {
-                  AppFeedback.success(context, '推断偏好已调整');
+                  AppFeedback.success(context, I18nService.instance.isChinese ? '推断偏好已调整' : 'Inferred preference adjusted');
                   Navigator.of(context).pop();
                 }
               } catch (error) {
                 if (context.mounted) {
-                  AppFeedback.error(context, '调整失败：${_friendlyError(error)}');
+                  AppFeedback.error(context, I18nService.instance.isChinese ? '调整失败：${_friendlyError(error)}' : 'Adjustment failed: ${_friendlyError(error)}');
                 }
               }
             },
@@ -1556,11 +1557,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       ref.invalidate(inferredPreferencesProvider);
       ref.invalidate(activePoliciesProvider);
       if (context.mounted) {
-        AppFeedback.success(context, '已恢复系统推断值');
+        AppFeedback.success(context, I18nService.instance.isChinese ? '已恢复系统推断值' : 'Restored system inferred value');
       }
     } catch (error) {
       if (context.mounted) {
-        AppFeedback.error(context, '恢复失败：${_friendlyError(error)}');
+        AppFeedback.error(context, I18nService.instance.isChinese ? '恢复失败：${_friendlyError(error)}' : 'Restore failed: ${_friendlyError(error)}');
       }
     }
   }
@@ -1588,7 +1589,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   String _friendlyError(Object error) {
     final message = error.toString().trim();
     if (message.isEmpty) {
-      return '未知错误';
+      return I18nService.instance.isChinese ? '未知错误' : 'Unknown error';
     }
     return message.replaceFirst('Exception: ', '');
   }
@@ -1609,9 +1610,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     switch (prefKey) {
       case 'depth_preference':
       case 'curiosity_preference':
-        return '请输入 0.0 到 1.0 之间的数字';
+        return I18nService.instance.isChinese ? '请输入 0.0 到 1.0 之间的数字' : 'Enter a number between 0.0 and 1.0';
       case 'study_time_preference':
-        return '请输入学习时长（分钟）';
+        return I18nService.instance.isChinese ? '请输入学习时长（分钟）' : 'Enter study time (minutes)';
       default:
         return null;
     }
@@ -1641,11 +1642,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     switch (prefKey) {
       case 'depth_preference':
       case 'curiosity_preference':
-        return '请输入 0.0 到 1.0 之间的数字';
+        return I18nService.instance.isChinese ? '请输入 0.0 到 1.0 之间的数字' : 'Enter a number between 0.0 and 1.0';
       case 'study_time_preference':
-        return '请输入大于 0 的分钟数';
+        return I18nService.instance.isChinese ? '请输入大于 0 的分钟数' : 'Enter minutes greater than 0';
       default:
-        return '请输入有效的偏好值';
+        return I18nService.instance.isChinese ? '请输入有效的偏好值' : 'Enter a valid preference value';
     }
   }
 }

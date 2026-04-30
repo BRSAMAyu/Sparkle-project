@@ -4,6 +4,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class UserRepository {
@@ -97,10 +98,10 @@ class UserRepository {
           'cards': [
             {
               'dim': 'time_estimation_bias',
-              'title': '时间预估',
+              'title': I18nService.instance.isChinese ? '时间预估' : 'Time Estimation',
               'status': 'ready',
-              'body': '你过去 10 次对完成时间估得偏乐观 2.3 小时。',
-              'trend_text': '最近几周正在变稳。',
+              'body': I18nService.instance.isChinese ? '你过去 10 次对完成时间估得偏乐观 2.3 小时。' : 'You were 2.3 hours too optimistic in your last 10 completion time estimates.',
+              'trend_text': I18nService.instance.isChinese ? '最近几周正在变稳。' : 'Stabilizing in recent weeks.',
             },
           ],
         },
@@ -111,14 +112,14 @@ class UserRepository {
               'active_session_id': 'session-stage35-demo',
               'items': [
                 {
-                  'summary': '英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。',
+                  'summary': I18nService.instance.isChinese ? '英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。' : 'Still stuck on inverted sentences in complex English sentence breakdown; review question 3 in next practice.',
                   'subject_type': 'study_focus',
                   'mention_count': 3,
                   'consolidated': false,
                   'last_seen_at': '2026-04-22T09:40:00',
                 },
                 {
-                  'summary': '这周要把概率论错题本整理成 2 页复盘卡片。',
+                  'summary': I18nService.instance.isChinese ? '这周要把概率论错题本整理成 2 页复盘卡片。' : 'Organize probability theory error book into 2 review cards this week.',
                   'subject_type': 'task',
                   'mention_count': 2,
                   'consolidated': true,
@@ -135,7 +136,7 @@ class UserRepository {
               'recent_unlocks': [
                 {
                   'achievement_id': 'weekly-streak',
-                  'name': '七日连学',
+                  'name': I18nService.instance.isChinese ? '七日连学' : '7-Day Learning Streak',
                   'rarity': 'rare',
                   'unlocked_at': '2026-04-21T21:00:00',
                 },
@@ -143,7 +144,7 @@ class UserRepository {
               'in_progress_achievements': [
                 {
                   'achievement_id': 'deep-work-10',
-                  'name': '深度专注 10 次',
+                  'name': I18nService.instance.isChinese ? '深度专注 10 次' : 'Deep Work 10 Times',
                   'progress': 0.7,
                 },
               ],
@@ -158,12 +159,12 @@ class UserRepository {
               'items': [
                 {
                   'skill_id': 'chunking',
-                  'name': '分块推进',
+                  'name': I18nService.instance.isChinese ? '分块推进' : 'Chunking Progress',
                   'activation_match_score': 0.92,
                 },
                 {
                   'skill_id': 'replan',
-                  'name': '轻量重排',
+                  'name': I18nService.instance.isChinese ? '轻量重排' : 'Lightweight Replan',
                   'activation_match_score': 0.78,
                 },
               ],
@@ -184,7 +185,7 @@ class UserRepository {
           },
           'foresight_hint': {
             'value': {
-              'hint_text': '你今天后半段更容易被切碎，先把最难的一题压到午前完成。',
+              'hint_text': I18nService.instance.isChinese ? '你今天后半段更容易被切碎，先把最难的一题压到午前完成。' : 'Your focus is more fragmented later today; tackle the hardest problem before noon.',
               'generated_at': '2026-04-22T09:55:00',
               'deviation_count': 2,
               'attractor_confidences': [
@@ -237,7 +238,7 @@ class UserRepository {
         'idiographic_summary': {
           'mode': 'shadow',
           'confidence': 0.42,
-          'disclaimer_text': '这只是你数据中的模式，不代表因果关系。',
+          'disclaimer_text': I18nService.instance.isChinese ? '这只是你数据中的模式，不代表因果关系。' : 'These are patterns in your data, not causal relationships.',
           'top_associations': <dynamic>[],
         },
       };
@@ -350,8 +351,8 @@ class UserRepository {
     if (DemoDataService.isDemoMode) {
       return {
         'message': goal.isEmpty
-            ? '先告诉我你现在最想推进的学习目标，我会立刻帮你判断难度并给出第一版起步建议。'
-            : '我已经理解你想先推进「$goal」。接下来我会先补齐画像，再给你第一版学习路径和任务建议。',
+            ? (I18nService.instance.isChinese ? '先告诉我你现在最想推进的学习目标，我会立刻帮你判断难度并给出第一版起步建议。' : 'Tell me your top learning goal first, and I\'ll immediately assess difficulty and provide initial recommendations.')
+            : (I18nService.instance.isChinese ? '我已经理解你想先推进「$goal」。接下来我会先补齐画像，再给你第一版学习路径和任务建议。' : "I understand you want to prioritize \"$goal\". Next, I'll complete your profile and provide your first learning path and task recommendations."),
         'source': 'demo_fallback',
         'fallback_used': true,
       };
@@ -550,7 +551,7 @@ class UserRepository {
         'items': [
           {
             'mode': 'fast',
-            'label': '敏捷',
+            'label': I18nService.instance.isChinese ? '敏捷' : 'Fast',
             'requests_used': 12,
             'requests_limit': 120,
             'requests_remaining': 108,
@@ -563,7 +564,7 @@ class UserRepository {
           },
           {
             'mode': 'balanced',
-            'label': '均衡',
+            'label': I18nService.instance.isChinese ? '均衡' : 'Balanced',
             'requests_used': 6,
             'requests_limit': 60,
             'requests_remaining': 54,
@@ -576,7 +577,7 @@ class UserRepository {
           },
           {
             'mode': 'deep',
-            'label': '深思',
+            'label': I18nService.instance.isChinese ? '深思' : 'Deep',
             'requests_used': 1,
             'requests_limit': 24,
             'requests_remaining': 23,
@@ -962,7 +963,12 @@ class UserRepository {
           'queue_critical_total': 500,
           'db_probe_warning_ms': 200,
         },
-        'recommendations': <String>['当前容量健康，可继续观察 AI 高峰时段的首包时延。'],
+        'recommendations': <String>[
+          if (I18nService.instance.isChinese)
+            '当前容量健康，可继续观察 AI 高峰时段的首包时延。'
+          else
+            'Current capacity is healthy; continue monitoring first-token latency during AI peak hours.',
+        ],
       };
     }
     final response = await _apiClient.get<Map<String, dynamic>>(
@@ -981,7 +987,7 @@ class UserRepository {
           {
             'severity': 'warning',
             'name': 'SparklePredictionRulesFallbackSpike',
-            'message': '规则回退正在抬头，请检查 free/free_fast 健康度',
+            'message': I18nService.instance.isChinese ? '规则回退正在抬头，请检查 free/free_fast 健康度' : 'Rule fallback is increasing; check free/free_fast health',
             'value': 14,
           },
         ],
