@@ -80,7 +80,11 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
 
   @override
   void dispose() {
-    ref.read(auroraStatusProvider.notifier).stopPeriodicRefresh();
+    try {
+      ref.read(auroraStatusProvider.notifier).stopPeriodicRefresh();
+    } catch (_) {
+      // Widget already disposed — ref is no longer accessible
+    }
     _controller.dispose();
     super.dispose();
   }
