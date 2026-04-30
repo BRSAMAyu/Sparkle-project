@@ -533,7 +533,7 @@
 | G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
 | F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已验证零中文残留 (所有字符串已用 context.l10n.* 模式) |
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已验证零中文UI残留 (仅注释含中文) |
-| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 15+ files | 🟡 进行中 (424 + photon_transfer 29 + group_detail 27 = 480 strings i18n'd across 14 files) |
+| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 18+ files | 🟡 进行中 (480 + flash_capsule 25 + group_discover 25 + ai_ops 12 + calendar 3 = 545 strings i18n'd across 18 files; 6 pre-existing ARB metadata fixes) |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
 | G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | ✅ 已修 (4c6301aa) |
 | G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | ✅ 已修 (b45925d2) |
