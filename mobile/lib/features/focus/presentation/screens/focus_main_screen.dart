@@ -66,7 +66,7 @@ class FocusMainScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: DS.spacing6),
                       Text(
-                        '先选一个任务开始，或直接进入自由专注。',
+                        context.l10n.focusNoTaskHint,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: DS.fontSizeSm,
@@ -257,9 +257,7 @@ class FocusMainScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              Localizations.localeOf(context).languageCode == 'zh'
-                  ? '完成后会生成专注结算与今日累计'
-                  : 'Completion reveals a focus summary and today total',
+              context.l10n.focusCompletionHint,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: DS.fontSizeXs,

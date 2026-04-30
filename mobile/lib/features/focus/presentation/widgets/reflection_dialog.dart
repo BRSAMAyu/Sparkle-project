@@ -54,15 +54,16 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
   }
 
   String _buildReflectionContent() {
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
     final parts = <String>[
-      '专注复盘',
-      '卡点：${_stuckController.text.trim()}',
+      isZh ? '专注复盘' : 'Focus Reflection',
+      isZh ? '卡点：${_stuckController.text.trim()}' : 'Friction: ${_stuckController.text.trim()}',
     ];
     if (_methodController.text.trim().isNotEmpty) {
-      parts.add('有效方法：${_methodController.text.trim()}');
+      parts.add(isZh ? '有效方法：${_methodController.text.trim()}' : 'What helped: ${_methodController.text.trim()}');
     }
     if (_adjustmentController.text.trim().isNotEmpty) {
-      parts.add('下次调整：${_adjustmentController.text.trim()}');
+      parts.add(isZh ? '下次调整：${_adjustmentController.text.trim()}' : 'Next adjustment: ${_adjustmentController.text.trim()}');
     }
     return parts.join('\n');
   }
