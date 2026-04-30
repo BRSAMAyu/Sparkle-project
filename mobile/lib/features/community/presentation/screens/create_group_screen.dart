@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -97,7 +98,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     if (_type == GroupType.sprint && _deadline == null) {
       AppFeedback.info(
         context,
-        '请选择冲刺社群的截止时间',
+        I18nService.instance.isChinese ? '请选择冲刺社群的截止时间' : 'Please select a deadline for the sprint group',
       );
       return;
     }
@@ -131,7 +132,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     } catch (e) {
       if (mounted) {
         await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
-        AppFeedback.error(context, '创建社群失败: $e');
+        AppFeedback.error(context, I18nService.instance.isChinese ? '创建社群失败: $e' : 'Failed to create group: $e');
       }
     } finally {
       if (mounted) {
@@ -176,16 +177,16 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   children: [
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: '社群名称',
+                      decoration: InputDecoration(
+                        labelText: I18nService.instance.isChinese ? '社群名称' : 'Group Name',
                         hintText: 'e.g. Daily Algorithm Sprint',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return '请输入社群名称';
+                          return I18nService.instance.isChinese ? '请输入社群名称' : 'Enter a group name';
                         }
-                        if (value.length < 2) return '名称至少 2 个字符';
+                        if (value.length < 2) return I18nService.instance.isChinese ? '名称至少 2 个字符' : 'Name must be at least 2 characters';
                         return null;
                       },
                     ),
@@ -193,38 +194,38 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     DropdownButtonFormField<GroupType>(
                       initialValue: _type,
                       isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: '小组类型',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: I18nService.instance.isChinese ? '小组类型' : 'Group Type',
+                        border: const OutlineInputBorder(),
                       ),
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                           value: GroupType.squad,
                           child: Text(
-                            '学习小组',
+                            I18nService.instance.isChinese ? '学习小组' : 'Study Squad',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         DropdownMenuItem(
                           value: GroupType.sprint,
                           child: Text(
-                            '冲刺小组',
+                            I18nService.instance.isChinese ? '冲刺小组' : 'Sprint Group',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
-                      selectedItemBuilder: (context) => const [
+                      selectedItemBuilder: (context) => [
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '学习小组',
+                            I18nService.instance.isChinese ? '学习小组' : 'Study Squad',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '冲刺小组',
+                            I18nService.instance.isChinese ? '冲刺小组' : 'Sprint Group',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -243,9 +244,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     const SizedBox(height: DS.spacing16),
                     TextFormField(
                       controller: _descController,
-                      decoration: const InputDecoration(
-                        labelText: '社群介绍',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: I18nService.instance.isChinese ? '社群介绍' : 'Description',
+                        border: const OutlineInputBorder(),
                         alignLabelWithHint: true,
                       ),
                       maxLines: 3,
@@ -253,10 +254,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     const SizedBox(height: DS.spacing16),
                     TextFormField(
                       controller: _tagsController,
-                      decoration: const InputDecoration(
-                        labelText: '主题标签',
-                        hintText: '用逗号分隔，例如：数学, 算法, 考研',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: I18nService.instance.isChinese ? '主题标签' : 'Tags',
+                        hintText: I18nService.instance.isChinese ? '用逗号分隔，例如：数学, 算法, 考研' : 'Comma-separated, e.g. math, algorithms, exam',
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     if (_type == GroupType.sprint) ...[
@@ -264,15 +265,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       const Divider(),
                       const SizedBox(height: DS.spacing8),
                       Text(
-                        '冲刺设置',
+                        I18nService.instance.isChinese ? '冲刺设置' : 'Sprint Settings',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: DS.spacing16),
                       ListTile(
-                        title: const Text('截止日期'),
+                        title: Text(I18nService.instance.isChinese ? '截止日期' : 'Deadline'),
                         subtitle: Text(
                           _deadline == null
-                              ? '选择日期'
+                              ? (I18nService.instance.isChinese ? '选择日期' : 'Select Date')
                               : _deadline.toString().split(' ')[0],
                         ),
                         trailing: const Icon(Icons.calendar_today),
@@ -306,14 +307,14 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       TextFormField(
                         controller: _goalController,
                         decoration: InputDecoration(
-                          labelText: '冲刺目标',
+                          labelText: I18nService.instance.isChinese ? '冲刺目标' : 'Sprint Goal',
                           hintText: context.l10n.communityCreateGroupGoalHint,
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (_type == GroupType.sprint &&
                               (value == null || value.trim().isEmpty)) {
-                            return '请输入冲刺目标';
+                            return I18nService.instance.isChinese ? '请输入冲刺目标' : 'Enter a sprint goal';
                           }
                           return null;
                         },
@@ -321,7 +322,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     ],
                     const SizedBox(height: DS.spacing32),
                     SparkleButton(
-                      label: _isSubmitting ? '创建中...' : '创建社群',
+                      label: _isSubmitting
+                          ? (I18nService.instance.isChinese ? '创建中...' : 'Creating...')
+                          : (I18nService.instance.isChinese ? '创建社群' : 'Create Group'),
                       onPressed: _isSubmitting ? null : _submit,
                       loading: _isSubmitting,
                       expand: true,

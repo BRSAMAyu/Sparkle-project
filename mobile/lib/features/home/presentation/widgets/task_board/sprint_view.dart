@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
@@ -50,7 +51,7 @@ class SprintView extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
             Text(
-              '暂无活跃冲刺',
+              I18nService.instance.isChinese ? '暂无活跃冲刺' : 'No active sprint',
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
@@ -63,12 +64,12 @@ class SprintView extends ConsumerWidget {
                 SparkleButton(
                   onPressed: () => context.push('/plans/new?type=sprint'),
                   icon: const Icon(Icons.flash_on_rounded),
-                  label: '直接创建冲刺',
+                  label: I18nService.instance.isChinese ? '直接创建冲刺' : 'Create Sprint',
                 ),
                 SparkleButton.ghost(
                   onPressed: () => context.push('/plans/new?type=growth'),
                   icon: const Icon(Icons.trending_up_rounded),
-                  label: '新建成长计划',
+                  label: I18nService.instance.isChinese ? '新建成长计划' : 'New Growth Plan',
                 ),
               ],
             ),
@@ -120,7 +121,7 @@ class SprintView extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
             Text(
-              '${sprint.name} 暂无待办任务',
+              I18nService.instance.isChinese ? '${sprint.name} 暂无待办任务' : '${sprint.name} has no pending tasks',
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
@@ -177,7 +178,7 @@ class _SprintHeader extends ConsumerWidget {
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    '剩余 $taskCount 个任务 · ${sprint.daysLeft} 天',
+                    I18nService.instance.isChinese ? '剩余 $taskCount 个任务 · ${sprint.daysLeft} 天' : '$taskCount tasks left · ${sprint.daysLeft}d remaining',
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -190,7 +191,7 @@ class _SprintHeader extends ConsumerWidget {
               icon: const Icon(Icons.history_rounded),
               onPressed: () => context.push(PlanRoutes.sprintHistory),
               variant: ButtonVariant.ghost,
-              semanticLabel: '冲刺历史',
+              semanticLabel: I18nService.instance.isChinese ? '冲刺历史' : 'Sprint History',
             ),
             const SizedBox(width: DS.spacing4),
             // Actions menu button
@@ -199,7 +200,7 @@ class _SprintHeader extends ConsumerWidget {
                 Icons.more_vert_rounded,
                 color: DS.brandPrimaryConst,
               ),
-              tooltip: '更多操作',
+              tooltip: I18nService.instance.isChinese ? '更多操作' : 'More Actions',
               padding: const EdgeInsets.all(DS.spacing4),
               constraints: const BoxConstraints(
                 minWidth: 36,
@@ -226,7 +227,7 @@ class _SprintHeader extends ConsumerWidget {
                         color: DS.semanticSuccess,
                       ),
                       const SizedBox(width: DS.spacing12),
-                      const Text('完成冲刺'),
+                      Text(I18nService.instance.isChinese ? '完成冲刺' : 'Complete Sprint'),
                     ],
                   ),
                 ),
@@ -236,7 +237,7 @@ class _SprintHeader extends ConsumerWidget {
                     children: [
                       Icon(Icons.date_range_rounded, color: DS.info),
                       const SizedBox(width: DS.spacing12),
-                      const Text('延长冲刺'),
+                      Text(I18nService.instance.isChinese ? '延长冲刺' : 'Extend Sprint'),
                     ],
                   ),
                 ),
@@ -246,7 +247,7 @@ class _SprintHeader extends ConsumerWidget {
                     children: [
                       Icon(Icons.cancel_rounded, color: DS.semanticError),
                       const SizedBox(width: DS.spacing12),
-                      const Text('放弃冲刺'),
+                      Text(I18nService.instance.isChinese ? '放弃冲刺' : 'Abandon Sprint'),
                     ],
                   ),
                 ),
@@ -330,18 +331,22 @@ class _SprintHeader extends ConsumerWidget {
 class _SprintFilterChips extends ConsumerWidget {
   const _SprintFilterChips();
 
-  static const _filterLabels = {
-    SprintTaskFilter.all: '全部',
-    SprintTaskFilter.todo: '待办',
-    SprintTaskFilter.inProgress: '进行中',
-    SprintTaskFilter.done: '已完成',
-  };
+  static Map<SprintTaskFilter, String> _filterLabels() {
+    final zh = I18nService.instance.isChinese;
+    return {
+      SprintTaskFilter.all: zh ? '全部' : 'All',
+      SprintTaskFilter.todo: zh ? '待办' : 'To Do',
+      SprintTaskFilter.inProgress: zh ? '进行中' : 'In Progress',
+      SprintTaskFilter.done: zh ? '已完成' : 'Done',
+    };
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentFilter =
         ref.watch(taskBoardProvider.select((s) => s.sprintFilter));
     final counts = ref.watch(sprintTaskCountsProvider);
+    final filterLabels = _filterLabels();
 
     return Wrap(
       spacing: DS.spacing8,
@@ -369,7 +374,7 @@ class _SprintFilterChips extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _filterLabels[filter] ?? '',
+                  filterLabels[filter] ?? '',
                   style: context.sparkleTypography.labelSmall.copyWith(
                     color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
                     fontWeight:
