@@ -683,3 +683,45 @@
 **结论**: 全部 47 个 Aurora kill switch 默认 `live`, "25 个从未生产运行" 的说法已过时。3 个 drill gap 已补齐。
 
 ### R6 总计: 13 issues (6 评分修正 + 5 死代码 + 3 CI + 3 测试)
+
+---
+
+## R7 全面收尾复核 (2026-04-30)
+
+> **来源**: Codex 全链路复核
+> **方法**: 以当前代码、定向测试、契约检查、脚本现实为准，不沿用既有“已完成”结论
+> **审查文档**: `docs/product/SPARKLE_AUDIT_R7_COMPREHENSIVE_CLOSEOUT_CODEX_2026-04-30.md`
+
+### R7.1 本轮确认仍成立的结论
+
+| 项目 | 结论 |
+|------|------|
+| Governance 5 模块死代码 | 不成立，当前已接入生产主链 |
+| RAG 预算守卫未接生产 | 不成立，`is_rag_within_budget()` + `record_rag_cost()` 已接线 |
+| 生产切流完全不存在 | 不成立，`deploy-prod.sh` / `deploy_k8s.sh` 已有真实切流逻辑 |
+
+### R7.2 Reopen 项（当前现实仍未收口）
+
+| ID | 严重度 | 问题 | 文件/证据 | 状态 |
+|----|--------|------|-----------|------|
+| R7-1 | P1 | Go Gateway 质量门不绿：`ws_auth.go` log.Printf 参数数错误，`client_test.go` invalid address 断言失真 | `backend/gateway/internal/middleware/ws_auth.go:36-37`, `backend/gateway/internal/agent/client_test.go:77-79` | 🔴 Reopen |
+| R7-2 | P1 | 首页 Aurora 状态带纠偏协议保真度不足：`band_status` 上报为 camelCase，freeform 语义被压扁，仍退化成普通聊天入口 | `dashboard_screen.dart:481-503`, `aurora_telemetry_service.dart:45-64`, `spine_status_band_provider.dart:60-67`, `spine_orchestrator.py:522-528` | 🔴 Reopen |
+| R7-3 | P1 | `load-test.yml` 的 k6 job 仍未启动被测服务，T6.1.6 / OBS-012 不能按“完全闭环”验收 | `.github/workflows/load-test.yml:98-116`, `backend/tests/load/k6/scenarios.js:22` | 🔴 Reopen |
+| R7-4 | P1 | Aurora 预算治理只接入前置检查，`record_aurora_cost()` 仍未进入生产调用链 | `backend/app/core/cost_controller.py:173-178`; 搜索无生产调用者 | 🔴 Reopen |
+| R7-5 | P2 | 旧 `blue_green_switch.sh` 仍会误导最终验收口径，不应作为 T7.3.5 主证据 | `scripts/blue_green_switch.sh` | 🟡 待校准 |
+| R7-6 | P2 | 愿景验收清单 canonical 路径仍漂移，顶层 `docs/product/愿景验收清单` 不存在 | 实际文件为 `docs/product/critical_files/愿景验收清单` | 🟡 待校准 |
+
+### R7.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_cost_controller.py tests/unit/test_t34_status_band_preferences.py tests/unit/test_spine_orchestrator.py -q` | ✅ `91 passed, 2 warnings` |
+| `cd backend/gateway && go test ./internal/middleware/... ./internal/agent/...` | ❌ 失败 |
+| `cd mobile && flutter analyze lib/features/home/presentation/screens/dashboard_screen.dart lib/core/i18n/intent_keywords.dart` | ⚠️ 1 warning + 若干 info |
+
+### R7.4 口径修正
+
+当前不建议继续使用“Phase 0-6 已全部收尾，只剩人工部署”的表述。  
+更准确的阶段判断是：
+
+> **Phase 0-6 大部分功能已实现，但 R7 最终收敛仍未完成；至少还有 Aurora 显性纠偏、Go 质量门、k6 CI 真实性、Aurora 成本记账 4 项关键尾差需要回收。**
