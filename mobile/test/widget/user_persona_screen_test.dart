@@ -307,8 +307,8 @@ void main() {
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pumpAndSettle();
 
-    // "Context Snapshot" section is collapsed by default — expand it
-    await _expandSection(tester, 'Context Snapshot');
+    // "上下文快照" section is collapsed by default — expand it
+    await _expandSection(tester, '上下文快照');
     expect(find.textContaining('Preference Version: 12'), findsOneWidget);
     expect(
         find.textContaining('Knowledge Summary: mastery=0.81'), findsOneWidget);
@@ -317,12 +317,12 @@ void main() {
     await _expandSection(tester, '系统推断与策略');
 
     await tester.scrollUntilVisible(
-      find.text('Inferred Preferences'),
+      find.text('推断偏好'),
       300,
       scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Inferred Preferences'), findsOneWidget);
+    expect(find.text('推断偏好'), findsOneWidget);
     expect(
         find.textContaining('social_learning_preference: 0.2'), findsOneWidget);
     expect(find.text('重置'), findsOneWidget);
@@ -396,16 +396,16 @@ void main() {
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pumpAndSettle();
 
-    // Expand the "系统推断与策略" section to reveal "Inferred Preferences"
+    // Expand the "系统推断与策略" section to reveal "推断偏好"
     await _expandSection(tester, '系统推断与策略');
 
     await tester.scrollUntilVisible(
-      find.text('Inferred Preferences'),
+      find.text('推断偏好'),
       300,
       scrollable: _mainScrollable().first,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Inferred Preferences'), findsOneWidget);
+    expect(find.text('推断偏好'), findsOneWidget);
     expect(find.textContaining('加载失败：inferred fetch failed'), findsOneWidget);
     expect(find.text('重试'), findsWidgets);
   });
