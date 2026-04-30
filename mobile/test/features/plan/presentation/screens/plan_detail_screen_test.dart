@@ -163,6 +163,7 @@ Future<void> _pumpPlanDetail(
         theme: AppThemes.lightTheme,
         darkTheme: AppThemes.darkTheme,
         routerConfig: router,
+        locale: const Locale('zh'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
