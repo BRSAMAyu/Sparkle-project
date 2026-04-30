@@ -90,8 +90,15 @@ async def test_policy_growth_momentum_high(policy_engine):
     assert result is not None
     decision, directive = result
     assert decision.primary_strategy == "sustain_momentum"
+    assert decision.secondary_strategy == "gradual_challenge_increase"
+    assert decision.hard_constraints == {}
     assert "tone" in decision.soft_biases
     assert decision.visibility == "status_band"
+    assert decision.requires_user_confirmation is False
+    assert isinstance(decision.reasoning_summary, str) and len(decision.reasoning_summary) > 0
+    assert decision.risk_level in ("critical", "high", "medium", "low")
+    assert isinstance(decision.policy_decision_id, str)
+    assert directive.policy_decision_id == decision.policy_decision_id
 
 
 @pytest.mark.asyncio
@@ -106,7 +113,17 @@ async def test_policy_growth_momentum_stalled(policy_engine):
     )
     result = await policy_engine.evaluate(signal)
     assert result is not None
-    assert result[0].primary_strategy == "rekindle_engagement"
+    decision, directive = result
+    assert decision.primary_strategy == "rekindle_engagement"
+    assert decision.secondary_strategy == "insert_easy_win"
+    assert decision.hard_constraints.get("prefer_easy_wins") is True
+    assert decision.hard_constraints.get("max_task_duration_min") == 20
+    assert "tone" in decision.soft_biases
+    assert decision.visibility == "status_band"
+    assert decision.requires_user_confirmation is False
+    assert isinstance(decision.reasoning_summary, str) and len(decision.reasoning_summary) > 0
+    assert decision.risk_level in ("critical", "high", "medium", "low")
+    assert directive.policy_decision_id == decision.policy_decision_id
 
 
 @pytest.mark.asyncio
@@ -123,6 +140,15 @@ async def test_policy_recall_pre_exam(policy_engine):
     assert result is not None
     decision, directive = result
     assert decision.primary_strategy == "urgent_exam_prep"
+    assert decision.secondary_strategy == "high_yield_review"
+    assert decision.hard_constraints.get("prefer_high_yield_review") is True
+    assert decision.hard_constraints.get("avoid_new_chapter") is True
+    assert "tone" in decision.soft_biases
+    assert decision.visibility == "receipt"
+    assert decision.requires_user_confirmation is False
+    assert isinstance(decision.reasoning_summary, str) and len(decision.reasoning_summary) > 0
+    assert decision.risk_level in ("critical", "high", "medium", "low")
+    assert directive.policy_decision_id == decision.policy_decision_id
     assert directive.hard_constraints.get("prefer_high_yield_review") is True
 
 
@@ -138,7 +164,15 @@ async def test_policy_recall_task_missed(policy_engine):
     )
     result = await policy_engine.evaluate(signal)
     assert result is not None
-    assert result[0].requires_user_confirmation is True
+    decision, directive = result
+    assert decision.primary_strategy == "recover_from_missed_task"
+    assert decision.secondary_strategy == "adjust_plan"
+    assert decision.visibility == "receipt"
+    assert decision.requires_user_confirmation is True
+    assert decision.soft_biases.get("message_strategy") == "recovery_offer"
+    assert isinstance(decision.reasoning_summary, str) and len(decision.reasoning_summary) > 0
+    assert decision.risk_level in ("critical", "high", "medium", "low")
+    assert directive.policy_decision_id == decision.policy_decision_id
 
 
 @pytest.mark.asyncio
@@ -153,7 +187,16 @@ async def test_policy_recall_undigested_material(policy_engine):
     )
     result = await policy_engine.evaluate(signal)
     assert result is not None
-    assert result[0].primary_strategy == "prompt_diagnostic"
+    decision, directive = result
+    assert decision.primary_strategy == "prompt_diagnostic"
+    assert decision.secondary_strategy is None
+    assert decision.hard_constraints == {}
+    assert decision.soft_biases.get("message_strategy") == "low_effort_next_step"
+    assert decision.visibility == "receipt"
+    assert decision.requires_user_confirmation is False
+    assert isinstance(decision.reasoning_summary, str) and len(decision.reasoning_summary) > 0
+    assert decision.risk_level in ("critical", "high", "medium", "low")
+    assert directive.policy_decision_id == decision.policy_decision_id
 
 
 @pytest.mark.asyncio

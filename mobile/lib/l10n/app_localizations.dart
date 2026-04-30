@@ -39893,7 +39893,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{days} 天连续专注'**
-  String toolsStatsStreak(Object days);
+  String toolsStatsStreak(int days);
 
   /// No description provided for @toolsStatsWaitingData.
   ///

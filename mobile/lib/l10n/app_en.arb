@@ -9954,6 +9954,7 @@
   "toolsStatsTitle": "Focus Stats",
   "toolsStatsSubtitle": "Turn timer and focus behavior into structured insights. Check if your rhythm is steady or needs tuning.",
   "toolsStatsStreak": "{days}-day focus streak",
+  "@toolsStatsStreak": { "placeholders": { "days": { "type": "int" } } },
   "toolsStatsWaitingData": "Waiting for data",
   "toolsStatsRecentCount": "{totalSessions} recent sessions",
   "toolsStatsTodayFocus": "Today's Focus",

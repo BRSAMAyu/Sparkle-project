@@ -21873,7 +21873,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsStatsSubtitle => '把计时和专注行为沉淀成结构化洞察，方便你判断节奏是否稳定、是否需要调整工作块长度。';
 
   @override
-  String toolsStatsStreak(Object days) {
+  String toolsStatsStreak(int days) {
     return '$days 天连续专注';
   }
 

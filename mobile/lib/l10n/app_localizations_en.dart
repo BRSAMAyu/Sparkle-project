@@ -22824,7 +22824,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Turn timer and focus behavior into structured insights. Check if your rhythm is steady or needs tuning.';
 
   @override
-  String toolsStatsStreak(Object days) {
+  String toolsStatsStreak(int days) {
     return '$days-day focus streak';
   }
 

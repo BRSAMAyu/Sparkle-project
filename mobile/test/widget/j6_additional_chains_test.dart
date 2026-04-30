@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/error_book/error_book_routes.dart';
 import 'package:sparkle/features/error_book/presentation/screens/review_screen.dart';
@@ -31,8 +32,8 @@ void main() {
 
       // Each mode must have a non-empty label and description
       for (final mode in ReviewMode.values) {
-        expect(mode.label.isNotEmpty, isTrue);
-        expect(mode.description.isNotEmpty, isTrue);
+        expect(mode.label(S).isNotEmpty, isTrue);
+        expect(mode.description(S).isNotEmpty, isTrue);
       }
     });
 

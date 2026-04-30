@@ -291,6 +291,8 @@ class TestDirectiveRoundTrip:
         assert result is not None
         assert result.directive_id == rd.directive_id
         assert result.tone == "supportive"
+        assert result.policy_decision_id == rd.policy_decision_id
+        assert isinstance(result.target_module, str)
 
     @pytest.mark.asyncio
     async def test_notification_directive_round_trip(self, orchestrator, fake_redis):
@@ -303,6 +305,9 @@ class TestDirectiveRoundTrip:
         result = await orchestrator.get_notification_directive("u1")
         assert result is not None
         assert result.directive_id == nd.directive_id
+        assert result.channel == "push"
+        assert result.policy_decision_id == nd.policy_decision_id
+        assert result.allowed is True
 
     @pytest.mark.asyncio
     async def test_retrieval_directive_round_trip(self, orchestrator, fake_redis):
@@ -317,6 +322,8 @@ class TestDirectiveRoundTrip:
         assert result is not None
         assert result.must_load == ["node_a"]
         assert result.do_not_load == ["node_b"]
+        assert result.directive_id == rd.directive_id
+        assert result.citation_required is True
 
     @pytest.mark.asyncio
     async def test_plan_directive_round_trip(self, orchestrator, fake_redis):
@@ -330,6 +337,8 @@ class TestDirectiveRoundTrip:
         result = await orchestrator.get_plan_directive("u1")
         assert result is not None
         assert result.plan_action == "local_replan"
+        assert result.directive_id == pd.directive_id
+        assert result.constraints == {"deadline_days": 14}
 
     @pytest.mark.asyncio
     async def test_model_write_directive_round_trip(self, orchestrator, fake_redis):
@@ -343,6 +352,9 @@ class TestDirectiveRoundTrip:
         assert result is not None
         assert len(result.writes) == 1
         assert result.writes[0].claim == "fast"
+        assert result.writes[0].target == "learning_pace"
+        assert result.writes[0].confidence == 0.9
+        assert result.directive_id == mw.directive_id
 
     @pytest.mark.asyncio
     async def test_ux_directive_round_trip(self, orchestrator, fake_redis):
@@ -355,6 +367,8 @@ class TestDirectiveRoundTrip:
         result = await orchestrator.get_ux_directive("u1")
         assert result is not None
         assert result.status_band_state == "encouragement"
+        assert result.directive_id == ux.directive_id
+        assert isinstance(result.show_context_receipt, bool)
 
     @pytest.mark.asyncio
     async def test_community_directive_round_trip(self, orchestrator, fake_redis):
@@ -367,6 +381,8 @@ class TestDirectiveRoundTrip:
         result = await orchestrator.get_community_directive("u1")
         assert result is not None
         assert result.cohort_hint_shown is True
+        assert result.directive_id == cd.directive_id
+        assert result.peer_context_mode == "anonymous"
 
     @pytest.mark.asyncio
     async def test_skill_directive_round_trip(self, orchestrator, fake_redis):
@@ -381,6 +397,8 @@ class TestDirectiveRoundTrip:
         assert result is not None
         assert result.skill_action == "recommend"
         assert result.relevant_skill_ids == ["skill_1"]
+        assert result.directive_id == sd.directive_id
+        assert result.policy_decision_id == sd.policy_decision_id
 
     @pytest.mark.asyncio
     async def test_get_directive_returns_none_when_empty(self, orchestrator):
@@ -538,6 +556,9 @@ class TestReceiptHandling:
         result = await orchestrator.get_latest_receipt("u1")
         assert result is not None
         assert result.message == "Test receipt"
+        assert result.receipt_type == "strategy_adjustment"
+        assert result.actions == ["confirm", "correct", "dismiss"]
+        assert result.related_state_keys == ["test_state"]
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -624,6 +645,8 @@ class TestEdgeCases:
         result = await orchestrator.get_response_directive("u1")
         assert result is not None
         assert "中文" in result.tone
+        assert result.directive_id == rd.directive_id
+        assert isinstance(result.length, str)
 
     @pytest.mark.asyncio
     async def test_multi_user_isolation(self, orchestrator, fake_redis):

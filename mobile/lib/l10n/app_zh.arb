@@ -9315,6 +9315,7 @@
   "toolsStatsTitle": "专注统计",
   "toolsStatsSubtitle": "把计时和专注行为沉淀成结构化洞察，方便你判断节奏是否稳定、是否需要调整工作块长度。",
   "toolsStatsStreak": "{days} 天连续专注",
+  "@toolsStatsStreak": { "placeholders": { "days": { "type": "int" } } },
   "toolsStatsWaitingData": "等待数据",
   "toolsStatsRecentCount": "{totalSessions} 条最近记录",
   "toolsStatsTodayFocus": "今日专注",
