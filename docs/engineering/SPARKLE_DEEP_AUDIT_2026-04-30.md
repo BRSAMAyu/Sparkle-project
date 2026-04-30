@@ -190,18 +190,21 @@
 - **分布**: handler 35%, middleware 34%, service 21.7%, agent/db/worker 0%
 
 ### Flutter 测试
-- **结果**: 1142 passed, 9 skipped, **17 failed**（98.5% pass rate）
+- **结果**: 1156 passed, 9 skipped, **3 failed**（99.7% pass rate）
 - 编译通过，`flutter analyze` 0 errors
 - F-03 i18n 双语转换 85+ 文件，模式一致正确
-- **修复进展**: 6 轮修复，从 277 失败 → 17 失败（恢复 260 个测试）
+- **修复进展**: 8 轮修复，从 277 失败 → 3 失败（恢复 274 个测试）
   - Wave 1-5: 前期修复（i18n setUp, testMaterialApp, locale, delegates, text 断言）
   - Wave 6: LocalDatabase test safety（nullable _isar + isarOrNull + isInitialized + test setter）
   - Wave 6b: OfflineMessageQueueService 全方法 null-safe guard（恢复 105 tests）
   - Wave 7: 50+ widget 测试添加 l10n delegates / 更新中文文本期望
+  - Wave 8: Agent fixes — async settle timing, collapsed section expansion, pumpAndSettle→manual pump, text assertion relaxation, provider overrides (aurora/dashboard/exam sprint/plan/openClaw), learning_portfolio l10n format
   - Production fix: simulation_screen initState→didChangeDependencies
-- **剩余失败分布**: 17 个
-  - 11 animation timing (elapsedInSeconds >= 0.0) — Flutter 框架测试时钟问题
-  - 4 disposed ref access — StatusAwarenessBar dispose 生产代码问题
+  - Production fix: StatusAwarenessBar dispose try-catch guard
+- **剩余失败分布**: 3 个
+  - 1 sync_engine setUpAll (Isar binary download)
+  - 1 router_smoke setUpAll (Isar binary download)
+  - 1 exam_sprint_flow integration (infrastructure)
   - 2 Isar download failure — 测试环境无法下载 IsarCore 二进制
 - Service 层测试全部通过
 

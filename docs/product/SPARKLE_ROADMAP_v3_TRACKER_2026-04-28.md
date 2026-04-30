@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-05-01 (Flutter test recovery: 277→17 fail (1142 pass); LocalDatabase test safety + i18n delegates + text assertions fixed; simulation_screen initState→didChangeDependencies; 12 commits, 248 tests recovered)
+> **最后更新**: 2026-05-01 (Flutter test recovery: 277→3 fail (1156 pass, 9 skip); 8-wave fix: LocalDatabase nullable isar, i18n delegates, text assertions, pump timing, agent provider overrides, learning_portfolio l10n; T3.4 36/36 tests pass; All R5 audit items DONE; All P0/P1 DONE)
 
 ### P0 Critical — 当前会话修复
 
