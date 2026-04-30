@@ -190,14 +190,14 @@
 - **分布**: handler 35%, middleware 34%, service 21.7%, agent/db/worker 0%
 
 ### Flutter 测试
-- **结果**: 882 passed, 9 skipped, **277 failed**（76% 通过率）
-- 编译通过，`flutter analyze` 仅有 1 个 unused import 警告
-- F-03 i18n 双语转换 50+ 文件，模式一致正确
-- **277 个失败分析**: 绝大多数在 widget 测试中，失败模式为：
-  - Provider/L10n 未正确注入导致 `NullPointerException`
-  - i18n 双语转换后部分 widget 测试断言的中文文本已变更
-  - `modeling_chat_screen_test.dart` 有 4+ 异常（Aurora 消息去重测试）
-- Service 层测试（如 `community_websocket_service_test.dart`）13/13 全部通过
+- **结果**: 757 passed, 7 skipped, **255 failed**（75% → 修复中）
+- 编译通过，`flutter analyze` 0 errors
+- F-03 i18n 双语转换 85+ 文件，模式一致正确
+- **修复进展**: 109 个测试文件已注入 i18n setUp，22 个失败已修复
+  - 创建 `test/shared/i18n_test_helper.dart` 提供 `setUpI18nForTesting()` + `testMaterialApp()`
+  - 失败模式 1: I18nService 默认英文 → setUp 强制中文 ✅ 已修
+  - 失败模式 2: context.l10n 无 delegates → testMaterialApp 注入 ✅ 进行中
+- Service 层测试全部通过
 
 ---
 
