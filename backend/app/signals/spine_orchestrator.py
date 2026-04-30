@@ -23,7 +23,7 @@ from app.aurora.runtime_v1.aurora_spine_confluence import (
 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
-from app.core.cost_controller import is_aurora_within_budget
+from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
@@ -3315,6 +3315,12 @@ class SpineOrchestrator:
             agenda = self.aurora_core.build_agenda_from_case_file(case_file, resolved_type)
 
             session = await self.aurora_core.create_session(user_id, case_file, agenda)
+
+            try:
+                await record_aurora_cost(tier="l3_full_core")
+            except Exception:
+                pass
+
             return session
         except Exception:
             logger.warning("start_aurora_core_session: failed", exc_info=True)

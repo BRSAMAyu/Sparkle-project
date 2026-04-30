@@ -25,7 +25,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.cost_controller import is_aurora_within_budget
+from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 from app.signals.types import _uid
 
 
@@ -201,6 +201,11 @@ class L4AsyncEngine:
             confidence=confidence,
             episode_count=episode_count,
         )
+
+        try:
+            await record_aurora_cost(tier="l4_async")
+        except Exception:
+            pass
 
         return candidate
 
