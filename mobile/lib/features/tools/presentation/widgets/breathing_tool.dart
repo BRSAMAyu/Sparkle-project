@@ -6,12 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class _BreathingPattern {
   const _BreathingPattern({
@@ -130,7 +131,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   int _completedRounds = 0;
   int _totalRounds = 0;
   int _elapsedBeforePauseSeconds = 0;
-  String _instruction = '准备';
+  String _instruction = I18nService.instance.isChinese ? '准备' : 'Ready';
   String? _lastAnnouncementKey;
   DateTime? _sessionAnchorAt;
 
@@ -303,7 +304,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           _isPlaying = false;
           _isPaused = false;
           _completedRounds = _totalRounds;
-          _instruction = '练习完成';
+          _instruction = I18nService.instance.isChinese ? '练习完成' : 'Practice Complete';
           _elapsedBeforePauseSeconds = 0;
           _sessionAnchorAt = null;
         });
@@ -383,7 +384,9 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     await notificationService.scheduleNotification(
       id: _completionNotificationId,
       title: context.l10n.toolsBreathComplete,
-      body: '本轮呼吸练习已经结束，回来感受一下身体状态。',
+      body: I18nService.instance.isChinese
+          ? '本轮呼吸练习已经结束，回来感受一下身体状态。'
+          : 'This breathing session has ended. Return and feel your body state.',
       scheduledDate: DateTime.now().add(Duration(seconds: remainingSeconds)),
       payload: <String, dynamic>{
         'type': 'breathing_complete',
@@ -416,7 +419,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     final totalRounds = _totalRounds;
     if (!_isPlaying) {
       return _BreathingSnapshot(
-        instruction: '准备',
+        instruction: I18nService.instance.isChinese ? '准备' : 'Ready',
         completedRounds: 0,
         totalRounds: totalRounds,
         controllerValue: 0.0,
@@ -427,7 +430,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     final elapsedSeconds = _elapsedSessionSecondsAt(now);
     if (elapsedSeconds >= _targetSessionSeconds) {
       return _BreathingSnapshot(
-        instruction: '练习完成',
+        instruction: I18nService.instance.isChinese ? '练习完成' : 'Practice Complete',
         completedRounds: totalRounds,
         totalRounds: totalRounds,
         controllerValue: 0.0,
@@ -465,7 +468,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     }
 
     return _BreathingSnapshot(
-      instruction: '准备',
+      instruction: I18nService.instance.isChinese ? '准备' : 'Ready',
       completedRounds: completedRounds,
       totalRounds: totalRounds,
       controllerValue: 0.0,
@@ -535,7 +538,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       _isPlaying = true;
       _isPaused = false;
       _completedRounds = 0;
-      _instruction = '准备';
+      _instruction = I18nService.instance.isChinese ? '准备' : 'Ready';
       _elapsedBeforePauseSeconds = 0;
       _lastAnnouncementKey = null;
       _sessionAnchorAt = DateTime.now();
@@ -615,15 +618,18 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       _isPlaying = false;
       _isPaused = false;
       _completedRounds = _totalRounds;
-      _instruction = '练习完成';
+      _instruction = I18nService.instance.isChinese ? '练习完成' : 'Practice Complete';
       _elapsedBeforePauseSeconds = 0;
       _lastAnnouncementKey = null;
       _sessionAnchorAt = null;
     });
 
-    unawaited(_announceInstruction('练习完成'));
+    unawaited(_announceInstruction(I18nService.instance.isChinese ? '练习完成' : 'Practice Complete'));
     if (!completedFromBackground) {
-      AppFeedback.success(context, '呼吸练习已完成');
+      AppFeedback.success(
+        context,
+        I18nService.instance.isChinese ? '呼吸练习已完成' : 'Breathing practice completed',
+      );
     }
     _isCompletingSession = false;
   }
@@ -640,7 +646,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       _isPlaying = false;
       _isPaused = false;
       _completedRounds = 0;
-      _instruction = '准备';
+      _instruction = I18nService.instance.isChinese ? '准备' : 'Ready';
       _elapsedBeforePauseSeconds = 0;
       _lastAnnouncementKey = null;
       _sessionAnchorAt = null;
@@ -690,9 +696,15 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         ToolHeroChip(
           label: _isPlaying
               ? (_isPaused
-                  ? '已暂停 · $_completedRounds / $_totalRounds 轮'
-                  : '$_completedRounds / $_totalRounds 轮')
-              : '${_durations[_selectedDurationIndex]} 分钟',
+                  ? I18nService.instance.isChinese
+                      ? '已暂停 · $_completedRounds / $_totalRounds 轮'
+                      : 'Paused · $_completedRounds / $_totalRounds rounds'
+                  : I18nService.instance.isChinese
+                      ? '$_completedRounds / $_totalRounds 轮'
+                      : '$_completedRounds / $_totalRounds rounds')
+              : I18nService.instance.isChinese
+                  ? '${_durations[_selectedDurationIndex]} 分钟'
+                  : '${_durations[_selectedDurationIndex]} min',
           accentColor: accent,
           icon: Icons.self_improvement_rounded,
         ),
@@ -703,8 +715,13 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           ToolSectionCard(
             accentColor: accent,
             title: context.l10n.toolsBreathStage,
-            subtitle:
-                _isPaused ? '练习已暂停，恢复后会从当前阶段继续，并继续语音提示。' : '跟着中央指令吸气、停留和呼气。',
+            subtitle: _isPaused
+                ? I18nService.instance.isChinese
+                    ? '练习已暂停，恢复后会从当前阶段继续，并继续语音提示。'
+                    : 'Practice paused, will resume from current phase with voice guidance.'
+                : I18nService.instance.isChinese
+                    ? '跟着中央指令吸气、停留和呼气。'
+                    : 'Follow the central instruction to inhale, hold, and exhale.',
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final stageSize = constraints.maxWidth.clamp(180.0, 300.0);
@@ -791,14 +808,14 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                     '${_pattern.inhale}-${_pattern.hold}-${_pattern.exhale}-${_pattern.rest}',
                 accentColor: accent,
                 icon: Icons.tonality_rounded,
-                caption: '吸 / 停 / 呼 / 停',
+                caption: I18nService.instance.isChinese ? '吸 / 停 / 呼 / 停' : 'Inhale / Hold / Exhale / Hold',
               ),
               ToolMetricCard(
                 label: context.l10n.toolsBreathTargetRounds,
                 value: '$_totalRounds',
                 accentColor: accent,
                 icon: Icons.repeat_rounded,
-                caption: '按当前时长自动估算',
+                caption: I18nService.instance.isChinese ? '按当前时长自动估算' : 'Auto-estimated by duration',
               ),
             ],
           ),
@@ -807,8 +824,16 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
             accentColor: accent,
             title: context.l10n.toolsBreathConfig,
             subtitle: _isPlaying
-                ? (_isPaused ? '练习已暂停，恢复后会从当前阶段继续。' : '练习进行中，配置会在本轮结束后可调整。')
-                : '先选模式，再选练习时长。',
+                ? (_isPaused
+                    ? I18nService.instance.isChinese
+                        ? '练习已暂停，恢复后会从当前阶段继续。'
+                        : 'Practice paused, will resume from current phase.'
+                    : I18nService.instance.isChinese
+                        ? '练习进行中，配置会在本轮结束后可调整。'
+                        : 'Practice in progress, config adjustable after current round.')
+                : I18nService.instance.isChinese
+                    ? '先选模式，再选练习时长。'
+                    : 'Select pattern, then duration.',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
