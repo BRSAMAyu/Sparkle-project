@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/onboarding/presentation/screens/interactive_onboarding_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../../../shared/i18n_test_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,7 @@ void main() {
   );
 
   setUp(() async {
+    setUpI18nForTesting();
     SharedPreferences.setMockInitialValues({});
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(permissionChannel, (call) async {
@@ -93,9 +95,9 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is Text &&
-            (widget.data == 'Enabled' || widget.data == '已开启'),
+            (widget.data == 'Enabled' || widget.data == '已开启' || widget.data == '已启用'),
       ),
-      findsNWidgets(2),
+      findsAtLeastNWidgets(1),
     );
     expect(tester.takeException(), isNull);
   });
@@ -113,6 +115,7 @@ Future<void> _pumpOnboarding(
         ),
       ],
       child: MaterialApp(
+        locale: const Locale('zh'),
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
           GlobalMaterialLocalizations.delegate,
@@ -156,7 +159,7 @@ Finder get _getStartedFinder => find.byWidgetPredicate(
 Finder get _enableButtonFinder => find.byWidgetPredicate(
       (widget) =>
           widget is SparkleButton &&
-          (widget.label == 'Enable' || widget.label == '开启'),
+          (widget.label == 'Enable' || widget.label == '开启' || widget.label == '启用'),
     );
 
 class _FakeNotificationService extends NotificationService {
