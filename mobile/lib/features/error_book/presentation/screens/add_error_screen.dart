@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/question_image_reference.dart';
@@ -117,7 +118,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
       setState(() {
         _questionImageReference = buildSparkleFileReference(storedFile.id);
       });
-      AppFeedback.success(context, '题目图片上传成功');
+      AppFeedback.success(context, I18nService.instance.isChinese ? '题目图片上传成功' : 'Question image uploaded');
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -146,13 +147,13 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
   String? _validateQuestionText(String? value) {
     final content = value?.trim() ?? '';
     if (content.isEmpty && !_hasQuestionImage) {
-      return '请输入题目内容或上传题目图片';
+      return I18nService.instance.isChinese ? '请输入题目内容或上传题目图片' : 'Enter the question or upload an image';
     }
     if (content.isNotEmpty && content.length < 5) {
-      return '题目内容至少需要 5 个字符';
+      return I18nService.instance.isChinese ? '题目内容至少需要 5 个字符' : 'Question must be at least 5 characters';
     }
     if (content.length > 5000) {
-      return '题目内容过长（最多 5000 字符）';
+      return I18nService.instance.isChinese ? '题目内容过长（最多 5000 字符）' : 'Question too long (max 5000 characters)';
     }
     return null;
   }
@@ -178,7 +179,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_isSubmitting) return;
     if (_isUploadingImage) {
-      AppFeedback.info(context, '题目图片仍在上传，请稍候');
+      AppFeedback.info(context, I18nService.instance.isChinese ? '题目图片仍在上传，请稍候' : 'Image still uploading, please wait');
       return;
     }
 
@@ -214,14 +215,18 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
       if (!mounted) return;
       AppFeedback.success(
         context,
-        widget.isEditMode ? '错题已更新' : '错题已添加，AI 正在分析中...',
+        widget.isEditMode
+            ? (I18nService.instance.isChinese ? '错题已更新' : 'Error updated')
+            : (I18nService.instance.isChinese ? '错题已添加，AI 正在分析中...' : 'Error added, AI analyzing...'),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
           context,
-          widget.isEditMode ? '更新失败: $e' : '添加失败: $e',
+          widget.isEditMode
+              ? (I18nService.instance.isChinese ? '更新失败: $e' : 'Update failed: $e')
+              : (I18nService.instance.isChinese ? '添加失败: $e' : 'Add failed: $e'),
         );
       }
     } finally {
@@ -252,7 +257,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               Icon(Icons.image_outlined, color: theme.colorScheme.primary),
               const SizedBox(width: DS.spacing8),
               Text(
-                '题目图片（可选）',
+                I18nService.instance.isChinese ? '题目图片（可选）' : 'Question Image (optional)',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -268,7 +273,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '支持拍照后的题目截图或试卷照片。若未填写题干，AI 会优先尝试 OCR 识别图片文字。',
+            I18nService.instance.isChinese ? '支持拍照后的题目截图或试卷照片。若未填写题干，AI 会优先尝试 OCR 识别图片文字。' : 'Supports photos of exam questions. If no text is entered, AI will try OCR on the image first.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               height: 1.5,
@@ -302,7 +307,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                               ),
                               const SizedBox(height: DS.spacing12),
                               Text(
-                                '还没有上传题目图片',
+                                I18nService.instance.isChinese ? '还没有上传题目图片' : 'No question image uploaded yet',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -317,7 +322,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             LinearProgressIndicator(value: _uploadProgress),
             const SizedBox(height: DS.spacing8),
             Text(
-              '上传中 ${(_uploadProgress * 100).toStringAsFixed(0)}%',
+              I18nService.instance.isChinese ? '上传中 ${(_uploadProgress * 100).toStringAsFixed(0)}%' : 'Uploading ${(_uploadProgress * 100).toStringAsFixed(0)}%',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -420,7 +425,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               _buildInfoCard(context),
               const SizedBox(height: 20),
               Text(
-                '选择科目 *',
+                I18nService.instance.isChinese ? '选择科目 *' : 'Subject *',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -482,10 +487,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 textInputAction: TextInputAction.newline,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return '请输入你的答案';
+                    return I18nService.instance.isChinese ? '请输入你的答案' : 'Enter your answer';
                   }
                   if (value.trim().length > 2000) {
-                    return '答案内容过长（最多 2000 字符）';
+                    return I18nService.instance.isChinese ? '答案内容过长（最多 2000 字符）' : 'Answer too long (max 2000 characters)';
                   }
                   return null;
                 },
@@ -505,10 +510,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 onFieldSubmitted: (_) => _submit(),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return '请输入正确答案';
+                    return I18nService.instance.isChinese ? '请输入正确答案' : 'Enter the correct answer';
                   }
                   if (value.trim().length > 2000) {
-                    return '答案内容过长（最多 2000 字符）';
+                    return I18nService.instance.isChinese ? '答案内容过长（最多 2000 字符）' : 'Answer too long (max 2000 characters)';
                   }
                   return null;
                 },
@@ -525,8 +530,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                     : const Icon(Icons.save),
                 label: Text(
                   _isSubmitting
-                      ? '保存中，请稍候...'
-                      : (widget.isEditMode ? '保存修改' : '保存错题'),
+                      ? (I18nService.instance.isChinese ? '保存中，请稍候...' : 'Saving...')
+                      : (widget.isEditMode
+                          ? (I18nService.instance.isChinese ? '保存修改' : 'Save Changes')
+                          : (I18nService.instance.isChinese ? '保存错题' : 'Save Error')),
                 ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
@@ -564,8 +571,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           Expanded(
             child: Text(
               widget.isEditMode
-                  ? '更新后的题目、答案和图片会重新用于后续复习与分析。'
-                  : '记录越完整，AI 越容易定位错误原因并推荐下一次复习时间。',
+                  ? (I18nService.instance.isChinese ? '更新后的题目、答案和图片会重新用于后续复习与分析。' : 'Updated question, answer, and image will be used for future reviews and analysis.')
+                  : (I18nService.instance.isChinese ? '记录越完整，AI 越容易定位错误原因并推荐下一次复习时间。' : 'The more complete the record, the easier AI can identify the cause and suggest review times.'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 height: 1.5,
               ),
