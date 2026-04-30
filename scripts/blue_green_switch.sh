@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # blue_green_switch.sh — Blue-Green deployment switcher for Sparkle
 #
+# ⚠️ DEPRECATED: This script manages local Docker slot switching only.
+# For production deployment, use deploy-prod.sh or deploy_k8s.sh instead.
+# This script should NOT be used as evidence of production blue-green capability.
+#
+#
 # Usage:
 #   ./scripts/blue_green_switch.sh switch   # Switch active slot (blue↔green)
 #   ./scripts/blue_green_switch.sh status   # Show current active slot

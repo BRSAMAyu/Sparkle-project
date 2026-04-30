@@ -707,9 +707,9 @@
 | R7-1 | P1 | 首页 Aurora 状态带纠偏协议保真度不足：`band_status` 上报为 camelCase，freeform 语义被压扁，仍退化成普通聊天入口 | `dashboard_screen.dart:481-503`, `aurora_telemetry_service.dart:45-64`, `spine_status_band_provider.dart:60-67`, `spine_orchestrator.py:522-528` | ✅ 已修 (8ade5da2: protocolValue getter + freeform handling + aurora_correction context) |
 | R7-2 | P1 | `load-test.yml` 的 k6 job 仍未启动被测服务，T6.1.6 / OBS-012 不能按”完全闭环”验收 | `.github/workflows/load-test.yml:98-116`, `backend/tests/load/k6/scenarios.js:22` | ✅ 已修 (81ed2d0b: k6 job now has PG+Redis services + backend startup) |
 | R7-3 | P1 | Aurora 预算治理只接入前置检查，`record_aurora_cost()` 仍未进入生产调用链 | `backend/app/core/cost_controller.py:173-178`; 搜索无生产调用者 | ✅ 已修 (251d310e: record_aurora_cost wired into L3/L4 production paths) |
-| R7-4 | P2 | Go Gateway 质量门曾在本轮复核初始报红，但当前工作区已修复并复测通过；需与后续代码提交保持一致 | `backend/gateway/internal/middleware/ws_auth.go`, `backend/gateway/internal/agent/client_test.go` | 🟡 工作区已修 |
-| R7-5 | P2 | 旧 `blue_green_switch.sh` 仍会误导最终验收口径，不应作为 T7.3.5 主证据 | `scripts/blue_green_switch.sh` | 🟡 待校准 |
-| R7-6 | P2 | 愿景验收清单 canonical 路径仍漂移，顶层 `docs/product/愿景验收清单` 不存在 | 实际文件为 `docs/product/critical_files/愿景验收清单` | 🟡 待校准 |
+| R7-4 | P2 | Go Gateway 质量门曾在本轮复核初始报红，但当前工作区已修复并复测通过；需与后续代码提交保持一致 | `backend/gateway/internal/middleware/ws_auth.go`, `backend/gateway/internal/agent/client_test.go` | ✅ 已验证 (go test middleware+agent pass) |
+| R7-5 | P2 | 旧 `blue_green_switch.sh` 仍会误导最终验收口径，不应作为 T7.3.5 主证据 | `scripts/blue_green_switch.sh` | ✅ 已修 (deprecated header added, redirects to deploy-prod.sh/deploy_k8s.sh) |
+| R7-6 | P2 | 愿景验收清单 canonical 路径仍漂移，顶层 `docs/product/愿景验收清单` 不存在 | 实际文件为 `docs/product/critical_files/愿景验收清单` | ✅ 已修 (14744efe: symlink created) |
 
 ### R7.3 本轮实测
 
