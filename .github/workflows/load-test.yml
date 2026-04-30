@@ -98,11 +98,58 @@ jobs:
   k6-load-test:
     name: k6 Load Test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: sparkle
+          POSTGRES_DB: sparkle_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Start backend services
+        run: |
+          cd backend
+          DATABASE_URL=postgresql://sparkle:sparkle@localhost:5432/sparkle_test \
+          REDIS_URL=redis://localhost:6379/0 \
+          INTERNAL_API_KEY=test-key \
+          SECRET_KEY=test-secret-key-for-load-test \
+          LLM_API_KEY=placeholder \
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+          curl -sf http://localhost:8000/api/v1/health || echo "Backend not ready, proceeding anyway"
 
       - name: Install k6
         run: |
@@ -112,6 +159,7 @@ jobs:
       - name: Run k6 scenarios
         run: |
           k6 run backend/tests/load/k6/scenarios.js \
+            --env BASE_URL=http://localhost:8000 \
             --out json=load_test_k6_results.json \
             --summary-export=load_test_k6_summary.json
 
