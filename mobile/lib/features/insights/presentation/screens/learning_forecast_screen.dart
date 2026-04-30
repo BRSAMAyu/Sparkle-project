@@ -11,6 +11,7 @@ import 'package:sparkle/features/insights/presentation/widgets/predictive_insigh
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 学习预测洞察屏幕 - 展示AI预测的学习趋势
 ///
@@ -136,7 +137,7 @@ class _LearningForecastScreenState
                             ),
                             const SizedBox(height: DS.sm),
                             Text(
-                              '稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。',
+                              I18nService.instance.isChinese ? '稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。' : 'Try again later, or complete a few learning and focus sessions so the prediction system has enough data.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: DS.textSecondary,
@@ -259,7 +260,7 @@ class _LearningForecastScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'AI 预测系统',
+                    I18nService.instance.isChinese ? 'AI 预测系统' : 'AI Prediction System',
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: 20,
@@ -268,7 +269,7 @@ class _LearningForecastScreenState
                   ),
                   const SizedBox(height: DS.xs),
                   Text(
-                    '基于学习数据的智能分析',
+                    I18nService.instance.isChinese ? '基于学习数据的智能分析' : 'Smart analysis based on learning data',
                     style: TextStyle(
                       color: DS.textSecondary,
                       fontSize: 14,
@@ -325,8 +326,8 @@ class _LearningForecastScreenState
                   size: 24,
                 ),
                 const SizedBox(width: DS.md),
-                const Text(
-                  '最佳学习时间',
+                Text(
+                  I18nService.instance.isChinese ? '最佳学习时间' : 'Best Learning Time',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -352,7 +353,7 @@ class _LearningForecastScreenState
                 ),
                 child: Text(
                   dataStatus == 'insufficient_data'
-                      ? '先完成 3 次以上学习或专注记录，系统就会开始给出更个性化的时间窗口。'
+                      ? (I18nService.instance.isChinese ? '先完成 3 次以上学习或专注记录，系统就会开始给出更个性化的时间窗口。' : 'Complete 3+ learning or focus sessions first, and the system will provide more personalized time windows.')
                       : reason,
                   style: TextStyle(
                     color: DS.textSecondary,
@@ -366,8 +367,8 @@ class _LearningForecastScreenState
             // Best Hours
             if (bestHours.isNotEmpty) ...[
               const SizedBox(height: DS.lg),
-              const Text(
-                '推荐学习时段',
+              Text(
+                I18nService.instance.isChinese ? '推荐学习时段' : 'Recommended Learning Hours',
                 style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
@@ -393,8 +394,8 @@ class _LearningForecastScreenState
             // Best Weekdays
             if (bestWeekdays.isNotEmpty) ...[
               const SizedBox(height: DS.lg),
-              const Text(
-                '推荐学习日',
+              Text(
+                I18nService.instance.isChinese ? '推荐学习日' : 'Recommended Learning Days',
                 style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
@@ -438,15 +439,15 @@ class _LearningForecastScreenState
                     size: 24,
                   ),
                   const SizedBox(width: DS.md),
-                  const Text(
-                    '学习建议',
+                  Text(
+                    I18nService.instance.isChinese ? '学习建议' : 'Learning Tips',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: DS.md),
               _buildTip(context.l10n.lfcTipMorning),
-              _buildTip('周一到周四是您的高产学习日'),
+              _buildTip(I18nService.instance.isChinese ? '周一到周四是您的高产学习日' : 'Mon-Thu are your peak learning days'),
               _buildTip(context.l10n.lfcTipPomodoro),
             ],
           ),
@@ -468,7 +469,10 @@ class _LearningForecastScreenState
       );
 
   String _getWeekdayName(int day) {
-    const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    final zh = I18nService.instance.isChinese;
+    final weekdays = zh
+        ? ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+        : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return weekdays[day];
   }
 }

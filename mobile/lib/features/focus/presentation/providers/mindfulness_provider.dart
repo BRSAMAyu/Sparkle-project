@@ -375,7 +375,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           }
         } else {
           final zh = I18nService.instance.isChinese;
-          resultMessage = zh ? '专注记录已离线保存，稍后会自动重试同步。' : 'Focus record saved offline, will auto-sync later.';
+          resultMessage = zh ? '专注记录已离线保存，稍后会自动重试同步' : 'Focus record saved offline, will auto-sync later';
         }
       } catch (e) {
         state = state.copyWith(loggingError: e.toString());

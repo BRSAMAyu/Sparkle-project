@@ -13,6 +13,7 @@ import 'package:sparkle/features/knowledge/presentation/providers/knowledge_deta
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class LearningPathDialog extends ConsumerStatefulWidget {
@@ -535,7 +536,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                     _selectedRelatedNodeIds.toList(growable: false),
               );
       if (!feedbackContext.mounted) return;
-      AppFeedback.success(feedbackContext, '学习计划已生成');
+      AppFeedback.success(feedbackContext, I18nService.instance.isChinese ? '学习计划已生成' : 'Learning plan generated');
       _clearInlineFeedback();
       _closeThenPushFromRoot(
         context,

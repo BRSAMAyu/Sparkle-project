@@ -14,6 +14,7 @@ import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class LearningInsightsOverviewScreen extends ConsumerWidget {
   const LearningInsightsOverviewScreen({
@@ -98,7 +99,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                   icon: Icons.insights_outlined,
                   title: context.l10n.insOverviewEmpty,
                   description: context.l10n.insOverviewEmptyDesc,
-                  actionText: '去创建学习任务',
+                  actionText: I18nService.instance.isChinese ? '去创建学习任务' : 'Create Learning Task',
                   onAction: () => context.push(TaskRoutes.taskCreate),
                 )
               else
@@ -124,10 +125,10 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                 icon: Icons.groups_rounded,
                 highlighted: initialPanel == panelSimulation,
                 buttonLabel: latestSimulation != null
-                    ? '继续查看'
+                    ? (I18nService.instance.isChinese ? '继续查看' : 'Continue')
                     : topSeed != null
-                        ? '从推荐开始'
-                        : '开始模拟',
+                        ? (I18nService.instance.isChinese ? '从推荐开始' : 'Start from Recommended')
+                        : (I18nService.instance.isChinese ? '开始模拟' : 'Start Simulation'),
                 onPressed: () => context.push(
                   latestSimulation != null
                       ? _simulationLocation(context, latestSimulation)
@@ -187,7 +188,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                               const SizedBox(width: DS.spacing10),
                               Expanded(
                                 child: Text(
-                                  '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。',
+                                  I18nService.instance.isChinese ? '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。' : 'Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
@@ -218,7 +219,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                         const SizedBox(width: DS.spacing10),
                         Expanded(
                           child: Text(
-                            '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。',
+                            I18nService.instance.isChinese ? '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。' : 'Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.',
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: DS.textSecondary,
@@ -245,7 +246,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
 
   String _theaterTitle(BuildContext context, Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
-      return '把一个目标拆成多条学习路径';
+      return I18nService.instance.isChinese ? '把一个目标拆成多条学习路径' : 'Break a goal into multiple learning paths';
     }
     final metadata = Map<String, dynamic>.from(
       latestTheater['metadata'] as Map? ?? const {},
@@ -261,7 +262,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     required SimulationSeedModel? fallbackSeed,
   }) {
     if (latestSimulation == null) {
-      return fallbackSeed?.topic ?? '把一个知识点拉进多角色现场讨论';
+      return fallbackSeed?.topic ?? (I18nService.instance.isChinese ? '把一个知识点拉进多角色现场讨论' : 'Bring a knowledge point into multi-role live discussion');
     }
     final metadata = Map<String, dynamic>.from(
       latestSimulation['metadata'] as Map? ?? const {},
@@ -353,11 +354,12 @@ class _OverviewHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final focusLabel = switch (activePanel) {
-      LearningInsightsOverviewScreen.panelSimulation => '已聚焦：学习仿真',
-      LearningInsightsOverviewScreen.panelTheater => '已聚焦：推演剧场',
-      LearningInsightsOverviewScreen.panelReport => '已聚焦：学习报告',
-      _ => '仿真、推演、报告统一收在这里',
+      LearningInsightsOverviewScreen.panelSimulation => zh ? '已聚焦：学习仿真' : 'Focused: Learning Simulation',
+      LearningInsightsOverviewScreen.panelTheater => zh ? '已聚焦：推演剧场' : 'Focused: Scenario Theater',
+      LearningInsightsOverviewScreen.panelReport => zh ? '已聚焦：学习报告' : 'Focused: Learning Report',
+      _ => zh ? '仿真、推演、报告统一收在这里' : 'Simulation, theater & reports in one place',
     };
 
     return GraphiteCardSurface(
@@ -386,7 +388,7 @@ class _OverviewHero extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '把学习里的“看见问题、模拟讨论、沉淀结论”放到同一条动线里。',
+            I18nService.instance.isChinese ? '把学习里的”看见问题、模拟讨论、沉淀结论”放到同一条动线里。' : 'Connect “spot problems, simulate discussions, draw conclusions” into one flow.',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   height: 1.2,
@@ -394,7 +396,7 @@ class _OverviewHero extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '这里只保留你下一步真正需要的入口，不再堆叠多余说明。',
+            I18nService.instance.isChinese ? '这里只保留你下一步真正需要的入口，不再堆叠多余说明。' : 'Only the entries you actually need next — no clutter.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,
@@ -480,7 +482,7 @@ class _InsightModuleCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      '推荐先看',
+                      I18nService.instance.isChinese ? '推荐先看' : 'Recommended',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: accent,
                             fontWeight: DS.fontWeightBold,

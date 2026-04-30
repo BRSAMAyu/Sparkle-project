@@ -178,8 +178,8 @@ class FocusRepository {
   }) async {
     if (DemoDataService.isDemoMode) {
       return I18nService.instance.isChinese
-          ? 'Mock LLM Guidance: 建议使用番茄工作法，将任务分解为25分钟的专注块，每块之间休息5分钟。保持环境安静，关闭手机通知。'
-          : 'Mock LLM Guidance: Try the Pomodoro technique: break tasks into 25-minute focus blocks with 5-minute breaks. Keep your environment quiet and notifications off.';
+          ? '建议使用番茄工作法，将任务分解为25分钟的专注块，每块之间休息5分钟。保持环境安静，关闭手机通知。'
+          : 'Try the Pomodoro technique: break tasks into 25-minute focus blocks with 5-minute breaks. Keep your environment quiet and notifications off.';
     }
 
     try {
@@ -209,7 +209,7 @@ class FocusRepository {
     if (DemoDataService.isDemoMode) {
       return I18nService.instance.isChinese
           ? ['创建项目大纲', '编写核心功能代码', '添加测试用例', '完善文档']
-          : ['Create project outline', 'Write core feature code', 'Add test cases', 'Improve documentation'];
+          : ['Create project outline', 'Write core feature code', 'Add test cases', 'Complete documentation'];
     }
 
     try {

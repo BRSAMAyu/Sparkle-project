@@ -4,6 +4,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class WeeklyGrowthNarrativeCard extends ConsumerStatefulWidget {
   const WeeklyGrowthNarrativeCard({
@@ -327,7 +328,7 @@ class _NarrativeLoadingSurface extends StatelessWidget {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                '正在整理这周的成长线索...',
+                I18nService.instance.isChinese ? '正在整理这周的成长线索...' : 'Organizing this week\'s growth threads...',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -355,7 +356,7 @@ class _NarrativeErrorSurface extends StatelessWidget {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                '这周故事暂时没有同步成功，先继续学习，稍后再看。',
+                I18nService.instance.isChinese ? '这周故事暂时没有同步成功，先继续学习，稍后再看。' : 'This week\'s story didn\'t sync. Keep learning and check back later.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
