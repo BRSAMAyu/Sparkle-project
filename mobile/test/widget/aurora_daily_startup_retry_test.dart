@@ -192,7 +192,7 @@ void main() {
             (ref) => _StartupChatNotifier(_FakeChatRepository(), ref),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale('zh'),
@@ -240,7 +240,7 @@ void main() {
             (ref) => _StartupChatNotifier(_FakeChatRepository(), ref),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale('zh'),

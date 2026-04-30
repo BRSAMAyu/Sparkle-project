@@ -57,7 +57,7 @@ void main() {
 
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: [
             ...AppLocalizations.localizationsDelegates,
             GlobalMaterialLocalizations.delegate,

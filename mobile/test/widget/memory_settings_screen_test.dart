@@ -189,7 +189,7 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(stub),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: MemorySettingsScreen(),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

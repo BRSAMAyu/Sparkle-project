@@ -42,7 +42,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(
+          child: testMaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
             localizationsDelegates: AppLocalizations.localizationsDelegates,

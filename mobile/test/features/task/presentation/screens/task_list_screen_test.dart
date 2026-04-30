@@ -28,7 +28,7 @@ void main() {
             (ref) => _RecoveryTaskNotifier(TaskListState()),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -59,7 +59,7 @@ void main() {
         overrides: [
           taskListProvider.overrideWith((ref) => notifier),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

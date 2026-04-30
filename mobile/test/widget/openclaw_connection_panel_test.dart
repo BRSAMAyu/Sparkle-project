@@ -141,7 +141,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             locale: Locale('zh'),
             supportedLocales: <Locale>[Locale('zh')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -188,7 +188,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             locale: Locale('zh'),
             supportedLocales: <Locale>[Locale('zh')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -229,7 +229,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             locale: Locale('zh'),
             supportedLocales: <Locale>[Locale('zh')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -286,7 +286,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             locale: Locale('zh'),
             supportedLocales: <Locale>[Locale('zh')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -320,7 +320,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             locale: Locale('zh'),
             supportedLocales: <Locale>[Locale('zh')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,

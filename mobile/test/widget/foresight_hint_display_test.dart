@@ -171,7 +171,7 @@ Widget _buildApp(MemoryApiService service) => ProviderScope(
       overrides: [
         memoryApiServiceProvider.overrideWithValue(service),
       ],
-      child: const MaterialApp(home: MemoryPanelScreen()),
+      child: testMaterialApp(home: MemoryPanelScreen()),
     );
 
 void main() {

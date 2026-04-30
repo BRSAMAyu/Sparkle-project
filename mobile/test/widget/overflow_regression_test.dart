@@ -309,7 +309,7 @@ Future<void> _pumpApp(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      child: MaterialApp(
+      child: testMaterialApp(
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
           GlobalMaterialLocalizations.delegate,

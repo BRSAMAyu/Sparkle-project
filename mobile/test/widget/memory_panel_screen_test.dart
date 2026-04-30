@@ -227,7 +227,7 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_EmptyMemoryApiService()),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: MemoryPanelScreen(),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -257,7 +257,7 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: MemoryPanelScreen(),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

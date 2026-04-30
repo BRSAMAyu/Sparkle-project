@@ -15,7 +15,7 @@ void main() {
       testWidgets('Chat input field is visible', (WidgetTester tester) async {
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Column(
                   children: [
@@ -59,7 +59,7 @@ void main() {
       testWidgets('Chat message list is visible', (WidgetTester tester) async {
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: ListView(
                   children: const [
@@ -85,7 +85,7 @@ void main() {
       testWidgets('Send button is present', (WidgetTester tester) async {
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Column(
                   children: [
@@ -129,7 +129,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: TextField(
                   controller: textController,
@@ -152,7 +152,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: IconButton(
                   icon: const Icon(Icons.send),
@@ -175,7 +175,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Column(
                   children: [
@@ -219,7 +219,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: ListView.builder(
                   itemCount: messages.length,
@@ -241,7 +241,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           const ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Center(
                   child: Text('No messages yet'),
@@ -258,7 +258,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           const ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Text('Message with 中文 and emoji 😀'),
               ),
@@ -275,7 +275,7 @@ void main() {
 
         await tester.pumpWidget(
           const ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: SizedBox(
                   width: 300,
@@ -302,7 +302,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: ListView.builder(
                   controller: scrollController,
@@ -325,7 +325,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: ListView.builder(
                   controller: scrollController,
@@ -357,7 +357,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Column(
                   children: [
@@ -393,7 +393,7 @@ void main() {
           (WidgetTester tester) async {
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Column(
                   children: [
@@ -439,7 +439,7 @@ void main() {
       testWidgets('Loading indicator appears', (WidgetTester tester) async {
         await tester.pumpWidget(
           const ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Center(
                   child: CircularProgressIndicator(),
@@ -455,7 +455,7 @@ void main() {
       testWidgets('Error message displays', (WidgetTester tester) async {
         await tester.pumpWidget(
           const ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Center(
                   child: Text('Error: Connection failed'),
@@ -477,7 +477,7 @@ void main() {
       testWidgets('Send button has tooltip', (WidgetTester tester) async {
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Tooltip(
                   message: 'Send message',
@@ -497,7 +497,7 @@ void main() {
       testWidgets('Input field has label', (WidgetTester tester) async {
         await tester.pumpWidget(
           const ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: TextField(
                   decoration: InputDecoration(
@@ -518,7 +518,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: TextField(
                   focusNode: focusNode,
@@ -549,7 +549,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: ListView.builder(
                   itemCount: 1000,
@@ -573,7 +573,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: TextField(
                   controller: textController,
@@ -603,7 +603,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: Consumer(
                   builder: (context, ref, child) {
@@ -634,7 +634,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: GestureDetector(
                   onLongPress: () {
@@ -656,7 +656,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
+            child: testMaterialApp(
               home: Scaffold(
                 body: GestureDetector(
                   onDoubleTap: () {

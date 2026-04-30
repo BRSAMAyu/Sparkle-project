@@ -91,7 +91,7 @@ void main() {
             (ref, query) => itemsController.stream,
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

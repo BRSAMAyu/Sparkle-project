@@ -212,7 +212,7 @@ void main() {
             _LearningPathDialogRepository(),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: Center(
               child: LearningPathDialog(

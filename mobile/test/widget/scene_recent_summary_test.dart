@@ -178,7 +178,7 @@ void main() {
             _SceneSummaryApiService(recentScenes: scenes),
           ),
         ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: MemoryPanelScreen()),
       ),
     );
     await tester.pumpAndSettle();

@@ -33,7 +33,7 @@ void main() {
             _FakeEnhancedGalaxyRepository(),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -75,7 +75,7 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

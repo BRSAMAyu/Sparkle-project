@@ -76,7 +76,7 @@ void main() {
           overrides: [
             userRepositoryProvider.overrideWithValue(repo),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: ProfileTransparentScreen(),
           ),
         ),

@@ -31,7 +31,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: 'session-1',
@@ -61,7 +61,7 @@ void main() {
   testWidgets('drawer stays hidden without session id', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: null,
@@ -79,7 +79,7 @@ void main() {
   testWidgets('drawer renders empty state when no items', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: 'session-empty',
@@ -123,7 +123,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: 'session-1',

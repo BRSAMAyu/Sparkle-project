@@ -127,7 +127,7 @@ Widget _buildHarness({
   required int days,
 }) {
   return ProviderScope(
-    child: MaterialApp(
+    child: testMaterialApp(
       locale: const Locale('zh'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,

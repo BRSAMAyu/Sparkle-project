@@ -42,7 +42,7 @@ void main() {
             _FakeEvidenceResolveService(),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
@@ -186,7 +186,7 @@ void main() {
             _FakeEvidenceResolveService(),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),

@@ -200,7 +200,7 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
@@ -245,7 +245,7 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(service),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),

@@ -31,7 +31,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: NodeDetailSheet(
               nodeId: 'cn.tcp_flow',
@@ -83,7 +83,7 @@ void main() {
 
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: NodeDetailSheet(
               nodeId: 'cn.empty',

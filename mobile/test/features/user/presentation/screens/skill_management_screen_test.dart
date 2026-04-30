@@ -211,7 +211,7 @@ void main() {
         overrides: [
           skillApiServiceProvider.overrideWithValue(api),
         ],
-        child: const MaterialApp(home: SkillManagementScreen()),
+        child: testMaterialApp(home: SkillManagementScreen()),
       );
 
   testWidgets('skill screen renders personal and shared tabs', (tester) async {

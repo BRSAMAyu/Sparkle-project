@@ -183,7 +183,7 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_SubjectTypeApiService()),
         ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: MemoryPanelScreen()),
       ),
     );
 

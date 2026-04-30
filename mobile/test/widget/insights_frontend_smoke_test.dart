@@ -318,7 +318,7 @@ void main() {
 
       await tester.pumpWidget(
         const ProviderScope(
-          child: MaterialApp(
+          child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
         ),
@@ -412,7 +412,7 @@ void main() {
 
       await tester.pumpWidget(
         const ProviderScope(
-          child: MaterialApp(
+          child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
         ),
@@ -444,7 +444,7 @@ void main() {
               ),
             ),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: KnowledgeTheaterScreen(),
           ),
         ),
@@ -585,7 +585,7 @@ void main() {
 
       await tester.pumpWidget(
         const ProviderScope(
-          child: MaterialApp(
+          child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
         ),
@@ -741,7 +741,7 @@ void main() {
               ),
             ),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: KnowledgeTheaterScreen(),
           ),
         ),
@@ -795,7 +795,7 @@ void main() {
               (ref) async => <Map<String, dynamic>>[],
             ),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 320,

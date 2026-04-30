@@ -299,7 +299,7 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: KnowledgeTheaterScreen(),
         ),
       ),
@@ -411,7 +411,7 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: KnowledgeTheaterScreen(),
         ),
       ),

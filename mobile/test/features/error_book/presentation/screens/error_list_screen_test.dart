@@ -24,7 +24,7 @@ void main() {
             _FakeErrorBookRepository(),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -80,7 +80,7 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

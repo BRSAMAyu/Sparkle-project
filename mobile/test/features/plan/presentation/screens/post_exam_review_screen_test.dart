@@ -147,7 +147,7 @@ Widget _buildApp({
       overrides: [
         examSprintRepositoryProvider.overrideWithValue(repository),
       ],
-      child: MaterialApp(
+      child: testMaterialApp(
         theme: AppThemes.lightTheme,
         home: child,
       ),

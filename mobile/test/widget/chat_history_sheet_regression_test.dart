@@ -99,7 +99,7 @@ void main() {
         overrides: [
           chatProvider.overrideWith((ref) => notifier),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: const [
             ...AppLocalizations.localizationsDelegates,
             GlobalMaterialLocalizations.delegate,

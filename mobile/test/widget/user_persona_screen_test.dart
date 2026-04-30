@@ -266,7 +266,7 @@ Widget _buildTestApp(_FakeUserRepository repository) => ProviderScope(
       overrides: [
         userRepositoryProvider.overrideWithValue(repository),
       ],
-      child: const MaterialApp(
+      child: testMaterialApp(
         home: UserPersonaScreen(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

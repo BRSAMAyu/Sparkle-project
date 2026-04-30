@@ -138,7 +138,7 @@ void main() {
             overrides: [
               activeTaskProvider.overrideWith((ref) => task),
             ],
-            child: MaterialApp(
+            child: testMaterialApp(
               theme: AppThemes.lightTheme,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,

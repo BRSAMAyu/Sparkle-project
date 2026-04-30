@@ -59,7 +59,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(),
           ),
@@ -95,7 +95,7 @@ void main() {
             (ref) async => WeeklyGrowthNarrative.placeholder(),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(),
           ),
@@ -131,7 +131,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(initialExpanded: true),
           ),
@@ -169,7 +169,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(
               initialExpanded: initialExpanded,

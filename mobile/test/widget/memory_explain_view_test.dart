@@ -190,7 +190,7 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_HistoryStubService()),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
@@ -228,7 +228,7 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_HistoryStubService()),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),

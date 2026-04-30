@@ -162,7 +162,7 @@ Future<void> _useTallSurface(WidgetTester tester) async {
 }
 
 Widget _buildApp(Widget child) => ProviderScope(
-      child: MaterialApp(
+      child: testMaterialApp(
         theme: AppThemes.lightTheme,
         home: child,
       ),

@@ -200,7 +200,7 @@ print(x);
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
+          child: testMaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -244,7 +244,7 @@ print(x);
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
+          child: testMaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -285,7 +285,7 @@ print(x);
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
+          child: testMaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -413,7 +413,7 @@ print(nums)
             taskRepositoryProvider.overrideWithValue(taskRepository),
             subtaskRepositoryProvider.overrideWithValue(subtaskRepository),
           ],
-          child: MaterialApp(
+          child: testMaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -486,7 +486,7 @@ print(nums)
             taskRepositoryProvider.overrideWithValue(taskRepository),
             subtaskRepositoryProvider.overrideWithValue(subtaskRepository),
           ],
-          child: MaterialApp(
+          child: testMaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
             localizationsDelegates: AppLocalizations.localizationsDelegates,

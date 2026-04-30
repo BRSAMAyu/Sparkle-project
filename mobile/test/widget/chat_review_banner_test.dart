@@ -158,7 +158,7 @@ void main() {
             (ref) => _QuietAuroraStatusNotifier(),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale('zh'),

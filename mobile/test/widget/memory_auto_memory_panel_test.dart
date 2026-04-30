@@ -233,7 +233,7 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: MemoryPanelScreen()),
       ),
     );
 

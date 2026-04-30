@@ -517,7 +517,7 @@ void main() {
         overrides: <Override>[
           simulationProvider.overrideWith((ref) => notifier),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),
@@ -551,7 +551,7 @@ void main() {
         overrides: <Override>[
           simulationProvider.overrideWith((ref) => notifier),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),
@@ -636,7 +636,7 @@ void main() {
         overrides: <Override>[
           simulationProvider.overrideWith((ref) => notifier),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),
