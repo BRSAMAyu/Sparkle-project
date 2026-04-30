@@ -28,11 +28,12 @@
 - [x] Circuit breaker health checker: full state machine (21 tests)
 - [x] CORS middleware: allowed/disallowed origin, preflight (5 tests)
 - [x] Timeout middleware: route classification, context deadline (6 tests)
-- [ ] Internal API key middleware tests
-- [ ] IP whitelist middleware tests
-- [ ] Error book handler tests
-- [ ] Health check handler tests
-- [ ] Service-layer tests (message_dedup, chat_history)
+- [x] Internal API key middleware tests (5 tests — already adequate)
+- [x] IP whitelist middleware tests (8 tests — already adequate)
+- [x] Error book handler tests: gRPC error mapping, auth injection, invalid JSON (11 tests)
+- [x] Health check handler tests (8 tests — already adequate)
+- [x] Service-layer: message_dedup real Redis tests (11 tests)
+- [ ] Service-layer: chat_history coverage expansion
 - **Coverage**: handler 39.2%, middleware 30.1%, agent 35.7%, **total 12.4%** (was 10.7%)
 
 ### M3: Python Mock→Integration
@@ -49,11 +50,16 @@
 - [ ] Test prompt assembly with real context injection
 - [ ] Test dual-core routing with real router
 
-### M5: Flutter Compilation Fix
-- [ ] Fix `subject_chips.dart` i18n errors
-- [ ] Fix `task_provider.dart` parse error
-- [ ] Fix `user_galaxy_contribution.dart` const/final error
-- [ ] Fix `error_list_screen.dart` context errors
+### M5: Flutter Compilation Fix — IN PROGRESS
+- [x] Fix 387→177 compilation errors across 73 files
+- [x] Replace S.current with context.l10n or fallback strings (12 files)
+- [x] Add missing context_l10n.dart imports (6 files)
+- [x] Fix ARB $var→{var} templates (40 entries across zh+en)
+- [x] Add missing ARB metadata for placeholder methods
+- [x] Remove const from non-const widget expressions
+- [x] Convert static initializers using context to methods
+- [x] Fix breathing_tool static _patterns → _patternsFor(BuildContext)
+- [ ] Remaining: ~57 feature errors (29 argument_type, 8 undefined_identifier, etc.)
 - [ ] Verify `flutter test` runs green
 
 ## Commit Log
@@ -63,3 +69,7 @@
 | 11:22 | 44549ff | M2: auth handler + WS ticket + auth middleware tests (45 tests) |
 | 11:35 | 39f6436 | M2: circuit breaker health checker tests (21 tests) |
 | 11:40 | fe01319 | M2: CORS + timeout middleware tests (11 tests) |
+| 12:30 | 268a3fc | M5: replace S.current + add context params (9 files) |
+| 12:35 | f41174c | M2: message_dedup (11) + error_book handler (11) tests |
+| 12:45 | fe711b1 | M5: convert 40 $var→{var} ARB templates |
+| 12:55 | 55a35c8 | M5: fix 387→186 compilation errors (73 files) |
