@@ -11436,5 +11436,22 @@
   "@gdGroupStats": { "placeholders": { "members": { "type": "int" }, "checkins": { "type": "int" }, "flame": { "type": "String" } } },
   "gdPublicGroup": "公开社群",
   "gdActivityScore": "热度分 {score}",
-  "@gdActivityScore": { "placeholders": { "score": { "type": "String" } } }
+  "@gdActivityScore": { "placeholders": { "score": { "type": "String" } } },
+  "aiopsDays": "{days} 天",
+  "@aiopsDays": { "placeholders": { "days": { "type": "int" } } },
+  "aiopsSurfaceRow": "{surface} · 接受 {ctr}% · 执行 {execRate}%",
+  "@aiopsSurfaceRow": { "placeholders": { "surface": { "type": "String" }, "ctr": { "type": "String" }, "execRate": { "type": "String" } } },
+  "aiopsActionRow": "{actionType} · 执行 {executions} 次 · 转化 {rate}%",
+  "@aiopsActionRow": { "placeholders": { "actionType": { "type": "String" }, "executions": { "type": "int" }, "rate": { "type": "String" } } },
+  "aiopsTrendDesc": "看耗时是否稳定下降，同时确认成功率和执行转化没有被成本优化拖垮。",
+  "aiopsTotalTime": "总耗时",
+  "aiopsLatestRequests": "最新请求量",
+  "aiopsLatestFallback": "最新 fallback",
+  "aiopsLatestCost": "最新成本",
+  "aiopsFirstPacket": "首包 {ms}ms · 总耗时 {totalMs}ms · 成功率 {rate}%",
+  "@aiopsFirstPacket": { "placeholders": { "ms": { "type": "String" }, "totalMs": { "type": "String" }, "rate": { "type": "String" } } },
+  "aiopsFallbackCost": "fallback {rate}% · 成本 USD{cost} · 执行转化 {execRate}%",
+  "@aiopsFallbackCost": { "placeholders": { "rate": { "type": "String" }, "cost": { "type": "String" }, "execRate": { "type": "String" } } },
+  "aiopsPromptHit": "prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}",
+  "@aiopsPromptHit": { "placeholders": { "prompt": { "type": "String" }, "inference": { "type": "String" }, "promptCount": { "type": "int" }, "inferenceCount": { "type": "int" } } }
 }

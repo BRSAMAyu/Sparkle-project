@@ -50025,6 +50025,73 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'热度分 {score}'**
   String gdActivityScore(String score);
+
+  /// No description provided for @aiopsDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days} 天'**
+  String aiopsDays(int days);
+
+  /// No description provided for @aiopsSurfaceRow.
+  ///
+  /// In zh, this message translates to:
+  /// **'{surface} · 接受 {ctr}% · 执行 {execRate}%'**
+  String aiopsSurfaceRow(String surface, String ctr, String execRate);
+
+  /// No description provided for @aiopsActionRow.
+  ///
+  /// In zh, this message translates to:
+  /// **'{actionType} · 执行 {executions} 次 · 转化 {rate}%'**
+  String aiopsActionRow(String actionType, int executions, String rate);
+
+  /// No description provided for @aiopsTrendDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'看耗时是否稳定下降，同时确认成功率和执行转化没有被成本优化拖垮。'**
+  String get aiopsTrendDesc;
+
+  /// No description provided for @aiopsTotalTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'总耗时'**
+  String get aiopsTotalTime;
+
+  /// No description provided for @aiopsLatestRequests.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新请求量'**
+  String get aiopsLatestRequests;
+
+  /// No description provided for @aiopsLatestFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新 fallback'**
+  String get aiopsLatestFallback;
+
+  /// No description provided for @aiopsLatestCost.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新成本'**
+  String get aiopsLatestCost;
+
+  /// No description provided for @aiopsFirstPacket.
+  ///
+  /// In zh, this message translates to:
+  /// **'首包 {ms}ms · 总耗时 {totalMs}ms · 成功率 {rate}%'**
+  String aiopsFirstPacket(String ms, String totalMs, String rate);
+
+  /// No description provided for @aiopsFallbackCost.
+  ///
+  /// In zh, this message translates to:
+  /// **'fallback {rate}% · 成本 USD{cost} · 执行转化 {execRate}%'**
+  String aiopsFallbackCost(String rate, String cost, String execRate);
+
+  /// No description provided for @aiopsPromptHit.
+  ///
+  /// In zh, this message translates to:
+  /// **'prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}'**
+  String aiopsPromptHit(
+      String prompt, String inference, int promptCount, int inferenceCount);
 }
 
 class _AppLocalizationsDelegate

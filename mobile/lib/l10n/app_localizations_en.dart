@@ -28625,4 +28625,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String gdActivityScore(String score) {
     return 'Activity $score';
   }
+
+  @override
+  String aiopsDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String aiopsSurfaceRow(String surface, String ctr, String execRate) {
+    return '$surface · Accepted $ctr% · Executed $execRate%';
+  }
+
+  @override
+  String aiopsActionRow(String actionType, int executions, String rate) {
+    return '$actionType · Executed $executions times · Conversion $rate%';
+  }
+
+  @override
+  String get aiopsTrendDesc =>
+      'Check whether latency is declining steadily while confirming that success rate and execution conversion are not hurt by cost optimization.';
+
+  @override
+  String get aiopsTotalTime => 'Total Duration';
+
+  @override
+  String get aiopsLatestRequests => 'Latest Requests';
+
+  @override
+  String get aiopsLatestFallback => 'Latest Fallback';
+
+  @override
+  String get aiopsLatestCost => 'Latest Cost';
+
+  @override
+  String aiopsFirstPacket(String ms, String totalMs, String rate) {
+    return 'First token ${ms}ms · Total ${totalMs}ms · Success $rate%';
+  }
+
+  @override
+  String aiopsFallbackCost(String rate, String cost, String execRate) {
+    return 'Fallback $rate% · Cost USD$cost · Exec conversion $execRate%';
+  }
+
+  @override
+  String aiopsPromptHit(
+      String prompt, String inference, int promptCount, int inferenceCount) {
+    return 'Prompt hit $prompt% · Inference hit $inference% · Known $promptCount/$inferenceCount';
+  }
 }

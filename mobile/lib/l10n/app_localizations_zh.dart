@@ -27441,4 +27441,50 @@ class AppLocalizationsZh extends AppLocalizations {
   String gdActivityScore(String score) {
     return '热度分 $score';
   }
+
+  @override
+  String aiopsDays(int days) {
+    return '$days 天';
+  }
+
+  @override
+  String aiopsSurfaceRow(String surface, String ctr, String execRate) {
+    return '$surface · 接受 $ctr% · 执行 $execRate%';
+  }
+
+  @override
+  String aiopsActionRow(String actionType, int executions, String rate) {
+    return '$actionType · 执行 $executions 次 · 转化 $rate%';
+  }
+
+  @override
+  String get aiopsTrendDesc => '看耗时是否稳定下降，同时确认成功率和执行转化没有被成本优化拖垮。';
+
+  @override
+  String get aiopsTotalTime => '总耗时';
+
+  @override
+  String get aiopsLatestRequests => '最新请求量';
+
+  @override
+  String get aiopsLatestFallback => '最新 fallback';
+
+  @override
+  String get aiopsLatestCost => '最新成本';
+
+  @override
+  String aiopsFirstPacket(String ms, String totalMs, String rate) {
+    return '首包 ${ms}ms · 总耗时 ${totalMs}ms · 成功率 $rate%';
+  }
+
+  @override
+  String aiopsFallbackCost(String rate, String cost, String execRate) {
+    return 'fallback $rate% · 成本 USD$cost · 执行转化 $execRate%';
+  }
+
+  @override
+  String aiopsPromptHit(
+      String prompt, String inference, int promptCount, int inferenceCount) {
+    return 'prompt 命中 $prompt% · 推理命中 $inference% · known $promptCount/$inferenceCount';
+  }
 }

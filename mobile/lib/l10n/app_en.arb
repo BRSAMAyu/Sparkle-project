@@ -11436,5 +11436,22 @@
   "@gdGroupStats": { "placeholders": { "members": { "type": "int" }, "checkins": { "type": "int" }, "flame": { "type": "String" } } },
   "gdPublicGroup": "Public Group",
   "gdActivityScore": "Activity {score}",
-  "@gdActivityScore": { "placeholders": { "score": { "type": "String" } } }
+  "@gdActivityScore": { "placeholders": { "score": { "type": "String" } } },
+  "aiopsDays": "{days} days",
+  "@aiopsDays": { "placeholders": { "days": { "type": "int" } } },
+  "aiopsSurfaceRow": "{surface} · Accepted {ctr}% · Executed {execRate}%",
+  "@aiopsSurfaceRow": { "placeholders": { "surface": { "type": "String" }, "ctr": { "type": "String" }, "execRate": { "type": "String" } } },
+  "aiopsActionRow": "{actionType} · Executed {executions} times · Conversion {rate}%",
+  "@aiopsActionRow": { "placeholders": { "actionType": { "type": "String" }, "executions": { "type": "int" }, "rate": { "type": "String" } } },
+  "aiopsTrendDesc": "Check whether latency is declining steadily while confirming that success rate and execution conversion are not hurt by cost optimization.",
+  "aiopsTotalTime": "Total Duration",
+  "aiopsLatestRequests": "Latest Requests",
+  "aiopsLatestFallback": "Latest Fallback",
+  "aiopsLatestCost": "Latest Cost",
+  "aiopsFirstPacket": "First token {ms}ms · Total {totalMs}ms · Success {rate}%",
+  "@aiopsFirstPacket": { "placeholders": { "ms": { "type": "String" }, "totalMs": { "type": "String" }, "rate": { "type": "String" } } },
+  "aiopsFallbackCost": "Fallback {rate}% · Cost USD{cost} · Exec conversion {execRate}%",
+  "@aiopsFallbackCost": { "placeholders": { "rate": { "type": "String" }, "cost": { "type": "String" }, "execRate": { "type": "String" } } },
+  "aiopsPromptHit": "Prompt hit {prompt}% · Inference hit {inference}% · Known {promptCount}/{inferenceCount}",
+  "@aiopsPromptHit": { "placeholders": { "prompt": { "type": "String" }, "inference": { "type": "String" }, "promptCount": { "type": "int" }, "inferenceCount": { "type": "int" } } }
 }

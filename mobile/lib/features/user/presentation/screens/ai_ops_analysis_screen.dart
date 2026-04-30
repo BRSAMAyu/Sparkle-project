@@ -103,7 +103,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               children: [7, 14, 30]
                   .map(
                     (days) => ChoiceChip(
-                      label: Text('$days 天'),
+                      label: Text(context.l10n.aiopsDays(days)),
                       selected: _days == days,
                       onSelected: (_) => setState(() => _days = days),
                     ),
@@ -285,7 +285,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
-                  '${_surfaceLabel(entry.key)} · 接受 ${((item['ctr_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}% · 执行 ${((item['execution_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
+                  context.l10n.aiopsSurfaceRow(_surfaceLabel(entry.key), ((item['ctr_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), ((item['execution_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               );
@@ -308,7 +308,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
-                  '$actionType · 执行 $executions 次 · 转化 ${rate.toStringAsFixed(1)}%',
+                  context.l10n.aiopsActionRow(actionType, executions as int, rate.toStringAsFixed(1)),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               );
@@ -380,21 +380,21 @@ class _TrendSeriesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _chatModeLabel(chatMode),
+            _chatModeLabel(context, chatMode),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '看耗时是否稳定下降，同时确认成功率和执行转化没有被成本优化拖垮。',
+            context.l10n.aiopsTrendDesc,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
           ),
           const SizedBox(height: DS.spacing12),
           _TrendBarRow(
-            label: '总耗时',
+            label: context.l10n.aiopsTotalTime,
             points: points,
             valueKey: 'avg_total_duration_ms',
             valueFormatter: (value) => '${value.toStringAsFixed(0)}ms',
@@ -422,16 +422,16 @@ class _TrendSeriesCard extends StatelessWidget {
             runSpacing: DS.spacing8,
             children: [
               _MetricChip(
-                label: '最新请求量',
+                label: context.l10n.aiopsLatestRequests,
                 value: '${latest['requests_total'] ?? 0}',
               ),
               _MetricChip(
-                label: '最新 fallback',
+                label: context.l10n.aiopsLatestFallback,
                 value:
                     '${((latest['fallback_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
               ),
               _MetricChip(
-                label: '最新成本',
+                label: context.l10n.aiopsLatestCost,
                 value:
                     '\$${((latest['total_cost_usd'] as num?)?.toDouble() ?? 0).toStringAsFixed(4)}',
               ),
@@ -442,7 +442,7 @@ class _TrendSeriesCard extends StatelessWidget {
     );
   }
 
-  String _chatModeLabel(String value) {
+  String _chatModeLabel(BuildContext context, String value) {
     switch (value) {
       case 'standard':
         return context.l10n.userAiOpsStandardChat;
@@ -591,26 +591,26 @@ class _ModeBreakdownRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _chatModeLabel(chatMode),
+            _chatModeLabel(context, chatMode),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: 6),
           Text(
-            '首包 ${avgFirst.toStringAsFixed(0)}ms · 总耗时 ${avgTotal.toStringAsFixed(0)}ms · 成功率 ${successRate.toStringAsFixed(1)}%',
+            context.l10n.aiopsFirstPacket(avgFirst.toStringAsFixed(0), avgTotal.toStringAsFixed(0), successRate.toStringAsFixed(1)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 2),
           Text(
-            'fallback ${fallbackRate.toStringAsFixed(1)}% · 成本 \$${cost.toStringAsFixed(4)} · 执行转化 ${executionRate.toStringAsFixed(1)}%',
+            context.l10n.aiopsFallbackCost(fallbackRate.toStringAsFixed(1), cost.toStringAsFixed(4), executionRate.toStringAsFixed(1)),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
           ),
           const SizedBox(height: 2),
           Text(
-            'prompt 命中 ${((item['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}% · 推理命中 ${((item['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}% · known ${item['prompt_utilization_known_count'] ?? 0}/${item['inference_utilization_known_count'] ?? 0}',
+            context.l10n.aiopsPromptHit(((item['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), ((item['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), (item['prompt_utilization_known_count'] ?? 0) as int, (item['inference_utilization_known_count'] ?? 0) as int),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -620,7 +620,7 @@ class _ModeBreakdownRow extends StatelessWidget {
     );
   }
 
-  String _chatModeLabel(String value) {
+  String _chatModeLabel(BuildContext context, String value) {
     switch (value) {
       case 'standard':
         return context.l10n.userAiOpsStandardChat;
