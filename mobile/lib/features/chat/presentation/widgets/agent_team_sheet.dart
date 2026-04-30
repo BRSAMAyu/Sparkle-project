@@ -528,7 +528,9 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
                 TextField(
                   controller: descriptionController,
-                  decoration: const InputDecoration(labelText: '简介'),
+                  decoration: InputDecoration(
+                    labelText: I18nService.instance.isChinese ? '简介' : 'Bio',
+                  ),
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedBaseExpert,
@@ -546,7 +548,9 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedModelKey,
-                  decoration: const InputDecoration(labelText: '模型'),
+                  decoration: InputDecoration(
+                    labelText: I18nService.instance.isChinese ? '模型' : 'Model',
+                  ),
                   items: modelOptions
                       .map(
                         (item) => DropdownMenuItem<String>(
@@ -560,11 +564,22 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedReasoningMode,
-                  decoration: const InputDecoration(labelText: '档位'),
-                  items: const [
-                    DropdownMenuItem(value: 'fast', child: Text('敏捷')),
-                    DropdownMenuItem(value: 'balanced', child: Text('均衡')),
-                    DropdownMenuItem(value: 'deep', child: Text('深思')),
+                  decoration: InputDecoration(
+                    labelText: I18nService.instance.isChinese ? '档位' : 'Tier',
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'fast',
+                      child: Text(I18nService.instance.isChinese ? '敏捷' : 'Fast'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'balanced',
+                      child: Text(I18nService.instance.isChinese ? '均衡' : 'Balanced'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'deep',
+                      child: Text(I18nService.instance.isChinese ? '深思' : 'Deep'),
+                    ),
                   ],
                   onChanged: (value) => setLocalState(
                     () => selectedReasoningMode = value ?? 'balanced',
@@ -585,7 +600,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('取消'),
+              child: Text(I18nService.instance.isChinese ? '取消' : 'Cancel'),
             ),
             FilledButton(
               onPressed: () async {
@@ -600,7 +615,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 if (!dialogContext.mounted) return;
                 Navigator.pop(dialogContext, expert);
               },
-              child: const Text('创建'),
+              child: Text(I18nService.instance.isChinese ? '创建' : 'Create'),
             ),
           ],
         ),
@@ -633,14 +648,16 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             ),
             TextField(
               controller: descriptionController,
-              decoration: const InputDecoration(labelText: '说明'),
+              decoration: InputDecoration(
+                labelText: I18nService.instance.isChinese ? '说明' : 'Description',
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('取消'),
+            child: Text(I18nService.instance.isChinese ? '取消' : 'Cancel'),
           ),
           FilledButton(
             onPressed: () async {
@@ -654,7 +671,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
               if (!dialogContext.mounted) return;
               Navigator.pop(dialogContext, true);
             },
-            child: const Text('保存'),
+            child: Text(I18nService.instance.isChinese ? '保存' : 'Save'),
           ),
         ],
       ),

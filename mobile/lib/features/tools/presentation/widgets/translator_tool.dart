@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
@@ -32,8 +33,8 @@ class Language {
 }
 
 const supportedLanguages = [
-  Language(code: 'auto', name: '自动检测', flag: '🔍'),
-  Language(code: 'zh', name: '中文', flag: '🇨🇳'),
+  Language(code: 'auto', name: 'Auto Detect', flag: '🔍'),
+  Language(code: 'zh', name: 'Chinese', flag: '🇨🇳'),
   Language(code: 'en', name: 'English', flag: '🇺🇸'),
   Language(code: 'ja', name: '日本語', flag: '🇯🇵'),
   Language(code: 'ko', name: '한국어', flag: '🇰🇷'),
@@ -76,7 +77,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
   Future<void> _translate() async {
     if (_inputController.text.trim().isEmpty) {
-      AppFeedback.info(context, '请输入要翻译的文本');
+      AppFeedback.info(
+        context,
+        I18nService.instance.isChinese ? '请输入要翻译的文本' : 'Please enter text to translate',
+      );
       return;
     }
 
@@ -205,7 +209,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
   void _copyToClipboard() {
     unawaited(Clipboard.setData(ClipboardData(text: _output)));
-    AppFeedback.info(context, '已复制到剪贴板');
+    AppFeedback.info(
+      context,
+      I18nService.instance.isChinese ? '已复制到剪贴板' : 'Copied to clipboard',
+    );
   }
 
   bool get _canAddToWordbook {
@@ -249,7 +256,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         partOfSpeech: partOfSpeech,
       );
       if (mounted) {
-        AppFeedback.success(context, '已加入单词本');
+        AppFeedback.success(
+          context,
+          I18nService.instance.isChinese ? '已加入单词本' : 'Added to wordbook',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -283,7 +293,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             unawaited(context.push(TranslationRoutes.history));
           }
         },
-        icon: const Icon(Icons.history_rounded),
+        icon: Icon(Icons.history_rounded),
         variant: ButtonVariant.ghost,
       ),
       heroChips: [
@@ -307,14 +317,18 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 value: '$inputLength',
                 accentColor: accent,
                 icon: Icons.edit_note_rounded,
-                caption: '建议控制在可读段落内',
+                caption: I18nService.instance.isChinese
+                    ? '建议控制在可读段落内'
+                    : 'Keep within readable paragraphs',
               ),
               ToolMetricCard(
                 label: context.l10n.toolsTransOutputLen,
                 value: '$outputLength',
                 accentColor: accent,
                 icon: Icons.auto_fix_high_rounded,
-                caption: _isLoading ? '翻译生成中' : '翻译完成后可复制',
+                caption: _isLoading
+                    ? (I18nService.instance.isChinese ? '翻译生成中' : 'Translating')
+                    : (I18nService.instance.isChinese ? '翻译完成后可复制' : 'Copy after translation'),
               ),
             ],
           ),
@@ -327,7 +341,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
               label: context.l10n.toolsTransSwap,
               variant: ButtonVariant.ghost,
               onPressed: _swapLanguages,
-              icon: const Icon(Icons.swap_horiz_rounded),
+              icon: Icon(Icons.swap_horiz_rounded),
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -381,7 +395,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                       _output = '';
                     });
                   },
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(Icons.close_rounded),
                 ),
                 child: SizedBox(
                   height: (MediaQuery.sizeOf(context).height * 0.2).clamp(140.0, 250.0),
@@ -513,7 +527,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 child: SparkleButton(
                   label: context.l10n.toolsTransAddWordbook,
                   onPressed: _isAddingToWordbook ? null : _addToWordbook,
-                  icon: const Icon(Icons.bookmark_add_rounded),
+                  icon: Icon(Icons.bookmark_add_rounded),
                   loading: _isAddingToWordbook,
                 ),
               ),
@@ -528,13 +542,13 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             label: context.l10n.toolsTransCopyResult,
             variant: ButtonVariant.ghost,
             onPressed: _output.isEmpty ? null : _copyToClipboard,
-            icon: const Icon(Icons.copy_rounded),
+            icon: Icon(Icons.copy_rounded),
             expand: true,
           );
           final translateButton = SparkleButton(
             label: _isLoading ? context.l10n.toolsTransTranslating : context.l10n.toolsTransStart,
             onPressed: _isLoading ? null : _translate,
-            icon: const Icon(Icons.auto_fix_high_rounded),
+            icon: Icon(Icons.auto_fix_high_rounded),
             loading: _isLoading,
             expand: true,
           );
