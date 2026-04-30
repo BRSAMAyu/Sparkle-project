@@ -23164,27 +23164,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insExpand => '展开';
 
   @override
-  String insStudyDays(Object count) {
+  String insStudyDays(int count) {
     return '$count 天学习';
   }
 
   @override
-  String insTasksDone(Object count) {
+  String insTasksDone(int count) {
     return '$count 个任务';
   }
 
   @override
-  String insErrorsFixed(Object count) {
+  String insErrorsFixed(int count) {
     return '修复 $count 个错误';
   }
 
   @override
-  String insReflections(Object count) {
+  String insReflections(int count) {
     return '$count 次复盘';
   }
 
   @override
-  String insMasteryGain(Object delta) {
+  String insMasteryGain(int delta) {
     return '掌握 +$delta';
   }
 
@@ -27583,4 +27583,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get lfcTipPomodoro => '建议每次学习 30-45 分钟，然后休息 5-10 分钟';
+
+  @override
+  String wgnBiggestImprovement(String node) {
+    return '最大进步：$node';
+  }
+
+  @override
+  String wgnNextWeekGoal(String suggestion) {
+    return '下周目标：$suggestion';
+  }
 }

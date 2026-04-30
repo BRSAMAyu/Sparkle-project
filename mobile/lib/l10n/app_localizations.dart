@@ -42371,31 +42371,31 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 天学习'**
-  String insStudyDays(Object count);
+  String insStudyDays(int count);
 
   /// No description provided for @insTasksDone.
   ///
   /// In zh, this message translates to:
   /// **'{count} 个任务'**
-  String insTasksDone(Object count);
+  String insTasksDone(int count);
 
   /// No description provided for @insErrorsFixed.
   ///
   /// In zh, this message translates to:
   /// **'修复 {count} 个错误'**
-  String insErrorsFixed(Object count);
+  String insErrorsFixed(int count);
 
   /// No description provided for @insReflections.
   ///
   /// In zh, this message translates to:
   /// **'{count} 次复盘'**
-  String insReflections(Object count);
+  String insReflections(int count);
 
   /// No description provided for @insMasteryGain.
   ///
   /// In zh, this message translates to:
   /// **'掌握 +{delta}'**
-  String insMasteryGain(Object delta);
+  String insMasteryGain(int delta);
 
   /// No description provided for @insFirstWeek.
   ///
@@ -50224,6 +50224,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'建议每次学习 30-45 分钟，然后休息 5-10 分钟'**
   String get lfcTipPomodoro;
+
+  /// No description provided for @wgnBiggestImprovement.
+  ///
+  /// In zh, this message translates to:
+  /// **'最大进步：{node}'**
+  String wgnBiggestImprovement(String node);
+
+  /// No description provided for @wgnNextWeekGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'下周目标：{suggestion}'**
+  String wgnNextWeekGoal(String suggestion);
 }
 
 class _AppLocalizationsDelegate

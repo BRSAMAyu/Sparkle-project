@@ -60,7 +60,7 @@ class _NarrativeSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final metrics = _metrics(narrative);
+    final metrics = _metrics(context, narrative);
     final accent = narrative.hasData ? DS.success : DS.info;
     final highlights = narrative.highlights.isNotEmpty
         ? narrative.highlights
@@ -177,9 +177,8 @@ class _NarrativeSurface extends StatelessWidget {
                 ),
               ),
               child: Text(
-                '最大进步：${narrative.biggestImprovementNode} '
-                '${narrative.biggestImprovementBefore.toStringAsFixed(0)}% → '
-                '${narrative.biggestImprovementAfter.toStringAsFixed(0)}%',
+                context.l10n.wgnBiggestImprovement(narrative.biggestImprovementNode) +
+                ' ${narrative.biggestImprovementBefore.toStringAsFixed(0)}% → ${narrative.biggestImprovementAfter.toStringAsFixed(0)}%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
@@ -190,7 +189,7 @@ class _NarrativeSurface extends StatelessWidget {
           if (expanded && narrative.nextWeekSuggestion.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '下周目标：${narrative.nextWeekSuggestion}',
+              context.l10n.wgnNextWeekGoal(narrative.nextWeekSuggestion),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
@@ -217,13 +216,13 @@ class _NarrativeSurface extends StatelessWidget {
     );
   }
 
-  List<Widget> _metrics(WeeklyGrowthNarrative narrative) {
+  List<Widget> _metrics(BuildContext context, WeeklyGrowthNarrative narrative) {
     final items = <Widget>[];
     if (narrative.studyDays > 0) {
       items.add(
         _MetricPill(
           icon: Icons.calendar_today_rounded,
-          label: context.l10n.insStudyDays,
+          label: context.l10n.insStudyDays(narrative.studyDays),
         ),
       );
     }
@@ -231,7 +230,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.task_alt_rounded,
-          label: context.l10n.insTasksDone,
+          label: context.l10n.insTasksDone(narrative.tasksCompleted),
         ),
       );
     }
@@ -239,7 +238,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.psychology_alt_rounded,
-          label: context.l10n.insErrorsFixed,
+          label: context.l10n.insErrorsFixed(narrative.errorsFixed),
         ),
       );
     }
@@ -247,7 +246,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.rate_review_rounded,
-          label: context.l10n.insReflections,
+          label: context.l10n.insReflections(narrative.reflectionRecords),
         ),
       );
     }
@@ -255,13 +254,13 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.trending_up_rounded,
-          label: context.l10n.insMasteryGain,
+          label: context.l10n.insMasteryGain(narrative.masteryDelta.toInt()),
         ),
       );
     }
     if (items.isEmpty) {
       items.add(
-        const _MetricPill(
+        _MetricPill(
           icon: Icons.flag_rounded,
           label: context.l10n.insFirstWeek,
         ),

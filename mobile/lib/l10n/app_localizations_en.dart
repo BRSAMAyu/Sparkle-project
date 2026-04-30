@@ -24166,27 +24166,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insExpand => 'Expand';
 
   @override
-  String insStudyDays(Object count) {
+  String insStudyDays(int count) {
     return '$count study days';
   }
 
   @override
-  String insTasksDone(Object count) {
+  String insTasksDone(int count) {
     return '$count tasks';
   }
 
   @override
-  String insErrorsFixed(Object count) {
+  String insErrorsFixed(int count) {
     return 'Fixed $count errors';
   }
 
   @override
-  String insReflections(Object count) {
+  String insReflections(int count) {
     return '$count reflections';
   }
 
   @override
-  String insMasteryGain(Object delta) {
+  String insMasteryGain(int delta) {
     return 'Mastery +$delta';
   }
 
@@ -28771,4 +28771,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lfcTipPomodoro =>
       'Suggest 30-45 minute study sessions with 5-10 minute breaks';
+
+  @override
+  String wgnBiggestImprovement(String node) {
+    return 'Biggest improvement: $node';
+  }
+
+  @override
+  String wgnNextWeekGoal(String suggestion) {
+    return 'Next week goal: $suggestion';
+  }
 }

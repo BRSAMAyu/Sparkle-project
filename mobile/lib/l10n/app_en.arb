@@ -10397,7 +10397,9 @@
   "insTasksDone": "{count} tasks",
   "insErrorsFixed": "Fixed {count} errors",
   "insReflections": "{count} reflections",
+  "@insReflections": { "placeholders": { "count": { "type": "int" } } },
   "insMasteryGain": "Mastery +{delta}",
+  "@insMasteryGain": { "placeholders": { "delta": { "type": "int" } } },
   "insFirstWeek": "Week 1",
   "insRetry": "Retry",
   "calNoActivity": "No activity",
@@ -11490,5 +11492,9 @@
   "lfcConfidence": "Based on {sampleSize} learning records, current recommendation confidence is {confidence}%.",
   "@lfcConfidence": { "placeholders": { "sampleSize": { "type": "int" }, "confidence": { "type": "String" } } },
   "lfcTipMorning": "Based on your history, studying at 9am is most effective",
-  "lfcTipPomodoro": "Suggest 30-45 minute study sessions with 5-10 minute breaks"
+  "lfcTipPomodoro": "Suggest 30-45 minute study sessions with 5-10 minute breaks",
+  "wgnBiggestImprovement": "Biggest improvement: {node}",
+  "@wgnBiggestImprovement": { "placeholders": { "node": { "type": "String" } } },
+  "wgnNextWeekGoal": "Next week goal: {suggestion}",
+  "@wgnNextWeekGoal": { "placeholders": { "suggestion": { "type": "String" } } }
 }

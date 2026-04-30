@@ -9761,10 +9761,15 @@
   "insCollapse": "收起",
   "insExpand": "展开",
   "insStudyDays": "{count} 天学习",
+  "@insStudyDays": { "placeholders": { "count": { "type": "int" } } },
   "insTasksDone": "{count} 个任务",
+  "@insTasksDone": { "placeholders": { "count": { "type": "int" } } },
   "insErrorsFixed": "修复 {count} 个错误",
+  "@insErrorsFixed": { "placeholders": { "count": { "type": "int" } } },
   "insReflections": "{count} 次复盘",
+  "@insReflections": { "placeholders": { "count": { "type": "int" } } },
   "insMasteryGain": "掌握 +{delta}",
+  "@insMasteryGain": { "placeholders": { "delta": { "type": "int" } } },
   "insFirstWeek": "第一周",
   "insRetry": "重试",
   "calNoActivity": "无活动",
@@ -11490,5 +11495,9 @@
   "lfcConfidence": "基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。",
   "@lfcConfidence": { "placeholders": { "sampleSize": { "type": "int" }, "confidence": { "type": "String" } } },
   "lfcTipMorning": "根据历史数据，您在早上9点学习效果最佳",
-  "lfcTipPomodoro": "建议每次学习 30-45 分钟，然后休息 5-10 分钟"
+  "lfcTipPomodoro": "建议每次学习 30-45 分钟，然后休息 5-10 分钟",
+  "wgnBiggestImprovement": "最大进步：{node}",
+  "@wgnBiggestImprovement": { "placeholders": { "node": { "type": "String" } } },
+  "wgnNextWeekGoal": "下周目标：{suggestion}",
+  "@wgnNextWeekGoal": { "placeholders": { "suggestion": { "type": "String" } } }
 }
