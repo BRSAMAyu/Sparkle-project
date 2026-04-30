@@ -499,7 +499,7 @@
 > **审查范围**: 全系统深度瓶颈 + 愿景差距 + 细节打磨
 > **方法**: 4 路并行审查 Agent (后端 Python / Flutter+Gateway / 数据流集成 / 愿景差距)
 
-### R5.1 后端 Python 审查 (20 issues) — 已修 3
+### R5.1 后端 Python 审查 (20 issues) — 已修 18, 🟡 2 (God class 长期重构)
 
 > **P1-7/12 SpineOrchestrator 零测试 | P1-8 AchievementEngine async lock | P1-9 ✅分钟保留 | P1-10 ✅误报 | P1-13 测试不足 | P1-15 ✅日志修复 | P2-1~P2-20 待修**
 
