@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-04-30 (R7 all resolved, F-03 i18n: task_repository + visual_elements + plan_guide + community_agent; test quality upgrade COMPLETE)
+> **最后更新**: 2026-04-30 (P2-17 post-lock hardened; F-03 i18n 37 files; calendar smart_schedule bilingual)
 
 ### P0 Critical — 当前会话修复
 
@@ -523,7 +523,7 @@
 | P2-9 | P2 | OutcomeRecorder 无幂等保护 | `outcome_recorder.py` | ✅ 已修 (b908c7bb) |
 | P2-10 | P2 | 数据最小化审计未被任何模块调用 | `data_minimization.py` | ✅ 误报 (context_manager.py:341-352 已调用 DataMinimizationAuditor.audit_data_collection + _sanitize_context 在每次 get_user_context 时运行) |
 | P2-14 | P2 | cognitive_adjustments 被截断到 [:2]/[:3] | `dual_core_router.py` | ✅ 已修 → [:5] |
-| P2-17 | P2 | pipeline lock 管理 on_task_completed vs _run_signal_pipeline 不一致 | `spine_orchestrator.py` | ✅ 已修 (5dc92b70: on_task_completed 去重~200行重复管道逻辑, 委托 _run_signal_pipeline 统一锁管理) |
+| P2-17 | P2 | pipeline lock 管理 on_task_completed vs _run_signal_pipeline 不一致 | `spine_orchestrator.py` | ✅ 已修 (5dc92b70 + f83cc6d5: 委托 _run_signal_pipeline + task_completed_lock 保护后处理) |
 | P2-20 | P2 | EventBus consumer loop Redis 断连不重连 | `event_bus.py` | ✅ 已修: 自动重连 |
 
 ### R5.2 Flutter + Gateway 审查 (17 issues)
@@ -533,7 +533,7 @@
 | G-01 | P0 | Auth logout/guest-upgrade 路由无鉴权直接代理 | `setup.go:746-798` | ✅ 已修: isPrivilegedNoRoutePath |
 | F-01 | P1 | dashboard_screen 12+ 硬编码中文字符串 | `dashboard_screen.dart` | ✅ 已验证零中文残留 (所有字符串已用 context.l10n.* 模式) |
 | F-02 | P1 | chat_screen 6 硬编码中文字符串 (推理模式标签等) | `chat_screen.dart` | ✅ 已验证零中文UI残留 (仅注释含中文) |
-| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 22+ files | 🟡 进行中 (700+ strings i18n'd across 36 files; task_repository + visual_element_repo + plan_guide + community_agent prompts all bilingual; 4 new ARB keys; dead code removed) |
+| F-03 | P1 | 60+ 硬编码中文字符串遍布 features | 22+ files | 🟡 进行中 (700+ strings i18n'd across 37 files; calendar smart_schedule + task_repository + visual_element_repo + plan_guide + community_agent prompts all bilingual; 4 new ARB keys; dead code removed) |
 | F-04 | P1 | Dashboard 错误时静默回退, 无错误 UI | `dashboard_screen.dart:332-418` | ✅ 已修: 错误UI+重试 |
 | G-02 | P1 | API 组 30 RPS 对未认证 endpoint 过宽松 | `setup.go:440` | ✅ 已修 (4c6301aa) |
 | G-03 | P1 | WebSocket 连接跟踪跨实例不共享 | `websocket_proxy.go:306` | ✅ 已修 (b45925d2) |
