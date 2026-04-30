@@ -72,7 +72,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '月度打卡视图 · ${widget.year}',
+              context.l10n.communityMonthlyCheckinView(widget.year),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -124,7 +124,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
                 padding: EdgeInsets.only(right: index == 11 ? 0 : 8),
                 child: ChoiceChip(
                   selected: selected,
-                  label: Text('${_monthLabels(context)[index]} · $count天'),
+                  label: Text(context.l10n.communityMonthDayCount(_monthLabels(context)[index], count)),
                   onSelected: (_) {
                     unawaited(
                       _pageController.animateToPage(
@@ -175,7 +175,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
           Expanded(
             child: Center(
               child: Text(
-                '${widget.year}年${_currentMonthPage + 1}月',
+                context.l10n.communityYearMonth(widget.year, _currentMonthPage + 1),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),

@@ -133,7 +133,7 @@ class AchievementBadge extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              '解锁于 ${_formatDate(unlockedAt!)}',
+              context.l10n.communityBadgeUnlockedOn(_formatDate(unlockedAt!)),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -197,11 +197,11 @@ class AchievementBadge extends StatelessWidget {
     } else if (difference.inDays == 1) {
       return S.communityShareYesterday;
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
+      return S.communityDaysAgo(difference.inDays);
     } else if (difference.inDays < 30) {
-      return '${(difference.inDays / 7).floor()}周前';
+      return S.communityWeeksAgo((difference.inDays / 7).floor());
     } else if (difference.inDays < 365) {
-      return '${(difference.inDays / 30).floor()}个月前';
+      return S.communityMonthsAgo((difference.inDays / 30).floor());
     } else {
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
