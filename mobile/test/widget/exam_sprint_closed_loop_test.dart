@@ -10,6 +10,7 @@ import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/plan/presentation/screens/exam_sprint_setup_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
@@ -27,6 +28,15 @@ import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import '../shared/i18n_test_helper.dart';
+
+class _PreloadedLearningPortfolioNotifier extends LearningPortfolioNotifier {
+  _PreloadedLearningPortfolioNotifier(this._result);
+
+  final LearningPortfolioResult _result;
+
+  @override
+  Future<LearningPortfolioResult> build() async => _result;
+}
 
 void main() {
 
@@ -189,12 +199,19 @@ void main() {
       (tester) async {
         await _useTallSurface(tester);
         final harness = _MutableSprintHarness.completedSprint();
+        final portfolio = _portfolio(
+          planId: harness.planId,
+          masteredNodesCount: 9,
+          status: 'completed',
+          completedAt: DateTime.utc(2026, 5, 1),
+        );
 
         await tester.pumpWidget(_buildRouterApp(
           initialLocation: '/plans/${harness.planId}',
           planRepository: harness.planRepository,
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
+          preloadedPortfolio: portfolio,
         ));
         await _pumpTransitions(tester, cycles: 4);
         await tester.pump(const Duration(milliseconds: 950));
@@ -210,17 +227,13 @@ void main() {
           planRepository: harness.planRepository,
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
+          preloadedPortfolio: portfolio,
         ));
-        // Allow async provider data to load (learningPortfolioProvider is async)
-        await _pumpTransitions(tester, cycles: 12);
-        // Additional pumps to ensure all async data settles
-        for (var i = 0; i < 20; i++) {
-          await tester.pump(const Duration(milliseconds: 50));
-        }
+        await _pumpTransitions(tester, cycles: 8);
 
         expect(find.byType(LearningPortfolioScreen), findsOneWidget);
         expect(find.text('已完成'), findsWidgets);
-        expect(find.text('7天冲刺（已完成，2026-05-01）'), findsOneWidget);
+        expect(find.text('2026-05-01（已完成，7天冲刺）'), findsOneWidget);
         expect(find.text('掌握度 9%'), findsOneWidget);
       },
     );
@@ -247,6 +260,7 @@ Widget _buildRouterApp({
   required PlanRepository planRepository,
   required TaskRepository taskRepository,
   required ExamSprintRepository examSprintRepository,
+  LearningPortfolioResult? preloadedPortfolio,
 }) {
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -294,6 +308,8 @@ Widget _buildRouterApp({
       taskRepositoryProvider.overrideWithValue(taskRepository),
       examSprintRepositoryProvider.overrideWithValue(examSprintRepository),
       currentUserProvider.overrideWithValue(_mockUser()),
+      if (preloadedPortfolio != null)
+        learningPortfolioProvider.overrideWith(() => _PreloadedLearningPortfolioNotifier(preloadedPortfolio)),
     ],
     child: MaterialApp.router(
       theme: AppThemes.lightTheme,

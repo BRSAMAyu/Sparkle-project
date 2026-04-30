@@ -2,36 +2,85 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
+import 'package:sparkle/features/aurora/data/models/aurora_daily_startup_message.dart';
+import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
+import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
+import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
-// Mock needed dependencies
-class MockChatNotifier extends ChatNotifier {
-  MockChatNotifier(super.chatRepository, super.ref);
+class _NoopApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _QuietDashboardRepository extends DashboardRepository {
+  _QuietDashboardRepository() : super(_NoopApiClient());
 
   @override
-  Future<void> sendMessage(
-    String content, {
-    String? taskId,
-    Map<String, dynamic>? extraContextOverrides,
-    bool reuseLastUserMessage = false,
+  Future<Map<String, dynamic>> getDashboardStatus() async => const {};
+
+  @override
+  Future<Map<String, dynamic>> getGrowthDashboard() async => const {};
+
+  @override
+  Future<Map<String, dynamic>> getPredictiveDashboard() async => const {};
+}
+
+class _QuietDashboardNotifier extends DashboardNotifier {
+  _QuietDashboardNotifier() : super(_QuietDashboardRepository());
+
+  @override
+  Future<void> refresh() async {}
+}
+
+class _QuietPlanRepository extends PlanRepository {
+  _QuietPlanRepository() : super(_NoopApiClient());
+
+  @override
+  Future<List<PlanModel>> getPlans({PlanType? type, bool? isActive}) async =>
+      const [];
+
+  @override
+  Future<List<PlanModel>> getActivePlans() async => const [];
+}
+
+class _QuietDailyStartupRepository extends AuroraDailyStartupRepository {
+  _QuietDailyStartupRepository() : super(_NoopApiClient());
+
+  @override
+  Future<AuroraComebackContext> getComebackContext() async =>
+      const AuroraComebackContext.empty();
+
+  @override
+  Future<AuroraDailyStartupMessage> getDailyStartup({
+    required String planId,
   }) async {
-    // Mock sending
-    state = state.copyWith(
-      messages: [
-        ChatMessageModel(
-          id: DateTime.now().toString(),
-          conversationId: 'test-session',
-          content: content,
-          role: MessageRole.user,
-          createdAt: DateTime.now(),
-        ),
-        ...state.messages,
-      ],
-    );
+    throw StateError('daily startup disabled for scroll test');
   }
+}
+
+// Mock needed dependencies
+class _ScrollChatNotifier extends ChatNotifier {
+  _ScrollChatNotifier(super.chatRepository, super.ref);
+
+  @override
+  Future<void> warmUpConnection() async {}
 
   void addMessage(ChatMessageModel msg) {
     state = state.copyWith(
@@ -40,7 +89,7 @@ class MockChatNotifier extends ChatNotifier {
   }
 }
 
-class FakeChatRepository extends Fake implements ChatRepository {
+class _FakeChatRepository extends Fake implements ChatRepository {
   @override
   Stream<WsConnectionState> get connectionStateStream => const Stream.empty();
   @override
@@ -51,7 +100,18 @@ class FakeChatRepository extends Fake implements ChatRepository {
   Future<List<Map<String, dynamic>>> getRecentConversations() async => [];
 }
 
-class FakeRef extends Fake implements Ref {}
+class _QuietAuroraStatusNotifier extends AuroraStatusNotifier {
+  _QuietAuroraStatusNotifier() : super(_NoopApiClient());
+
+  @override
+  Future<void> refresh({String? conversationId}) async {}
+
+  @override
+  void startPeriodicRefresh({String? conversationId}) {}
+
+  @override
+  void stopPeriodicRefresh() {}
+}
 
 void main() {
   setUp(setUpI18nForTesting);
@@ -60,29 +120,46 @@ void main() {
       (WidgetTester tester) async {
     // Initialize SharedPreferences and ViewStorageService
     SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
     await ViewStorageService.ensureInitialized();
 
-    final mockChatRepo = FakeChatRepository();
-    final mockChatNotifier = MockChatNotifier(mockChatRepo, FakeRef());
+    final fakeChatRepo = _FakeChatRepository();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          chatProvider.overrideWith((ref) => mockChatNotifier),
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          chatProvider.overrideWith(
+            (ref) => _ScrollChatNotifier(fakeChatRepo, ref),
+          ),
+          planRepositoryProvider.overrideWithValue(_QuietPlanRepository()),
+          openClawConnectionProvider.overrideWith(
+            (ref) => OpenClawConnectionService(),
+          ),
+          dashboardProvider.overrideWith((ref) => _QuietDashboardNotifier()),
+          examSprintDashboardProvider.overrideWith((ref) async => null),
+          auroraDailyStartupRepositoryProvider.overrideWithValue(
+            _QuietDailyStartupRepository(),
+          ),
+          auroraStatusProvider.overrideWith(
+            (ref) => _QuietAuroraStatusNotifier(),
+          ),
         ],
         child: testMaterialApp(home: const ChatScreen()),
       ),
     );
 
     // Pump several frames to let async initialization settle without using
-    // pumpAndSettle, which times out due to the CircularProgressIndicator
-    // in the loading state.
+    // pumpAndSettle, which times out due to periodic timers.
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
+    final chatNotifier = tester.state<ConsumerState>(find.byType(ChatScreen))
+        .ref.read(chatProvider.notifier) as _ScrollChatNotifier;
+
     // Seed one message so the ListView is rendered (not the quick action panel).
-    mockChatNotifier.addMessage(
+    chatNotifier.addMessage(
       ChatMessageModel(
         id: 'seed',
         conversationId: 'test-session',
@@ -109,7 +186,7 @@ void main() {
 
     // Add many messages to ensure scrolling is possible
     for (var i = 0; i < 20; i++) {
-      mockChatNotifier.addMessage(
+      chatNotifier.addMessage(
         ChatMessageModel(
           id: 'msg_$i',
           conversationId: 'test-session',
@@ -130,7 +207,7 @@ void main() {
     }
 
     // Add new message
-    mockChatNotifier.addMessage(
+    chatNotifier.addMessage(
       ChatMessageModel(
         id: 'new_msg',
         conversationId: 'test-session',
