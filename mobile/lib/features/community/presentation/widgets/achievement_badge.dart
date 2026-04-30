@@ -133,7 +133,9 @@ class AchievementBadge extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              context.l10n.communityBadgeUnlockedOn(_formatDate(unlockedAt!)),
+              I18nService.instance.isChinese
+                  ? '在 ${_formatDate(unlockedAt!)} 解锁'
+                  : 'Unlocked on ${_formatDate(unlockedAt!)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -199,9 +201,11 @@ class AchievementBadge extends StatelessWidget {
     } else if (difference.inDays < 7) {
       return S.communityDaysAgo(difference.inDays);
     } else if (difference.inDays < 30) {
-      return S.communityWeeksAgo((difference.inDays / 7).floor());
+      final weeks = (difference.inDays / 7).floor();
+      return I18nService.instance.isChinese ? '$weeks 周前' : '$weeks weeks ago';
     } else if (difference.inDays < 365) {
-      return S.communityMonthsAgo((difference.inDays / 30).floor());
+      final months = (difference.inDays / 30).floor();
+      return I18nService.instance.isChinese ? '$months 个月前' : '$months months ago';
     } else {
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
