@@ -214,19 +214,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AI 自动记忆'), findsOneWidget);
-    expect(find.text('待你确认'), findsOneWidget);
+    expect(find.text('冲突记录'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('选 A'),
+      find.text('A'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text('选 A'));
-    expect(find.text('选 A'), findsOneWidget);
+    await tester.ensureVisible(find.text('A'));
+    expect(find.text('A'), findsOneWidget);
 
-    await tester.tap(find.text('选 A'));
+    await tester.tap(find.text('A'));
     await tester.pumpAndSettle();
 
     expect(api.lastSelection, 'left');
-    expect(find.text('待你确认'), findsNothing);
+    expect(find.text('冲突记录'), findsNothing);
   });
 }

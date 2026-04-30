@@ -101,6 +101,7 @@ void main() {
           theme: AppThemes.lightTheme,
           darkTheme: AppThemes.darkTheme,
           routerConfig: router,
+          locale: const Locale('zh'),
           localizationsDelegates: const [
             ...AppLocalizations.localizationsDelegates,
             GlobalMaterialLocalizations.delegate,

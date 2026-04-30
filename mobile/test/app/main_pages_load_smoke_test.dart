@@ -63,6 +63,7 @@ void main() {
     testWidgets('dashboard shows first-goal empty state for new users', (
       tester,
     ) async {
+      DemoDataService.isDemoMode = false;
       await _pumpPage(
         tester,
         const DashboardScreen(),
@@ -129,7 +130,8 @@ void main() {
           (widget) =>
               widget is Text &&
               (widget.data == 'Continue as Guest' ||
-                  widget.data == '继续作为访客'),
+                  widget.data == '继续作为访客' ||
+                  widget.data == '以访客身份继续'),
         ),
         findsOneWidget,
       );

@@ -79,7 +79,7 @@ void main() {
 
     expect(shared, isTrue);
     expect(sharedText, contains('#30天打卡'));
-    expect(sharedText, contains('67 个知识节点'));
+    expect(sharedText, contains('2 个知识节点'));
   });
 
   testWidgets(

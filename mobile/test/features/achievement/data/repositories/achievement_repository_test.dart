@@ -4,6 +4,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 class TestApiClient implements ApiClient {
   Future<Response<dynamic>> Function(
@@ -108,6 +109,7 @@ void main() {
   late AchievementRepository repository;
 
   setUp(() {
+    setUpI18nForTesting();
     DemoDataService.isDemoMode = false;
     apiClient = TestApiClient();
     repository = AchievementRepository(apiClient);
