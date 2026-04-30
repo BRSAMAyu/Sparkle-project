@@ -274,7 +274,7 @@ class VisualElementRepository {
     final zh = I18nService.instance.isChinese;
     return VisualElementListResponse(
         items: [
-          // Backgrounds — ink-blue base (墨兰底色系), deep understated premium
+          // Backgrounds — ink-blue base, deep understated premium
           VisualElementModel(
             id: 'bg_default_dark',
             name: zh ? '深邃夜空' : 'Deep Night Sky',

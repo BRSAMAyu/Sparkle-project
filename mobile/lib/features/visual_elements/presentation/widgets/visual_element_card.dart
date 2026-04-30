@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -466,7 +467,9 @@ class _VisualElementCardState extends State<VisualElementCard>
     );
   }
 
-  Widget _buildPreviewHint(Color accent) => Container(
+  Widget _buildPreviewHint(Color accent) {
+    final zh = I18nService.instance.isChinese;
+    return Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing8,
           vertical: DS.spacing4,
@@ -486,7 +489,7 @@ class _VisualElementCardState extends State<VisualElementCard>
             ),
             const SizedBox(width: DS.spacing4),
             Text(
-              '预览',
+              zh ? '预览' : 'Preview',
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: Color.lerp(accent, _InkVisualPalette.textPrimary, 0.18),
@@ -496,6 +499,7 @@ class _VisualElementCardState extends State<VisualElementCard>
           ],
         ),
       );
+  }
 
   IconData _getTypeIcon(VisualElementType type) {
     switch (type) {
@@ -637,7 +641,9 @@ class _VisualElementCardState extends State<VisualElementCard>
         ),
       );
 
-  Widget _buildBundleProgressChip(_RarityColors colors) => Container(
+  Widget _buildBundleProgressChip(_RarityColors colors) {
+    final zh = I18nService.instance.isChinese;
+    return Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing8,
           vertical: DS.spacing4,
@@ -657,7 +663,7 @@ class _VisualElementCardState extends State<VisualElementCard>
             ),
             const SizedBox(width: DS.spacing4),
             Text(
-              '${widget.bundleOwnedCount}/${widget.bundleTotalCount} 已集齐',
+              '${widget.bundleOwnedCount}/${widget.bundleTotalCount} ${zh ? '已集齐' : 'Collected'}',
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 color: colors.text,
@@ -667,6 +673,7 @@ class _VisualElementCardState extends State<VisualElementCard>
           ],
         ),
       );
+  }
 
   String _getUnlockSourceText(AppLocalizations l10n) {
     switch (widget.element.unlockSource) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 enum UserActivityState {
@@ -68,7 +69,7 @@ class VisualRecommendationService {
           effect: -5,
           bundle: 8,
         );
-        score += _keywordScore(text, _focusKeywords);
+        score += _keywordScore(text, _focusKeywords());
         break;
       case UserActivityState.relax:
         score += _scoreByType(
@@ -78,7 +79,7 @@ class VisualRecommendationService {
           effect: 8,
           bundle: 6,
         );
-        score += _keywordScore(text, _relaxKeywords);
+        score += _keywordScore(text, _relaxKeywords());
         break;
       case UserActivityState.sprint:
         score += _scoreByType(
@@ -88,7 +89,7 @@ class VisualRecommendationService {
           effect: 20,
           bundle: 10,
         );
-        score += _keywordScore(text, _sprintKeywords);
+        score += _keywordScore(text, _sprintKeywords());
         break;
       case UserActivityState.night:
         score += _scoreByType(
@@ -98,7 +99,7 @@ class VisualRecommendationService {
           effect: 5,
           bundle: 8,
         );
-        score += _keywordScore(text, _nightKeywords);
+        score += _keywordScore(text, _nightKeywords());
         break;
       case UserActivityState.streak:
         score += _scoreByType(
@@ -108,7 +109,7 @@ class VisualRecommendationService {
           effect: 30,
           bundle: 12,
         );
-        score += _keywordScore(text, _streakKeywords);
+        score += _keywordScore(text, _streakKeywords());
         break;
     }
 
@@ -188,7 +189,7 @@ class VisualRecommendationService {
   }
 }
 
-const List<String> _focusKeywords = [
+List<String> _focusKeywords() => [
   'focus',
   'calm',
   'quiet',
@@ -197,14 +198,16 @@ const List<String> _focusKeywords = [
   'minimal',
   'cool',
   'clear',
-  '专注',
-  '安静',
-  '宁静',
-  '冷',
-  '清爽',
+  if (I18nService.instance.isChinese) ...[
+    '专注',
+    '安静',
+    '宁静',
+    '冷',
+    '清爽',
+  ],
 ];
 
-const List<String> _relaxKeywords = [
+List<String> _relaxKeywords() => [
   'relax',
   'warm',
   'sunset',
@@ -213,14 +216,16 @@ const List<String> _relaxKeywords = [
   'soft',
   'chill',
   'rest',
-  '暖',
-  '柔',
-  '治愈',
-  '舒缓',
-  '轻松',
+  if (I18nService.instance.isChinese) ...[
+    '暖',
+    '柔',
+    '治愈',
+    '舒缓',
+    '轻松',
+  ],
 ];
 
-const List<String> _sprintKeywords = [
+List<String> _sprintKeywords() => [
   'sprint',
   'energy',
   'boost',
@@ -228,36 +233,42 @@ const List<String> _sprintKeywords = [
   'neon',
   'vivid',
   'contrast',
-  '冲刺',
-  '高能',
-  '激励',
-  '速度',
-  '高对比',
+  if (I18nService.instance.isChinese) ...[
+    '冲刺',
+    '高能',
+    '激励',
+    '速度',
+    '高对比',
+  ],
 ];
 
-const List<String> _nightKeywords = [
+List<String> _nightKeywords() => [
   'night',
   'dark',
   'midnight',
   'moon',
   'star',
   'shadow',
-  '夜',
-  '暗',
-  '月',
-  '星',
-  '暮',
+  if (I18nService.instance.isChinese) ...[
+    '夜',
+    '暗',
+    '月',
+    '星',
+    '暮',
+  ],
 ];
 
-const List<String> _streakKeywords = [
+List<String> _streakKeywords() => [
   'flame',
   'fire',
   'spark',
   'streak',
   'blaze',
   'ember',
-  '焰',
-  '火',
-  '光',
-  '耀',
+  if (I18nService.instance.isChinese) ...[
+    '焰',
+    '火',
+    '光',
+    '耀',
+  ],
 ];
