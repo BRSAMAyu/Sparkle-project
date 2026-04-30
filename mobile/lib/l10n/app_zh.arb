@@ -9723,7 +9723,8 @@
   "insLearnBasic": "学习基础概念",
   "insQuickCore": "快速理解核心概念",
   "insSmallPractice": "完成一轮小练习",
-  "insLoadFailed": "加载失败: $e",
+  "insLoadFailed": "加载失败: {e}",
+  "@insLoadFailed": { "placeholders": { "e": { "type": "String" } } },
   "insForecastTitle": "学习预测洞察",
   "insForecastEmpty": "预测数据暂时还没准备好",
   "insReload": "重新加载",
@@ -11485,5 +11486,9 @@
   "lioNoTheaterYet": "暂未生成最近推演",
   "lioNoReportYet": "暂未生成最近报告",
   "lioMastery": "掌握度 {percent}%",
-  "@lioMastery": { "placeholders": { "percent": { "type": "String" } } }
+  "@lioMastery": { "placeholders": { "percent": { "type": "String" } } },
+  "lfcConfidence": "基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。",
+  "@lfcConfidence": { "placeholders": { "sampleSize": { "type": "int" }, "confidence": { "type": "String" } } },
+  "lfcTipMorning": "根据历史数据，您在早上9点学习效果最佳",
+  "lfcTipPomodoro": "建议每次学习 30-45 分钟，然后休息 5-10 分钟"
 }

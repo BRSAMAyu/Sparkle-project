@@ -23051,7 +23051,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insSmallPractice => '完成一轮小练习';
 
   @override
-  String get insLoadFailed => '加载失败: \$e';
+  String insLoadFailed(String e) {
+    return '加载失败: $e';
+  }
 
   @override
   String get insForecastTitle => '学习预测洞察';
@@ -27570,4 +27572,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String lioMastery(String percent) {
     return '掌握度 $percent%';
   }
+
+  @override
+  String lfcConfidence(int sampleSize, String confidence) {
+    return '基于 $sampleSize 条学习记录，当前推荐置信度 $confidence%。';
+  }
+
+  @override
+  String get lfcTipMorning => '根据历史数据，您在早上9点学习效果最佳';
+
+  @override
+  String get lfcTipPomodoro => '建议每次学习 30-45 分钟，然后休息 5-10 分钟';
 }

@@ -24052,7 +24052,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insSmallPractice => 'Complete a round of practice';
 
   @override
-  String get insLoadFailed => 'Load failed: \$e';
+  String insLoadFailed(String e) {
+    return 'Load failed: $e';
+  }
 
   @override
   String get insForecastTitle => 'Learning Forecast';
@@ -28756,4 +28758,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String lioMastery(String percent) {
     return 'Mastery $percent%';
   }
+
+  @override
+  String lfcConfidence(int sampleSize, String confidence) {
+    return 'Based on $sampleSize learning records, current recommendation confidence is $confidence%.';
+  }
+
+  @override
+  String get lfcTipMorning =>
+      'Based on your history, studying at 9am is most effective';
+
+  @override
+  String get lfcTipPomodoro =>
+      'Suggest 30-45 minute study sessions with 5-10 minute breaks';
 }

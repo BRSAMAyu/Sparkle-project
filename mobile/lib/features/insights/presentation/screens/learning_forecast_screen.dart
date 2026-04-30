@@ -334,7 +334,7 @@ class _LearningForecastScreenState
             const SizedBox(height: DS.lg),
             Text(
               hasRecommendations
-                  ? '基于 $sampleSize 条学习记录，当前推荐置信度 ${(confidence * 100).round()}%。'
+                  ? context.l10n.lfcConfidence(sampleSize, (confidence * 100).round().toString())
                   : (reason.isEmpty ? context.l10n.insNotEnoughData : reason),
               style: TextStyle(
                 color: DS.textSecondary,
@@ -445,9 +445,9 @@ class _LearningForecastScreenState
                 ],
               ),
               const SizedBox(height: DS.md),
-              _buildTip('根据历史数据，您在早上9点学习效果最佳'),
+              _buildTip(context.l10n.lfcTipMorning),
               _buildTip('周一到周四是您的高产学习日'),
-              _buildTip('建议每次学习 30-45 分钟，然后休息 5-10 分钟'),
+              _buildTip(context.l10n.lfcTipPomodoro),
             ],
           ),
         ),

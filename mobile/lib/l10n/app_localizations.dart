@@ -42154,8 +42154,8 @@ abstract class AppLocalizations {
   /// No description provided for @insLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'加载失败: \$e'**
-  String get insLoadFailed;
+  /// **'加载失败: {e}'**
+  String insLoadFailed(String e);
 
   /// No description provided for @insForecastTitle.
   ///
@@ -50206,6 +50206,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'掌握度 {percent}%'**
   String lioMastery(String percent);
+
+  /// No description provided for @lfcConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。'**
+  String lfcConfidence(int sampleSize, String confidence);
+
+  /// No description provided for @lfcTipMorning.
+  ///
+  /// In zh, this message translates to:
+  /// **'根据历史数据，您在早上9点学习效果最佳'**
+  String get lfcTipMorning;
+
+  /// No description provided for @lfcTipPomodoro.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议每次学习 30-45 分钟，然后休息 5-10 分钟'**
+  String get lfcTipPomodoro;
 }
 
 class _AppLocalizationsDelegate

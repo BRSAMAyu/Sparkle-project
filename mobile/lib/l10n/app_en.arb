@@ -10356,7 +10356,8 @@
   "insLearnBasic": "Learn basic concepts",
   "insQuickCore": "Quickly grasp core concepts",
   "insSmallPractice": "Complete a round of practice",
-  "insLoadFailed": "Load failed: $e",
+  "insLoadFailed": "Load failed: {e}",
+  "@insLoadFailed": { "placeholders": { "e": { "type": "String" } } },
   "insForecastTitle": "Learning Forecast",
   "insForecastEmpty": "Forecast data is not ready yet",
   "insReload": "Reload",
@@ -11485,5 +11486,9 @@
   "lioNoTheaterYet": "No recent prediction generated yet",
   "lioNoReportYet": "No recent report generated yet",
   "lioMastery": "Mastery {percent}%",
-  "@lioMastery": { "placeholders": { "percent": { "type": "String" } } }
+  "@lioMastery": { "placeholders": { "percent": { "type": "String" } } },
+  "lfcConfidence": "Based on {sampleSize} learning records, current recommendation confidence is {confidence}%.",
+  "@lfcConfidence": { "placeholders": { "sampleSize": { "type": "int" }, "confidence": { "type": "String" } } },
+  "lfcTipMorning": "Based on your history, studying at 9am is most effective",
+  "lfcTipPomodoro": "Suggest 30-45 minute study sessions with 5-10 minute breaks"
 }
