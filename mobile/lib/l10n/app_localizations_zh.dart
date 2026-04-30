@@ -21715,10 +21715,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsNotesSyncToPrism => '同步到棱镜';
 
   @override
-  String get toolsFlashLoadFailed => '加载历史胶囊失败: \$e';
+  String toolsFlashLoadFailed(String e) {
+    return '加载历史胶囊失败: $e';
+  }
 
   @override
-  String get toolsFlashSaveFailed => '记录失败: \$e';
+  String toolsFlashSaveFailed(String e) {
+    return '记录失败: $e';
+  }
 
   @override
   String get toolsFlashTitle => '闪念胶囊';
@@ -21727,7 +21731,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsFlashSubtitle => '把一闪而过的疑点及时落地成错题线索，减少“知道有问题但没记住”的损耗。';
 
   @override
-  String toolsFlashSubjectCount(Object count) {
+  String toolsFlashSubjectCount(int count) {
     return '$count 个科目';
   }
 
@@ -22543,6 +22547,65 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fpSharedContent => '已分享内容';
+
+  @override
+  String get fcConceptConfusion => '概念混淆';
+
+  @override
+  String get fcCalculationError => '计算错误';
+
+  @override
+  String get fcMisreading => '审题不清';
+
+  @override
+  String get fcKnowledgeFading => '知识遗忘';
+
+  @override
+  String get fcWrongMethod => '方法不当';
+
+  @override
+  String get fcOther => '其他';
+
+  @override
+  String get fcSubjectMath => '数学';
+
+  @override
+  String get fcSubjectPhysics => '物理';
+
+  @override
+  String get fcSubjectChemistry => '化学';
+
+  @override
+  String get fcSubjectBiology => '生物';
+
+  @override
+  String get fcSubjectEnglish => '英语';
+
+  @override
+  String get fcSubjectChinese => '语文';
+
+  @override
+  String get fcSubjectComputer => '计算机';
+
+  @override
+  String get fcFillRequired => '请补全知识点和错误描述';
+
+  @override
+  String get fcSaveFailed => '胶囊保存失败，请稍后重试';
+
+  @override
+  String get fcSavedWithSync => '已保存胶囊，并同步到错题本';
+
+  @override
+  String get fcSavedSyncLater => '胶囊已保存，错题本同步稍后重试';
+
+  @override
+  String fcHistoryCount(int count) {
+    return '$count 条历史胶囊';
+  }
+
+  @override
+  String get fcRecording => '记录中...';
 
   @override
   String get simSocratic => '苏格拉底对话';

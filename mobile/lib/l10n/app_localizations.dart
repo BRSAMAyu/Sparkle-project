@@ -39628,14 +39628,14 @@ abstract class AppLocalizations {
   /// No description provided for @toolsFlashLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'加载历史胶囊失败: \$e'**
-  String get toolsFlashLoadFailed;
+  /// **'加载历史胶囊失败: {e}'**
+  String toolsFlashLoadFailed(String e);
 
   /// No description provided for @toolsFlashSaveFailed.
   ///
   /// In zh, this message translates to:
-  /// **'记录失败: \$e'**
-  String get toolsFlashSaveFailed;
+  /// **'记录失败: {e}'**
+  String toolsFlashSaveFailed(String e);
 
   /// No description provided for @toolsFlashTitle.
   ///
@@ -39653,7 +39653,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'{count} 个科目'**
-  String toolsFlashSubjectCount(Object count);
+  String toolsFlashSubjectCount(int count);
 
   /// No description provided for @toolsFlashContent.
   ///
@@ -41166,6 +41166,120 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已分享内容'**
   String get fpSharedContent;
+
+  /// No description provided for @fcConceptConfusion.
+  ///
+  /// In zh, this message translates to:
+  /// **'概念混淆'**
+  String get fcConceptConfusion;
+
+  /// No description provided for @fcCalculationError.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算错误'**
+  String get fcCalculationError;
+
+  /// No description provided for @fcMisreading.
+  ///
+  /// In zh, this message translates to:
+  /// **'审题不清'**
+  String get fcMisreading;
+
+  /// No description provided for @fcKnowledgeFading.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识遗忘'**
+  String get fcKnowledgeFading;
+
+  /// No description provided for @fcWrongMethod.
+  ///
+  /// In zh, this message translates to:
+  /// **'方法不当'**
+  String get fcWrongMethod;
+
+  /// No description provided for @fcOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get fcOther;
+
+  /// No description provided for @fcSubjectMath.
+  ///
+  /// In zh, this message translates to:
+  /// **'数学'**
+  String get fcSubjectMath;
+
+  /// No description provided for @fcSubjectPhysics.
+  ///
+  /// In zh, this message translates to:
+  /// **'物理'**
+  String get fcSubjectPhysics;
+
+  /// No description provided for @fcSubjectChemistry.
+  ///
+  /// In zh, this message translates to:
+  /// **'化学'**
+  String get fcSubjectChemistry;
+
+  /// No description provided for @fcSubjectBiology.
+  ///
+  /// In zh, this message translates to:
+  /// **'生物'**
+  String get fcSubjectBiology;
+
+  /// No description provided for @fcSubjectEnglish.
+  ///
+  /// In zh, this message translates to:
+  /// **'英语'**
+  String get fcSubjectEnglish;
+
+  /// No description provided for @fcSubjectChinese.
+  ///
+  /// In zh, this message translates to:
+  /// **'语文'**
+  String get fcSubjectChinese;
+
+  /// No description provided for @fcSubjectComputer.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算机'**
+  String get fcSubjectComputer;
+
+  /// No description provided for @fcFillRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请补全知识点和错误描述'**
+  String get fcFillRequired;
+
+  /// No description provided for @fcSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'胶囊保存失败，请稍后重试'**
+  String get fcSaveFailed;
+
+  /// No description provided for @fcSavedWithSync.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存胶囊，并同步到错题本'**
+  String get fcSavedWithSync;
+
+  /// No description provided for @fcSavedSyncLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'胶囊已保存，错题本同步稍后重试'**
+  String get fcSavedSyncLater;
+
+  /// No description provided for @fcHistoryCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条历史胶囊'**
+  String fcHistoryCount(int count);
+
+  /// No description provided for @fcRecording.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录中...'**
+  String get fcRecording;
 
   /// No description provided for @simSocratic.
   ///

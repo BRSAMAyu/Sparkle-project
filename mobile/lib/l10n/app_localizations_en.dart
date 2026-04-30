@@ -22657,10 +22657,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsNotesSyncToPrism => 'Sync to Prism';
 
   @override
-  String get toolsFlashLoadFailed => 'Failed to load history: \$e';
+  String toolsFlashLoadFailed(String e) {
+    return 'Failed to load history: $e';
+  }
 
   @override
-  String get toolsFlashSaveFailed => 'Failed to save: \$e';
+  String toolsFlashSaveFailed(String e) {
+    return 'Failed to save: $e';
+  }
 
   @override
   String get toolsFlashTitle => 'Flash Capsule';
@@ -22670,7 +22674,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Capture fleeting doubts as error-book leads before they slip away.';
 
   @override
-  String toolsFlashSubjectCount(Object count) {
+  String toolsFlashSubjectCount(int count) {
     return '$count subjects';
   }
 
@@ -23518,6 +23522,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fpSharedContent => 'Shared content';
+
+  @override
+  String get fcConceptConfusion => 'Concept Confusion';
+
+  @override
+  String get fcCalculationError => 'Calculation Error';
+
+  @override
+  String get fcMisreading => 'Misreading';
+
+  @override
+  String get fcKnowledgeFading => 'Knowledge Fading';
+
+  @override
+  String get fcWrongMethod => 'Wrong Method';
+
+  @override
+  String get fcOther => 'Other';
+
+  @override
+  String get fcSubjectMath => 'Math';
+
+  @override
+  String get fcSubjectPhysics => 'Physics';
+
+  @override
+  String get fcSubjectChemistry => 'Chemistry';
+
+  @override
+  String get fcSubjectBiology => 'Biology';
+
+  @override
+  String get fcSubjectEnglish => 'English';
+
+  @override
+  String get fcSubjectChinese => 'Chinese';
+
+  @override
+  String get fcSubjectComputer => 'Computer Science';
+
+  @override
+  String get fcFillRequired =>
+      'Please fill in the knowledge point and error description';
+
+  @override
+  String get fcSaveFailed => 'Capsule save failed, please try again later';
+
+  @override
+  String get fcSavedWithSync => 'Capsule saved and synced to error book';
+
+  @override
+  String get fcSavedSyncLater =>
+      'Capsule saved, error book sync will retry later';
+
+  @override
+  String fcHistoryCount(int count) {
+    return '$count history capsules';
+  }
+
+  @override
+  String get fcRecording => 'Recording...';
 
   @override
   String get simSocratic => 'Socratic Dialogue';
