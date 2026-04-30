@@ -19,15 +19,15 @@
 
 但它**还不适合被表述为“全链路收尾完成、只剩人工部署”**。这轮复核里仍然发现了几类真实缺口：
 
-1. **网关质量门当前不绿**，Go 侧至少还有 1 个直接打断测试的代码问题和 1 个失真的测试断言；
-2. **Aurora 状态带纠偏链路仍有契约漂移**，尤其是首页状态带的自由纠偏语义没有完整保真；
-3. **压测 CI 的 k6 分支仍未真正启动被测服务**，文档里“已入 CI”的结论仍偏乐观；
-4. **Aurora 成本治理只接入了预算前置判断，没有接入实际执行记账**；
-5. **文档工作流本身仍有漂移**，愿景验收清单的主引用路径与实际文件位置不一致，Tracker 中也仍有过于乐观的完成表述。
+1. **Aurora 状态带纠偏链路仍有契约漂移**，尤其是首页状态带的自由纠偏语义没有完整保真；
+2. **压测 CI 的 k6 分支仍未真正启动被测服务**，文档里“已入 CI”的结论仍偏乐观；
+3. **Aurora 成本治理只接入了预算前置判断，没有接入实际执行记账**；
+4. **文档工作流本身仍有漂移**，愿景验收清单的主引用路径与实际文件位置不一致，Tracker 中也仍有过于乐观的完成表述；
+5. **Go Gateway 质量门曾在本轮复核中实际报红，但当前工作区已修复并复测通过，尚未与本次审查文档一起形成独立提交。**
 
 结论上，当前更准确的状态应当是：
 
-> **Phase 0-6 大部分功能实现已具备，但 R7“最终收敛 / 最终验收”仍未完成，且至少还有若干 P1 级问题需要回收。**
+> **Phase 0-6 大部分功能实现已具备，但 R7“最终收敛 / 最终验收”仍未完成，且至少还有若干 P1 级尾差需要回收。**
 
 ---
 
@@ -68,7 +68,7 @@
 
 ## 2. 关键问题清单（按严重度排序）
 
-## P1-01 网关测试门当前不绿，收尾口径不能成立
+## P2-00 网关质量门已在当前工作区恢复，但需要和代码提交保持一致
 
 **影响面**: Go Gateway / CI / 生产质量门  
 **严重度**: P1
@@ -81,7 +81,7 @@
 cd backend/gateway && go test ./internal/middleware/... ./internal/agent/...
 ```
 
-当前直接失败。
+在本轮最初复核时，这条测试链路曾直接失败；但用户随后已在当前工作区修复，复测现已通过。
 
 ### 证据
 
@@ -102,12 +102,13 @@ log.Printf("[WsAuth] Request to %s from %s, Origin: %s",
 
 ### 判断
 
-这不是“审美问题”，而是**当前仓库的 Go 质量门现实上不绿**。  
-在这个状态下，Tracker/审查文档里任何“跨层一致性已到 9/10、Go 侧收尾完成”的说法都需要降级。
+当前判断应更新为：
+
+> **Go Gateway 质量门在当前工作区已恢复为绿，但修复尚未与本次文档提交绑定，因此仍需要在后续代码提交中显式落档。**
 
 ---
 
-## P1-02 Aurora 首页状态带的纠偏语义仍未完整保真
+## P1-01 Aurora 首页状态带的纠偏语义仍未完整保真
 
 **影响面**: Aurora 用户体验 / 纠偏闭环 / 愿景 AUR-043 AUR-044  
 **严重度**: P1
@@ -195,7 +196,7 @@ bandStatus: band?.bandStatus.name ?? '',
 
 ---
 
-## P1-03 k6 压测 CI 分支仍未真正启动被测系统
+## P1-02 k6 压测 CI 分支仍未真正启动被测系统
 
 **影响面**: CI / 性能验收 / T6.1.6 与 OBS-012 完成口径  
 **严重度**: P1
@@ -236,7 +237,7 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 
 ---
 
-## P1-04 Aurora 成本治理尚未形成真实记账闭环
+## P1-03 Aurora 成本治理尚未形成真实记账闭环
 
 **影响面**: Aurora 成本控制 / 生产治理 / Phase 6 完整性  
 **严重度**: P1
@@ -399,8 +400,12 @@ cd backend/gateway && go test ./internal/middleware/... ./internal/agent/...
 
 原因：
 
+本轮最初失败点：
+
 1. `ws_auth.go` 的 `log.Printf` 参数个数错误；
 2. `client_test.go` 里的 invalid address 断言和当前 `NewClient()` 语义不一致。
+
+当前工作区复测后，这两点已不再阻塞测试。
 
 ### 4.3 Flutter 定向分析
 
@@ -421,21 +426,20 @@ cd mobile && flutter analyze lib/features/home/presentation/screens/dashboard_sc
 
 ### 第一优先级（先修，修完再宣称收尾）
 
-1. 修复 `backend/gateway/internal/middleware/ws_auth.go` 的日志格式问题；
-2. 校正 `backend/gateway/internal/agent/client_test.go` 的无效断言；
-3. 修复首页状态带 telemetry 契约：
+1. 修复首页状态带 telemetry 契约：
    - `band_status` 改回 snake_case；
    - 保留 `is_freeform`；
    - 为状态带纠偏补足可追踪的 `telemetry_id/group_id`；
    - 自由纠偏不要退化成普通文本入口；
-4. 给 k6 CI job 补齐服务启动步骤，或把 job 明确降级为脚本存在而非有效 CI；
-5. 在 Aurora L3/L4 执行完成处接入 `record_aurora_cost()`。
+2. 给 k6 CI job 补齐服务启动步骤，或把 job 明确降级为脚本存在而非有效 CI；
+3. 在 Aurora L3/L4 执行完成处接入 `record_aurora_cost()`。
 
 ### 第二优先级（收口可信度）
 
-6. 明确 `scripts/deploy-prod.sh` / `scripts/deploy_k8s.sh` 才是生产切流主路径，并降级 `blue_green_switch.sh` 的文档定位；
-7. 修正文档主引用路径，统一“愿景验收清单”的 canonical location；
-8. 把 Tracker 中与上述问题相关的“已完成”状态改成 reopen / 待复核。
+4. 把当前工作区里已修复的 Gateway 质量门问题随代码正式提交，避免文档与代码快照脱节；
+5. 明确 `scripts/deploy-prod.sh` / `scripts/deploy_k8s.sh` 才是生产切流主路径，并降级 `blue_green_switch.sh` 的文档定位；
+6. 修正文档主引用路径，统一“愿景验收清单”的 canonical location；
+7. 把 Tracker 中与上述问题相关的“已完成”状态改成 reopen / 待复核。
 
 ---
 
@@ -447,4 +451,4 @@ cd mobile && flutter analyze lib/features/home/presentation/screens/dashboard_sc
 > **系统的大部分核心能力已经做出来了，Aurora/Spine 的主体也已经成形，但 R7 最终收敛仍然没有完成。**
 
 如果只看功能存在性，项目已经非常靠近终盘；  
-如果按你现在要求的标准去看，也就是“真实、可验收、和愿景一致”，那它还需要再清掉一批关键尾差，尤其是 **Aurora 显性纠偏体验、Go 质量门、性能 CI 真实性、成本治理闭环** 这四块。
+如果按你现在要求的标准去看，也就是“真实、可验收、和愿景一致”，那它还需要再清掉一批关键尾差，尤其是 **Aurora 显性纠偏体验、性能 CI 真实性、成本治理闭环** 这三块，以及文档/代码快照的一致性问题。
