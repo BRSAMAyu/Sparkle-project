@@ -158,8 +158,10 @@ PlanModel _sprintPlan(List<TaskModel> tasks) {
 
 // --- Widget hosts ---
 
-Widget _materialHost(Widget child) => testMaterialApp(theme: AppThemes.lightTheme
-      home: Scaffold(body: child),);
+Widget _materialHost(Widget child) => testMaterialApp(
+      theme: AppThemes.lightTheme,
+      home: Scaffold(body: child),
+    );
 
 Widget _guidePanelHost(TaskModel task, {ValueChanged<String>? onTrigger}) =>
     _materialHost(

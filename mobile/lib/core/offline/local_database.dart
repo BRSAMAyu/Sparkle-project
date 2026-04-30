@@ -150,6 +150,12 @@ class LocalDatabase {
 
   bool get isInitialized => _initialized;
 
+  /// Test-only setter to inject a real Isar instance without calling init().
+  set isar(Isar value) {
+    _isar = value;
+    _initialized = true;
+  }
+
   Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
     // In production, you would fetch a secure key from SecureStorage
