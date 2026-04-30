@@ -57,11 +57,6 @@ class _SprintCompletionScreenState
   SprintCompletionSummary? get _summary =>
       widget.initialSummary ?? _loadedSummary;
 
-  String get _subjectLabel {
-    final subject = widget.subjectName.trim();
-    return subject.isEmpty ? '7 天备考成果' : '$subject 7 天备考成果';
-  }
-
   String _subjectLabelL10n(AppLocalizations l10n) {
     final subject = widget.subjectName.trim();
     return subject.isEmpty ? l10n.planSprintSevenDayResults : l10n.planSprintSevenDayResultsFor(subject);

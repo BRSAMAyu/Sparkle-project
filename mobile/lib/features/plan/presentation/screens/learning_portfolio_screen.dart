@@ -612,21 +612,22 @@ class _LoadMoreButton extends StatelessWidget {
 }
 
 String _statusLine(BuildContext context, LearningPortfolioEntry entry) {
+  final l10n = context.l10n;
   final mode = _modeLabel(context, entry.sprintMode);
   if (entry.isCompleted) {
     final completedOn = _formatDate(context, entry.completedAt ?? entry.targetDate);
-    return '$mode（已完成，$completedOn）';
+    return l10n.planPortfolioCompletedOn(mode, completedOn);
   }
   if (entry.isActive) {
     final totalDays = _totalDays(entry);
     final currentDay = _currentDay(entry, totalDays);
     final remainingDays = totalDays == null ? null : (totalDays - currentDay);
     if (remainingDays != null) {
-      return '$mode · 进行中（第 $currentDay 天，还剩 $remainingDays 天）';
+      return l10n.planPortfolioActiveDay(mode, currentDay, remainingDays);
     }
-    return '$mode · 进行中';
+    return l10n.planPortfolioActiveShort(mode);
   }
-  return '$mode · 计划中';
+  return l10n.planPortfolioPlannedShort(mode);
 }
 
 String _scoreLabel(BuildContext context, LearningPortfolioEntry entry) {

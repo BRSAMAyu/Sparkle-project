@@ -126,13 +126,13 @@ class AchievementStatsPanel extends StatelessWidget {
             _buildCompactStatItem(
               _hasStarted
                   ? '${stats.unlockedCount}/${stats.totalAchievements}'
-                  : '尚未开始',
+                  : l10n.achievementStatsNotStarted,
               l10n.achievementTitle,
             ),
             _buildCompactStatItem(
               _hasStarted
                   ? '${stats.unlockedPercentage.toStringAsFixed(0)}%'
-                  : '等待点亮',
+                  : l10n.achievementStatsWaitingToLight,
               l10n.achievementCompletionRate,
             ),
             _buildCompactStatItem(

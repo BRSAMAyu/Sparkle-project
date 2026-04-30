@@ -42,11 +42,6 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
   bool _isSubmitting = false;
   bool _showConfetti = false;
 
-  String get _title {
-    final subject = widget.subjectName.trim();
-    return subject.isEmpty ? '考试复盘' : '考试复盘 · $subject';
-  }
-
   String _titleL10n(AppLocalizations l10n) {
     final subject = widget.subjectName.trim();
     return subject.isEmpty ? l10n.planExamReviewNoSubject : l10n.planExamReviewSubject(subject);
