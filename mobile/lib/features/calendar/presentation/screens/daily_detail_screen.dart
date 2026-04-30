@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -93,7 +94,7 @@ class DailyDetailScreen extends ConsumerWidget {
               if (streakRecord != null) ...[
                 _buildSectionTitle(
                   context,
-                  '打卡详情',
+                  I18nService.instance.isChinese ? '打卡详情' : 'Check-in Details',
                   Icons.local_fire_department_rounded,
                 ),
                 const SizedBox(height: DS.spacing10),
@@ -105,7 +106,7 @@ class DailyDetailScreen extends ConsumerWidget {
               if (activePlans.isNotEmpty) ...[
                 _buildSectionTitle(
                   context,
-                  '活跃计划',
+                  I18nService.instance.isChinese ? '活跃计划' : 'Active Plans',
                   Icons.flag_rounded,
                 ),
                 const SizedBox(height: DS.spacing10),
@@ -117,7 +118,7 @@ class DailyDetailScreen extends ConsumerWidget {
               if (closeToUnlock.isNotEmpty) ...[
                 _buildSectionTitle(
                   context,
-                  '即将解锁',
+                  I18nService.instance.isChinese ? '即将解锁' : 'Close to Unlock',
                   Icons.emoji_events_rounded,
                 ),
                 const SizedBox(height: DS.spacing10),
@@ -249,22 +250,24 @@ class DailyDetailScreen extends ConsumerWidget {
     StreakDayRecord record,
     List<TaskModel> dayTasks,
   ) {
+    final zh = I18nService.instance.isChinese;
+    final completedCount = dayTasks.where((task) => task.status == TaskStatus.completed).length;
     final (title, description, color, icon) = switch (record.status) {
       StreakDayStatus.active => (
-          '今日已形成有效打卡',
-          '已完成 ${dayTasks.where((task) => task.status == TaskStatus.completed).length} 个任务，连击记录已计入系统。',
+          zh ? '今日已形成有效打卡' : 'Valid check-in recorded today',
+          zh ? '已完成 $completedCount 个任务，连击记录已计入系统。' : '$completedCount tasks completed. Streak recorded.',
           DS.semanticSuccess,
           Icons.local_fire_department_rounded,
         ),
       StreakDayStatus.frozen => (
-          '今日触发了连击保护',
-          '系统保留了连击，但这一天没有形成标准完成记录。',
+          zh ? '今日触发了连击保护' : 'Streak protection triggered',
+          zh ? '系统保留了连击，但这一天没有形成标准完成记录。' : 'Streak preserved, but no standard completion record for today.',
           DS.semanticWarning,
           Icons.ac_unit_rounded,
         ),
       StreakDayStatus.missed => (
-          '今日没有形成打卡',
-          '任务与专注记录不足以计入当日连击。',
+          zh ? '今日没有形成打卡' : 'No check-in today',
+          zh ? '任务与专注记录不足以计入当日连击。' : 'Not enough task or focus records for today\'s streak.',
           DS.textSecondary,
           Icons.event_busy_rounded,
         ),
@@ -306,7 +309,7 @@ class DailyDetailScreen extends ConsumerWidget {
                     record.sourceEvent!.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing6),
                   Text(
-                    '来源事件：${record.sourceEvent}',
+                    zh ? '来源事件：${record.sourceEvent}' : 'Source: ${record.sourceEvent}',
                     style: TextStyle(
                       color: DS.textTertiary,
                       fontSize: DS.fontSizeXs,
@@ -383,7 +386,7 @@ class DailyDetailScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: DS.spacing8),
                             Text(
-                              '还差 ${remaining.toInt()}%',
+                              I18nService.instance.isChinese ? '还差 ${remaining.toInt()}%' : '${remaining.toInt()}% remaining',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: DS.textSecondary,
@@ -778,7 +781,7 @@ class DailyDetailScreen extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '编辑日程',
+                      I18nService.instance.isChinese ? '编辑日程' : 'Edit Schedule',
                       style: TextStyle(
                         color: DS.textPrimary,
                         fontWeight: FontWeight.bold,
