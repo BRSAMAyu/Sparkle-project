@@ -237,7 +237,8 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
 
     expect(find.text('AI 自动记忆'), findsOneWidget);
     expect(find.text('待处理承诺'), findsOneWidget);
@@ -245,10 +246,12 @@ void main() {
     expect(find.byIcon(Icons.check), findsOneWidget);
 
     await tester.tap(find.text('撤销此条'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     await tester.tap(find.byIcon(Icons.check));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(api.lastRetractedId, 'auto_1');
     expect(api.lastResolvedId, 'commit_1');

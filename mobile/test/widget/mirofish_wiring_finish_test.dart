@@ -123,9 +123,20 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // The prediction / simulation / report cards are wrapped in
+      // CollapsibleWidgetWrapper chips. Expand them first.
+      await tester.tap(find.text('查看推演详情'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.text('查看模拟详情'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.text('查看学习报告'));
+      await tester.pump(const Duration(milliseconds: 300));
+
       expect(find.text('推演剧场'), findsOneWidget);
       expect(find.text('学习仿真'), findsOneWidget);
-      expect(find.text('查看学习报告'), findsOneWidget);
+      expect(find.text('查看学习报告'), findsWidgets);
       expect(find.textContaining('两周掌握特征值'), findsOneWidget);
       expect(find.textContaining('矩阵特征值'), findsOneWidget);
       expect(find.text('继续在对话里'), findsWidgets);

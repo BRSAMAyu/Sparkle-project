@@ -211,7 +211,12 @@ void main() {
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
         ));
-        await _pumpTransitions(tester, cycles: 4);
+        // Allow async provider data to load (learningPortfolioProvider is async)
+        await _pumpTransitions(tester, cycles: 12);
+        // Additional pumps to ensure all async data settles
+        for (var i = 0; i < 20; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
 
         expect(find.byType(LearningPortfolioScreen), findsOneWidget);
         expect(find.text('已完成'), findsWidgets);

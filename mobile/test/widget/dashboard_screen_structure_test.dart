@@ -20,8 +20,11 @@ void main() {
 
       final briefingToggle = find.byKey(const ValueKey('dashboard-briefing-toggle'));
       await tester.ensureVisible(briefingToggle);
+      await tester.pump();
       await tester.tap(briefingToggle);
-      await _pumpDashboard(tester);
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       expect(find.text('Active Plan'), findsOneWidget);
     });

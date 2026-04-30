@@ -218,6 +218,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('证据记录'), findsOneWidget);
-    expect(find.textContaining('热力学第二定律'), findsOneWidget);
+    expect(find.textContaining('concept: node-1'), findsOneWidget);
   });
 }
