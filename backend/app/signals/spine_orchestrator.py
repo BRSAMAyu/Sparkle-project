@@ -901,16 +901,7 @@ class SpineOrchestrator:
             logger.warning("on_achievement_event: save_spine_snapshot failed", exc_info=True)
 
         # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
-        try:
-            return_case = await self.growth_chronicle.build_return_case_file(user_id)
-            if return_case and return_case.get("confirmed_insights"):
-                await self.redis.set(
-                    f"spine:return_case_file:{user_id}:latest",
-                    json.dumps(return_case),
-                    ex=7 * 24 * 3600,
-                )
-        except Exception as exc:
-            logger.debug("build_return_case_file skipped: {}", exc)
+        await self._save_return_case_file(user_id)
 
         return trace
 
@@ -1630,18 +1621,7 @@ class SpineOrchestrator:
             logger.debug("recover_from_snapshot skipped: {}", exc)
 
         # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
-        try:
-            return_case = await self.growth_chronicle.build_return_case_file(user_id)
-            if return_case and return_case.get("confirmed_insights"):
-                await self.redis.set(
-                    f"spine:return_case_file:{user_id}:latest",
-                    json.dumps(return_case),
-                    ex=7 * 24 * 3600,
-                )
-                logger.info("Spine ReturnCaseFile loaded for user={}: {} confirmed insights",
-                            user_id, len(return_case["confirmed_insights"]))
-        except Exception as exc:
-            logger.debug("build_return_case_file skipped: {}", exc)
+        await self._save_return_case_file(user_id)
 
         # Refresh snapshot on return (pre_ttl_expiry — extends the 90d window)
         try:
@@ -3899,6 +3879,19 @@ class SpineOrchestrator:
             logger.warning("save_spine_snapshot: operation failed", exc_info=True)
 
         return snapshot
+
+    async def _save_return_case_file(self, user_id: str) -> None:
+        """Build and cache the ReturnCaseFile from GrowthChronicle (STAB-004)."""
+        try:
+            return_case = await self.growth_chronicle.build_return_case_file(user_id)
+            if return_case and return_case.get("confirmed_insights"):
+                await self.redis.set(
+                    f"spine:return_case_file:{user_id}:latest",
+                    json.dumps(return_case),
+                    ex=7 * 24 * 3600,
+                )
+        except Exception as exc:
+            logger.debug("build_return_case_file skipped: {}", exc)
 
     async def recover_from_snapshot(
         self,

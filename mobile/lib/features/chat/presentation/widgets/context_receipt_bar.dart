@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 
@@ -307,23 +308,30 @@ class _ReceiptActionChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = I18nService.instance;
     final actions = [
-      const _ReceiptAction(
+      _ReceiptAction(
         icon: Icons.menu_book_outlined,
-        label: '按课件重讲',
-        prompt: '请按我已上传/选中的课件重新讲一遍，优先引用刚才使用的资料。',
+        label: s.isChinese ? '按课件重讲' : 'Reteach from slides',
+        prompt: s.isChinese
+            ? '请按我已上传/选中的课件重新讲一遍，优先引用刚才使用的资料。'
+            : 'Please reteach based on my uploaded/selected materials, prioritizing the ones just used.',
       ),
       _ReceiptAction(
         icon: Icons.block_outlined,
-        label: '排除此资料',
+        label: s.isChinese ? '排除此资料' : 'Exclude this source',
         prompt: usedNames.isEmpty
-            ? '请暂时排除刚才使用的资料，换一种解释。'
-            : '请暂时排除这些资料：${usedNames.join('、')}，换一种解释。',
+            ? (s.isChinese ? '请暂时排除刚才使用的资料，换一种解释。' : 'Please exclude the source just used and explain differently.')
+            : (s.isChinese
+                ? '请暂时排除这些资料：${usedNames.join('、')}，换一种解释。'
+                : 'Please exclude these sources: ${usedNames.join(', ')}, and explain differently.'),
       ),
-      const _ReceiptAction(
+      _ReceiptAction(
         icon: Icons.history_edu_outlined,
-        label: '换成历年真题',
-        prompt: '请换成历年真题/典型题视角来讲，并说明为什么这样选资料。',
+        label: s.isChinese ? '换成历年真题' : 'Use past exams',
+        prompt: s.isChinese
+            ? '请换成历年真题/典型题视角来讲，并说明为什么这样选资料。'
+            : 'Please switch to a past-exam / classic-problem perspective and explain why these sources were chosen.',
       ),
     ];
 
