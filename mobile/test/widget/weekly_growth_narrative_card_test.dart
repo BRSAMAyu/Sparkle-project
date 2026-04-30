@@ -78,7 +78,7 @@ void main() {
     expect(find.text('2 个任务'), findsOneWidget);
     expect(find.text('修复 2 个错误'), findsOneWidget);
     expect(find.text('1 次复盘'), findsOneWidget);
-    expect(find.text('掌握 +18.5'), findsOneWidget);
+    expect(find.text('掌握 +18'), findsOneWidget);
     expect(find.textContaining('最大进步：路由算法 30% → 65%'), findsOneWidget);
     expect(
       find.textContaining('下周目标：继续把网络层相关的核心概念吃透'),
