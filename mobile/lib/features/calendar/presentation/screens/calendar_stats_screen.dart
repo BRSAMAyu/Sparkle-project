@@ -134,7 +134,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       if (mounted) {
         AppFeedback.success(
           context,
-          '已将「${task.title}」加入 ${_formatMonthDay(newDueDate)} 的日程。',
+          context.l10n.calTaskRescheduled(task.title, _formatMonthDay(newDueDate)),
         );
       }
     }
@@ -1184,7 +1184,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ),
         ),
         subtitle: Text(
-          '${task.planId != null ? '任务' : '待办'} · $dueLabel',
+          context.l10n.calTaskWithDue(task.planId != null ? context.l10n.calTaskTypeTask : context.l10n.calTaskTypeTodo, dueLabel),
           style: TextStyle(color: DS.textSecondary),
         ),
         trailing: Icon(

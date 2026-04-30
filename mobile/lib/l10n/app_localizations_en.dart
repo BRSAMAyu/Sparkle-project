@@ -24230,7 +24230,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calEndAfterStart => 'End time must be after start time';
 
   @override
-  String get calCreateEventFailed => 'Failed to create event: \$e';
+  String calCreateEventFailed(String e) {
+    return 'Failed to create event: $e';
+  }
 
   @override
   String get calTitle => 'Title';
@@ -28671,5 +28673,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String aiopsPromptHit(
       String prompt, String inference, int promptCount, int inferenceCount) {
     return 'Prompt hit $prompt% · Inference hit $inference% · Known $promptCount/$inferenceCount';
+  }
+
+  @override
+  String calTaskRescheduled(String title, String date) {
+    return 'Added \"$title\" to $date schedule.';
+  }
+
+  @override
+  String get calTaskTypeTask => 'Task';
+
+  @override
+  String get calTaskTypeTodo => 'To-Do';
+
+  @override
+  String calTaskWithDue(String type, String due) {
+    return '$type · $due';
   }
 }

@@ -42478,8 +42478,8 @@ abstract class AppLocalizations {
   /// No description provided for @calCreateEventFailed.
   ///
   /// In zh, this message translates to:
-  /// **'创建日程失败：\$e'**
-  String get calCreateEventFailed;
+  /// **'创建日程失败：{e}'**
+  String calCreateEventFailed(String e);
 
   /// No description provided for @calTitle.
   ///
@@ -50092,6 +50092,30 @@ abstract class AppLocalizations {
   /// **'prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}'**
   String aiopsPromptHit(
       String prompt, String inference, int promptCount, int inferenceCount);
+
+  /// No description provided for @calTaskRescheduled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将「{title}」加入 {date} 的日程。'**
+  String calTaskRescheduled(String title, String date);
+
+  /// No description provided for @calTaskTypeTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get calTaskTypeTask;
+
+  /// No description provided for @calTaskTypeTodo.
+  ///
+  /// In zh, this message translates to:
+  /// **'待办'**
+  String get calTaskTypeTodo;
+
+  /// No description provided for @calTaskWithDue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{type} · {due}'**
+  String calTaskWithDue(String type, String due);
 }
 
 class _AppLocalizationsDelegate

@@ -23228,7 +23228,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calEndAfterStart => '结束时间需要晚于开始时间';
 
   @override
-  String get calCreateEventFailed => '创建日程失败：\$e';
+  String calCreateEventFailed(String e) {
+    return '创建日程失败：$e';
+  }
 
   @override
   String get calTitle => '标题';
@@ -27486,5 +27488,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String aiopsPromptHit(
       String prompt, String inference, int promptCount, int inferenceCount) {
     return 'prompt 命中 $prompt% · 推理命中 $inference% · known $promptCount/$inferenceCount';
+  }
+
+  @override
+  String calTaskRescheduled(String title, String date) {
+    return '已将「$title」加入 $date 的日程。';
+  }
+
+  @override
+  String get calTaskTypeTask => '任务';
+
+  @override
+  String get calTaskTypeTodo => '待办';
+
+  @override
+  String calTaskWithDue(String type, String due) {
+    return '$type · $due';
   }
 }

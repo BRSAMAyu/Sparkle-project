@@ -9777,7 +9777,8 @@
   "calCurrentMainGoal": "当前主线",
   "calAchievementMomentum": "成就势能",
   "calEndAfterStart": "结束时间需要晚于开始时间",
-  "calCreateEventFailed": "创建日程失败：$e",
+  "calCreateEventFailed": "创建日程失败：{e}",
+  "@calCreateEventFailed": { "placeholders": { "e": { "type": "String" } } },
   "calTitle": "标题",
   "calAllDay": "全天",
   "calStartTime": "开始时间",
@@ -11453,5 +11454,11 @@
   "aiopsFallbackCost": "fallback {rate}% · 成本 USD{cost} · 执行转化 {execRate}%",
   "@aiopsFallbackCost": { "placeholders": { "rate": { "type": "String" }, "cost": { "type": "String" }, "execRate": { "type": "String" } } },
   "aiopsPromptHit": "prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}",
-  "@aiopsPromptHit": { "placeholders": { "prompt": { "type": "String" }, "inference": { "type": "String" }, "promptCount": { "type": "int" }, "inferenceCount": { "type": "int" } } }
+  "@aiopsPromptHit": { "placeholders": { "prompt": { "type": "String" }, "inference": { "type": "String" }, "promptCount": { "type": "int" }, "inferenceCount": { "type": "int" } } },
+  "calTaskRescheduled": "已将「{title}」加入 {date} 的日程。",
+  "@calTaskRescheduled": { "placeholders": { "title": { "type": "String" }, "date": { "type": "String" } } },
+  "calTaskTypeTask": "任务",
+  "calTaskTypeTodo": "待办",
+  "calTaskWithDue": "{type} · {due}",
+  "@calTaskWithDue": { "placeholders": { "type": { "type": "String" }, "due": { "type": "String" } } }
 }

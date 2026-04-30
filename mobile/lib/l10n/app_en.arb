@@ -10410,7 +10410,8 @@
   "calCurrentMainGoal": "Current Main Goal",
   "calAchievementMomentum": "Achievement Momentum",
   "calEndAfterStart": "End time must be after start time",
-  "calCreateEventFailed": "Failed to create event: $e",
+  "calCreateEventFailed": "Failed to create event: {e}",
+  "@calCreateEventFailed": { "placeholders": { "e": { "type": "String" } } },
   "calTitle": "Title",
   "calAllDay": "All Day",
   "calStartTime": "Start Time",
@@ -11453,5 +11454,11 @@
   "aiopsFallbackCost": "Fallback {rate}% · Cost USD{cost} · Exec conversion {execRate}%",
   "@aiopsFallbackCost": { "placeholders": { "rate": { "type": "String" }, "cost": { "type": "String" }, "execRate": { "type": "String" } } },
   "aiopsPromptHit": "Prompt hit {prompt}% · Inference hit {inference}% · Known {promptCount}/{inferenceCount}",
-  "@aiopsPromptHit": { "placeholders": { "prompt": { "type": "String" }, "inference": { "type": "String" }, "promptCount": { "type": "int" }, "inferenceCount": { "type": "int" } } }
+  "@aiopsPromptHit": { "placeholders": { "prompt": { "type": "String" }, "inference": { "type": "String" }, "promptCount": { "type": "int" }, "inferenceCount": { "type": "int" } } },
+  "calTaskRescheduled": "Added \"{title}\" to {date} schedule.",
+  "@calTaskRescheduled": { "placeholders": { "title": { "type": "String" }, "date": { "type": "String" } } },
+  "calTaskTypeTask": "Task",
+  "calTaskTypeTodo": "To-Do",
+  "calTaskWithDue": "{type} · {due}",
+  "@calTaskWithDue": { "placeholders": { "type": { "type": "String" }, "due": { "type": "String" } } }
 }
