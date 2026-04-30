@@ -127,6 +127,9 @@ var sanitizer = bluemonday.UGCPolicy()
 // 🔧 P1-2: 消息长度限制（防止OOM和滥用）
 const maxMessageLength = 4000
 
+// maxToolResultLength limits tool_result_json to prevent oversized payloads.
+const maxToolResultLength = 10 * 1024 // 10 KB
+
 type ChatOrchestrator struct {
 	agentClient  *agent.Client
 	galaxyClient *galaxy.Client
@@ -401,6 +404,13 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					toolInput.SessionID, _ = msgMap["session_id"].(string)
 					toolInput.RequestID, _ = msgMap["request_id"].(string)
 
+					if len(toolInput.ToolResultJSON) > maxToolResultLength {
+						_ = writer.WriteJSON(gin.H{"type": "error", "message": "Tool result too large"})
+						toolInput.Reset()
+						chatInputPool.Put(toolInput)
+						return false
+					}
+
 					return func() bool {
 						defer func() {
 							toolInput.Reset()
@@ -541,6 +551,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				toolInput.ToolIsError, _ = msgMap["is_error"].(bool)
 				toolInput.ToolErrorMsg, _ = msgMap["error_message"].(string)
 				toolInput.SessionID, _ = msgMap["session_id"].(string)
+
+				if len(toolInput.ToolResultJSON) > maxToolResultLength {
+					responder.SendError("invalid_argument", "Tool result too large", false)
+					return false
+				}
 
 				span.SetAttributes(
 					attribute.String("tool_call_id", toolInput.ToolCallID),
