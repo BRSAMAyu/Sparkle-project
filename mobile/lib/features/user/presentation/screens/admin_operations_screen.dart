@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class AdminOperationsScreen extends ConsumerStatefulWidget {
@@ -106,7 +107,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
               children: [7, 14, 30]
                   .map(
                     (days) => ChoiceChip(
-                      label: Text('$days 天'),
+                      label: Text('$days ${I18nService.instance.isChinese ? '天' : 'days'}'),
                       selected: _days == days,
                       onSelected: (_) => setState(() => _days = days),
                     ),
