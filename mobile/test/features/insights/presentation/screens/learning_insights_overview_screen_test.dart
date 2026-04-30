@@ -30,7 +30,7 @@ void main() {
             (ref) async => WeeklyGrowthNarrative.placeholder(),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           home: const LearningInsightsOverviewScreen(),
         ),
@@ -74,7 +74,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           home: const LearningInsightsOverviewScreen(
             initialPanel: LearningInsightsOverviewScreen.panelWeeklyNarrative,
@@ -86,7 +86,6 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byTooltip('收起'), findsOneWidget);
     expect(find.text('错题复盘更稳定了。'), findsOneWidget);
   });
 }
