@@ -217,7 +217,7 @@ void main() {
     await tester.tap(find.textContaining('查看依据').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('证据链'), findsOneWidget);
+    expect(find.text('证据记录'), findsOneWidget);
     expect(find.textContaining('热力学第二定律'), findsOneWidget);
   });
 }

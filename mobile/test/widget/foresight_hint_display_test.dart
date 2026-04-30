@@ -236,7 +236,9 @@ void main() {
       _buildApp(_ForesightMemoryApiService()),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('前瞻提示'), findsNothing);
   });

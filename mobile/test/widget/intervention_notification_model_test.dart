@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   test('infers intervention source type from intervention_push notifications',
       () {
     final notification = UnifiedNotification.fromJson({

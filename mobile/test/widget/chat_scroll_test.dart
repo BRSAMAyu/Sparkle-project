@@ -74,7 +74,12 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    // Pump several frames to let async initialization settle without using
+    // pumpAndSettle, which times out due to the CircularProgressIndicator
+    // in the loading state.
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     // Seed one message so the ListView is rendered (not the quick action panel).
     mockChatNotifier.addMessage(
@@ -86,7 +91,9 @@ void main() {
         createdAt: DateTime.now(),
       ),
     );
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     // Initial check - find ListView
     final listFinder = find.byWidgetPredicate(
@@ -112,11 +119,15 @@ void main() {
         ),
       );
     }
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     // Scroll up (visually) -> offset increases
     await tester.drag(listFinder, const Offset(0, 300));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     // Add new message
     mockChatNotifier.addMessage(
@@ -133,7 +144,9 @@ void main() {
     await tester.pump();
     // Wait for animation
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     // We expect the scroll position to be back at 0.0
     final scrollableState = tester.state<ScrollableState>(scrollFinder);

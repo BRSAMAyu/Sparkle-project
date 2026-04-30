@@ -237,7 +237,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('记忆面板还没有内容'), findsOneWidget);
-    expect(find.text('去开始对话'), findsOneWidget);
+    expect(find.text('开始对话'), findsOneWidget);
   });
 
   testWidgets('Memory panel renders sections and opens detail',

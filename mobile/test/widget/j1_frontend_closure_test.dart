@@ -203,6 +203,7 @@ print(x);
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -247,6 +248,7 @@ print(x);
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -288,6 +290,7 @@ print(x);
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -352,6 +355,7 @@ print(x);
           child: MaterialApp.router(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
@@ -416,6 +420,7 @@ print(nums)
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const TaskDetailScreen(taskId: 't-guide'),
@@ -489,6 +494,7 @@ print(nums)
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const TaskDetailScreen(taskId: taskId),

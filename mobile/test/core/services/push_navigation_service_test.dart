@@ -9,6 +9,18 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/push_navigation_service.dart';
 import '../../shared/i18n_test_helper.dart';
 
+Widget _testRouterApp({required GoRouter routerConfig}) => MaterialApp.router(
+  locale: const Locale('zh'),
+  localizationsDelegates: const [
+    AppLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  supportedLocales: AppLocalizations.supportedLocales,
+  routerConfig: routerConfig,
+);
+
 class _FakeInterventionActionService extends InterventionActionService {
   _FakeInterventionActionService() : super(_NoopRef());
 
@@ -126,7 +138,7 @@ void main() {
           interventionActionServiceProvider
               .overrideWithValue(fakeInterventionService),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: _testRouterApp(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -182,7 +194,7 @@ void main() {
             interventionActionServiceProvider
                 .overrideWithValue(fakeInterventionService),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: _testRouterApp(routerConfig: router),
         ),
       );
       await tester.pumpAndSettle();
@@ -313,7 +325,7 @@ void main() {
           interventionActionServiceProvider
               .overrideWithValue(fakeInterventionService),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: _testRouterApp(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -368,7 +380,7 @@ void main() {
           interventionActionServiceProvider
               .overrideWithValue(fakeInterventionService),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: _testRouterApp(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();

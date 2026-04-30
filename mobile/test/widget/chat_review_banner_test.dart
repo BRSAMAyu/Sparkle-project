@@ -170,7 +170,11 @@ void main() {
       ),
     );
 
-    await tester.pump();
+    // Pump multiple frames to let async initialization complete without
+    // using pumpAndSettle which times out due to periodic refresh timers.
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(find.text('正在复习: TCP 流量控制 · 当前掌握 35%'), findsOneWidget);
   });

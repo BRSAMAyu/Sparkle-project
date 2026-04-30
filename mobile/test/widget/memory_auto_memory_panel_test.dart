@@ -240,7 +240,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AI 自动记忆'), findsOneWidget);
-    expect(find.text('待跟进承诺'), findsOneWidget);
+    expect(find.text('待处理承诺'), findsOneWidget);
     expect(find.text('撤销此条'), findsOneWidget);
     expect(find.text('已完成'), findsOneWidget);
 
