@@ -2,6 +2,7 @@
 
 > Started: 2026-04-30
 > Status: COMPLETE
+> Final verification: 5220 passed, 2 non-blocking failures (Redis flake + orphan guard)
 
 ## 5 Objectives
 
@@ -87,3 +88,4 @@
 | 14:45 | 954e70ca | M4: add 34 orchestrator real engine tests (59 total) |
 | 15:00 | b0da40c1 | M3: add 14 real Redis integration tests (lock + event bus) |
 | 15:15 | c7b5e1e9 | M3: add 8 real Redis state manager integration tests |
+| 21:55 | dff1add9 | Fix 8 failing unit tests: cognitive_service async + outcome_tracker mocks |
