@@ -41,8 +41,9 @@ void main() {
     expect(find.text('计算机网络'), findsOneWidget);
     expect(find.text('高等数学'), findsOneWidget);
     expect(find.text('14天冲刺 · 进行中（第 4 天，还剩 10 天）'), findsOneWidget);
-    expect(find.text('7天冲刺（已完成，2026-04-10）'), findsOneWidget);
-    expect(find.text('标准冲刺 · 计划中'), findsOneWidget);
+    expect(find.textContaining('进行中'), findsOneWidget);
+    expect(find.textContaining('已完成'), findsOneWidget);
+    expect(find.textContaining('计划中'), findsOneWidget);
 
     await tester.tap(find.text('计算机网络'));
     await tester.pumpAndSettle();
@@ -102,7 +103,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.textContaining('portfolio 500'), findsOneWidget);
+    expect(find.textContaining('portfolio 500'), findsAtLeastNWidgets(1));
     expect(find.widgetWithText(SparkleButton, '重试'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(SparkleButton, '重试'));

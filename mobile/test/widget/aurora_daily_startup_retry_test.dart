@@ -171,7 +171,7 @@ void main() {
 
   setUp(setUpI18nForTesting);
   testWidgets('daily startup 500 shows retry banner', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.binding.setSurfaceSize(const Size(390, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
@@ -215,7 +215,7 @@ void main() {
 
   testWidgets('slow dashboard falls back to active plan for daily startup',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.binding.setSurfaceSize(const Size(390, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();

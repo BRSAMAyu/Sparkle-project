@@ -158,7 +158,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('focus-screen'), findsOneWidget);
-    await tester.binding.handlePopRoute();
+    // Navigate back to home — handleOpenedPayload uses go() which replaces,
+    // so there is no pop stack. Explicitly return to verify round-trip.
+    router.go('/home');
     await tester.pumpAndSettle();
     expect(find.text('home-screen'), findsOneWidget);
 

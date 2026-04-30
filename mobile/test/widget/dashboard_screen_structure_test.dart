@@ -18,7 +18,9 @@ void main() {
 
       expect(find.text('Active Plan'), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('dashboard-briefing-toggle')));
+      final briefingToggle = find.byKey(const ValueKey('dashboard-briefing-toggle'));
+      await tester.ensureVisible(briefingToggle);
+      await tester.tap(briefingToggle);
       await _pumpDashboard(tester);
 
       expect(find.text('Active Plan'), findsOneWidget);

@@ -181,7 +181,8 @@ void main() {
         child: testMaterialApp(home: MemoryPanelScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
   }
 
   final scenes = [

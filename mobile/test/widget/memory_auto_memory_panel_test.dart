@@ -242,12 +242,12 @@ void main() {
     expect(find.text('AI 自动记忆'), findsOneWidget);
     expect(find.text('待处理承诺'), findsOneWidget);
     expect(find.text('撤销此条'), findsOneWidget);
-    expect(find.text('已完成'), findsOneWidget);
+    expect(find.byIcon(Icons.check), findsOneWidget);
 
     await tester.tap(find.text('撤销此条'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('已完成'));
+    await tester.tap(find.byIcon(Icons.check));
     await tester.pumpAndSettle();
 
     expect(api.lastRetractedId, 'auto_1');
