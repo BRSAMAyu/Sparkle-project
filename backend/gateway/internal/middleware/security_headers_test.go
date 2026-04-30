@@ -10,10 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func init() {
-	gin.SetMode(gin.TestMode)
-}
-
 func TestSecurityHeaders_AllPresent(t *testing.T) {
 	tests := []struct {
 		name         string

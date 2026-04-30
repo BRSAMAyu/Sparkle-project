@@ -3,15 +3,20 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 )
 
+func TestMain(m *testing.M) {
+	gin.SetMode(gin.TestMode)
+	os.Exit(m.Run())
+}
+
 func TestHybridRateLimitMiddleware_ClientTelemetryIsRateLimited(t *testing.T) {
 	t.Parallel()
 
-	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(HybridRateLimitMiddlewareSimple(nil, 1, 1))
 	router.POST("/api/v1/client-telemetry/events", func(c *gin.Context) {
@@ -36,7 +41,6 @@ func TestHybridRateLimitMiddleware_ClientTelemetryIsRateLimited(t *testing.T) {
 func TestAdminRateLimitMiddleware(t *testing.T) {
 	t.Parallel()
 
-	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(AdminRateLimitMiddleware(nil))
 	// route-tier: authed
@@ -66,7 +70,6 @@ func TestAdminRateLimitMiddleware(t *testing.T) {
 func TestInternalRateLimitMiddleware(t *testing.T) {
 	t.Parallel()
 
-	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(InternalRateLimitMiddleware(nil))
 	router.GET("/internal/probe", func(c *gin.Context) {

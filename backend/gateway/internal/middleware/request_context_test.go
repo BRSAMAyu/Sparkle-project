@@ -10,7 +10,6 @@ import (
 )
 
 func TestRequestContextMiddlewareGeneratesIDs(t *testing.T) {
-	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(RequestContextMiddleware())
 	r.GET("/ping", func(c *gin.Context) {
@@ -32,7 +31,6 @@ func TestRequestContextMiddlewareGeneratesIDs(t *testing.T) {
 }
 
 func TestRequestContextMiddlewareKeepsIncomingIDs(t *testing.T) {
-	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(RequestContextMiddleware())
 	r.GET("/ping", func(c *gin.Context) {

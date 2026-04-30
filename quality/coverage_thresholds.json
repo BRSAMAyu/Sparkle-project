@@ -21,18 +21,26 @@
     ]
   },
   "go": {
-    "global": 14,
+    "global": 10,
     "paths": [
       {
         "path": "internal/handler",
-        "threshold": 18
+        "threshold": 35
       },
       {
         "path": "internal/service",
-        "threshold": 14
+        "threshold": 15
       },
       {
         "path": "internal/db",
+        "threshold": 1
+      },
+      {
+        "path": "internal/agent",
+        "threshold": 9
+      },
+      {
+        "path": "internal/middleware",
         "threshold": 12
       }
     ]

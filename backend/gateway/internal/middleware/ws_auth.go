@@ -33,7 +33,7 @@ type wsTicketPayload struct {
 func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Debug logging for real device testing
-		log.Printf("[WsAuth] Request to %s from %s, Origin: %s",
+		log.Printf("[WsAuth] Request to %s from %s, Origin: %s, Upgrade: %s",
 			c.Request.URL.Path, c.ClientIP(), c.GetHeader("Origin"), c.GetHeader("Upgrade"))
 
 		authHeader := c.GetHeader("Authorization")
