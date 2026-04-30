@@ -494,16 +494,15 @@ void main() {
           suggestedReplies: <String>[
             '我会先画依赖图，再做一道题验证。',
           ],
-          interactionType: 'choice',
-          interactionOptions: <String>['优等生', '提问者'],
+          interactionType: 'prompt',
           pendingInteraction: SimulationInteractionModel(
             id: 'i-1',
-            interactionType: 'choice',
+            interactionType: 'prompt',
             prompt: '你会怎么接这一步？',
             suggestedReplies: <String>[
               '我会先画依赖图，再做一道题验证。',
             ],
-            options: <String>['优等生', '提问者'],
+            options: <String>[],
             targetRound: 1,
           ),
         ),
@@ -528,7 +527,7 @@ void main() {
     expect(find.text('推荐场景'), findsNothing);
     expect(find.text('模拟设置'), findsOneWidget);
     expect(find.text('提交我的判断'), findsOneWidget);
-    final chipFinder = find.byType(ActionChip).first;
+    final chipFinder = find.text('我会先画依赖图，再做一道题验证。');
     await tester.ensureVisible(chipFinder);
     await tester.pumpAndSettle();
     await tester.tap(chipFinder, warnIfMissed: false);

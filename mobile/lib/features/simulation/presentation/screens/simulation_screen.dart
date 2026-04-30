@@ -140,6 +140,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   String _facilitationStyle = 'balanced';
   List<String> _selectedParticipantNames = const [];
   bool _showScrollToBottomFab = false;
+  bool _isInitialized = false;
   List<SimulationParticipantModel>? _pausedParticipants;
   List<SimulationRoundModel>? _pausedRounds;
   String? _pausedInsightSummary;
@@ -150,7 +151,6 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   void initState() {
     super.initState();
     _selectedScenarioKey = widget.initialScenarioKey ?? 'study_group';
-    _applyScenarioDefaults(_selectedScenarioKey, resetParticipants: true);
     _immersiveScrollController.addListener(_handleImmersiveScroll);
     _simulationSubscription = ref.listenManual<SimulationState>(
       simulationProvider,
@@ -226,6 +226,15 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         );
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _applyScenarioDefaults(_selectedScenarioKey, resetParticipants: true);
+    }
   }
 
   @override

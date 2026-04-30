@@ -45,6 +45,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('TCP流量控制'), findsOneWidget);
     expect(find.text('65%'), findsOneWidget);
@@ -52,6 +53,10 @@ void main() {
     expect(find.text('相关错题 1 道'), findsOneWidget);
     expect(find.text('rwnd 和 cwnd 的区别是什么？'), findsOneWidget);
 
+    // Scroll the button into view before tapping (the sheet content may be
+    // taller than the 800x600 test viewport).
+    await tester.ensureVisible(find.text('开始复习'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('开始复习'));
     await tester.pump();
 
@@ -96,6 +101,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('尚未学习'), findsWidgets);
     expect(find.text('0%'), findsNothing);
@@ -157,7 +163,17 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -165,6 +181,10 @@ void main() {
     await tester.tap(find.text('OPEN_SHEET'));
     await tester.pumpAndSettle();
 
+    // Scroll the button into view before tapping (the bottom-sheet content
+    // may exceed the 800x600 test viewport).
+    await tester.ensureVisible(find.text('开始复习'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('开始复习'));
     await tester.pumpAndSettle();
 

@@ -5,17 +5,75 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
+
+/// Inactive Aurora snapshot that prevents the StatusAwarenessBar from
+/// rendering its shimmer dots (which have an infinite animation and cause
+/// pumpAndSettle to time out).
+final _inactiveAuroraSnapshot = AuroraControlSurfaceSnapshot(
+  auroraActive: false,
+  runtimeEnabled: false,
+  overallStatus: 'sensing',
+  energyLevel: 'L0',
+  summary: '',
+  readyCount: 0,
+  activeCount: 0,
+  totalCount: 4,
+  conversationId: null,
+  requestedConversationId: null,
+  sceneAlignment: 'matched',
+  surface: null,
+  updatedAt: null,
+  facets: const [],
+  wakeEligibility: AuroraWakeEligibility(
+    canUserWake: false,
+    userQuotaRemaining: 0,
+    cooldownStatus: 'available',
+    cooldownRemainingMin: 0,
+    wakeReasons: [],
+    recommendedSessionType: 'strategy_recalibration',
+    estimatedDurationSec: 240,
+    suggestedScope: '',
+    fallbackIfUnavailable: 'quick_calibration',
+  ),
+  predictedReplyOptions: const [],
+  fetchedAt: DateTime(2026),
+);
 
 class _HistoryFakeRef implements Ref<Object?> {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+/// Fake AuroraStatusNotifier that immediately provides an inactive snapshot.
+/// This avoids the shimmer loading animation that causes pumpAndSettle timeouts.
+class _FakeAuroraNotifier extends AuroraStatusNotifier {
+  _FakeAuroraNotifier() : super(_FakeApiClient()) {
+    state = _inactiveAuroraSnapshot;
+  }
+
+  @override
+  Future<void> refresh({String? conversationId}) async {}
+
+  @override
+  void startPeriodicRefresh({String? conversationId}) {}
+
+  @override
+  void stopPeriodicRefresh() {}
+
+  @override
+  void dispose() {}
+}
+
+/// Minimal Fake ApiClient to satisfy the AuroraStatusNotifier constructor.
+class _FakeApiClient extends Fake implements ApiClient {}
 
 class _HistoryChatRepository extends Fake implements ChatRepository {
   _HistoryChatRepository({
@@ -84,6 +142,15 @@ void main() {
     await ViewStorageService.ensureInitialized();
   });
 
+  /// Pumps enough frames for layout to settle. Uses [pump] instead of
+  /// [pumpAndSettle] because the ChatScreen contains widgets with infinite
+  /// animations (e.g. shimmer dots, breathing overlays) that prevent settling.
+  Future<void> settleFrames(WidgetTester tester) async {
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
   Future<_HistoryChatNotifier> pumpChat(
     WidgetTester tester, {
     required _HistoryChatRepository repository,
@@ -98,6 +165,7 @@ void main() {
       ProviderScope(
         overrides: [
           chatProvider.overrideWith((ref) => notifier),
+          auroraStatusProvider.overrideWith((ref) => _FakeAuroraNotifier()),
         ],
         child: testMaterialApp(
           home: const ChatScreen(),
@@ -105,7 +173,7 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await settleFrames(tester);
 
     return notifier;
   }
@@ -118,7 +186,7 @@ void main() {
     );
 
     await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await settleFrames(tester);
 
     expect(find.text('历史对话'), findsOneWidget);
     expect(find.text('暂无历史记录'), findsOneWidget);
@@ -134,7 +202,7 @@ void main() {
     await pumpChat(tester, repository: repository);
 
     await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await settleFrames(tester);
 
     expect(find.textContaining('加载失败'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
@@ -171,9 +239,9 @@ void main() {
     );
 
     await tester.tap(find.byIcon(Icons.history));
-    await tester.pumpAndSettle();
+    await settleFrames(tester);
     await tester.tap(find.text('上一轮计划讨论'));
-    await tester.pumpAndSettle();
+    await settleFrames(tester);
 
     expect(repository.requestedSessions, contains('session-2'));
     expect(repository.requestedSessions.last, 'session-2');
