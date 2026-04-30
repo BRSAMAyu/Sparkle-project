@@ -48,6 +48,14 @@ async def test_spine_orchestrator_registers_expected_outcome():
     spine.exam_sprint_policy = AsyncMock()
     spine.skill_lifecycle_manager = AsyncMock()
     spine.core_session_manager = AsyncMock()
+    spine._safety_degradation = AsyncMock()
+    from app.signals.safety_degradation import SafetyDegradationLevel
+    spine._safety_degradation.get_current_level = AsyncMock(return_value=SafetyDegradationLevel.NORMAL)
+    spine._safety_degradation.get_restricted_capabilities = AsyncMock(return_value=[])
+    spine._high_impact_confirmation = AsyncMock()
+    spine._high_impact_confirmation.is_high_impact = MagicMock(return_value=False)
+    spine._research_isolation = AsyncMock()
+    spine._research_isolation.is_research_allowed = MagicMock(return_value=True)
 
     spine.trace_store.create_trace = AsyncMock(return_value=trace)
     spine.trace_store._save_trace = AsyncMock()
@@ -83,6 +91,14 @@ async def test_spine_orchestrator_registers_expected_outcome():
         user_visible_reason="Test reason",
     )
     spine.policy_engine.evaluate = AsyncMock(return_value=(decision, directive))
+    spine.policy_engine.build_response_directive = MagicMock(return_value=None)
+    spine.policy_engine.build_retrieval_directive = MagicMock(return_value=None)
+    spine.policy_engine.build_plan_directive = MagicMock(return_value=None)
+    spine.policy_engine.build_model_write_directive = MagicMock(return_value=None)
+    spine.policy_engine.build_ux_directive = MagicMock(return_value=None)
+    spine.policy_engine.build_community_directive = MagicMock(return_value=None)
+    spine.policy_engine.build_skill_directive = MagicMock(return_value=None)
+    spine.policy_engine.build_notification_directive = MagicMock(return_value=None)
 
     spine._store_response_directive = AsyncMock()
     spine._store_notification_directive = AsyncMock()
