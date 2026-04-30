@@ -6,6 +6,7 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _AutoMemoryApiService implements MemoryApiService {
   String? lastRetractedId;
@@ -213,6 +214,8 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('memory panel exposes AI auto memory section and revoke action', (
     WidgetTester tester,
   ) async {

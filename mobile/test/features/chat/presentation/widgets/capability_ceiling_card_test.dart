@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/presentation/widgets/capability_ceiling_card.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('CapabilityCeilingCard', () {
     Widget buildWidget(Map<String, dynamic> ceilingData) => MaterialApp(
           home: Scaffold(

@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('RecommendationFeedbackPromptCard renders friend prompt',
       (tester) async {
     final prompt = RecommendationFeedbackPrompt(

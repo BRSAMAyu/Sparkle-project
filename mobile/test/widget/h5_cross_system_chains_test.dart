@@ -16,8 +16,11 @@ import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('chain A opens chat with review node context', (tester) async {
     Map<String, String>? chatQuery;
     Map<String, dynamic>? chatExtra;

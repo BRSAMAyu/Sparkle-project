@@ -7,8 +7,11 @@ import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('S0-COM-01: friend request navigation avoids recursion', () {
     testWidgets('pending invite banner navigates to dedicated requests page',
         (tester) async {

@@ -6,6 +6,7 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _MemorySettingsApiStub implements MemoryApiService {
   _MemorySettingsApiStub(this.settings, this.pushSettings);
@@ -153,6 +154,8 @@ class _MemorySettingsApiStub implements MemoryApiService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   tearDown(() {
     AppFeatureFlags.enableUserMemoryControls = false;
   });

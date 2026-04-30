@@ -4,8 +4,11 @@ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   ExamSprintDashboardData _makeData({

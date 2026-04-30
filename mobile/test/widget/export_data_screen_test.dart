@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/presentation/screens/export_data_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('export data screen gives visible export affordance', (
     tester,
   ) async {

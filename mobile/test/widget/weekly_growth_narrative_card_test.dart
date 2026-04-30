@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('weekly growth narrative card expands concrete data',
       (tester) async {
     const narrative = WeeklyGrowthNarrative(

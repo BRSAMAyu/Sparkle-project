@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/presentation/widgets/context_receipt_bar.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('receipt actions emit corrective prompts', (tester) async {
     String? selectedPrompt;
 

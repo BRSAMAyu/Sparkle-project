@@ -7,8 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_completion_screen.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets(
     'sprint completion screen renders mastered and repaired counts',
     (tester) async {

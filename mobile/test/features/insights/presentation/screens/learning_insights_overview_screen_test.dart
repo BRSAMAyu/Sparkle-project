@@ -9,8 +9,11 @@ import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+  setUp(setUpI18nForTesting);
+
   testWidgets(
       'insights overview shows empty state guidance when there is no data',
       (WidgetTester tester) async {

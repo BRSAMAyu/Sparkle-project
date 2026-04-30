@@ -7,6 +7,7 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeUserRepository implements UserRepository {
   _FakeUserRepository({
@@ -293,6 +294,8 @@ Future<void> _expandSection(WidgetTester tester, String title) async {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{
       kOnboardingCompletedKey: true,

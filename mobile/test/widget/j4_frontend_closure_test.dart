@@ -17,8 +17,11 @@ import 'package:sparkle/features/visual_elements/presentation/widgets/visual_ele
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('J4 frontend closure', () {
     testWidgets('achievement list filters switch without blanking or overflow',
         (tester) async {

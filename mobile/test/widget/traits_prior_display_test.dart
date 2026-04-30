@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/presentation/widgets/traits_prior_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('traits prior card hides when there is no confident trait',
       (tester) async {
     await tester.pumpWidget(

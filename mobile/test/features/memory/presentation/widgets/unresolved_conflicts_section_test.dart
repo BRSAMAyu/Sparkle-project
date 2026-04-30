@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/features/memory/presentation/widgets/unresolved_conflicts_section.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('unresolved conflicts section renders candidates and actions', (
     WidgetTester tester,
   ) async {

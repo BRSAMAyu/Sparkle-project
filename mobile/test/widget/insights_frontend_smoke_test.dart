@@ -16,6 +16,7 @@ import 'package:sparkle/features/theater/data/repositories/theater_repository.da
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/features/theater/presentation/screens/knowledge_theater_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
   @override
@@ -161,6 +162,8 @@ class _StaticTheaterNotifier extends TheaterNotifier {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });

@@ -47,8 +47,11 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {

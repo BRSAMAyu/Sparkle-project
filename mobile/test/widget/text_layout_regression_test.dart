@@ -5,8 +5,11 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('compact text atoms stay stable with long CJK labels',
       (tester) async {
     tester.view.physicalSize = const Size(320, 640);

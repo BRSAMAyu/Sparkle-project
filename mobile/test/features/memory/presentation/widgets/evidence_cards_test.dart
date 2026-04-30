@@ -17,6 +17,7 @@ import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_bad
 import 'package:sparkle/l10n/app_localizations.dart';
 
 import 'evidence_cards_test.mocks.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 // Mock Classes
 @GenerateMocks([
@@ -24,6 +25,8 @@ import 'evidence_cards_test.mocks.dart';
 ])
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('EvidenceCard Tests', () {
     testWidgets('should render evidence card with event payload', (tester) async {
       final item = EvidenceResolveItem(

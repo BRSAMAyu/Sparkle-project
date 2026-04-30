@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+import '../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('normalizeRichText', () {
     test('normalizes CRLF to LF', () {
       expect(

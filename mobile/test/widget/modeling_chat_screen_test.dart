@@ -15,6 +15,7 @@ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart'
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _QueuedChatRepository extends ChatRepository {
   _QueuedChatRepository() : super(Dio(), container: ProviderContainer());
@@ -250,6 +251,8 @@ Future<GoRouter> _pumpModelingScreen(
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ModelingChatScreen', () {

@@ -4,8 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() {
     SharedPreferences.setMockInitialValues({});

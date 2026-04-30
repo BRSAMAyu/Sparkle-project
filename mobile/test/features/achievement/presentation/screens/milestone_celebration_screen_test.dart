@@ -6,8 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/screens/milestone_celebration_screen.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('milestone celebration screen renders mock milestone stats',
       (tester) async {
     await _useTallSurface(tester);

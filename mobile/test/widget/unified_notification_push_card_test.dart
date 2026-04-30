@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('push notification card shows stage18 actions',
       (WidgetTester tester) async {
     var dismissTapped = false;

@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
+import '../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('NodeDetailSheet renders mastery, study count, and errors', (
     tester,
   ) async {

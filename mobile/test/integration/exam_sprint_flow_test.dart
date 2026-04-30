@@ -15,6 +15,7 @@ import 'package:sparkle/features/task/presentation/screens/task_execution_screen
 import 'package:sparkle/features/task/presentation/widgets/task_guide_panel.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 // --- Mock helpers ---
 
@@ -178,6 +179,8 @@ Widget _guidePanelHost(TaskModel task, {ValueChanged<String>? onTrigger}) =>
 // --- Tests ---
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('F22: Exam Sprint end-to-end flow', () {

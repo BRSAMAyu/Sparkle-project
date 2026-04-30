@@ -6,8 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const snapshotEntry = BgmCatalogEntry(

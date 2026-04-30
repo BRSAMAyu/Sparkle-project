@@ -22,6 +22,7 @@ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboa
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _NoopApiClient implements ApiClient {
   @override
@@ -128,6 +129,8 @@ class _QuietAuroraStatusNotifier extends AuroraStatusNotifier {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('review banner renders node label and mastery', (tester) async {

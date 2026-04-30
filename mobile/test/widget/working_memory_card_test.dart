@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/features/user/presentation/widgets/working_memory_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('WorkingMemoryCard renders top working-memory items', (
     tester,
   ) async {

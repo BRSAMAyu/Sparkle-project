@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 
 import '../features/home/dashboard_test_harness.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Dashboard screen structure', () {

@@ -20,8 +20,11 @@ import 'package:sparkle/features/community/presentation/screens/accountability_s
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('accepting invite lands on the active accountability workspace',
       (tester) async {
     final accountabilityRepo = _FakeAccountabilityRepository();

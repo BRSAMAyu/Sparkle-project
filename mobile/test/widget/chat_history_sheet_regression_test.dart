@@ -10,6 +10,7 @@ import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _HistoryFakeRef implements Ref<Object?> {
   @override
@@ -74,6 +75,8 @@ class _HistoryChatNotifier extends ChatNotifier {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {

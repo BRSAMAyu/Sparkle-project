@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('preview card exposes launch prediction action', (tester) async {
     var launched = false;
 

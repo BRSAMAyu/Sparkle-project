@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart';
+import '../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('GalaxyContributionBanner', () {
     testWidgets('starts animated counts from zero before counting up', (
       tester,

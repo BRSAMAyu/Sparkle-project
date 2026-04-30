@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/presentation/widgets/idiographic_summary_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   test('fromProfileContext_returns_null_below_confidence_threshold', () {
     expect(
       IdiographicSummaryCard.fromProfileContext({

@@ -35,8 +35,11 @@ import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.d
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory hiveDir;
 

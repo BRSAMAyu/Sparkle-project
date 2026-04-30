@@ -9,8 +9,11 @@ import 'package:sparkle/features/error_book/data/repositories/error_book_reposit
 import 'package:sparkle/features/error_book/presentation/screens/error_list_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('error book empty state includes action entry', (
     WidgetTester tester,
   ) async {

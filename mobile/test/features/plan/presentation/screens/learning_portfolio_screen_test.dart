@@ -10,8 +10,11 @@ import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('learning portfolio renders grouped sprint sections',
       (WidgetTester tester) async {
     await _useTallSurface(tester);

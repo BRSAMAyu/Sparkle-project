@@ -6,6 +6,7 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _CorrectionApiService implements MemoryApiService {
   _CorrectionApiService(this.result);
@@ -160,6 +161,8 @@ class _CorrectionApiService implements MemoryApiService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
     AppFeatureFlags.enableMemoryCorrection = false;
   });

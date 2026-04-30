@@ -8,6 +8,7 @@ import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _StaticNotificationCenter extends NotificationCenter {
   _StaticNotificationCenter(this._initialState);
@@ -23,6 +24,8 @@ class _StaticNotificationCenter extends NotificationCenter {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('MiroFish wiring finish', () {
     testWidgets(
         'chat bubble renders inline mirofish bridge cards and chat follow-ups',

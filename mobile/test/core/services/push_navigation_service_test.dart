@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/push_navigation_service.dart';
+import '../../shared/i18n_test_helper.dart';
 
 class _FakeInterventionActionService extends InterventionActionService {
   _FakeInterventionActionService() : super(_NoopRef());
@@ -109,6 +110,8 @@ GoRouter _buildRouter() => GoRouter(
     );
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('push navigation service reports seen and navigates to route',
       (tester) async {
     final fakeInterventionService = _FakeInterventionActionService();

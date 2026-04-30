@@ -17,8 +17,11 @@ import 'package:sparkle/features/notification_center/data/models/unified_notific
 import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('overflow regression', () {
     testWidgets('permission dialog stays stable on a compact screen',
         (tester) async {
