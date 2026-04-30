@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
@@ -17,7 +18,6 @@ import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 enum TaskGuidanceAudience { human, ai }
 
@@ -420,15 +420,16 @@ class TaskRepository {
     String taskId,
   ) async {
     if (DemoDataService.isDemoMode) {
+      final zh = I18nService.instance.isChinese;
       return [
-        const ExecutionTemplateModel(
+        ExecutionTemplateModel(
           templateId: 'web_research_brief',
-          name: '网页调研简报',
-          description: '适合搜索与总结',
+          name: zh ? '网页调研简报' : 'Web Research Brief',
+          description: zh ? '适合搜索与总结' : 'Great for search and summarization',
           executionMode: ExecutionMode.agent,
           targetEnv: 'browser',
           matchScore: 0.91,
-          matchReasons: ['keyword:搜索'],
+          matchReasons: zh ? ['keyword:搜索'] : ['keyword:search'],
         ),
       ];
     }
@@ -687,7 +688,11 @@ class TaskRepository {
         updatedAt: DateTime.now(),
         dueDate: task.dueDate,
         guideContent:
-            generateGuide ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段' : null,
+            generateGuide
+                ? (I18nService.instance.isChinese
+                    ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段'
+                    : '# AI Execution Guide\n\n1. Preparation\n2. Execution\n3. Review')
+                : null,
       );
       DemoDataService().demoTasks.add(newTask);
       return newTask;
@@ -718,9 +723,10 @@ class TaskRepository {
           ? [
               TaskNudge(
                 type: 'time_adjustment',
-                title: '检测到规划乐观偏差',
-                message:
-                    '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟',
+                title: I18nService.instance.isChinese ? '检测到规划乐观偏差' : 'Planning optimism bias detected',
+                message: I18nService.instance.isChinese
+                    ? '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟'
+                    : 'Based on your history, consider adjusting the estimate to ${task.estimatedMinutes * 130 ~/ 100} min',
                 suggestedValue: task.estimatedMinutes * 130 ~/ 100,
                 confidence: 0.8,
               ),
@@ -985,7 +991,9 @@ class TaskRepository {
       DemoDataService().demoTasks[existingIndex] = updated;
       return TaskQuickActionResult(
         action: 'snooze',
-        message: '已推迟到明天，今天先把节奏放轻一点。',
+        message: I18nService.instance.isChinese
+            ? '已推迟到明天，今天先把节奏放轻一点。'
+            : 'Snoozed until tomorrow — take it easy today.',
         task: updated,
       );
     }
@@ -1018,39 +1026,40 @@ class TaskRepository {
       }
       final existing = DemoDataService().demoTasks[existingIndex];
       final now = DateTime.now();
+      final zh = I18nService.instance.isChinese;
       final subtasks = [
         SubTaskModel(
           id: 'demo_${id}_step_1',
           parentTaskId: id,
-          title: '先找出最卡的一点',
+          title: zh ? '先找出最卡的一点' : 'Find the single point that blocks you',
           order: 0,
           status: SubTaskStatus.pending,
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 5,
-          guideContent: '只定位卡点，不解决整张任务卡。',
+          guideContent: zh ? '只定位卡点，不解决整张任务卡。' : 'Just locate the block — don\'t solve the whole task.',
         ),
         SubTaskModel(
           id: 'demo_${id}_step_2',
           parentTaskId: id,
-          title: '把这个卡点讲成一句人话',
+          title: zh ? '把这个卡点讲成一句人话' : 'Describe the block in one plain sentence',
           order: 1,
           status: SubTaskStatus.pending,
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 10,
-          guideContent: '先讲清楚，再决定下一步。',
+          guideContent: zh ? '先讲清楚，再决定下一步。' : 'Explain it clearly first, then decide next steps.',
         ),
         SubTaskModel(
           id: 'demo_${id}_step_3',
           parentTaskId: id,
-          title: '做一个最小验证动作',
+          title: zh ? '做一个最小验证动作' : 'Do one smallest verification action',
           order: 2,
           status: SubTaskStatus.pending,
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 10,
-          guideContent: '只验证刚拆出来的这一步。',
+          guideContent: zh ? '只验证刚拆出来的这一步。' : 'Only verify this one sub-step you just broke out.',
         ),
       ];
       final updated = existing.copyWith(
@@ -1066,7 +1075,9 @@ class TaskRepository {
       DemoDataService().demoTasks[existingIndex] = updated;
       return TaskQuickActionResult(
         action: 'too_hard',
-        message: '我把它拆成 3 小步了，先做「${subtasks.first.title}」。',
+        message: zh
+            ? '我把它拆成 3 小步了，先做「${subtasks.first.title}」。'
+            : 'Broke it into 3 small steps — start with "${subtasks.first.title}".',
         task: updated,
         subtasks: subtasks,
       );
@@ -1107,7 +1118,9 @@ class TaskRepository {
       DemoDataService().demoTasks[existingIndex] = updated;
       return TaskQuickActionResult(
         action: 'skip',
-        message: '已跳过，这张卡不会再挤在今天了。',
+        message: I18nService.instance.isChinese
+            ? '已跳过，这张卡不会再挤在今天了。'
+            : 'Skipped — this card won\'t crowd your day anymore.',
         task: updated,
       );
     }
@@ -1125,7 +1138,10 @@ class TaskRepository {
     }
   }
 
-  String _demoGuide(String title) => '''
+  String _demoGuide(String title) {
+    final zh = I18nService.instance.isChinese;
+    if (zh) {
+      return '''
 # $title
 
 ## 🎯 任务目标
@@ -1160,6 +1176,43 @@ class TaskRepository {
 - [ ] 质量达到预期标准
 - [ ] 已记录总结和反思
 ''';
+    }
+    return '''
+# $title
+
+## 🎯 Objective
+Clarify the core output and completion criteria.
+
+## 📋 Preparation
+- [ ] Confirm relevant materials are ready
+- [ ] Set a focused time block
+- [ ] Remove distractions
+
+## 📍 Steps
+
+### Step 1: Understand & Break Down
+- Outline task requirements and key points
+- Break the task into executable sub-steps
+
+### Step 2: Core Execution
+- Complete sub-tasks by priority
+- Record key findings and notes promptly
+
+### Step 3: Review & Summarize
+- Self-check against completion criteria
+- Document lessons learned and improvements
+
+## 💡 Tips
+- Stay focused — try the Pomodoro technique
+- Mark difficult points for later, tackle them together
+- Log your reflection in Sparkle after completion
+
+## ✅ Completion Criteria
+- [ ] Core content completed
+- [ ] Quality meets expected standard
+- [ ] Summary and reflection recorded
+''';
+  }
 
   Future<TaskModel> startTask(String id) async {
     if (DemoDataService.isDemoMode) {
@@ -1200,11 +1253,14 @@ class TaskRepository {
         throw Exception('Task not found in demo data');
       }
       final existing = DemoDataService().demoTasks[existingIndex];
+      final zh = I18nService.instance.isChinese;
       final diagnosis = <String, dynamic>{
-        'diagnosis_question': '你现在最像卡在哪一步？',
-        'diagnosis_options': ['概念没想清', '步骤顺序乱了', '题目条件不会用'],
-        'targeted_fix': '先只做一个 5 分钟内能完成的小动作。',
-        'check_question': '下一步你能先写下哪一句？',
+        'diagnosis_question': zh ? '你现在最像卡在哪一步？' : 'Which step feels most stuck right now?',
+        'diagnosis_options': zh
+            ? ['概念没想清', '步骤顺序乱了', '题目条件不会用']
+            : ['Concept not clear', 'Step order confused', 'Can\'t use given conditions'],
+        'targeted_fix': zh ? '先只做一个 5 分钟内能完成的小动作。' : 'Just do one small action you can finish in 5 minutes.',
+        'check_question': zh ? '下一步你能先写下哪一句？' : 'What can you write down first for the next step?',
         'source': 'demo',
       };
       final updated = existing.copyWith(
@@ -1219,7 +1275,9 @@ class TaskRepository {
       return TaskStuckResult(
         task: updated,
         diagnosis: diagnosis,
-        message: 'Aurora 已根据当前任务状态给出诊断。',
+        message: zh
+            ? 'Aurora 已根据当前任务状态给出诊断。'
+            : 'Aurora has diagnosed based on your current task state.',
       );
     }
 
@@ -1258,29 +1316,30 @@ class TaskRepository {
             );
         DemoDataService().demoTasks[existingIndex] = updated;
         // Demo mode: include mock next actions
+        final zh = I18nService.instance.isChinese;
         return TaskCompletionResult(
           task: updated.toJson(),
           feedback: 'Mock feedback: Great job!',
           flameUpdate: {'level': 15, 'brightness_change': 10},
           statsUpdate: {'total_minutes': 100, 'streak_days': 7},
-          nextActions: const [
+          nextActions: [
             NextAction(
               type: NextActionType.quickReview,
-              title: '快速回顾',
-              description: '回顾刚才的核心要点',
+              title: zh ? '快速回顾' : 'Quick Review',
+              description: zh ? '回顾刚才的核心要点' : 'Review the key points just covered',
               estimatedMinutes: 5,
               energyCost: 1,
               difficulty: 1,
-              reason: '及时回顾对抗遗忘',
+              reason: zh ? '及时回顾对抗遗忘' : 'Timely review combats forgetting',
             ),
             NextAction(
               type: NextActionType.lightExpand,
-              title: '拓展: 相关概念',
-              description: '了解相关知识点',
+              title: zh ? '拓展: 相关概念' : 'Expand: Related Concepts',
+              description: zh ? '了解相关知识点' : 'Explore related knowledge points',
               estimatedMinutes: 10,
               energyCost: 2,
               difficulty: 2,
-              reason: '加深理解',
+              reason: zh ? '加深理解' : 'Deepen understanding',
             ),
           ],
         );
@@ -1380,10 +1439,12 @@ class TaskRepository {
   ) async {
     if (DemoDataService.isDemoMode) {
       // Demo mode: return mock response
-      return const TaskFeedbackResponse(
+      return TaskFeedbackResponse(
         success: true,
-        message: '偏好已更新（演示模式）',
-        preferenceUpdates: PreferenceUpdates(
+        message: I18nService.instance.isChinese
+            ? '偏好已更新（演示模式）'
+            : 'Preferences updated (demo mode)',
+        preferenceUpdates: const PreferenceUpdates(
           depthPreference: 0.02,
           difficultyPreference: -0.01,
         ),
