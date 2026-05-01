@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
@@ -305,11 +304,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         return;
       }
       _applySettings(state.settings!, state.pushSettings!);
-      AppFeedback.success(
-          context,
-          I18nService.instance.isChinese
-              ? '记忆设置已更新'
-              : 'Memory settings updated');
+      AppFeedback.success(context, context.l10n.memSettingsUpdated);
     } catch (e) {
       if (!mounted) {
         return;
@@ -331,7 +326,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
           semanticLabel: context.l10n.memBack,
         ),
         title: Text(
-          I18nService.instance.isChinese ? '记忆控制' : 'Memory Control',
+          context.l10n.memControl,
           style: DS.titleLarge.copyWith(
             color: DS.textPrimary,
             fontWeight: DS.fontWeightBold,
@@ -430,9 +425,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   ),
                   const SizedBox(height: DS.spacing12),
                   Text(
-                    I18nService.instance.isChinese
-                        ? '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。'
-                        : 'Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.',
+                    context.l10n.memControlDesc,
                     style: DS.bodyMedium.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -466,9 +459,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    I18nService.instance.isChinese
-                        ? '社交语义子开关'
-                        : 'Social Semantic Toggles',
+                    context.l10n.memSocialToggles,
                     style: DS.titleMedium.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
@@ -476,9 +467,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   ),
                   const SizedBox(height: DS.sm),
                   Text(
-                    I18nService.instance.isChinese
-                        ? 'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。'
-                        : 'Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.',
+                    context.l10n.memSocialTogglesDesc,
                     style: DS.bodySmall.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -528,9 +517,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle(
-                    I18nService.instance.isChinese
-                        ? '主动提醒'
-                        : 'Proactive Reminders',
+                    context.l10n.memProactiveReminders,
                     subtitle: context.l10n.memCommitmentStageNote,
                   ),
                   _buildToggleRow(
@@ -559,7 +546,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                   ),
                   const SizedBox(height: DS.md),
                   _buildSectionTitle(
-                    I18nService.instance.isChinese ? '静默时段' : 'Quiet Hours',
+                    context.l10n.memQuietHours,
                     subtitle: context.l10n.memQuietHoursNote,
                   ),
                   _buildChoiceGroup(
@@ -584,9 +571,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          I18nService.instance.isChinese
-                              ? '当前时区：$_pushTimezone'
-                              : 'Timezone: $_pushTimezone',
+                          context.l10n.memCurrentTimezone(_pushTimezone),
                           style: DS.bodySmall.copyWith(
                             color: DS.textSecondary,
                           ),
@@ -610,7 +595,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle(
-                    I18nService.instance.isChinese ? '记忆类型' : 'Memory Types',
+                    context.l10n.memTypes,
                     subtitle: context.l10n.memDecideWhat,
                   ),
                   _buildToggleRow(
@@ -658,21 +643,19 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle(
-                    I18nService.instance.isChinese
-                        ? '捕获强度'
-                        : 'Capture Intensity',
+                    context.l10n.memCaptureIntensity,
                     subtitle: context.l10n.memSensitivityNote,
                   ),
                   Wrap(
                     spacing: DS.spacing8,
                     runSpacing: DS.spacing8,
                     children: [
-                      ('low', I18nService.instance.isChinese ? '低' : 'Low'),
+                      ('low', context.l10n.memCaptureLow),
                       (
                         'medium',
-                        I18nService.instance.isChinese ? '中' : 'Medium'
+                        context.l10n.memCaptureMedium
                       ),
-                      ('high', I18nService.instance.isChinese ? '高' : 'High'),
+                      ('high', context.l10n.memCaptureHigh),
                     ].map((entry) {
                       final value = entry.$1;
                       final label = entry.$2;
@@ -701,9 +684,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle(
-                    I18nService.instance.isChinese
-                        ? '屏蔽偏好'
-                        : 'Blocking Preferences',
+                    context.l10n.memBlockingPrefs,
                     subtitle: context.l10n.memExcludeNote,
                   ),
                   Wrap(
@@ -733,7 +714,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle(
-                    I18nService.instance.isChinese ? '屏蔽来源' : 'Blocked Sources',
+                    context.l10n.memBlockedSources,
                     subtitle: context.l10n.memSourceLimit,
                   ),
                   Wrap(

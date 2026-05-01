@@ -66,6 +66,7 @@ class DualCoreRoutingInput:
     capsule_preferences: dict[str, Any] = field(default_factory=dict)
     spine_active_states: list[dict[str, Any]] = field(default_factory=list)
     aurora_preferences: dict[str, str] = field(default_factory=dict)
+    recent_corrections: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -438,6 +439,31 @@ class DualCoreRouter:
         aurora_explanation = str(aurora_prefs.get("aurora_explanation_level", "detailed"))
         aurora_analysis = str(aurora_prefs.get("aurora_analysis_depth", "deep"))
 
+        # ── Recent corrections bridge (BP1) ──
+        recent_corrections = routing_input.recent_corrections or []
+        corrections_count = len(recent_corrections)
+        corrections_addressed_topics: set[str] = set()
+        for correction in recent_corrections:
+            topic = str(correction.get("correction_type") or correction.get("topic") or "").strip().lower()
+            if topic:
+                corrections_addressed_topics.add(topic)
+        if corrections_count >= 3:
+            cognitive_adjustments.append(
+                "用户近期被多次校准，优先确认校准是否已经生效，避免重复纠正。"
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="Multiple recent corrections suggest the system should pause and verify calibration before pushing more changes.",
+            )
+        if "difficulty_mismatch" in corrections_addressed_topics:
+            execution_constraints.append("用户曾校准过难度判断，本轮任务难度应基于校准后的标准。")
+            recommend_strategy(
+                "difficulty_level",
+                2,
+                reason="Prior difficulty correction should cap task difficulty at a user-validated level.",
+            )
+
         if aurora_directness == "direct":
             recommend_strategy(
                 "directness_mode",
@@ -571,6 +597,8 @@ class DualCoreRouter:
                 "explanation": aurora_explanation,
                 "analysis": aurora_analysis,
             },
+            "corrections_count": corrections_count,
+            "corrections_topics": sorted(corrections_addressed_topics),
         }
         if social_signals is not None:
             routing_debug["social_relationship_count"] = social_signals.relationship_count

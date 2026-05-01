@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -8,8 +9,10 @@ from typing import Any
 from loguru import logger
 
 SPARKLE_SELF_MODEL_KEY_TEMPLATE = "aurora:self_model:{user_id}"
-SPARKLE_SELF_MODEL_TTL_SECONDS = 30 * 24 * 60 * 60
+SPARKLE_SELF_MODEL_TTL_SECONDS = 90 * 24 * 60 * 60  # 90 days to cover semester breaks
 SPARKLE_SELF_MODEL_DAILY_RECAP_TTL_SECONDS = 24 * 60 * 60
+_SPINE_SELF_MODEL_PG_SURFACE = "self_model"
+_SPINE_SELF_MODEL_PG_CONV_ID = "self_model_persist"
 DEFAULT_STRATEGY_CONFIDENCE = 0.7
 DEFAULT_EFFECTIVENESS_RATE = 0.7
 _DAILY_RECAP_WORKING_THRESHOLD = 0.8
@@ -21,18 +24,26 @@ _TASK_SHAPE_STRUGGLING = "struggling"
 _DAILY_TIME_ASSUMPTION = "daily_available_time"
 _DURATION_ASSUMPTION = "task_duration_fit"
 _DIFFICULTY_ASSUMPTION = "task_difficulty_fit"
+_PRESSURE_ASSUMPTION = "pressure_level_fit"
+_EMOTIONAL_ASSUMPTION = "emotional_state_fit"
 _DEFAULT_ASSUMPTION_IDS = (
     _DAILY_TIME_ASSUMPTION,
     _DURATION_ASSUMPTION,
     _DIFFICULTY_ASSUMPTION,
+    _PRESSURE_ASSUMPTION,
+    _EMOTIONAL_ASSUMPTION,
 )
 _ASSUMPTION_DEFAULTS = {
     _DAILY_TIME_ASSUMPTION: "用户每天可稳定投入当前计划预估的学习时长",
     _DURATION_ASSUMPTION: "当前推荐的任务时长与用户实际节奏匹配",
     _DIFFICULTY_ASSUMPTION: "当前推荐的任务难度与用户当前基础匹配",
+    _PRESSURE_ASSUMPTION: "当前系统施加的催促/压力强度与用户承受水平匹配",
+    _EMOTIONAL_ASSUMPTION: "系统对用户情绪状态的判断与用户实际感受匹配",
 }
 _TIME_KEYWORDS = ("时间", "分钟", "小时", "daily", "time", "schedule", "90")
 _DIFFICULTY_KEYWORDS = ("难", "太难", "简单", "太简单", "基础", "难度", "difficulty", "baseline")
+_PRESSURE_KEYWORDS = ("压力", "催", "逼", "太紧", "太多", "负荷", "超载", "扛不住", "喘不过气", "压力太大", "push", "pressure", "overwhelm")
+_EMOTIONAL_KEYWORDS = ("焦虑", "烦躁", "心情", "情绪", "不开心", "低落", "人际", "社交", "关系", "孤独", "累", "疲惫", "emo", "心情不好", "压力大")
 _MAX_EVIDENCE_ITEMS = 5
 _MAX_SIGNAL_IDS = 100
 _LOW_CONFIDENCE_THRESHOLD = 0.45
@@ -87,9 +98,11 @@ class SparkleSelfModelService:
         redis_client=None,
         *,
         ttl_seconds: int = SPARKLE_SELF_MODEL_TTL_SECONDS,
+        db_session=None,
     ) -> None:
         self.redis = redis_client
         self.ttl_seconds = int(ttl_seconds)
+        self.db_session = db_session
 
     def redis_key(self, user_id: str) -> str:
         return SPARKLE_SELF_MODEL_KEY_TEMPLATE.format(user_id=str(user_id))
@@ -242,6 +255,10 @@ class SparkleSelfModelService:
             targeted.append(_DAILY_TIME_ASSUMPTION)
         if any(token in lowered for token in _DIFFICULTY_KEYWORDS):
             targeted.append(_DIFFICULTY_ASSUMPTION)
+        if any(token in lowered for token in _PRESSURE_KEYWORDS):
+            targeted.append(_PRESSURE_ASSUMPTION)
+        if any(token in lowered for token in _EMOTIONAL_KEYWORDS):
+            targeted.append(_EMOTIONAL_ASSUMPTION)
         if not targeted:
             targeted = [_DAILY_TIME_ASSUMPTION, _DURATION_ASSUMPTION]
 
@@ -304,6 +321,10 @@ class SparkleSelfModelService:
             return self._default_state(user_id)
 
         if not raw:
+            pg_state = await self._restore_from_pg(user_id)
+            if pg_state is not None:
+                await self._persist(user_id=user_id, state=pg_state)
+                return pg_state
             state = self._default_state(user_id)
             await self._persist(user_id=user_id, state=state)
             return state
@@ -421,17 +442,100 @@ class SparkleSelfModelService:
         return state
 
     async def _persist(self, *, user_id: str, state: dict[str, Any]) -> None:
-        if self.redis is None:
-            return
         state["updated_at"] = _utcnow().isoformat()
+        if self.redis is not None:
+            try:
+                await self.redis.setex(
+                    self.redis_key(user_id),
+                    self.ttl_seconds,
+                    json.dumps(state, ensure_ascii=False, default=str),
+                )
+            except Exception as exc:
+                logger.warning("Sparkle self model persist failed for {}: {}", user_id, exc)
+        if self.db_session is not None:
+            await self._backup_to_pg(user_id=user_id, state=state)
+
+    async def _backup_to_pg(self, *, user_id: str, state: dict[str, Any]) -> None:
         try:
-            await self.redis.setex(
-                self.redis_key(user_id),
-                self.ttl_seconds,
-                json.dumps(state, ensure_ascii=False, default=str),
+            from sqlalchemy import select as sa_select
+
+            from app.aurora.runtime_v1.models import AuroraStateSnapshot
+
+            uid = uuid.UUID(user_id) if not isinstance(user_id, uuid.UUID) else user_id
+            stmt = sa_select(AuroraStateSnapshot).where(
+                AuroraStateSnapshot.user_id == uid,
+                AuroraStateSnapshot.surface == _SPINE_SELF_MODEL_PG_SURFACE,
+                AuroraStateSnapshot.conversation_id == _SPINE_SELF_MODEL_PG_CONV_ID,
             )
+            result = await self.db_session.execute(stmt)
+            existing = result.scalar_one_or_none()
+
+            snapshot_data = {
+                "version": state.get("version"),
+                "strategy_confidence": state.get("strategy_confidence"),
+                "known_assumptions": state.get("known_assumptions"),
+                "harness_effectiveness": state.get("harness_effectiveness"),
+                "failure_streak": state.get("failure_streak"),
+                "recalibration": state.get("recalibration"),
+                "updated_at": state.get("updated_at"),
+            }
+
+            if existing is not None:
+                existing.user_model_snapshot = snapshot_data
+                existing.snapshot_at = _utcnow()
+                existing.snapshot_version = (existing.snapshot_version or 0) + 1
+            else:
+                self.db_session.add(
+                    AuroraStateSnapshot(
+                        user_id=uid,
+                        surface=_SPINE_SELF_MODEL_PG_SURFACE,
+                        conversation_id=_SPINE_SELF_MODEL_PG_CONV_ID,
+                        snapshot_at=_utcnow(),
+                        snapshot_version=1,
+                        user_model_snapshot=snapshot_data,
+                        informational_tensions=[],
+                        latent_threads=[],
+                        activity_profile={},
+                    )
+                )
+            await self.db_session.flush()
         except Exception as exc:
-            logger.warning("Sparkle self model persist failed for {}: {}", user_id, exc)
+            logger.debug("Sparkle self model PG backup skipped for {}: {}", user_id, exc)
+
+    async def _restore_from_pg(self, user_id: str) -> dict[str, Any] | None:
+        if self.db_session is None:
+            return None
+        try:
+            from sqlalchemy import select as sa_select
+
+            from app.aurora.runtime_v1.models import AuroraStateSnapshot
+
+            uid = uuid.UUID(user_id) if not isinstance(user_id, uuid.UUID) else user_id
+            stmt = sa_select(AuroraStateSnapshot).where(
+                AuroraStateSnapshot.user_id == uid,
+                AuroraStateSnapshot.surface == _SPINE_SELF_MODEL_PG_SURFACE,
+                AuroraStateSnapshot.conversation_id == _SPINE_SELF_MODEL_PG_CONV_ID,
+            ).order_by(AuroraStateSnapshot.snapshot_at.desc())
+            result = await self.db_session.execute(stmt)
+            row = result.scalar_one_or_none()
+            if row is None or not isinstance(row.user_model_snapshot, dict):
+                return None
+            snapshot = row.user_model_snapshot
+            state = self._default_state(user_id)
+            state["strategy_confidence"] = _clamp_unit(
+                snapshot.get("strategy_confidence", DEFAULT_STRATEGY_CONFIDENCE),
+                default=DEFAULT_STRATEGY_CONFIDENCE,
+            )
+            state["known_assumptions"] = snapshot.get("known_assumptions", state["known_assumptions"])
+            state["harness_effectiveness"] = snapshot.get("harness_effectiveness", state["harness_effectiveness"])
+            state["failure_streak"] = _safe_int(snapshot.get("failure_streak"))
+            state["recalibration"] = snapshot.get("recalibration", state["recalibration"])
+            state["restored_from_pg"] = True
+            logger.info("Sparkle self model restored from PG for user {}", user_id)
+            return state
+        except Exception as exc:
+            logger.debug("Sparkle self model PG restore failed for {}: {}", user_id, exc)
+            return None
 
     async def _refresh_ttl(self, user_id: str) -> None:
         if self.redis is None or not hasattr(self.redis, "expire"):

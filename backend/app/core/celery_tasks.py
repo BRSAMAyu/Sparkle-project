@@ -2594,3 +2594,80 @@ def spine_auto_deprecate_skills(self, limit: int = 500):
     except Exception as exc:
         logger.error("spine_auto_deprecate_skills failed: %s", exc)
         raise self.retry(exc=exc, countdown=120) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.apply_memory_decay")
+def apply_memory_decay(self, batch_size: int = 200):
+    """Apply time-based decay to episodic memories with decay_policy.
+
+    Policies:
+      - "30d": half-life 30 days, archive when importance_score < 0.15
+      - "60d": half-life 60 days, archive when importance_score < 0.15
+      - "90d": half-life 90 days, archive when importance_score < 0.10
+
+    Runs daily. Only processes memories with a decay_policy that are not
+    already archived.
+    """
+
+    async def _run():
+        import uuid
+        from datetime import timedelta
+
+        from sqlalchemy import select, update
+
+        from app.core.redis_client import get_redis
+        from app.models.memory import EpisodicMemory
+
+        redis = get_redis()
+        from app.core.db import async_session_factory
+
+        async with async_session_factory() as session:
+            now = datetime.now(UTC)
+            policies = {
+                "30d": {"half_life_days": 30, "archive_threshold": 0.15},
+                "60d": {"half_life_days": 60, "archive_threshold": 0.15},
+                "90d": {"half_life_days": 90, "archive_threshold": 0.10},
+            }
+
+            total_decayed = 0
+            total_archived = 0
+
+            for policy_name, config in policies.items():
+                stmt = (
+                    select(EpisodicMemory)
+                    .where(
+                        EpisodicMemory.decay_policy == policy_name,
+                        EpisodicMemory.archived_at.is_(None),
+                        EpisodicMemory.importance_score.isnot(None),
+                    )
+                    .limit(batch_size)
+                )
+                result = await session.execute(stmt)
+                rows = result.scalars().all()
+
+                import math
+
+                for row in rows:
+                    if not row.occurred_at:
+                        continue
+                    age_days = max(0, (now.replace(tzinfo=None) - row.occurred_at).total_seconds() / 86400)
+                    half_life = config["half_life_days"]
+                    decay_factor = math.pow(0.5, age_days / half_life)
+                    new_score = round((row.importance_score or 0.5) * decay_factor, 4)
+                    row.importance_score = max(0.0, new_score)
+                    total_decayed += 1
+
+                    if new_score < config["archive_threshold"]:
+                        row.archived_at = now.replace(tzinfo=None)
+                        total_archived += 1
+
+                if rows:
+                    await session.commit()
+
+            return {"decayed": total_decayed, "archived": total_archived}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("apply_memory_decay failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300) from exc

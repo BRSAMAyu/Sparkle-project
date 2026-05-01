@@ -189,6 +189,20 @@ class RoutingEngineMixin:
         return candidates[0] if candidates else {}
 
     @staticmethod
+    def _extract_recent_corrections(user_context_payload: dict[str, Any] | None) -> list[dict[str, Any]]:
+        if not isinstance(user_context_payload, dict):
+            return []
+        raw = user_context_payload.get("recent_corrections")
+        if isinstance(raw, list):
+            return [item for item in raw if isinstance(item, dict)]
+        cognitive_context = user_context_payload.get("cognitive_context")
+        if isinstance(cognitive_context, dict):
+            raw = cognitive_context.get("recent_corrections")
+            if isinstance(raw, list):
+                return [item for item in raw if isinstance(item, dict)]
+        return []
+
+    @staticmethod
     def _extract_behavior_pattern_names(
         plan_context: dict[str, Any] | None,
     ) -> list[str]:
@@ -752,6 +766,7 @@ class RoutingEngineMixin:
             capsule_preferences=self._extract_capsule_preferences(user_context_payload),
             spine_active_states=await self._get_spine_active_states(user_id),
             aurora_preferences=aurora_preferences,
+            recent_corrections=self._extract_recent_corrections(user_context_payload),
         )
 
     async def _build_metacognition_hint(

@@ -43927,6 +43927,96 @@ abstract class AppLocalizations {
   /// **'跳过'**
   String get memSkip;
 
+  /// No description provided for @memSettingsUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory settings updated'**
+  String get memSettingsUpdated;
+
+  /// No description provided for @memControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory Control'**
+  String get memControl;
+
+  /// No description provided for @memControlDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.'**
+  String get memControlDesc;
+
+  /// No description provided for @memSocialToggles.
+  ///
+  /// In en, this message translates to:
+  /// **'Social Semantic Toggles'**
+  String get memSocialToggles;
+
+  /// No description provided for @memSocialTogglesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.'**
+  String get memSocialTogglesDesc;
+
+  /// No description provided for @memProactiveReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Proactive Reminders'**
+  String get memProactiveReminders;
+
+  /// No description provided for @memQuietHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet Hours'**
+  String get memQuietHours;
+
+  /// No description provided for @memCurrentTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Timezone: {timezone}'**
+  String memCurrentTimezone(String timezone);
+
+  /// No description provided for @memTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory Types'**
+  String get memTypes;
+
+  /// No description provided for @memCaptureIntensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture Intensity'**
+  String get memCaptureIntensity;
+
+  /// No description provided for @memCaptureLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get memCaptureLow;
+
+  /// No description provided for @memCaptureMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get memCaptureMedium;
+
+  /// No description provided for @memCaptureHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get memCaptureHigh;
+
+  /// No description provided for @memBlockingPrefs.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocking Preferences'**
+  String get memBlockingPrefs;
+
+  /// No description provided for @memBlockedSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked Sources'**
+  String get memBlockedSources;
+
   /// No description provided for @seedDetailFailed.
   ///
   /// In zh, this message translates to:

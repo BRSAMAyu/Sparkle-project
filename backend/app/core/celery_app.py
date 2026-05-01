@@ -1180,6 +1180,12 @@ celery_app.conf.beat_schedule = {
         "args": (200,),
         "options": {"queue": "low_priority"},
     },
+    "memory-decay": {
+        "task": "app.core.celery_tasks.apply_memory_decay",
+        "schedule": crontab(hour=3, minute=30),
+        "args": (200,),
+        "options": {"queue": "low_priority"},
+    },
 }
 
 

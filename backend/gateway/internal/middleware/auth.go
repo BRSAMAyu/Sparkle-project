@@ -15,9 +15,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
+	"go.uber.org/zap"
 )
 
 const (
@@ -227,15 +230,49 @@ type apiErrorResponse struct {
 	RequestID string `json:"request_id,omitempty"`
 }
 
+var middlewareSanitizedErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "sparkle_gateway_middleware_errors_total",
+	Help: "Total middleware error responses (auth, admin, etc.) sanitized before returning to clients.",
+}, []string{"status_code", "code", "category"})
+
 func abortWithAPIError(c *gin.Context, status int, code string, message string) {
 	if code == "" {
 		code = middlewareErrorCode(status)
 	}
+	category := middlewareErrorCategory(status)
+	middlewareSanitizedErrorsTotal.WithLabelValues(strconv.Itoa(status), code, category).Inc()
+
+	if message != "" {
+		fields := []zap.Field{
+			zap.Int("status", status),
+			zap.String("code", code),
+			zap.String("category", category),
+			zap.String("internal_message", message),
+			zap.String("request_id", requestIDFromContext(c)),
+		}
+		zap.L().Warn("middleware error response", fields...)
+	}
+
 	c.AbortWithStatusJSON(status, apiErrorResponse{
 		Error:     middlewareErrorMessage(c, status, message),
 		ErrorCode: code,
 		RequestID: requestIDFromContext(c),
 	})
+}
+
+func middlewareErrorCategory(statusCode int) string {
+	switch {
+	case statusCode >= 500:
+		return "server_error"
+	case statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden:
+		return "auth_error"
+	case statusCode == http.StatusNotFound:
+		return "not_found"
+	case statusCode >= 400:
+		return "client_error"
+	default:
+		return "unknown"
+	}
 }
 
 func middlewareErrorMessage(c *gin.Context, status int, message string) string {

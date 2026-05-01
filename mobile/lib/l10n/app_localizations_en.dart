@@ -25044,6 +25044,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memSkip => 'Skip';
 
   @override
+  String get memSettingsUpdated => 'Memory settings updated';
+
+  @override
+  String get memControl => 'Memory Control';
+
+  @override
+  String get memControlDesc => 'Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.';
+
+  @override
+  String get memSocialToggles => 'Social Semantic Toggles';
+
+  @override
+  String get memSocialTogglesDesc => 'Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.';
+
+  @override
+  String get memProactiveReminders => 'Proactive Reminders';
+
+  @override
+  String get memQuietHours => 'Quiet Hours';
+
+  @override
+  String memCurrentTimezone(String timezone) => 'Timezone: $timezone';
+
+  @override
+  String get memTypes => 'Memory Types';
+
+  @override
+  String get memCaptureIntensity => 'Capture Intensity';
+
+  @override
+  String get memCaptureLow => 'Low';
+
+  @override
+  String get memCaptureMedium => 'Medium';
+
+  @override
+  String get memCaptureHigh => 'High';
+
+  @override
+  String get memBlockingPrefs => 'Blocking Preferences';
+
+  @override
+  String get memBlockedSources => 'Blocked Sources';
+
+  @override
   String get seedDetailFailed =>
       'Failed to load seed library details. Please try again.';
 

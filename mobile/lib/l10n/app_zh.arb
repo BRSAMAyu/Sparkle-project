@@ -10078,6 +10078,26 @@
   "memOpenRelatedChat": "打开相关对话",
   "memOpenOriginalChat": "打开原对话",
   "memSkip": "跳过",
+  "memSettingsUpdated": "记忆设置已更新",
+  "memControl": "记忆控制",
+  "memControlDesc": "控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。",
+  "memSocialToggles": "社交语义子开关",
+  "memSocialTogglesDesc": "Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。",
+  "memProactiveReminders": "主动提醒",
+  "memQuietHours": "静默时段",
+  "memCurrentTimezone": "当前时区：{timezone}",
+  "@memCurrentTimezone": {
+    "placeholders": [
+      {"name": "timezone", "type": "String"}
+    ]
+  },
+  "memTypes": "记忆类型",
+  "memCaptureIntensity": "捕获强度",
+  "memCaptureLow": "低",
+  "memCaptureMedium": "中",
+  "memCaptureHigh": "高",
+  "memBlockingPrefs": "屏蔽偏好",
+  "memBlockedSources": "屏蔽来源",
   "seedDetailFailed": "种子库详情加载失败，请稍后再试",
   "seedStateFailed": "种子库状态加载失败，请稍后再试",
   "seedCreateFailed": "创建失败：{e}",

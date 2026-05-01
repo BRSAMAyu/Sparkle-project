@@ -565,7 +565,7 @@ class CognitiveService:
             logger.info(f"Successfully analyzed fragment {fragment_id}")
             return analysis
 
-        except Exception as e:
+        except (SQLAlchemyError, ValueError, TypeError, AttributeError, KeyError, asyncio.TimeoutError) as e:
             logger.exception(f"Error during behavior analysis for {fragment_id}: {e}")
             fragment.analysis_status = AnalysisStatus.FAILED
             fragment.error_message = str(e)[:200]

@@ -24011,6 +24011,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memSkip => '跳过';
 
   @override
+  String get memSettingsUpdated => '记忆设置已更新';
+
+  @override
+  String get memControl => '记忆控制';
+
+  @override
+  String get memControlDesc => '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。';
+
+  @override
+  String get memSocialToggles => '社交语义子开关';
+
+  @override
+  String get memSocialTogglesDesc => 'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。';
+
+  @override
+  String get memProactiveReminders => '主动提醒';
+
+  @override
+  String get memQuietHours => '静默时段';
+
+  @override
+  String memCurrentTimezone(String timezone) => '当前时区：$timezone';
+
+  @override
+  String get memTypes => '记忆类型';
+
+  @override
+  String get memCaptureIntensity => '捕获强度';
+
+  @override
+  String get memCaptureLow => '低';
+
+  @override
+  String get memCaptureMedium => '中';
+
+  @override
+  String get memCaptureHigh => '高';
+
+  @override
+  String get memBlockingPrefs => '屏蔽偏好';
+
+  @override
+  String get memBlockedSources => '屏蔽来源';
+
+  @override
   String get seedDetailFailed => '种子库详情加载失败，请稍后再试';
 
   @override

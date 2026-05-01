@@ -220,7 +220,13 @@ class ContextPruner:
         if message.get("tool_calls") or message.get("tool_results"):
             return True
         content = str(message.get("content") or "")
-        high_priority_keywords = ["计划", "任务", "阶段", "里程碑", "目标", "记住", "注意", "修改", "变更"]
+        high_priority_keywords = [
+            "计划", "任务", "阶段", "里程碑", "目标", "记住", "注意", "修改", "变更",
+            "焦虑", "压力", "紧张", "担心", "害怕", "崩溃", "烦躁", "失落",
+            "开心", "高兴", "激动", "兴奋", "成就感",
+            "卡住", "不理解", "不懂", "迷茫", "困惑",
+            "想放弃", "放弃", "坚持", "动力",
+        ]
         return any(keyword in content for keyword in high_priority_keywords)
 
     def _is_anchor_message(self, message: dict[str, Any]) -> bool:

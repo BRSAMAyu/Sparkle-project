@@ -10711,6 +10711,26 @@
   "memOpenRelatedChat": "Open Related Chat",
   "memOpenOriginalChat": "Open Original Chat",
   "memSkip": "Skip",
+  "memSettingsUpdated": "Memory settings updated",
+  "memControl": "Memory Control",
+  "memControlDesc": "Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.",
+  "memSocialToggles": "Social Semantic Toggles",
+  "memSocialTogglesDesc": "Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.",
+  "memProactiveReminders": "Proactive Reminders",
+  "memQuietHours": "Quiet Hours",
+  "memCurrentTimezone": "Timezone: {timezone}",
+  "@memCurrentTimezone": {
+    "placeholders": [
+      {"name": "timezone", "type": "String"}
+    ]
+  },
+  "memTypes": "Memory Types",
+  "memCaptureIntensity": "Capture Intensity",
+  "memCaptureLow": "Low",
+  "memCaptureMedium": "Medium",
+  "memCaptureHigh": "High",
+  "memBlockingPrefs": "Blocking Preferences",
+  "memBlockedSources": "Blocked Sources",
   "seedDetailFailed": "Failed to load seed library details. Please try again.",
   "seedStateFailed": "Failed to load seed library state. Please try again.",
   "seedCreateFailed": "Create failed: {e}",

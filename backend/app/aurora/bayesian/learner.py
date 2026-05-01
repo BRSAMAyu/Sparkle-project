@@ -16,6 +16,11 @@ AURORA_POLICY_SOURCE_STATE = "aurora_runtime_policy"
 AURORA_TARGET_VISIBLE_INTERVENTION = "visible_intervention"
 AURORA_TARGET_HOLD = "hold"
 
+# Warm-started prior: assumes moderate initial success (mean ≈ 0.67)
+# This accelerates cold-start by making the posterior respond faster to early observations.
+_COLD_START_ALPHA = 2.0
+_COLD_START_BETA = 1.0
+
 _VISIBLE_ACTIONS = {
     "emit_message",
     "soft_return_topic",
@@ -124,7 +129,7 @@ class AuroraBayesianLearner:
         learner = PersistentBayesianLearner(self.redis, user_id=user_id)
         ranked = await learner.rank_targets(source_state, [target])
         if not ranked:
-            return AuroraPosterior(target=target, alpha=1.0, beta=1.0)
+            return AuroraPosterior(target=target, alpha=_COLD_START_ALPHA, beta=_COLD_START_BETA)
         stats = ranked[0]
         return AuroraPosterior(
             target=target,
@@ -137,12 +142,13 @@ class AuroraBayesianLearner:
 
         posterior = await self.get_posterior(user_id=user_id)
         if posterior.observations <= 0:
+            warm_mean = _COLD_START_ALPHA / (_COLD_START_ALPHA + _COLD_START_BETA)
             return {
                 "target": posterior.target,
                 "observations": 0,
                 "posterior_mean": posterior.mean,
                 "posterior_uncertainty": posterior.uncertainty,
-                "calibrated_confidence": None,
+                "calibrated_confidence": round(warm_mean * 0.85, 4),
             }
 
         calibrated = posterior.mean * (1.0 - 0.35 * posterior.uncertainty)
