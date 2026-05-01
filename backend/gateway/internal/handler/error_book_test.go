@@ -17,6 +17,7 @@ import (
 func TestWriteGRPCError_InvalidArgument(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		writeGRPCError(c, grpcstatus.Error(codes.InvalidArgument, "bad request"))
 	})
@@ -34,6 +35,7 @@ func TestWriteGRPCError_InvalidArgument(t *testing.T) {
 func TestWriteGRPCError_NotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		writeGRPCError(c, grpcstatus.Error(codes.NotFound, "not found"))
 	})
@@ -46,6 +48,7 @@ func TestWriteGRPCError_NotFound(t *testing.T) {
 func TestWriteGRPCError_Unauthenticated(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		writeGRPCError(c, grpcstatus.Error(codes.Unauthenticated, "no auth"))
 	})
@@ -58,6 +61,7 @@ func TestWriteGRPCError_Unauthenticated(t *testing.T) {
 func TestWriteGRPCError_PermissionDenied(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		writeGRPCError(c, grpcstatus.Error(codes.PermissionDenied, "forbidden"))
 	})
@@ -70,6 +74,7 @@ func TestWriteGRPCError_PermissionDenied(t *testing.T) {
 func TestWriteGRPCError_InternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		writeGRPCError(c, grpcstatus.Error(codes.Internal, "boom"))
 	})
@@ -82,6 +87,7 @@ func TestWriteGRPCError_InternalError(t *testing.T) {
 func TestWriteGRPCError_NonGRPCErrors(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		writeGRPCError(c, assert.AnError)
 	})
@@ -94,6 +100,7 @@ func TestWriteGRPCError_NonGRPCErrors(t *testing.T) {
 func TestInjectAuthContext_SetsBearerToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		c.Set("auth_token", "my-jwt-token")
 		injectAuthContext(c)
@@ -108,6 +115,7 @@ func TestInjectAuthContext_SetsBearerToken(t *testing.T) {
 func TestInjectAuthContext_NoToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		injectAuthContext(c)
 		c.Status(200)
@@ -122,6 +130,7 @@ func TestErrorBookHandler_CreateError_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := NewErrorBookHandler(nil)
 	r := gin.New()
+	// route-tier: internal
 	r.POST("/errors", func(c *gin.Context) {
 		c.Set("user_id", "user-123")
 		c.Next()

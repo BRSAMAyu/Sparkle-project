@@ -227,6 +227,7 @@ func TestAppleLogin_MissingProvider(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := testAuthHandler()
 	r := gin.New()
+	// route-tier: internal
 	r.POST("/auth/apple", h.AppleLogin)
 
 	body := `{"token": "abc"}`
@@ -242,6 +243,7 @@ func TestAppleLogin_UnsupportedProvider(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := testAuthHandler()
 	r := gin.New()
+	// route-tier: internal
 	r.POST("/auth/apple", h.AppleLogin)
 
 	body := `{"provider": "google", "token": "abc"}`
@@ -261,6 +263,7 @@ func TestAppleLogin_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := testAuthHandler()
 	r := gin.New()
+	// route-tier: internal
 	r.POST("/auth/apple", h.AppleLogin)
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/apple", newTestReader(`{invalid`))
@@ -275,6 +278,7 @@ func TestAppleLogin_MissingToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := testAuthHandler()
 	r := gin.New()
+	// route-tier: internal
 	r.POST("/auth/apple", h.AppleLogin)
 
 	body := `{"provider": "apple"}`

@@ -15,6 +15,7 @@ import (
 func TestHealthHandler_Liveness(t *testing.T) {
 	h := NewHealthHandler(nil, nil, nil, "test-version")
 	r := gin.New()
+		// route-tier: internal
 	r.GET("/healthz", h.handleLiveness)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -30,6 +31,7 @@ func TestHealthHandler_Liveness(t *testing.T) {
 func TestHealthHandler_LivenessAlt(t *testing.T) {
 	h := NewHealthHandler(nil, nil, nil, "test-version")
 	r := gin.New()
+		// route-tier: internal
 	r.GET("/live", h.handleLiveness)
 
 	req := httptest.NewRequest(http.MethodGet, "/live", nil)
@@ -42,6 +44,7 @@ func TestHealthHandler_LivenessAlt(t *testing.T) {
 func TestHealthHandler_Readiness_NoDeps(t *testing.T) {
 	h := NewHealthHandler(nil, nil, nil, "test-version")
 	r := gin.New()
+		// route-tier: internal
 	r.GET("/readyz", h.handleReadiness)
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
@@ -79,6 +82,7 @@ func TestHealthHandler_RegisterRoutes(t *testing.T) {
 func TestHealthHandler_DetailedHealth(t *testing.T) {
 	h := NewHealthHandler(nil, nil, nil, "test-version")
 	r := gin.New()
+		// route-tier: internal
 	r.GET("/health", h.handleHealth)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)

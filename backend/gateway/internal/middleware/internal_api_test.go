@@ -14,6 +14,7 @@ func TestInternalAPIKey_ValidKey(t *testing.T) {
 	cfg := &config.Config{InternalAPIKey: "secret-key-123"}
 	r := gin.New()
 	r.Use(InternalAPIKeyMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/internal/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/internal/test", nil)
@@ -27,6 +28,7 @@ func TestInternalAPIKey_InvalidKey(t *testing.T) {
 	cfg := &config.Config{InternalAPIKey: "secret-key-123"}
 	r := gin.New()
 	r.Use(InternalAPIKeyMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/internal/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/internal/test", nil)
@@ -40,6 +42,7 @@ func TestInternalAPIKey_MissingKey(t *testing.T) {
 	cfg := &config.Config{InternalAPIKey: "secret-key-123"}
 	r := gin.New()
 	r.Use(InternalAPIKeyMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/internal/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/internal/test", nil)
@@ -52,6 +55,7 @@ func TestInternalAPIKey_NotConfigured(t *testing.T) {
 	cfg := &config.Config{InternalAPIKey: ""}
 	r := gin.New()
 	r.Use(InternalAPIKeyMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/internal/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/internal/test", nil)
@@ -64,6 +68,7 @@ func TestInternalAPIKey_TimingAttackResistant(t *testing.T) {
 	cfg := &config.Config{InternalAPIKey: "secret-key-123"}
 	r := gin.New()
 	r.Use(InternalAPIKeyMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/internal/test", func(c *gin.Context) { c.Status(200) })
 
 	// Even a partial prefix match should fail

@@ -36,6 +36,7 @@ func TestIsLongRunningRoute(t *testing.T) {
 func TestTimeout_NormalRequest(t *testing.T) {
 	r := gin.New()
 	r.Use(TimeoutMiddleware(5 * time.Second))
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -47,6 +48,7 @@ func TestTimeout_NormalRequest(t *testing.T) {
 func TestTimeout_ZeroTimeout(t *testing.T) {
 	r := gin.New()
 	r.Use(TimeoutMiddleware(0))
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -58,6 +60,7 @@ func TestTimeout_ZeroTimeout(t *testing.T) {
 func TestTimeout_NegativeTimeout(t *testing.T) {
 	r := gin.New()
 	r.Use(TimeoutMiddleware(-1 * time.Second))
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -69,6 +72,7 @@ func TestTimeout_NegativeTimeout(t *testing.T) {
 func TestTimeout_LongRunningRouteSkipped(t *testing.T) {
 	r := gin.New()
 	r.Use(TimeoutMiddleware(1 * time.Nanosecond))
+	// route-tier: internal
 	r.GET("/api/v1/stt/transcribe", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/stt/transcribe", nil)
@@ -83,6 +87,7 @@ func TestTimeout_SetsContextDeadline(t *testing.T) {
 
 	r := gin.New()
 	r.Use(TimeoutMiddleware(timeout))
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		_, hasDeadline = c.Request.Context().Deadline()
 		c.Status(200)

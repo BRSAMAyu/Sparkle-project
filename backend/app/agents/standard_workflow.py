@@ -1295,8 +1295,11 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                         "shown_results",
                         len(filtered_docs.chunks),
                     )
-                    document_context = document_context_candidate
-                    injected_document_chunks = int(document_budget_metadata.get("shown_results") or 0)
+                    if document_context_mode == "live":
+                        document_context = document_context_candidate
+                        injected_document_chunks = int(document_budget_metadata.get("shown_results") or 0)
+                    else:
+                        state.context_data["document_context_shadow_only"] = True
             except Exception as e:
                 logger.warning(f"Document retrieval failed: {e}")
 

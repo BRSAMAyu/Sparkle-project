@@ -606,7 +606,7 @@ class Settings(BaseSettings):
     GALAXY_KNOWLEDGE_CONTEXT_RATIO: float = 0.15
     TASK_ERROR_CONTEXT_RATIO: float = 0.10
     COGNITIVE_PROFILE_CONTEXT_RATIO: float = 0.10
-    AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE: str = "live"  # off | shadow | live
+    AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE: str = "shadow"  # off | shadow | live
     # Aurora document-context gate. auto/live/on run the classifier; off/skip disable
     # document retrieval for every turn; selective/aggressive cap positive decisions.
     AURORA_DOC_CONTEXT_MODE: str = "auto"

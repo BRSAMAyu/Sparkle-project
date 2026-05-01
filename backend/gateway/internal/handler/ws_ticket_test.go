@@ -15,6 +15,7 @@ func TestWSTicket_MissingUserContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := NewWSTicketHandler(&config.Config{WSTicketTTLSeconds: 300}, nil)
 	r := gin.New()
+		// route-tier: internal
 	r.POST("/ws/ticket", h.Issue)
 
 	req := httptest.NewRequest(http.MethodPost, "/ws/ticket", nil)
@@ -38,6 +39,7 @@ func TestWSTicket_ResponseFormat(t *testing.T) {
 		c.Next()
 	})
 	h := NewWSTicketHandler(cfg, nil)
+		// route-tier: internal
 	r.POST("/ws/ticket", h.Issue)
 
 	req := httptest.NewRequest(http.MethodPost, "/ws/ticket", nil)
@@ -55,6 +57,7 @@ func TestWSTicket_IssueEndpointRequiresAuth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := NewWSTicketHandler(&config.Config{}, nil)
 	r := gin.New()
+		// route-tier: internal
 	r.POST("/ws/ticket", h.Issue)
 
 	// No user_id set → should return 401

@@ -43,6 +43,7 @@ func TestAuthMiddleware_MissingToken(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
 
 	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
@@ -55,6 +56,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
 
 	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
@@ -68,6 +70,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) {
 		userID, _ := c.Get("user_id")
 		c.JSON(200, gin.H{"user_id": userID})
@@ -88,6 +91,7 @@ func TestAuthMiddleware_SetsUserContext(t *testing.T) {
 
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/test", func(c *gin.Context) {
 		capturedUserID = c.GetString("user_id")
 		capturedToken = c.GetString("auth_token")
@@ -121,6 +125,7 @@ func TestAuthMiddleware_ExpiredToken(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.Status(200) })
 
 	token := makeTestJWT(cfg, jwt.MapClaims{
@@ -142,6 +147,7 @@ func TestAuthMiddleware_RefreshTokenRejected(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.Status(200) })
 
 	token := makeTestJWT(cfg, jwt.MapClaims{
@@ -161,6 +167,7 @@ func TestAuthMiddleware_UserIDMismatch(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.Status(200) })
 
 	token := makeTestJWT(cfg, nil)
@@ -175,6 +182,7 @@ func TestAuthMiddleware_UserIDMatch(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.Status(200) })
 
 	token := makeTestJWT(cfg, nil)
@@ -189,6 +197,7 @@ func TestAuthMiddleware_MissingBearerPrefix(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.Status(200) })
 
 	token := makeTestJWT(cfg, nil)
@@ -203,6 +212,7 @@ func TestAuthMiddleware_WrongSigningMethod(t *testing.T) {
 	cfg := testAuthConfig()
 	r := gin.New()
 	r.Use(AuthMiddleware(cfg, nil))
+		// route-tier: internal
 	r.GET("/protected", func(c *gin.Context) { c.Status(200) })
 
 	// Create token with wrong signing method
@@ -224,6 +234,7 @@ func TestAdminAuthMiddleware_ValidSecret(t *testing.T) {
 	cfg := &config.Config{AdminSecret: "admin-secret-123"}
 	r := gin.New()
 	r.Use(AdminAuthMiddleware(cfg))
+		// route-tier: internal
 	r.GET("/admin", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -237,6 +248,7 @@ func TestAdminAuthMiddleware_InvalidSecret(t *testing.T) {
 	cfg := &config.Config{AdminSecret: "admin-secret-123"}
 	r := gin.New()
 	r.Use(AdminAuthMiddleware(cfg))
+		// route-tier: internal
 	r.GET("/admin", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -250,6 +262,7 @@ func TestAdminAuthMiddleware_MissingSecret(t *testing.T) {
 	cfg := &config.Config{AdminSecret: ""}
 	r := gin.New()
 	r.Use(AdminAuthMiddleware(cfg))
+		// route-tier: internal
 	r.GET("/admin", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -262,6 +275,7 @@ func TestAdminAuthMiddleware_MissingHeader(t *testing.T) {
 	cfg := &config.Config{AdminSecret: "admin-secret-123"}
 	r := gin.New()
 	r.Use(AdminAuthMiddleware(cfg))
+		// route-tier: internal
 	r.GET("/admin", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -275,6 +289,7 @@ func TestRequireAdmin_IsAdmin(t *testing.T) {
 	r := gin.New()
 	r.Use(func(c *gin.Context) { c.Set("is_admin", true); c.Next() })
 	r.Use(RequireAdmin)
+		// route-tier: internal
 	r.GET("/admin", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -287,6 +302,7 @@ func TestRequireAdmin_NotAdmin(t *testing.T) {
 	r := gin.New()
 	r.Use(func(c *gin.Context) { c.Set("is_admin", false); c.Next() })
 	r.Use(RequireAdmin)
+		// route-tier: internal
 	r.GET("/admin", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -344,10 +360,12 @@ func TestLocalBlacklistCache_ExpiredEntry(t *testing.T) {
 
 func TestIsWebSocketRequest(t *testing.T) {
 	r := gin.New()
+		// route-tier: internal
 	r.GET("/ws", func(c *gin.Context) {
 		assert.True(t, isWebSocketRequest(c))
 		c.Status(200)
 	})
+		// route-tier: internal
 	r.GET("/http", func(c *gin.Context) {
 		assert.False(t, isWebSocketRequest(c))
 		c.Status(200)

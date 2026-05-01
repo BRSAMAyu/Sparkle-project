@@ -247,6 +247,7 @@ async def get_feedback_stats(
 # ── Spine Experience Envelope & Receipt Actions ────────────────────────
 
 
+# route-tier: authed
 @router.get("/envelope", summary="获取当前体验信封")
 async def get_experience_envelope(
     current_user: User = Depends(get_current_user),
@@ -271,6 +272,7 @@ class ReceiptActionRequest(BaseModel):
     action: str = Field(..., description="confirm | correct | dismiss")
 
 
+# route-tier: authed
 @router.post("/receipt-action", summary="用户对 Receipt 的反馈")
 async def handle_receipt_action(
     request: ReceiptActionRequest,
@@ -295,6 +297,7 @@ async def handle_receipt_action(
         raise HTTPException(status_code=500, detail=f"Failed: {e}")
 
 
+# route-tier: authed
 @router.get("/context-receipt", summary="获取当前上下文决策收据")
 async def get_context_receipt(
     current_user: User = Depends(get_current_user),
@@ -316,6 +319,7 @@ async def get_context_receipt(
         return {"ok": True, "receipt": None}
 
 
+# route-tier: authed
 @router.get("/metrics", summary="获取滚动指标")
 async def get_rolling_metrics(
     current_user: User = Depends(get_current_user),

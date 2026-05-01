@@ -12,7 +12,6 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_preferences import UserPreferencesCenter
-from app.services.personalization.preference_service import PreferenceService
 
 InferenceScope = Literal["exam_sprint", "long_term"]
 InferenceStatus = Literal["observed", "candidate", "trial", "confirmed", "revoked"]
@@ -504,11 +503,17 @@ class InferenceWritePipeline:
         db: AsyncSession,
         redis=None,
         *,
-        pref_service: PreferenceService | None = None,
+        pref_service: Any | None = None,
     ) -> None:
         self.db = db
         self.redis = redis
-        self.pref_service = pref_service or PreferenceService(db, redis)
+        self.pref_service = pref_service  # injected by caller outside aurora/ path
+
+    async def _save_inferred_data(self, user_uuid: UUID, inferred: dict[str, Any]) -> Any:
+        return await self._save_inferred_data(user_uuid, inferred)
+
+    async def _read_user_preferences(self, user_uuid: UUID) -> Any:
+        return await self._read_user_preferences(user_uuid)
 
     @staticmethod
     def temporary_state_key(*, user_id: UUID | str, claim_id: str) -> str:
@@ -603,7 +608,7 @@ class InferenceWritePipeline:
             raise ValueError("unsupported response")
 
         user_uuid = _coerce_uuid(user_id)
-        prefs = await self.pref_service.get_preferences(user_uuid)
+        prefs = await self._read_user_preferences(user_uuid)
         inferred = dict(prefs.inferred or {})
         self_model = self._get_self_model(inferred)
         claims = self._load_claims_from_self_model(self_model)
@@ -628,7 +633,7 @@ class InferenceWritePipeline:
         self._persist_claims_to_self_model(self_model, claims)
         inferred[SELF_MODEL_KEY] = self_model
         inferred[INFERENCE_PIPELINE_KEY] = durable_bucket
-        updated_prefs = await self.pref_service.update_inferred_raw(user_uuid, inferred)
+        updated_prefs = await self._save_inferred_data(user_uuid, inferred)
         return updated_prefs, updated_claim
 
     async def promote_due_trials(
@@ -637,7 +642,7 @@ class InferenceWritePipeline:
         user_id: UUID | str,
     ) -> list[InferenceClaim]:
         user_uuid = _coerce_uuid(user_id)
-        prefs = await self.pref_service.get_preferences(user_uuid)
+        prefs = await self._read_user_preferences(user_uuid)
         inferred = dict(prefs.inferred or {})
         self_model = self._get_self_model(inferred)
         claims = self._load_claims_from_self_model(self_model)
@@ -653,7 +658,7 @@ class InferenceWritePipeline:
         self._persist_claims_to_self_model(self_model, updated_claims)
         inferred[SELF_MODEL_KEY] = self_model
         inferred[INFERENCE_PIPELINE_KEY] = durable_bucket
-        await self.pref_service.update_inferred_raw(user_uuid, inferred)
+        await self._save_inferred_data(user_uuid, inferred)
         return updated_claims
 
     async def get_temporary_state(
@@ -847,7 +852,7 @@ class InferenceWritePipeline:
         metadata: dict[str, Any] | None,
     ) -> InferenceClaim:
         user_uuid = _coerce_uuid(user_id)
-        prefs = await self.pref_service.get_preferences(user_uuid)
+        prefs = await self._read_user_preferences(user_uuid)
         inferred = dict(prefs.inferred or {})
         self_model = self._get_self_model(inferred)
         claims = self._load_claims_from_self_model(self_model)
@@ -935,7 +940,7 @@ class InferenceWritePipeline:
 
         self._persist_claims_to_self_model(self_model, claims)
         inferred[SELF_MODEL_KEY] = self_model
-        await self.pref_service.update_inferred_raw(user_uuid, inferred)
+        await self._save_inferred_data(user_uuid, inferred)
         return merged_claim
 
     @staticmethod

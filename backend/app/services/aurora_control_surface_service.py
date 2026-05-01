@@ -10,6 +10,7 @@ from app.aurora.runtime_v1.persistence import AuroraPersistenceStore
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.aurora.runtime_v1.state import AuroraCognitiveSnapshot, AuroraEnergyStore, AuroraRuntimeStore, AuroraState
 from app.core.profile_context import ProfileContext
+from app.services.personalization.preference_service import PreferenceService
 from app.core.user_insight_state import UserInsightState
 from app.services.profile_context_service import ProfileContextService
 
@@ -94,6 +95,7 @@ class AuroraControlSurfaceService:
         control_surface = await ControlSurfaceService(
             self.db,
             self.redis,
+            preference_service=PreferenceService(self.db, self.redis),
             enabled=True,
         ).read_control_surface(user_id)
 

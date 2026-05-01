@@ -32,6 +32,7 @@ func TestSecurityHeaders_AllPresent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
 			router.Use(SecurityHeadersMiddleware(tt.cfg))
+			// route-tier: internal
 			router.GET("/test", func(c *gin.Context) {
 				c.String(http.StatusOK, "ok")
 			})
@@ -80,6 +81,7 @@ func TestSecurityHeaders_AllPresent(t *testing.T) {
 func TestSecurityHeaders_XSSProtection(t *testing.T) {
 	router := gin.New()
 	router.Use(SecurityHeadersMiddleware())
+	// route-tier: internal
 	router.GET("/test", func(c *gin.Context) {
 		c.String(http.StatusOK, "ok")
 	})
@@ -94,8 +96,11 @@ func TestSecurityHeaders_XSSProtection(t *testing.T) {
 func TestSecurityHeaders_AppliesToAllRoutes(t *testing.T) {
 	router := gin.New()
 	router.Use(SecurityHeadersMiddleware())
+	// route-tier: internal
 	router.GET("/api/v1/users", func(c *gin.Context) { c.String(200, "ok") })
+	// route-tier: internal
 	router.POST("/api/v1/chat", func(c *gin.Context) { c.String(200, "ok") })
+	// route-tier: internal
 	router.GET("/health", func(c *gin.Context) { c.String(200, "ok") })
 
 	for _, path := range []string{"/api/v1/users", "/api/v1/chat", "/health"} {

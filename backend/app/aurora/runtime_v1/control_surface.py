@@ -20,7 +20,6 @@ from app.aurora.runtime_v1.state import (
     normalize_expression_update,
 )
 from app.config import settings
-from app.services.personalization.preference_service import PreferenceService
 
 
 def _normalize_text(value: Any) -> str:
@@ -153,12 +152,12 @@ class ControlSurfaceService:
         db,
         redis=None,
         *,
-        preference_service: PreferenceService | None = None,
+        preference_service: Any | None = None,
         enabled: bool | None = None,
     ) -> None:
         self.db = db
         self.redis = redis
-        self.preference_service = preference_service or PreferenceService(db, redis)
+        self.preference_service = preference_service
         self._enabled = enabled
 
     @property
@@ -170,6 +169,12 @@ class ControlSurfaceService:
 
     async def read_control_surface(self, user_id: UUID | str) -> ControlSurfaceReading:
         adjustable_payload = await self._read_adjustable_payload(user_id)
+        if self.preference_service is None:
+            return ControlSurfaceReading(
+                adjustable=ActivityProfile.model_validate(adjustable_payload),
+                hard_bounds=AuroraHardBounds(),
+                runtime_enabled=self.enabled,
+            )
         prefs = await self.preference_service.get_preferences(UUID(str(user_id)))
         explicit = dict(getattr(prefs, "explicit", {}) or {})
         hard_bounds = self._hard_bounds_from_explicit(explicit)

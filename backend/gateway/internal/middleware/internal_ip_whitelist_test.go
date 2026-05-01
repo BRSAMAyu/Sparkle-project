@@ -18,6 +18,7 @@ func TestInternalIPWhitelist_DevelopmentBypass(t *testing.T) {
 	}
 	r := gin.New()
 	r.Use(InternalIPWhitelistMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/internal/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/internal/test", nil)
@@ -33,6 +34,7 @@ func TestInternalIPWhitelist_EmptyWhitelist(t *testing.T) {
 	}
 	r := gin.New()
 	r.Use(InternalIPWhitelistMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/internal/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/internal/test", nil)

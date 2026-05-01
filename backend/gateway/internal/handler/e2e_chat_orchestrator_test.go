@@ -64,6 +64,7 @@ func TestE2E_CompleteChatFlow(t *testing.T) {
 	})
 
 	orchestrator := newTestOrchestrator(t)
+	// route-tier: internal
 	router.GET("/ws/chat", orchestrator.HandleWebSocket)
 
 	ts := httptest.NewServer(router)
@@ -106,6 +107,7 @@ func TestE2E_CompleteChatFlow(t *testing.T) {
 
 	t.Run("authentication failed without userID", func(t *testing.T) {
 		r2 := gin.New()
+		// route-tier: internal
 		r2.GET("/ws/chat", func(c *gin.Context) {
 			// no userID set — handler should reject
 			orchestrator.HandleWebSocket(c)
@@ -137,6 +139,7 @@ func TestE2E_WebSocketReconnection(t *testing.T) {
 	})
 
 	orchestrator := newTestOrchestrator(t)
+	// route-tier: internal
 	router.GET("/ws/chat", orchestrator.HandleWebSocket)
 
 	ts := httptest.NewServer(router)
@@ -175,6 +178,7 @@ func TestE2E_ConcurrentWebSocketConnections(t *testing.T) {
 	})
 
 	orchestrator := newTestOrchestrator(t)
+	// route-tier: internal
 	router.GET("/ws/chat", orchestrator.HandleWebSocket)
 
 	ts := httptest.NewServer(router)
@@ -223,6 +227,7 @@ func TestE2E_LargeMessageHandling(t *testing.T) {
 	})
 
 	orchestrator := newTestOrchestrator(t)
+	// route-tier: internal
 	router.GET("/ws/chat", orchestrator.HandleWebSocket)
 
 	ts := httptest.NewServer(router)

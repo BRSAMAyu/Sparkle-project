@@ -14,6 +14,7 @@ func TestCORS_AllowedOrigin(t *testing.T) {
 	cfg := &config.Config{AllowedOrigins: []string{"https://sparkle.app", "http://localhost:3000"}}
 	r := gin.New()
 	r.Use(CORSMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -34,6 +35,7 @@ func TestCORS_DisallowedOrigin(t *testing.T) {
 	cfg := &config.Config{AllowedOrigins: []string{"https://sparkle.app"}}
 	r := gin.New()
 	r.Use(CORSMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -49,6 +51,7 @@ func TestCORS_NoOrigin(t *testing.T) {
 	cfg := &config.Config{AllowedOrigins: []string{"https://sparkle.app"}}
 	r := gin.New()
 	r.Use(CORSMiddleware(cfg))
+	// route-tier: internal
 	r.GET("/test", func(c *gin.Context) { c.Status(200) })
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)

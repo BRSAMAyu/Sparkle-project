@@ -224,7 +224,13 @@ class PushService:
         try:
             from app.aurora.runtime_v1.control_surface import ControlSurfaceService
 
-            reading = await ControlSurfaceService(self.db, self.redis).read_control_surface(user_id)
+            from app.services.personalization.preference_service import PreferenceService
+
+            reading = await ControlSurfaceService(
+                self.db,
+                self.redis,
+                preference_service=PreferenceService(self.db, self.redis),
+            ).read_control_surface(user_id)
             hard_bounds = reading.hard_bounds
             return hard_bounds.is_action_disabled("proactive_follow_up") or hard_bounds.is_within_dnd(
                 datetime.now(UTC)

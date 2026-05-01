@@ -826,7 +826,7 @@ class AuroraRuntimeV1Service:
                 runtime_enabled=True,
             )
         try:
-            return await ControlSurfaceService(active_db, self.redis, enabled=True).read_control_surface(user_id)
+            return await ControlSurfaceService(active_db, self.redis, preference_service=None, enabled=True).read_control_surface(user_id)
         except Exception as exc:
             logger.warning("Aurora runtime v1 failed to read control surface: {}", exc)
             hard_boundaries = await self._read_hard_boundaries(active_db=active_db, user_id=user_id)
