@@ -517,6 +517,7 @@ class StateAggregatorService:
             .where(
                 CognitiveFragment.user_id == user_id,
                 CognitiveFragment.sentiment.isnot(None),
+                CognitiveFragment.sentiment != "",
                 CognitiveFragment.created_at >= last_24h,
             )
             .order_by(CognitiveFragment.created_at.desc())

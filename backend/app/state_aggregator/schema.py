@@ -26,6 +26,7 @@ UserStateFieldName = Literal[
     "srl_phase",
     "metacognition_profile",
     "idiographic_summary",
+    "emotion_hint",
 ]
 
 
