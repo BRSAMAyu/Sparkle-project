@@ -889,6 +889,7 @@ async def request_partnership(
         select(Friendship).where(
             and_(
                 Friendship.status == FriendshipStatus.ACCEPTED,
+                Friendship.not_deleted_filter(),
                 or_(
                     and_(
                         Friendship.user_id == current_user.id,

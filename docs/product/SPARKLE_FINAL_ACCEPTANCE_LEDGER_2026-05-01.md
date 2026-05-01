@@ -436,13 +436,13 @@
 
 ### 14.4 当前判断
 
-1. **Aurora / 画像 / 知识星图**: 本轮抽样仍是 `PASS`。  
+1. **Aurora / 画像 / 知识星图**: 本轮抽样仍是 `PASS`。
    我没有在这些高价值闭环里抓到新的结构性回归。
 
-2. **社区首页筛选**: 现在是 `PASS-WIP`。  
+2. **社区首页筛选**: 现在是 `PASS-WIP`。
    从“完全假筛选”前进到了“有 scope、能分 squad”，但 `Goal Mates` 还没有真正落到责任伙伴语义。
 
-3. **移动端最终质量门**: 现在还不能写 `PASS`。  
+3. **移动端最终质量门**: 现在还不能写 `PASS`。
    原因不是主链编译又炸了，而是 `main_actions_smoke_test` 这类关键 smoke harness 还没和新接口演进保持同步。
 
 ---
@@ -490,10 +490,10 @@
 
 ### 15.4 当前判断
 
-1. **R9 的两个问题都已关闭**。  
+1. **R9 的两个问题都已关闭**。
    这轮没有再看到 `Goal Mates` / `Following` 同语义坍缩，也没有再看到 smoke fake repo 的接口漂移。
 
-2. **社区 feed 现在的真正尾差变成了“关系边界是否干净”**。  
+2. **社区 feed 现在的真正尾差变成了“关系边界是否干净”**。
    功能已经连上，但查询没有把软删除语义一起带过来，这类问题很容易在线上变成“为什么我明明退出/解除关系了，还能看到那边的内容”。
 
 ---
@@ -546,8 +546,60 @@
 
 ### 16.4 当前判断
 
-1. **R10 的问题可以关闭**。  
+1. **R10 的问题可以关闭**。
    关系来源的 soft-delete 边界已经补上。
 
-2. **社区 feed 还不能最终验收**。  
+2. **社区 feed 还不能最终验收**。
    现在的主要问题已经从“关系集合是否正确”升级为“内容是否应该被当前用户看到”。这属于上线前必须补的隐私/信任边界。
+
+---
+
+## 17. Codex R12 复验与修复闭环 (2026-05-01)
+
+> **方法**: 复验 R11 的三类 feed guard，并继续向更细的社群关系语义、Goal Mates 源头约束和主 smoke 链路扩展。
+> **结论**: R11 已关闭；本轮发现的 squad friends-only 泄露边界与 accountability soft-deleted friendship 源头边界已直接修复。
+
+### 17.1 已复验通过
+
+| ID | 结论 | 证据 |
+|----|------|------|
+| R12-V1 | `/community/feed` 已排除软删除动态 | `community.py:247` 使用 `Post.not_deleted_filter()` |
+| R12-V2 | 全局 feed 已限定 public 动态 | `community.py:331` 使用 `Post.visibility == "public"` |
+| R12-V3 | feed 已排除双向 active block 关系 | `community.py:333-342` 使用 `UserBlock.not_deleted_filter()` union |
+| R12-V4 | R11 新增测试覆盖软删除、global visibility、following visibility、双向 block | `test_community_integration.py` 新增 feed privacy 测试组 |
+
+### 17.2 本轮新增并已修复的问题
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| C-R12-1 | P1 | 社区 / 隐私语义 | `squad` scope 曾把小队成员的 `friends` 动态展示给非好友成员；小队成员关系不等于好友关系 | ✅ Fixed |
+| C-R12-2 | P2 | Accountability / Goal Mates 源头 | 创建责任伙伴时只检查 `Friendship.status == ACCEPTED`，未排除 soft-deleted friendship | ✅ Fixed |
+
+#### C-R12-1 修复说明
+
+- `community.py` 现在统一构造 `friend_visible_posts`：
+  - public 动态可见
+  - friends 动态仅在作者是当前用户本人或 accepted + not-deleted friend 时可见
+- `squad / goal_mates / following` 均复用同一套 friends 可见性条件，避免 “scope 关系” 意外放大 “friends 关系”。
+- 新增 `test_feed_squad_hides_friends_posts_from_non_friends()`，旧逻辑下该测试会失败。
+
+#### C-R12-2 修复说明
+
+- `accountability.py` 的 `/accountability/request` 好友前置检查已加入 `Friendship.not_deleted_filter()`。
+- 新增 `test_request_partnership_rejects_soft_deleted_friendship()`，确保历史好友关系不能重新打开 Goal Mates 入口。
+
+### 17.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && ruff check app/api/v1/community.py app/api/v1/accountability.py tests/integration/test_community_integration.py tests/api/test_accountability_system_api.py` | ✅ 通过 |
+| `cd backend && pytest tests/integration/test_community_integration.py tests/test_community_e2e.py tests/api/test_community_group_file_sharing_api.py tests/test_community_security.py tests/api/test_accountability_system_api.py -q` | ✅ `50 passed, 2 skipped` |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+
+### 17.4 当前判断
+
+1. **社区 feed 的 P1 隐私边界本轮可以关闭**。
+   软删除、visibility、block、scope 关系语义都已经有代码与测试兜底。
+
+2. **下一层验收重点应从“能不能正确过滤”转向“能不能形成真实好用的体验闭环”**。
+   尤其是 Aurora 主动感知、状态带、任务卡/社群/看板流转、多端通知与用户画像解释面，需要继续按“用户是否真的感到被理解、被帮助、可控且可信”来审查，而不是只看接口是否存在。

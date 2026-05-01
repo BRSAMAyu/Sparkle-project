@@ -57,6 +57,7 @@ from app.models.community import (
     PrivateMessage,
     SharedResource,
     SharedResourceType,
+    UserBlock,
 )
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.file_storage import StoredFile
@@ -242,6 +243,39 @@ async def get_feed(
     offset = (page - 1) * limit
     stmt = select(Post).options(selectinload(Post.user))
 
+    # ── soft-delete guard ──
+    stmt = stmt.where(Post.not_deleted_filter())
+
+    accepted_friend_ids = (
+        select(Friendship.friend_id)
+        .where(
+            Friendship.user_id == current_user.id,
+            Friendship.status == FriendshipStatus.ACCEPTED,
+            Friendship.not_deleted_filter(),
+        )
+        .correlate(None)
+    )
+    accepted_friend_ids_alt = (
+        select(Friendship.user_id)
+        .where(
+            Friendship.friend_id == current_user.id,
+            Friendship.status == FriendshipStatus.ACCEPTED,
+            Friendship.not_deleted_filter(),
+        )
+        .correlate(None)
+    )
+    friend_visible_posts = or_(
+        Post.visibility == "public",
+        and_(
+            Post.visibility == "friends",
+            or_(
+                Post.user_id == current_user.id,
+                Post.user_id.in_(accepted_friend_ids),
+                Post.user_id.in_(accepted_friend_ids_alt),
+            ),
+        ),
+    )
+
     if scope == "squad":
         squad_member_subq = (
             select(GroupMember.group_id)
@@ -254,6 +288,7 @@ async def get_feed(
             .correlate(None)
         )
         stmt = stmt.where(Post.user_id.in_(squad_user_subq))
+        stmt = stmt.where(friend_visible_posts)
     elif scope == "goal_mates":
         partner_ids_initiated = (
             select(AccountabilityPartnership.partner_id)
@@ -276,30 +311,25 @@ async def get_feed(
         stmt = stmt.where(
             Post.user_id.in_(partner_ids_initiated) | Post.user_id.in_(partner_ids_accepted)
         )
+        stmt = stmt.where(friend_visible_posts)
     elif scope == "following":
-        friend_ids = (
-            select(Friendship.friend_id)
-            .where(
-                Friendship.user_id == current_user.id,
-                Friendship.status == FriendshipStatus.ACCEPTED,
-                Friendship.not_deleted_filter(),
-            )
-            .correlate(None)
-        )
-        friend_ids_alt = (
-            select(Friendship.user_id)
-            .where(
-                Friendship.friend_id == current_user.id,
-                Friendship.status == FriendshipStatus.ACCEPTED,
-                Friendship.not_deleted_filter(),
-            )
-            .correlate(None)
-        )
-        stmt = stmt.where(Post.user_id.in_(friend_ids) | Post.user_id.in_(friend_ids_alt))
+        stmt = stmt.where(Post.user_id.in_(accepted_friend_ids) | Post.user_id.in_(accepted_friend_ids_alt))
+        stmt = stmt.where(friend_visible_posts)
     elif scope is not None:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail=f"Unknown scope: {scope}")
+    else:
+        stmt = stmt.where(Post.visibility == "public")
+
+    # ── block guard: exclude authors with an active block relationship ──
+    blocked_uids = (
+        select(UserBlock.blocked_id.label("uid"))
+        .where(UserBlock.blocker_id == current_user.id, UserBlock.not_deleted_filter())
+        .union(
+            select(UserBlock.blocker_id.label("uid"))
+            .where(UserBlock.blocked_id == current_user.id, UserBlock.not_deleted_filter())
+        ).subquery()
+    )
+    stmt = stmt.where(~Post.user_id.in_(select(blocked_uids.c.uid)))
 
     stmt = stmt.order_by(Post.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)

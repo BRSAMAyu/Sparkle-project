@@ -11,28 +11,32 @@
 - WebSocket 和多用户测试标记为跳过
 """
 
+
 import pytest
 import pytest_asyncio
-from typing import Dict
-from unittest.mock import MagicMock
-from uuid import uuid4
-
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.models.base import Base
-from app.models.user import User
-from app.models.community import (
-    Friendship, Group, GroupMember, GroupMessage,
-    PrivateMessage, GroupType, GroupRole
-)
-from app.api.v1.community import router as community_router
 from app.api.deps import get_current_user
+from app.api.v1.community import router as community_router
 from app.db.session import get_db
-
+from app.models.base import Base
+from app.models.community import (
+    Friendship,
+    FriendshipStatus,
+    Group,
+    GroupMember,
+    GroupMessage,
+    GroupRole,
+    GroupType,
+    Post,
+    PrivateMessage,
+    UserBlock,
+)
+from app.models.user import User
 
 # ============================================================
 # Test Fixtures
@@ -80,7 +84,7 @@ def test_client(db_session: AsyncSession):
 
 
 @pytest.fixture
-def authenticated_client(db_session: AsyncSession, community_test_users: Dict[str, User]):
+def authenticated_client(db_session: AsyncSession, community_test_users: dict[str, User]):
     """FastAPI TestClient with authenticated user (Alice)"""
     app = FastAPI()
     app.include_router(community_router, prefix="/api/v1/community")
@@ -101,7 +105,7 @@ def authenticated_client(db_session: AsyncSession, community_test_users: Dict[st
 
 
 @pytest.fixture
-async def community_test_users(db_session: AsyncSession) -> Dict[str, User]:
+async def community_test_users(db_session: AsyncSession) -> dict[str, User]:
     """创建测试用户"""
     # Use a known bcrypt hash for "password123"
     pre_hashed_password = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5Mx5W.kwCV/LWi"
@@ -199,7 +203,7 @@ async def test_group_creation(authenticated_client: TestClient):
 
 
 @pytest.mark.skip(reason="需要多用户认证支持")
-async def test_multi_user_flow(db_session: AsyncSession, community_test_users: Dict[str, User]):
+async def test_multi_user_flow(db_session: AsyncSession, community_test_users: dict[str, User]):
     """测试多用户流程 - 需要多用户认证，暂时跳过"""
     pass
 
@@ -211,11 +215,196 @@ async def test_websocket_messaging():
 
 
 # ============================================================
+# Feed privacy tests — R11: soft-delete, visibility, block guards
+# ============================================================
+
+
+@pytest_asyncio.fixture
+async def feed_auth_client(db_session: AsyncSession, community_test_users: dict[str, User]):
+    """Authenticated as Alice, with Bob also present for multi-user feed tests."""
+    app = FastAPI()
+    app.include_router(community_router, prefix="/api/v1/community")
+
+    alice = community_test_users["alice"]
+
+    async def _override_get_db():
+        yield db_session
+
+    async def _override_get_current_user():
+        return alice
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+
+    with TestClient(app) as client:
+        yield client
+
+
+@pytest.mark.asyncio
+async def test_feed_excludes_soft_deleted_posts(
+    feed_auth_client: TestClient, db_session: AsyncSession, community_test_users: dict[str, User]
+):
+    """Soft-deleted posts must not appear in the feed."""
+    bob = community_test_users["bob"]
+
+    public_post = Post(
+        user_id=bob.id,
+        content="visible post",
+        visibility="public",
+    )
+    deleted_post = Post(
+        user_id=bob.id,
+        content="soft-deleted post",
+        visibility="public",
+    )
+    deleted_post.soft_delete()
+
+    db_session.add_all([public_post, deleted_post])
+    await db_session.commit()
+
+    resp = feed_auth_client.get("/api/v1/community/feed", params={"limit": 50})
+    assert resp.status_code == 200
+    posts = resp.json()
+    contents = {p["content"] for p in posts}
+    assert "visible post" in contents
+    assert "soft-deleted post" not in contents
+
+
+@pytest.mark.asyncio
+async def test_feed_global_only_shows_public_posts(
+    feed_auth_client: TestClient, db_session: AsyncSession, community_test_users: dict[str, User]
+):
+    """Global feed (no scope) must only return public-visibility posts."""
+    bob = community_test_users["bob"]
+
+    public_post = Post(user_id=bob.id, content="public post", visibility="public")
+    friends_post = Post(user_id=bob.id, content="friends post", visibility="friends")
+    private_post = Post(user_id=bob.id, content="private post", visibility="private")
+
+    db_session.add_all([public_post, friends_post, private_post])
+    await db_session.commit()
+
+    resp = feed_auth_client.get("/api/v1/community/feed", params={"limit": 50})
+    assert resp.status_code == 200
+    posts = resp.json()
+    contents = {p["content"] for p in posts}
+    assert "public post" in contents
+    assert "friends post" not in contents
+    assert "private post" not in contents
+
+
+@pytest.mark.asyncio
+async def test_feed_scoped_shows_public_and_friends(
+    feed_auth_client: TestClient, db_session: AsyncSession, community_test_users: dict[str, User]
+):
+    """Scoped feed must return public + friends posts from in-scope authors."""
+    alice = community_test_users["alice"]
+    bob = community_test_users["bob"]
+
+    # Make Alice and Bob friends
+    friendship = Friendship(
+        user_id=alice.id, friend_id=bob.id, status=FriendshipStatus.ACCEPTED,
+        initiated_by=alice.id,
+    )
+    db_session.add(friendship)
+
+    public_post = Post(user_id=bob.id, content="bob public", visibility="public")
+    friends_post = Post(user_id=bob.id, content="bob friends", visibility="friends")
+    private_post = Post(user_id=bob.id, content="bob private", visibility="private")
+
+    db_session.add_all([public_post, friends_post, private_post])
+    await db_session.commit()
+
+    resp = feed_auth_client.get("/api/v1/community/feed", params={"scope": "following", "limit": 50})
+    assert resp.status_code == 200
+    posts = resp.json()
+    contents = {p["content"] for p in posts}
+    assert "bob public" in contents
+    assert "bob friends" in contents
+    assert "bob private" not in contents
+
+
+@pytest.mark.asyncio
+async def test_feed_squad_hides_friends_posts_from_non_friends(
+    feed_auth_client: TestClient, db_session: AsyncSession, community_test_users: dict[str, User]
+):
+    """Squad membership must not expand friends-only visibility."""
+    alice = community_test_users["alice"]
+    bob = community_test_users["bob"]
+
+    group = Group(name="Privacy Squad", type=GroupType.SQUAD, max_members=10)
+    db_session.add(group)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            GroupMember(group_id=group.id, user_id=alice.id, role=GroupRole.OWNER),
+            GroupMember(group_id=group.id, user_id=bob.id, role=GroupRole.MEMBER),
+            Post(user_id=bob.id, content="squad public", visibility="public"),
+            Post(user_id=bob.id, content="squad friends", visibility="friends"),
+            Post(user_id=bob.id, content="squad private", visibility="private"),
+        ]
+    )
+    await db_session.commit()
+
+    resp = feed_auth_client.get("/api/v1/community/feed", params={"scope": "squad", "limit": 50})
+    assert resp.status_code == 200
+    posts = resp.json()
+    contents = {p["content"] for p in posts}
+    assert "squad public" in contents
+    assert "squad friends" not in contents
+    assert "squad private" not in contents
+
+
+@pytest.mark.asyncio
+async def test_feed_excludes_blocked_users(
+    feed_auth_client: TestClient, db_session: AsyncSession, community_test_users: dict[str, User]
+):
+    """Posts from blocked users must not appear in the feed."""
+    alice = community_test_users["alice"]
+    bob = community_test_users["bob"]
+
+    bob_post = Post(user_id=bob.id, content="bob visible", visibility="public")
+
+    # Alice blocks Bob
+    block = UserBlock(blocker_id=alice.id, blocked_id=bob.id)
+    db_session.add_all([bob_post, block])
+    await db_session.commit()
+
+    resp = feed_auth_client.get("/api/v1/community/feed", params={"limit": 50})
+    assert resp.status_code == 200
+    posts = resp.json()
+    contents = {p["content"] for p in posts}
+    assert "bob visible" not in contents
+
+
+@pytest.mark.asyncio
+async def test_feed_excludes_reverse_blocked_users(
+    feed_auth_client: TestClient, db_session: AsyncSession, community_test_users: dict[str, User]
+):
+    """Posts from users who blocked the current user must also not appear."""
+    alice = community_test_users["alice"]
+    bob = community_test_users["bob"]
+
+    bob_post = Post(user_id=bob.id, content="bob visible", visibility="public")
+
+    # Bob blocks Alice
+    block = UserBlock(blocker_id=bob.id, blocked_id=alice.id)
+    db_session.add_all([bob_post, block])
+    await db_session.commit()
+
+    resp = feed_auth_client.get("/api/v1/community/feed", params={"limit": 50})
+    assert resp.status_code == 200
+    posts = resp.json()
+    contents = {p["content"] for p in posts}
+    assert "bob visible" not in contents
+
+
+# ============================================================
 # Cleanup
 # ============================================================
 
 @pytest.mark.asyncio
-async def cleanup_test_data(db_session: AsyncSession, community_test_users: Dict[str, User]):
+async def cleanup_test_data(db_session: AsyncSession, community_test_users: dict[str, User]):
     """清理测试数据"""
     from sqlalchemy import delete
 

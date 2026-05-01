@@ -273,6 +273,37 @@ async def _create_task(
 
 
 @pytest.mark.asyncio
+async def test_request_partnership_rejects_soft_deleted_friendship(
+    accountability_app,
+    db_session,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    candidate = _make_user(username="candidate")
+    await _commit_all(db_session, owner, candidate)
+    friendship = await _create_friendship(db_session, owner, candidate)
+    friendship.soft_delete()
+    await db_session.commit()
+
+    state["current_user"] = owner
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/accountability/request",
+            json={
+                "partner_id": str(candidate.id),
+                "initiator_goal": "旧好友关系不应再创建责任伙伴",
+                "check_in_days": 1,
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "You must be friends before becoming accountability partners"
+
+
+@pytest.mark.asyncio
 async def test_request_partnership_rejects_when_user_already_has_core_partner(
     accountability_app,
     db_session,

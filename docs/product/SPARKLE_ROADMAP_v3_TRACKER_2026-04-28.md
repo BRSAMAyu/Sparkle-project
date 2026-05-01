@@ -721,7 +721,7 @@
 
 ### R7.4 口径修正
 
-当前不建议继续使用“Phase 0-6 已全部收尾，只剩人工部署”的表述。  
+当前不建议继续使用“Phase 0-6 已全部收尾，只剩人工部署”的表述。
 更准确的阶段判断是：
 
 > **Phase 0-6 大部分功能已实现，R7 关键尾差 (R7-1/2/3) 已回收；剩余 R7-4/5/6 为 P2 待校准项 (Go Gateway 一致性、蓝绿脚本校准、愿景清单路径)。**
@@ -900,3 +900,42 @@
 因此：
 
 > **社区 feed 还不能按最终上线验收签字，必须先补 `Post.visibility / Post.not_deleted_filter / UserBlock` 三类读取边界，并补对应 API 测试。**
+
+---
+
+## R12 当前主干复验与修复闭环 (2026-05-01)
+
+> **来源**: Codex 当前主干继续复验 + 直接修复局部边界问题
+> **方法**: 复验 R11 的 `Post.visibility / Post.not_deleted_filter / UserBlock` 修复，并向 squad、Goal Mates 源头关系与 smoke 链路扩展。
+
+### R12.1 已关闭问题
+
+| ID | 模块 | 结论 |
+|----|------|------|
+| R11-1 | 社区 / 内容可见性 | 已关闭：feed 现在有 `Post.not_deleted_filter()`，global 只返回 public，scoped 不返回 private |
+| R11-2 | 社区 / 屏蔽关系 | 已关闭：feed 现在排除当前用户 block 对方、或对方 block 当前用户的 active block 关系 |
+| R12-1 | 社区 / squad 隐私语义 | 已修复：小队成员关系不再放大 friends-only visibility；非好友小队成员只能看到 public |
+| R12-2 | Accountability / Goal Mates 源头 | 已修复：soft-deleted friendship 不能再作为创建责任伙伴的前置条件 |
+
+### R12.2 本轮代码变更
+
+| 文件 | 变更 |
+|------|------|
+| `backend/app/api/v1/community.py` | 统一构造 `friend_visible_posts`；`squad / goal_mates / following` 复用同一套 public + accepted-friend 可见性条件；保留软删除、visibility、block guard |
+| `backend/app/api/v1/accountability.py` | `/accountability/request` 的好友前置检查加入 `Friendship.not_deleted_filter()` |
+| `backend/tests/integration/test_community_integration.py` | 增加 squad 非好友不能看 friends-only 动态的回归测试，并保留 R11 的 soft-delete / visibility / block 测试 |
+| `backend/tests/api/test_accountability_system_api.py` | 增加 soft-deleted friendship 不能创建责任伙伴的回归测试 |
+
+### R12.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && ruff check app/api/v1/community.py app/api/v1/accountability.py tests/integration/test_community_integration.py tests/api/test_accountability_system_api.py` | ✅ 通过 |
+| `cd backend && pytest tests/integration/test_community_integration.py tests/test_community_e2e.py tests/api/test_community_group_file_sharing_api.py tests/test_community_security.py tests/api/test_accountability_system_api.py -q` | ✅ `50 passed, 2 skipped` |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+
+### R12.4 阶段判断修正
+
+当前更准确的说法是：
+
+> **社区 feed 的 P1 隐私与关系语义边界已经可以关闭；下一轮验收应转向 Aurora 真实体验、主动感知、多端触达、任务卡/社群/看板流转以及用户画像可解释性的产品级质量。**
