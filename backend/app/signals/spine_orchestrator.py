@@ -29,6 +29,7 @@ from app.signals.achievement_reinforcement import AchievementReinforcementConsum
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
 from app.signals.aurora_wake import AuroraWakeJudge
 from app.signals.causal_trace_store import CausalTraceStore
+from app.signals.card_store import CardStore
 from app.signals.directive_store import DirectiveStore
 from app.signals.community_loops import CommunityLoopManager
 from app.signals.community_signal import CommunitySignalDetector
@@ -124,6 +125,7 @@ class SpineOrchestrator:
         self.self_model = SparkleSelfModelService(redis_client)
         self.community_detector = CommunitySignalDetector()
         self.community_loops = CommunityLoopManager()
+        self.card_store = CardStore(redis_client, self.community_loops)
         self.reply_engine = SpineReplyOptionEngine()
         self.wake_judge = AuroraWakeJudge()
         self.signal_ranker = SignalRanker()
@@ -3337,46 +3339,12 @@ class SpineOrchestrator:
         last_task_id: str | None = None,
         last_task_status: str | None = None,
     ) -> dict[str, Any] | None:
-        """神性时刻4: 记得时间 — build recovery card for returning user."""
-        import json
-        try:
-            recovery_card = {
-                "type": "recovery_card",
-                "user_id": user_id,
-                "elapsed_minutes": elapsed_minutes,
-                "last_task_id": last_task_id,
-                "last_task_status": last_task_status,
-                "options": [
-                    {"label": "做完了，补记录", "value": "completed"},
-                    {"label": "做了一半，卡住了", "value": "stuck"},
-                    {"label": "没开始", "value": "not_started"},
-                    {"label": "换个小任务", "value": "switch_task"},
-                ],
-            }
-
-            if elapsed_minutes >= 120:
-                recovery_card["urgency"] = "high"
-                recovery_card["message"] = f"你离开了大约 {int(elapsed_minutes / 60)} 小时。"
-            elif elapsed_minutes >= 60:
-                recovery_card["urgency"] = "medium"
-                recovery_card["message"] = f"你离开了大约 {int(elapsed_minutes)} 分钟。"
-            else:
-                recovery_card["urgency"] = "low"
-                recovery_card["message"] = f"你离开了 {int(elapsed_minutes)} 分钟。"
-
-            if last_task_id:
-                recovery_card["message"] += " 上一张任务卡预计完成，但还没收到反馈。"
-
-            await self.redis.set(
-                f"spine:card:recovery:{user_id}:latest",
-                json.dumps(recovery_card),
-                ex=24 * 3600,
-            )
-
-            return recovery_card
-        except Exception:
-            logger.warning("build_recovery_card: failed", exc_info=True)
-            return None
+        return await self.card_store.build_recovery_card(
+            user_id=user_id,
+            elapsed_minutes=elapsed_minutes,
+            last_task_id=last_task_id,
+            last_task_status=last_task_status,
+        )
 
     async def build_context_receipt(
         self,
@@ -3387,29 +3355,13 @@ class SpineOrchestrator:
         reason: str = "",
         retrieval_mode: str = "auto",
     ) -> dict[str, Any]:
-        """神性时刻3: 知道不用资料 — build context receipt for current turn."""
-        import json
-        receipt = {
-            "type": "context_receipt",
-            "used": used_sources or [],
-            "excluded": excluded_sources or [],
-            "reason": reason,
-            "retrieval_mode": retrieval_mode,
-            "user_actions": [
-                {"label": "按完整资料重讲", "value": "force_full_source"},
-                {"label": "不要用这份资料", "value": "exclude_source"},
-                {"label": "查看为什么", "value": "explain_decision"},
-            ],
-        }
-        try:
-            await self.redis.set(
-                f"spine:card:context_receipt:{user_id}:latest",
-                json.dumps(receipt),
-                ex=2 * 3600,
-            )
-        except Exception:
-            logger.warning("build_context_receipt: redis failed", exc_info=True)
-        return receipt
+        return await self.card_store.build_context_receipt(
+            user_id=user_id,
+            used_sources=used_sources,
+            excluded_sources=excluded_sources,
+            reason=reason,
+            retrieval_mode=retrieval_mode,
+        )
 
     async def on_community_hint(
         self,
@@ -3419,34 +3371,12 @@ class SpineOrchestrator:
         common_mistake: str,
         cohort_size: int,
     ) -> dict[str, Any] | None:
-        """神性时刻6: 社群经验转策略 — cohort hint → directive bias."""
-        import json
-        try:
-            hint = self.community_loops.build_cohort_mistake_hint({
-                "knowledge_node_id": knowledge_node,
-                "common_misconception": common_mistake,
-                "cohort_size": cohort_size,
-            })
-            if hint is None:
-                return None
-
-            card = {
-                "type": "community_hint",
-                "knowledge_node": knowledge_node,
-                "common_mistake": common_mistake,
-                "cohort_size": cohort_size,
-                "message": hint.get("hint_text", ""),
-            }
-
-            await self.redis.set(
-                f"spine:card:community_hint:{user_id}:latest",
-                json.dumps(card),
-                ex=48 * 3600,
-            )
-            return card
-        except Exception:
-            logger.warning("on_community_hint: failed", exc_info=True)
-            return None
+        return await self.card_store.build_community_hint(
+            user_id=user_id,
+            knowledge_node=knowledge_node,
+            common_mistake=common_mistake,
+            cohort_size=cohort_size,
+        )
 
     # ── P2: ExperienceEnvelope Builder ────────────────────────────────
 
