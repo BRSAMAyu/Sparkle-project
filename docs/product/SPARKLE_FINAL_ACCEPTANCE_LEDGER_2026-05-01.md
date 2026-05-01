@@ -495,3 +495,59 @@
 
 2. **社区 feed 现在的真正尾差变成了“关系边界是否干净”**。  
    功能已经连上，但查询没有把软删除语义一起带过来，这类问题很容易在线上变成“为什么我明明退出/解除关系了，还能看到那边的内容”。
+
+---
+
+## 16. Codex R11 复验补充 (2026-05-01)
+
+> **方法**: 复验 R10 的 soft-delete finding，并继续审查 `/community/feed` 的内容可见性、屏蔽关系和测试覆盖。
+
+### 16.1 已复验通过
+
+| ID | 结论 | 证据 |
+|----|------|------|
+| R11-V1 | R10 的关系软删除边界已补齐 | `community.py:245-298` 已在 `squad / goal_mates / following` 分支分别使用 `GroupMember.not_deleted_filter()`、`AccountabilityPartnership.not_deleted_filter()`、`Friendship.not_deleted_filter()` |
+| R11-V2 | 主 smoke 与社区 closure 当前可运行 | `flutter test test/app/main_actions_smoke_test.dart test/widget/community_remaining_closure_test.dart` |
+| R11-V3 | 社区 E2E / 文件分享 / 安全测试当前通过 | `pytest tests/test_community_e2e.py tests/api/test_community_group_file_sharing_api.py tests/test_community_security.py -q` |
+
+### 16.2 本轮新增发现
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| C-R11-1 | P1 | 社区 / 内容可见性 | `/community/feed` 没有约束 `Post.visibility` 与 `Post.not_deleted_filter()`，读取面可能把非 public 或软删除动态返回给不该看到的用户 | **REOPEN** |
+| C-R11-2 | P1 | 社区 / 屏蔽关系 | `/community/feed` 没有排除与当前用户存在拉黑关系的作者，和社区搜索/分享等路径的隐私边界不一致 | **REOPEN** |
+
+#### C-R11-1 说明: feed 只筛关系来源，没有筛内容可见性
+
+- `Post` 模型明确有 `visibility = public / friends / private`，见 `community.py` 对应模型 `Post.visibility`
+- `/community/feed` 当前从 `select(Post).options(selectinload(Post.user))` 开始，仅按 scope 收窄作者集合，最终直接返回 `_post_to_response(p)`
+- 查询没有基础条件：
+  - `Post.not_deleted_filter()`
+  - `Post.visibility == "public"` 或按 `friends/private` 做当前用户可见性判断
+- `_post_to_response()` 也没有把 `visibility` 带给移动端，因此前端无法补救这个边界
+
+**结论**: 即使当前 `create_post()` 默认写入 `public`，读取面也不应该依赖写入面的偶然默认。只要未来或数据迁移中出现 `friends/private` 或软删除动态，feed 就可能越权返回。
+
+#### C-R11-2 说明: feed 没有应用用户屏蔽关系
+
+- 社区系统已经有 `UserBlockService.has_block_relationship()`，并在用户搜索、分享路径等地方使用
+- `block_user()` 会解除好友关系并结束 accountability，但全局 feed 不依赖好友/伙伴关系，仍可能展示被拉黑用户的 public 动态
+- 当前 `/community/feed` 没有任何 `UserBlock` 排除条件
+
+**结论**: 从用户体验看，“我拉黑/被拉黑后仍在广场看到对方动态”属于明显的信任破坏。这个边界应该在 feed 查询层兜住，而不是只依赖关系表副作用。
+
+### 16.3 本轮抽样结果
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && ruff check app/api/v1/community.py` | ✅ 通过 |
+| `cd backend && pytest tests/test_community_e2e.py tests/api/test_community_group_file_sharing_api.py tests/test_community_security.py -q` | ✅ `28 passed` |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+
+### 16.4 当前判断
+
+1. **R10 的问题可以关闭**。  
+   关系来源的 soft-delete 边界已经补上。
+
+2. **社区 feed 还不能最终验收**。  
+   现在的主要问题已经从“关系集合是否正确”升级为“内容是否应该被当前用户看到”。这属于上线前必须补的隐私/信任边界。

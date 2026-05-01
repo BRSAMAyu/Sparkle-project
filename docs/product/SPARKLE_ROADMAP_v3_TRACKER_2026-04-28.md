@@ -860,3 +860,43 @@
 当前更准确的说法是：
 
 > **R9 的两个问题已关闭；社区 feed 现在的主要尾差不再是“功能是否接线”，而是“关系与软删除边界是否严格一致”。**
+
+---
+
+## R11 当前主干复验补充 (2026-05-01)
+
+> **来源**: Codex 当前主干 `main` 深入复验
+> **方法**: 复验 R10 soft-delete finding，并继续审查 `/community/feed` 的内容可见性、用户屏蔽关系与测试覆盖。
+
+### R11.1 已复验通过
+
+| ID | 模块 | 结论 |
+|----|------|------|
+| R11-P1 | 社区关系边界 | R10 的 soft-delete 边界已补齐，`squad / goal_mates / following` 均带对应 `not_deleted_filter()` |
+| R11-P2 | 移动端 smoke | `main_actions_smoke_test + community_remaining_closure_test` 当前通过 |
+| R11-P3 | 后端社区回归 | `community_e2e + group_file_sharing + community_security` 当前 `28 passed` |
+
+### R11.2 新发现问题
+
+| ID | 严重度 | 问题 | 文件/证据 | 状态 |
+|----|--------|------|-----------|------|
+| R11-1 | P1 | `/community/feed` 没有约束 `Post.visibility` 与 `Post.not_deleted_filter()`，未来出现 friends/private 或软删除动态时可能越权返回 | `community.py:243-307`; `Post.visibility` 模型字段 | 🔴 Reopen |
+| R11-2 | P1 | `/community/feed` 没有排除与当前用户存在拉黑关系的作者，和用户搜索/分享路径的隐私边界不一致 | `community.py:243-307`; `UserBlockService.has_block_relationship()` | 🔴 Reopen |
+
+### R11.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && ruff check app/api/v1/community.py` | ✅ 通过 |
+| `cd backend && pytest tests/test_community_e2e.py tests/api/test_community_group_file_sharing_api.py tests/test_community_security.py -q` | ✅ `28 passed` |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+
+### R11.4 阶段判断修正
+
+当前更准确的说法是：
+
+> **R10 的关系 soft-delete 问题已关闭；社区 feed 现在剩下的是更高层的内容可见性与屏蔽关系边界。**
+
+因此：
+
+> **社区 feed 还不能按最终上线验收签字，必须先补 `Post.visibility / Post.not_deleted_filter / UserBlock` 三类读取边界，并补对应 API 测试。**
