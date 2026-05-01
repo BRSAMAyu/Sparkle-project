@@ -512,7 +512,7 @@ class FriendMatchService:
         score_breakdown: dict[str, float],
         *,
         tuning: dict[str, dict[str, float]],
-        strategy: FriendMatchStrategyEnum,
+        _strategy: FriendMatchStrategyEnum,
     ) -> dict[str, float]:
         feature_weights = tuning.get("feature_weights") or {}
         adjusted: dict[str, float] = {}
@@ -731,7 +731,7 @@ class FriendMatchService:
         db: AsyncSession,
         current_user_id: UUID,
         *,
-        accepted_friend_ids: set[str],
+        accepted_friend_ids: set[str],  # noqa: ARG003
         pending_user_ids: set[str],
         blocked_user_ids: set[str],
     ) -> list[User]:

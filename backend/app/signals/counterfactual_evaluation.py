@@ -465,7 +465,7 @@ class MatchedContextEvaluator:
         cls,
         actual_eps: list[InterventionEpisode],
         alt_eps: list[InterventionEpisode],
-        num_effects: int,
+        _num_effects: int,
     ) -> EvidenceGrade:
         total = len(actual_eps) + len(alt_eps)
         if total == 0:
@@ -491,7 +491,7 @@ class MatchedContextEvaluator:
         actual_eps: list[InterventionEpisode],
         alt_eps: list[InterventionEpisode],
         grade: EvidenceGrade,
-        max_distance: float,
+        _max_distance: float,
     ) -> list[str]:
         limitations = []
         if grade.grade < 3:

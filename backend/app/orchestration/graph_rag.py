@@ -684,7 +684,8 @@ Return ONLY a JSON array of concept strings."""
         return self._heuristic_concept_split(query, max_concepts=max_concepts)
 
     def _heuristic_concept_split(self, query: str, max_concepts: int = 3) -> list[str]:
-        normalized = re.sub(r"\s+", " ", str(query or "")).strip(" ??.，,")
+        normalized = re.sub(r"\s+", " ", str(query or "")).strip()
+        normalized = normalized.rstrip("?.，,")
         split_patterns = [
             r"\brelate(?:s|d)? to\b",
             r"\brelated to\b",
@@ -707,7 +708,7 @@ Return ONLY a JSON array of concept strings."""
         for pattern in split_patterns:
             if len(parts) >= 2:
                 break
-            parts = [segment.strip(" ??.，,:：") for segment in re.split(pattern, normalized, flags=re.IGNORECASE) if segment.strip()]
+            parts = [segment.rstrip("?.，,:：").strip() for segment in re.split(pattern, normalized, flags=re.IGNORECASE) if segment.strip()]
 
         cleaned_parts = []
         for part in parts:

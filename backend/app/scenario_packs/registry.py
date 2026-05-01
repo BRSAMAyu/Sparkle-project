@@ -125,7 +125,7 @@ def flatten_node_signals(manifest: ScenarioPackManifest) -> set[str]:
         for key in node.ux_mapping.get("signal_terms", []):
             if isinstance(key, str) and key.strip():
                 signal_keys.add(key.strip())
-        for trigger_key in node.transition_triggers.keys():
+        for trigger_key in node.transition_triggers:
             if trigger_key.strip():
                 signal_keys.add(trigger_key.strip())
     return signal_keys

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
-from typing import Any, Union
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -254,7 +254,7 @@ async def get_graph_reasoning_service(db: AsyncSession = Depends(get_db)) -> Gra
 
 @router.get(
     "/{target_node_id}",
-    response_model=Union[list[LearningPathNodeResponse], LearningPathErrorResponse],
+    response_model=list[LearningPathNodeResponse] | LearningPathErrorResponse,
 )
 async def get_dynamic_learning_path(
     target_node_id: UUID,
