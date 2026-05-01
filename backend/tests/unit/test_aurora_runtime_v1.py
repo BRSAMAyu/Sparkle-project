@@ -273,7 +273,8 @@ async def test_scheduled_wake_persists_and_lists_pending(db_session, test_user) 
 
 @pytest.mark.asyncio
 async def test_control_surface_reads_hard_bounds_from_explicit_json(db_session, test_user) -> None:
-    await PreferenceService(db_session, redis=None).update_explicit(
+    pref_service = PreferenceService(db_session, redis=None)
+    await pref_service.update_explicit(
         test_user.id,
         {
             "timezone": "Asia/Shanghai",
@@ -285,7 +286,7 @@ async def test_control_surface_reads_hard_bounds_from_explicit_json(db_session, 
         },
     )
 
-    service = ControlSurfaceService(db_session, redis=_FakeRedis(), enabled=True)
+    service = ControlSurfaceService(db_session, redis=_FakeRedis(), enabled=True, preference_service=pref_service)
     reading = await service.read_control_surface(test_user.id)
 
     assert reading.hard_bounds.timezone_name == "Asia/Shanghai"
@@ -305,7 +306,8 @@ async def test_illegal_harness_update_is_rejected(db_session, test_user) -> None
         },
     )
 
-    service = ControlSurfaceService(db_session, redis=_FakeRedis(), enabled=True)
+    pref_svc = PreferenceService(db_session, redis=None)
+    service = ControlSurfaceService(db_session, redis=_FakeRedis(), enabled=True, preference_service=pref_svc)
     reading = await service.read_control_surface(test_user.id)
 
     with pytest.raises(HarnessUpdateRejectedError) as exc_info:
@@ -335,7 +337,8 @@ async def test_control_surface_expression_update_round_trips(db_session, test_us
 @pytest.mark.asyncio
 async def test_dnd_wake_is_suppressed(db_session, test_user) -> None:
     redis = _FakeRedis()
-    await PreferenceService(db_session, redis=None).update_explicit(
+    pref_svc = PreferenceService(db_session, redis=None)
+    await pref_svc.update_explicit(
         test_user.id,
         {
             "timezone": "UTC",
@@ -349,7 +352,7 @@ async def test_dnd_wake_is_suppressed(db_session, test_user) -> None:
         db_session,
         redis=redis,
         persistence_store=AuroraPersistenceStore(db_session, enabled=True),
-        control_surface_service=ControlSurfaceService(db_session, redis=redis, enabled=True),
+        control_surface_service=ControlSurfaceService(db_session, redis=redis, enabled=True, preference_service=pref_svc),
         enabled=True,
     )
     suppressed = await scheduler.schedule_wake(
