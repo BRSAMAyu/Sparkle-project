@@ -70,6 +70,8 @@ class TaskEventConsumer:
             await self._handle_task_feedback(event)
         elif event_type == "plan.replanned":
             await self._handle_plan_replanned(event)
+        elif event_type == "reflection.completed":
+            await self._handle_reflection_completed(event)
         elif event_type == "behavior.pattern.updated":
             await self._handle_behavior_pattern(event)
         elif event_type in {
@@ -315,6 +317,24 @@ class TaskEventConsumer:
             actual_outcome=actual,
             exclude_context={"task_id": task_id},
         )
+
+    async def _handle_reflection_completed(self, event: dict) -> None:
+        """Wire reflection → adapt: trigger plan re-evaluation after user reflects."""
+        user_id = event.get("user_id")
+        plan_id = event.get("plan_id")
+        if not user_id or not plan_id or plan_id == "None":
+            return
+        try:
+            async with AsyncSessionLocal() as db:
+                replanner = AdaptiveReplanner(db, cache_service.redis)
+                await replanner.evaluate_plan_health_now(
+                    user_id=UUID(user_id),
+                    plan_id=UUID(plan_id),
+                    trigger="reflection_completed",
+                )
+                logger.info("Triggered adaptation after reflection: plan_id={}", plan_id)
+        except Exception as exc:
+            logger.warning("reflection→adapt failed for plan {}: {}", plan_id, exc)
 
     def stop(self):
         """停止消费者"""
