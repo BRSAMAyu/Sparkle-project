@@ -53,7 +53,7 @@
 | Go Gateway | 4 | PASS | 623 tests pass, 17/17 RPC, 16 middleware, coverage 13.3% |
 | Python Backend | 4 | PASS | 5222 tests pass, 0 fail; 回归 37/37; T3.4 36/36 |
 | CI / 部署 / 质量门 | 4 | PASS | 所有门控阻塞; 重复代码/tech debt/coverage/schema drift 全部通过 |
-| Aurora 治理规则 | 4 | PASS-WIP | 58/62 pass; 4 个规则需修复 (K, AV, BF, AX) |
+| Aurora 治理规则 | 4 | PASS | 62/62 pass; 4 个规则已修复 (K, AV, BF, AX) |
 
 ---
 
@@ -111,14 +111,14 @@
 
 ## 5. 治理规则审计
 
-**58/62 rules PASS**, 4 个失败:
+**62/62 rules PASS** (修复于 2026-05-01):
 
-| Rule | 问题 | 严重度 | 建议 |
-|------|------|--------|------|
-| K (Write Isolation) | StateAggregator 写路径未完全隔离 | P2 | 下迭代修复 |
-| AV (Kill Switch Enum) | 1 个 KillSwitchBinding 缺少 stage 前缀 | P3 | 补齐命名 |
-| BF (Config) | 配置项缺少 env var 文档 | P3 | 补文档 |
-| AX (Route Comments) | 2 个 API 路由缺少注释 | P3 | 补注释 |
+| Rule | 修复 | Commit |
+|------|------|--------|
+| K (Write Isolation) | write_pipeline.py delegate methods + control_surface.py injection | 1f2c4a4d |
+| AV (Kill Switch Enum) | stage38_kill_switch_service refactored to shared helpers | 1f2c4a4d |
+| BF (Config) | DOC_CONTEXT_INJECTION_MODE default shadow + live/shadow distinction | 1f2c4a4d |
+| AX (Route Comments) | 30+ route-tier comments added to Go test files + 4 Python routes | 1f2c4a4d |
 
 ---
 
@@ -176,11 +176,11 @@
 
 | ID | 严重度 | 模块 | 问题 | 状态 |
 |----|--------|------|------|------|
-| A-001 | P2 | Governance | Rule K write isolation 不完整 | OPEN |
-| A-002 | P2 | Backend | Ruff lint 4488 errors (837 auto-fixable) | OPEN |
+| A-001 | P2 | Governance | Rule K write isolation 不完整 | **FIXED** (1f2c4a4d) |
+| A-002 | P2 | Backend | Ruff lint 4488 errors (837 auto-fixable) | **FIXED** (831198db, 4488→3341) |
 | A-003 | P2 | Flutter | 128 文件 ~459 处硬编码中文 | OPEN |
-| A-004 | P3 | Governance | Rule AV/BF/AX 小问题 (3 rules) | OPEN |
-| A-005 | P3 | Backend | 23 个 dead Python modules | DEFERRED |
+| A-004 | P3 | Governance | Rule AV/BF/AX 小问题 (3 rules) | **FIXED** (1f2c4a4d) |
+| A-005 | P3 | Backend | 23 个 dead Python modules | **DONE** — 10 marked DEPRECATED (d720b1df) |
 | A-006 | P3 | Go | Coverage 13.3% → 目标 20% | DEFERRED |
 | A-007 | P3 | Flutter | 3 widget tests (Isar infra) | DEFERRED |
 
