@@ -29,6 +29,7 @@ from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
+from app.config import settings
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -9,7 +9,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 from google.protobuf import struct_pb2
 from loguru import logger
@@ -1258,7 +1258,7 @@ class ExecutionEngineMixin:
         active_tools: list[str],
         stream_callback,
         tracer,
-    ) -> tuple[TransparencyDataGenerator, typing.Callable]:
+    ) -> tuple[TransparencyDataGenerator, Callable]:
         """Prepare transparency tracking, tools schema, and initial status.
 
         Returns (transparency_generator, emit_transparency_event).

@@ -10,6 +10,8 @@ Sends detailed notifications for major state changes:
 Integrates with WebSocket to deliver real-time notifications to clients.
 Also creates database records for notification center persistence.
 """
+from typing import TYPE_CHECKING
+
 from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID, uuid4
@@ -18,6 +20,9 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.websocket import get_ws_manager
+
+if TYPE_CHECKING:
+    from app.models.notification import Notification
 
 
 def _utcnow() -> datetime:

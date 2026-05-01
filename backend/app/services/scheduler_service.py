@@ -385,6 +385,7 @@ class SchedulerService:
                             continue
 
                         # 通过 Celery 异步生成
+                        from app.core.celery_app import celery_app
                         celery_app.send_task(
                             "generate_capsules_batch",
                             args=(
@@ -455,6 +456,7 @@ class SchedulerService:
                             continue
 
                         # 通过 Celery 异步生成深度胶囊
+                        from app.core.celery_app import celery_app
                         celery_app.send_task(
                             "generate_capsules_batch",
                             args=(

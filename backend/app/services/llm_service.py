@@ -1004,7 +1004,7 @@ class LLMService:
         带工具调用的聊天
         """
         await refresh_llm_safety_mode()
-        user_id = self._resolve_user_id(user_id=None)
+        user_id = self._resolve_user_id()
         safe_system_prompt = sanitize_text_for_llm(system_prompt, user_id=user_id)
         safe_user_message = wrap_user_message(sanitize_text_for_llm(user_message, user_id=user_id))
 
@@ -1199,6 +1199,7 @@ class LLMService:
         流式聊天（支持工具调用）
         """
         await refresh_llm_safety_mode()
+        user_id = self._resolve_user_id(user_context=user_context)
         safe_system_prompt = sanitize_text_for_llm(system_prompt)
         safe_user_message = wrap_user_message(sanitize_text_for_llm(user_message))
         messages = [{"role": "system", "content": safe_system_prompt}]

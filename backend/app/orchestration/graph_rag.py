@@ -32,6 +32,7 @@ from app.services.embedding_service import embedding_service
 from app.services.galaxy.rag_router import RagRouter
 from app.services.graphrag_trace_store import cache_trace
 from app.services.knowledge_service import KnowledgeService
+from app.services.group_file_service import GroupFileService
 from app.services.llm_service import get_configured_llm_service, llm_service
 from app.services.rerank_service import rerank_service
 

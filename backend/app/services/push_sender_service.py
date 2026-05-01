@@ -12,7 +12,7 @@ Features:
 - Deep link support for notification actions
 """
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
