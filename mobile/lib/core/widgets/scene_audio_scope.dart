@@ -11,10 +11,14 @@ class SceneAudioScope extends StatefulWidget {
     required this.policy,
     required this.child,
     super.key,
+    this.auroraStatus,
+    this.enableAuroraAudio = true,
   });
 
   final SceneAudioPolicy policy;
   final Widget child;
+  final String? auroraStatus;
+  final bool enableAuroraAudio;
 
   @override
   State<SceneAudioScope> createState() => _SceneAudioScopeState();
@@ -22,8 +26,11 @@ class SceneAudioScope extends StatefulWidget {
 
 class _SceneAudioScopeState extends State<SceneAudioScope> {
   Object? _bgmToken;
+  Object? _auroraBgmToken;
   bool _ambientActivated = false;
   int _ambientRequestVersion = 0;
+  String? _lastAuroraStatus;
+  BgmTrack? _lastAuroraSceneTrack;
 
   @override
   void initState() {
@@ -34,7 +41,9 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
   @override
   void didUpdateWidget(covariant SceneAudioScope oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.policy != widget.policy) {
+    if (oldWidget.policy != widget.policy ||
+        oldWidget.auroraStatus != widget.auroraStatus ||
+        oldWidget.enableAuroraAudio != widget.enableAuroraAudio) {
       unawaited(_configureAudio());
     }
   }
@@ -70,6 +79,7 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
         _ambientActivated = false;
         unawaited(SensoryFeedbackService.stopAmbient());
       }
+      unawaited(_configureAuroraAudio(policy));
       return;
     }
 
@@ -81,9 +91,34 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
     _ambientActivated = ambientScene != AmbientScene.none;
     if (_ambientActivated) {
       unawaited(SensoryFeedbackService.playAmbient(ambientScene));
+      unawaited(_configureAuroraAudio(policy));
       return;
     }
     unawaited(SensoryFeedbackService.stopAmbient());
+    unawaited(_configureAuroraAudio(policy));
+  }
+
+  Future<void> _configureAuroraAudio(SceneAudioPolicy policy) async {
+    final status = widget.auroraStatus?.trim();
+    final sceneTrack = policy.track;
+    if (_lastAuroraStatus == status && _lastAuroraSceneTrack == sceneTrack) {
+      return;
+    }
+    _lastAuroraStatus = status;
+    _lastAuroraSceneTrack = sceneTrack;
+
+    try {
+      final enabled = widget.enableAuroraAudio &&
+          await SensoryFeedbackService.isAuroraLinkageEnabled();
+      _auroraBgmToken = await BgmService.applyAuroraStatus(
+        status: status,
+        token: _auroraBgmToken,
+        sceneTrack: sceneTrack,
+        enabled: enabled,
+      );
+    } catch (_) {
+      // Audio linkage is ambient polish; never block the route surface.
+    }
   }
 
   @override
@@ -92,6 +127,7 @@ class _SceneAudioScopeState extends State<SceneAudioScope> {
     if (_bgmToken != null) {
       unawaited(BgmService.deactivate(_bgmToken!));
     }
+    unawaited(BgmService.clearAuroraStatus(_auroraBgmToken));
     if (_ambientActivated && widget.policy.stopAmbientOnDispose) {
       unawaited(SensoryFeedbackService.stopAmbient());
     }

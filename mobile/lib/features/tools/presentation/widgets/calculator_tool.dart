@@ -7,6 +7,7 @@ import 'package:math_expressions/math_expressions.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -58,7 +59,7 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
     });
   }
 
-  void _evaluate() {
+  Future<void> _evaluate() async {
     if (_expression.trim().isEmpty) {
       return;
     }
@@ -90,11 +91,20 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
     });
 
     if (evaluated && complexity != null) {
-      unawaited(
-        ref.read(toolHistoryRepositoryProvider).recordCalculatorEvaluated(
-              complexity: complexity!,
-              surface: widget.surface.name,
-            ),
+      final contextEventId = await ref
+          .read(toolHistoryRepositoryProvider)
+          .recordCalculatorEvaluated(
+            complexity: complexity!,
+            surface: widget.surface.name,
+          );
+      if (!mounted) {
+        return;
+      }
+      ToolContextEffectFeedback.show(
+        context: context,
+        ref: ref,
+        toolLabel: context.l10n.toolsCalcTitle,
+        eventId: contextEventId,
       );
     }
   }
@@ -134,12 +144,16 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: _history.isEmpty ? context.l10n.toolsCalcNoHistory : '${_history.length} 条历史',
+          label: _history.isEmpty
+              ? context.l10n.toolsCalcNoHistory
+              : '${_history.length} 条历史',
           accentColor: accent,
           icon: Icons.history_rounded,
         ),
         ToolHeroChip(
-          label: _result.isEmpty ? context.l10n.toolsCalcWaiting : context.l10n.toolsCalcResultReady,
+          label: _result.isEmpty
+              ? context.l10n.toolsCalcWaiting
+              : context.l10n.toolsCalcResultReady,
           accentColor: accent,
           icon: Icons.auto_graph_rounded,
         ),
@@ -204,7 +218,7 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
                     Expanded(
                       child: SparkleButton(
                         label: context.l10n.toolsCalcCompute,
-                        onPressed: _evaluate,
+                        onPressed: () => unawaited(_evaluate()),
                         icon: const Icon(Icons.play_arrow_rounded),
                       ),
                     ),
@@ -260,7 +274,7 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
                                   accentColor: accent,
                                   isPrimary: true,
                                   height: keyHeight,
-                                  onTap: _evaluate,
+                                  onTap: () => unawaited(_evaluate()),
                                 ),
                               ),
                             ),

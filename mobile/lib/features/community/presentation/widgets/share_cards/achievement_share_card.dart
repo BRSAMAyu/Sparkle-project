@@ -38,7 +38,7 @@ class AchievementShareCardFactory {
                   width: isCompact ? 34 : 40,
                   height: isCompact ? 34 : 40,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.75),
+                    color: DS.neutral0.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -80,9 +80,11 @@ class AchievementShareCardFactory {
               spacing: DS.spacing6,
               runSpacing: DS.spacing6,
               children: [
-                _chip(S.communityShareRarity, metadata['rarity']?.toString() ?? '荣耀'),
+                _chip(S.communityShareRarity,
+                    metadata['rarity']?.toString() ?? '荣耀'),
                 if (metadata['unlocked_count'] != null)
-                  _chip(S.communityShareUnlocked, '${metadata['unlocked_count']}'),
+                  _chip(S.communityShareUnlocked,
+                      '${metadata['unlocked_count']}'),
                 if (metadata['flame_level'] != null)
                   _chip(S.communityShareLevel, 'Lv.${metadata['flame_level']}'),
               ],
@@ -99,7 +101,7 @@ class AchievementShareCardFactory {
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.66),
+          color: DS.neutral0.withValues(alpha: 0.66),
           borderRadius: DS.borderRadius12,
         ),
         child: Text(

@@ -404,25 +404,25 @@ class NotificationCenterService:
             if system_rows:
                 system_ids = [row.id for row in system_rows]
                 await self.db.execute(
-                    sa_update(Notification)
-                    .where(Notification.id.in_(system_ids))
-                    .values(is_read=True, read_at=now)
+                    sa_update(Notification).where(Notification.id.in_(system_ids)).values(is_read=True, read_at=now)
                 )
                 count += len(system_ids)
 
                 # Batch INSERT interactions
-                self.db.add_all([
-                    NotificationInteraction(
-                        id=uuid4(),
-                        user_id=user_id,
-                        notification_type="system",
-                        notification_id=row.id,
-                        action_type="viewed",
-                        action_time=now,
-                        time_to_action=max(0, int((now - row.created_at).total_seconds())),
-                    )
-                    for row in system_rows
-                ])
+                self.db.add_all(
+                    [
+                        NotificationInteraction(
+                            id=uuid4(),
+                            user_id=user_id,
+                            notification_type="system",
+                            notification_id=row.id,
+                            action_type="viewed",
+                            action_time=now,
+                            time_to_action=max(0, int((now - row.created_at).total_seconds())),
+                        )
+                        for row in system_rows
+                    ]
+                )
 
             # --- Intervention notifications: must loop for side effects ---
             intervention_notification_stmt = select(Notification).where(
@@ -474,18 +474,20 @@ class NotificationCenterService:
                 count += len(intervention_ids)
 
                 # Batch INSERT interactions
-                self.db.add_all([
-                    NotificationInteraction(
-                        id=uuid4(),
-                        user_id=user_id,
-                        notification_type="intervention",
-                        notification_id=row.id,
-                        action_type="viewed",
-                        action_time=now,
-                        time_to_action=max(0, int((now - row.created_at).total_seconds())),
-                    )
-                    for row in intervention_rows
-                ])
+                self.db.add_all(
+                    [
+                        NotificationInteraction(
+                            id=uuid4(),
+                            user_id=user_id,
+                            notification_type="intervention",
+                            notification_id=row.id,
+                            action_type="viewed",
+                            action_time=now,
+                            time_to_action=max(0, int((now - row.created_at).total_seconds())),
+                        )
+                        for row in intervention_rows
+                    ]
+                )
 
             await self.db.commit()
             return count
@@ -767,9 +769,7 @@ class NotificationCenterService:
                         Notification.id.in_(notification_ids),
                     )
                 )
-                notifications_by_id = {
-                    notification.id: notification for notification in linked_result.scalars().all()
-                }
+                notifications_by_id = {notification.id: notification for notification in linked_result.scalars().all()}
 
             for record in push_records:
                 record.deleted_at = _utcnow()
@@ -893,7 +893,9 @@ class NotificationCenterService:
             if filters.end_date:
                 intervention_stmt = intervention_stmt.where(InterventionRequest.created_at <= filters.end_date)
             if filters.search:
-                intervention_stmt = intervention_stmt.where(InterventionRequest.topic.ilike(f"%{_escape_like(filters.search)}%"))
+                intervention_stmt = intervention_stmt.where(
+                    InterventionRequest.topic.ilike(f"%{_escape_like(filters.search)}%")
+                )
 
             # Count total
             count_stmt = select(func.count()).select_from(intervention_stmt.subquery())
@@ -1062,6 +1064,9 @@ class NotificationCenterService:
             return
 
         if action == "accepted":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
@@ -1076,6 +1081,9 @@ class NotificationCenterService:
             return
 
         if action == "acted":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
@@ -1092,6 +1100,9 @@ class NotificationCenterService:
             return
 
         if action == "dismissed":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
@@ -1101,6 +1112,9 @@ class NotificationCenterService:
             return
 
         if action == "snoozed":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,

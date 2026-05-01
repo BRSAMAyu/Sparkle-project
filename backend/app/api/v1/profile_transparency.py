@@ -30,6 +30,7 @@ from app.models.accountability import (
 from app.models.card_protocol import InterventionAcceptanceStatus, InterventionRecord
 from app.models.chat import ChatMessage, MessageRole
 from app.models.chat import ChatSession as ChatSessionModel
+from app.models.memory import MemoryCorrection
 from app.models.user import User
 from app.orchestration.session_state_mixin import SessionStateMixin
 from app.services.cognitive_service import CognitiveService
@@ -67,6 +68,47 @@ def _snippet(value: str, limit: int = 80) -> str:
 
 def _strip(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _parse_correction_reason(raw: Any) -> dict[str, Any]:
+    text = _strip(raw)
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+    except (TypeError, ValueError):
+        return {"reason": text}
+    return parsed if isinstance(parsed, dict) else {"reason": text}
+
+
+async def _recent_profile_corrections(db: AsyncSession, user_id: UUID, limit: int = 8) -> list[dict[str, Any]]:
+    result = await db.execute(
+        select(MemoryCorrection)
+        .where(MemoryCorrection.user_id == user_id)
+        .order_by(MemoryCorrection.created_at.desc())
+        .limit(limit)
+    )
+    items: list[dict[str, Any]] = []
+    for correction in result.scalars().all():
+        details = _parse_correction_reason(correction.reason)
+        target_id = _strip(details.get("target_id"))
+        field_name = _strip(details.get("field_name")) or target_id
+        suggested = details.get("suggested_value")
+        reason = _strip(details.get("reason"))
+        summary = reason or _strip(suggested) or correction.action
+        items.append(
+            {
+                "id": str(correction.id),
+                "target_type": correction.memory_type,
+                "target_id": target_id,
+                "field_name": field_name,
+                "action": correction.action,
+                "summary": summary,
+                "created_at": correction.created_at.isoformat() if correction.created_at else "",
+                "can_undo": bool(target_id and correction.memory_type == "insight_signal"),
+            }
+        )
+    return items
 
 
 def _response_style_from_depth(depth: float) -> str:
@@ -868,9 +910,7 @@ def _apply_legacy_transparency_level(payload: dict[str, Any], level: int) -> dic
     layer_2 = dict(payload.get("layer_2") or {})
     layer_3 = dict(payload.get("layer_3") or {})
     hidden_count = (
-        len(layer_2.get("patterns") or [])
-        + len(layer_3.get("patterns") or [])
-        + len(layer_3.get("fragments") or [])
+        len(layer_2.get("patterns") or []) + len(layer_3.get("patterns") or []) + len(layer_3.get("fragments") or [])
     )
 
     if level <= 0:
@@ -878,9 +918,7 @@ def _apply_legacy_transparency_level(payload: dict[str, Any], level: int) -> dic
             "layer_1": {"preferences": [], "goals": []},
             "layer_2": {"persona": {"tags": []}, "editable": False},
             "layer_3": {"patterns": [], "fragments": []},
-            "hidden_item_count": hidden_count
-            + len(layer_1.get("preferences") or [])
-            + len(layer_1.get("goals") or []),
+            "hidden_item_count": hidden_count + len(layer_1.get("preferences") or []) + len(layer_1.get("goals") or []),
             "transparency": {"enabled": False, "level": 0},
         }
 
@@ -1008,11 +1046,14 @@ async def get_profile_transparent(
         ],
     }
 
-    return _apply_legacy_transparency_level({
-        "layer_1": layer_1,
-        "layer_2": layer_2,
-        "layer_3": layer_3,
-    }, transparency_level)
+    return _apply_legacy_transparency_level(
+        {
+            "layer_1": layer_1,
+            "layer_2": layer_2,
+            "layer_3": layer_3,
+        },
+        transparency_level,
+    )
 
 
 @router.get("/context")
@@ -1032,6 +1073,7 @@ async def get_profile_context(
     payload = context.to_prompt_context()
     payload["preferences"] = merged_preferences
     payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
+    payload["recent_corrections"] = await _recent_profile_corrections(db, current_user.id)
     user_insight_state = getattr(context, "user_insight_state", None)
     if user_insight_state is not None:
         transparency_level = await _get_transparency_level(db, current_user.id)
@@ -1112,14 +1154,17 @@ async def get_profile_insights(
     state = context.user_insight_state
     transparency_level = await _get_transparency_level(db, current_user.id)
     if state is None:
-        return _apply_insight_transparency_level({
-            "claims": [],
-            "predictions": [],
-            "recent_changes": [],
-            "unknowns": [],
-            "calibration": {},
-            "current_profile": {},
-        }, transparency_level)
+        return _apply_insight_transparency_level(
+            {
+                "claims": [],
+                "predictions": [],
+                "recent_changes": [],
+                "unknowns": [],
+                "calibration": {},
+                "current_profile": {},
+            },
+            transparency_level,
+        )
 
     return _apply_insight_transparency_level(
         UserInsightTransparencyService().build_payload(

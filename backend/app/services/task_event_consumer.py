@@ -209,6 +209,9 @@ class TaskEventConsumer:
     async def _handle_task_stuck(self, event: dict):
         """处理任务卡住 — H-01: 新增 Spine 信号。"""
         try:
+            async with AsyncSessionLocal() as db:
+                collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
+                await collector.handle_task_stuck_event(event)
             await self._handle_spine_bridge_event(event)
             await self._trigger_adaptive_plan_health_event(
                 event,

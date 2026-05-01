@@ -386,6 +386,18 @@ abstract class AppLocalizations {
   /// **'关闭后，成就、星图等所有触感反馈都会停止'**
   String get sensoryHapticSubtitle;
 
+  /// No description provided for @sensoryAuroraLinkTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 感官联动'**
+  String get sensoryAuroraLinkTitle;
+
+  /// No description provided for @sensoryAuroraLinkSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'允许 Aurora 根据状态轻柔调整音乐、触感和庆祝反馈'**
+  String get sensoryAuroraLinkSubtitle;
+
   /// No description provided for @sensoryAmbientSceneTitle.
   ///
   /// In zh, this message translates to:
@@ -19780,6 +19792,12 @@ abstract class AppLocalizations {
   /// **'继续在对话里'**
   String get chatContinueInChat;
 
+  /// No description provided for @chatNewMessagesDivider.
+  ///
+  /// In zh, this message translates to:
+  /// **'新消息'**
+  String get chatNewMessagesDivider;
+
   /// No description provided for @chatViewLatestReport.
   ///
   /// In zh, this message translates to:
@@ -33376,7 +33394,7 @@ abstract class AppLocalizations {
   /// No description provided for @auroraCalibrationComplete.
   ///
   /// In zh, this message translates to:
-  /// **'校准完成，回到标准层。'**
+  /// **'校准完成'**
   String get auroraCalibrationComplete;
 
   /// No description provided for @auroraCalibrationExit.
@@ -33391,11 +33409,23 @@ abstract class AppLocalizations {
   /// **'不是这个方向'**
   String get auroraCorrectNotRight;
 
+  /// No description provided for @auroraCorrectNotRightSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'判断偏了'**
+  String get auroraCorrectNotRightSubtitle;
+
   /// No description provided for @auroraCorrectShorter.
   ///
   /// In zh, this message translates to:
   /// **'更短一点'**
   String get auroraCorrectShorter;
+
+  /// No description provided for @auroraCorrectShorterSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'收短回复'**
+  String get auroraCorrectShorterSubtitle;
 
   /// No description provided for @auroraCorrectDirect.
   ///
@@ -33403,11 +33433,191 @@ abstract class AppLocalizations {
   /// **'直接出题'**
   String get auroraCorrectDirect;
 
+  /// No description provided for @auroraCorrectDirectSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'切到练习'**
+  String get auroraCorrectDirectSubtitle;
+
   /// No description provided for @auroraCorrectRecalibrate.
   ///
   /// In zh, this message translates to:
   /// **'重新校准'**
   String get auroraCorrectRecalibrate;
+
+  /// No description provided for @auroraCorrectRecalibrateSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度检查'**
+  String get auroraCorrectRecalibrateSubtitle;
+
+  /// No description provided for @auroraCorrectionRiskFalsePositive.
+  ///
+  /// In zh, this message translates to:
+  /// **'我其实不焦虑，只是忙'**
+  String get auroraCorrectionRiskFalsePositive;
+
+  /// No description provided for @auroraCorrectionRiskOverstated.
+  ///
+  /// In zh, this message translates to:
+  /// **'没那么严重'**
+  String get auroraCorrectionRiskOverstated;
+
+  /// No description provided for @auroraCorrectionRiskSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'判断偏高'**
+  String get auroraCorrectionRiskSubtitle;
+
+  /// No description provided for @auroraCorrectionJudgmentOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次判断不太准'**
+  String get auroraCorrectionJudgmentOff;
+
+  /// No description provided for @auroraCorrectionJudgmentSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新判断'**
+  String get auroraCorrectionJudgmentSubtitle;
+
+  /// No description provided for @auroraCorrectionTemporaryBusy.
+  ///
+  /// In zh, this message translates to:
+  /// **'只是临时忙'**
+  String get auroraCorrectionTemporaryBusy;
+
+  /// No description provided for @auroraCorrectionTemporarySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'临时情境'**
+  String get auroraCorrectionTemporarySubtitle;
+
+  /// No description provided for @auroraCorrectionStrategyAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'方向需要调整'**
+  String get auroraCorrectionStrategyAdjust;
+
+  /// No description provided for @auroraCorrectionStrategyFaster.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以再快一点'**
+  String get auroraCorrectionStrategyFaster;
+
+  /// No description provided for @auroraCorrectionStrategySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整策略'**
+  String get auroraCorrectionStrategySubtitle;
+
+  /// No description provided for @auroraCorrectionKnowledgeBlocker.
+  ///
+  /// In zh, this message translates to:
+  /// **'我是内容卡住'**
+  String get auroraCorrectionKnowledgeBlocker;
+
+  /// No description provided for @auroraCorrectionKnowledgeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'改判断原因'**
+  String get auroraCorrectionKnowledgeSubtitle;
+
+  /// No description provided for @auroraCorrectionCareless.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次是粗心'**
+  String get auroraCorrectionCareless;
+
+  /// No description provided for @auroraCorrectionCarelessSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是概念问题'**
+  String get auroraCorrectionCarelessSubtitle;
+
+  /// No description provided for @auroraCorrectionGenericDisconfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'这不太对'**
+  String get auroraCorrectionGenericDisconfirm;
+
+  /// No description provided for @auroraCorrectionGenericConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个方向对'**
+  String get auroraCorrectionGenericConfirm;
+
+  /// No description provided for @auroraCorrectionFactSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认事实'**
+  String get auroraCorrectionFactSubtitle;
+
+  /// No description provided for @auroraCorrectionToneSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整语气'**
+  String get auroraCorrectionToneSubtitle;
+
+  /// No description provided for @auroraCorrectionFreeformLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 理解错了？'**
+  String get auroraCorrectionFreeformLabel;
+
+  /// No description provided for @auroraCorrectionFreeformSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我来说明'**
+  String get auroraCorrectionFreeformSubtitle;
+
+  /// No description provided for @auroraCorrectionReceivedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已收到'**
+  String get auroraCorrectionReceivedTitle;
+
+  /// No description provided for @auroraCorrectionReceivedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 正在更新理解'**
+  String get auroraCorrectionReceivedSubtitle;
+
+  /// No description provided for @auroraCorrectionApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次纠正已生效'**
+  String get auroraCorrectionApplied;
+
+  /// No description provided for @auroraCorrectionInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'想让 Aurora 知道什么？'**
+  String get auroraCorrectionInputTitle;
+
+  /// No description provided for @auroraCorrectionInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'哪里判断错了？说说你的纠正…'**
+  String get auroraCorrectionInputHint;
+
+  /// No description provided for @auroraCorrectionInputCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get auroraCorrectionInputCancel;
+
+  /// No description provided for @auroraCorrectionInputSend.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送'**
+  String get auroraCorrectionInputSend;
+
+  /// No description provided for @auroraCorrectionSubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已收到，Aurora 正在更新理解。'**
+  String get auroraCorrectionSubmitted;
 
   /// No description provided for @auroraSourceBadge.
   ///
@@ -33486,6 +33696,156 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'Aurora 校准冷却中'**
   String get auroraBandCoolingDown;
+
+  /// No description provided for @auroraBandShortSensing.
+  ///
+  /// In zh, this message translates to:
+  /// **'在感知'**
+  String get auroraBandShortSensing;
+
+  /// No description provided for @auroraBandShortCalibrated.
+  ///
+  /// In zh, this message translates to:
+  /// **'节奏不错'**
+  String get auroraBandShortCalibrated;
+
+  /// No description provided for @auroraBandShortRiskFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'可能卡住'**
+  String get auroraBandShortRiskFound;
+
+  /// No description provided for @auroraBandShortNeedsConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'需你确认'**
+  String get auroraBandShortNeedsConfirm;
+
+  /// No description provided for @auroraBandShortCalibrationAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'可深聊'**
+  String get auroraBandShortCalibrationAvailable;
+
+  /// No description provided for @auroraBandShortCoolingDown.
+  ///
+  /// In zh, this message translates to:
+  /// **'稍后再聊'**
+  String get auroraBandShortCoolingDown;
+
+  /// No description provided for @auroraLayerJudgmentPrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'我觉得现在'**
+  String get auroraLayerJudgmentPrefix;
+
+  /// No description provided for @auroraLayerCorrectionQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'可能是因为'**
+  String get auroraLayerCorrectionQuestion;
+
+  /// No description provided for @auroraCorrectionTimeNotEnough.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间不够'**
+  String get auroraCorrectionTimeNotEnough;
+
+  /// No description provided for @auroraCorrectionTooHard.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容太难'**
+  String get auroraCorrectionTooHard;
+
+  /// No description provided for @auroraCorrectionLowEnergy.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近状态不好'**
+  String get auroraCorrectionLowEnergy;
+
+  /// No description provided for @auroraCorrectionNoneOfThese.
+  ///
+  /// In zh, this message translates to:
+  /// **'都不是'**
+  String get auroraCorrectionNoneOfThese;
+
+  /// No description provided for @auroraCorrectionRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录，下轮会按这个校准。'**
+  String get auroraCorrectionRecorded;
+
+  /// No description provided for @auroraActionDeepConversation.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入深度对话'**
+  String get auroraActionDeepConversation;
+
+  /// No description provided for @auroraActionWakeDeepConversation.
+  ///
+  /// In zh, this message translates to:
+  /// **'唤醒 Aurora 深度对话'**
+  String get auroraActionWakeDeepConversation;
+
+  /// No description provided for @auroraLayerCurrentStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前状态'**
+  String get auroraLayerCurrentStatus;
+
+  /// No description provided for @auroraLayerMemoryReferences.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆引用'**
+  String get auroraLayerMemoryReferences;
+
+  /// No description provided for @auroraLayerNextSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步建议'**
+  String get auroraLayerNextSuggestion;
+
+  /// No description provided for @auroraLayerSelfEvaluation.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 自评'**
+  String get auroraLayerSelfEvaluation;
+
+  /// No description provided for @auroraLayerMemoryFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有足够可靠的近因记忆。'**
+  String get auroraLayerMemoryFallback;
+
+  /// No description provided for @auroraLayerNextSuggestionFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'先做一个 10 分钟的最小推进。'**
+  String get auroraLayerNextSuggestionFallback;
+
+  /// No description provided for @auroraLayerNextSuggestionTimeConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'先快速调整这个时间冲突。'**
+  String get auroraLayerNextSuggestionTimeConflict;
+
+  /// No description provided for @auroraLayerSelfEvalFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'我会先保持轻量判断，等更多信号再加深校准。'**
+  String get auroraLayerSelfEvalFallback;
+
+  /// No description provided for @auroraLayerExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开'**
+  String get auroraLayerExpand;
+
+  /// No description provided for @auroraLayerCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get auroraLayerCollapse;
 
   /// No description provided for @auroraWakeAvailable.
   ///
@@ -36823,6 +37183,30 @@ abstract class AppLocalizations {
   /// **'上下文资料详情'**
   String get chatContextDetail;
 
+  /// No description provided for @chatSocialContextDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群参考详情'**
+  String get chatSocialContextDetail;
+
+  /// No description provided for @chatSocialContextUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'参考了学习伙伴的动态'**
+  String get chatSocialContextUsed;
+
+  /// No description provided for @chatSocialContextDisableAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'不需要参考他的进度'**
+  String get chatSocialContextDisableAction;
+
+  /// No description provided for @chatSocialContextDisablePrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'以后请不要参考学习伙伴的进度来调整回复。'**
+  String get chatSocialContextDisablePrompt;
+
   /// No description provided for @chatContextUnused.
   ///
   /// In zh, this message translates to:
@@ -37350,6 +37734,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'原 turn'**
   String get chatMemoryOriginalTurn;
+
+  /// No description provided for @chatMemoryReferenceCorrectFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆纠正失败'**
+  String get chatMemoryReferenceCorrectFailed;
+
+  /// No description provided for @chatMemoryReferenceDetailTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关记忆'**
+  String get chatMemoryReferenceDetailTitle;
+
+  /// No description provided for @chatMemoryReferenceNeedsConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'待确认'**
+  String get chatMemoryReferenceNeedsConfirmation;
+
+  /// No description provided for @chatMemoryReferenceNotRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'不对'**
+  String get chatMemoryReferenceNotRight;
+
+  /// No description provided for @chatMemoryReferenceReceiptLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 引用了 {count} 条相关记忆'**
+  String chatMemoryReferenceReceiptLabel(Object count);
+
+  /// No description provided for @chatMemoryReferenceUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用了 {count} 条相关记忆'**
+  String chatMemoryReferenceUsed(Object count);
 
   /// No description provided for @chatMemorySessionCount.
   ///
@@ -43675,6 +44095,156 @@ abstract class AppLocalizations {
   /// **'发送'**
   String get auroraSend;
 
+  /// No description provided for @auroraCoreSessionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 深度校准'**
+  String get auroraCoreSessionTitle;
+
+  /// No description provided for @auroraTurnsRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {count} 轮'**
+  String auroraTurnsRemaining(int count);
+
+  /// No description provided for @auroraPauseCalibration.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停校准'**
+  String get auroraPauseCalibration;
+
+  /// No description provided for @auroraResumeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续上次的深度对话'**
+  String get auroraResumeTitle;
+
+  /// No description provided for @auroraResumeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 还保留着你暂停时的阶段和消息。'**
+  String get auroraResumeSubtitle;
+
+  /// No description provided for @auroraResumeBannerSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'从上次停下的位置继续，不用重新开始'**
+  String get auroraResumeBannerSubtitle;
+
+  /// No description provided for @auroraResumeAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get auroraResumeAction;
+
+  /// No description provided for @auroraCoreSessionResumed.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续我们刚才聊的。Aurora 保留了前面的阶段和消息。'**
+  String get auroraCoreSessionResumed;
+
+  /// No description provided for @auroraSessionExpiredTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次的深度对话已结束'**
+  String get auroraSessionExpiredTitle;
+
+  /// No description provided for @auroraSessionExpiredSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'它已经超过可恢复时间，Aurora 不会从过期状态里继续判断。'**
+  String get auroraSessionExpiredSubtitle;
+
+  /// No description provided for @auroraLastSessionSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次摘要'**
+  String get auroraLastSessionSummary;
+
+  /// No description provided for @auroraJustChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'只是聊天'**
+  String get auroraJustChat;
+
+  /// No description provided for @auroraStartNewSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始新的深度对话'**
+  String get auroraStartNewSession;
+
+  /// No description provided for @auroraExpandSheet.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开校准面板'**
+  String get auroraExpandSheet;
+
+  /// No description provided for @auroraShrinkSheet.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起校准面板'**
+  String get auroraShrinkSheet;
+
+  /// No description provided for @auroraStatePatchesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已更新的状态'**
+  String get auroraStatePatchesTitle;
+
+  /// No description provided for @auroraNextChangesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'接下来会变化什么'**
+  String get auroraNextChangesTitle;
+
+  /// No description provided for @auroraReturnedToBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 已退回后台'**
+  String get auroraReturnedToBackground;
+
+  /// No description provided for @auroraViewAdjustedPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看调整后的计划'**
+  String get auroraViewAdjustedPlan;
+
+  /// No description provided for @auroraExplainPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'解释一下'**
+  String get auroraExplainPrompt;
+
+  /// No description provided for @auroraFreeformLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'自由描述'**
+  String get auroraFreeformLabel;
+
+  /// No description provided for @auroraCoreCheckpointCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'深入校准'**
+  String get auroraCoreCheckpointCta;
+
+  /// No description provided for @auroraCheckpointWhyNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个 checkpoint 正好适合确认计划和真实进度是否还对齐'**
+  String get auroraCheckpointWhyNow;
+
+  /// No description provided for @auroraCoreTaskStuckCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'和 Aurora 深度校准'**
+  String get auroraCoreTaskStuckCta;
+
+  /// No description provided for @auroraTaskStuckWhyNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务已经出现卡点，现在校准可以避免下一步继续建立在错误判断上'**
+  String get auroraTaskStuckWhyNow;
+
   /// No description provided for @settingsQueueCleared.
   ///
   /// In zh, this message translates to:
@@ -48274,6 +48844,30 @@ abstract class AppLocalizations {
   /// **'暂无可回退动作。'**
   String get userNoRevertibleActions;
 
+  /// No description provided for @userCorrectionHistoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我纠正过 Aurora 什么'**
+  String get userCorrectionHistoryTitle;
+
+  /// No description provided for @userCorrectionHistoryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近会影响后续判断的画像和聊天纠正。'**
+  String get userCorrectionHistoryHint;
+
+  /// No description provided for @userCorrectionHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有 Aurora 纠正记录。'**
+  String get userCorrectionHistoryEmpty;
+
+  /// No description provided for @userCorrectionHistoryUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复原判断'**
+  String get userCorrectionHistoryUndo;
+
   /// No description provided for @userTransparentNotEnabled.
   ///
   /// In zh, this message translates to:
@@ -50362,6 +50956,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'加载错题失败，请重试'**
   String get ebLoadError;
+
+  /// No description provided for @chatContextReceiptSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 使用 {used} 个上下文 / 跳过 {skipped} 个'**
+  String chatContextReceiptSummary(int used, int skipped);
+
+  /// No description provided for @chatContextUsedTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用的工具上下文（{count}）'**
+  String chatContextUsedTools(int count);
+
+  /// No description provided for @toolsContextEffectMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'已让 Aurora 知道这次{tool}'**
+  String toolsContextEffectMessage(String tool);
+
+  /// No description provided for @toolsContextEffectUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'不让 Aurora 知道'**
+  String get toolsContextEffectUndo;
+
+  /// No description provided for @toolsContextEffectUndone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤回这次工具上下文'**
+  String get toolsContextEffectUndone;
+
+  /// No description provided for @toolsContextEffectUndoFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回失败，请稍后再试'**
+  String get toolsContextEffectUndoFailed;
+
+  /// No description provided for @toolsNotesSyncedToPrism.
+  ///
+  /// In zh, this message translates to:
+  /// **'已同步到认知棱镜'**
+  String get toolsNotesSyncedToPrism;
 }
 
 class _AppLocalizationsDelegate

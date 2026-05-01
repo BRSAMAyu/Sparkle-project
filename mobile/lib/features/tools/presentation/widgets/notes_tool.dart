@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
+import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -136,7 +138,26 @@ class _NotesToolState extends ConsumerState<NotesTool> {
       _isSyncing = false;
       _lastSyncedAt = now;
     });
-    AppFeedback.success(context, '已同步到认知棱镜');
+    final contextEventId =
+        await ref.read(toolHistoryRepositoryProvider).recordNotesSynced(
+              charCount: _charCount,
+              lineCount: _lineCount,
+              surface: widget.surface.name,
+              taskId: widget.taskId,
+            );
+    if (!mounted) {
+      return;
+    }
+    if (contextEventId == null) {
+      AppFeedback.success(context, context.l10n.toolsNotesSyncedToPrism);
+    } else {
+      ToolContextEffectFeedback.show(
+        context: context,
+        ref: ref,
+        toolLabel: context.l10n.toolsNotesTitle,
+        eventId: contextEventId,
+      );
+    }
   }
 
   @override
@@ -167,7 +188,9 @@ class _NotesToolState extends ConsumerState<NotesTool> {
           icon: Icons.cloud_done_rounded,
         ),
         ToolHeroChip(
-          label: _charCount == 0 ? context.l10n.toolsNotesWaiting : '$_charCount 字',
+          label: _charCount == 0
+              ? context.l10n.toolsNotesWaiting
+              : '$_charCount 字',
           accentColor: accent,
           icon: Icons.notes_rounded,
         ),
@@ -258,7 +281,9 @@ class _NotesToolState extends ConsumerState<NotesTool> {
               expand: true,
             ),
             SparkleButton(
-              label: _isSyncing ? context.l10n.toolsNotesSyncing : context.l10n.toolsNotesSyncToPrism,
+              label: _isSyncing
+                  ? context.l10n.toolsNotesSyncing
+                  : context.l10n.toolsNotesSyncToPrism,
               onPressed: _isSyncing ? null : _syncToPrism,
               icon: const Icon(Icons.psychology_alt_rounded),
               loading: _isSyncing,

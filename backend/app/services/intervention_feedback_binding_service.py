@@ -283,11 +283,7 @@ class InterventionFeedbackBindingService:
         )
         dedupe_window = await self._get_dedupe_window(session_id)
         duplicate_hit = next(
-            (
-                entry
-                for entry in dedupe_window
-                if str(entry.get("fingerprint") or "").strip() == fingerprint
-            ),
+            (entry for entry in dedupe_window if str(entry.get("fingerprint") or "").strip() == fingerprint),
             None,
         )
         if isinstance(duplicate_hit, dict):
@@ -396,10 +392,13 @@ class InterventionFeedbackBindingService:
                 target_record = await self.record_service.mark_accepted(target_record.id) or target_record
                 current = target_record.acceptance_status
             if current == InterventionAcceptanceStatus.ACCEPTED:
-                target_record = await self.record_service.mark_acted(
-                    target_record.id,
-                    action_payload={"feedback_summary": "helped"},
-                ) or target_record
+                target_record = (
+                    await self.record_service.mark_acted(
+                        target_record.id,
+                        action_payload={"feedback_summary": "helped"},
+                    )
+                    or target_record
+                )
             return target_record
 
         if sentiment == "accepted":
@@ -428,10 +427,13 @@ class InterventionFeedbackBindingService:
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
             }:
-                target_record = await self.record_service.mark_snoozed(
-                    target_record.id,
-                    snooze_hours=snooze_hours,
-                ) or target_record
+                target_record = (
+                    await self.record_service.mark_snoozed(
+                        target_record.id,
+                        snooze_hours=snooze_hours,
+                    )
+                    or target_record
+                )
             return target_record
 
         if sentiment == "mixed":
@@ -452,9 +454,7 @@ class InterventionFeedbackBindingService:
     ) -> None:
         action_payload = _coerce_dict(target_record.action_payload)
         log_entries = [
-            item
-            for item in (action_payload.get("conversation_feedback_log") or [])
-            if isinstance(item, dict)
+            item for item in (action_payload.get("conversation_feedback_log") or []) if isinstance(item, dict)
         ]
         entry = {
             "timestamp": _utcnow().isoformat(),
@@ -527,7 +527,7 @@ class InterventionFeedbackBindingService:
         self,
         session_id: str | None,
         payload: dict[str, Any],
-        ) -> None:
+    ) -> None:
         if not self.redis or not str(session_id or "").strip():
             return
         try:
@@ -596,6 +596,7 @@ class InterventionFeedbackBindingService:
             "delivery_channel": record.delivery_channel.value if record.delivery_channel else None,
             "acceptance_status": record.acceptance_status.value if record.acceptance_status else None,
             "outcome_status": record.outcome_status.value if record.outcome_status else None,
+            "diagnosis_payload": dict(record.diagnosis_payload or {}),
             "created_at": record.created_at.isoformat() if record.created_at else None,
             "metadata": metadata or {},
         }

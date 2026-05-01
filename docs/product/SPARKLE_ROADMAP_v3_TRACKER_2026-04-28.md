@@ -19,6 +19,7 @@
 | 任务 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
 | C16: Flutter Typed Failure Model | ✅ 完成 | Codex | `AppFailure` typed mapper added; auth/chat/dashboard paths adopted; chat/dashboard UI differentiates offline/auth/server/validation recovery; `flutter test test/core/errors/failures_test.dart` 4/4 passed |
+| R18: Aurora 完全体体验收口 | ✅ 完成 | Codex | Legacy `SPARKLE_*` 配套开关默认全开并纳入配置一致性守卫；聊天 freeform 纠错进入可见对话+结构化链；状态带第三层小屏可滚动、纠正/详情 chip 更稳；后端 Aurora 51 tests + 移动端聚焦 61 tests + secret/diff checks passed |
 
 ---
 

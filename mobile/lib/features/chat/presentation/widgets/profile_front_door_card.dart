@@ -48,7 +48,8 @@ class ProfileFrontDoorCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  confirmation['title']?.toString() ?? context.l10n.chatProfileUpdated,
+                  confirmation['title']?.toString() ??
+                      context.l10n.chatProfileUpdated,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color: DS.neutral900,
@@ -254,7 +255,8 @@ class _ClaimTile extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing8),
               _Badge(
-                label: claim['evidence_label']?.toString() ?? context.l10n.chatProfileCompileConclusion,
+                label: claim['evidence_label']?.toString() ??
+                    context.l10n.chatProfileCompileConclusion,
                 color: const Color(0xFF0F766E),
                 background: const Color(0xFFE7F6F4),
               ),
@@ -287,20 +289,25 @@ class _ClaimTile extends StatelessWidget {
             children: [
               if ((claim['confidence_label']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileConfidence(claim['confidence_label'].toString()),
+                  label: context.l10n.chatProfileConfidence(
+                      claim['confidence_label'].toString()),
                   color: DS.primaryBase,
                   background: DS.primaryBase.withValues(alpha: 0.08),
                 ),
               if ((claim['source']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileSource(claim['source'].toString()),
+                  label: context.l10n
+                      .chatProfileSource(claim['source'].toString()),
                   color: DS.neutral700,
-                  background: DS.neutral100,),
+                  background: DS.neutral100,
+                ),
               if ((claim['freshness']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileFreshness(claim['freshness'].toString()),
+                  label: context.l10n
+                      .chatProfileFreshness(claim['freshness'].toString()),
                   color: DS.neutral700,
-                  background: DS.neutral100,),
+                  background: DS.neutral100,
+                ),
             ],
           ),
           if ((claim['correction_hint']?.toString() ?? '').isNotEmpty) ...[
@@ -341,7 +348,8 @@ class _ClaimTile extends StatelessWidget {
                       child: Text(
                         claim['evidence_cta']?.toString().isNotEmpty == true
                             ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
-                            : claim['evidence_summary']?.toString() ?? context.l10n.chatProfileViewEvidence,
+                            : claim['evidence_summary']?.toString() ??
+                                context.l10n.chatProfileViewEvidence,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.info,
                               fontWeight: DS.fontWeightMedium,
@@ -399,7 +407,8 @@ class _PredictionTile extends StatelessWidget {
                 ),
               ),
               _Badge(
-                label: item['evidence_label']?.toString() ?? context.l10n.chatProfileInferencePrediction,
+                label: item['evidence_label']?.toString() ??
+                    context.l10n.chatProfileInferencePrediction,
                 color: const Color(0xFF7C3AED),
                 background: const Color(0xFFF2EAFE),
               ),
@@ -418,7 +427,8 @@ class _PredictionTile extends StatelessWidget {
           if ((item['recommended_action']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              context.l10n.chatProfileSuggestedAction(item['recommended_action'].toString()),
+              context.l10n.chatProfileSuggestedAction(
+                  item['recommended_action'].toString()),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral900,
                     fontWeight: DS.fontWeightSemibold,
@@ -454,7 +464,8 @@ class _PredictionTile extends StatelessWidget {
                       child: Text(
                         item['evidence_cta']?.toString().isNotEmpty == true
                             ? '${item['evidence_cta']} · ${item['evidence_summary']}'
-                            : item['evidence_summary']?.toString() ?? context.l10n.chatProfileViewEvidence,
+                            : item['evidence_summary']?.toString() ??
+                                context.l10n.chatProfileViewEvidence,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.info,
                               fontWeight: DS.fontWeightMedium,
@@ -529,7 +540,8 @@ List<EvidenceRefModel> _parseEvidenceRefs(dynamic raw) {
   if (raw is List) {
     return raw
         .whereType<Map>()
-        .map((item) => EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)))
+        .map((item) =>
+            EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)))
         .where((item) => item.type.isNotEmpty && item.id.isNotEmpty)
         .toList();
   }

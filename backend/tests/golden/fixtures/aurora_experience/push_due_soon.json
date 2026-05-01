@@ -1,0 +1,11 @@
+{
+  "id": "push_due_soon",
+  "family": "push_copy",
+  "kind": "push_copy",
+  "title": "推送文案：临近节点",
+  "input": {
+    "lead": "今晚还有一个很小的窗口。",
+    "body": "「TCP 流量控制」只需要先完成 20 分钟保底版，别把整晚都押上。",
+    "action": "点开后我会直接带你到那张任务卡。"
+  }
+}

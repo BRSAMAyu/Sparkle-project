@@ -42,194 +42,194 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
             child: Column(
               children: [
-              // Handle bar
-              Container(
-                width: DS.spacing40,
-                height: DS.spacing4,
-                margin: const EdgeInsets.symmetric(vertical: DS.spacing12),
-                decoration: BoxDecoration(
-                  color: isDark ? DS.neutral700 : DS.neutral300,
-                  borderRadius: BorderRadius.circular(DS.spacing4 / 2),
+                // Handle bar
+                Container(
+                  width: DS.spacing40,
+                  height: DS.spacing4,
+                  margin: const EdgeInsets.symmetric(vertical: DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: isDark ? DS.neutral700 : DS.neutral300,
+                    borderRadius: BorderRadius.circular(DS.spacing4 / 2),
+                  ),
                 ),
-              ),
 
-              // Header
-              Row(
-                children: [
-                  Icon(Icons.groups_rounded, color: DS.primaryBase),
-                  const SizedBox(width: DS.spacing12),
-                  Text(
-                    context.l10n.chatTeamSheetTitle,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeLg,
-                      fontWeight: DS.fontWeightBold,
-                      color: isDark ? DS.textPrimary : DS.neutral900,
+                // Header
+                Row(
+                  children: [
+                    Icon(Icons.groups_rounded, color: DS.primaryBase),
+                    const SizedBox(width: DS.spacing12),
+                    Text(
+                      context.l10n.chatTeamSheetTitle,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeLg,
+                        fontWeight: DS.fontWeightBold,
+                        color: isDark ? DS.textPrimary : DS.neutral900,
+                      ),
+                    ),
+                    const Spacer(),
+                    SparkleIconButton(
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      onPressed: () => _showCreateExpertDialog(context),
+                      variant: ButtonVariant.ghost,
+                    ),
+                    SparkleIconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      variant: ButtonVariant.ghost,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing16),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: DS.spacing12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            context.l10n.chatTeamSheetAvailableExperts,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              fontWeight: DS.fontWeightSemibold,
+                              color: DS.neutral500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                        catalogAsync.when(
+                          data: (catalog) {
+                            final experts = [
+                              ...catalog.experts.where((e) => e.enabled),
+                              ...catalog.customExperts.where((e) => e.enabled),
+                            ];
+                            if (experts.isEmpty) {
+                              return _emptyHint(
+                                context.l10n.chatTeamSheetNoExperts,
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (catalog.customTeams
+                                    .where((e) => e.enabled)
+                                    .isNotEmpty) ...[
+                                  Text(
+                                    context.l10n.chatTeamSaved,
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeSm,
+                                      fontWeight: DS.fontWeightSemibold,
+                                      color: DS.neutral500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: DS.spacing8),
+                                  _buildSavedTeams(
+                                    catalog.customTeams
+                                        .where((e) => e.enabled)
+                                        .toList(),
+                                  ),
+                                  const SizedBox(height: DS.spacing12),
+                                ],
+                                _buildExpertGrid(experts),
+                              ],
+                            );
+                          },
+                          loading: () =>
+                              _emptyHint(context.l10n.chatTeamSheetLoading),
+                          error: (_, __) =>
+                              _emptyHint(context.l10n.chatTeamSheetLoadFailed),
+                        ),
+                        const SizedBox(height: DS.spacing16),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            context.l10n.chatTeamSheetCollaborationMode,
+                            style: TextStyle(
+                              fontSize: DS.fontSizeSm,
+                              fontWeight: DS.fontWeightSemibold,
+                              color: DS.neutral500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                        _buildModeSelector(),
+                        if (_selectedAgents.isNotEmpty) ...[
+                          const SizedBox(height: DS.spacing16),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              context.l10n.chatTeamSheetSelectedExperts(
+                                _selectedAgents.length,
+                              ),
+                              style: TextStyle(
+                                fontSize: DS.fontSizeSm,
+                                fontWeight: DS.fontWeightSemibold,
+                                color: DS.neutral600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          _buildSelectedChips(),
+                        ],
+                        if (_selectedAgents.length > 1) ...[
+                          const SizedBox(height: DS.spacing16),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              context.l10n.chatTeamFinalExperts,
+                              style: TextStyle(
+                                fontSize: DS.fontSizeSm,
+                                fontWeight: DS.fontWeightSemibold,
+                                color: DS.neutral600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          _buildAnswerExpertSelector(),
+                        ],
+                      ],
                     ),
                   ),
-                  const Spacer(),
-                  SparkleIconButton(
-                    icon: const Icon(Icons.person_add_alt_1_outlined),
-                    onPressed: () => _showCreateExpertDialog(context),
-                    variant: ButtonVariant.ghost,
-                  ),
-                  SparkleIconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                    variant: ButtonVariant.ghost,
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing16),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: DS.spacing12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          context.l10n.chatTeamSheetAvailableExperts,
-                          style: TextStyle(
-                            fontSize: DS.fontSizeSm,
-                            fontWeight: DS.fontWeightSemibold,
-                            color: DS.neutral500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing8),
-                      catalogAsync.when(
-                        data: (catalog) {
-                          final experts = [
-                            ...catalog.experts.where((e) => e.enabled),
-                            ...catalog.customExperts.where((e) => e.enabled),
-                          ];
-                          if (experts.isEmpty) {
-                            return _emptyHint(
-                              context.l10n.chatTeamSheetNoExperts,
-                            );
-                          }
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (catalog.customTeams
-                                  .where((e) => e.enabled)
-                                  .isNotEmpty) ...[
-                                Text(
-                                  context.l10n.chatTeamSaved,
-                                  style: TextStyle(
-                                    fontSize: DS.fontSizeSm,
-                                    fontWeight: DS.fontWeightSemibold,
-                                    color: DS.neutral500,
-                                  ),
-                                ),
-                                const SizedBox(height: DS.spacing8),
-                                _buildSavedTeams(
-                                  catalog.customTeams
-                                      .where((e) => e.enabled)
-                                      .toList(),
-                                ),
-                                const SizedBox(height: DS.spacing12),
-                              ],
-                              _buildExpertGrid(experts),
-                            ],
-                          );
-                        },
-                        loading: () =>
-                            _emptyHint(context.l10n.chatTeamSheetLoading),
-                        error: (_, __) =>
-                            _emptyHint(context.l10n.chatTeamSheetLoadFailed),
-                      ),
-                      const SizedBox(height: DS.spacing16),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          context.l10n.chatTeamSheetCollaborationMode,
-                          style: TextStyle(
-                            fontSize: DS.fontSizeSm,
-                            fontWeight: DS.fontWeightSemibold,
-                            color: DS.neutral500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing8),
-                      _buildModeSelector(),
-                      if (_selectedAgents.isNotEmpty) ...[
-                        const SizedBox(height: DS.spacing16),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            context.l10n.chatTeamSheetSelectedExperts(
-                              _selectedAgents.length,
-                            ),
-                            style: TextStyle(
-                              fontSize: DS.fontSizeSm,
-                              fontWeight: DS.fontWeightSemibold,
-                              color: DS.neutral600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing8),
-                        _buildSelectedChips(),
-                      ],
-                      if (_selectedAgents.length > 1) ...[
-                        const SizedBox(height: DS.spacing16),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            context.l10n.chatTeamFinalExperts,
-                            style: TextStyle(
-                              fontSize: DS.fontSizeSm,
-                              fontWeight: DS.fontWeightSemibold,
-                              color: DS.neutral600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing8),
-                        _buildAnswerExpertSelector(),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              if (_selectedAgents.length > 1)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () => _showSaveTeamDialog(context),
-                    icon: const Icon(Icons.bookmark_add_outlined),
-                    label: Text(context.l10n.chatTeamSaveTeam),
-                  ),
                 ),
 
-              // Confirm button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _selectedAgents.isEmpty
-                      ? null
-                      : () {
-                          final mode = _buildMode();
-                          ref
-                              .read(chatModeNotifierProvider.notifier)
-                              .setMode(mode);
-                          if (mode.apiValue != 'standard') {
+                if (_selectedAgents.length > 1)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () => _showSaveTeamDialog(context),
+                      icon: const Icon(Icons.bookmark_add_outlined),
+                      label: Text(context.l10n.chatTeamSaveTeam),
+                    ),
+                  ),
+
+                // Confirm button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _selectedAgents.isEmpty
+                        ? null
+                        : () {
+                            final mode = _buildMode();
                             ref
-                                .read(lastMultiAgentModeProvider.notifier)
-                                .state = mode;
-                          }
-                          Navigator.pop(context);
-                        },
-                  child: Text(
-                    _selectedAgents.length <= 1
-                        ? context.l10n.chatTeamSheetEnterExpert
-                        : context.l10n.chatTeamSheetStartCollaboration,
+                                .read(chatModeNotifierProvider.notifier)
+                                .setMode(mode);
+                            if (mode.apiValue != 'standard') {
+                              ref
+                                  .read(lastMultiAgentModeProvider.notifier)
+                                  .state = mode;
+                            }
+                            Navigator.pop(context);
+                          },
+                    child: Text(
+                      _selectedAgents.length <= 1
+                          ? context.l10n.chatTeamSheetEnterExpert
+                          : context.l10n.chatTeamSheetStartCollaboration,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: DS.spacing16),
+                const SizedBox(height: DS.spacing16),
               ],
             ),
           ),
@@ -267,7 +267,8 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             checkmarkColor: color,
             labelStyle: TextStyle(
               color: isSelected ? color : DS.textPrimary,
-              fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
+              fontWeight:
+                  isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
             ),
             onSelected: (selected) {
               setState(() {
@@ -325,7 +326,8 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 selected: isSelected,
                 selectedColor: DS.brandPrimary.withValues(alpha: 0.16),
                 labelStyle: TextStyle(
-                  fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
+                  fontWeight:
+                      isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
                   color: isSelected ? DS.brandPrimary : DS.textPrimary,
                 ),
                 onSelected: (_) =>
@@ -524,7 +526,8 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: InputDecoration(labelText: context.l10n.chatTeamExpertName),
+                  decoration: InputDecoration(
+                      labelText: context.l10n.chatTeamExpertName),
                 ),
                 TextField(
                   controller: descriptionController,
@@ -534,7 +537,8 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedBaseExpert,
-                  decoration: InputDecoration(labelText: context.l10n.chatTeamBaseExpert),
+                  decoration: InputDecoration(
+                      labelText: context.l10n.chatTeamBaseExpert),
                   items: enabledExperts
                       .map(
                         (expert) => DropdownMenuItem<String>(
@@ -570,15 +574,18 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                   items: [
                     DropdownMenuItem(
                       value: 'fast',
-                      child: Text(I18nService.instance.isChinese ? '敏捷' : 'Fast'),
+                      child:
+                          Text(I18nService.instance.isChinese ? '敏捷' : 'Fast'),
                     ),
                     DropdownMenuItem(
                       value: 'balanced',
-                      child: Text(I18nService.instance.isChinese ? '均衡' : 'Balanced'),
+                      child: Text(
+                          I18nService.instance.isChinese ? '均衡' : 'Balanced'),
                     ),
                     DropdownMenuItem(
                       value: 'deep',
-                      child: Text(I18nService.instance.isChinese ? '深思' : 'Deep'),
+                      child:
+                          Text(I18nService.instance.isChinese ? '深思' : 'Deep'),
                     ),
                   ],
                   onChanged: (value) => setLocalState(
@@ -644,12 +651,14 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
           children: [
             TextField(
               controller: nameController,
-              decoration: InputDecoration(labelText: context.l10n.chatTeamTeamName),
+              decoration:
+                  InputDecoration(labelText: context.l10n.chatTeamTeamName),
             ),
             TextField(
               controller: descriptionController,
               decoration: InputDecoration(
-                labelText: I18nService.instance.isChinese ? '说明' : 'Description',
+                labelText:
+                    I18nService.instance.isChinese ? '说明' : 'Description',
               ),
             ),
           ],

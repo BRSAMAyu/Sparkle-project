@@ -28,6 +28,19 @@ from app.services.signal_adaptation import (
     recency_weight,
     weighted_median,
 )
+from app.services.task_stuck_signal_service import (
+    TaskStuckPatternAnalyzer,
+    load_recent_task_execution_signals,
+)
+
+CONTEXT_AWARE_TOOL_NAMES = {
+    "breathing",
+    "calculator",
+    "translator",
+    "vocabulary_lookup",
+    "notes",
+    "flash_capsule",
+}
 
 
 def _utcnow() -> datetime:
@@ -44,6 +57,8 @@ class BehaviorSignalCollector:
     INACTIVITY_DAYS = 3
     OVERRUN_RATIO = 1.5
     OVERRUN_STREAK = 3
+    TASK_STUCK_PATTERN_COOLDOWN_KEY = "task_stuck_intervention_pattern"
+    TASK_STUCK_RECOVERY_COOLDOWN_KEY = "task_stuck_recovery"
     INFERRED_WINDOW_DAYS = 14
     INFERRED_AGGREGATION_STEP = 5
     INFERRED_TASK_LIMIT = 200
@@ -97,11 +112,27 @@ class BehaviorSignalCollector:
         )
         await self.cognitive_service.analyze_behavior(user_id, fragment.id)
         await self._mark_signal_emitted(user_id, signal_key)
+        await self._maybe_emit_task_stuck_intervention_signal(
+            user_id,
+            trigger_event="task.abandoned",
+        )
         await self._maybe_emit_inactivity_signal(user_id)
+
+    async def handle_task_stuck_event(self, event: dict) -> None:
+        user_id = UUID(str(event["user_id"]))
+        await self._maybe_emit_task_stuck_intervention_signal(
+            user_id,
+            trigger_event="task.stuck",
+        )
 
     async def handle_task_completed_event(self, event: dict) -> None:
         user_id = UUID(str(event["user_id"]))
         await self._maybe_emit_overrun_pattern(user_id)
+        await self._maybe_emit_task_stuck_intervention_signal(
+            user_id,
+            trigger_event="task.completed",
+        )
+        await self._maybe_emit_task_stuck_recovery_signal(user_id)
         await self._maybe_emit_inactivity_signal(user_id)
         await self._maybe_update_task_inferred_preferences(user_id)
 
@@ -116,11 +147,13 @@ class BehaviorSignalCollector:
     async def handle_tool_history_event(self, event: dict) -> None:
         user_id_raw = event.get("user_id")
         tool_name = str(event.get("tool_name") or "").strip()
-        if not user_id_raw or tool_name not in {"breathing", "calculator"}:
+        if not user_id_raw or tool_name not in CONTEXT_AWARE_TOOL_NAMES:
+            return
+        if event.get("success") is False:
             return
 
         user_id = UUID(str(user_id_raw))
-        record = await self._latest_tool_history_record(user_id, tool_name)
+        record = await self._tool_history_record_from_event(user_id, tool_name, event)
         if record is None or not record.success:
             return
 
@@ -129,6 +162,8 @@ class BehaviorSignalCollector:
             await self._maybe_emit_breathing_recovery_signal(user_id, record, context)
         elif tool_name == "calculator":
             await self._maybe_emit_calculator_load_signal(user_id, record, context)
+        else:
+            await self._emit_tool_context_effect_signal(user_id, record, context)
 
     async def handle_behavior_pattern_event(self, event: dict) -> None:
         user_id = UUID(str(event["user_id"]))
@@ -169,6 +204,11 @@ class BehaviorSignalCollector:
                             solution_text=event.get("solution_text"),
                             frequency=int(event.get("frequency") or 1),
                             evidence_ids=event.get("evidence_ids"),
+                            extra_diagnosis_payload={
+                                "task_health": event.get("task_health"),
+                                "receipt": event.get("receipt"),
+                                "micro_session": event.get("micro_session"),
+                            },
                         )
                 else:
                     record = await bridge.on_behavior_pattern(
@@ -181,6 +221,11 @@ class BehaviorSignalCollector:
                         solution_text=event.get("solution_text"),
                         frequency=int(event.get("frequency") or 1),
                         evidence_ids=event.get("evidence_ids"),
+                        extra_diagnosis_payload={
+                            "task_health": event.get("task_health"),
+                            "receipt": event.get("receipt"),
+                            "micro_session": event.get("micro_session"),
+                        },
                     )
                 if record:
                     intervention_created = True
@@ -421,6 +466,114 @@ class BehaviorSignalCollector:
         await self.cognitive_service.analyze_behavior(user_id, fragment.id)
         await self._mark_signal_emitted(user_id, signal_key)
 
+    async def _maybe_emit_task_stuck_intervention_signal(
+        self,
+        user_id: UUID,
+        *,
+        trigger_event: str,
+    ) -> None:
+        signal_key = self.TASK_STUCK_PATTERN_COOLDOWN_KEY
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        events = await load_recent_task_execution_signals(self.db, user_id=user_id)
+        pattern = TaskStuckPatternAnalyzer.detect_intervention(events)
+        if not pattern:
+            return
+
+        titles = list(pattern.get("task_titles") or [])
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=f"用户最近{pattern['description']}：{', '.join(titles)}。",
+            source_type="behavior_auto",
+            context_tags={
+                "signal_key": signal_key,
+                "trigger_event": trigger_event,
+                "task_titles": titles,
+                "task_ids": list(pattern.get("task_ids") or []),
+                "issue_counts": dict(pattern.get("issue_counts") or {}),
+                "task_health": dict(pattern.get("task_health") or {}),
+                "receipt": dict(pattern.get("receipt") or {}),
+            },
+            error_tags=["execution.task_stuck_streak"],
+            severity=3,
+            source_event_id=f"behavior_auto:{signal_key}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._publish_task_stuck_intervention(user_id, pattern, trigger_event=trigger_event)
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _maybe_emit_task_stuck_recovery_signal(self, user_id: UUID) -> None:
+        signal_key = self.TASK_STUCK_RECOVERY_COOLDOWN_KEY
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        events = await load_recent_task_execution_signals(self.db, user_id=user_id)
+        recovery = TaskStuckPatternAnalyzer.detect_recovery(events)
+        if not recovery:
+            return
+
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=recovery["message"],
+            source_type="behavior_auto",
+            context_tags={
+                "signal_key": signal_key,
+                "task_titles": list(recovery.get("task_titles") or []),
+                "recovered_count": recovery.get("recovered_count"),
+                "prior_issue_count": recovery.get("prior_issue_count"),
+                "receipt": dict(recovery.get("receipt") or {}),
+            },
+            error_tags=["execution.task_stuck_recovery"],
+            severity=1,
+            source_event_id=f"behavior_auto:{signal_key}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        if self.event_bus:
+            await self.event_bus.publish(
+                "aurora.task_stuck_recovery.detected",
+                {
+                    "event_type": "aurora.task_stuck_recovery.detected",
+                    "user_id": str(user_id),
+                    **recovery,
+                },
+            )
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _publish_task_stuck_intervention(
+        self,
+        user_id: UUID,
+        pattern: dict,
+        *,
+        trigger_event: str,
+    ) -> None:
+        if not self.event_bus:
+            return
+        payload = {
+            "event_type": "behavior.pattern.updated",
+            "user_id": str(user_id),
+            "pattern_name": pattern["pattern_name"],
+            "pattern_type": pattern["pattern_type"],
+            "confidence_score": pattern["confidence"],
+            "frequency": pattern["frequency"],
+            "description": pattern["description"],
+            "solution_text": pattern["micro_adjustment"],
+            "evidence_ids": list(pattern.get("task_ids") or []),
+            "task_health": dict(pattern.get("task_health") or {}),
+            "receipt": dict(pattern.get("receipt") or {}),
+            "micro_session": TaskStuckPatternAnalyzer.build_micro_session_payload(pattern),
+            "trigger_event": trigger_event,
+        }
+        await self.event_bus.publish("behavior.pattern.updated", payload)
+        await self.event_bus.publish(
+            "aurora.task_stuck_intervention.requested",
+            {
+                **payload,
+                "event_type": "aurora.task_stuck_intervention.requested",
+                "user_id": str(user_id),
+            },
+        )
+
     async def _maybe_emit_pattern_adjustment(self, user_id: UUID) -> None:
         signal_key = "pattern_adjustment"
         if await self._signal_on_cooldown(user_id, signal_key):
@@ -447,6 +600,31 @@ class BehaviorSignalCollector:
             .limit(1)
         )
         return result.scalars().first()
+
+    async def _tool_history_record_from_event(
+        self,
+        user_id: UUID,
+        tool_name: str,
+        event: dict,
+    ) -> UserToolHistory | None:
+        raw_record_id = event.get("tool_history_id")
+        if raw_record_id is not None:
+            try:
+                record_id = int(raw_record_id)
+            except (TypeError, ValueError):
+                record_id = None
+            if record_id is not None:
+                result = await self.db.execute(
+                    select(UserToolHistory).where(
+                        UserToolHistory.id == record_id,
+                        UserToolHistory.user_id == user_id,
+                        UserToolHistory.tool_name == tool_name,
+                    )
+                )
+                record = result.scalars().first()
+                if record is not None:
+                    return record
+        return await self._latest_tool_history_record(user_id, tool_name)
 
     async def _maybe_emit_breathing_recovery_signal(
         self,
@@ -512,6 +690,95 @@ class BehaviorSignalCollector:
         )
         await self.cognitive_service.analyze_behavior(user_id, fragment.id)
         await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _emit_tool_context_effect_signal(
+        self,
+        user_id: UUID,
+        record: UserToolHistory,
+        context: dict,
+    ) -> None:
+        signal_key = f"tool_context_effect:{record.tool_name}:{record.id}"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        content, tags = self._tool_context_effect_content(record.tool_name, record.id, context)
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=content,
+            source_type="tool_usage_event",
+            context_tags={
+                "signal_key": signal_key,
+                "tool_name": record.tool_name,
+                "tool_history_id": record.id,
+                **tags,
+            },
+            error_tags=["workflow.recent_tool_context"],
+            severity=1,
+            source_event_id=f"tool_usage:{record.tool_name}:{record.id}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    @staticmethod
+    def _tool_context_effect_content(tool_name: str, record_id: int, context: dict) -> tuple[str, dict[str, object]]:
+        if tool_name == "translator":
+            source = str(context.get("source_language") or "auto").strip()
+            target = str(context.get("target_language") or "").strip()
+            text_length = context.get("text_length")
+            length_text = (
+                f"，原文约 {int(text_length)} 字符" if isinstance(text_length, int) and text_length > 0 else ""
+            )
+            return (
+                f"用户刚完成一次 {source}->{target or 'unknown'} 翻译{length_text}；原文和译文未写入工具历史。",
+                {
+                    "source_language": source,
+                    "target_language": target,
+                    "text_length": text_length,
+                    "privacy": "raw_translation_text_not_stored",
+                },
+            )
+        if tool_name == "vocabulary_lookup":
+            term = str(context.get("lookup_term") or "").strip()
+            term_text = f"「{term}」" if term else "一个词汇"
+            return (
+                f"用户刚查询了词汇{term_text}，下一轮可在相关语境中自然衔接。",
+                {"lookup_term": term},
+            )
+        if tool_name == "notes":
+            char_count = context.get("char_count")
+            line_count = context.get("line_count")
+            detail = []
+            if isinstance(char_count, int) and char_count > 0:
+                detail.append(f"{char_count} 字")
+            if isinstance(line_count, int) and line_count > 0:
+                detail.append(f"{line_count} 行")
+            suffix = f"（{'，'.join(detail)}）" if detail else ""
+            return (
+                f"用户刚把快速笔记同步到认知棱镜{suffix}；笔记原文未写入工具历史。",
+                {
+                    "char_count": char_count,
+                    "line_count": line_count,
+                    "task_id": context.get("task_id"),
+                    "privacy": "raw_note_text_not_stored",
+                },
+            )
+        if tool_name == "flash_capsule":
+            subject = str(context.get("subject") or "").strip()
+            error_type = str(context.get("error_type") or "").strip()
+            details = "，".join(item for item in (subject, error_type) if item)
+            return (
+                f"用户刚保存了一条闪念胶囊{f'（{details}）' if details else ''}；具体描述不写入工具历史。",
+                {
+                    "subject": subject,
+                    "error_type": error_type,
+                    "task_id": context.get("task_id"),
+                    "privacy": "raw_capsule_text_not_stored",
+                },
+            )
+        return (
+            f"用户刚完成了一次工具使用（{tool_name}, history #{record_id}）。",
+            {},
+        )
 
     async def _signal_on_cooldown(self, user_id: UUID, signal_key: str) -> bool:
         key = self._cooldown_key(user_id, signal_key)

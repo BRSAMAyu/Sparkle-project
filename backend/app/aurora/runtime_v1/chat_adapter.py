@@ -16,6 +16,7 @@ from app.aurora.runtime_v1.decision_loop import (
 )
 from app.aurora.runtime_v1.state import merge_activity_profile_payload, merge_expression_settings
 from app.core.agent_profiles import AgentRole, TaskType
+from app.orchestration.aurora_language_principles import render_aurora_language_contract
 from app.orchestration.prompts import build_conversation_memory_fragment
 from app.services.llm_service import get_configured_llm_service
 from app.sprint_packs.sprint_pack_loader import get_mistake_by_nodes, load_pack
@@ -247,6 +248,10 @@ class ChatLayerAdapter:
             if multimessage_allowed
             else "Write exactly 1 short, natural message for the user. "
         )
+        language_contract = render_aurora_language_contract(
+            scenario="checkpoint" if readout.surface == "aurora_checkpoint" else "chat",
+            include_examples=False,
+        )
         system = (
             "You are Sparkle's chat layer adapter. Aurora has already made the cognitive decision. "
             f"{message_count_instruction}"
@@ -263,12 +268,15 @@ class ChatLayerAdapter:
             "The standard_layer_contract is a hard contract, not a suggestion. You MUST satisfy every item in "
             "must_include, MUST avoid every item in must_not_include, and MUST stay within max_response_length. "
             "If any other hint conflicts with standard_layer_contract, follow the contract. "
+            "If local tone hints conflict with the Aurora language contract, keep the local intensity but obey the "
+            "shared voice, blacklist, and no-internal-token rules. "
             "When intent=diagnose_stuck_point, use micro_teaching: first narrow the stuck point with one "
             "two-choice diagnosis question; after the user answers, give a one-minute targeted fix and one simple "
             "confirmation question. Do not give the full solution or turn it into a drill set. "
             "Stay task-level and avoid clinical, personality, or social-identity inference. "
             'Return JSON: {"messages": ["..."]}.'
         )
+        system += f"\n\n{language_contract}"
         conversation_summary = readout.conversation_summary if isinstance(readout.conversation_summary, dict) else {}
         recent_messages = conversation_summary.get("recent_messages")
         try:
@@ -283,9 +291,13 @@ class ChatLayerAdapter:
         )
         conversation_memory_fragment = build_conversation_memory_fragment(conversation_summary)
         if has_conversation_history:
+            system += "\n\n在适当时机自然地引用用户之前提到的具体内容" "（困难点/已完成的任务），而不是每次都从头开始。"
+        if readout.surface == "aurora_checkpoint":
             system += (
-                "\n\n在适当时机自然地引用用户之前提到的具体内容"
-                "（困难点/已完成的任务），而不是每次都从头开始。"
+                "\n\nCheckpoint rendering rule: do not use a fixed progress/difficulty/advice script. "
+                "Use dashboard_digest.checkpoint_state.personalized_opening and personalized_questions when present. "
+                "Ask only 1-3 necessary questions, and every question must make its reason clear in user-visible language. "
+                "Reference previous_runtime_state_summary, open_threads, or unclosed_questions when available, then tie the next move to real progress facts."
             )
         if conversation_memory_fragment:
             system += f"\n\n{conversation_memory_fragment}"

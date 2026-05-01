@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
+
 /// Chat Mode Selector Sheet
 ///
 /// Bottom sheet for selecting a chat mode.
@@ -23,10 +24,12 @@ class ChatModeSelectorSheet extends ConsumerWidget {
     final expertModes = catalog.when(
       data: (value) => value.experts
           .where((expert) => expert.enabled)
-          .map((expert) => ChatModeExpert(
-                expertId: expert.id,
-                displayName: expert.displayName,
-              ),)
+          .map(
+            (expert) => ChatModeExpert(
+              expertId: expert.id,
+              displayName: expert.displayName,
+            ),
+          )
           .toList(),
       loading: () => <ChatMode>[],
       error: (_, __) => <ChatMode>[],

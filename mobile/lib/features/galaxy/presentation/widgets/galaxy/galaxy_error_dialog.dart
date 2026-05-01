@@ -38,92 +38,92 @@ class GalaxyErrorDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-        backgroundColor: DS.surfaceHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: _getErrorColor().withValues(alpha: 0.3),
+      backgroundColor: DS.surfaceHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: _getErrorColor().withValues(alpha: 0.3),
+        ),
+      ),
+      title: Row(
+        children: [
+          Icon(
+            _getErrorIcon(),
+            color: _getErrorColor(),
+            size: 24,
           ),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              _getErrorIcon(),
-              color: _getErrorColor(),
-              size: 24,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _getDialogTitle(l10n),
+              style: TextStyle(
+                color: DS.textPrimary,
+                fontSize: 18,
+                fontWeight: DS.fontWeightSemibold,
+              ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _getDialogTitle(l10n),
-                style: TextStyle(
-                  color: DS.textPrimary,
-                  fontSize: 18,
-                  fontWeight: DS.fontWeightSemibold,
-                ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _getErrorColor().withValues(alpha: 0.08),
+                  DS.surfacePrimary,
+                ],
+              ),
+              borderRadius: DS.borderRadius12,
+              border: Border.all(
+                color: _getErrorColor().withValues(alpha: 0.14),
+              ),
+            ),
+            child: Text(
+              error.userMessage,
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          if (error.isRetryable) ...[
+            const SizedBox(height: 16),
+            Text(
+              l10n.galaxyErrorRetryHint,
+              style: TextStyle(
+                color: DS.textTertiary,
+                fontSize: 12,
               ),
             ),
           ],
+        ],
+      ),
+      actions: [
+        SparkleButton(
+          label: l10n.close,
+          variant: ButtonVariant.ghost,
+          onPressed: () {
+            Navigator.of(context).pop();
+            onDismiss?.call();
+          },
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    _getErrorColor().withValues(alpha: 0.08),
-                    DS.surfacePrimary,
-                  ],
-                ),
-                borderRadius: DS.borderRadius12,
-                border: Border.all(
-                  color: _getErrorColor().withValues(alpha: 0.14),
-                ),
-              ),
-              child: Text(
-                error.userMessage,
-                style: TextStyle(
-                  color: DS.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            if (error.isRetryable) ...[
-              const SizedBox(height: 16),
-              Text(
-                l10n.galaxyErrorRetryHint,
-                style: TextStyle(
-                  color: DS.textTertiary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
+        if (onRetry != null && error.isRetryable)
           SparkleButton(
-            label: l10n.close,
-            variant: ButtonVariant.ghost,
+            label: l10n.retry,
             onPressed: () {
               Navigator.of(context).pop();
-              onDismiss?.call();
+              onRetry?.call();
             },
           ),
-          if (onRetry != null && error.isRetryable)
-            SparkleButton(
-              label: l10n.retry,
-              onPressed: () {
-                Navigator.of(context).pop();
-                onRetry?.call();
-              },
-            ),
-        ],
-      );
+      ],
+    );
   }
 
   IconData _getErrorIcon() {
@@ -331,65 +331,65 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(DS.xxl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 图标
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    colors: [
-                      _getErrorColor().withValues(alpha: 0.16),
-                      _getErrorColor().withValues(alpha: 0.05),
-                      Colors.transparent,
-                    ],
-                  ),
-                  shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(DS.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 图标
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    _getErrorColor().withValues(alpha: 0.16),
+                    _getErrorColor().withValues(alpha: 0.05),
+                    Colors.transparent,
+                  ],
                 ),
-                child: Icon(
-                  _getErrorIcon(),
-                  color: _getErrorColor(),
-                  size: 40,
-                ),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: DS.xl),
-
-              // 标题
-              Text(
-                _getPlaceholderTitle(l10n),
-                style: TextStyle(
-                  color: DS.textPrimary,
-                  fontSize: 18,
-                  fontWeight: DS.fontWeightSemibold,
-                ),
+              child: Icon(
+                _getErrorIcon(),
+                color: _getErrorColor(),
+                size: 40,
               ),
-              const SizedBox(height: 8),
+            ),
+            const SizedBox(height: DS.xl),
 
-              // 描述
-              Text(
-                error.userMessage,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: DS.textSecondary,
-                  fontSize: 14,
-                ),
+            // 标题
+            Text(
+              _getPlaceholderTitle(l10n),
+              style: TextStyle(
+                color: DS.textPrimary,
+                fontSize: 18,
+                fontWeight: DS.fontWeightSemibold,
               ),
-              const SizedBox(height: DS.xl),
+            ),
+            const SizedBox(height: 8),
 
-              // 重试按钮
-              if (onRetry != null && error.isRetryable)
-                SparkleButton(
-                  label: l10n.retry,
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                ),
-            ],
-          ),
+            // 描述
+            Text(
+              error.userMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: DS.xl),
+
+            // 重试按钮
+            if (onRetry != null && error.isRetryable)
+              SparkleButton(
+                label: l10n.retry,
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+              ),
+          ],
         ),
+      ),
     );
   }
 

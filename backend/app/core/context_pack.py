@@ -521,9 +521,16 @@ def format_document_chunks_for_prompt(
             "budget": max(0, int(budget or 0)),
         }
 
-    effective_budget = max(0, int(budget if budget is not None else _allocate_context_source_budgets(
-        int(getattr(settings, "CONTEXT_TOTAL_TOKEN_BUDGET", 8000) or 8000)
-    )[CONTEXT_SOURCE_DOCUMENTS]))
+    effective_budget = max(
+        0,
+        int(
+            budget
+            if budget is not None
+            else _allocate_context_source_budgets(int(getattr(settings, "CONTEXT_TOTAL_TOKEN_BUDGET", 8000) or 8000))[
+                CONTEXT_SOURCE_DOCUMENTS
+            ]
+        ),
+    )
     if effective_budget <= 0:
         CONTEXT_BUDGET_OVER_LIMIT_TOTAL.labels(type=CONTEXT_SOURCE_DOCUMENTS).inc()
         CONTEXT_BUDGET_UTILIZATION.labels(type=CONTEXT_SOURCE_DOCUMENTS).set(0.0)
@@ -616,9 +623,7 @@ def format_document_chunks_for_prompt(
             compact_text = "\n".join([header, f"{prefix}{snippet}"])
             compact_usage = estimate_tokens(compact_text)
             if compact_usage <= effective_budget:
-                CONTEXT_BUDGET_UTILIZATION.labels(type=CONTEXT_SOURCE_DOCUMENTS).set(
-                    compact_usage / effective_budget
-                )
+                CONTEXT_BUDGET_UTILIZATION.labels(type=CONTEXT_SOURCE_DOCUMENTS).set(compact_usage / effective_budget)
                 CONTEXT_BUDGET_OVER_LIMIT_TOTAL.labels(type=CONTEXT_SOURCE_DOCUMENTS).inc()
                 return compact_text, {
                     "total_results": total_results,
@@ -751,10 +756,7 @@ class ContextBudgetManager:
             CONTEXT_SOURCE_TASK_ERROR: estimate_tokens(task_text),
             CONTEXT_SOURCE_COGNITIVE: estimate_tokens(cognitive_text),
         }
-        budget_remaining = {
-            source: budgets.get(source, 0) - token_usage.get(source, 0)
-            for source in raw_budgets
-        }
+        budget_remaining = {source: budgets.get(source, 0) - token_usage.get(source, 0) for source in raw_budgets}
         for source, budget in budgets.items():
             usage = token_usage.get(source, 0)
             utilization = usage / budget if budget > 0 else 0.0
@@ -840,10 +842,7 @@ class ContextBudgetManager:
             remaining = budget - used - estimate_tokens(_serialize({**candidate, "content": ""}))
             if remaining > 16:
                 candidate["content"] = _truncate_text_to_token_budget(content, remaining)
-                while (
-                    candidate.get("content")
-                    and used + estimate_tokens(_serialize(candidate)) > budget
-                ):
+                while candidate.get("content") and used + estimate_tokens(_serialize(candidate)) > budget:
                     candidate["content"] = _truncate_text_to_token_budget(
                         str(candidate.get("content") or ""),
                         max(1, estimate_tokens(str(candidate.get("content") or "")) - 4),
@@ -1211,6 +1210,10 @@ class ContextPackBuilder:
                 "source_lane": str(getattr(entry.item, "source_lane", "") or "").strip(),
                 "occurred_at": entry.item.occurred_at,
                 "importance_score": entry.item.importance_score,
+                "confidence": getattr(entry.item, "confidence", None),
+                "evidence_score": getattr(entry.item, "evidence_score", None),
+                "correction_count": int(getattr(entry.item, "correction_count", 0) or 0),
+                "user_confirmed": str(getattr(entry.item, "source_lane", "") or "").strip() != "inferred_extraction",
                 "tags": getattr(entry.item, "tags", None) or [],
             }
             for entry in ranked_episodic

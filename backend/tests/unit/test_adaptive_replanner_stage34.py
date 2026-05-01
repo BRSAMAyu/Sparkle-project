@@ -134,3 +134,46 @@ def test_should_compress_considers_same_day_class_conflict() -> None:
             "time_blocks_today": [{"start": "19:00", "end": "20:00"}],
         },
     ) is True
+
+
+def test_calendar_capacity_shortfall_becomes_lightweight_adjustment() -> None:
+    report = PlanHealthReport(
+        plan_id=uuid4(),
+        user_id=uuid4(),
+        status="active",
+        severity="critical",
+        reasons=["progress_lag"],
+        metrics={"progress_rate": 0.35},
+        requires_adjustment=True,
+        recommended_action="replan",
+    )
+
+    adjusted = AdaptiveReplanner._apply_calendar_capacity_to_report(
+        report,
+        {
+            "required_daily_minutes": 180,
+            "available_minutes_by_date": {
+                "2026-05-01": 90,
+                "2026-05-02": 80,
+                "2026-05-03": 100,
+            },
+            "capacity_summary": {
+                "next_3_days_available_minutes": 270,
+                "next_3_days_required_minutes": 540,
+                "planning_intensity_hint": "lower",
+            },
+        },
+    )
+
+    assert adjusted.severity == "warning"
+    assert adjusted.recommended_action == "adjust"
+    assert "calendar_capacity_shortfall" in adjusted.reasons
+    assert adjusted.metrics["calendar_capacity"]["next_3_days_available_minutes"] == 270
+
+    replanner = object.__new__(AdaptiveReplanner)
+    adjustments = replanner._calculate_adjustments({}, adjusted, None)
+    assert adjustments["adaptive_adjustments"]["calendar_aware"] is True
+    assert adjustments["adaptive_adjustments"]["task_density_mode"] == "calendar_aware_reduced"
+
+    record = replanner._build_adjustment_record(adjusted, adjustments, feedback_category=None)
+    assert "日程时间不够" in record.user_facing_message

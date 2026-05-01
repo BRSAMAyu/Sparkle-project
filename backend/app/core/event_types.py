@@ -8,6 +8,7 @@ CAPSULE_CONTENT_UPDATED = "capsule.content.updated"
 PROFILE_COGNITIVE_UPDATED = "profile.cognitive.updated"
 CAPSULE_REGENERATE_REQUESTED = "capsule.regenerate.requested"
 TOOL_HISTORY_RECORDED = "tool.history.recorded"
+TOOL_USAGE_EVENT = "tool_usage_event"
 ACCOUNTABILITY_PARTNERSHIP_UPDATED = "accountability.partnership.updated"
 ACCOUNTABILITY_CHECKIN_CREATED = "accountability.checkin.created"
 ACCOUNTABILITY_STRUGGLE_DETECTED = "accountability.struggle_detected"
@@ -38,6 +39,7 @@ __all__ = [
     "PROFILE_COGNITIVE_UPDATED",
     "CAPSULE_REGENERATE_REQUESTED",
     "TOOL_HISTORY_RECORDED",
+    "TOOL_USAGE_EVENT",
     "ACCOUNTABILITY_PARTNERSHIP_UPDATED",
     "ACCOUNTABILITY_CHECKIN_CREATED",
     "ACCOUNTABILITY_STRUGGLE_DETECTED",

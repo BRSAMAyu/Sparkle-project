@@ -220,6 +220,7 @@ class Ws6ProfileMirrorAdapter {
       mediatedItems: mediatedItems,
       hiddenItemCount: computedHiddenCount,
       revertActions: revertActions,
+      recentCorrections: _buildRecentCorrections(profileContext),
       calibrationPosture:
           _asMap(transparentProfile['calibration'])['calibration_posture']
                   ?.toString() ??
@@ -237,6 +238,34 @@ class Ws6ProfileMirrorAdapter {
         if (relationshipState != null)
           'data source: relationship_state adapter',
       ]),
+    );
+  }
+
+  List<Ws6ProfileCorrectionHistoryItemModel> _buildRecentCorrections(
+    Map<String, dynamic> profileContext,
+  ) {
+    return [
+      for (final raw in _asList(profileContext['recent_corrections']))
+        if (_asMap(raw).isNotEmpty) _buildCorrectionHistoryItem(_asMap(raw)),
+    ];
+  }
+
+  Ws6ProfileCorrectionHistoryItemModel _buildCorrectionHistoryItem(
+    Map<String, dynamic> item,
+  ) {
+    final targetId = item['target_id']?.toString() ?? '';
+    final fieldName = item['field_name']?.toString() ?? targetId;
+    final action = item['action']?.toString() ?? '';
+    final summary = item['summary']?.toString() ?? action;
+    final createdAt = item['created_at']?.toString() ?? '';
+    return Ws6ProfileCorrectionHistoryItemModel(
+      id: item['id']?.toString() ?? targetId,
+      targetId: targetId,
+      fieldName: fieldName.isEmpty ? targetId : fieldName,
+      action: action,
+      summary: summary,
+      createdAtLabel: createdAt.split('T').first,
+      canUndo: item['can_undo'] == true && targetId.isNotEmpty,
     );
   }
 

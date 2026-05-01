@@ -28,6 +28,7 @@ router = APIRouter(prefix="/aurora", tags=["aurora"])
 
 # ── Request / Response models ──────────────────────────────────────────────────
 
+
 class CalibrationCardRespondRequest(BaseModel):
     response: Literal["confirm", "incorrect", "mute"]
     reason: str | None = None
@@ -42,15 +43,27 @@ class DailyStartupResponse(BaseModel):
 
 
 class ComebackContextResponse(BaseModel):
-    title: str
-    message: str
-    days_away: int
-    days_remaining: int
-    subject: str
-    next_task_title: str
-    recent_task_summary: str
-    light_restart_suggestion: str
-    plan_id: str
+    comeback_kind: str = ""
+    title: str = ""
+    message: str = ""
+    should_show_message: bool = False
+    last_active_at: str = ""
+    inactive_minutes: int = 0
+    days_away: int = 0
+    days_remaining: int = 0
+    subject: str = ""
+    next_task_title: str = ""
+    recent_task_summary: str = ""
+    light_restart_suggestion: str = ""
+    plan_id: str = ""
+    conversation_id: str = ""
+    last_message_id: str = ""
+    topic_summary: str = ""
+    pending_question: str = ""
+    active_core_session: dict[str, Any] = Field(default_factory=dict)
+    resume_token: str = ""
+    unfinished_items: list[dict[str, Any]] = Field(default_factory=list)
+    calendar_note: str = ""
 
 
 class CoreSessionStartRequest(BaseModel):
@@ -60,6 +73,8 @@ class CoreSessionStartRequest(BaseModel):
     scope: str | None = None
     wake_reasons: list[str] = Field(default_factory=list)
     band_status: str = "calibration_available"
+    entry_reason: dict[str, Any] | None = None
+    resume_token: str | None = None
 
 
 class CoreSessionRespondRequest(BaseModel):
@@ -69,6 +84,14 @@ class CoreSessionRespondRequest(BaseModel):
     semantic_value: str | None = None
     model_write_effect: dict[str, Any] | None = None
     is_freeform: bool = False
+
+
+class CoreSessionPauseRequest(BaseModel):
+    reason: str = "user_request"
+
+
+class CoreSessionResumeRequest(BaseModel):
+    resume_token: str
 
 
 class ChipSelectedTelemetryRequest(BaseModel):
@@ -86,6 +109,7 @@ class ChipSelectedTelemetryRequest(BaseModel):
 
 
 # ── Existing endpoints ─────────────────────────────────────────────────────────
+
 
 # route-tier: authed
 @router.get("/daily-startup", response_model=DailyStartupResponse)
@@ -142,6 +166,7 @@ async def get_comeback_context(
     payload = await service.get_comeback_context(
         active_db=db,
         user_id=resolved_user_id,
+        include_short_gaps=True,
     )
     if payload is None:
         return {}
@@ -201,6 +226,7 @@ async def get_aurora_telemetry_summary(
 
 # ── New: Core Session endpoints ────────────────────────────────────────────────
 
+
 # route-tier: authed
 @router.post("/core-session/start")
 async def start_core_session(
@@ -218,7 +244,24 @@ async def start_core_session(
             scope=payload.scope,
             wake_reasons=payload.wake_reasons,
             band_status=payload.band_status,
+            entry_reason=payload.entry_reason,
+            resume_token=payload.resume_token,
         )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
     except Exception as exc:
         logger.exception("Failed to start Aurora core session")
         raise HTTPException(
@@ -233,6 +276,65 @@ async def start_core_session(
     except Exception:
         pass
 
+    return session.to_dict()
+
+
+# route-tier: authed
+@router.post("/core-session/resume")
+async def resume_core_session(
+    payload: CoreSessionResumeRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Resume a paused/active Aurora Core Session by opaque resume token."""
+    service = AuroraCoreSessionService(cache_service.redis)
+    try:
+        session = await service.resume_session(
+            user_id=str(current_user.id),
+            resume_token=payload.resume_token,
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    return session.to_dict()
+
+
+# route-tier: authed
+@router.post("/core-session/{session_id}/pause")
+async def pause_core_session(
+    payload: CoreSessionPauseRequest,
+    session_id: str = Path(...),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Pause an active Aurora Core Session and return its resume token."""
+    service = AuroraCoreSessionService(cache_service.redis)
+    try:
+        session = await service.pause_session(
+            user_id=str(current_user.id),
+            session_id=session_id,
+            reason=payload.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
     return session.to_dict()
 
 
@@ -272,12 +374,17 @@ async def respond_core_session(
 async def get_current_core_session(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Get the user's current active Aurora Core Session, if any."""
+    """Get the user's current resumable Aurora Core Session, if any."""
     service = AuroraCoreSessionService(cache_service.redis)
-    session = await service.get_active_session(str(current_user.id))
+    session = await service.get_current_session(str(current_user.id))
     if session is None:
-        return {"active": False, "session": None}
-    return {"active": True, "session": session.to_dict()}
+        return {"active": False, "resumable": False, "expired": False, "session": None}
+    return {
+        "active": session.status == "active",
+        "resumable": session.status in ("active", "paused"),
+        "expired": session.status == "expired",
+        "session": session.to_dict(),
+    }
 
 
 # route-tier: authed
@@ -308,6 +415,7 @@ async def close_core_session(
 
 # ── New: Predicted reply options endpoint ──────────────────────────────────────
 
+
 # route-tier: authed
 @router.get("/predicted-options")
 async def get_predicted_options(
@@ -329,6 +437,7 @@ async def get_predicted_options(
 
 # ── New: Chip selected telemetry ───────────────────────────────────────────────
 
+
 # route-tier: authed
 @router.post("/telemetry/chip-selected")
 async def record_chip_selected(
@@ -344,6 +453,7 @@ async def record_chip_selected(
     redis = cache_service.redis
     import json as _json
     import time
+
     correction_result = None
 
     if redis is not None:
@@ -390,6 +500,17 @@ async def record_chip_selected(
                     telemetry_id=payload.telemetry_id,
                     context_source=payload.context_source,
                 )
+                if correction_result.user_visible_effect:
+                    effect_key = f"aurora:last_correction_effect:{current_user.id}"
+                    effect_payload = _json.dumps(
+                        correction_result.user_visible_effect,
+                        ensure_ascii=False,
+                    )
+                    try:
+                        await redis.set(effect_key, effect_payload)
+                        await redis.expire(effect_key, 24 * 3600)
+                    except Exception:
+                        logger.debug("Failed to persist Aurora correction effect", exc_info=True)
             except Exception:
                 logger.exception("Correction feedback processing failed")
 
@@ -567,18 +688,20 @@ async def get_causal_timeline(
         except Exception:
             pass
 
-        entries.append(CausalTimelineEntry(
-            trace_id=trace.trace_id,
-            created_at=trace.created_at,
-            event_summary=event_summary,
-            signal=signal_data,
-            state_patches=[],
-            policy_decision=policy_data,
-            directives=directives,
-            receipt=receipt_data,
-            outcome=outcome_data,
-            card=card_data,
-        ))
+        entries.append(
+            CausalTimelineEntry(
+                trace_id=trace.trace_id,
+                created_at=trace.created_at,
+                event_summary=event_summary,
+                signal=signal_data,
+                state_patches=[],
+                policy_decision=policy_data,
+                directives=directives,
+                receipt=receipt_data,
+                outcome=outcome_data,
+                card=card_data,
+            )
+        )
 
     return CausalTimelineResponse(entries=entries, total=len(entries))
 
@@ -683,6 +806,7 @@ async def correct_timeline_card(
         # Record correction to self_model
         try:
             from app.signals.self_model import SparkleSelfModelService
+
             await SparkleSelfModelService(redis).record_user_correction(
                 user_id=str(current_user.id),
                 signal_id=f"card_correct:{request.card_id}",
@@ -702,12 +826,14 @@ async def correct_timeline_card(
     # Store the correction action
     await redis.set(
         f"spine:card_action:{request.card_id}",
-        json_mod.dumps({
-            "action": request.action,
-            "user_id": str(current_user.id),
-            "trace_id": request.trace_id,
-            "user_explanation": request.user_explanation,
-        }),
+        json_mod.dumps(
+            {
+                "action": request.action,
+                "user_id": str(current_user.id),
+                "trace_id": request.trace_id,
+                "user_explanation": request.user_explanation,
+            }
+        ),
         ex=72 * 3600,
     )
 
@@ -773,9 +899,7 @@ async def get_goal_graph(
             return {"active": False, "nodes": [], "edges": []}
 
         bottleneck = graph.find_bottleneck()
-        suggestions = await spine.get_goal_focus_suggestions(
-            user_id=str(current_user.id), goal_id=goal_id
-        )
+        suggestions = await spine.get_goal_focus_suggestions(user_id=str(current_user.id), goal_id=goal_id)
         return {
             "active": True,
             "goal_id": goal_id,
@@ -926,10 +1050,10 @@ _DEFAULT_AURORA_PREFS: dict[str, str] = {
 
 
 class AuroraPreferencesRequest(BaseModel):
-    aurora_analysis_depth: str | None = None   # "light" | "deep"
-    aurora_directness: str | None = None        # "direct" | "guided"
+    aurora_analysis_depth: str | None = None  # "light" | "deep"
+    aurora_directness: str | None = None  # "direct" | "guided"
     aurora_explanation_level: str | None = None  # "detailed" | "brief"
-    aurora_pressure_style: str | None = None     # "gentle" | "motivating"
+    aurora_pressure_style: str | None = None  # "gentle" | "motivating"
 
 
 # route-tier: authed
@@ -977,5 +1101,3 @@ async def update_aurora_preferences(
     service = AuroraUserPreferencesService(db)
     prefs = await service.update(user_id=current_user.id, preferences=updates)
     return {"preferences": prefs, "updated_keys": list(updates.keys())}
-
-

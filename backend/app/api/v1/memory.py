@@ -38,17 +38,14 @@ def _ensure_memory_export_enabled() -> None:
     if not settings.ENABLE_MEMORY_EXPORT:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory export disabled")
 
+
 def _ensure_memory_correction_enabled() -> None:
     if not settings.ENABLE_MEMORY_CORRECTION:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Memory correction disabled")
 
 
 def _resolve_preference_source(record: MemoryPreference) -> tuple[str, str]:
-    evidence_types = {
-        ref.get("type")
-        for ref in (record.evidence_refs or [])
-        if isinstance(ref, dict)
-    }
+    evidence_types = {ref.get("type") for ref in (record.evidence_refs or []) if isinstance(ref, dict)}
     if "ai_inferred" in evidence_types:
         return "ai_inferred", "系统推断"
     return "user_state", "用户设置"
@@ -129,9 +126,7 @@ async def list_preferences(
         if record.pref_key in current_values:
             continue
         current_values[record.pref_key] = (
-            (record.pref_value or {}).get("value")
-            if isinstance(record.pref_value, dict)
-            else record.pref_value
+            (record.pref_value or {}).get("value") if isinstance(record.pref_value, dict) else record.pref_value
         )
     for record in records:
         if record.pref_key in latest_by_key:
@@ -199,9 +194,7 @@ async def list_goals(
     if status_filter:
         stmt = stmt.where(MemoryGoal.status == status_filter)
     if not include_expired:
-        stmt = stmt.where(
-            MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now)
-        )
+        stmt = stmt.where(MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now))
     stmt = stmt.order_by(MemoryGoal.updated_at.desc()).limit(limit)
     result = await db.execute(stmt)
     items = []
@@ -267,9 +260,7 @@ async def list_episodic(
                 "retracted_at": record.retracted_at,
                 "revoked_at": record.revoked_at,
                 "mentioned_entity_hash": record.mentioned_entity_hash,
-                "declaration_label": (
-                    "AI 推断" if record.source_lane == "inferred_extraction" else None
-                ),
+                "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),
             }
         )
     return {"items": items}
@@ -521,7 +512,9 @@ async def arbitrate_unresolved_conflict(
     _ensure_memory_panel_enabled()
     selection = str(payload.get("selection") or "").strip().lower()
     if selection not in {"left", "right", "none"}:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="selection must be left/right/none")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="selection must be left/right/none"
+        )
     service = ConflictResolverService(db)
     item = await service.arbitrate_unresolved_conflict(
         user_id=current_user.id,
@@ -616,6 +609,48 @@ async def correct_memory(
         "status": "corrected",
         "item": _serialize_corrected_memory(kind, record),
     }
+
+
+@router.post("/reference-outcome")
+async def record_memory_reference_outcome(
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+
+    kind = payload.get("type")
+    memory_id = payload.get("id")
+    outcome = payload.get("outcome")
+    reason = payload.get("reason")
+    response_id = payload.get("response_id")
+    if not kind or not memory_id or not outcome:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="type, id, and outcome required",
+        )
+    if str(outcome).strip().lower() in {"corrected", "denied"}:
+        _ensure_memory_correction_enabled()
+    try:
+        memory_uuid = UUID(memory_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid id") from exc
+
+    service = MemoryService(db)
+    try:
+        result = await service.record_memory_reference_outcome(
+            kind=kind,
+            memory_id=memory_uuid,
+            user_id=current_user.id,
+            outcome=outcome,
+            response_id=str(response_id) if response_id else None,
+            reason=str(reason) if reason else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory item not found")
+    return {"status": "recorded", "outcome": result}
 
 
 @router.get("/export")
@@ -718,9 +753,7 @@ def _serialize_episodic(record: EpisodicMemory) -> dict:
         "evidence_refs": record.evidence_refs or [],
         "retracted_at": record.retracted_at,
         "revoked_at": record.revoked_at,
-        "declaration_label": (
-            "AI 推断" if record.source_lane == "inferred_extraction" else None
-        ),
+        "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),
     }
     if record.evidence_snapshot:
         payload["evidence_snapshot"] = record.evidence_snapshot

@@ -14,6 +14,8 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
+import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
 import 'package:sparkle/features/home/home_routes.dart';
@@ -482,6 +484,40 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           Navigator.of(sheetContext).pop();
           _openStuckChat(sheetTask);
         },
+        onCoreSessionPressed: () {
+          Navigator.of(sheetContext).pop();
+          _openStuckCoreSession(sheetTask);
+        },
+      ),
+    );
+  }
+
+  void _openStuckCoreSession(TaskModel task) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final fallbackLines = _guideFallbackLines(guide['fallback_if_stuck']);
+    final observed = <String>[
+      task.title,
+      ..._guideStepNames(guide).take(2),
+      ...fallbackLines.take(2),
+    ].where((item) => item.trim().isNotEmpty).toList();
+    unawaited(
+      showAuroraCoreSession(
+        context: context,
+        bandStatus: 'risk_found',
+        wakeReasons: const ['task_stuck'],
+        entryReason: AuroraCoreSessionEntryReason(
+          triggerSource: 'task_stuck_prompt',
+          observedSignals: observed.isEmpty ? [task.title] : observed,
+          suggestedAgendaPreview: const [
+            '确认卡点发生在哪里',
+            '判断是任务太大还是知识点没接上',
+            '给出下一步可执行调整',
+          ],
+          whyNow: context.l10n.auroraTaskStuckWhyNow,
+          estimatedMinutes: 4,
+        ),
+        scope: task.title,
+        sessionType: 'strategy_recalibration',
       ),
     );
   }

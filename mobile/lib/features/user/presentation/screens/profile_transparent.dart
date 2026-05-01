@@ -93,6 +93,16 @@ class ProfileTransparentScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: DS.spacing12),
+              _buildCorrectionHistorySection(
+                context,
+                view,
+                onUndo: (item) => submitInsightControl(
+                  targetId: item.targetId,
+                  action: 'reset_override',
+                  reason: 'User reverted a previous Aurora correction.',
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
               _buildBindingCard(context, view),
               const SizedBox(height: 24),
             ],
@@ -324,6 +334,52 @@ class ProfileTransparentScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildCorrectionHistorySection(
+    BuildContext context,
+    Ws6TransparentProfileViewModel view, {
+    Future<void> Function(Ws6ProfileCorrectionHistoryItemModel item)? onUndo,
+  }) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.userCorrectionHistoryTitle,
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            context.l10n.userCorrectionHistoryHint,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing12),
+          if (view.recentCorrections.isEmpty)
+            Text(
+              context.l10n.userCorrectionHistoryEmpty,
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            )
+          else
+            ...view.recentCorrections.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing10),
+                child: _CorrectionHistoryCard(
+                  item: item,
+                  onUndo: item.canUndo && onUndo != null
+                      ? () => onUndo(item)
+                      : null,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOfflineFallback(BuildContext context) {
     return Center(
       child: Padding(
@@ -504,9 +560,74 @@ class _RevertActionCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: onMarkWrong == null ? null : () => onMarkWrong!(),
-                  child: Text(action.requiresDialogue ? context.l10n.userMarkNeedsRecalibration : context.l10n.userMarkInaccurate),
+                  child: Text(action.requiresDialogue
+                      ? context.l10n.userMarkNeedsRecalibration
+                      : context.l10n.userMarkInaccurate),
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CorrectionHistoryCard extends StatelessWidget {
+  const _CorrectionHistoryCard({
+    required this.item,
+    this.onUndo,
+  });
+
+  final Ws6ProfileCorrectionHistoryItemModel item;
+  final Future<void> Function()? onUndo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.surfacePrimaryElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.fieldName,
+                  style: DS.bodyMedium.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                ),
+              ),
+              if (item.createdAtLabel.isNotEmpty)
+                Text(
+                  item.createdAtLabel,
+                  style: DS.labelSmall.copyWith(color: DS.textTertiary),
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            item.summary,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Row(
+            children: [
+              _ModePill(label: item.action, color: const Color(0xFF78D1C0)),
+              const Spacer(),
+              if (item.canUndo)
+                TextButton(
+                  onPressed: onUndo == null ? null : () => onUndo!(),
+                  child: Text(context.l10n.userCorrectionHistoryUndo),
+                ),
             ],
           ),
         ],

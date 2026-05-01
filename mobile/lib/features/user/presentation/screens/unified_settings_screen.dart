@@ -90,6 +90,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   BgmLibrarySnapshot? _bgmLibrarySnapshot;
   bool _soundEnabled = true;
   bool _hapticEnabled = true;
+  bool _auroraSensoryLinkEnabled = true;
   bool _sensoryReady = false;
   AmbientScene _ambientScene = AmbientScene.none;
   double _ambientVolume = 0.5;
@@ -161,6 +162,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Future<void> _loadSensoryPreferences() async {
     final soundEnabled = await SensoryFeedbackService.isSoundEnabled();
     final hapticEnabled = await SensoryFeedbackService.isHapticEnabled();
+    final auroraLinkEnabled =
+        await SensoryFeedbackService.isAuroraLinkageEnabled();
     final ambientScene = await SensoryFeedbackService.getSavedAmbientScene();
     final ambientVolume = await SensoryFeedbackService.getAmbientVolume();
     if (!mounted) {
@@ -169,6 +172,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     setState(() {
       _soundEnabled = soundEnabled;
       _hapticEnabled = hapticEnabled;
+      _auroraSensoryLinkEnabled = auroraLinkEnabled;
       _ambientScene = ambientScene;
       _ambientVolume = ambientVolume;
       _sensoryReady = true;
@@ -211,7 +215,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       await BgmService.previewPalette(palette);
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, AppLocalizations.of(context)!.capsulePreviewFailed);
+        AppFeedback.error(
+            context, AppLocalizations.of(context)!.capsulePreviewFailed);
       }
     } finally {
       if (mounted) {
@@ -272,7 +277,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       await BgmService.previewSceneSample(track, palette: _bgmPalette);
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, AppLocalizations.of(context)!.capsuleScenePreviewFailed);
+        AppFeedback.error(
+            context, AppLocalizations.of(context)!.capsuleScenePreviewFailed);
       }
     } finally {
       if (mounted) {
@@ -303,6 +309,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     }
   }
 
+  Future<void> _setAuroraSensoryLinkEnabled(bool value) async {
+    setState(() => _auroraSensoryLinkEnabled = value);
+    await SensoryFeedbackService.setAuroraLinkageEnabled(value);
+    if (value) {
+      await SensoryFeedbackService.emitAuroraEvent(
+        AuroraSensoryEvent.statusChanged,
+        enableSound: false,
+      );
+    }
+  }
+
   Future<void> _setAmbientScene(AmbientScene scene) async {
     setState(() => _ambientScene = scene);
     await SensoryFeedbackService.setAmbientScene(scene, autoplay: true);
@@ -321,7 +338,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     notifier.previewPreferences(depth: depth, curiosity: curiosity);
     if (mounted) {
       setState(() {
-        _learningPreferenceStatus = AppLocalizations.of(context)!.learningPreferenceSaving;
+        _learningPreferenceStatus =
+            AppLocalizations.of(context)!.learningPreferenceSaving;
         _learningPreferenceStatusIsError = false;
       });
     }
@@ -333,7 +351,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           return;
         }
         setState(() {
-          _learningPreferenceStatus = AppLocalizations.of(context)!.learningPreferenceSaved;
+          _learningPreferenceStatus =
+              AppLocalizations.of(context)!.learningPreferenceSaved;
           _learningPreferenceStatusIsError = false;
         });
       } catch (e) {
@@ -343,7 +362,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         final message = e.toString().replaceFirst('Exception: ', '').trim();
         final l10n = AppLocalizations.of(context)!;
         setState(() {
-          _learningPreferenceStatus = l10n.learningPreferenceSaveFailed(message);
+          _learningPreferenceStatus =
+              l10n.learningPreferenceSaveFailed(message);
           _learningPreferenceStatusIsError = true;
         });
         AppFeedback.error(context, l10n.learningPreferenceSaveFailed(message));
@@ -451,6 +471,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 : null,
                             activeThumbColor: DS.primaryBase,
                           ),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.sensoryAuroraLinkTitle),
+                            subtitle: Text(l10n.sensoryAuroraLinkSubtitle),
+                            value: _auroraSensoryLinkEnabled,
+                            onChanged: _sensoryReady
+                                ? (value) => unawaited(
+                                      _setAuroraSensoryLinkEnabled(value),
+                                    )
+                                : null,
+                            activeThumbColor: DS.primaryBase,
+                          ),
                           const SizedBox(height: DS.spacing8),
                           Text(
                             l10n.sensoryAmbientSceneTitle,
@@ -549,7 +581,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           ),
                           const SizedBox(height: DS.spacing12),
                           _buildInlineStatusMessage(
-                            _learningPreferenceStatus ?? l10n.learningPreferenceAutoSaveHint,
+                            _learningPreferenceStatus ??
+                                l10n.learningPreferenceAutoSaveHint,
                             isError: _learningPreferenceStatusIsError,
                           ),
                           const SizedBox(height: DS.spacing24),
@@ -747,8 +780,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         ChoiceChip(
-                                          label:
-                                              Text(_bgmPaletteLabel(l10n, palette)),
+                                          label: Text(
+                                              _bgmPaletteLabel(l10n, palette)),
                                           selected: _bgmPalette == palette,
                                           onSelected: _bgmReady
                                               ? (_) => unawaited(
@@ -757,8 +790,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                               : null,
                                         ),
                                         IconButton(
-                                          tooltip:
-                                              l10n.bgmPreviewTooltip(_bgmPaletteLabel(l10n, palette)),
+                                          tooltip: l10n.bgmPreviewTooltip(
+                                              _bgmPaletteLabel(l10n, palette)),
                                           iconSize: 18,
                                           visualDensity: VisualDensity.compact,
                                           onPressed: _bgmEnabled && _bgmReady
@@ -1047,7 +1080,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             children: MotionIntensityLevel.values
                                 .map(
                                   (level) => ChoiceChip(
-                                    label: Text(_motionIntensityLabel(l10n, level)),
+                                    label: Text(
+                                        _motionIntensityLabel(l10n, level)),
                                     selected: motionIntensityLevel == level,
                                     onSelected: (_) => ref
                                         .read(motionIntensityLevelProvider
@@ -1069,7 +1103,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               ),
                             ),
                             child: Text(
-                              _motionIntensityDescription(l10n, motionIntensityLevel),
+                              _motionIntensityDescription(
+                                  l10n, motionIntensityLevel),
                               style: DS.bodySmall.copyWith(
                                 color: DS.textSecondary,
                                 height: 1.4,
@@ -1139,7 +1174,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   children: [
                     _buildCollapsibleHeader(
                       icon: Icons.auto_awesome_outlined,
-                      title: I18nService.instance.isChinese ? 'Aurora 沟通偏好' : 'Aurora Preferences',
+                      title: I18nService.instance.isChinese
+                          ? 'Aurora 沟通偏好'
+                          : 'Aurora Preferences',
                       subtitle: I18nService.instance.isChinese
                           ? '控制 Aurora 如何与你互动'
                           : 'Control how Aurora interacts with you',
@@ -1158,15 +1195,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildAuroraPrefSegmented(
-                                  label: I18nService.instance.isChinese ? '分析深度' : 'Analysis Depth',
+                                  label: I18nService.instance.isChinese
+                                      ? '分析深度'
+                                      : 'Analysis Depth',
                                   options: [
                                     (
-                                      I18nService.instance.isChinese ? '少分析我' : 'Light',
+                                      I18nService.instance.isChinese
+                                          ? '少分析我'
+                                          : 'Light',
                                       'light',
                                       Icons.insights_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese ? '多分析我' : 'Deep',
+                                      I18nService.instance.isChinese
+                                          ? '多分析我'
+                                          : 'Deep',
                                       'deep',
                                       Icons.psychology_outlined,
                                     ),
@@ -1179,15 +1222,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
-                                  label: I18nService.instance.isChinese ? '沟通方式' : 'Directness',
+                                  label: I18nService.instance.isChinese
+                                      ? '沟通方式'
+                                      : 'Directness',
                                   options: [
                                     (
-                                      I18nService.instance.isChinese ? '直接安排我' : 'Direct',
+                                      I18nService.instance.isChinese
+                                          ? '直接安排我'
+                                          : 'Direct',
                                       'direct',
                                       Icons.fast_forward_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese ? '引导我' : 'Guided',
+                                      I18nService.instance.isChinese
+                                          ? '引导我'
+                                          : 'Guided',
                                       'guided',
                                       Icons.tour_outlined,
                                     ),
@@ -1195,21 +1244,25 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                   selected: prefs.directness,
                                   onChanged: (v) => ref
                                       .read(auroraPreferencesProvider.notifier)
-                                      .updatePreference(
-                                          'aurora_directness', v),
+                                      .updatePreference('aurora_directness', v),
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
-                                  label:
-                                      I18nService.instance.isChinese ? '解释详细程度' : 'Explanation Level',
+                                  label: I18nService.instance.isChinese
+                                      ? '解释详细程度'
+                                      : 'Explanation Level',
                                   options: [
                                     (
-                                      I18nService.instance.isChinese ? '多解释原因' : 'Detailed',
+                                      I18nService.instance.isChinese
+                                          ? '多解释原因'
+                                          : 'Detailed',
                                       'detailed',
                                       Icons.article_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese ? '简洁' : 'Brief',
+                                      I18nService.instance.isChinese
+                                          ? '简洁'
+                                          : 'Brief',
                                       'brief',
                                       Icons.short_text_outlined,
                                     ),
@@ -1222,16 +1275,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
-                                  label:
-                                      I18nService.instance.isChinese ? '压力提醒风格' : 'Pressure Style',
+                                  label: I18nService.instance.isChinese
+                                      ? '压力提醒风格'
+                                      : 'Pressure Style',
                                   options: [
                                     (
-                                      I18nService.instance.isChinese ? '不用压力提醒' : 'Gentle',
+                                      I18nService.instance.isChinese
+                                          ? '不用压力提醒'
+                                          : 'Gentle',
                                       'gentle',
                                       Icons.spa_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese ? '可用压力' : 'Motivating',
+                                      I18nService.instance.isChinese
+                                          ? '可用压力'
+                                          : 'Motivating',
                                       'motivating',
                                       Icons.fitness_center_outlined,
                                     ),
@@ -1245,13 +1303,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 const SizedBox(height: DS.spacing12),
                               ],
                             ),
-                            loading: () =>
-                                const Center(
-                                    child: CircularProgressIndicator()),
+                            loading: () => const Center(
+                                child: CircularProgressIndicator()),
                             error: (_, __) => Padding(
                               padding: const EdgeInsets.all(DS.spacing16),
                               child: Text(
-                                I18nService.instance.isChinese ? '加载偏好失败' : 'Failed to load preferences',
+                                I18nService.instance.isChinese
+                                    ? '加载偏好失败'
+                                    : 'Failed to load preferences',
                                 style: DS.bodySmall
                                     .copyWith(color: DS.textSecondary),
                               ),
@@ -1334,7 +1393,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(l10n.notificationSpacedRepetition),
-                        subtitle: Text(l10n.notificationSpacedRepetitionSubtitle),
+                        subtitle:
+                            Text(l10n.notificationSpacedRepetitionSubtitle),
                         onChanged: (value) => unawaited(
                           _updateNotificationTypePreference(
                             context,
@@ -1424,8 +1484,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             _updateNotificationPreferences(
                               context,
                               notificationLevel: level,
-                              successMessage:
-                                  l10n.notificationLevelSwitched(_notificationLevelLabel(l10n, level)),
+                              successMessage: l10n.notificationLevelSwitched(
+                                  _notificationLevelLabel(l10n, level)),
                             ),
                           );
                         },
@@ -1433,8 +1493,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       const SizedBox(height: DS.spacing12),
                       _buildSelectionPreviewCard(
                         icon: Icons.notifications_active_outlined,
-                        title:
-                            l10n.notificationLevelPreviewTitle(_notificationLevelLabel(l10n, notificationLevel)),
+                        title: l10n.notificationLevelPreviewTitle(
+                            _notificationLevelLabel(l10n, notificationLevel)),
                         description: _notificationLevelPreview(
                           l10n,
                           notificationLevel,
@@ -1923,7 +1983,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       }
       AppFeedback.error(
         context,
-        AppLocalizations.of(context)!.notificationUpdateFailed(e.toString().replaceFirst('Exception: ', '').trim()),
+        AppLocalizations.of(context)!.notificationUpdateFailed(
+            e.toString().replaceFirst('Exception: ', '').trim()),
       );
     }
   }
@@ -1975,14 +2036,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final nextStart = isStart ? formatted : prefs.quietHoursStart;
     final nextEnd = isStart ? prefs.quietHoursEnd : formatted;
     if (nextStart == nextEnd) {
-      AppFeedback.info(context, AppLocalizations.of(context)!.notificationQuietHoursSameTimeError);
+      AppFeedback.info(context,
+          AppLocalizations.of(context)!.notificationQuietHoursSameTimeError);
       return;
     }
     await _updateNotificationPreferences(
       context,
       quietHoursStart: isStart ? formatted : null,
       quietHoursEnd: isStart ? null : formatted,
-      successMessage: isStart ? AppLocalizations.of(context)!.notificationQuietHoursStartUpdated : AppLocalizations.of(context)!.notificationQuietHoursEndUpdated,
+      successMessage: isStart
+          ? AppLocalizations.of(context)!.notificationQuietHoursStartUpdated
+          : AppLocalizations.of(context)!.notificationQuietHoursEndUpdated,
     );
   }
 
@@ -2023,14 +2087,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     return '$hour:$minute';
   }
 
-  String _taskReminderSummary(AppLocalizations l10n, TaskReminderConfig config) {
+  String _taskReminderSummary(
+      AppLocalizations l10n, TaskReminderConfig config) {
     if (!config.enabled) {
       return l10n.taskReminderDisabled;
     }
     if (config.reminders.isEmpty) {
       return l10n.taskReminderEnabledNoTime;
     }
-    final labels = config.reminders.map((m) => _formatReminderMinutes(l10n, m)).join(' / ');
+    final labels = config.reminders
+        .map((m) => _formatReminderMinutes(l10n, m))
+        .join(' / ');
     return '${l10n.taskReminderEnabledWithTimes} · $labels';
   }
 
@@ -2478,12 +2545,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _buildInfoChip(context.l10n.bgmCurated, context.l10n.tracksCount(snapshot.curatedCount)),
-              _buildInfoChip(context.l10n.bgmImported, context.l10n.tracksCount(snapshot.importedCount)),
-              _buildInfoChip(context.l10n.bgmBundled, context.l10n.tracksCount(snapshot.bundledCount)),
+              _buildInfoChip(context.l10n.bgmCurated,
+                  context.l10n.tracksCount(snapshot.curatedCount)),
+              _buildInfoChip(context.l10n.bgmImported,
+                  context.l10n.tracksCount(snapshot.importedCount)),
+              _buildInfoChip(context.l10n.bgmBundled,
+                  context.l10n.tracksCount(snapshot.bundledCount)),
               _buildInfoChip(
                 context.l10n.bgmModeLabel,
-                _bgmMode == BgmMode.continuous ? context.l10n.bgmPlayerMode : context.l10n.bgmPageStrategyMode,
+                _bgmMode == BgmMode.continuous
+                    ? context.l10n.bgmPlayerMode
+                    : context.l10n.bgmPageStrategyMode,
               ),
             ],
           ),
@@ -2503,7 +2575,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget _buildBgmNowPlayingCard() {
     final snapshot = _bgmPlaybackSnapshot;
     final sceneName = snapshot?.scene?.name ?? context.l10n.bgmNotPlaying;
-    final trackName = snapshot?.trackTitle ?? snapshot?.trackId ?? context.l10n.bgmBundledTrack;
+    final trackName = snapshot?.trackTitle ??
+        snapshot?.trackId ??
+        context.l10n.bgmBundledTrack;
     final sourceLabel = snapshot?.sourceLabel ?? 'Bundled fallback';
     final reason = snapshot?.selectionReason ?? context.l10n.bgmWaitingPlayback;
     final statusText = !_bgmEnabled
@@ -2576,13 +2650,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
-                  _buildInfoChip(context.l10n.bgmIntensityLabel, _bgmIntensityLabel(context.l10n, snapshot.intensity)),
-                  _buildInfoChip(context.l10n.bgmVarietyLabel, _bgmVarietyLabel(context.l10n, snapshot.variety)),
+                  _buildInfoChip(context.l10n.bgmIntensityLabel,
+                      _bgmIntensityLabel(context.l10n, snapshot.intensity)),
+                  _buildInfoChip(context.l10n.bgmVarietyLabel,
+                      _bgmVarietyLabel(context.l10n, snapshot.variety)),
                   if (snapshot.readingProtectionApplied)
-                    _buildInfoChip(context.l10n.bgmReadingProtection, context.l10n.bgmReadingProtectionTitle),
+                    _buildInfoChip(context.l10n.bgmReadingProtection,
+                        context.l10n.bgmReadingProtectionTitle),
                   if (snapshot.focusPriorityApplied)
-                    _buildInfoChip(context.l10n.bgmFocusPriority, context.l10n.bgmFocusPriorityTitle),
-                  if (snapshot.styleLocked) _buildInfoChip(context.l10n.bgmStyleLocked, context.l10n.bgmStyleLocked),
+                    _buildInfoChip(context.l10n.bgmFocusPriority,
+                        context.l10n.bgmFocusPriorityTitle),
+                  if (snapshot.styleLocked)
+                    _buildInfoChip(context.l10n.bgmStyleLocked,
+                        context.l10n.bgmStyleLocked),
                 ],
               ),
             ),
@@ -2698,7 +2778,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
-  String _bgmPaletteLabel(AppLocalizations l10n, BgmPalette palette) => switch (palette) {
+  String _bgmPaletteLabel(AppLocalizations l10n, BgmPalette palette) =>
+      switch (palette) {
         BgmPalette.adaptive => l10n.bgmPaletteAdaptive,
         BgmPalette.classical => l10n.bgmPaletteClassical,
         BgmPalette.piano => l10n.bgmPalettePiano,
@@ -2706,7 +2787,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         BgmPalette.warm => l10n.bgmPaletteWarm,
       };
 
-  String _bgmPaletteDescription(AppLocalizations l10n, BgmPalette palette) => switch (palette) {
+  String _bgmPaletteDescription(AppLocalizations l10n, BgmPalette palette) =>
+      switch (palette) {
         BgmPalette.adaptive => l10n.bgmPaletteAdaptiveDesc,
         BgmPalette.classical => l10n.bgmPaletteClassicalDesc,
         BgmPalette.piano => l10n.bgmPalettePianoDesc,
@@ -2714,39 +2796,46 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         BgmPalette.warm => l10n.bgmPaletteWarmDesc,
       };
 
-  String _bgmIntensityLabel(AppLocalizations l10n, BgmIntensity intensity) => switch (intensity) {
+  String _bgmIntensityLabel(AppLocalizations l10n, BgmIntensity intensity) =>
+      switch (intensity) {
         BgmIntensity.gentle => l10n.bgmIntensityGentle,
         BgmIntensity.balanced => l10n.bgmIntensityBalanced,
         BgmIntensity.lush => l10n.bgmIntensityLush,
       };
 
-  String _bgmIntensityDescription(AppLocalizations l10n, BgmIntensity intensity) =>
+  String _bgmIntensityDescription(
+          AppLocalizations l10n, BgmIntensity intensity) =>
       switch (intensity) {
         BgmIntensity.gentle => l10n.bgmIntensityGentleDesc,
         BgmIntensity.balanced => l10n.bgmIntensityBalancedDesc,
         BgmIntensity.lush => l10n.bgmIntensityLushDesc,
       };
 
-  String _bgmVarietyLabel(AppLocalizations l10n, BgmVariety variety) => switch (variety) {
+  String _bgmVarietyLabel(AppLocalizations l10n, BgmVariety variety) =>
+      switch (variety) {
         BgmVariety.steady => l10n.bgmVarietySteady,
         BgmVariety.balanced => l10n.bgmVarietyBalanced,
         BgmVariety.dynamic => l10n.bgmVarietyDynamic,
       };
 
-  String _bgmVarietyDescription(AppLocalizations l10n, BgmVariety variety) => switch (variety) {
+  String _bgmVarietyDescription(AppLocalizations l10n, BgmVariety variety) =>
+      switch (variety) {
         BgmVariety.steady => l10n.bgmVarietySteadyDesc,
         BgmVariety.balanced => l10n.bgmVarietyBalancedDesc,
         BgmVariety.dynamic => l10n.bgmVarietyDynamicDesc,
       };
 
-  String _motionIntensityLabel(AppLocalizations l10n, MotionIntensityLevel level) => switch (level) {
+  String _motionIntensityLabel(
+          AppLocalizations l10n, MotionIntensityLevel level) =>
+      switch (level) {
         MotionIntensityLevel.ultra => l10n.motionIntensityUltra,
         MotionIntensityLevel.high => l10n.motionIntensityHigh,
         MotionIntensityLevel.medium => l10n.motionIntensityMedium,
         MotionIntensityLevel.off => l10n.motionIntensityOff,
       };
 
-  String _motionIntensityDescription(AppLocalizations l10n, MotionIntensityLevel level) =>
+  String _motionIntensityDescription(
+          AppLocalizations l10n, MotionIntensityLevel level) =>
       switch (level) {
         MotionIntensityLevel.ultra => l10n.motionIntensityUltraDesc,
         MotionIntensityLevel.high => l10n.motionIntensityHighDesc,
@@ -2761,7 +2850,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         BgmMode.silent => l10n.bgmModeSilent,
       };
 
-  String _bgmModeDescription(AppLocalizations l10n, BgmMode mode) => switch (mode) {
+  String _bgmModeDescription(AppLocalizations l10n, BgmMode mode) =>
+      switch (mode) {
         BgmMode.adaptive => l10n.bgmModeAdaptiveDesc,
         BgmMode.continuous => l10n.bgmModeContinuousDesc,
         BgmMode.focusOnly => l10n.bgmModeFocusOnlyDesc,
@@ -2792,7 +2882,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.error_outline, color: DS.error),
           title: Text(l10n.notificationPermissionStatus),
-          subtitle: Text(l10n.notificationPermissionDeniedTitle(error.toString())),
+          subtitle:
+              Text(l10n.notificationPermissionDeniedTitle(error.toString())),
         ),
       ),
       data: (status) {
@@ -2856,7 +2947,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         child: Icon(Icons.check_circle, color: statusColor),
                       )
                     : SparkleButton.ghost(
-                        label: !hasPermission ? l10n.notificationRequestPermission : l10n.notificationOpenSettings,
+                        label: !hasPermission
+                            ? l10n.notificationRequestPermission
+                            : l10n.notificationOpenSettings,
                         onPressed: () async {
                           if (!hasPermission) {
                             final granted = await ref
@@ -3042,7 +3135,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          context.l10n.aiUsageLatency(avgFirstTokenMs.toStringAsFixed(0), avgTotalMs.toStringAsFixed(0)),
+                          context.l10n.aiUsageLatency(
+                              avgFirstTokenMs.toStringAsFixed(0),
+                              avgTotalMs.toStringAsFixed(0)),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.textTheme.bodySmall?.color?.withValues(
                               alpha: 0.72,
@@ -3323,7 +3418,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           ),
           const SizedBox(height: DS.spacing10),
           Text(
-            context.l10n.aiOpsPredictionSummary(windowDays, topAction, avgPromptUtil.toStringAsFixed(1), avgInferenceUtil.toStringAsFixed(1)),
+            context.l10n.aiOpsPredictionSummary(
+                windowDays,
+                topAction,
+                avgPromptUtil.toStringAsFixed(1),
+                avgInferenceUtil.toStringAsFixed(1)),
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: DS.spacing12),

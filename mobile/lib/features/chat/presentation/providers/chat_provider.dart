@@ -5,7 +5,7 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -565,6 +565,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? metadata,
   ) {
     if (metadata == null || metadata.isEmpty) return;
+
+    final taskStuck = _parseJsonMap(metadata['task_stuck_intervention']);
+    if (taskStuck != null && taskStuck.isNotEmpty) {
+      _upsertWidget(target, 'task_stuck_card', taskStuck);
+    }
 
     final suggestion = _parseJsonMap(metadata['execution_suggestion']);
     if (suggestion != null && suggestion['task_id'] != null) {

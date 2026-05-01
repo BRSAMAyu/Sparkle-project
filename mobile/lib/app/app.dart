@@ -88,8 +88,50 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => DefaultTextStyle.merge(
         style: const TextStyle(fontFamilyFallback: sparkleFontFallback),
-        child: child ?? const SizedBox.shrink(),
+        child: _ColdStartFade(
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }
+}
+
+class _ColdStartFade extends StatefulWidget {
+  const _ColdStartFade({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ColdStartFade> createState() => _ColdStartFadeState();
+}
+
+class _ColdStartFadeState extends State<_ColdStartFade>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    )..forward();
+    _opacity = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+        opacity: _opacity,
+        child: widget.child,
+      );
 }

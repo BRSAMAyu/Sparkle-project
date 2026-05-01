@@ -1,0 +1,13 @@
+{
+  "id": "core_session_task_stuck",
+  "family": "core_session_opening",
+  "kind": "core_session_opening",
+  "title": "Core Session：任务卡点",
+  "input": {
+    "trigger_source": "task_stuck_prompt",
+    "observed_signals": ["连续三张任务都停在开始前", "下一张任务仍然偏大"],
+    "suggested_agenda_preview": ["确认是启动难还是内容难", "改写下一张任务卡"],
+    "why_now": "先把下一步变小，会比继续忍着更容易恢复",
+    "estimated_minutes": 2
+  }
+}

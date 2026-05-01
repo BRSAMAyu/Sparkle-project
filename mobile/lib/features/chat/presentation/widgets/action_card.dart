@@ -19,6 +19,7 @@ import 'package:sparkle/features/chat/presentation/widgets/graph_diagnostic_card
 import 'package:sparkle/features/chat/presentation/widgets/plan_progress_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_strategy_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/profile_front_door_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/task_stuck_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
@@ -302,7 +303,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   right: DS.spacing8,
                 ),
                 child: SparkleButton(
-                  label: _confirmingTasks ? context.l10n.chatActionConfirming : context.l10n.chatActionConfirmTask,
+                  label: _confirmingTasks
+                      ? context.l10n.chatActionConfirming
+                      : context.l10n.chatActionConfirmTask,
                   onPressed: _confirmingTasks
                       ? null
                       : () => unawaited(_handleConfirmTasks(toolResultId)),
@@ -620,11 +623,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return DS.infoGradient;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return const LinearGradient(
           colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
+      case 'task_stuck_card':
+        return DS.warningGradient;
       default:
         return DS.primaryGradient;
     }
@@ -685,7 +691,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return DS.info;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return const Color(0xFF0EA5A4);
+      case 'task_stuck_card':
+        return DS.warning;
       default:
         return DS.primaryBase;
     }
@@ -752,7 +761,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return Icons.linear_scale_rounded;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return Icons.psychology_rounded;
+      case 'task_stuck_card':
+        return Icons.assignment_late_rounded;
       default:
         return Icons.touch_app_rounded;
     }
@@ -808,7 +820,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return context.l10n.chatActionPlanningProcess;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return context.l10n.chatActionAuroraReminder;
+      case 'task_stuck_card':
+        return context.l10n.stuckHelpTitle;
       default:
         return l10n.chatActionTitleDefault;
     }
@@ -897,6 +912,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'aurora_nudge_entry') {
       return AuroraNudgeEntry(
+        data: action.data,
+        onWidgetAction: widget.onWidgetAction,
+      );
+    }
+    if (action.type == 'aurora_runtime_follow_up') {
+      return _buildAuroraRuntimeFollowUp(context, action);
+    }
+    if (action.type == 'task_stuck_card') {
+      return TaskStuckCard(
         data: action.data,
         onWidgetAction: widget.onWidgetAction,
       );
@@ -1309,6 +1333,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'reflection_card':
       case 'plan_card':
       case 'task_list':
+      case 'aurora_runtime_follow_up':
+      case 'task_stuck_card':
         return true;
       default:
         return false;
@@ -1372,6 +1398,96 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       return scalarItems.join(' · ');
     }
     return null;
+  }
+
+  Widget _buildAuroraRuntimeFollowUp(
+    BuildContext context,
+    WidgetPayload action,
+  ) {
+    final rawRenderAction = action.data['render_action'];
+    final renderAction = rawRenderAction is Map
+        ? Map<String, dynamic>.from(rawRenderAction)
+        : const <String, dynamic>{};
+    final title = _asString(renderAction['title']) ??
+        _asString(action.data['title']) ??
+        context.l10n.chatActionAuroraReminder;
+    final summary = _asString(renderAction['summary']) ??
+        _asString(action.data['message']) ??
+        _asString(action.data['blocker_summary']) ??
+        '';
+    final checkpoint = _asString(renderAction['checkpoint_description']) ??
+        _asString(action.data['checkpoint_description']);
+    final nextTask = _asString(renderAction['next_task_title']) ??
+        _asString(action.data['next_task_title']);
+    final ctaLabel = _asString(renderAction['cta_label']) ?? '接着聊';
+    final wakeId =
+        _asString(renderAction['wake_id']) ?? _asString(action.data['wake_id']);
+    final conversationId = _asString(renderAction['conversation_id']) ??
+        _asString(action.data['conversation_id']);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: DS.neutral900,
+                fontWeight: DS.fontWeightSemibold,
+              ),
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                  height: 1.42,
+                ),
+          ),
+        ],
+        if (checkpoint != null || nextTask != null) ...[
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (checkpoint != null)
+                _buildMetaChip(
+                  icon: Icons.flag_outlined,
+                  label: checkpoint,
+                ),
+              if (nextTask != null)
+                _buildMetaChip(
+                  icon: Icons.task_alt_rounded,
+                  label: nextTask,
+                ),
+            ],
+          ),
+        ],
+        if (widget.onWidgetAction != null && summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => unawaited(
+                widget.onWidgetAction!(
+                  'checkpoint_follow_up_continue',
+                  {
+                    'prompt': summary,
+                    if (wakeId != null) 'wake_id': wakeId,
+                    if (conversationId != null)
+                      'conversation_id': conversationId,
+                    if (renderAction.isNotEmpty) 'render_action': renderAction,
+                  },
+                ),
+              ),
+              icon: const Icon(Icons.reply_rounded, size: 16),
+              label: Text(ctaLabel),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {
@@ -1558,9 +1674,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                     entity.share?.resourceType ?? 'plan',
                                 resourceId: entity.share?.resourceId ?? planId,
                                 title: entity.share?.title ??
-                                    (planTitle ?? context.l10n.chatActionStudyPlan),
-                                subtitle:
-                                    entity.share?.subtitle ?? context.l10n.chatActionAiGeneratedPlan,
+                                    (planTitle ??
+                                        context.l10n.chatActionStudyPlan),
+                                subtitle: entity.share?.subtitle ??
+                                    context.l10n.chatActionAiGeneratedPlan,
                               ),
                             )
                         : () {},
@@ -1574,7 +1691,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing12),
             child: SparkleButton(
-              label: _confirmingTasks ? context.l10n.chatActionConfirming : context.l10n.chatActionConfirmAllTasks,
+              label: _confirmingTasks
+                  ? context.l10n.chatActionConfirming
+                  : context.l10n.chatActionConfirmAllTasks,
               icon: const Icon(Icons.check_circle_outline),
               onPressed: _confirmingTasks
                   ? null
@@ -1816,7 +1935,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final retryAction =
         _executionSummaryPreviewData(action.data['retry_action']);
     final comparisonHeadline = comparisonSummary is Map<String, dynamic>
-        ? comparisonSummary['headline']?.toString() ?? context.l10n.chatActionResultComparison
+        ? comparisonSummary['headline']?.toString() ??
+            context.l10n.chatActionResultComparison
         : comparisonSummary != null
             ? context.l10n.chatActionResultComparison
             : null;
@@ -2000,19 +2120,23 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               if (validationTotal > 0)
                 _buildMetaChip(
                   icon: Icons.rule_rounded,
-                  label: context.l10n.chatActionValidationSteps(validationPassed, validationTotal),
+                  label: context.l10n.chatActionValidationSteps(
+                      validationPassed, validationTotal),
                 ),
               if (qualityScore > 0)
                 _buildMetaChip(
                   icon: Icons.fact_check_rounded,
-                  label: context.l10n.chatActionQualityScore((qualityScore * 100).round().toString()),
+                  label: context.l10n.chatActionQualityScore(
+                      (qualityScore * 100).round().toString()),
                 ),
               if (selfVerification != null &&
                   (selfVerification['score'] as num?) != null)
                 _buildMetaChip(
                   icon: Icons.verified_user_rounded,
-                  label:
-                      context.l10n.chatActionSelfCheck((((selfVerification['score'] as num?) ?? 0) * 100).round().toString()),
+                  label: context.l10n.chatActionSelfCheck(
+                      (((selfVerification['score'] as num?) ?? 0) * 100)
+                          .round()
+                          .toString()),
                 ),
             ],
           ),
@@ -2164,7 +2288,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        step['title']?.toString() ?? context.l10n.chatActionManualSteps,
+                        step['title']?.toString() ??
+                            context.l10n.chatActionManualSteps,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: DS.fontWeightSemibold,
                               color: DS.neutral900,
@@ -2272,7 +2397,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  step['label']?.toString() ?? context.l10n.chatActionExecutionSteps,
+                  step['label']?.toString() ??
+                      context.l10n.chatActionExecutionSteps,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color: DS.neutral900,
@@ -2332,7 +2458,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             borderRadius: DS.borderRadius8,
           ),
           child: Text(
-            executionMode == 'hybrid' ? context.l10n.chatActionNeedsReview : context.l10n.chatActionCanDelegate,
+            executionMode == 'hybrid'
+                ? context.l10n.chatActionNeedsReview
+                : context.l10n.chatActionCanDelegate,
             style: TextStyle(
               color: DS.primaryBase,
               fontWeight: DS.fontWeightSemibold,
@@ -2356,17 +2484,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           children: [
             _buildMetaChip(
               icon: Icons.memory_rounded,
-              label: executionMode == 'hybrid' ? context.l10n.chatActionHybridExecution : context.l10n.chatActionAutoExecution,
+              label: executionMode == 'hybrid'
+                  ? context.l10n.chatActionHybridExecution
+                  : context.l10n.chatActionAutoExecution,
             ),
             _buildMetaChip(
               icon: Icons.hub_outlined,
-              label: context.l10n.chatActionEnvironment(targetEnv.toUpperCase()),
+              label:
+                  context.l10n.chatActionEnvironment(targetEnv.toUpperCase()),
             ),
             if (delegatePreference != null)
               _buildMetaChip(
                 icon: Icons.favorite_border_rounded,
-                label:
-                    context.l10n.chatActionTrust((double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)),
+                label: context.l10n.chatActionTrust(
+                    (double.tryParse('$delegatePreference') ?? 0)
+                        .toStringAsFixed(2)),
               ),
           ],
         ),
@@ -3310,7 +3442,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildAdaptationSummary(BuildContext context, WidgetPayload action) {
-    final title = action.data['title']?.toString() ?? context.l10n.chatActionMadeAdjustment;
+    final title = action.data['title']?.toString() ??
+        context.l10n.chatActionMadeAdjustment;
     final summary = action.data['summary']?.toString() ?? '';
     final reversibility = action.data['reversibility_note']?.toString() ?? '';
     final evidence = action.data['evidence_summary']?.toString() ?? '';

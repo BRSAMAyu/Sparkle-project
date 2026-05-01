@@ -954,6 +954,19 @@ wheels = [
 ]
 
 [[package]]
+name = "fakeredis"
+version = "2.35.1"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "redis" },
+    { name = "sortedcontainers" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/43/50/b748233c02fa77e5105238190cc9bb58b852eb1c8b1d0763230d3a5b745a/fakeredis-2.35.1.tar.gz", hash = "sha256:5bae5eba7b9d93cb968944ac40936373cf2397ff71667d4b595df65c3d2e413f" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/6f/27/b8b057a23f7777177e92d3a602fd866751b6b45014964548997e92e048fd/fakeredis-2.35.1-py3-none-any.whl", hash = "sha256:67d97e11f562b7870e11e5c30cf182270bfb2dd37f6707dba47cc6d91628d1b9" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.135.2"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -4275,6 +4288,15 @@ wheels = [
 ]
 
 [[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/e8/c4/ba2f8066cceb6f23394729afe52f3bf7adec04bf9ed2c820b39e19299111/sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0" },
+]
+
+[[package]]
 name = "soupsieve"
 version = "2.8.3"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -4356,6 +4378,7 @@ agent-graph = [
 ]
 dev = [
     { name = "black" },
+    { name = "fakeredis" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "psutil" },
@@ -4385,6 +4408,7 @@ reporting = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
+    { name = "fakeredis" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "psutil" },
@@ -4407,6 +4431,7 @@ requires-dist = [
     { name = "boto3", specifier = ">=1.34.0" },
     { name = "dashscope", specifier = ">=1.20.0" },
     { name = "email-validator", specifier = ">=2.0.0" },
+    { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.31.0" },
     { name = "fastapi", specifier = ">=0.109.0" },
     { name = "greenlet", specifier = ">=3.0.0" },
     { name = "grpcio", specifier = ">=1.60.0" },
@@ -4481,6 +4506,7 @@ provides-extras = ["dev", "llm", "ingestion", "reporting", "agent-graph"]
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=24.1.1" },
+    { name = "fakeredis", specifier = ">=2.31.0" },
     { name = "mypy", specifier = ">=1.8.0" },
     { name = "pre-commit", specifier = ">=3.6.0" },
     { name = "psutil", specifier = ">=5.9.0" },

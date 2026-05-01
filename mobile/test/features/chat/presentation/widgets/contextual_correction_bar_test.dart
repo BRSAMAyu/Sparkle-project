@@ -10,8 +10,7 @@ void main() {
   tearDown(tearDownI18n);
 
   testWidgets(
-      'predicted chip exposes label for chat text and semantic value for telemetry',
-      (
+      'predicted chip uses natural text while preserving semantic value', (
     tester,
   ) async {
     AuroraPredictedReplyOption? selected;
@@ -30,7 +29,7 @@ void main() {
                 options: [
                   AuroraPredictedReplyOption(
                     id: 'opt-risk',
-                    label: 'That is not what happened',
+                    label: 'risk_false_positive',
                     semanticValue: 'risk_false_positive',
                     replyType: 'assumption_check',
                     confidence: 0.95,
@@ -65,12 +64,61 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('That is not what happened'));
+    expect(find.text('risk_false_positive'), findsNothing);
+    expect(find.text('我其实不焦虑，只是忙'), findsOneWidget);
+    expect(find.text('判断偏高'), findsOneWidget);
+
+    await tester.tap(find.text('我其实不焦虑，只是忙'));
     await tester.pump();
 
-    expect(selected?.label, 'That is not what happened');
+    expect(find.text('已收到'), findsOneWidget);
+    expect(selected?.label, 'risk_false_positive');
     expect(selected?.semanticValue, 'risk_false_positive');
     expect(selectedGroupId, 'group-risk');
-    expect(selected?.label, isNot(selected?.semanticValue));
+  });
+
+  testWidgets('freeform chip opens the independent correction lane', (
+    tester,
+  ) async {
+    var requested = false;
+
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: Scaffold(
+          body: ContextualCorrectionBar(
+            predictedReplyGroups: [
+              AuroraPredictedReplyGroup(
+                groupId: 'group-freeform',
+                question: 'Was Aurora wrong?',
+                questionType: 'assumption_check',
+                contextNote: '',
+                options: [
+                  AuroraPredictedReplyOption(
+                    id: 'opt-freeform',
+                    label: 'freeform_correction',
+                    semanticValue: 'freeform_correction',
+                    replyType: 'freeform',
+                    confidence: 0.1,
+                    modelWriteEffect: null,
+                    isDisconfirming: true,
+                    isFreeform: true,
+                    contextSource: 'chat',
+                    telemetryId: 'telemetry-freeform',
+                  ),
+                ],
+              ),
+            ],
+            onFreeformCorrectionRequested: () => requested = true,
+            onRecalibrate: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('freeform_correction'), findsNothing);
+    await tester.tap(find.text('Aurora 理解错了？'));
+    await tester.pump();
+
+    expect(requested, isTrue);
   });
 }

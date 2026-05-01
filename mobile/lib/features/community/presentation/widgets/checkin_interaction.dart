@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -34,217 +35,224 @@ class CheckinInteraction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 8),
-            _buildContent(context),
-            const SizedBox(height: 12),
-            _buildActions(context),
-            if (encouragements.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _buildEncouragements(context),
-            ],
-          ],
-        ),
-      ),
-    );
-
-  Widget _buildHeader(BuildContext context) => Row(
-      children: [
-        CircleAvatar(
-          radius: 16,
-          child: Text(authorName[0].toUpperCase()),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                authorName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              if (isMyCheckin)
-                Text(
-                  context.l10n.communityMyCheckin,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                ),
+              _buildHeader(context),
+              const SizedBox(height: 8),
+              _buildContent(context),
+              const SizedBox(height: 12),
+              _buildActions(context),
+              if (encouragements.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildEncouragements(context),
+              ],
             ],
           ),
         ),
-      ],
-    );
+      );
 
-  Widget _buildContent(BuildContext context) => Text(
-      content,
-      style: Theme.of(context).textTheme.bodyMedium,
-    );
-
-  Widget _buildActions(BuildContext context) => Row(
-      children: [
-        if (!isMyCheckin && isMyPartner)
-          _buildLikeButton(context)
-        else
-          _buildLikeCount(context),
-        const SizedBox(width: 16),
-        if (!isMyCheckin && isMyPartner)
-          _buildEncourageButton(context)
-        else
-          _buildEncourageCount(context),
-        const Spacer(),
-      ],
-    );
-
-  Widget _buildLikeButton(BuildContext context) => InkWell(
-      onTap: () {
-        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
-        onLike?.call();
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.favorite_border, size: 16),
-            const SizedBox(width: 4),
-            Text(
-              likes.toString(),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
-
-  Widget _buildLikeCount(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.favorite, size: 16, color: Colors.red),
-        const SizedBox(width: 4),
-        Text(
-          context.l10n.communityLikesCount(likes),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      ],
-    );
-
-  Widget _buildEncourageButton(BuildContext context) => InkWell(
-      onTap: () {
-        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
-        _showEncourageDialog(context);
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.chat_bubble_outline, size: 16),
-            const SizedBox(width: 4),
-            Text(
-              context.l10n.communityEncourage,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
-
-  Widget _buildEncourageCount(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.chat_bubble_outline, size: 16),
-        const SizedBox(width: 4),
-        Text(
-          context.l10n.communityEncouragementsCount(encouragements.length),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      ],
-    );
-
-  Widget _buildEncouragements(BuildContext context) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.communityEncouragementMessages,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(height: 8),
-        ...encouragements.map((e) => _buildEncouragementItem(context, e)),
-      ],
-    );
-
-  Widget _buildEncouragementItem(
-      BuildContext context, EncouragementMessage encouragement,) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget _buildHeader(BuildContext context) => Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            child: Text(authorName[0].toUpperCase()),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 10,
-                  child: Text(
-                      _encouragementAuthor(context, encouragement)[0].toUpperCase(),),
-                ),
-                const SizedBox(width: 6),
                 Text(
-                  _encouragementAuthor(context, encouragement),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  authorName,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                 ),
-                const Spacer(),
-                Text(
-                  _formatTime(context, encouragement.createdAt),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+                if (isMyCheckin)
+                  Text(
+                    context.l10n.communityMyCheckin,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              encouragement.message,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ],
+      );
 
-  String _encouragementAuthor(BuildContext context, EncouragementMessage encouragement) {
+  Widget _buildContent(BuildContext context) => Text(
+        content,
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+
+  Widget _buildActions(BuildContext context) => Row(
+        children: [
+          if (!isMyCheckin && isMyPartner)
+            _buildLikeButton(context)
+          else
+            _buildLikeCount(context),
+          const SizedBox(width: 16),
+          if (!isMyCheckin && isMyPartner)
+            _buildEncourageButton(context)
+          else
+            _buildEncourageCount(context),
+          const Spacer(),
+        ],
+      );
+
+  Widget _buildLikeButton(BuildContext context) => InkWell(
+        onTap: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+          onLike?.call();
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.favorite_border, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                likes.toString(),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildLikeCount(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.favorite, size: 16, color: DS.error),
+          const SizedBox(width: 4),
+          Text(
+            context.l10n.communityLikesCount(likes),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      );
+
+  Widget _buildEncourageButton(BuildContext context) => InkWell(
+        onTap: () {
+          unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+          _showEncourageDialog(context);
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chat_bubble_outline, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                context.l10n.communityEncourage,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildEncourageCount(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.chat_bubble_outline, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            context.l10n.communityEncouragementsCount(encouragements.length),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      );
+
+  Widget _buildEncouragements(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.communityEncouragementMessages,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 8),
+          ...encouragements.map((e) => _buildEncouragementItem(context, e)),
+        ],
+      );
+
+  Widget _buildEncouragementItem(
+    BuildContext context,
+    EncouragementMessage encouragement,
+  ) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 10,
+                    child: Text(
+                      _encouragementAuthor(context, encouragement)[0]
+                          .toUpperCase(),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _encouragementAuthor(context, encouragement),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _formatTime(context, encouragement.createdAt),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                encouragement.message,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+
+  String _encouragementAuthor(
+      BuildContext context, EncouragementMessage encouragement) {
     if (encouragement.authorName.isNotEmpty) {
       return encouragement.authorName;
     }
@@ -321,21 +329,22 @@ class EncouragementMessage {
   final String message;
   final DateTime createdAt;
 
-  factory EncouragementMessage.fromJson(Map<String, dynamic> json) => EncouragementMessage(
-      id: json['id'] as String,
-      authorId: json['user_id'] as String,
-      authorName: json['author_name'] as String? ?? '伙伴',
-      message: json['message'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
+  factory EncouragementMessage.fromJson(Map<String, dynamic> json) =>
+      EncouragementMessage(
+        id: json['id'] as String,
+        authorId: json['user_id'] as String,
+        authorName: json['author_name'] as String? ?? '伙伴',
+        message: json['message'] as String,
+        createdAt: DateTime.parse(json['created_at'] as String),
+      );
 
   Map<String, dynamic> toJson() => {
-      'id': id,
-      'user_id': authorId,
-      'author_name': authorName,
-      'message': message,
-      'created_at': createdAt.toIso8601String(),
-    };
+        'id': id,
+        'user_id': authorId,
+        'author_name': authorName,
+        'message': message,
+        'created_at': createdAt.toIso8601String(),
+      };
 }
 
 /// 简化版打卡互动组件 - 仅显示互动信息
@@ -355,54 +364,55 @@ class CheckinInteractionCompact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildInteractionItem(
-              context,
-              icon: Icons.favorite,
-              count: likes,
-              color: Colors.red,
-            ),
-            if (showEncouragement) ...[
-              const SizedBox(width: 12),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               _buildInteractionItem(
                 context,
-                icon: Icons.chat_bubble_outline,
-                count: encouragementCount,
+                icon: Icons.favorite,
+                count: likes,
+                color: DS.error,
               ),
+              if (showEncouragement) ...[
+                const SizedBox(width: 12),
+                _buildInteractionItem(
+                  context,
+                  icon: Icons.chat_bubble_outline,
+                  count: encouragementCount,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildInteractionItem(
     BuildContext context, {
     required IconData icon,
     required int count,
     Color? color,
-  }) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 14,
-          color: color ?? Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          count.toString(),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      ],
-    );
+  }) =>
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: color ?? Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            count.toString(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      );
 }
 
 /// 打卡互动列表 - 用于时间线展示
@@ -456,26 +466,26 @@ class CheckinInteractionList extends StatelessWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(
-              Icons.history,
-              size: 48,
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.communityNoCheckinYet,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            children: [
+              Icon(
+                Icons.history,
+                size: 48,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                context.l10n.communityNoCheckinYet,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 /// 带互动信息的打卡数据模型
@@ -498,25 +508,27 @@ class CheckinWithInteraction {
   final List<EncouragementMessage> encouragements;
   final DateTime createdAt;
 
-  factory CheckinWithInteraction.fromJson(Map<String, dynamic> json) => CheckinWithInteraction(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      authorName: json['author_name'] as String? ?? '用户',
-      content: json['content'] as String,
-      likes: json['likes'] as int? ?? 0,
-      encouragements: (json['encouragements'] as List? ?? [])
-          .map((e) => EncouragementMessage.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
+  factory CheckinWithInteraction.fromJson(Map<String, dynamic> json) =>
+      CheckinWithInteraction(
+        id: json['id'] as String,
+        userId: json['user_id'] as String,
+        authorName: json['author_name'] as String? ?? '用户',
+        content: json['content'] as String,
+        likes: json['likes'] as int? ?? 0,
+        encouragements: (json['encouragements'] as List? ?? [])
+            .map(
+                (e) => EncouragementMessage.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        createdAt: DateTime.parse(json['created_at'] as String),
+      );
 
   Map<String, dynamic> toJson() => {
-      'id': id,
-      'user_id': userId,
-      'author_name': authorName,
-      'content': content,
-      'likes': likes,
-      'encouragements': encouragements.map((e) => e.toJson()).toList(),
-      'created_at': createdAt.toIso8601String(),
-    };
+        'id': id,
+        'user_id': userId,
+        'author_name': authorName,
+        'content': content,
+        'likes': likes,
+        'encouragements': encouragements.map((e) => e.toJson()).toList(),
+        'created_at': createdAt.toIso8601String(),
+      };
 }

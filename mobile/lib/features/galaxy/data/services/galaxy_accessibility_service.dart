@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
@@ -147,9 +148,11 @@ class GalaxyAccessibilityService {
     if (node.isUnlocked) {
       buffer
         ..write(l10n.galaxyA11yNodeUnlocked)
-        ..write(l10n.galaxyA11yNodeMastery(
-          node.masteryScore.toStringAsFixed(0),
-        ),)
+        ..write(
+          l10n.galaxyA11yNodeMastery(
+            node.masteryScore.toStringAsFixed(0),
+          ),
+        )
         ..write(l10n.galaxyA11yNodeStudyCount(node.studyCount));
     } else {
       buffer.write(l10n.galaxyA11yNodeLocked);
@@ -173,7 +176,10 @@ class GalaxyAccessibilityService {
 
   /// Generate semantic label for a cluster
   String getClusterSemanticLabel(
-          String name, int nodeCount, double avgMastery,) =>
+    String name,
+    int nodeCount,
+    double avgMastery,
+  ) =>
       I18nService.instance.l10n.galaxyA11yClusterLabel(
         name,
         nodeCount,
@@ -243,7 +249,8 @@ class GalaxyAccessibilityService {
     if (_reduceMotionEnabled) {
       // Reduce animation duration significantly
       return Duration(
-          milliseconds: (normalDuration.inMilliseconds * 0.1).round(),);
+        milliseconds: (normalDuration.inMilliseconds * 0.1).round(),
+      );
     }
     return normalDuration;
   }
@@ -281,7 +288,7 @@ class GalaxyAccessibilityService {
   /// Get contrasting text color
   Color getContrastingTextColor(Color background) {
     final luminance = background.computeLuminance();
-    return luminance > 0.5 ? Colors.black : Colors.white;
+    return luminance > 0.5 ? DS.galaxyShadow : DS.neutral0;
   }
 }
 

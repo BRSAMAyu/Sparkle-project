@@ -35,6 +35,7 @@ final _inactiveAuroraSnapshot = AuroraControlSurfaceSnapshot(
   conversationId: null,
   requestedConversationId: null,
   sceneAlignment: 'matched',
+  timeContext: AuroraTimeContext.fromJson(null),
   surface: null,
   updatedAt: null,
   facets: const [],

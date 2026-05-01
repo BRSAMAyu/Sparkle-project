@@ -202,6 +202,14 @@ jobs:
         run: |
           pytest backend/tests -v --cov=backend/app --cov-report=xml
 
+      - name: Aurora Golden Text Snapshot Tests
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/golden -v
+
       - name: Python Contract and Workflow Risk Suites
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test

@@ -104,6 +104,25 @@ extension ChatNotifierActions on ChatNotifier {
           },
         );
         return;
+      case 'checkpoint_follow_up_continue':
+        final prompt = payload['prompt']?.toString().trim() ?? '';
+        if (prompt.isNotEmpty) {
+          await sendMessage(
+            prompt,
+            extraContextOverrides: {
+              'checkpoint_follow_up': {
+                if (payload['wake_id'] != null) 'wake_id': payload['wake_id'],
+                if (payload['conversation_id'] != null)
+                  'conversation_id': payload['conversation_id'],
+                if (payload['render_action'] is Map)
+                  'render_action': Map<String, dynamic>.from(
+                    payload['render_action'] as Map,
+                  ),
+              },
+            },
+          );
+        }
+        return;
       case 'route':
         final route = _actionString(payload, 'route');
         if (route.isNotEmpty) {
@@ -151,7 +170,8 @@ extension ChatNotifierActions on ChatNotifier {
                       : null,
                 );
         if (intent == null) {
-          final message = _ref.read(taskListProvider).error ?? S.chatExecutionLaunchFailed;
+          final message =
+              _ref.read(taskListProvider).error ?? S.chatExecutionLaunchFailed;
           if (message.contains(S.chatWaitingInQueue)) {
             state = state.copyWith(
               lastActionStatus: 'queued',
@@ -330,7 +350,7 @@ extension ChatNotifierActions on ChatNotifier {
 
       final confirmed = await showSensoryDialog<bool>(
         context: context,
-        barrierColor: Colors.black54,
+        barrierColor: DS.galaxyShadow.withValues(alpha: 0.54),
         builder: (ctx) => PlanSwitchConfirmationDialog(
           targetPlanName: targetPlanName,
           unsavedMessageCount: state.messages.length,
@@ -663,7 +683,8 @@ extension ChatNotifierActions on ChatNotifier {
       notificationData: {
         'id':
             'achievement-progress-${event.achievementId}-${event.milestonePercent}-${now.microsecondsSinceEpoch}',
-        'title': S.chatAchievementProgress(event.achievementName, event.milestonePercent),
+        'title': S.chatAchievementProgress(
+            event.achievementName, event.milestonePercent),
         'content': event.message,
         'type': 'achievement_progress',
         'priority': 'medium',

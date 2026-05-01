@@ -12,6 +12,7 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
 class _BreathingPattern {
@@ -87,31 +88,31 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const List<int> _durations = [1, 3, 5, 8];
   static List<_BreathingPattern> _patternsFor(BuildContext context) => [
-    _BreathingPattern(
-      label: '4-7-8',
-      description: context.l10n.toolsBreathQuickDesc,
-      inhale: 4,
-      hold: 7,
-      exhale: 8,
-      rest: 0,
-    ),
-    _BreathingPattern(
-      label: context.l10n.toolsBreathBox,
-      description: context.l10n.toolsBreathBoxDesc,
-      inhale: 4,
-      hold: 4,
-      exhale: 4,
-      rest: 4,
-    ),
-    _BreathingPattern(
-      label: context.l10n.toolsBreathRelax,
-      description: context.l10n.toolsBreathRelaxDesc,
-      inhale: 4,
-      hold: 2,
-      exhale: 6,
-      rest: 2,
-    ),
-  ];
+        _BreathingPattern(
+          label: '4-7-8',
+          description: context.l10n.toolsBreathQuickDesc,
+          inhale: 4,
+          hold: 7,
+          exhale: 8,
+          rest: 0,
+        ),
+        _BreathingPattern(
+          label: context.l10n.toolsBreathBox,
+          description: context.l10n.toolsBreathBoxDesc,
+          inhale: 4,
+          hold: 4,
+          exhale: 4,
+          rest: 4,
+        ),
+        _BreathingPattern(
+          label: context.l10n.toolsBreathRelax,
+          description: context.l10n.toolsBreathRelaxDesc,
+          inhale: 4,
+          hold: 2,
+          exhale: 6,
+          rest: 2,
+        ),
+      ];
   static const String _prefsPatternKey = 'breathing.pattern_index';
   static const String _prefsDurationKey = 'breathing.duration_index';
   static const String _prefsSessionKey = 'breathing.active_session';
@@ -135,7 +136,8 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   String? _lastAnnouncementKey;
   DateTime? _sessionAnchorAt;
 
-  _BreathingPattern get _pattern => _patternsFor(context)[_selectedPatternIndex];
+  _BreathingPattern get _pattern =>
+      _patternsFor(context)[_selectedPatternIndex];
   int get _selectedDurationMinutes => _durations[_selectedDurationIndex];
   int get _targetSessionSeconds => _selectedDurationMinutes * 60;
 
@@ -304,7 +306,8 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
           _isPlaying = false;
           _isPaused = false;
           _completedRounds = _totalRounds;
-          _instruction = I18nService.instance.isChinese ? '练习完成' : 'Practice Complete';
+          _instruction =
+              I18nService.instance.isChinese ? '练习完成' : 'Practice Complete';
           _elapsedBeforePauseSeconds = 0;
           _sessionAnchorAt = null;
         });
@@ -430,7 +433,8 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     final elapsedSeconds = _elapsedSessionSecondsAt(now);
     if (elapsedSeconds >= _targetSessionSeconds) {
       return _BreathingSnapshot(
-        instruction: I18nService.instance.isChinese ? '练习完成' : 'Practice Complete',
+        instruction:
+            I18nService.instance.isChinese ? '练习完成' : 'Practice Complete',
         completedRounds: totalRounds,
         totalRounds: totalRounds,
         controllerValue: 0.0,
@@ -599,15 +603,14 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     await _cancelCompletionNotification();
     await _clearPersistedSession();
     await SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete);
-    unawaited(
-      ref.read(toolHistoryRepositoryProvider).recordBreathingCompleted(
-            pattern: _pattern.label,
-            durationMinutes: _selectedDurationMinutes,
-            roundsCompleted: _totalRounds,
-            surface: widget.surface.name,
-            completedFromBackground: completedFromBackground,
-          ),
-    );
+    final contextEventId =
+        await ref.read(toolHistoryRepositoryProvider).recordBreathingCompleted(
+              pattern: _pattern.label,
+              durationMinutes: _selectedDurationMinutes,
+              roundsCompleted: _totalRounds,
+              surface: widget.surface.name,
+              completedFromBackground: completedFromBackground,
+            );
 
     if (!mounted) {
       return;
@@ -618,18 +621,26 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       _isPlaying = false;
       _isPaused = false;
       _completedRounds = _totalRounds;
-      _instruction = I18nService.instance.isChinese ? '练习完成' : 'Practice Complete';
+      _instruction =
+          I18nService.instance.isChinese ? '练习完成' : 'Practice Complete';
       _elapsedBeforePauseSeconds = 0;
       _lastAnnouncementKey = null;
       _sessionAnchorAt = null;
     });
 
-    unawaited(_announceInstruction(I18nService.instance.isChinese ? '练习完成' : 'Practice Complete'));
+    unawaited(_announceInstruction(
+        I18nService.instance.isChinese ? '练习完成' : 'Practice Complete'));
     if (!completedFromBackground) {
-      AppFeedback.success(
-        context,
-        I18nService.instance.isChinese ? '呼吸练习已完成' : 'Breathing practice completed',
-      );
+      if (contextEventId == null) {
+        AppFeedback.success(context, context.l10n.toolsBreathComplete);
+      } else {
+        ToolContextEffectFeedback.show(
+          context: context,
+          ref: ref,
+          toolLabel: context.l10n.toolsBreathTitle,
+          eventId: contextEventId,
+        );
+      }
     }
     _isCompletingSession = false;
   }
@@ -808,14 +819,18 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                     '${_pattern.inhale}-${_pattern.hold}-${_pattern.exhale}-${_pattern.rest}',
                 accentColor: accent,
                 icon: Icons.tonality_rounded,
-                caption: I18nService.instance.isChinese ? '吸 / 停 / 呼 / 停' : 'Inhale / Hold / Exhale / Hold',
+                caption: I18nService.instance.isChinese
+                    ? '吸 / 停 / 呼 / 停'
+                    : 'Inhale / Hold / Exhale / Hold',
               ),
               ToolMetricCard(
                 label: context.l10n.toolsBreathTargetRounds,
                 value: '$_totalRounds',
                 accentColor: accent,
                 icon: Icons.repeat_rounded,
-                caption: I18nService.instance.isChinese ? '按当前时长自动估算' : 'Auto-estimated by duration',
+                caption: I18nService.instance.isChinese
+                    ? '按当前时长自动估算'
+                    : 'Auto-estimated by duration',
               ),
             ],
           ),
@@ -857,7 +872,8 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
                   children: List.generate(
                     _durations.length,
                     (index) => ToolChoiceChip(
-                      label: context.l10n.toolsBreathDurationMin(_durations[index]),
+                      label: context.l10n
+                          .toolsBreathDurationMin(_durations[index]),
                       selected: _selectedDurationIndex == index,
                       onTap: () => unawaited(_updateDuration(index)),
                       accentColor: accent,
@@ -874,7 +890,11 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
           final primaryButton = SparkleButton(
-            label: _isPlaying ? (_isPaused ? context.l10n.toolsBreathContinue : context.l10n.toolsBreathPause) : context.l10n.toolsBreathStart,
+            label: _isPlaying
+                ? (_isPaused
+                    ? context.l10n.toolsBreathContinue
+                    : context.l10n.toolsBreathPause)
+                : context.l10n.toolsBreathStart,
             onPressed: _isPlaying
                 ? (_isPaused ? _resumeBreathing : _pauseBreathing)
                 : _startBreathing,
@@ -886,7 +906,9 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
             expand: true,
           );
           final secondaryButton = SparkleButton(
-            label: _isPlaying ? context.l10n.toolsBreathStop : context.l10n.toolsBreathReset,
+            label: _isPlaying
+                ? context.l10n.toolsBreathStop
+                : context.l10n.toolsBreathReset,
             variant: ButtonVariant.ghost,
             onPressed: _stopBreathing,
             icon: Icon(

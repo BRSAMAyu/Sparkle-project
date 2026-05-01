@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
@@ -35,8 +36,8 @@ class GalaxyMiniMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frameColor = isDarkMode
-        ? Colors.white.withValues(alpha: 0.14)
-        : Colors.black.withValues(alpha: 0.08);
+        ? DS.neutral0.withValues(alpha: 0.14)
+        : DS.galaxyShadow.withValues(alpha: 0.08);
 
     return SizedBox(
       width: size,
@@ -60,13 +61,13 @@ class GalaxyMiniMap extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isDarkMode
                     ? const Color(0xAA101A2B)
-                    : Colors.white.withValues(alpha: 0.8),
+                    : DS.neutral0.withValues(alpha: 0.8),
                 border: Border.all(color: frameColor),
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        Colors.black.withValues(alpha: isDarkMode ? 0.22 : 0.1),
+                    color: DS.galaxyShadow
+                        .withValues(alpha: isDarkMode ? 0.22 : 0.1),
                     blurRadius: 16,
                     offset: const Offset(0, 12),
                   ),

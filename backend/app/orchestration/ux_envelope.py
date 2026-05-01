@@ -15,6 +15,7 @@ from app.core.business_metrics import (
     UX_STAGE_DETECTED_TOTAL,
 )
 from app.core.cache import cache_service
+from app.orchestration.aurora_language_principles import get_aurora_language_profile, scenario_from_chat_mode
 from app.orchestration.chat_modes import CHAT_MODE_STANDARD
 from app.orchestration.mode_workflow_config import get_workflow_config
 
@@ -71,6 +72,7 @@ class PresentationStyleDecision:
     next_action_limit: int
     companion_frame_variant: str
     next_actions_title_variant: str
+    language_profile: dict[str, str]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -79,6 +81,7 @@ class PresentationStyleDecision:
             "next_action_limit": self.next_action_limit,
             "companion_frame_variant": self.companion_frame_variant,
             "next_actions_title_variant": self.next_actions_title_variant,
+            "language_profile": self.language_profile,
         }
 
 
@@ -210,6 +213,18 @@ _MODE_PROFILES: dict[str, PresentationProfile] = {
         partial_message="AI已部分完成执行，你可以在此基础上继续。",
         next_action_limit=2,
     ),
+    "aurora_core_session": PresentationProfile(
+        mode_label="Aurora 深度校准",
+        companion_frame="我会先说明观察到什么、为什么现在值得校准，以及这次大概需要多久。",
+        answer_kind="core_session_entry",
+        default_retry_options=["暂停一下", "继续校准", "跳过这次"],
+        first_screen_focus="core_session_entry",
+        next_actions_title="校准后会这样变化",
+        blocked_title="校准前还需要一点上下文",
+        blocked_message="我已经看到需要校准的信号，但还缺一个关键事实，补上后会更稳。",
+        partial_message="这次校准还没完全结束，但已记录目前明确的信息。",
+        next_action_limit=2,
+    ),
 }
 
 
@@ -319,6 +334,10 @@ class UXEnvelopeBuilder:
         if settings.ENABLE_ADAPTIVE_PRESENTATION or settings.ENABLE_UX_PRESENTATION_METADATA:
             ux_turn["presentation_style"] = style_decision.style_variant
             ux_turn["tone_variant"] = style_decision.tone_variant
+            ux_turn["aurora_language_profile"] = style_decision.language_profile
+        social_context_presentation = self._social_context_presentation(user_context_payload)
+        if social_context_presentation:
+            ux_turn["social_context_presentation"] = social_context_presentation
 
         ux_result = {
             "answer_kind": self._answer_kind(profile, executable_plan, chat_mode),
@@ -421,7 +440,9 @@ class UXEnvelopeBuilder:
         if collaboration_summary:
             envelope["collaboration_summary"] = collaboration_summary
 
-        visible_adaptation = self._visible_adaptation(final_state=final_state, user_context_payload=user_context_payload)
+        visible_adaptation = self._visible_adaptation(
+            final_state=final_state, user_context_payload=user_context_payload
+        )
         if visible_adaptation:
             envelope["adaptation_summary"] = visible_adaptation
 
@@ -487,6 +508,12 @@ class UXEnvelopeBuilder:
             tone_variant = "analytical"
         else:
             tone_variant = "direct"
+        social_context = self._extract_social_context_payload(user_context_payload)
+        if tone_variant == "direct" and (
+            int(social_context.get("active_accountability_contract_count") or 0) > 0
+            or bool(social_context.get("high_relevance_events"))
+        ):
+            tone_variant = "warm"
 
         next_action_limit = {
             "compact": 2,
@@ -513,6 +540,7 @@ class UXEnvelopeBuilder:
             next_action_limit=next_action_limit,
             companion_frame_variant=companion_frame_variant,
             next_actions_title_variant=next_actions_title_variant,
+            language_profile=get_aurora_language_profile(scenario_from_chat_mode(chat_mode)),
         )
 
     async def _blocked_state(
@@ -1821,6 +1849,46 @@ class UXEnvelopeBuilder:
         context_data = getattr(final_state, "context_data", {}) or {}
         user_id = str(context_data.get("user_id") or "").strip()
         return user_id or None
+
+    @staticmethod
+    def _extract_social_context_payload(user_context_payload: dict[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(user_context_payload, dict):
+            return {}
+        for candidate in (
+            user_context_payload.get("social_context_v1"),
+            user_context_payload.get("social_signals_summary"),
+        ):
+            if isinstance(candidate, dict) and candidate:
+                return candidate
+        cognitive_context = user_context_payload.get("cognitive_context")
+        if isinstance(cognitive_context, dict):
+            for candidate in (
+                cognitive_context.get("social_context_v1"),
+                cognitive_context.get("social_signals_summary"),
+            ):
+                if isinstance(candidate, dict) and candidate:
+                    return candidate
+        return {}
+
+    def _social_context_presentation(self, user_context_payload: dict[str, Any] | None) -> dict[str, Any] | None:
+        social_context = self._extract_social_context_payload(user_context_payload)
+        if not social_context:
+            return None
+        receipt = social_context.get("social_context_receipt")
+        events = social_context.get("high_relevance_events") or []
+        tone_guidance = social_context.get("tone_guidance") or []
+        active_contracts = int(social_context.get("active_accountability_contract_count") or 0)
+        if not receipt and not events and active_contracts <= 0:
+            return None
+        return {
+            "type": "social_context",
+            "tone": "warm_accountability" if active_contracts > 0 or events else "bounded",
+            "receipt": receipt if isinstance(receipt, dict) else {},
+            "event_count": len(events) if isinstance(events, list) else 0,
+            "active_accountability_contract_count": active_contracts,
+            "privacy_boundary": "anonymous_partner_labels_only",
+            "tone_guidance": [str(item).strip() for item in tone_guidance[:4] if str(item).strip()],
+        }
 
     def _message_has_negative_signal(self, user_message: str) -> bool:
         compact = str(user_message or "").strip().lower()

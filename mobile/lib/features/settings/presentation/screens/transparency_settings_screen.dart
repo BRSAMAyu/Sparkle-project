@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -15,6 +16,9 @@ enum TransparencyDisplayMode {
   bottomSheet,
   detailOnly,
 }
+
+String _settingsCopy({required String zh, required String en}) =>
+    I18nService.instance.isChinese ? zh : en;
 
 /// Transparency Settings Screen
 /// 透明模式设置屏幕
@@ -111,7 +115,8 @@ class TransparencySettingsScreen extends ConsumerWidget {
                           items: [
                             DropdownMenuItem(
                               value: TransparencyDisplayMode.collapsedFloating,
-                              child: Text(context.l10n.settingsCollapseFloating),
+                              child:
+                                  Text(context.l10n.settingsCollapseFloating),
                             ),
                             DropdownMenuItem(
                               value: TransparencyDisplayMode.bottomSheet,
@@ -219,6 +224,114 @@ class TransparencySettingsScreen extends ConsumerWidget {
                           );
                         },
                       ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: Text(
+                          _settingsCopy(
+                            zh: 'Aurora 体验回执',
+                            en: 'Aurora experience receipts',
+                          ),
+                        ),
+                        subtitle: Text(
+                          _settingsCopy(
+                            zh: '显示 Aurora 为什么改变语气、状态或深度校准入口。',
+                            en: 'Show why Aurora changed tone, state, or deep calibration entry.',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.showAuroraExperienceReceipts,
+                        onChanged: (value) {
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setShowAuroraExperienceReceipts(value),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: Text(
+                          _settingsCopy(
+                            zh: '记忆引用回执',
+                            en: 'Memory reference receipts',
+                          ),
+                        ),
+                        subtitle: Text(
+                          _settingsCopy(
+                            zh: '显示 Aurora 引用了哪些相关记忆，并允许纠正。',
+                            en: 'Show which memories Aurora used and allow corrections.',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.showMemoryReferenceReceipts,
+                        onChanged: (value) {
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setShowMemoryReferenceReceipts(value),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: Text(
+                          _settingsCopy(
+                            zh: '资料与工具回执',
+                            en: 'Source and tool receipts',
+                          ),
+                        ),
+                        subtitle: Text(
+                          _settingsCopy(
+                            zh: '显示 Aurora 参考了哪些资料、工具或社群上下文。',
+                            en: 'Show which materials, tools, or social context Aurora used.',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.showSourceContextReceipts,
+                        onChanged: (value) {
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setShowSourceContextReceipts(value),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: Text(
+                          _settingsCopy(
+                            zh: '下一步变更回执',
+                            en: 'Next-action change receipts',
+                          ),
+                        ),
+                        subtitle: Text(
+                          _settingsCopy(
+                            zh: '显示计划或任务被 Aurora 调整的原因。',
+                            en: 'Show why Aurora changed a plan or task.',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.showNextActionChangedReceipts,
+                        onChanged: (value) {
+                          unawaited(
+                            ref
+                                .read(
+                                  transparencyPreferencesNotifierProvider
+                                      .notifier,
+                                )
+                                .setShowNextActionChangedReceipts(value),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -282,12 +395,11 @@ class TransparencySettingsScreen extends ConsumerWidget {
 
 /// Safely parse [TransparencyDisplayMode] from a stored string.
 /// Returns [TransparencyDisplayMode.collapsedFloating] for unknown values.
-TransparencyDisplayMode _safeDisplayMode(String name) {
-  return TransparencyDisplayMode.values.firstWhere(
-    (e) => e.name == name,
-    orElse: () => TransparencyDisplayMode.collapsedFloating,
-  );
-}
+TransparencyDisplayMode _safeDisplayMode(String name) =>
+    TransparencyDisplayMode.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => TransparencyDisplayMode.collapsedFloating,
+    );
 
 /// Transparency preferences model
 class TransparencyPreferences {
@@ -299,6 +411,10 @@ class TransparencyPreferences {
     required this.displayMode,
     required this.autoCollapseOnComplete,
     required this.allowPerTurnDismiss,
+    this.showAuroraExperienceReceipts = true,
+    this.showMemoryReferenceReceipts = true,
+    this.showSourceContextReceipts = true,
+    this.showNextActionChangedReceipts = true,
   });
 
   factory TransparencyPreferences.fromJson(Map<String, dynamic> json) =>
@@ -312,6 +428,14 @@ class TransparencyPreferences {
         ),
         autoCollapseOnComplete: json['autoCollapseOnComplete'] as bool? ?? true,
         allowPerTurnDismiss: json['allowPerTurnDismiss'] as bool? ?? true,
+        showAuroraExperienceReceipts:
+            json['showAuroraExperienceReceipts'] as bool? ?? true,
+        showMemoryReferenceReceipts:
+            json['showMemoryReferenceReceipts'] as bool? ?? true,
+        showSourceContextReceipts:
+            json['showSourceContextReceipts'] as bool? ?? true,
+        showNextActionChangedReceipts:
+            json['showNextActionChangedReceipts'] as bool? ?? true,
       );
 
   final bool enabled;
@@ -321,6 +445,17 @@ class TransparencyPreferences {
   final TransparencyDisplayMode displayMode;
   final bool autoCollapseOnComplete;
   final bool allowPerTurnDismiss;
+  final bool showAuroraExperienceReceipts;
+  final bool showMemoryReferenceReceipts;
+  final bool showSourceContextReceipts;
+  final bool showNextActionChangedReceipts;
+
+  Set<String> get enabledReceiptTypes => {
+        if (showAuroraExperienceReceipts) 'aurora_experience_receipt',
+        if (showMemoryReferenceReceipts) 'memory_reference_receipt',
+        if (showSourceContextReceipts) 'source_context_receipt',
+        if (showNextActionChangedReceipts) 'next_action_changed_by_aurora',
+      };
 
   Map<String, dynamic> toJson() => {
         'enabled': enabled,
@@ -330,6 +465,10 @@ class TransparencyPreferences {
         'displayMode': displayMode.name,
         'autoCollapseOnComplete': autoCollapseOnComplete,
         'allowPerTurnDismiss': allowPerTurnDismiss,
+        'showAuroraExperienceReceipts': showAuroraExperienceReceipts,
+        'showMemoryReferenceReceipts': showMemoryReferenceReceipts,
+        'showSourceContextReceipts': showSourceContextReceipts,
+        'showNextActionChangedReceipts': showNextActionChangedReceipts,
       };
 
   TransparencyPreferences copyWith({
@@ -340,6 +479,10 @@ class TransparencyPreferences {
     TransparencyDisplayMode? displayMode,
     bool? autoCollapseOnComplete,
     bool? allowPerTurnDismiss,
+    bool? showAuroraExperienceReceipts,
+    bool? showMemoryReferenceReceipts,
+    bool? showSourceContextReceipts,
+    bool? showNextActionChangedReceipts,
   }) =>
       TransparencyPreferences(
         enabled: enabled ?? this.enabled,
@@ -350,6 +493,14 @@ class TransparencyPreferences {
         autoCollapseOnComplete:
             autoCollapseOnComplete ?? this.autoCollapseOnComplete,
         allowPerTurnDismiss: allowPerTurnDismiss ?? this.allowPerTurnDismiss,
+        showAuroraExperienceReceipts:
+            showAuroraExperienceReceipts ?? this.showAuroraExperienceReceipts,
+        showMemoryReferenceReceipts:
+            showMemoryReferenceReceipts ?? this.showMemoryReferenceReceipts,
+        showSourceContextReceipts:
+            showSourceContextReceipts ?? this.showSourceContextReceipts,
+        showNextActionChangedReceipts:
+            showNextActionChangedReceipts ?? this.showNextActionChangedReceipts,
       );
 }
 
@@ -444,6 +595,70 @@ class TransparencyPreferencesNotifier
           allowPerTurnDismiss: true,
         );
     await _updatePreferences(current.copyWith(showReasoningSteps: value));
+  }
+
+  Future<void> setShowAuroraExperienceReceipts(bool value) async {
+    final current = state.valueOrNull ??
+        const TransparencyPreferences(
+          enabled: true,
+          showTokenUsage: true,
+          showAgentSwitching: true,
+          showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
+        );
+    await _updatePreferences(
+      current.copyWith(showAuroraExperienceReceipts: value),
+    );
+  }
+
+  Future<void> setShowMemoryReferenceReceipts(bool value) async {
+    final current = state.valueOrNull ??
+        const TransparencyPreferences(
+          enabled: true,
+          showTokenUsage: true,
+          showAgentSwitching: true,
+          showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
+        );
+    await _updatePreferences(
+      current.copyWith(showMemoryReferenceReceipts: value),
+    );
+  }
+
+  Future<void> setShowSourceContextReceipts(bool value) async {
+    final current = state.valueOrNull ??
+        const TransparencyPreferences(
+          enabled: true,
+          showTokenUsage: true,
+          showAgentSwitching: true,
+          showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
+        );
+    await _updatePreferences(
+      current.copyWith(showSourceContextReceipts: value),
+    );
+  }
+
+  Future<void> setShowNextActionChangedReceipts(bool value) async {
+    final current = state.valueOrNull ??
+        const TransparencyPreferences(
+          enabled: true,
+          showTokenUsage: true,
+          showAgentSwitching: true,
+          showReasoningSteps: true,
+          displayMode: TransparencyDisplayMode.collapsedFloating,
+          autoCollapseOnComplete: true,
+          allowPerTurnDismiss: true,
+        );
+    await _updatePreferences(
+      current.copyWith(showNextActionChangedReceipts: value),
+    );
   }
 
   Future<void> setDisplayMode(TransparencyDisplayMode value) async {

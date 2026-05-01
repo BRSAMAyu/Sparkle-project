@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
 void main() {
-
   setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -36,6 +36,7 @@ void main() {
       'bgm.reading_protection': true,
       'bgm.focus_priority': true,
       'bgm.lock_current_style': false,
+      'sensory_feedback.aurora_linkage_enabled': true,
     });
     await BgmService.debugResetState();
     BgmService.debugSeedCurrentSelection(
@@ -87,5 +88,29 @@ void main() {
     expect(find.text('柔和'), findsOneWidget);
     expect(find.text('平衡'), findsOneWidget);
     expect(find.text('丰盈'), findsOneWidget);
+  });
+
+  testWidgets('settings screen can disable Aurora sensory linkage',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: testMaterialApp(
+          home: UnifiedSettingsScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('感官反馈').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Aurora 感官联动'), findsOneWidget);
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Aurora 感官联动'));
+    await tester.pump();
+
+    expect(await SensoryFeedbackService.isAuroraLinkageEnabled(), isFalse);
   });
 }

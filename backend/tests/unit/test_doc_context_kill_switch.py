@@ -10,7 +10,7 @@ from app.services.aurora_doc_context_kill_switch_service import AuroraDocContext
 
 
 @pytest.mark.asyncio
-async def test_doc_context_kill_switch_defaults_to_shadow(monkeypatch) -> None:
+async def test_doc_context_kill_switch_reads_shadow_setting(monkeypatch) -> None:
     monkeypatch.setattr(cache_service, "redis", None)
     monkeypatch.setattr(settings, "ENABLE_DOCUMENT_CONTEXT_INJECTION", True, raising=False)
     monkeypatch.setattr(settings, "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE", "shadow", raising=False)

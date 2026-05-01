@@ -21,6 +21,7 @@ from app.core.event_types import (
     CAPSULE_FEEDBACK_SUBMITTED,
     CAPSULE_REGENERATE_REQUESTED,
     TOOL_HISTORY_RECORDED,
+    TOOL_USAGE_EVENT,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.seed_content import SeedLibrary
@@ -51,6 +52,7 @@ class ProfileEventConsumer:
         CAPSULE_FAVORITE_UPDATED,
         CAPSULE_CONTENT_UPDATED,
         TOOL_HISTORY_RECORDED,
+        TOOL_USAGE_EVENT,
         ACCOUNTABILITY_PARTNERSHIP_UPDATED,
         ACCOUNTABILITY_CHECKIN_CREATED,
     }
@@ -94,7 +96,7 @@ class ProfileEventConsumer:
             await self._handle_seed_library_event(event)
         elif event_type == CAPSULE_FAVORITE_UPDATED:
             await self._handle_capsule_favorite_updated(event)
-        elif event_type == TOOL_HISTORY_RECORDED:
+        elif event_type == TOOL_USAGE_EVENT:
             await self._handle_tool_history_recorded(event)
         elif event_type in self.INSIGHT_SIGNAL_EVENTS:
             await self._handle_insight_signal_family_updated(event)

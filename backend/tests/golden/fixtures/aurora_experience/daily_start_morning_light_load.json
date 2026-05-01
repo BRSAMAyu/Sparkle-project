@@ -1,0 +1,19 @@
+{
+  "id": "daily_start_morning_light_load",
+  "family": "daily_start",
+  "kind": "daily_start",
+  "title": "每日开场：早晨轻负载",
+  "input": {
+    "greeting": "早上好",
+    "display_name": "小林",
+    "plan_name": "高数冲刺",
+    "subject": "高等数学",
+    "day_index": 4,
+    "today_focus": "导数错题复盘",
+    "estimated_minutes": 35,
+    "completion_rate": 0.92,
+    "adjustment_reason": "昨天完成率 92%，今天保持当前节奏。",
+    "day_recommendation": "先拿 3 道错题找回手感",
+    "calendar_note": "今天上午比较空，可以把复盘放在 09:00-10:00"
+  }
+}

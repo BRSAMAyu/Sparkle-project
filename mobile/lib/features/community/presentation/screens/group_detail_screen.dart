@@ -70,40 +70,41 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
 
   Widget _buildContent(BuildContext context, WidgetRef ref, GroupInfo group) =>
       ContentConstraint(
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _buildAppBar(context, ref, group),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                DS.spacing16,
-                DS.spacing16,
-                DS.spacing16,
-                DS.spacing12,
-              ),
-              child: _GroupDetailTabs(
-                selectedTab: _selectedTab,
-                onChanged: (tab) => setState(() => _selectedTab = tab),
-              ),
-            ),
-          ),
-          if (_selectedTab == _GroupDetailTab.overview)
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            _buildAppBar(context, ref, group),
             SliverToBoxAdapter(
-              child: _buildOverviewTab(context, ref, group),
-            )
-          else
-            SliverFillRemaining(
-              child: GroupKnowledgeBaseView(
-                groupId: widget.groupId,
-                currentUserRole: group.myRole,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing16,
+                  DS.spacing16,
+                  DS.spacing16,
+                  DS.spacing12,
+                ),
+                child: _GroupDetailTabs(
+                  selectedTab: _selectedTab,
+                  onChanged: (tab) => setState(() => _selectedTab = tab),
+                ),
               ),
             ),
-        ],
-      ),
+            if (_selectedTab == _GroupDetailTab.overview)
+              SliverToBoxAdapter(
+                child: _buildOverviewTab(context, ref, group),
+              )
+            else
+              SliverFillRemaining(
+                child: GroupKnowledgeBaseView(
+                  groupId: widget.groupId,
+                  currentUserRole: group.myRole,
+                ),
+              ),
+          ],
+        ),
       );
 
-  SliverAppBar _buildAppBar(BuildContext context, WidgetRef ref, GroupInfo group) {
+  SliverAppBar _buildAppBar(
+      BuildContext context, WidgetRef ref, GroupInfo group) {
     final isMember = group.myRole != null;
     final isSprint = group.isSprint;
 
@@ -123,7 +124,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             color: DS.textPrimary,
             shadows: [
               Shadow(
-                color: Colors.black.withValues(alpha: 0.08),
+                color: DS.galaxyShadow.withValues(alpha: 0.08),
                 blurRadius: 8,
               ),
             ],
@@ -199,7 +200,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     );
   }
 
-  Widget _buildOverviewTab(BuildContext context, WidgetRef ref, GroupInfo group) {
+  Widget _buildOverviewTab(
+      BuildContext context, WidgetRef ref, GroupInfo group) {
     final isMember = group.myRole != null;
     final theme = Theme.of(context);
 
@@ -346,7 +348,9 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           ),
           const SizedBox(height: DS.sm),
           Text(
-            group.announcement?.isNotEmpty ?? false ? group.announcement! : context.l10n.gdNoAnnouncement,
+            group.announcement?.isNotEmpty ?? false
+                ? group.announcement!
+                : context.l10n.gdNoAnnouncement,
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: DS.textSecondary, height: 1.6),
           ),
@@ -366,8 +370,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   child: CustomButton.secondary(
                     text: context.l10n.gdTasks,
                     icon: Icons.task_alt,
-                    onPressed: () =>
-                        unawaited(context.push('/community/groups/${widget.groupId}/tasks')),
+                    onPressed: () => unawaited(context
+                        .push('/community/groups/${widget.groupId}/tasks')),
                   ),
                 ),
                 const SizedBox(width: DS.lg),
@@ -407,7 +411,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    AppFeedback.error(context, context.l10n.gdJoinFailed(e.toString()));
+                    AppFeedback.error(
+                        context, context.l10n.gdJoinFailed(e.toString()));
                   }
                 }
               },
@@ -577,9 +582,11 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       await ref
           .read(groupDetailProvider(widget.groupId).notifier)
           .updateAnnouncement(result.isEmpty ? null : result);
-      if (context.mounted) AppFeedback.success(context, context.l10n.gdAnnouncementUpdated);
+      if (context.mounted)
+        AppFeedback.success(context, context.l10n.gdAnnouncementUpdated);
     } catch (e) {
-      if (context.mounted) AppFeedback.error(context, context.l10n.gdUpdateFailed(e.toString()));
+      if (context.mounted)
+        AppFeedback.error(context, context.l10n.gdUpdateFailed(e.toString()));
     }
   }
 }
@@ -654,7 +661,7 @@ class _TabButton extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontWeight: DS.fontWeightSemiBold,
-                  color: selected ? Colors.white : DS.textSecondary,
+                  color: selected ? DS.neutral0 : DS.textSecondary,
                 ),
               ),
             ),

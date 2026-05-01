@@ -158,6 +158,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Turn off haptics for achievements, galaxy interactions, and more';
 
   @override
+  String get sensoryAuroraLinkTitle => 'Aurora Sensory Link';
+
+  @override
+  String get sensoryAuroraLinkSubtitle =>
+      'Let Aurora gently adjust music, haptics, and moments of celebration';
+
+  @override
   String get sensoryAmbientSceneTitle => 'Focus Ambience';
 
   @override
@@ -11154,6 +11161,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatContinueInChat => 'Continue in chat';
 
   @override
+  String get chatNewMessagesDivider => 'New messages';
+
+  @override
   String get chatViewLatestReport => 'View latest learning report';
 
   @override
@@ -19106,8 +19116,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraCalibrationConfirm => 'Need your confirmation';
 
   @override
-  String get auroraCalibrationComplete =>
-      'Calibration complete. Returning to standard layer.';
+  String get auroraCalibrationComplete => 'Calibration complete';
 
   @override
   String get auroraCalibrationExit => 'Aurora returning to background';
@@ -19116,13 +19125,112 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraCorrectNotRight => 'Not the right direction';
 
   @override
+  String get auroraCorrectNotRightSubtitle => 'This read is off';
+
+  @override
   String get auroraCorrectShorter => 'Make it shorter';
+
+  @override
+  String get auroraCorrectShorterSubtitle => 'Tighter reply';
 
   @override
   String get auroraCorrectDirect => 'Give me practice';
 
   @override
+  String get auroraCorrectDirectSubtitle => 'Switch to drills';
+
+  @override
   String get auroraCorrectRecalibrate => 'Recalibrate';
+
+  @override
+  String get auroraCorrectRecalibrateSubtitle => 'Deep check';
+
+  @override
+  String get auroraCorrectionRiskFalsePositive => 'I’m not anxious, just busy';
+
+  @override
+  String get auroraCorrectionRiskOverstated => 'It is not that serious';
+
+  @override
+  String get auroraCorrectionRiskSubtitle => 'Risk read is high';
+
+  @override
+  String get auroraCorrectionJudgmentOff => 'That read is off';
+
+  @override
+  String get auroraCorrectionJudgmentSubtitle => 'Update the judgment';
+
+  @override
+  String get auroraCorrectionTemporaryBusy => 'It is just temporary';
+
+  @override
+  String get auroraCorrectionTemporarySubtitle => 'Busy context';
+
+  @override
+  String get auroraCorrectionStrategyAdjust => 'Adjust the direction';
+
+  @override
+  String get auroraCorrectionStrategyFaster => 'We can move faster';
+
+  @override
+  String get auroraCorrectionStrategySubtitle => 'Strategy will shift';
+
+  @override
+  String get auroraCorrectionKnowledgeBlocker => 'I am stuck on the content';
+
+  @override
+  String get auroraCorrectionKnowledgeSubtitle => 'Change the cause';
+
+  @override
+  String get auroraCorrectionCareless => 'It was carelessness';
+
+  @override
+  String get auroraCorrectionCarelessSubtitle => 'Not concept gap';
+
+  @override
+  String get auroraCorrectionGenericDisconfirm => 'That is not quite right';
+
+  @override
+  String get auroraCorrectionGenericConfirm => 'That sounds right';
+
+  @override
+  String get auroraCorrectionFactSubtitle => 'Confirm the fact';
+
+  @override
+  String get auroraCorrectionToneSubtitle => 'Adjust the tone';
+
+  @override
+  String get auroraCorrectionFreeformLabel => 'Aurora got it wrong?';
+
+  @override
+  String get auroraCorrectionFreeformSubtitle => 'I’ll explain';
+
+  @override
+  String get auroraCorrectionReceivedTitle => 'Got it';
+
+  @override
+  String get auroraCorrectionReceivedSubtitle =>
+      'Aurora is updating its understanding';
+
+  @override
+  String get auroraCorrectionApplied => 'Last correction is active';
+
+  @override
+  String get auroraCorrectionInputTitle => 'What should Aurora know?';
+
+  @override
+  String get auroraCorrectionInputHint =>
+      'What did Aurora get wrong? Share the correction…';
+
+  @override
+  String get auroraCorrectionInputCancel => 'Cancel';
+
+  @override
+  String get auroraCorrectionInputSend => 'Send';
+
+  @override
+  String get auroraCorrectionSubmitted =>
+      'Got it. Aurora is updating its understanding.';
 
   @override
   String auroraSourceBadge(Object source) {
@@ -19164,6 +19272,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraBandCoolingDown => 'Aurora cooling down';
+
+  @override
+  String get auroraBandShortSensing => 'Sensing now';
+
+  @override
+  String get auroraBandShortCalibrated => 'Good rhythm';
+
+  @override
+  String get auroraBandShortRiskFound => 'Maybe stuck';
+
+  @override
+  String get auroraBandShortNeedsConfirm => 'Check this';
+
+  @override
+  String get auroraBandShortCalibrationAvailable => 'Can go deeper';
+
+  @override
+  String get auroraBandShortCoolingDown => 'Cooling down';
+
+  @override
+  String get auroraLayerJudgmentPrefix => 'I think this is: ';
+
+  @override
+  String get auroraLayerCorrectionQuestion => 'It may be because';
+
+  @override
+  String get auroraCorrectionTimeNotEnough => 'Not enough time';
+
+  @override
+  String get auroraCorrectionTooHard => 'Too hard';
+
+  @override
+  String get auroraCorrectionLowEnergy => 'Low energy lately';
+
+  @override
+  String get auroraCorrectionNoneOfThese => 'None of these';
+
+  @override
+  String get auroraCorrectionRecorded =>
+      'Got it. I will recalibrate from this next turn.';
+
+  @override
+  String get auroraActionDeepConversation => 'Enter deep conversation';
+
+  @override
+  String get auroraActionWakeDeepConversation =>
+      'Wake Aurora deep conversation';
+
+  @override
+  String get auroraLayerCurrentStatus => 'Current state';
+
+  @override
+  String get auroraLayerMemoryReferences => 'Memory references';
+
+  @override
+  String get auroraLayerNextSuggestion => 'Next suggestion';
+
+  @override
+  String get auroraLayerSelfEvaluation => 'Aurora self-check';
+
+  @override
+  String get auroraLayerMemoryFallback =>
+      'No recent related memory is strong enough yet.';
+
+  @override
+  String get auroraLayerNextSuggestionFallback =>
+      'Start with one 10-minute smallest next action.';
+
+  @override
+  String get auroraLayerNextSuggestionTimeConflict =>
+      'Quickly adjust the plan around this time conflict first.';
+
+  @override
+  String get auroraLayerSelfEvalFallback =>
+      'I will keep this as a light judgment until more signals arrive.';
+
+  @override
+  String get auroraLayerExpand => 'Expand';
+
+  @override
+  String get auroraLayerCollapse => 'Collapse';
 
   @override
   String auroraWakeAvailable(Object count) {
@@ -21057,6 +21246,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatContextDetail => 'Context detail';
 
   @override
+  String get chatSocialContextDetail => 'Social context detail';
+
+  @override
+  String get chatSocialContextUsed => 'Used study partner activity';
+
+  @override
+  String get chatSocialContextDisableAction => 'Do not use their progress';
+
+  @override
+  String get chatSocialContextDisablePrompt =>
+      'Please stop using my study partner\'s progress to adjust replies.';
+
+  @override
   String chatContextUnused(Object count) {
     return 'Unused ($count)';
   }
@@ -21365,6 +21567,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMemoryOriginalTurn => 'Original turn';
+
+  @override
+  String get chatMemoryReferenceCorrectFailed => 'Memory correction failed';
+
+  @override
+  String get chatMemoryReferenceDetailTitle => 'Related memories';
+
+  @override
+  String get chatMemoryReferenceNeedsConfirmation => 'needs confirmation';
+
+  @override
+  String get chatMemoryReferenceNotRight => 'Not right';
+
+  @override
+  String chatMemoryReferenceReceiptLabel(Object count) {
+    return 'Aurora used $count related memories';
+  }
+
+  @override
+  String chatMemoryReferenceUsed(Object count) {
+    return 'Used $count related memories';
+  }
 
   @override
   String chatMemorySessionCount(Object count) {
@@ -24896,6 +25120,90 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraSend => 'Send';
 
   @override
+  String get auroraCoreSessionTitle => 'Aurora Deep Calibration';
+
+  @override
+  String auroraTurnsRemaining(int count) {
+    return '$count turns left';
+  }
+
+  @override
+  String get auroraPauseCalibration => 'Pause calibration';
+
+  @override
+  String get auroraResumeTitle => 'Continue the last deep calibration';
+
+  @override
+  String get auroraResumeSubtitle =>
+      'Aurora still has the stage and messages from where you paused.';
+
+  @override
+  String get auroraResumeBannerSubtitle =>
+      'Pick up from the last stage without starting over';
+
+  @override
+  String get auroraResumeAction => 'Continue';
+
+  @override
+  String get auroraCoreSessionResumed =>
+      'Continuing where we left off. Aurora kept the previous stage and messages.';
+
+  @override
+  String get auroraSessionExpiredTitle => 'The last deep calibration has ended';
+
+  @override
+  String get auroraSessionExpiredSubtitle =>
+      'It sat idle past the resume window, so Aurora will not continue from a stale state.';
+
+  @override
+  String get auroraLastSessionSummary => 'Last session summary';
+
+  @override
+  String get auroraJustChat => 'Just chat';
+
+  @override
+  String get auroraStartNewSession => 'Start a new calibration';
+
+  @override
+  String get auroraExpandSheet => 'Expand calibration sheet';
+
+  @override
+  String get auroraShrinkSheet => 'Shrink calibration sheet';
+
+  @override
+  String get auroraStatePatchesTitle => 'Updated states';
+
+  @override
+  String get auroraNextChangesTitle => 'What changes next';
+
+  @override
+  String get auroraReturnedToBackground =>
+      'Aurora has returned to the background';
+
+  @override
+  String get auroraViewAdjustedPlan => 'View adjusted plan';
+
+  @override
+  String get auroraExplainPrompt => 'Explain';
+
+  @override
+  String get auroraFreeformLabel => 'Freeform';
+
+  @override
+  String get auroraCoreCheckpointCta => 'Deep calibrate';
+
+  @override
+  String get auroraCheckpointWhyNow =>
+      'this checkpoint is the right moment to check whether the plan still matches your real progress';
+
+  @override
+  String get auroraCoreTaskStuckCta => 'Deep calibrate with Aurora';
+
+  @override
+  String get auroraTaskStuckWhyNow =>
+      'a task has become stuck, so calibrating now can prevent the next step from being built on the wrong assumption';
+
+  @override
   String get settingsQueueCleared => 'Queue cleared';
 
   @override
@@ -27637,6 +27945,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userNoRevertibleActions => 'No revertible actions.';
 
   @override
+  String get userCorrectionHistoryTitle => 'What I corrected Aurora on';
+
+  @override
+  String get userCorrectionHistoryHint =>
+      'Recent profile and chat corrections that can change future judgments.';
+
+  @override
+  String get userCorrectionHistoryEmpty => 'No Aurora corrections yet.';
+
+  @override
+  String get userCorrectionHistoryUndo => 'Restore previous read';
+
+  @override
   String get userTransparentNotEnabled => 'Transparent profile not yet enabled';
 
   @override
@@ -28891,4 +29212,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebLoadError => 'Failed to load errors, please try again';
+
+  @override
+  String chatContextReceiptSummary(int used, int skipped) {
+    return 'Aurora · used $used context item(s) / skipped $skipped';
+  }
+
+  @override
+  String chatContextUsedTools(int count) {
+    return 'Tool context used ($count)';
+  }
+
+  @override
+  String toolsContextEffectMessage(String tool) {
+    return 'Aurora now knows about this $tool';
+  }
+
+  @override
+  String get toolsContextEffectUndo => 'Do not tell Aurora';
+
+  @override
+  String get toolsContextEffectUndone => 'This tool context was removed';
+
+  @override
+  String get toolsContextEffectUndoFailed =>
+      'Could not remove it. Try again later.';
+
+  @override
+  String get toolsNotesSyncedToPrism => 'Synced to Cognitive Prism';
 }

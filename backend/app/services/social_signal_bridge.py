@@ -6,16 +6,18 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.event_bus import event_bus
 from app.core.event_types import ACCOUNTABILITY_STRUGGLE_DETECTED
-from app.models.accountability import AccountabilityPartnership, AccountabilityStatus
+from app.models.accountability import AccountabilityCheckin, AccountabilityPartnership, AccountabilityStatus
+from app.models.community import Group, GroupMember, GroupMessage, GroupType, MessageType
 from app.models.notification import Notification
 from app.models.user import User
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
+from app.services.community_signal_bridge import CommunitySignalBridge
 from app.services.personalization.preference_service import PreferenceService
 from app.services.social_signal_types import SocialSignalsV1
 
@@ -52,6 +54,9 @@ PRESET_ENCOURAGEMENTS: tuple[dict[str, str], ...] = (
 class SocialSignalBridge:
     ACCOUNTABILITY_STRUGGLE_THRESHOLD = 0.6
     ACCOUNTABILITY_STRUGGLE_DEDUP_TTL = 20 * 3600
+    HIGH_RELEVANCE_EVENT_LIMIT = 3
+    PARTNER_ACTIVITY_LOOKBACK_HOURS = 36
+    COMMUNITY_ACTIVITY_LOOKBACK_HOURS = 24
 
     def __init__(self, db: AsyncSession, redis=None) -> None:
         self.db = db
@@ -71,9 +76,11 @@ class SocialSignalBridge:
         snapshot = await self.provider.fetch_social_snapshot(user_id)
         prefs_center = await self.preference_service.get_preferences(user_id)
         inferred = dict(getattr(prefs_center, "inferred", {}) or {})
+        explicit = dict(getattr(prefs_center, "explicit", {}) or {})
         return {
             "snapshot": snapshot,
             "inferred": inferred,
+            "explicit": explicit,
         }
 
     async def build_social_signals_v1(self, user_id: UUID) -> SocialSignalsV1 | None:
@@ -88,6 +95,16 @@ class SocialSignalBridge:
 
         inferred = payload.get("inferred")
         inferred = inferred if isinstance(inferred, dict) else {}
+        explicit = payload.get("explicit")
+        explicit = explicit if isinstance(explicit, dict) else {}
+        if self._social_signals_disabled(explicit):
+            return None
+
+        partnerships = await self._active_partnerships_for_user(user_id)
+        high_relevance_events = await self._rank_high_relevance_events(
+            user_id=user_id,
+            partnerships=partnerships,
+        )
         mention_count = len(getattr(snapshot, "recent_person_mentions", []) or [])
         relationship_count = int(getattr(snapshot, "relationship_count", 0) or 0)
         pending_commitments_count = int(getattr(snapshot, "pending_commitments_count", 0) or 0)
@@ -106,27 +123,271 @@ class SocialSignalBridge:
             summary_lines.append(f"当前有 {relationship_count} 条关系型背景需要在建议里保持边界感。")
         if pending_commitments_count > 0:
             summary_lines.append(f"目前有 {pending_commitments_count} 条到期承诺待跟进。")
+        if partnerships:
+            summary_lines.append(f"当前有 {len(partnerships)} 个进行中的责任伙伴约定，卡点时优先用共同推进感而不是比较压力。")
         if engagement_level:
             summary_lines.append(f"社区参与度推断为 {engagement_level}。")
         if social_learning_preference is not None:
             summary_lines.append(f"社交学习倾向约为 {social_learning_preference:.2f}。")
         if content_contribution_rate is not None:
             summary_lines.append(f"内容贡献倾向约为 {content_contribution_rate:.2f}。")
+        for event in high_relevance_events:
+            summary_line = str(event.get("summary_line") or "").strip()
+            if summary_line:
+                summary_lines.append(summary_line)
+
+        tone_guidance = self._build_tone_guidance(
+            active_contract_count=len(partnerships),
+            high_relevance_events=high_relevance_events,
+        )
+        social_context_receipt = self._build_social_context_receipt(high_relevance_events)
 
         signals = SocialSignalsV1(
             mention_count=mention_count,
             relationship_count=relationship_count,
             pending_commitments_count=pending_commitments_count,
+            active_accountability_contract_count=len(partnerships),
             community_engagement_level=engagement_level,
             social_learning_preference=social_learning_preference,
             content_contribution_rate=content_contribution_rate,
-            summary_lines=tuple(summary_lines[:4]),
+            summary_lines=tuple(summary_lines[:6]),
+            high_relevance_events=tuple(high_relevance_events),
+            tone_guidance=tuple(tone_guidance),
+            social_context_receipt=social_context_receipt,
         )
-        if not signals.summary_lines and mention_count <= 0 and relationship_count <= 0:
+        if (
+            not signals.summary_lines
+            and mention_count <= 0
+            and relationship_count <= 0
+            and pending_commitments_count <= 0
+            and not high_relevance_events
+            and not partnerships
+        ):
             return None
         if mode != "live":
             return None
         return signals
+
+    @staticmethod
+    def _social_signals_disabled(explicit: dict[str, Any]) -> bool:
+        for key in (
+            "use_social_signals",
+            "enable_social_signals",
+            "allow_social_context_in_aurora",
+        ):
+            if key in explicit and explicit.get(key) is False:
+                return True
+        return False
+
+    async def _rank_high_relevance_events(
+        self,
+        *,
+        user_id: UUID,
+        partnerships: list[AccountabilityPartnership],
+    ) -> list[dict[str, Any]]:
+        raw_events: list[dict[str, Any]] = []
+        raw_events.extend(await self._partner_activity_events(user_id=user_id, partnerships=partnerships))
+        raw_events.extend(await self._community_activity_events(user_id=user_id))
+
+        sanitized_events = [
+            event
+            for event in (
+                CommunitySignalBridge.sanitize_for_aurora_context(event, viewer_user_id=user_id)
+                for event in raw_events
+            )
+            if event is not None
+        ]
+        sanitized_events.sort(
+            key=lambda item: (
+                float(item.get("relevance") or 0.0),
+                str(item.get("created_at") or ""),
+            ),
+            reverse=True,
+        )
+
+        selected: list[dict[str, Any]] = []
+        seen_kinds: set[str] = set()
+        for event in sanitized_events:
+            kind = str(event.get("kind") or "")
+            if kind in seen_kinds and kind != "direct_mention":
+                continue
+            selected.append(event)
+            seen_kinds.add(kind)
+            if len(selected) >= self.HIGH_RELEVANCE_EVENT_LIMIT:
+                break
+        return selected
+
+    async def _partner_activity_events(
+        self,
+        *,
+        user_id: UUID,
+        partnerships: list[AccountabilityPartnership],
+    ) -> list[dict[str, Any]]:
+        if not partnerships:
+            return []
+
+        partnership_ids = [partnership.id for partnership in partnerships]
+        partner_ids = {
+            partnership.partner_id if str(partnership.initiator_id) == str(user_id) else partnership.initiator_id
+            for partnership in partnerships
+        }
+        cutoff = _utcnow() - timedelta(hours=self.PARTNER_ACTIVITY_LOOKBACK_HOURS)
+        result = await self.db.execute(
+            select(AccountabilityCheckin)
+            .where(
+                AccountabilityCheckin.partnership_id.in_(partnership_ids),
+                AccountabilityCheckin.user_id.in_(partner_ids),
+                AccountabilityCheckin.created_at >= cutoff,
+                AccountabilityCheckin.deleted_at.is_(None),
+            )
+            .order_by(desc(AccountabilityCheckin.created_at))
+            .limit(5)
+        )
+        events: list[dict[str, Any]] = []
+        for checkin in result.scalars().all():
+            events.append(
+                {
+                    "kind": "partner_checkin",
+                    "source": "accountability_checkin",
+                    "actor_id": str(checkin.user_id),
+                    "label": "你的学习伙伴",
+                    "summary_line": "你的学习伙伴刚完成了一次 check-in；如果当前用户卡住，可把它作为温和启动信号，不做进度比较。",
+                    "relevance": 0.95,
+                    "created_at": checkin.created_at.isoformat() if checkin.created_at else "",
+                }
+            )
+        if not events and partnerships:
+            events.append(
+                {
+                    "kind": "accountability_contract",
+                    "source": "accountability_partnership",
+                    "label": "你的学习伙伴",
+                    "summary_line": "用户有进行中的责任伙伴约定；任务卡点时可提醒“这不是你一个人的目标”，但不要施压。",
+                    "relevance": 0.72,
+                    "created_at": max(
+                        (p.started_at or p.created_at for p in partnerships if p.started_at or p.created_at),
+                        default=_utcnow(),
+                    ).isoformat(),
+                }
+            )
+        return events
+
+    async def _community_activity_events(self, *, user_id: UUID) -> list[dict[str, Any]]:
+        cutoff = _utcnow() - timedelta(hours=self.COMMUNITY_ACTIVITY_LOOKBACK_HOURS)
+        membership_result = await self.db.execute(
+            select(GroupMember.group_id)
+            .where(
+                GroupMember.user_id == user_id,
+                GroupMember.deleted_at.is_(None),
+            )
+            .limit(30)
+        )
+        group_ids = [row[0] for row in membership_result.all()]
+        if not group_ids:
+            return []
+
+        group_result = await self.db.execute(select(Group).where(Group.id.in_(group_ids)))
+        group_by_id = {group.id: group for group in group_result.scalars().all()}
+        message_result = await self.db.execute(
+            select(GroupMessage)
+            .where(
+                GroupMessage.group_id.in_(group_ids),
+                GroupMessage.created_at >= cutoff,
+                GroupMessage.deleted_at.is_(None),
+                GroupMessage.is_revoked.is_(False),
+                or_(GroupMessage.sender_id.is_(None), GroupMessage.sender_id != user_id),
+            )
+            .order_by(desc(GroupMessage.created_at))
+            .limit(60)
+        )
+
+        events: list[dict[str, Any]] = []
+        for message in message_result.scalars().all():
+            mention_user_ids = [str(item) for item in (message.mention_user_ids or [])]
+            if str(user_id) in mention_user_ids:
+                events.append(
+                    {
+                        "kind": "direct_mention",
+                        "source": "group_message",
+                        "actor_id": str(message.sender_id or ""),
+                        "label": "学习群成员",
+                        "summary_line": "学习群里有人直接提到了用户；只有当前回复与协作或回看群内进展有关时才轻轻提及。",
+                        "relevance": 0.9,
+                        "created_at": message.created_at.isoformat() if message.created_at else "",
+                    }
+                )
+                continue
+
+            group = group_by_id.get(message.group_id)
+            group_type = getattr(group, "type", None)
+            group_type_value = str(getattr(group_type, "value", group_type) or "").lower()
+            message_type = getattr(message.message_type, "value", message.message_type)
+            if group_type_value == GroupType.SPRINT.value and message_type in {
+                MessageType.TASK_SHARE.value,
+                MessageType.PLAN_SHARE.value,
+                MessageType.PROGRESS.value,
+                MessageType.CHECKIN.value,
+            }:
+                events.append(
+                    {
+                        "kind": "shared_goal_progress",
+                        "source": "group_message",
+                        "actor_id": str(message.sender_id or ""),
+                        "label": "冲刺群伙伴",
+                        "summary_line": "冲刺群里有一条共同目标相关进展；可用作共同体感背景，不要展开具体成员内容。",
+                        "relevance": 0.76,
+                        "created_at": message.created_at.isoformat() if message.created_at else "",
+                    }
+                )
+        return events
+
+    @staticmethod
+    def _build_tone_guidance(
+        *,
+        active_contract_count: int,
+        high_relevance_events: list[dict[str, Any]],
+    ) -> list[str]:
+        guidance: list[str] = []
+        if active_contract_count > 0:
+            guidance.append("任务卡点时可以用“这不是你一个人的目标”来降低孤立感，但禁止责备、比较或替伙伴发话。")
+        if any(str(event.get("kind")) == "partner_checkin" for event in high_relevance_events):
+            guidance.append("伙伴刚活跃时，只把它当成温和启动线索；不要说“别人已经完成了”。")
+        if any(str(event.get("kind")) == "direct_mention" for event in high_relevance_events):
+            guidance.append("群内 @ 提及时，先确认当前问题确实相关；不相关就不要主动提起。")
+        if high_relevance_events:
+            guidance.append("提及社群信号时只使用“学习伙伴/责任伙伴/学习群”这类角色标签，除非用户显式允许实名。")
+        return guidance
+
+    @staticmethod
+    def _build_social_context_receipt(high_relevance_events: list[dict[str, Any]]) -> dict[str, Any] | None:
+        if not high_relevance_events:
+            return None
+        labels = []
+        for event in high_relevance_events:
+            label = str(event.get("label") or "学习伙伴动态").strip()
+            kind = str(event.get("kind") or "").strip()
+            labels.append("学习伙伴动态" if kind == "partner_checkin" else label)
+        deduped_labels = list(dict.fromkeys(labels))
+        return {
+            "type": "social_context_receipt",
+            "used_count": len(high_relevance_events),
+            "used_names": deduped_labels,
+            "excluded_count": 0,
+            "excluded_names": [],
+            "decision_reason": "参考了学习伙伴的动态",
+            "privacy_boundary": "只使用匿名角色标签，不展示伙伴姓名、原文或联系方式。",
+            "retrieval_mode": "social_context",
+            "events": [
+                {
+                    "kind": str(event.get("kind") or ""),
+                    "label": str(event.get("label") or ""),
+                    "source": str(event.get("source") or ""),
+                    "relevance": round(float(event.get("relevance") or 0.0), 2),
+                }
+                for event in high_relevance_events
+            ],
+            "user_actions": ["dismiss", "disable_social_signals"],
+        }
 
     async def maybe_publish_accountability_struggle_signal(
         self,

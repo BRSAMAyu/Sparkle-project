@@ -6,6 +6,7 @@ import pytest
 
 from app.models.card_protocol import DeliveryChannel
 from app.services.behavior_signal_collector import BehaviorSignalCollector
+from app.services.task_stuck_signal_service import TaskExecutionSignal
 
 
 class _RowsResult:
@@ -25,6 +26,15 @@ class _ScalarRowsResult:
 
     def first(self):
         return self._rows[0] if self._rows else None
+
+
+class _FakeEventBus:
+    def __init__(self):
+        self.events = []
+
+    async def publish(self, event_type, payload, stream="sparkle_events"):
+        self.events.append((event_type, payload, stream))
+        return "event-id"
 
 
 @pytest.mark.asyncio
@@ -269,6 +279,47 @@ async def test_behavior_signal_collector_does_not_store_calculator_expression_co
 
 
 @pytest.mark.asyncio
+async def test_behavior_signal_collector_creates_fragment_for_translator_tool_usage_event():
+    user_id = uuid4()
+    record = SimpleNamespace(
+        id=44,
+        tool_name="translator",
+        success=True,
+        context_snapshot={
+            "source_language": "zh",
+            "target_language": "en",
+            "text_length": 32,
+            "used_at": "2026-04-26T08:00:00",
+        },
+    )
+    db = SimpleNamespace(execute=AsyncMock(return_value=_ScalarRowsResult([record])))
+    collector = BehaviorSignalCollector(db, redis=None)
+    fragment = SimpleNamespace(id=uuid4())
+    collector.cognitive_service.create_fragment = AsyncMock(return_value=fragment)
+    collector.cognitive_service.analyze_behavior = AsyncMock()
+    collector._mark_signal_emitted = AsyncMock()
+
+    await collector.handle_tool_history_event(
+        {
+            "event_type": "tool_usage_event",
+            "user_id": str(user_id),
+            "tool_history_id": 44,
+            "tool_name": "translator",
+            "success": True,
+            "tool_category": "translation",
+        }
+    )
+
+    collector.cognitive_service.create_fragment.assert_awaited_once()
+    payload = collector.cognitive_service.create_fragment.await_args.kwargs
+    assert payload["source_type"] == "tool_usage_event"
+    assert "原文和译文未写入工具历史" in payload["content"]
+    assert payload["context_tags"]["tool_history_id"] == 44
+    assert payload["context_tags"]["privacy"] == "raw_translation_text_not_stored"
+    assert "workflow.recent_tool_context" in payload["error_tags"]
+
+
+@pytest.mark.asyncio
 async def test_behavior_signal_collector_uses_local_cooldown_without_redis():
     user_id = uuid4()
     collector = BehaviorSignalCollector(SimpleNamespace(), redis=None)
@@ -309,3 +360,117 @@ async def test_behavior_signal_collector_bridge_failure_does_not_rollback_replan
     on_detected.assert_awaited_once()
     db.commit.assert_awaited_once()
     db.rollback.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_behavior_signal_collector_emits_task_stuck_intervention_signal(monkeypatch):
+    user_id = uuid4()
+    events = [
+        TaskExecutionSignal(
+            task_id=str(uuid4()),
+            title="高数作业",
+            status="STUCK",
+        ),
+        TaskExecutionSignal(
+            task_id=str(uuid4()),
+            title="线代习题",
+            status="ABANDONED",
+        ),
+        TaskExecutionSignal(
+            task_id=str(uuid4()),
+            title="概率论复习",
+            status="COMPLETED",
+            estimated_minutes=20,
+            actual_minutes=45,
+        ),
+    ]
+
+    async def fake_load_recent_task_execution_signals(db, *, user_id, limit=14):
+        return events
+
+    monkeypatch.setattr(
+        "app.services.behavior_signal_collector.load_recent_task_execution_signals",
+        fake_load_recent_task_execution_signals,
+    )
+    event_bus = _FakeEventBus()
+    collector = BehaviorSignalCollector(SimpleNamespace(), redis=None, event_bus=event_bus)
+    fragment = SimpleNamespace(id=uuid4())
+    collector.cognitive_service.create_fragment = AsyncMock(return_value=fragment)
+    collector.cognitive_service.analyze_behavior = AsyncMock()
+    collector._signal_on_cooldown = AsyncMock(return_value=False)
+    collector._mark_signal_emitted = AsyncMock()
+
+    await collector.handle_task_stuck_event({"user_id": str(user_id)})
+
+    collector.cognitive_service.create_fragment.assert_awaited_once()
+    fragment_payload = collector.cognitive_service.create_fragment.await_args.kwargs
+    assert "连续 3 张任务" in fragment_payload["content"]
+    assert fragment_payload["error_tags"] == ["execution.task_stuck_streak"]
+    collector.cognitive_service.analyze_behavior.assert_awaited_once_with(user_id, fragment.id)
+    collector._mark_signal_emitted.assert_awaited_once()
+
+    event_types = [event_type for event_type, _, _ in event_bus.events]
+    assert event_types == [
+        "behavior.pattern.updated",
+        "aurora.task_stuck_intervention.requested",
+    ]
+    pattern_payload = event_bus.events[0][1]
+    assert pattern_payload["frequency"] == 3
+    assert pattern_payload["task_health"]["status"] == "needs_attention"
+    assert pattern_payload["micro_session"]["max_user_turns"] == 3
+    assert pattern_payload["micro_session"]["session_type"] == "task_stuck_light"
+
+
+@pytest.mark.asyncio
+async def test_behavior_signal_collector_emits_task_stuck_recovery_signal(monkeypatch):
+    user_id = uuid4()
+    events = [
+        TaskExecutionSignal(
+            task_id=str(uuid4()),
+            title="英语听力",
+            status="COMPLETED",
+            estimated_minutes=20,
+            actual_minutes=18,
+        ),
+        TaskExecutionSignal(
+            task_id=str(uuid4()),
+            title="物理错题",
+            status="COMPLETED",
+            estimated_minutes=25,
+            actual_minutes=22,
+        ),
+        TaskExecutionSignal(
+            task_id=str(uuid4()),
+            title="高数作业",
+            status="STUCK",
+        ),
+        TaskExecutionSignal(
+            task_id=str(uuid4()),
+            title="线代习题",
+            status="ABANDONED",
+        ),
+    ]
+
+    async def fake_load_recent_task_execution_signals(db, *, user_id, limit=14):
+        return events
+
+    monkeypatch.setattr(
+        "app.services.behavior_signal_collector.load_recent_task_execution_signals",
+        fake_load_recent_task_execution_signals,
+    )
+    event_bus = _FakeEventBus()
+    collector = BehaviorSignalCollector(SimpleNamespace(), redis=None, event_bus=event_bus)
+    fragment = SimpleNamespace(id=uuid4())
+    collector.cognitive_service.create_fragment = AsyncMock(return_value=fragment)
+    collector.cognitive_service.analyze_behavior = AsyncMock()
+    collector._signal_on_cooldown = AsyncMock(return_value=False)
+    collector._mark_signal_emitted = AsyncMock()
+
+    await collector._maybe_emit_task_stuck_recovery_signal(user_id)
+
+    collector.cognitive_service.create_fragment.assert_awaited_once()
+    fragment_payload = collector.cognitive_service.create_fragment.await_args.kwargs
+    assert "任务节奏恢复" in fragment_payload["content"]
+    assert fragment_payload["error_tags"] == ["execution.task_stuck_recovery"]
+    assert event_bus.events[0][0] == "aurora.task_stuck_recovery.detected"
+    assert event_bus.events[0][1]["recovered_count"] == 2

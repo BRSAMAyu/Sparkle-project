@@ -2534,6 +2534,7 @@ class PlanningWorkflowManager:
                     "scheduled_start_time",
                     "scheduled_end_time",
                     "calendar_avoidance",
+                    "calendar_capacity_receipt",
                     "target_date",
                     "date",
                 }
@@ -2543,6 +2544,8 @@ class PlanningWorkflowManager:
             guide_json["calendar_avoidance"] = _as_dict((day_spec or {}).get("calendar_avoidance"))
             guide_json["scheduled_start_time"] = _strip((day_spec or {}).get("scheduled_start_time"))
             guide_json["scheduled_end_time"] = _strip((day_spec or {}).get("scheduled_end_time"))
+        if (day_spec or {}).get("calendar_capacity_receipt"):
+            guide_json["calendar_capacity_receipt"] = _as_dict((day_spec or {}).get("calendar_capacity_receipt"))
         if (day_spec or {}).get("compressed"):
             guide_json["compressed"] = True
             guide_json["compression_reason"] = _strip((day_spec or {}).get("compression_reason"))
@@ -4649,6 +4652,9 @@ class PlanningWorkflowManager:
             return specs
 
         today = _utcnow().date()
+        capacity = _as_dict(calendar_context.get("capacity_summary"))
+        available_by_date = _as_dict(calendar_context.get("available_minutes_by_date"))
+        lower_intensity = _strip(capacity.get("planning_intensity_hint")) == "lower"
         scheduled_specs: list[dict[str, Any]] = []
         for raw_spec in specs:
             spec = dict(raw_spec)
@@ -4657,6 +4663,27 @@ class PlanningWorkflowManager:
             if not target_date:
                 target_date = (today + timedelta(days=max(day_number - 1, 0))).isoformat()
                 spec["target_date"] = target_date
+            available_minutes = _safe_int(available_by_date.get(target_date))
+            current_minutes = _safe_int(spec.get("estimated_minutes")) or 60
+            if lower_intensity and available_minutes is not None and current_minutes > max(30, available_minutes):
+                adjusted_minutes = max(30, min(current_minutes, available_minutes))
+                spec["estimated_minutes"] = adjusted_minutes
+                receipt = {
+                    "applied": True,
+                    "reason": (
+                        "未来 3 天日程较满，已降低当天任务强度，避免把时间压力误判成执行力问题。"
+                    ),
+                    "available_minutes": available_minutes,
+                    "original_estimated_minutes": current_minutes,
+                    "adjusted_estimated_minutes": adjusted_minutes,
+                }
+                spec["calendar_capacity_receipt"] = receipt
+                method_steps = [_strip(item) for item in list(spec.get("method_steps") or []) if _strip(item)]
+                note = receipt["reason"]
+                if note not in method_steps:
+                    method_steps.append(note)
+                if method_steps:
+                    spec["method_steps"] = method_steps
             if spec.get("scheduled_start_time") and spec.get("scheduled_end_time"):
                 scheduled_specs.append(spec)
                 continue

@@ -1,0 +1,12 @@
+{
+  "id": "correction_memory_denial",
+  "family": "correction_reply",
+  "kind": "correction_reply",
+  "title": "纠正回复：否认记忆",
+  "input": {
+    "correction_type": "memory_denial",
+    "original_assumption": "你更喜欢晚上复习",
+    "user_correction": "下午三点后效率最高",
+    "next_change": "后续计划会优先把高强度任务放到下午"
+  }
+}

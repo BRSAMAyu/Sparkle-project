@@ -10,7 +10,9 @@ import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
+import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
@@ -79,7 +81,9 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     if (_inputController.text.trim().isEmpty) {
       AppFeedback.info(
         context,
-        I18nService.instance.isChinese ? '请输入要翻译的文本' : 'Please enter text to translate',
+        I18nService.instance.isChinese
+            ? '请输入要翻译的文本'
+            : 'Please enter text to translate',
       );
       return;
     }
@@ -106,9 +110,25 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
           _isFavorited = false;
         });
         await _saveTranslation(translatedText);
+        final contextEventId = await ref
+            .read(toolHistoryRepositoryProvider)
+            .recordTranslatorCompleted(
+              sourceLanguage: _sourceLanguage.code,
+              targetLanguage: _targetLanguage.code,
+              textLength: _inputController.text.trim().length,
+              surface: widget.surface.name,
+            );
+        if (!mounted) return;
+        ToolContextEffectFeedback.show(
+          context: context,
+          ref: ref,
+          toolLabel: context.l10n.toolsTransTitle,
+          eventId: contextEventId,
+        );
       } else {
         setState(() {
-          _errorMessage = result.meta['error'] as String? ?? context.l10n.toolsTransFailed;
+          _errorMessage =
+              result.meta['error'] as String? ?? context.l10n.toolsTransFailed;
         });
       }
     } catch (e) {
@@ -147,12 +167,11 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     try {
       if (!mounted) return;
       final historyNotifier = ref.read(translationHistoryProvider.notifier);
-      final similar =
-          await historyNotifier.findSimilar(
-                originalText: _inputController.text,
-                sourceLanguage: _sourceLanguage.code,
-                targetLanguage: _targetLanguage.code,
-              );
+      final similar = await historyNotifier.findSimilar(
+        originalText: _inputController.text,
+        sourceLanguage: _sourceLanguage.code,
+        targetLanguage: _targetLanguage.code,
+      );
 
       if (!mounted) return;
       if (similar != null) {
@@ -164,15 +183,14 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         return;
       }
 
-      final id =
-          await historyNotifier.saveTranslation(
-                originalText: _inputController.text,
-                translatedText: translatedText,
-                sourceLanguage: _sourceLanguage.code,
-                targetLanguage: _targetLanguage.code,
-                rating: _currentRating,
-                isFavorited: _isFavorited,
-              );
+      final id = await historyNotifier.saveTranslation(
+        originalText: _inputController.text,
+        translatedText: translatedText,
+        sourceLanguage: _sourceLanguage.code,
+        targetLanguage: _targetLanguage.code,
+        rating: _currentRating,
+        isFavorited: _isFavorited,
+      );
       if (!mounted) return;
       setState(() {
         _currentTranslationId = id;
@@ -263,7 +281,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, context.l10n.toolsTransAddWordFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.toolsTransAddWordFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -303,7 +322,9 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
           icon: Icons.swap_horiz_rounded,
         ),
         ToolHeroChip(
-          label: _isFavorited ? context.l10n.toolsTransFavorited : context.l10n.toolsTransAutoSave,
+          label: _isFavorited
+              ? context.l10n.toolsTransFavorited
+              : context.l10n.toolsTransAutoSave,
           accentColor: accent,
           icon: _isFavorited ? Icons.favorite_rounded : Icons.archive_rounded,
         ),
@@ -328,7 +349,9 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 icon: Icons.auto_fix_high_rounded,
                 caption: _isLoading
                     ? (I18nService.instance.isChinese ? '翻译生成中' : 'Translating')
-                    : (I18nService.instance.isChinese ? '翻译完成后可复制' : 'Copy after translation'),
+                    : (I18nService.instance.isChinese
+                        ? '翻译完成后可复制'
+                        : 'Copy after translation'),
               ),
             ],
           ),
@@ -398,7 +421,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                   icon: Icon(Icons.close_rounded),
                 ),
                 child: SizedBox(
-                  height: (MediaQuery.sizeOf(context).height * 0.2).clamp(140.0, 250.0),
+                  height: (MediaQuery.sizeOf(context).height * 0.2)
+                      .clamp(140.0, 250.0),
                   child: TextField(
                     controller: _inputController,
                     maxLines: null,
@@ -448,7 +472,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   ConstrainedBox(
-                                    constraints: const BoxConstraints(maxHeight: 200),
+                                    constraints:
+                                        const BoxConstraints(maxHeight: 200),
                                     child: SingleChildScrollView(
                                       child: SelectableText(
                                         _output,
@@ -469,7 +494,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                                     children: List.generate(
                                       5,
                                       (index) => ToolChoiceChip(
-                                        label: context.l10n.toolsTransStarCount(index + 1),
+                                        label: context.l10n
+                                            .toolsTransStarCount(index + 1),
                                         selected: _currentRating == index + 1,
                                         onTap: () => _updateRating(index + 1),
                                         accentColor: accent,
@@ -546,7 +572,9 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             expand: true,
           );
           final translateButton = SparkleButton(
-            label: _isLoading ? context.l10n.toolsTransTranslating : context.l10n.toolsTransStart,
+            label: _isLoading
+                ? context.l10n.toolsTransTranslating
+                : context.l10n.toolsTransStart,
             onPressed: _isLoading ? null : _translate,
             icon: Icon(Icons.auto_fix_high_rounded),
             loading: _isLoading,

@@ -17,6 +17,7 @@ This bridge:
 Integration: Called from BehaviorSignalCollector.handle_behavior_pattern_event()
 after the existing replanner call, or as a dedicated event consumer.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -93,6 +94,7 @@ class BehaviorInterventionBridge:
         solution_text: str | None = None,
         frequency: int = 1,
         evidence_ids: list[str] | None = None,
+        extra_diagnosis_payload: dict | None = None,
     ) -> InterventionRecord | None:
         """Create an InterventionRecord from a behavior pattern detection.
 
@@ -147,9 +149,7 @@ class BehaviorInterventionBridge:
         )
         cohort_profile = await self._get_cohort_profile(user_id)
         delivery_strategy = (
-            await self.strategy_learner.get_best_strategy(
-                user_id, trigger_type, cohort_profile=cohort_profile
-            )
+            await self.strategy_learner.get_best_strategy(user_id, trigger_type, cohort_profile=cohort_profile)
             or default_strategy
         )
 
@@ -166,6 +166,8 @@ class BehaviorInterventionBridge:
             "default_delivery_strategy": default_strategy.value,
             "cohort_profile": cohort_profile or {},
         }
+        if isinstance(extra_diagnosis_payload, dict):
+            diagnosis.update(extra_diagnosis_payload)
 
         # 7. Create the record
         record = await self.record_service.create_record(
@@ -230,13 +232,12 @@ class BehaviorInterventionBridge:
     ) -> DeliveryChannel:
         lowered_pattern_name = pattern_name.lower()
         lowered_pattern_type = pattern_type.lower()
+        if lowered_pattern_name == "task stuck intervention":
+            return DeliveryChannel.CHAT
         if (
             confidence >= 0.8
             and frequency >= 3
-            and (
-                lowered_pattern_name in _MICRO_RESTART_PATTERNS
-                or lowered_pattern_type in _MICRO_RESTART_PATTERNS
-            )
+            and (lowered_pattern_name in _MICRO_RESTART_PATTERNS or lowered_pattern_type in _MICRO_RESTART_PATTERNS)
         ):
             return DeliveryChannel.PUSH
         return DeliveryChannel.CHAT
@@ -245,10 +246,9 @@ class BehaviorInterventionBridge:
         """Fetch minimal profile fields needed for cohort-based strategy selection."""
         try:
             from app.models.user_preferences import UserPreferencesCenter
+
             result = await self.db.execute(
-                select(UserPreferencesCenter).where(
-                    UserPreferencesCenter.user_id == user_id
-                )
+                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
             )
             prefs = result.scalar_one_or_none()
             if prefs is None:
@@ -264,13 +264,10 @@ class BehaviorInterventionBridge:
             return None
 
     async def _find_plan_card(self, legacy_plan_id: uuid.UUID) -> Card | None:
-        stmt = (
-            select(Card)
-            .where(
-                Card.card_type == CardType.PLAN,
-                Card.metadata_["legacy_plan_id"].as_string() == str(legacy_plan_id),
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card).where(
+            Card.card_type == CardType.PLAN,
+            Card.metadata_["legacy_plan_id"].as_string() == str(legacy_plan_id),
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -295,10 +292,6 @@ class BehaviorInterventionBridge:
         if plan_card_id is not None:
             conditions.append(InterventionRecord.plan_card_id == plan_card_id)
 
-        stmt = (
-            select(InterventionRecord)
-            .where(*conditions)
-            .limit(1)
-        )
+        stmt = select(InterventionRecord).where(*conditions).limit(1)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none() is not None

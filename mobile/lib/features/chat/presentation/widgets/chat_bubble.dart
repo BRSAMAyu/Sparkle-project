@@ -1123,11 +1123,18 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12.0,
                                 ),
-                                child: ContextReceiptBar(
-                                  rawMetadata:
-                                      (widget.message as ChatMessageModel)
-                                          .rawMetadata,
-                                  onActionSelected: _continueInlinePrompt,
+                                child: Column(
+                                  children: [
+                                    ContextReceiptBar(
+                                      rawMetadata:
+                                          (widget.message as ChatMessageModel)
+                                              .rawMetadata,
+                                      enabledReceiptTypes:
+                                          transparencyPreferences
+                                              .enabledReceiptTypes,
+                                      onActionSelected: _continueInlinePrompt,
+                                    ),
+                                  ],
                                 ),
                               ),
                             if (showAiSystemAccessories &&

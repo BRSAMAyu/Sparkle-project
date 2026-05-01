@@ -178,3 +178,28 @@ async def test_daily_startup_mentions_calendar_conflict_with_specific_time(db_se
     assert "高数考试" in payload["message"]
     assert "09:00-10:00" in payload["message"]
     assert payload["calendar_note"]
+
+
+@pytest.mark.asyncio
+async def test_daily_startup_mentions_calendar_exam_countdown(db_session):
+    user, plan, session_day = await _create_sprint_plan(db_session, completion_rate=0.9)
+    db_session.add(
+        CalendarEvent(
+            user_id=user.id,
+            title="计算机网络考试",
+            start_time=datetime.combine(session_day + timedelta(days=1), datetime.min.time()).replace(hour=9),
+            end_time=datetime.combine(session_day + timedelta(days=1), datetime.min.time()).replace(hour=11),
+        )
+    )
+    await db_session.commit()
+
+    service = AuroraRuntimeV1Service(wake_policy_service=_WakePolicyStub())
+    payload = await service.get_daily_startup_message(
+        active_db=db_session,
+        user_id=user.id,
+        plan_id=plan.id,
+        session_date=session_day,
+    )
+
+    assert "距「计算机网络考试」还有 1 天" in payload["message"]
+    assert payload["calendar_note"]

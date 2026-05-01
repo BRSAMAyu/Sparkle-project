@@ -9,7 +9,6 @@ import 'package:sparkle/features/user/presentation/widgets/mirror_bar.dart';
 import '../../shared/i18n_test_helper.dart';
 
 void main() {
-
   setUp(setUpI18nForTesting);
   testWidgets('mirror bar renders four dimensions and presence label',
       (tester) async {
@@ -126,6 +125,34 @@ void main() {
     expect(result.mediatedItems, isNotEmpty);
     expect(result.hiddenItemCount, 1);
     expect(result.revertActions, isNotEmpty);
+  });
+
+  test('adapter exposes recent correction history from profile context', () {
+    final adapter = Ws6ProfileMirrorAdapter();
+    final result = adapter.build(
+      transparentProfile: const {
+        'layer_1': {
+          'goals': ['连续完成计划'],
+        },
+      },
+      profileContext: {
+        'recent_corrections': [
+          {
+            'id': 'corr-1',
+            'target_id': 'achievement_motivation_response',
+            'field_name': 'achievement_motivation_response',
+            'action': 'wrong',
+            'summary': 'Mastery framing fits better now.',
+            'created_at': '2026-05-01T12:00:00',
+            'can_undo': true,
+          },
+        ],
+      },
+    );
+
+    expect(result.recentCorrections, hasLength(1));
+    expect(result.recentCorrections.single.canUndo, isTrue);
+    expect(result.recentCorrections.single.createdAtLabel, '2026-05-01');
   });
 
   test('adapter builds transparent profile from canonical transparency payload',

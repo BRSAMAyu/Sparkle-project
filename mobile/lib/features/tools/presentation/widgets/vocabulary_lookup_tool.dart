@@ -10,7 +10,9 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
+import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/vocabulary/data/services/offline_dictionary_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -104,6 +106,23 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     await notifier.lookup(word);
     if (!mounted) {
       return;
+    }
+    if (ref.read(vocabularyProvider).lookupResult != null) {
+      final contextEventId = await ref
+          .read(toolHistoryRepositoryProvider)
+          .recordVocabularyLookupCompleted(
+            lookupTerm: word,
+            surface: widget.surface.name,
+          );
+      if (!mounted) {
+        return;
+      }
+      ToolContextEffectFeedback.show(
+        context: context,
+        ref: ref,
+        toolLabel: context.l10n.vocabularyLookupTitle,
+        eventId: contextEventId,
+      );
     }
     notifier.fetchAssociations(word);
   }

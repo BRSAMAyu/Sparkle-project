@@ -786,7 +786,7 @@ class _StatusDot extends StatelessWidget {
       );
     }
     if (status == 'error') {
-      return const Icon(Icons.error, size: size, color: Colors.red);
+      return Icon(Icons.error, size: size, color: DS.error);
     }
     return Container(
       width: size,
@@ -830,7 +830,7 @@ class _StatusLabel extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
         decoration: BoxDecoration(
           color: status == 'error'
-              ? Colors.red.withValues(alpha: 0.1)
+              ? DS.error.withValues(alpha: 0.1)
               : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4),
         ),
@@ -839,7 +839,7 @@ class _StatusLabel extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: DS.fontWeightMedium,
-            color: status == 'error' ? Colors.red : color,
+            color: status == 'error' ? DS.error : color,
           ),
         ),
       );

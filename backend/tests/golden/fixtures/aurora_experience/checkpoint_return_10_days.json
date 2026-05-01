@@ -1,0 +1,16 @@
+{
+  "id": "checkpoint_return_10_days",
+  "family": "checkpoint_return",
+  "kind": "checkpoint_return",
+  "title": "Checkpoint 回归：中间隔",
+  "input": {
+    "plan_name": "高数期末冲刺",
+    "checkpoint_day": 10,
+    "checkpoint_description": "函数专题复盘",
+    "previous_summary": "",
+    "open_threads": ["导数应用题启动慢"],
+    "unclosed_questions": [],
+    "progress_facts": ["函数极限已经完成", "导数应用还剩 4 张任务"],
+    "previous_openings": []
+  }
+}

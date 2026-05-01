@@ -51,6 +51,8 @@ class AuroraTelemetryService {
     String telemetryId = '',
     String? groupId,
     String? freeformText,
+    String? conversationId,
+    String? sessionId,
   }) async {
     try {
       await _apiClient.post<void>(
@@ -64,6 +66,8 @@ class AuroraTelemetryService {
           'context_source': 'home_status_band',
           'band_status': bandStatus,
           'source': 'dashboard_correction_chip',
+          'conversation_id': conversationId,
+          'session_id': sessionId,
           if (freeformText != null && freeformText.trim().isNotEmpty)
             'freeform_text': freeformText.trim(),
           if (groupId != null) 'group_id': groupId,

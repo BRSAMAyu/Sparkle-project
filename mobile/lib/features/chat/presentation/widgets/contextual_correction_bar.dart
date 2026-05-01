@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -8,10 +10,11 @@ import 'package:sparkle/features/chat/presentation/providers/aurora_status_provi
 /// When [predictedReplyGroups] are available from the Aurora backend, shows
 /// the top group's primary options (sorted by confidence) plus the freeform
 /// fallback. Otherwise falls back to the static hardcoded chips.
-class ContextualCorrectionBar extends StatelessWidget {
+class ContextualCorrectionBar extends StatefulWidget {
   const ContextualCorrectionBar({
     required this.onRecalibrate,
     this.onSendCorrection,
+    this.onFreeformCorrectionRequested,
     this.onNotRightDirection,
     this.onMakeShorter,
     this.onGivePractice,
@@ -28,8 +31,9 @@ class ContextualCorrectionBar extends StatelessWidget {
   /// Called with the selected predicted reply option and its group id.
   /// The consumer is expected to record telemetry and send the correction
   /// with structured Aurora context rather than plain text.
-  final void Function(AuroraPredictedReplyOption option, String groupId)?
-      onSendCorrection;
+  final FutureOr<void> Function(
+      AuroraPredictedReplyOption option, String groupId)? onSendCorrection;
+  final FutureOr<void> Function()? onFreeformCorrectionRequested;
 
   /// Predicted reply groups from Aurora backend. If non-empty, used instead
   /// of the static fallback chips.
@@ -38,10 +42,25 @@ class ContextualCorrectionBar extends StatelessWidget {
   final bool visible;
 
   @override
-  Widget build(BuildContext context) {
-    if (!visible) return const SizedBox.shrink();
+  State<ContextualCorrectionBar> createState() =>
+      _ContextualCorrectionBarState();
+}
 
-    final groups = predictedReplyGroups;
+class _ContextualCorrectionBarState extends State<ContextualCorrectionBar> {
+  Timer? _ackTimer;
+  String? _acknowledgedLabel;
+
+  @override
+  void dispose() {
+    _ackTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.visible) return const SizedBox.shrink();
+
+    final groups = widget.predictedReplyGroups;
     final topGroup =
         (groups != null && groups.isNotEmpty) ? groups.first : null;
 
@@ -71,33 +90,60 @@ class ContextualCorrectionBar extends StatelessWidget {
         children: [
           ...primaryOptions.map(
             (opt) => _CorrectionChip(
-              label: opt.label,
+              presentation: auroraCorrectionPresentationFor(context, opt),
               onTap: () => _handleOptionTap(opt, groupId),
             ),
           ),
           if (freeform != null)
             _CorrectionChip(
-              label: freeform.label,
+              presentation: auroraCorrectionPresentationFor(context, freeform),
               onTap: () => _handleOptionTap(freeform, groupId),
               isAccent: true,
             )
           else
             _CorrectionChip(
-              label: context.l10n.auroraCorrectRecalibrate,
-              onTap: onRecalibrate,
+              presentation: AuroraCorrectionOptionPresentation(
+                label: context.l10n.auroraCorrectRecalibrate,
+                subtitle: context.l10n.auroraCorrectRecalibrateSubtitle,
+                icon: Icons.tune_rounded,
+              ),
+              onTap: widget.onRecalibrate,
               isAccent: true,
             ),
+          if (_acknowledgedLabel != null)
+            _CorrectionAcknowledgement(label: _acknowledgedLabel!),
         ],
       ),
     );
   }
 
+  void _showAcknowledgement(String label) {
+    _ackTimer?.cancel();
+    if (!mounted) return;
+    setState(() => _acknowledgedLabel = label);
+    _ackTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() => _acknowledgedLabel = null);
+      }
+    });
+  }
+
   void _handleOptionTap(AuroraPredictedReplyOption option, String groupId) {
+    final presentation = auroraCorrectionPresentationFor(context, option);
     if (option.isFreeform) {
-      onRecalibrate();
+      final handler = widget.onFreeformCorrectionRequested;
+      if (handler != null) {
+        unawaited(Future<void>.sync(handler));
+      } else {
+        widget.onRecalibrate();
+      }
       return;
     }
-    onSendCorrection?.call(option, groupId);
+    _showAcknowledgement(presentation.label);
+    final handler = widget.onSendCorrection;
+    if (handler != null) {
+      unawaited(Future<void>.sync(() => handler(option, groupId)));
+    }
   }
 
   Widget _buildFallback(BuildContext context) {
@@ -113,26 +159,53 @@ class ContextualCorrectionBar extends StatelessWidget {
         spacing: DS.spacing6,
         runSpacing: DS.spacing4,
         children: [
-          if (onNotRightDirection != null)
+          if (widget.onNotRightDirection != null)
             _CorrectionChip(
-              label: l10n.auroraCorrectNotRight,
-              onTap: onNotRightDirection!,
+              presentation: AuroraCorrectionOptionPresentation(
+                label: l10n.auroraCorrectNotRight,
+                subtitle: l10n.auroraCorrectNotRightSubtitle,
+                icon: Icons.report_gmailerrorred_rounded,
+              ),
+              onTap: () {
+                _showAcknowledgement(l10n.auroraCorrectNotRight);
+                widget.onNotRightDirection!();
+              },
             ),
-          if (onMakeShorter != null)
+          if (widget.onMakeShorter != null)
             _CorrectionChip(
-              label: l10n.auroraCorrectShorter,
-              onTap: onMakeShorter!,
+              presentation: AuroraCorrectionOptionPresentation(
+                label: l10n.auroraCorrectShorter,
+                subtitle: l10n.auroraCorrectShorterSubtitle,
+                icon: Icons.short_text_rounded,
+              ),
+              onTap: () {
+                _showAcknowledgement(l10n.auroraCorrectShorter);
+                widget.onMakeShorter!();
+              },
             ),
-          if (onGivePractice != null)
+          if (widget.onGivePractice != null)
             _CorrectionChip(
-              label: l10n.auroraCorrectDirect,
-              onTap: onGivePractice!,
+              presentation: AuroraCorrectionOptionPresentation(
+                label: l10n.auroraCorrectDirect,
+                subtitle: l10n.auroraCorrectDirectSubtitle,
+                icon: Icons.fitness_center_rounded,
+              ),
+              onTap: () {
+                _showAcknowledgement(l10n.auroraCorrectDirect);
+                widget.onGivePractice!();
+              },
             ),
           _CorrectionChip(
-            label: l10n.auroraCorrectRecalibrate,
-            onTap: onRecalibrate,
+            presentation: AuroraCorrectionOptionPresentation(
+              label: l10n.auroraCorrectRecalibrate,
+              subtitle: l10n.auroraCorrectRecalibrateSubtitle,
+              icon: Icons.tune_rounded,
+            ),
+            onTap: widget.onRecalibrate,
             isAccent: true,
           ),
+          if (_acknowledgedLabel != null)
+            _CorrectionAcknowledgement(label: _acknowledgedLabel!),
         ],
       ),
     );
@@ -296,26 +369,176 @@ class AuroraJudgmentTag extends StatelessWidget {
   }
 }
 
+// ── Correction presentation ──────────────────────────────────────
+
+class AuroraCorrectionOptionPresentation {
+  const AuroraCorrectionOptionPresentation({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String label;
+  final String subtitle;
+  final IconData icon;
+}
+
+AuroraCorrectionOptionPresentation auroraCorrectionPresentationFor(
+  BuildContext context,
+  AuroraPredictedReplyOption option,
+) {
+  final l10n = context.l10n;
+  final semantic = option.semanticValue.trim();
+  final label = option.label.trim();
+
+  if (option.isFreeform || semantic == 'freeform_correction') {
+    return AuroraCorrectionOptionPresentation(
+      label: l10n.auroraCorrectionFreeformLabel,
+      subtitle: l10n.auroraCorrectionFreeformSubtitle,
+      icon: Icons.edit_note_rounded,
+    );
+  }
+
+  switch (semantic) {
+    case 'risk_false_positive':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionRiskFalsePositive,
+        subtitle: l10n.auroraCorrectionRiskSubtitle,
+        icon: Icons.self_improvement_rounded,
+      );
+    case 'risk_wrong_diagnosis':
+    case 'judgment_incorrect':
+    case 'judgment_denied':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionJudgmentOff,
+        subtitle: l10n.auroraCorrectionJudgmentSubtitle,
+        icon: Icons.psychology_alt_rounded,
+      );
+    case 'risk_overstated':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionRiskOverstated,
+        subtitle: l10n.auroraCorrectionRiskSubtitle,
+        icon: Icons.speed_rounded,
+      );
+    case 'risk_temporary':
+    case 'temporary_time_conflict':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionTemporaryBusy,
+        subtitle: l10n.auroraCorrectionTemporarySubtitle,
+        icon: Icons.event_busy_rounded,
+      );
+    case 'strategy_adjust_needed':
+    case 'strategy_too_aggressive':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionStrategyAdjust,
+        subtitle: l10n.auroraCorrectionStrategySubtitle,
+        icon: Icons.route_rounded,
+      );
+    case 'strategy_too_conservative':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionStrategyFaster,
+        subtitle: l10n.auroraCorrectionStrategySubtitle,
+        icon: Icons.trending_up_rounded,
+      );
+    case 'knowledge_blocker':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionKnowledgeBlocker,
+        subtitle: l10n.auroraCorrectionKnowledgeSubtitle,
+        icon: Icons.school_rounded,
+      );
+    case 'carelessness':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectionCareless,
+        subtitle: l10n.auroraCorrectionCarelessSubtitle,
+        icon: Icons.fact_check_rounded,
+      );
+    case 'not_right_direction':
+      return AuroraCorrectionOptionPresentation(
+        label: l10n.auroraCorrectNotRight,
+        subtitle: l10n.auroraCorrectNotRightSubtitle,
+        icon: Icons.report_gmailerrorred_rounded,
+      );
+  }
+
+  final looksInternal = label.isEmpty ||
+      label == semantic ||
+      RegExp(r'^[a-z][a-z0-9_]*$').hasMatch(label);
+  if (!looksInternal) {
+    return AuroraCorrectionOptionPresentation(
+      label: label,
+      subtitle: _defaultCorrectionSubtitle(context, option),
+      icon: _defaultCorrectionIcon(option),
+    );
+  }
+
+  return AuroraCorrectionOptionPresentation(
+    label: option.isDisconfirming
+        ? l10n.auroraCorrectionGenericDisconfirm
+        : l10n.auroraCorrectionGenericConfirm,
+    subtitle: _defaultCorrectionSubtitle(context, option),
+    icon: _defaultCorrectionIcon(option),
+  );
+}
+
+String _defaultCorrectionSubtitle(
+  BuildContext context,
+  AuroraPredictedReplyOption option,
+) {
+  final l10n = context.l10n;
+  if (option.isDisconfirming) {
+    return l10n.auroraCorrectionJudgmentSubtitle;
+  }
+  switch (option.replyType) {
+    case 'strategy_choice':
+      return l10n.auroraCorrectionStrategySubtitle;
+    case 'fact_confirm':
+      return l10n.auroraCorrectionFactSubtitle;
+    case 'relational_signal':
+      return l10n.auroraCorrectionToneSubtitle;
+    case 'assumption_check':
+    default:
+      return l10n.auroraCorrectionJudgmentSubtitle;
+  }
+}
+
+IconData _defaultCorrectionIcon(AuroraPredictedReplyOption option) {
+  if (option.isDisconfirming) {
+    return Icons.report_gmailerrorred_rounded;
+  }
+  switch (option.replyType) {
+    case 'strategy_choice':
+      return Icons.route_rounded;
+    case 'fact_confirm':
+      return Icons.check_circle_outline_rounded;
+    case 'relational_signal':
+      return Icons.tune_rounded;
+    case 'assumption_check':
+    default:
+      return Icons.psychology_alt_rounded;
+  }
+}
+
 // ── Internal ────────────────────────────────────────────────────
 
 class _CorrectionChip extends StatelessWidget {
   const _CorrectionChip({
-    required this.label,
+    required this.presentation,
     required this.onTap,
     this.isAccent = false,
   });
 
-  final String label;
+  final AuroraCorrectionOptionPresentation presentation;
   final VoidCallback onTap;
   final bool isAccent;
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(999);
+    final radius = BorderRadius.circular(DS.radius8);
+    final color = isAccent ? DS.brandPrimary : DS.textSecondary;
 
     return Semantics(
       button: true,
-      label: label,
+      label: presentation.label,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
         child: Material(
@@ -328,7 +551,7 @@ class _CorrectionChip extends StatelessWidget {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(
                 horizontal: DS.spacing12,
-                vertical: DS.spacing8,
+                vertical: 7,
               ),
               decoration: BoxDecoration(
                 color: isAccent
@@ -342,18 +565,108 @@ class _CorrectionChip extends StatelessWidget {
                     : Border.all(color: Colors.transparent),
               ),
               child: ExcludeSemantics(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isAccent ? DS.brandPrimary : DS.textSecondary,
-                    fontSize: 11,
-                    fontWeight:
-                        isAccent ? DS.fontWeightMedium : DS.fontWeightRegular,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(presentation.icon, size: 14, color: color),
+                    const SizedBox(width: DS.spacing6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 190),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            presentation.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: isAccent
+                                  ? DS.fontWeightMedium
+                                  : DS.fontWeightRegular,
+                            ),
+                          ),
+                          Text(
+                            presentation.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: color.withValues(alpha: 0.72),
+                              fontSize: 10,
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CorrectionAcknowledgement extends StatelessWidget {
+  const _CorrectionAcknowledgement({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Semantics(
+      label: l10n.auroraCorrectionReceivedTitle,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: DS.semanticSuccess.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(DS.radius8),
+          border: Border.all(
+            color: DS.semanticSuccess.withValues(alpha: 0.22),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle_outline_rounded,
+              size: 15,
+              color: DS.semanticSuccess,
+            ),
+            const SizedBox(width: DS.spacing6),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.auroraCorrectionReceivedTitle,
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontSize: 11,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                ),
+                Text(
+                  l10n.auroraCorrectionReceivedSubtitle,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: 10,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

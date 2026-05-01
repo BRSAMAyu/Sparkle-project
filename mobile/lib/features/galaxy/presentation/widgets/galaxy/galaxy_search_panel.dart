@@ -33,8 +33,8 @@ class GalaxySearchPanel extends StatelessWidget {
     final colors = context.colorExtensions;
     final foreground = colors.adaptiveForeground;
     final secondary = isDarkMode
-        ? Colors.white.withValues(alpha: 0.64)
-        : Colors.black.withValues(alpha: 0.56);
+        ? DS.neutral0.withValues(alpha: 0.64)
+        : DS.galaxyShadow.withValues(alpha: 0.56);
     final responsiveMaxHeight = MediaQuery.sizeOf(context).height * 0.44;
     final panelMaxHeight =
         responsiveMaxHeight < 360 ? responsiveMaxHeight : 360.0;
@@ -51,21 +51,22 @@ class GalaxySearchPanel extends StatelessWidget {
               colors: [
                 isDarkMode
                     ? colors.panelDarkOverlayLighter
-                    : Colors.white.withValues(alpha: 0.88),
+                    : DS.neutral0.withValues(alpha: 0.88),
                 isDarkMode
-                    ? Colors.white.withValues(alpha: 0.03)
+                    ? DS.neutral0.withValues(alpha: 0.03)
                     : DS.info.withValues(alpha: 0.03),
               ],
             ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isDarkMode
-                  ? Colors.white.withValues(alpha: 0.12)
-                  : Colors.black.withValues(alpha: 0.08),
+                  ? DS.neutral0.withValues(alpha: 0.12)
+                  : DS.galaxyShadow.withValues(alpha: 0.08),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDarkMode ? 0.22 : 0.08),
+                color:
+                    DS.galaxyShadow.withValues(alpha: isDarkMode ? 0.22 : 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 16),
               ),
@@ -113,12 +114,12 @@ class GalaxySearchPanel extends StatelessWidget {
                       hintStyle: TextStyle(color: secondary),
                       prefixIcon: Icon(Icons.search_rounded, color: secondary),
                       filled: true,
-                      fillColor: (isDarkMode ? Colors.white : Colors.black)
+                      fillColor: (isDarkMode ? DS.neutral0 : DS.neutral900)
                           .withValues(alpha: isDarkMode ? 0.05 : 0.03),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: (isDarkMode ? Colors.white : Colors.black)
+                          color: (isDarkMode ? DS.neutral0 : DS.neutral900)
                               .withValues(alpha: 0.08),
                         ),
                       ),
@@ -159,7 +160,7 @@ class GalaxySearchPanel extends StatelessWidget {
                                 separatorBuilder: (_, __) => Divider(
                                   height: 1,
                                   color:
-                                      (isDarkMode ? Colors.white : Colors.black)
+                                      (isDarkMode ? DS.neutral0 : DS.neutral900)
                                           .withValues(alpha: 0.08),
                                 ),
                                 itemBuilder: (context, index) {
@@ -187,7 +188,8 @@ class GalaxySearchPanel extends StatelessWidget {
                                           height: 12,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: color.withValues(alpha: 0.92),
+                                            color:
+                                                color.withValues(alpha: 0.92),
                                             boxShadow: [
                                               BoxShadow(
                                                 color: color.withValues(
@@ -257,8 +259,8 @@ class _SearchHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final secondary = isDarkMode
-        ? Colors.white.withValues(alpha: 0.62)
-        : Colors.black.withValues(alpha: 0.56);
+        ? DS.neutral0.withValues(alpha: 0.62)
+        : DS.galaxyShadow.withValues(alpha: 0.56);
 
     return Center(
       child: Column(

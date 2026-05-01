@@ -46,56 +46,58 @@ class AgentMessageRenderer extends ConsumerWidget {
   final void Function(String actionId, bool confirmed)? onConfirmation;
 
   /// Map of widget type strings to their collapsible chip config.
-  Map<String, _WidgetTypeConfig> _widgetConfigs(BuildContext context) => <String, _WidgetTypeConfig>{
-    'task_card': const _WidgetTypeConfig(
-      label: '任务',
-      icon: Icons.check_circle_outline,
-    ),
-    'knowledge_card': _WidgetTypeConfig(
-      label: context.l10n.chatWidgetKnowledge,
-      icon: Icons.auto_stories,
-    ),
-    'task_list': _WidgetTypeConfig(
-      label: context.l10n.chatActionTaskList,
-      icon: Icons.list_alt,
-    ),
-    'plan_card': const _WidgetTypeConfig(
-      label: '计划',
-      icon: Icons.map_outlined,
-    ),
-    'plan_context_summary': _WidgetTypeConfig(
-      label: context.l10n.chatWidgetPlanSummary,
-      icon: Icons.summarize_outlined,
-    ),
-    'plan_state': _WidgetTypeConfig(
-      label: context.l10n.chatWidgetPlanStatus,
-      icon: Icons.flag_outlined,
-    ),
-    'prism_card': _WidgetTypeConfig(
-      label: context.l10n.chatWidgetCognitiveAnalysis,
-      icon: Icons.psychology_outlined,
-    ),
-    'achievement_card': const _WidgetTypeConfig(
-      label: '成就',
-      icon: Icons.emoji_events_outlined,
-      accentColor: Colors.amber,
-    ),
-    'error_card': const _WidgetTypeConfig(
-      label: '错题',
-      icon: Icons.menu_book_outlined,
-    ),
-  };
+  Map<String, _WidgetTypeConfig> _widgetConfigs(BuildContext context) =>
+      <String, _WidgetTypeConfig>{
+        'task_card': const _WidgetTypeConfig(
+          label: '任务',
+          icon: Icons.check_circle_outline,
+        ),
+        'knowledge_card': _WidgetTypeConfig(
+          label: context.l10n.chatWidgetKnowledge,
+          icon: Icons.auto_stories,
+        ),
+        'task_list': _WidgetTypeConfig(
+          label: context.l10n.chatActionTaskList,
+          icon: Icons.list_alt,
+        ),
+        'plan_card': const _WidgetTypeConfig(
+          label: '计划',
+          icon: Icons.map_outlined,
+        ),
+        'plan_context_summary': _WidgetTypeConfig(
+          label: context.l10n.chatWidgetPlanSummary,
+          icon: Icons.summarize_outlined,
+        ),
+        'plan_state': _WidgetTypeConfig(
+          label: context.l10n.chatWidgetPlanStatus,
+          icon: Icons.flag_outlined,
+        ),
+        'prism_card': _WidgetTypeConfig(
+          label: context.l10n.chatWidgetCognitiveAnalysis,
+          icon: Icons.psychology_outlined,
+        ),
+        'achievement_card': _WidgetTypeConfig(
+          label: '成就',
+          icon: Icons.emoji_events_outlined,
+          accentColor: DS.warning,
+        ),
+        'error_card': const _WidgetTypeConfig(
+          label: '错题',
+          icon: Icons.menu_book_outlined,
+        ),
+      };
 
-  _WidgetTypeConfig _collaborationConfig(BuildContext context) => _WidgetTypeConfig(
-    label: context.l10n.chatWidgetCollaborationProcess,
-    icon: Icons.hub_outlined,
-  );
+  _WidgetTypeConfig _collaborationConfig(BuildContext context) =>
+      _WidgetTypeConfig(
+        label: context.l10n.chatWidgetCollaborationProcess,
+        icon: Icons.hub_outlined,
+      );
 
   _WidgetTypeConfig _errorInfoConfig(BuildContext context) => _WidgetTypeConfig(
-    label: context.l10n.chatWidgetErrorHint,
-    icon: Icons.warning_amber,
-    accentColor: Colors.redAccent,
-  );
+        label: context.l10n.chatWidgetErrorHint,
+        icon: Icons.warning_amber,
+        accentColor: DS.error,
+      );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -257,8 +259,12 @@ class AgentMessageRenderer extends ConsumerWidget {
         ),
       );
 
-  Widget _buildAchievementCard(BuildContext context, Map<String, dynamic> data) {
-    final name = (data['name'] ?? data['title'] ?? context.l10n.chatWidgetAchievementUnlock).toString();
+  Widget _buildAchievementCard(
+      BuildContext context, Map<String, dynamic> data) {
+    final name = (data['name'] ??
+            data['title'] ??
+            context.l10n.chatWidgetAchievementUnlock)
+        .toString();
     final desc = (data['description'] ?? '').toString();
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -266,7 +272,7 @@ class AgentMessageRenderer extends ConsumerWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
+            Icon(Icons.emoji_events, color: DS.warning, size: 32),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -286,20 +292,24 @@ class AgentMessageRenderer extends ConsumerWidget {
 
   Widget _buildErrorBookCard(BuildContext context, Map<String, dynamic> data) {
     final subject = (data['subject'] ?? data['subject_code'] ?? '').toString();
-    final question = (data['question_text'] ?? data['title'] ?? '错题').toString();
+    final question =
+        (data['question_text'] ?? data['title'] ?? '错题').toString();
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(Icons.menu_book, color: Colors.orange, size: 28),
+            Icon(Icons.menu_book, color: DS.warning, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(question, style: Theme.of(context).textTheme.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(question,
+                      style: Theme.of(context).textTheme.titleSmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                   if (subject.isNotEmpty)
                     Text(subject, style: Theme.of(context).textTheme.bodySmall),
                 ],
@@ -314,80 +324,80 @@ class AgentMessageRenderer extends ConsumerWidget {
   Widget _buildErrorCard(BuildContext context, List<ErrorInfo> errors) {
     final errorConfig = _errorInfoConfig(context);
     return _wrap(
-        label: errorConfig.label,
-        icon: errorConfig.icon,
-        accentColor: errorConfig.accentColor,
-        child: Card(
-          color: Theme.of(context).colorScheme.errorContainer,
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(DS.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber,
+      label: errorConfig.label,
+      icon: errorConfig.icon,
+      accentColor: errorConfig.accentColor,
+      child: Card(
+        color: Theme.of(context).colorScheme.errorContainer,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: Padding(
+          padding: const EdgeInsets.all(DS.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(width: DS.sm),
+                  Text(
+                    context.l10n.chatActionErrorTitle,
+                    style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
-                    const SizedBox(width: DS.sm),
-                    Text(
-                      context.l10n.chatActionErrorTitle,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.sm),
+              ...errors.map(
+                (e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(top: 7, right: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: DS.sm),
-                ...errors.map(
-                  (e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          margin: const EdgeInsets.only(top: 7, right: 8),
-                          decoration: BoxDecoration(
+                      Expanded(
+                        child: Text(
+                          e.message,
+                          style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
-                            shape: BoxShape.circle,
                           ),
                         ),
-                        Expanded(
-                          child: Text(
-                            e.message,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                if (errors.any((e) => e.suggestion != null))
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      context.l10n.chatActionErrorSuggestion(
-                        errors
-                            .firstWhere((e) => e.suggestion != null)
-                            .suggestion!,
-                      ),
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(fontStyle: FontStyle.italic),
+              ),
+              if (errors.any((e) => e.suggestion != null))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    context.l10n.chatActionErrorSuggestion(
+                      errors
+                          .firstWhere((e) => e.suggestion != null)
+                          .suggestion!,
                     ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(fontStyle: FontStyle.italic),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildConfirmationCard(

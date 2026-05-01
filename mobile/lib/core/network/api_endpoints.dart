@@ -200,8 +200,11 @@ class ApiEndpoints {
   static const String auroraModelingStatus = '/aurora/modeling-status';
   static const String auroraPredictedOptions = '/aurora/predicted-options';
   static const String auroraCoreSessionStart = '/aurora/core-session/start';
+  static const String auroraCoreSessionResume = '/aurora/core-session/resume';
   static const String auroraCoreSessionRespond = '/aurora/core-session/respond';
   static const String auroraCoreSessionCurrent = '/aurora/core-session/current';
+  static String auroraCoreSessionPause(String id) =>
+      '/aurora/core-session/$id/pause';
   static String auroraCoreSessionClose(String id) =>
       '/aurora/core-session/$id/close';
   static const String auroraChipTelemetry = '/aurora/telemetry/chip-selected';

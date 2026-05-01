@@ -29,10 +29,73 @@ class CommunitySignalBridge:
 
     GROUP_WEIGHT_FACTOR = 0.7
     KNOWLEDGE_SHARE_BONUS = 5.0  # user_node_status.mastery_score uses 0-100 scale
+    AURORA_ALLOWED_SOCIAL_EVENT_KINDS = frozenset(
+        {
+            "partner_checkin",
+            "accountability_contract",
+            "shared_goal_progress",
+            "direct_mention",
+        }
+    )
+    AURORA_FORBIDDEN_SOCIAL_KEYS = frozenset(
+        {
+            "actor_name",
+            "display_name",
+            "email",
+            "full_name",
+            "nickname",
+            "phone",
+            "raw_content",
+            "username",
+        }
+    )
 
     def __init__(self, db: AsyncSession, redis=None) -> None:
         self.db = db
         self.redis = redis
+
+    @classmethod
+    def sanitize_for_aurora_context(
+        cls,
+        event: dict,
+        *,
+        viewer_user_id: UUID | str | None = None,
+    ) -> dict | None:
+        """Return a privacy-safe social event for Aurora prompt/receipt use.
+
+        The bridge only exposes role-level labels and high-level event kinds.
+        It intentionally strips names, raw message bodies, and contact fields so
+        Aurora can adjust tone without turning community data into surveillance.
+        """
+        if not isinstance(event, dict):
+            return None
+
+        kind = str(event.get("kind") or event.get("event_type") or "").strip()
+        if kind not in cls.AURORA_ALLOWED_SOCIAL_EVENT_KINDS:
+            return None
+
+        actor_id = str(event.get("actor_id") or event.get("sender_id") or "").strip()
+        viewer = str(viewer_user_id or "").strip()
+        if actor_id and viewer and actor_id == viewer:
+            return None
+
+        sanitized: dict = {
+            "kind": kind,
+            "source": str(event.get("source") or "community_signal_bridge"),
+            "label": str(event.get("label") or "你的学习伙伴").strip() or "你的学习伙伴",
+            "summary_line": str(event.get("summary_line") or "").strip(),
+            "relevance": float(event.get("relevance") or 0.0),
+            "privacy_boundary": "仅使用匿名角色标签，不暴露伙伴姓名、原文或联系方式。",
+        }
+        created_at = event.get("created_at") or event.get("timestamp")
+        if created_at:
+            sanitized["created_at"] = str(created_at)
+
+        for key in cls.AURORA_FORBIDDEN_SOCIAL_KEYS:
+            sanitized.pop(key, None)
+        if not sanitized["summary_line"]:
+            return None
+        return sanitized
 
     async def handle_group_task_completed(self, event: dict) -> None:
         if str(event.get("source") or "") != "group":

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -13,6 +14,10 @@ from app.core.profile_context import ProfileContext
 from app.core.user_insight_state import UserInsightState
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
+from app.services.task_stuck_signal_service import (
+    TaskStuckPatternAnalyzer,
+    load_recent_task_execution_signals,
+)
 
 
 def _utcnow() -> datetime:
@@ -86,6 +91,9 @@ class AuroraControlSurfaceService:
     ) -> dict[str, Any]:
         profile_context = await ProfileContextService(self.db, self.redis).get_profile_context(user_id)
         profile_payload = profile_context.to_prompt_context()
+        calendar_context = await self._load_calendar_context(user_id)
+        last_correction_effect = await self._load_last_correction_effect(user_id)
+        task_health = await self._load_task_health_context(user_id)
         runtime_state = await self._load_runtime_state(user_id=user_id, conversation_id=conversation_id)
         persisted_snapshot = await self._load_persisted_snapshot(user_id=user_id)
         self_model = await SparkleSelfModelService(self.redis).get_readout_summary(
@@ -108,6 +116,8 @@ class AuroraControlSurfaceService:
                 persisted_snapshot=persisted_snapshot,
                 control_surface=control_surface.model_dump(mode="json"),
                 requested_conversation_id=conversation_id,
+                calendar_context=calendar_context,
+                task_health=task_health,
             ),
             self._build_goal_model_facet(
                 profile_context=profile_context,
@@ -149,15 +159,23 @@ class AuroraControlSurfaceService:
             active_count=active_count,
         )
         summary = self._band_status_summary(band_status, facets)
+        time_context = self._build_time_context(calendar_context)
+        status_evidence_chain = self._build_status_evidence_chain(facets, time_context)
+        memory_references = self._build_memory_references(profile_context=profile_context, facets=facets)
+        next_step_suggestion = self._build_next_step_suggestion(
+            band_status=band_status,
+            facets=facets,
+            wake_eligibility=wake_eligibility.model_dump(),
+            time_context=time_context,
+        )
+        self_evaluation = self._build_self_evaluation(facets=facets, band_status=band_status)
 
         matched_conversation_id = _strip(getattr(runtime_state, "conversation_id", None))
         normalized_requested = _strip(conversation_id)
         scene_alignment = "matched"
         if normalized_requested:
             scene_alignment = (
-                "matched"
-                if matched_conversation_id and matched_conversation_id == normalized_requested
-                else "fallback"
+                "matched" if matched_conversation_id and matched_conversation_id == normalized_requested else "fallback"
             )
 
         # Build predicted reply options from current Aurora state
@@ -179,7 +197,9 @@ class AuroraControlSurfaceService:
             "aurora_active": aurora_active,
             "runtime_enabled": bool(control_surface.runtime_enabled),
             "overall_status": band_status,
-            "legacy_status": "recalibrating" if recalibrating else ("ready" if ready_count == len(facets) else "partial"),
+            "legacy_status": (
+                "recalibrating" if recalibrating else ("ready" if ready_count == len(facets) else "partial")
+            ),
             "energy_level": energy.current_level,
             "summary": summary,
             "progress": {
@@ -189,9 +209,16 @@ class AuroraControlSurfaceService:
             },
             "wake_eligibility": wake_eligibility.model_dump(),
             "predicted_reply_options": predicted_reply_options,
+            "status_evidence_chain": status_evidence_chain,
+            "memory_references": memory_references,
+            "next_step_suggestion": next_step_suggestion,
+            "self_evaluation": self_evaluation,
             "conversation_id": matched_conversation_id or normalized_requested or None,
             "requested_conversation_id": normalized_requested or None,
             "scene_alignment": scene_alignment,
+            "time_context": time_context,
+            "last_correction_effect": last_correction_effect,
+            "task_health": task_health,
             "surface": _strip(getattr(runtime_state, "surface", None))
             or _strip(getattr(persisted_snapshot, "last_surface", None))
             or None,
@@ -238,6 +265,45 @@ class AuroraControlSurfaceService:
             return None
         fallback.sort(key=lambda item: item.updated_at, reverse=True)
         return fallback[0]
+
+    async def _load_calendar_context(self, user_id: UUID) -> dict[str, Any]:
+        if self.db is None:
+            return {}
+        try:
+            from app.services.calendar_service import CalendarService
+
+            return await CalendarService(self.db).get_busy_free_context(user_id=user_id, days=7)
+        except Exception:
+            return {}
+
+    async def _load_last_correction_effect(self, user_id: UUID) -> dict[str, Any]:
+        if self.redis is None:
+            return {"visible": False}
+        try:
+            raw = await self.redis.get(f"aurora:last_correction_effect:{user_id}")
+        except Exception:
+            return {"visible": False}
+        if not raw:
+            return {"visible": False}
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        try:
+            payload = json.loads(str(raw))
+        except (TypeError, ValueError):
+            return {"visible": False}
+        if not isinstance(payload, dict):
+            return {"visible": False}
+        payload["visible"] = bool(payload.get("visible"))
+        return payload
+
+    async def _load_task_health_context(self, user_id: UUID) -> dict[str, Any]:
+        if self.db is None:
+            return {"visible": False}
+        try:
+            events = await load_recent_task_execution_signals(self.db, user_id=user_id)
+            return TaskStuckPatternAnalyzer.summarize_health(events)
+        except Exception:
+            return {"visible": False}
 
     async def _load_persisted_snapshot(
         self,
@@ -292,10 +358,14 @@ class AuroraControlSurfaceService:
             for value in _as_dict(insight_state.confidence_metadata).values()
             if _safe_float(value) is not None
         ]
-        confidence = round(
-            sum(confidence_values) / len(confidence_values),
-            4,
-        ) if confidence_values else round(min(signal_count / 5.0, 1.0), 4)
+        confidence = (
+            round(
+                sum(confidence_values) / len(confidence_values),
+                4,
+            )
+            if confidence_values
+            else round(min(signal_count / 5.0, 1.0), 4)
+        )
         status = "ready" if signal_count >= 3 else ("partial" if signal_count >= 1 else "missing")
 
         summary = "Aurora 还没有形成稳定的用户画像。"
@@ -337,13 +407,9 @@ class AuroraControlSurfaceService:
 
         signals: list[str] = []
         if harness.get("task_completion_rate") is not None:
-            signals.append(
-                f"任务完成率 {round(_clamp_unit(harness.get('task_completion_rate')) * 100):.0f}%"
-            )
+            signals.append(f"任务完成率 {round(_clamp_unit(harness.get('task_completion_rate')) * 100):.0f}%")
         if harness.get("context_hit_rate") is not None:
-            signals.append(
-                f"策略命中率 {round(_clamp_unit(harness.get('context_hit_rate')) * 100):.0f}%"
-            )
+            signals.append(f"策略命中率 {round(_clamp_unit(harness.get('context_hit_rate')) * 100):.0f}%")
         if recalibration and reasons:
             signals.append(reasons[0])
 
@@ -380,6 +446,8 @@ class AuroraControlSurfaceService:
         persisted_snapshot: AuroraCognitiveSnapshot | None,
         control_surface: dict[str, Any],
         requested_conversation_id: str | None,
+        calendar_context: dict[str, Any] | None,
+        task_health: dict[str, Any] | None,
     ) -> dict[str, Any]:
         insight_state = profile_context.user_insight_state or UserInsightState()
         current_state = _as_dict(insight_state.current_state)
@@ -402,6 +470,8 @@ class AuroraControlSurfaceService:
                 bool(tensions),
                 bool(latent_threads),
                 bool(getattr(runtime_state, "current_intent", None)),
+                bool(_as_dict(calendar_context).get("next_time_conflict")),
+                bool(_as_dict(task_health).get("visible")),
             )
             if present
         )
@@ -413,6 +483,12 @@ class AuroraControlSurfaceService:
         overload = _strip(current_state.get("predicted_overload_risk"))
         if requested and actual and requested != actual:
             summary = "当前情景读数回退到了最近一次 Aurora 运行快照。"
+        elif _as_dict(calendar_context).get("next_time_conflict"):
+            conflict = _as_dict(_as_dict(calendar_context).get("next_time_conflict"))
+            title = _strip(conflict.get("title")) or "当前计划"
+            summary = f"当前情景里有时间冲突：“{title}”可能需要快速调整。"
+        elif _as_dict(task_health).get("status") == "needs_attention":
+            summary = _strip(_as_dict(task_health).get("label")) or "最近任务节奏需要轻量关注。"
         elif overload:
             summary = f"当前情景判断显示过载风险为「{overload}」。"
         elif runtime_surface_state.get("in_detour") is True:
@@ -439,10 +515,15 @@ class AuroraControlSurfaceService:
         intent_type = _strip(getattr(getattr(runtime_state, "current_intent", None), "intent_type", None))
         if intent_type:
             signals.append(f"当前意图: {intent_type}")
+        time_context = self._build_time_context(calendar_context)
+        if time_context.get("label"):
+            signals.append(str(time_context["label"]))
+        task_health_payload = _as_dict(task_health)
+        if task_health_payload.get("visible") and task_health_payload.get("label"):
+            signals.append(str(task_health_payload["label"]))
 
-        freshness = (
-            _freshness_from_iso(getattr(runtime_state, "updated_at", None))
-            or _freshness_from_iso(getattr(persisted_snapshot, "updated_at", None))
+        freshness = _freshness_from_iso(getattr(runtime_state, "updated_at", None)) or _freshness_from_iso(
+            getattr(persisted_snapshot, "updated_at", None)
         )
         return self._facet_payload(
             key="scene_model",
@@ -457,8 +538,71 @@ class AuroraControlSurfaceService:
                 "latent_thread_count": len(latent_threads),
                 "tension_count": len(tensions),
                 "runtime_enabled": bool(_as_dict(control_surface).get("runtime_enabled")),
+                "time_context": time_context,
+                "task_health": task_health_payload,
             },
         )
+
+    @staticmethod
+    def _build_time_context(calendar_context: dict[str, Any] | None) -> dict[str, Any]:
+        context = _as_dict(calendar_context)
+        if not context:
+            return {"visible": False}
+
+        conflict = _as_dict(context.get("next_time_conflict"))
+        exam = _as_dict(context.get("exam_urgency"))
+        today = _as_dict(context.get("today_profile"))
+        density = _strip(today.get("density") or context.get("workload_density"))
+        day_type = _strip(today.get("day_type") or context.get("day_type"))
+
+        if conflict:
+            label = _strip(conflict.get("message")) or "时间可能不够"
+            return {
+                "visible": True,
+                "kind": "time_conflict",
+                "severity": "warning",
+                "label": label,
+                "subtitle": _strip(conflict.get("title")),
+                "action": "quick_adjust",
+                "conflict": conflict,
+            }
+
+        days_left = exam.get("days_left")
+        try:
+            days_left_int = int(days_left)
+        except (TypeError, ValueError):
+            days_left_int = None
+        if days_left_int is not None and days_left_int <= 14:
+            title = _strip(exam.get("title")) or "考试"
+            label = "今天考试" if days_left_int == 0 else f"距考试还有 {days_left_int} 天"
+            return {
+                "visible": True,
+                "kind": "exam_countdown",
+                "severity": "info" if days_left_int > 3 else "warning",
+                "label": label,
+                "subtitle": title,
+                "action": "open_daily_plan",
+            }
+
+        if density == "high":
+            return {
+                "visible": True,
+                "kind": "busy_day",
+                "severity": "info",
+                "label": "今天日程较满",
+                "subtitle": "开场会更简洁",
+                "action": "open_daily_plan",
+            }
+        if day_type == "weekend":
+            return {
+                "visible": True,
+                "kind": "weekend",
+                "severity": "neutral",
+                "label": "周末节奏",
+                "subtitle": "可留复盘缓冲",
+                "action": "open_daily_plan",
+            }
+        return {"visible": False}
 
     def _build_goal_model_facet(
         self,
@@ -561,6 +705,10 @@ class AuroraControlSurfaceService:
         signals: list[str],
         meta: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        clean_signals = [item for item in signals if _strip(item)][:3]
+        evidence_chain = self._clean_evidence_chain([summary, *clean_signals])
+        meta_payload = dict(meta or {})
+        meta_payload.setdefault("evidence_chain", evidence_chain)
         return {
             "key": key,
             "label": self._FACET_LABELS[key],
@@ -569,9 +717,114 @@ class AuroraControlSurfaceService:
             "confidence": confidence,
             "freshness_seconds": freshness_seconds,
             "signal_count": signal_count,
-            "signals": [item for item in signals if _strip(item)][:3],
-            "meta": meta or {},
+            "signals": clean_signals,
+            "meta": meta_payload,
         }
+
+    def _build_status_evidence_chain(
+        self,
+        facets: list[dict[str, Any]],
+        time_context: dict[str, Any],
+    ) -> list[str]:
+        items: list[str] = []
+        if time_context.get("visible") and _strip(time_context.get("label")):
+            subtitle = _strip(time_context.get("subtitle"))
+            label = _strip(time_context.get("label"))
+            items.append(f"{label} · {subtitle}" if subtitle else label)
+
+        priority = {"scene_model": 0, "self_model": 1, "goal_model": 2, "user_model": 3}
+        ordered_facets = sorted(facets, key=lambda item: priority.get(str(item.get("key")), 9))
+        for facet in ordered_facets:
+            items.append(facet.get("summary"))
+        for facet in ordered_facets:
+            meta = _as_dict(facet.get("meta"))
+            evidence_chain = _as_list(meta.get("evidence_chain"))
+            items.extend(evidence_chain[1:] if evidence_chain else [])
+            items.extend(_as_list(facet.get("signals")))
+        return self._clean_evidence_chain(items)[:5]
+
+    def _build_memory_references(
+        self,
+        *,
+        profile_context: ProfileContext,
+        facets: list[dict[str, Any]],
+    ) -> list[str]:
+        references: list[str] = []
+        insight_state = profile_context.user_insight_state or UserInsightState()
+        for goal in list(insight_state.goals or [])[:2]:
+            label = _strip(_as_dict(goal).get("label") or _as_dict(goal).get("goal") or _as_dict(goal).get("summary"))
+            if label:
+                references.append(f"最近目标锚点：{label}")
+        for weak_spot in list(profile_context.knowledge_summary.weak_spots or [])[:1]:
+            references.append(f"近期薄弱点：{weak_spot.node_name}")
+        for pattern in list(profile_context.cognitive_summary.active_patterns or [])[:1]:
+            references.append(f"常见推进方式：{pattern.pattern_name}")
+        for facet in facets:
+            if facet.get("key") in {"user_model", "goal_model"}:
+                summary = _strip(facet.get("summary"))
+                if summary:
+                    references.append(summary)
+        return self._clean_evidence_chain(references)[:4]
+
+    def _build_next_step_suggestion(
+        self,
+        *,
+        band_status: str,
+        facets: list[dict[str, Any]],
+        wake_eligibility: dict[str, Any],
+        time_context: dict[str, Any],
+    ) -> str:
+        if time_context.get("kind") == "time_conflict":
+            return "先把冲突任务压缩到一个可完成的最小动作。"
+        if band_status == "risk_found":
+            return "先确认卡住的原因，再决定要不要进入深度对话。"
+        if band_status == "needs_confirm":
+            return "先点选一个最接近的原因，Aurora 会按这个改判。"
+        if band_status == "calibration_available" and wake_eligibility.get("can_user_wake"):
+            return "如果这是关键节点，可以用一次深度对话校准计划。"
+        goal_facet = next((item for item in facets if item.get("key") == "goal_model"), None)
+        if goal_facet and _strip(goal_facet.get("summary")):
+            return "围绕当前目标先推进一个 10 分钟的小步骤。"
+        return "先保持当前节奏，等出现更强信号再调整。"
+
+    def _build_self_evaluation(
+        self,
+        *,
+        facets: list[dict[str, Any]],
+        band_status: str,
+    ) -> dict[str, Any]:
+        self_facet = next((item for item in facets if item.get("key") == "self_model"), {})
+        confidence = _safe_float(self_facet.get("confidence"))
+        summary = _strip(self_facet.get("summary"))
+        risk = ""
+        if band_status == "risk_found":
+            risk = "这个判断可能受最近失败任务影响，适合让用户确认原因。"
+        elif band_status == "needs_confirm":
+            risk = "当前证据还不完整，需要用户轻量纠正后再继续。"
+        elif band_status == "calibration_available":
+            risk = "证据较充分，但深度校准仍应由用户主动触发。"
+        else:
+            risk = "当前只做轻量判断，不主动打断。"
+        return {
+            "confidence": _clamp_unit(confidence, default=0.0),
+            "why": summary or self._band_status_summary(band_status, facets),
+            "risk": risk,
+        }
+
+    @staticmethod
+    def _clean_evidence_chain(items: list[Any]) -> list[str]:
+        result: list[str] = []
+        seen: set[str] = set()
+        blocked_prefixes = ("会话:", "表面:")
+        for item in items:
+            text = _strip(item)
+            if not text or text.startswith(blocked_prefixes):
+                continue
+            if text in seen:
+                continue
+            seen.add(text)
+            result.append(text)
+        return result
 
     def _collect_user_state_freshness(self, profile_context: ProfileContext) -> list[int]:
         payload = _as_dict(profile_context.user_state_v1)
@@ -642,15 +895,9 @@ class AuroraControlSurfaceService:
         if not insight:
             return {}
         return {
-            "available_time_confirmed": bool(
-                _as_dict(getattr(insight, "current_state", None)).get("available_time")
-            ),
+            "available_time_confirmed": bool(_as_dict(getattr(insight, "current_state", None)).get("available_time")),
             "goal_type_confirmed": bool(
-                _as_list(
-                    profile_context.user_insight_state.goals
-                    if profile_context.user_insight_state
-                    else None
-                )
+                _as_list(profile_context.user_insight_state.goals if profile_context.user_insight_state else None)
             ),
         }
 

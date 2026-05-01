@@ -1,0 +1,12 @@
+{
+  "id": "task_stuck_confusion",
+  "family": "task_stuck",
+  "kind": "task_stuck",
+  "title": "任务卡点：内容理解卡住",
+  "input": {
+    "description": "连续 3 张任务都卡在 TCP 滑动窗口",
+    "task_titles": ["滑动窗口例题", "拥塞控制对比", "可靠传输小测"],
+    "dominant_issue": "stuck",
+    "next_task_title": "TCP 状态转换复盘"
+  }
+}

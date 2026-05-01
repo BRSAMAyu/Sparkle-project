@@ -38,7 +38,7 @@ class LearningReportShareCardFactory {
                   width: isCompact ? 34 : 40,
                   height: isCompact ? 34 : 40,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.72),
+                    color: DS.neutral0.withValues(alpha: 0.72),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -81,11 +81,14 @@ class LearningReportShareCardFactory {
               runSpacing: DS.spacing6,
               children: [
                 if (metadata['active_plans'] != null)
-                  _chip(S.communityShareActivePlans, '${metadata['active_plans']}'),
+                  _chip(S.communityShareActivePlans,
+                      '${metadata['active_plans']}'),
                 if (metadata['unlocked_achievements'] != null)
-                  _chip(S.communityShareAchievements, '${metadata['unlocked_achievements']}'),
+                  _chip(S.communityShareAchievements,
+                      '${metadata['unlocked_achievements']}'),
                 if (metadata['flame_brightness'] != null)
-                  _chip(S.communityShareBrightness, metadata['flame_brightness'].toString()),
+                  _chip(S.communityShareBrightness,
+                      metadata['flame_brightness'].toString()),
               ],
             ),
           ],
@@ -100,7 +103,7 @@ class LearningReportShareCardFactory {
           vertical: DS.spacing4,
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.7),
+          color: DS.neutral0.withValues(alpha: 0.7),
           borderRadius: DS.borderRadius12,
         ),
         child: Text(

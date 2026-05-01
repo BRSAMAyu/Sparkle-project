@@ -187,7 +187,8 @@ class GalaxyMonitoringIntegration {
   void _onQualityChanged() {
     // 质量变化时的回调
     debugPrint(
-        'Galaxy quality adjusted to: ${(_currentQuality * 100).toStringAsFixed(0)}%',);
+      'Galaxy quality adjusted to: ${(_currentQuality * 100).toStringAsFixed(0)}%',
+    );
   }
 
   /// 获取当前性能摘要
@@ -387,7 +388,7 @@ class _PerformanceIndicator extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.7),
+        color: DS.galaxyShadow.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: summary.statusColor.withValues(alpha: 0.5),
@@ -422,15 +423,15 @@ class _PerformanceIndicator extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'FPS: ${summary.report.averageFps.toStringAsFixed(1)}',
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: DS.neutral0.withValues(alpha: 0.7),
               fontSize: 10,
             ),
           ),
           Text(
             'Quality: ${(summary.quality * 100).toStringAsFixed(0)}%',
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: DS.neutral0.withValues(alpha: 0.7),
               fontSize: 10,
             ),
           ),
@@ -484,7 +485,7 @@ class _GalaxyPerformanceDebugPanelState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black87,
+        color: DS.neutral900.withValues(alpha: 0.87),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -494,12 +495,12 @@ class _GalaxyPerformanceDebugPanelState
           // 标题
           Row(
             children: [
-              const Icon(Icons.speed, color: Colors.white, size: 20),
+              Icon(Icons.speed, color: DS.neutral0, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Galaxy Performance',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: DS.neutral0,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -527,23 +528,31 @@ class _GalaxyPerformanceDebugPanelState
 
           // 指标
           _buildMetricRow(
-              'Average FPS', summary.report.averageFps.toStringAsFixed(1),),
-          _buildMetricRow('Avg Frame Time',
-              '${summary.report.averageFrameTimeMs.toStringAsFixed(2)}ms',),
-          _buildMetricRow('Jank Rate',
-              '${(summary.report.jankRate * 100).toStringAsFixed(1)}%',),
+            'Average FPS',
+            summary.report.averageFps.toStringAsFixed(1),
+          ),
+          _buildMetricRow(
+            'Avg Frame Time',
+            '${summary.report.averageFrameTimeMs.toStringAsFixed(2)}ms',
+          ),
+          _buildMetricRow(
+            'Jank Rate',
+            '${(summary.report.jankRate * 100).toStringAsFixed(1)}%',
+          ),
           _buildMetricRow('Total Frames', summary.report.frameCount.toString()),
           const SizedBox(height: 8),
-          _buildMetricRow('Quality Level',
-              '${(summary.quality * 100).toStringAsFixed(0)}%',),
+          _buildMetricRow(
+            'Quality Level',
+            '${(summary.quality * 100).toStringAsFixed(0)}%',
+          ),
 
           // 建议
           if (summary.recommendations.isNotEmpty) ...[
-            const Divider(color: Colors.white24),
-            const Text(
+            Divider(color: DS.neutral0.withValues(alpha: 0.24)),
+            Text(
               'Recommendations',
               style: TextStyle(
-                color: Colors.white70,
+                color: DS.neutral0.withValues(alpha: 0.7),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -554,17 +563,17 @@ class _GalaxyPerformanceDebugPanelState
                 padding: const EdgeInsets.only(top: 2),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.lightbulb_outline,
-                      color: Colors.amber,
+                      color: DS.warning,
                       size: 12,
                     ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         r,
-                        style: const TextStyle(
-                          color: Colors.white60,
+                        style: TextStyle(
+                          color: DS.neutral0.withValues(alpha: 0.6),
                           fontSize: 11,
                         ),
                       ),
@@ -577,11 +586,11 @@ class _GalaxyPerformanceDebugPanelState
 
           // 警告历史
           if (_recentWarnings.isNotEmpty) ...[
-            const Divider(color: Colors.white24),
-            const Text(
+            Divider(color: DS.neutral0.withValues(alpha: 0.24)),
+            Text(
               'Recent Warnings',
               style: TextStyle(
-                color: Colors.white70,
+                color: DS.neutral0.withValues(alpha: 0.7),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -597,16 +606,16 @@ class _GalaxyPerformanceDebugPanelState
                               ? Icons.error
                               : Icons.warning,
                           color: w.severity == WarningSeverity.critical
-                              ? Colors.red
-                              : Colors.orange,
+                              ? DS.error
+                              : DS.warning,
                           size: 12,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             w.message,
-                            style: const TextStyle(
-                              color: Colors.white60,
+                            style: TextStyle(
+                              color: DS.neutral0.withValues(alpha: 0.6),
                               fontSize: 11,
                             ),
                           ),
@@ -628,15 +637,15 @@ class _GalaxyPerformanceDebugPanelState
           children: [
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.white60,
+              style: TextStyle(
+                color: DS.neutral0.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),
             Text(
               value,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: DS.neutral0,
                 fontSize: 12,
                 fontWeight: DS.fontWeightMedium,
               ),

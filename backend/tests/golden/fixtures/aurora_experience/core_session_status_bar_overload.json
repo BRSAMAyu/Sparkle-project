@@ -1,0 +1,13 @@
+{
+  "id": "core_session_status_bar_overload",
+  "family": "core_session_opening",
+  "kind": "core_session_opening",
+  "title": "Core Session：状态带压力过载",
+  "input": {
+    "trigger_source": "status_bar",
+    "observed_signals": ["连续两张任务超时", "今天日程密度偏高"],
+    "suggested_agenda_preview": ["确认任务颗粒度", "把今天后半段压成保底版"],
+    "why_now": "继续硬推可能会让后面的计划失真",
+    "estimated_minutes": 4
+  }
+}

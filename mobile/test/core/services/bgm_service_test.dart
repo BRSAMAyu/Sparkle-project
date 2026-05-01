@@ -210,6 +210,35 @@ void main() {
     expect(factor, closeTo(0.54, 0.001));
   });
 
+  test('Aurora status strategies cover the six-state BGM mapping', () {
+    final strategies = <String, AuroraBgmStrategy>{
+      for (final status in const [
+        'sensing',
+        'calibrated',
+        'risk_found',
+        'needs_confirm',
+        'calibration_available',
+        'cooling_down',
+      ])
+        status: BgmService.auroraStrategyForStatus(
+          status,
+          sceneTrack: BgmTrack.galaxy,
+        ),
+    };
+
+    expect(strategies['sensing']!.trackOverride, isNull);
+    expect(strategies['calibrated']!.trackOverride, BgmTrack.galaxy);
+    expect(strategies['risk_found']!.trackOverride, BgmTrack.thinking);
+    expect(strategies['needs_confirm']!.trackOverride, isNull);
+    expect(strategies['needs_confirm']!.duckFactor, lessThan(0.25));
+    expect(
+      strategies['calibration_available']!.trackOverride,
+      BgmTrack.visualUnlock,
+    );
+    expect(strategies['calibration_available']!.highlightPulse, isTrue);
+    expect(strategies['cooling_down']!.trackOverride, BgmTrack.focusDeep);
+  });
+
   test('curated catalog is preferred over bundled fallback by default',
       () async {
     BgmService.debugSetCatalogEntries([

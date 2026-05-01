@@ -1161,3 +1161,34 @@ This closes the highest-risk semantics/tap-target gaps for the dispatch priority
 ### 剩余真实风险
 
 Full `flutter analyze` 仍会因为项目级既有 info lint debt 返回非零，但本轮触达的发布关键路径没有 analyzer error。下一轮若继续做 C30 级发布验收，应把 broad Flutter info baseline 单独清掉，避免它继续干扰真正的阻断信号。
+
+---
+
+## R18 Aurora Complete-Experience Polish Closeout (2026-05-01)
+
+> **结论**: 本轮把 Aurora 完全体从“工程链路接通”继续收敛到“用户真的感到它在理解、记得、校准、解释自己”。已实现模块不再通过 legacy `SPARKLE_*` 默认值被半关闭；聊天 freeform 校准现在同时进入可见对话和结构化纠错链；状态带第三层详情在小屏中可滚动且纠正/详情 chip 更容易点击。
+
+### 已追加修复
+
+| 项 | 结果 |
+|----|------|
+| Aurora/双核 legacy 开关 | `SPARKLE_AGGREGATOR_ENABLED`、社交上下文、push policy/delivery、working memory、LLM extractor、consolidation、router sufficiency、skill extract/selection/share、prompt social context 默认启用；dry-run/shadow/mock-review 默认关闭 |
+| 配置一致性守卫 | `scripts/check_aurora_config_consistency.py` 纳入 legacy `SPARKLE_*` 完全体开关，防止后续再出现三态 live 但配套链路 false 的隐形断点 |
+| Chat freeform 校准 | 聊天内 freeform 纠正不再只上报 telemetry；用户输入会作为自然语言消息进入对话，同时携带 `aurora_correction.freeform_text/is_freeform/semantic_value/band_status` |
+| Aurora 状态带体感 | 纠正 chip/action chip 增加稳定 key、语义动作和更可靠触控目标；第三层详情加高度上限和滚动，避免小屏/键盘场景 overflow |
+| 测试稳定性 | 状态层测试改为等待动效完成并使用稳定交互 key，覆盖 light correction 与 deep details 两层真实交互 |
+
+### 验证
+
+| 命令 | 结果 |
+|------|------|
+| `python3 scripts/check_aurora_config_consistency.py` | ✅ PASS |
+| `cd backend && ruff check app/config/settings.py app/orchestration/adaptive_replanner.py tests/unit/test_aurora_config_consistency.py` | ✅ 通过 |
+| `cd backend && pytest tests/unit/test_aurora_config_consistency.py tests/unit/test_aurora_core_session_entry.py tests/unit/test_aurora_memory_naturalization.py tests/unit/test_social_signal_relevance.py tests/unit/test_t33_predicted_reply_correction.py` | ✅ `51 passed, 14 warnings` |
+| `cd mobile && flutter test ...Aurora/Chat/Tool/Profile/BGM focused suite...` | ✅ `61 passed` |
+| `git diff --check` | ✅ 通过 |
+| `python3 scripts/check_production_secrets.py --tracked-only` | ✅ PASS |
+
+### 剩余真实风险
+
+Full `flutter analyze` 仍被项目级 info lint debt 干扰；本轮 scoped analyzer 退出码为 0，但仍有既有 style/info 项。体验层下一步最值得投入的是真实设备走查：连续会话回归、Core Session 中断恢复、状态带第三层在小屏/大字/深色模式下的视觉节奏，以及 Aurora 引用记忆后的用户纠正是否在多天后明显降低错误复现。

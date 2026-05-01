@@ -26,10 +26,10 @@ class GalaxyContributionBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final surface = isDarkMode
         ? const Color(0xCC0F1728)
-        : Colors.white.withValues(alpha: 0.94);
+        : DS.neutral0.withValues(alpha: 0.94);
     final border =
-        (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08);
-    final foreground = isDarkMode ? Colors.white : const Color(0xFF111827);
+        (isDarkMode ? DS.neutral0 : DS.neutral900).withValues(alpha: 0.08);
+    final foreground = isDarkMode ? DS.neutral0 : const Color(0xFF111827);
     final secondary = foreground.withValues(alpha: 0.68);
 
     return Material(
@@ -53,7 +53,8 @@ class GalaxyContributionBanner extends StatelessWidget {
             border: Border.all(color: border),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDarkMode ? 0.18 : 0.08),
+                color:
+                    DS.galaxyShadow.withValues(alpha: isDarkMode ? 0.18 : 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 14),
               ),
@@ -217,7 +218,7 @@ class GalaxyContributionDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isDarkMode ? Colors.white : const Color(0xFF111827);
+    final foreground = isDarkMode ? DS.neutral0 : const Color(0xFF111827);
     final secondary = foreground.withValues(alpha: 0.68);
 
     return SafeArea(

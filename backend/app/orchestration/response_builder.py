@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -40,6 +41,515 @@ class ResponseBuilderMixin:
     """Mixin providing response-building and cleanup helpers for the Orchestrator."""
 
     @staticmethod
+    def _memory_value(item: Any, *keys: str, default: Any = None) -> Any:
+        if isinstance(item, dict):
+            for key in keys:
+                value = item.get(key)
+                if value not in (None, ""):
+                    return value
+            return default
+        for key in keys:
+            value = getattr(item, key, None)
+            if value not in (None, ""):
+                return value
+        return default
+
+    @staticmethod
+    def _memory_reference_confidence(item: Any) -> float:
+        for key in ("confidence", "reference_confidence", "evidence_score", "importance_score", "score"):
+            value = ResponseBuilderMixin._memory_value(item, key)
+            if value is None:
+                continue
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 1.0:
+                parsed = parsed / 100.0
+            return max(0.0, min(1.0, parsed))
+        return 0.5
+
+    @staticmethod
+    def _memory_reference_user_confirmed(item: Any) -> bool:
+        explicit = ResponseBuilderMixin._memory_value(item, "user_confirmed", "confirmed", "explicitly_confirmed")
+        if isinstance(explicit, bool):
+            return explicit
+        if isinstance(explicit, str):
+            lowered = explicit.strip().lower()
+            if lowered in {"true", "1", "yes", "confirmed", "user_confirmed"}:
+                return True
+            if lowered in {"false", "0", "no", "inferred", "system_inferred"}:
+                return False
+        source_lane = str(ResponseBuilderMixin._memory_value(item, "source_lane", default="") or "").strip()
+        source_type = str(ResponseBuilderMixin._memory_value(item, "source_type", "source", default="") or "").strip()
+        return source_lane != "inferred_extraction" and source_type not in {
+            "ai_inferred",
+            "analysis",
+            "prediction",
+            "system_inferred",
+        }
+
+    @staticmethod
+    def _memory_reference_source_label(item: Any) -> str:
+        source_lane = str(ResponseBuilderMixin._memory_value(item, "source_lane", default="") or "").strip().lower()
+        source_type = (
+            str(ResponseBuilderMixin._memory_value(item, "source_type", "source", default="") or "").strip().lower()
+        )
+        subject_type = str(ResponseBuilderMixin._memory_value(item, "subject_type", default="") or "").strip().lower()
+        if source_lane == "inferred_extraction" or source_type in {"ai_inferred", "analysis", "system_inferred"}:
+            return "从对话里推断的"
+        if source_type in {"task", "practice_outcome"} or subject_type in {"task", "commitment"}:
+            return "从任务完成情况推断的"
+        if source_type in {"chat_turn", "user_state", "event", "manual", "direct_capture", "user_confirmed"}:
+            return "你告诉我的"
+        return "上下文里整理出的"
+
+    @staticmethod
+    def _parse_memory_datetime(value: Any) -> datetime | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            raw = str(value or "").strip()
+            if not raw:
+                return None
+            try:
+                parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+        return parsed
+
+    @staticmethod
+    def _memory_time_ago(value: Any) -> str:
+        occurred_at = ResponseBuilderMixin._parse_memory_datetime(value)
+        if occurred_at is None:
+            return "时间未知"
+        delta = datetime.now(UTC).replace(tzinfo=None) - occurred_at
+        if delta.total_seconds() < 2 * 3600:
+            return "刚才"
+        if delta.days == 0:
+            return "今天"
+        if delta.days == 1:
+            return "昨天"
+        if delta.days <= 6:
+            return f"{delta.days}天前"
+        if delta.days <= 13:
+            return "上周"
+        return occurred_at.date().isoformat()
+
+    @staticmethod
+    def _memory_reference_tokens(text: str) -> set[str]:
+        normalized = str(text or "").lower()
+        tokens = set(re.findall(r"[a-z0-9][a-z0-9_-]{2,}", normalized))
+        for segment in re.findall(r"[\u4e00-\u9fff]{2,}", normalized):
+            if len(segment) <= 4:
+                tokens.add(segment)
+            for index in range(0, max(0, len(segment) - 1)):
+                tokens.add(segment[index : index + 2])
+        return {token for token in tokens if token.strip()}
+
+    @staticmethod
+    def _memory_was_naturally_referenced(summary: str, response_text: str) -> bool:
+        normalized_summary = re.sub(r"\s+", "", str(summary or "")).lower()
+        normalized_response = re.sub(r"\s+", "", str(response_text or "")).lower()
+        if not normalized_summary or not normalized_response:
+            return False
+        if len(normalized_summary) >= 4 and normalized_summary in normalized_response:
+            return True
+        summary_tokens = ResponseBuilderMixin._memory_reference_tokens(summary)
+        response_tokens = ResponseBuilderMixin._memory_reference_tokens(response_text)
+        if not summary_tokens or not response_tokens:
+            return False
+        overlap = summary_tokens & response_tokens
+        return any(len(token) >= 3 for token in overlap) or len(overlap) >= 2
+
+    @staticmethod
+    def _memory_candidate_relevance(entry: tuple[int, Any]) -> tuple[float, int]:
+        index, item = entry
+        for key in ("relevance_score", "rank_score", "score", "importance_score", "confidence", "evidence_score"):
+            value = ResponseBuilderMixin._memory_value(item, key)
+            if value is None:
+                continue
+            try:
+                return (-float(value), index)
+            except (TypeError, ValueError):
+                continue
+        return (0.0, index)
+
+    @staticmethod
+    def _collect_memory_reference_candidates(
+        *,
+        user_context_payload: dict[str, Any] | None,
+        context_data: dict[str, Any],
+    ) -> list[Any]:
+        pools: list[Any] = []
+        focused_memory = context_data.get("focused_memory")
+        if isinstance(focused_memory, dict):
+            pools.append(focused_memory.get("episodic_memories"))
+        if isinstance(user_context_payload, dict):
+            pools.extend(
+                [
+                    user_context_payload.get("episodic_memories"),
+                    user_context_payload.get("past_session_memory"),
+                ]
+            )
+        candidates: list[Any] = []
+        seen: set[str] = set()
+        for pool in pools:
+            if not isinstance(pool, list):
+                continue
+            for item in pool:
+                summary = str(
+                    ResponseBuilderMixin._memory_value(item, "summary", "content", "text", "title", default="") or ""
+                ).strip()
+                if not summary:
+                    continue
+                key = str(ResponseBuilderMixin._memory_value(item, "id", default="") or summary)
+                if key in seen:
+                    continue
+                seen.add(key)
+                candidates.append(item)
+        return [
+            item
+            for _, item in sorted(
+                enumerate(candidates),
+                key=ResponseBuilderMixin._memory_candidate_relevance,
+            )[:5]
+        ]
+
+    @staticmethod
+    def _build_memory_reference_receipt(
+        *,
+        full_response: str,
+        user_context_payload: dict[str, Any] | None,
+        context_data: dict[str, Any],
+        response_id: str,
+    ) -> dict[str, Any] | None:
+        referenced: list[dict[str, Any]] = []
+        for item in ResponseBuilderMixin._collect_memory_reference_candidates(
+            user_context_payload=user_context_payload,
+            context_data=context_data,
+        ):
+            summary = str(
+                ResponseBuilderMixin._memory_value(item, "summary", "content", "text", "title", default="") or ""
+            ).strip()
+            if not ResponseBuilderMixin._memory_was_naturally_referenced(summary, full_response):
+                continue
+            referenced.append(
+                {
+                    "id": str(ResponseBuilderMixin._memory_value(item, "id", default="") or ""),
+                    "type": "episodic",
+                    "content": summary,
+                    "time_ago": ResponseBuilderMixin._memory_time_ago(
+                        ResponseBuilderMixin._memory_value(
+                            item,
+                            "occurred_at",
+                            "last_seen_at",
+                            "updated_at",
+                            "created_at",
+                        )
+                    ),
+                    "source": ResponseBuilderMixin._memory_reference_source_label(item),
+                    "confidence": ResponseBuilderMixin._memory_reference_confidence(item),
+                    "user_confirmed": ResponseBuilderMixin._memory_reference_user_confirmed(item),
+                    "outcome": "pending",
+                }
+            )
+            if len(referenced) >= 5:
+                break
+
+        if not referenced:
+            return None
+        return {
+            "receipt_type": "memory_reference_receipt",
+            "response_id": response_id,
+            "used_count": len(referenced),
+            "decision_reason": "Aurora 引用了和本轮有关的记忆，让回复能接上你的真实上下文。",
+            "memory_reference_outcome": "pending",
+            "supported_outcomes": ["accepted", "corrected", "ignored", "denied"],
+            "referenced_memories": referenced,
+        }
+
+    @staticmethod
+    def _decode_receipt_payload(raw: Any) -> Any:
+        if raw is None:
+            return None
+        if isinstance(raw, (dict, list)):
+            return raw
+        if isinstance(raw, str):
+            try:
+                return json.loads(raw)
+            except Exception:
+                return None
+        return None
+
+    @staticmethod
+    def _receipt_summary(payload: dict[str, Any], *keys: str, default: str = "") -> str:
+        for key in keys:
+            value = payload.get(key)
+            if value not in (None, ""):
+                return str(value).strip()
+        return default
+
+    @staticmethod
+    def _append_unified_receipt(receipts: list[dict[str, Any]], receipt: dict[str, Any] | None) -> None:
+        if not receipt:
+            return
+        receipt_type = str(receipt.get("receipt_type") or "").strip()
+        if not receipt_type:
+            return
+        summary = str(receipt.get("summary") or receipt.get("decision_reason") or "").strip()
+        receipt_id = str(receipt.get("receipt_id") or receipt.get("response_id") or "").strip()
+        source_key = str(receipt.get("source_key") or "").strip()
+        duplicate_key = (receipt_type, receipt_id, source_key, summary)
+        for existing in receipts:
+            existing_key = (
+                str(existing.get("receipt_type") or "").strip(),
+                str(existing.get("receipt_id") or existing.get("response_id") or "").strip(),
+                str(existing.get("source_key") or "").strip(),
+                str(existing.get("summary") or existing.get("decision_reason") or "").strip(),
+            )
+            if existing_key == duplicate_key:
+                return
+        receipts.append(receipt)
+
+    @staticmethod
+    def _normalize_source_context_receipt(
+        payload: dict[str, Any],
+        *,
+        source_key: str,
+        source_kind: str,
+    ) -> dict[str, Any] | None:
+        if not payload:
+            return None
+        raw_used_names = payload.get("used_names")
+        raw_excluded_names = payload.get("excluded_names")
+        raw_used_tools = payload.get("used_tools")
+        used_names = [
+            str(item).strip()
+            for item in (raw_used_names if isinstance(raw_used_names, list) else [])
+            if str(item).strip()
+        ]
+        excluded_names = [
+            str(item).strip()
+            for item in (raw_excluded_names if isinstance(raw_excluded_names, list) else [])
+            if str(item).strip()
+        ]
+        used_tools = [
+            item for item in (raw_used_tools if isinstance(raw_used_tools, list) else []) if isinstance(item, dict)
+        ]
+        used_count = int(payload.get("used_count") or 0) + int(payload.get("tool_count") or len(used_tools) or 0)
+        reason = ResponseBuilderMixin._receipt_summary(
+            payload,
+            "summary",
+            "decision_reason",
+            default=(
+                "参考了学习伙伴的动态" if source_kind == "social" else f"Aurora 参考了 {used_count} 个上下文来源。"
+            ),
+        )
+        if used_count <= 0 and not reason:
+            return None
+        return {
+            **payload,
+            "receipt_type": "source_context_receipt",
+            "source_key": source_key,
+            "source_kind": source_kind,
+            "summary": reason,
+            "decision_reason": reason,
+            "used_count": used_count,
+            "used_names": used_names,
+            "excluded_names": excluded_names,
+            "used_tools": used_tools,
+            "correction_actions": (
+                [
+                    {
+                        "label": "不需要参考他的进度",
+                        "prompt": "这次不要参考学习伙伴的进度或动态，请只基于我自己的状态来判断。",
+                    }
+                ]
+                if source_kind == "social"
+                else [
+                    {
+                        "label": "排除此资料",
+                        "prompt": "请暂时排除刚才使用的资料，换一种解释。",
+                    }
+                ]
+            ),
+        }
+
+    @staticmethod
+    def _normalize_memory_reference_receipt(payload: dict[str, Any]) -> dict[str, Any] | None:
+        memories = [item for item in payload.get("referenced_memories") or [] if isinstance(item, dict)]
+        if not memories:
+            return None
+        used_count = int(payload.get("used_count") or len(memories))
+        reason = ResponseBuilderMixin._receipt_summary(
+            payload,
+            "summary",
+            "decision_reason",
+            default=f"Aurora 引用了 {used_count} 条相关记忆。",
+        )
+        return {
+            **payload,
+            "receipt_type": "memory_reference_receipt",
+            "summary": reason,
+            "decision_reason": reason,
+            "used_count": used_count,
+            "referenced_memories": memories[:5],
+            "correction_actions": [
+                {
+                    "label": "这个记忆引用不对",
+                    "prompt": "这条记忆引用不对，请降低置信度，以后不要直接引用。",
+                }
+            ],
+        }
+
+    @staticmethod
+    def _normalize_aurora_experience_receipt(
+        payload: dict[str, Any],
+        *,
+        source_key: str,
+    ) -> dict[str, Any] | None:
+        if not payload:
+            return None
+        summary = ResponseBuilderMixin._receipt_summary(
+            payload,
+            "summary",
+            "visible_hint",
+            "message",
+            "title",
+        )
+        what_changed = [str(item).strip() for item in payload.get("what_changed") or [] if str(item).strip()]
+        if not summary and not what_changed:
+            return None
+        title = ResponseBuilderMixin._receipt_summary(payload, "title", default="Aurora 调整了体验")
+        return {
+            **payload,
+            "receipt_type": "aurora_experience_receipt",
+            "source_key": source_key,
+            "summary": summary or title,
+            "decision_reason": summary or title,
+            "detail_title": title,
+            "what_changed": what_changed,
+            "correction_actions": [
+                {
+                    "label": "重新校准",
+                    "prompt": "这个 Aurora 判断不太对，请基于我刚才的反馈重新校准。",
+                }
+            ],
+        }
+
+    @staticmethod
+    def _normalize_next_action_receipt(payload: dict[str, Any]) -> dict[str, Any] | None:
+        if not payload:
+            return None
+        summary = ResponseBuilderMixin._receipt_summary(
+            payload,
+            "summary",
+            "message",
+            "decision_reason",
+            default="Aurora 调整了下一步行动。",
+        )
+        correction_options = [
+            str(item).strip() for item in payload.get("correction_options") or [] if str(item).strip()
+        ]
+        return {
+            **payload,
+            "receipt_type": "next_action_changed_by_aurora",
+            "source_key": "spine_receipt",
+            "summary": summary,
+            "decision_reason": summary,
+            "correction_actions": [
+                {
+                    "label": option,
+                    "prompt": f"{option}。请重新判断这次行动调整。",
+                }
+                for option in correction_options
+            ],
+        }
+
+    @staticmethod
+    def _build_unified_aurora_receipts(response_metadata: dict[str, Any]) -> list[dict[str, Any]]:
+        receipts: list[dict[str, Any]] = []
+        existing = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("aurora_receipts"))
+        if isinstance(existing, list):
+            for item in existing:
+                if isinstance(item, dict):
+                    ResponseBuilderMixin._append_unified_receipt(receipts, item)
+
+        adaptation = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("adaptation_summary"))
+        if isinstance(adaptation, dict):
+            ResponseBuilderMixin._append_unified_receipt(
+                receipts,
+                ResponseBuilderMixin._normalize_aurora_experience_receipt(
+                    adaptation,
+                    source_key="adaptation_summary",
+                ),
+            )
+        session_adaptation = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("session_adaptation"))
+        if isinstance(session_adaptation, dict):
+            ResponseBuilderMixin._append_unified_receipt(
+                receipts,
+                ResponseBuilderMixin._normalize_aurora_experience_receipt(
+                    session_adaptation,
+                    source_key="session_adaptation",
+                ),
+            )
+
+        memory = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("memory_reference_receipt"))
+        if isinstance(memory, dict):
+            ResponseBuilderMixin._append_unified_receipt(
+                receipts,
+                ResponseBuilderMixin._normalize_memory_reference_receipt(memory),
+            )
+
+        source = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("context_receipt"))
+        if isinstance(source, dict):
+            ResponseBuilderMixin._append_unified_receipt(
+                receipts,
+                ResponseBuilderMixin._normalize_source_context_receipt(
+                    source,
+                    source_key="context_receipt",
+                    source_kind="materials",
+                ),
+            )
+        social = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("social_context_receipt"))
+        if isinstance(social, dict):
+            ResponseBuilderMixin._append_unified_receipt(
+                receipts,
+                ResponseBuilderMixin._normalize_source_context_receipt(
+                    social,
+                    source_key="social_context_receipt",
+                    source_kind="social",
+                ),
+            )
+
+        spine = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("spine_receipt"))
+        if isinstance(spine, dict):
+            ResponseBuilderMixin._append_unified_receipt(
+                receipts,
+                ResponseBuilderMixin._normalize_next_action_receipt(spine),
+            )
+
+        priority = {
+            "aurora_experience_receipt": 0,
+            "memory_reference_receipt": 1,
+            "source_context_receipt": 2,
+            "next_action_changed_by_aurora": 3,
+        }
+        receipts.sort(key=lambda item: priority.get(str(item.get("receipt_type") or ""), 99))
+        return receipts
+
+    @staticmethod
+    def _inject_unified_aurora_receipts(response_metadata: dict[str, Any]) -> None:
+        receipts = ResponseBuilderMixin._build_unified_aurora_receipts(response_metadata)
+        if receipts:
+            response_metadata["aurora_receipts"] = json.dumps(receipts, ensure_ascii=False)
+
+    @staticmethod
     def _capability_selection_metadata(context_data: dict[str, Any]) -> dict[str, str]:
         situation_brief = context_data.get("situation_brief")
         capability_selection_report = context_data.get("capability_selection_report")
@@ -55,9 +565,7 @@ class ResponseBuilderMixin:
         if isinstance(summary_payload, dict) and summary_payload:
             metadata["capability_selection_summary"] = json.dumps(summary_payload, ensure_ascii=False)
         why_this_path = str(
-            context_data.get("why_this_path")
-            or capability_selection_report.get("why_this_path")
-            or ""
+            context_data.get("why_this_path") or capability_selection_report.get("why_this_path") or ""
         ).strip()
         if why_this_path:
             metadata["why_this_path"] = why_this_path
@@ -75,9 +583,66 @@ class ResponseBuilderMixin:
         structured = dual_core_decision.get("structured_adjustments") or []
         if structured:
             metadata["structured_cognitive_adjustments"] = json.dumps(
-                structured, ensure_ascii=False,
+                structured,
+                ensure_ascii=False,
             )
         return metadata
+
+    @staticmethod
+    def _task_stuck_intervention_metadata(context_data: dict[str, Any]) -> dict[str, str]:
+        active = context_data.get("active_interventions")
+        if not isinstance(active, list):
+            return {}
+
+        selected: dict[str, Any] | None = None
+        diagnosis: dict[str, Any] = {}
+        for item in active:
+            if not isinstance(item, dict):
+                continue
+            candidate_diagnosis = item.get("diagnosis_payload")
+            if not isinstance(candidate_diagnosis, dict):
+                candidate_diagnosis = {}
+            pattern_name = str(candidate_diagnosis.get("pattern_name") or "").strip().lower()
+            trigger_type = str(item.get("trigger_type") or "").strip().upper()
+            if pattern_name == "task stuck intervention" or (
+                trigger_type == "STALL_PATTERN" and candidate_diagnosis.get("task_health")
+            ):
+                selected = item
+                diagnosis = candidate_diagnosis
+                break
+
+        if not selected:
+            return {}
+
+        intervention_id = str(selected.get("intervention_id") or "").strip()
+        description = str(diagnosis.get("description") or "几张任务连续出现了卡点").strip()
+        task_titles = [str(item).strip() for item in list(diagnosis.get("task_titles") or [])[:3] if str(item).strip()]
+        task_health = diagnosis.get("task_health") if isinstance(diagnosis.get("task_health"), dict) else {}
+        micro_session = diagnosis.get("micro_session")
+        if not isinstance(micro_session, dict):
+            try:
+                from app.services.task_stuck_signal_service import TaskStuckPatternAnalyzer
+
+                micro_session = TaskStuckPatternAnalyzer.build_micro_session_payload(diagnosis)
+            except Exception:
+                micro_session = {}
+
+        message_subject = description if description.startswith("最近") else f"最近{description}"
+        payload = {
+            "intervention_id": intervention_id,
+            "message": f"我注意到{message_subject}。要不要聊一下？大概 2 分钟。",
+            "observed_pattern": description,
+            "task_titles": task_titles,
+            "task_health": task_health,
+            "micro_session": micro_session,
+            "receipt": diagnosis.get("receipt") if isinstance(diagnosis.get("receipt"), dict) else {},
+            "actions": [
+                {"label": "聊聊", "feedback_action": "accepted", "role": "primary"},
+                {"label": "稍后", "feedback_action": "snoozed", "snooze_hours": 24},
+                {"label": "不需要", "feedback_action": "dismissed"},
+            ],
+        }
+        return {"task_stuck_intervention": json.dumps(payload, ensure_ascii=False)}
 
     @staticmethod
     def _semantic_control_trace_metadata(context_data: dict[str, Any]) -> dict[str, str]:
@@ -113,6 +678,32 @@ class ResponseBuilderMixin:
             "observed_compliance_flags": dict(checks),
             "observed_compliance_source": "plan_quality_gate",
         }
+
+    @staticmethod
+    def _social_context_receipt_metadata(user_context_payload: dict[str, Any] | None) -> dict[str, str]:
+        if not isinstance(user_context_payload, dict):
+            return {}
+
+        candidates = [
+            user_context_payload.get("social_context_v1"),
+            user_context_payload.get("social_signals_summary"),
+        ]
+        cognitive_context = user_context_payload.get("cognitive_context")
+        if isinstance(cognitive_context, dict):
+            candidates.extend(
+                [
+                    cognitive_context.get("social_context_v1"),
+                    cognitive_context.get("social_signals_summary"),
+                ]
+            )
+
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            receipt = candidate.get("social_context_receipt")
+            if isinstance(receipt, dict) and receipt:
+                return {"social_context_receipt": json.dumps(receipt, ensure_ascii=False)}
+        return {}
 
     def _extract_response_outcome_stats(self, final_state: WorkflowState | None) -> dict[str, int]:
         if final_state is None:
@@ -245,11 +836,7 @@ class ResponseBuilderMixin:
         if not agents_involved:
             selected_experts_for_primary = final_state.context_data.get("selected_experts")
             if isinstance(selected_experts_for_primary, list):
-                agents_involved = [
-                    str(agent).strip()
-                    for agent in selected_experts_for_primary
-                    if str(agent).strip()
-                ]
+                agents_involved = [str(agent).strip() for agent in selected_experts_for_primary if str(agent).strip()]
         if not agents_involved and isinstance(user_context_payload, dict):
             raw_trace = user_context_payload.get("orchestration_trace")
             if isinstance(raw_trace, str) and raw_trace:
@@ -317,11 +904,32 @@ class ResponseBuilderMixin:
                 ensure_ascii=False,
             )
         doc_retrieval_meta = final_state.context_data.get("document_context_retrieval")
-        if isinstance(doc_retrieval_meta, dict) and doc_retrieval_meta.get("context_receipt"):
-            response_metadata["context_receipt"] = json.dumps(
-                doc_retrieval_meta["context_receipt"],
-                ensure_ascii=False,
-            )
+        context_receipt: dict[str, Any] = {}
+        if isinstance(doc_retrieval_meta, dict) and isinstance(doc_retrieval_meta.get("context_receipt"), dict):
+            context_receipt.update(doc_retrieval_meta["context_receipt"])
+        recent_tool_usage = (
+            (user_context_payload or {}).get("recent_tool_usage") if isinstance(user_context_payload, dict) else None
+        )
+        if isinstance(recent_tool_usage, list) and recent_tool_usage:
+            used_tools = [
+                {
+                    "name": str(item.get("label") or item.get("tool_name") or "").strip(),
+                    "tool_name": str(item.get("tool_name") or "").strip(),
+                    "summary": str(item.get("summary") or "").strip(),
+                    "used_at": item.get("used_at"),
+                    "privacy_note": str(item.get("privacy_note") or "").strip(),
+                }
+                for item in recent_tool_usage[:4]
+                if isinstance(item, dict) and str(item.get("summary") or "").strip()
+            ]
+            if used_tools:
+                context_receipt["used_tools"] = used_tools
+                context_receipt["tool_names"] = [item["name"] for item in used_tools if item.get("name")]
+                context_receipt["tool_count"] = len(used_tools)
+                context_receipt.setdefault("decision_reason", "Aurora 已参考你刚刚的工具动作。")
+        if context_receipt:
+            response_metadata["context_receipt"] = json.dumps(context_receipt, ensure_ascii=False)
+        response_metadata.update(self._social_context_receipt_metadata(user_context_payload))
         roundtable_turns = final_state.context_data.get("roundtable_turns")
         if isinstance(roundtable_turns, list) and roundtable_turns:
             response_metadata["roundtable_turns"] = json.dumps(
@@ -464,6 +1072,7 @@ class ResponseBuilderMixin:
         if isinstance(strategy_state, dict):
             response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)
         response_metadata.update(self._dual_core_response_metadata(final_state.context_data))
+        response_metadata.update(self._task_stuck_intervention_metadata(final_state.context_data))
         understanding_depth = (
             (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
         )
@@ -474,6 +1083,16 @@ class ResponseBuilderMixin:
         )
         if isinstance(returning_context, dict):
             response_metadata["returning_after_silence"] = json.dumps(returning_context, ensure_ascii=False)
+
+        memory_reference_receipt = self._build_memory_reference_receipt(
+            full_response=full_response,
+            user_context_payload=user_context_payload,
+            context_data=final_state.context_data,
+            response_id=response_id,
+        )
+        if memory_reference_receipt:
+            final_state.context_data["memory_reference_receipt"] = memory_reference_receipt
+            response_metadata["memory_reference_receipt"] = json.dumps(memory_reference_receipt, ensure_ascii=False)
 
         focused_memory = final_state.context_data.get("focused_memory")
         context_pack_meta = {}
@@ -542,9 +1161,11 @@ class ResponseBuilderMixin:
             user_message=self._extract_latest_user_message(final_state.messages),
             assistant_response=full_response,
             task_context=task_context,
-            cognitive_context=(user_context_payload or {}).get("cognitive_context")
-            if isinstance(user_context_payload, dict)
-            else None,
+            cognitive_context=(
+                (user_context_payload or {}).get("cognitive_context")
+                if isinstance(user_context_payload, dict)
+                else None
+            ),
             user_id=user_id,
             session_id=session_id,
             active_db=active_db,
@@ -653,39 +1274,37 @@ class ResponseBuilderMixin:
         if getattr(self, "redis", None) is not None:
             try:
                 from app.signals.spine_orchestrator import SpineOrchestrator
+
                 _spine = SpineOrchestrator(self.redis)
                 _latest_receipt = await _spine.get_latest_receipt(user_id)
                 if _latest_receipt:
                     _receipt_actions = list(_latest_receipt.actions or [])
                     _correctable = "correct" in _receipt_actions
-                    response_metadata["spine_receipt"] = json.dumps({
-                        "receipt_id": _latest_receipt.receipt_id,
-                        "trigger": _latest_receipt.receipt_type,
-                        "summary": _latest_receipt.message,
-                        "correctable": _correctable,
-                        "correction_options": (
-                            ["这个判断不准确", "我不同意这个调整", "继续，先看看效果"]
-                            if _correctable else []
-                        ),
-                    }, ensure_ascii=False)
+                    response_metadata["spine_receipt"] = json.dumps(
+                        {
+                            "receipt_id": _latest_receipt.receipt_id,
+                            "trigger": _latest_receipt.receipt_type,
+                            "summary": _latest_receipt.message,
+                            "correctable": _correctable,
+                            "correction_options": (
+                                ["这个判断不准确", "我不同意这个调整", "继续，先看看效果"] if _correctable else []
+                            ),
+                        },
+                        ensure_ascii=False,
+                    )
                 _community_hint = await _spine.get_latest_community_hint(user_id)
                 if _community_hint:
-                    response_metadata["spine_community_hint"] = json.dumps(
-                        _community_hint, ensure_ascii=False
-                    )
+                    response_metadata["spine_community_hint"] = json.dumps(_community_hint, ensure_ascii=False)
                 _ux_warning = await _spine.get_ux_risk_warning(user_id)
                 if _ux_warning:
-                    response_metadata["spine_ux_warning"] = json.dumps(
-                        _ux_warning, ensure_ascii=False
-                    )
+                    response_metadata["spine_ux_warning"] = json.dumps(_ux_warning, ensure_ascii=False)
                 _goal_arb = await _spine.get_goal_arbitration_summary(user_id)
                 if _goal_arb:
-                    response_metadata["spine_goal_arbitration"] = json.dumps(
-                        _goal_arb, ensure_ascii=False
-                    )
+                    response_metadata["spine_goal_arbitration"] = json.dumps(_goal_arb, ensure_ascii=False)
                 # T3.3.1: Inject predicted reply options into response metadata
                 try:
                     from app.aurora.runtime_v1.reply_option_injector import ReplyOptionInjector
+
                     _aurora_band = response_metadata.get("aurora_band_status", "sensing")
                     _aurora_energy = response_metadata.get("aurora_energy_level", "L1")
                     _injector = ReplyOptionInjector()
@@ -694,12 +1313,16 @@ class ResponseBuilderMixin:
                         energy_level=_aurora_energy,
                     )
                     _injector.inject_into_metadata(
-                        response_metadata, _reply_groups, _aurora_band,
+                        response_metadata,
+                        _reply_groups,
+                        _aurora_band,
                     )
                 except Exception:
                     pass
             except Exception:
                 pass
+
+        self._inject_unified_aurora_receipts(response_metadata)
 
         final_response = agent_service_pb2.ChatResponse(
             response_id=response_id,
@@ -858,9 +1481,11 @@ class ResponseBuilderMixin:
                         success=success,
                         fallback_used=fallback_used,
                         outcome_stats=outcome_stats,
-                        utilization_metrics=context_data.get("utilization_metrics")
-                        if isinstance(context_data.get("utilization_metrics"), dict)
-                        else None,
+                        utilization_metrics=(
+                            context_data.get("utilization_metrics")
+                            if isinstance(context_data.get("utilization_metrics"), dict)
+                            else None
+                        ),
                     ),
                     task_name="token_usage_record",
                     user_id=str(user_id),

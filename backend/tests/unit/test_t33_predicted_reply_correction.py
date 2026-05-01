@@ -311,6 +311,31 @@ class TestCorrectionFeedback:
         assert new_conf < 0.80
 
     @pytest.mark.asyncio
+    async def test_risk_false_positive_lowers_affective_pressure(self):
+        """Natural risk correction chips update the state that drives reassuring tone."""
+        redis = _make_redis()
+        affective = _make_state_entry("affective_pressure", "anxious", 0.78)
+        execution = _make_state_entry("execution_consistency", "risk", 0.68)
+        redis.get.side_effect = [
+            _state_entry_to_json(affective),
+            _state_entry_to_json(execution),
+        ]
+
+        processor = CorrectionFeedbackProcessor(redis)
+        result = await processor.process(
+            user_id="user_1",
+            semantic_value="risk_false_positive",
+            is_disconfirming=True,
+            telemetry_id="opt_risk_false_positive",
+        )
+
+        assert result.action == "disconfirmed"
+        assert "affective_pressure" in result.affected_state_keys
+        assert result.new_confidence["affective_pressure"] < 0.78
+        assert result.user_visible_effect["visible"] is True
+        assert result.user_visible_effect["semantic_value"] == "risk_false_positive"
+
+    @pytest.mark.asyncio
     async def test_confirmation_boosts_confidence(self):
         """Confirmation gives a small confidence boost."""
         redis = _make_redis()
@@ -515,6 +540,13 @@ class TestChipSelectedTelemetry:
                     telemetry_id=kwargs["telemetry_id"],
                     action="freeform_correction",
                     correction_recorded=True,
+                    user_visible_effect={
+                        "visible": True,
+                        "semantic_value": kwargs["semantic_value"],
+                        "action": "freeform_correction",
+                        "affected_state_keys": [],
+                        "updated_at": "2026-05-01T00:00:00",
+                    },
                 )
 
         monkeypatch.setattr(aurora_api.cache_service, "redis", redis)
@@ -546,6 +578,10 @@ class TestChipSelectedTelemetry:
         assert captured["is_freeform"] is True
         assert captured["is_disconfirming"] is False
         assert response["correction_result"]["action"] == "freeform_correction"
+        redis.set.assert_any_call(
+            f"aurora:last_correction_effect:{current_user.id}",
+            json.dumps(response["correction_result"]["user_visible_effect"], ensure_ascii=False),
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════

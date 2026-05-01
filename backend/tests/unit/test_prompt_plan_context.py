@@ -1,4 +1,4 @@
-from app.orchestration.prompts import _format_plan_context
+from app.orchestration.prompts import _format_plan_context, format_user_context
 
 
 def test_format_plan_context_skips_irrelevant_plan_context():
@@ -24,3 +24,23 @@ def test_format_plan_context_keeps_relevant_plan_context():
 
     assert "Python 测验冲刺" in rendered
     assert "仅在当前问题与这些计划/任务信息直接相关时" in rendered
+
+
+def test_format_user_context_includes_recent_tool_usage_without_raw_payload():
+    rendered = format_user_context(
+        {
+            "recent_tool_usage": [
+                {
+                    "tool_name": "translator",
+                    "label": "翻译器",
+                    "summary": "完成 zh->en 翻译，原文约 18 字符",
+                    "privacy_note": "只保存安全摘要，不保存原始内容。",
+                }
+            ]
+        }
+    )
+
+    assert "【刚刚使用过的工具】" in rendered
+    assert "翻译器: 完成 zh->en 翻译" in rendered
+    assert "不要硬提" in rendered
+    assert "raw" not in rendered.lower()

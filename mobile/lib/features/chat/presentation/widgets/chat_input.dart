@@ -35,6 +35,7 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onToggleStudyMaterials,
     this.onOpenStudyMaterials,
     this.onSetDocumentContextMode,
+    this.onFreeformCorrection,
   });
   final bool enabled;
   final String? hintText;
@@ -50,6 +51,7 @@ class ChatInput extends ConsumerStatefulWidget {
   final VoidCallback? onToggleStudyMaterials;
   final VoidCallback? onOpenStudyMaterials;
   final ValueChanged<DocumentContextMode>? onSetDocumentContextMode;
+  final FutureOr<void> Function(String text)? onFreeformCorrection;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -214,6 +216,72 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     });
   }
 
+  Future<void> _handleFreeformCorrection() async {
+    final callback = widget.onFreeformCorrection;
+    if (callback == null) return;
+
+    final text = await _showFreeformCorrectionDialog();
+    if (text == null || text.isEmpty) return;
+    await Future<void>.sync(() => callback(text));
+    if (mounted) {
+      AppFeedback.info(context, context.l10n.auroraCorrectionSubmitted);
+      _restoreFocus();
+    }
+  }
+
+  Future<String?> _showFreeformCorrectionDialog() {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
+    return showDialog<String?>(
+      context: context,
+      builder: (ctx) {
+        String? submittedText() {
+          final text = controller.text.trim();
+          return text.isEmpty ? null : text;
+        }
+
+        return AlertDialog(
+          title: Text(context.l10n.auroraCorrectionInputTitle),
+          content: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            maxLines: 3,
+            minLines: 2,
+            decoration: InputDecoration(
+              hintText: context.l10n.auroraCorrectionInputHint,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(DS.radius12),
+              ),
+              contentPadding: const EdgeInsets.all(DS.spacing12),
+            ),
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) {
+              final text = submittedText();
+              if (text != null) {
+                Navigator.of(ctx).pop(text);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: Text(context.l10n.auroraCorrectionInputCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(submittedText()),
+              child: Text(context.l10n.auroraCorrectionInputSend),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      focusNode.dispose();
+      controller.dispose();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
@@ -231,7 +299,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
-          if (widget.onToggleStudyMaterials != null)
+          if (widget.onToggleStudyMaterials != null ||
+              widget.onFreeformCorrection != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 DS.spacing8,
@@ -245,12 +314,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   spacing: DS.spacing8,
                   runSpacing: DS.spacing8,
                   children: [
-                    _SourceTrayPill(
-                      mode: widget.documentContextMode,
-                      enabled: widget.enabled,
-                      onModeChanged: widget.onSetDocumentContextMode,
-                    ),
-                    if (widget.documentContextMode != DocumentContextMode.off &&
+                    if (widget.onToggleStudyMaterials != null)
+                      _SourceTrayPill(
+                        mode: widget.documentContextMode,
+                        enabled: widget.enabled,
+                        onModeChanged: widget.onSetDocumentContextMode,
+                      ),
+                    if (widget.onToggleStudyMaterials != null &&
+                        widget.documentContextMode != DocumentContextMode.off &&
                         widget.availableStudyMaterialsCount > 0)
                       ChatAccessoryPill(
                         icon: Icons.description_outlined,
@@ -266,13 +337,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             widget.enabled ? widget.onOpenStudyMaterials : null,
                         emphasize: true,
                       ),
-                    if (widget.documentContextMode == DocumentContextMode.off)
+                    if (widget.onToggleStudyMaterials != null &&
+                        widget.documentContextMode == DocumentContextMode.off)
                       ChatAccessoryPill(
                         icon: Icons.pause_circle_outline_rounded,
                         label: context.l10n.chatStudyMaterialsPausedDescription,
                         onTap: widget.enabled
                             ? widget.onToggleStudyMaterials
                             : null,
+                      ),
+                    if (widget.onFreeformCorrection != null)
+                      ChatAccessoryPill(
+                        icon: Icons.edit_note_rounded,
+                        label: context.l10n.auroraCorrectionFreeformLabel,
+                        onTap:
+                            widget.enabled ? _handleFreeformCorrection : null,
+                        emphasize: true,
                       ),
                   ],
                 ),
@@ -478,7 +558,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.l10n.chatInputQuoting(widget.quotedMessage!.sender.displayName),
+                    context.l10n.chatInputQuoting(
+                        widget.quotedMessage!.sender.displayName),
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,
@@ -559,7 +640,8 @@ class _SourceTrayPill extends StatelessWidget {
           ? () {
               final next = switch (mode) {
                 DocumentContextMode.auto => DocumentContextMode.userSelected,
-                DocumentContextMode.userSelected => DocumentContextMode.taskScope,
+                DocumentContextMode.userSelected =>
+                  DocumentContextMode.taskScope,
                 DocumentContextMode.taskScope => DocumentContextMode.goalScope,
                 DocumentContextMode.goalScope => DocumentContextMode.off,
                 DocumentContextMode.off => DocumentContextMode.auto,

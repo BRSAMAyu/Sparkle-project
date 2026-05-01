@@ -457,6 +457,12 @@ class AuroraCheckpointRuntimeService:
         if not messages:
             messages = self._build_follow_up_messages(payload)
         for index, text in enumerate(messages):
+            render_action = self._build_follow_up_render_action(
+                wake=wake,
+                payload=payload,
+                message=text,
+                is_final_message=index == len(messages) - 1,
+            )
             self.db.add(
                 ChatMessage(
                     user_id=wake.user_id,
@@ -474,6 +480,10 @@ class AuroraCheckpointRuntimeService:
                                 ),
                                 "wake_id": str(wake.id),
                                 "conversation_id": wake.conversation_id,
+                                "message": text,
+                                "checkpoint_description": payload.get("checkpoint_description"),
+                                "blocker_summary": payload.get("blocker_summary"),
+                                "render_action": render_action,
                             },
                         }
                     ],
@@ -608,6 +618,17 @@ class AuroraCheckpointRuntimeService:
                 "next_task_title": getattr(next_task, "title", None),
                 "activity_profile": activity_profile,
                 "follow_up_policy": follow_up_policy,
+                "follow_up_render_action": self._build_follow_up_render_action(
+                    wake=None,
+                    payload={
+                        "checkpoint_day": checkpoint_day,
+                        "checkpoint_description": checkpoint_description,
+                        "blocker_summary": blocker["summary"],
+                        "next_task_title": getattr(next_task, "title", None),
+                    },
+                    message="",
+                    is_final_message=True,
+                ),
                 "follow_up_state": {
                     "defer_count": 0,
                     "timing_history": [],
@@ -791,11 +812,7 @@ class AuroraCheckpointRuntimeService:
         urgency_score = float(wake.urgency_score or 0.0)
         can_defer = defer_count < int(follow_up_policy.get("max_deferrals") or 0)
 
-        if (
-            recent_signals["working_on_gap"]
-            and recent_minutes is not None
-            and recent_minutes <= in_progress_grace
-        ):
+        if recent_signals["working_on_gap"] and recent_minutes is not None and recent_minutes <= in_progress_grace:
             if can_defer:
                 return (
                     FollowUpTimingDecision(
@@ -1237,6 +1254,12 @@ class AuroraCheckpointRuntimeService:
     def _build_follow_up_messages(self, payload: dict[str, Any]) -> list[str]:
         blocker = str(payload.get("blocker_summary") or "上次那个检查点的卡点")
         next_task_title = str(payload.get("next_task_title") or "").strip()
+        variant = self._follow_up_narrative_variant(payload)
+        openers = [
+            f"我还记着你上次 checkpoint 里提到的「{blocker}」。",
+            f"继续接上次那条线：你说「{blocker}」还没完全闭合。",
+            f"上次 checkpoint 留下的重点是「{blocker}」，我这次只轻轻接一下。",
+        ]
         task_hint = (
             f"先别把范围摊太大，我们先盯住「{next_task_title}」里最卡的那一块。"
             if next_task_title
@@ -1249,9 +1272,47 @@ class AuroraCheckpointRuntimeService:
         else:
             second = f"{task_hint} 你上次提到「{blocker}」，现在这块有没有往前推进一点？"
         return [
-            f"我还记着你上次 checkpoint 里提到的「{blocker}」。",
+            openers[variant],
             second,
         ]
+
+    def _follow_up_narrative_variant(self, payload: dict[str, Any]) -> int:
+        state = payload.get("follow_up_state") if isinstance(payload.get("follow_up_state"), dict) else {}
+        history = state.get("timing_history") if isinstance(state.get("timing_history"), list) else []
+        try:
+            checkpoint_day = int(payload.get("checkpoint_day") or 0)
+        except (TypeError, ValueError):
+            checkpoint_day = 0
+        return (checkpoint_day + len(history)) % 3
+
+    def _build_follow_up_render_action(
+        self,
+        *,
+        wake: AuroraScheduledWake | None,
+        payload: dict[str, Any],
+        message: str,
+        is_final_message: bool,
+    ) -> dict[str, Any]:
+        blocker = str(payload.get("blocker_summary") or "").strip()
+        checkpoint_description = str(payload.get("checkpoint_description") or "").strip()
+        next_task_title = str(payload.get("next_task_title") or "").strip()
+        title = "继续上次 checkpoint"
+        if blocker:
+            title = f"继续上次聊的：{blocker[:24]}"
+        summary = message.strip() or blocker or checkpoint_description
+        return {
+            "type": "checkpoint_follow_up",
+            "style": "conversation_continuation",
+            "title": title,
+            "summary": summary,
+            "checkpoint_description": checkpoint_description,
+            "blocker_summary": blocker,
+            "next_task_title": next_task_title,
+            "cta_label": "接着聊",
+            "surface_complete": bool(is_final_message),
+            "wake_id": str(wake.id) if wake is not None else None,
+            "conversation_id": wake.conversation_id if wake is not None else str(payload.get("conversation_id") or ""),
+        }
 
     async def _has_user_resolved_gap(
         self,

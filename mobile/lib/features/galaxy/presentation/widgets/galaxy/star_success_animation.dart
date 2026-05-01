@@ -185,9 +185,8 @@ class _ObsidianNodePainter extends CustomPainter {
       if (drawProgress <= 0) continue;
 
       // Fade out in the final phase
-      final fadeOut = progress > 0.70
-          ? ((1.0 - progress) / 0.30).clamp(0.0, 1.0)
-          : 1.0;
+      final fadeOut =
+          progress > 0.70 ? ((1.0 - progress) / 0.30).clamp(0.0, 1.0) : 1.0;
 
       final eased = Curves.easeOutCubic.transform(drawProgress);
       final lineEnd2 = Offset.lerp(center, neighbor, eased)!;
@@ -225,17 +224,15 @@ class _ObsidianNodePainter extends CustomPainter {
   void _paintConnectionParticles(Canvas canvas) {
     if (neighborPositions.isEmpty) return;
 
-    final fadeOut = progress > 0.70
-        ? ((1.0 - progress) / 0.30).clamp(0.0, 1.0)
-        : 1.0;
+    final fadeOut =
+        progress > 0.70 ? ((1.0 - progress) / 0.30).clamp(0.0, 1.0) : 1.0;
 
     for (final particle in connectionParticles) {
       if (particle.connectionIndex >= neighborPositions.length) continue;
 
       final neighbor = neighborPositions[particle.connectionIndex];
       final travelDuration = 0.25 / particle.speed;
-      final t =
-          ((progress - particle.delay) / travelDuration).clamp(0.0, 1.0);
+      final t = ((progress - particle.delay) / travelDuration).clamp(0.0, 1.0);
 
       if (t <= 0 || t >= 1) continue;
 
@@ -268,13 +265,11 @@ class _ObsidianNodePainter extends CustomPainter {
 
       if (pulseProgress <= 0) continue;
 
-      final fadeOut = progress > 0.75
-          ? ((1.0 - progress) / 0.25).clamp(0.0, 1.0)
-          : 1.0;
+      final fadeOut =
+          progress > 0.75 ? ((1.0 - progress) / 0.25).clamp(0.0, 1.0) : 1.0;
 
       // Expanding ring
-      final ringRadius =
-          8 + 20 * Curves.easeOutCubic.transform(pulseProgress);
+      final ringRadius = 8 + 20 * Curves.easeOutCubic.transform(pulseProgress);
       final ringOpacity = (1.0 - pulseProgress) * 0.6 * fadeOut;
 
       final ringPaint = Paint()
@@ -307,9 +302,8 @@ class _ObsidianNodePainter extends CustomPainter {
     final scale = Curves.easeOutBack.transform(scaleProgress);
 
     // Fade out
-    final fadeOut = progress > 0.72
-        ? ((1.0 - progress) / 0.28).clamp(0.0, 1.0)
-        : 1.0;
+    final fadeOut =
+        progress > 0.72 ? ((1.0 - progress) / 0.28).clamp(0.0, 1.0) : 1.0;
 
     // Outer glow pulse
     final glowPhase = progress * 3 * pi;
@@ -338,10 +332,8 @@ class _ObsidianNodePainter extends CustomPainter {
     // Secondary ring (delayed)
     if (progress > 0.08 && progress < 0.45) {
       const ring2Start = 0.08;
-      final ring2Progress =
-          ((progress - ring2Start) / 0.32).clamp(0.0, 1.0);
-      final ring2Radius =
-          20 * Curves.easeOutQuart.transform(ring2Progress);
+      final ring2Progress = ((progress - ring2Start) / 0.32).clamp(0.0, 1.0);
+      final ring2Radius = 20 * Curves.easeOutQuart.transform(ring2Progress);
       final ring2Opacity = (1 - ring2Progress) * 0.35 * fadeOut;
 
       final ring2Paint = Paint()
@@ -354,8 +346,7 @@ class _ObsidianNodePainter extends CustomPainter {
     // Bright core
     final coreRadius = 6.0 * scale;
     final coreOpacity = fadeOut * 0.9;
-    final corePaint = Paint()
-      ..color = color.withValues(alpha: coreOpacity);
+    final corePaint = Paint()..color = color.withValues(alpha: coreOpacity);
     canvas.drawCircle(center, coreRadius, corePaint);
 
     // Inner white flash on initial appear
@@ -365,7 +356,7 @@ class _ObsidianNodePainter extends CustomPainter {
       final flashOpacity = (1 - flashProgress) * 0.8;
 
       final flashPaint = Paint()
-        ..color = Colors.white.withValues(alpha: flashOpacity)
+        ..color = DS.neutral0.withValues(alpha: flashOpacity)
         ..maskFilter =
             MaskFilter.blur(BlurStyle.normal, 8 * (1 - flashProgress));
       canvas.drawCircle(center, flashRadius, flashPaint);
@@ -374,9 +365,8 @@ class _ObsidianNodePainter extends CustomPainter {
 
   /// Subtle burst particles around the central node
   void _paintBurstParticles(Canvas canvas) {
-    final fadeOut = progress > 0.70
-        ? ((1.0 - progress) / 0.30).clamp(0.0, 1.0)
-        : 1.0;
+    final fadeOut =
+        progress > 0.70 ? ((1.0 - progress) / 0.30).clamp(0.0, 1.0) : 1.0;
 
     for (final particle in burstParticles) {
       final adjustedProgress =
@@ -384,16 +374,14 @@ class _ObsidianNodePainter extends CustomPainter {
               .clamp(0.0, 1.0);
       if (adjustedProgress <= 0) continue;
 
-      final easedProgress =
-          Curves.easeOutQuart.transform(adjustedProgress);
+      final easedProgress = Curves.easeOutQuart.transform(adjustedProgress);
       final distance = particle.velocity * easedProgress;
       final pos = center +
           Offset(
             cos(particle.angle) * distance,
             sin(particle.angle) * distance,
           );
-      final particleOpacity =
-          (1 - adjustedProgress).clamp(0.0, 1.0) * fadeOut;
+      final particleOpacity = (1 - adjustedProgress).clamp(0.0, 1.0) * fadeOut;
 
       if (particleOpacity <= 0) continue;
 

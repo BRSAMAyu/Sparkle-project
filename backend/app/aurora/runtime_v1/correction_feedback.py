@@ -13,6 +13,7 @@ When a user selects a disconfirming predicted reply option, this processor:
 Correcting (disconfirming) lowers confidence by 0.15.
 Confirming boosts confidence by 0.05.
 """
+
 from __future__ import annotations
 
 import json
@@ -32,13 +33,15 @@ def _utcnow() -> datetime:
 @dataclass
 class CorrectionResult:
     """Result of processing a user correction (confirmation or disconfirmation)."""
+
     correction_id: str = ""
     telemetry_id: str = ""
-    action: str = ""               # "confirmed" | "disconfirmed" | "freeform_correction"
+    action: str = ""  # "confirmed" | "disconfirmed" | "freeform_correction"
     affected_state_keys: list[str] = field(default_factory=list)
     new_confidence: dict[str, float] = field(default_factory=dict)
     self_model_updated: bool = False
     correction_recorded: bool = False
+    user_visible_effect: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -49,6 +52,7 @@ class CorrectionResult:
             "new_confidence": self.new_confidence,
             "self_model_updated": self.self_model_updated,
             "correction_recorded": self.correction_recorded,
+            "user_visible_effect": self.user_visible_effect,
         }
 
 
@@ -63,8 +67,11 @@ _SEMANTIC_TO_STATE_KEYS: dict[str, list[str]] = {
     "deep_mastery": ["goal_mode"],
     "risk_temporary": ["execution_consistency"],
     "risk_wrong_diagnosis": ["execution_consistency"],
+    "risk_false_positive": ["affective_pressure", "execution_consistency"],
+    "risk_overstated": ["execution_consistency"],
     "strategy_too_aggressive": ["strategy_confidence"],
     "strategy_too_conservative": ["strategy_confidence"],
+    "strategy_adjust_needed": ["strategy_confidence"],
     "goal_has_changed": ["goal_mode"],
     "not_now": ["aurora_wake_intent"],
     "scope_ok_low_motivation": ["affective_pressure"],
@@ -73,8 +80,10 @@ _SEMANTIC_TO_STATE_KEYS: dict[str, list[str]] = {
     "difficulty_mismatch": ["knowledge_bottleneck"],
     "genuinely_fatigued": ["affective_pressure"],
     "avoidance_not_disengaged": ["growth_momentum"],
-    "freeform_correction": [],   # free-form targets resolved at runtime
+    "freeform_correction": [],  # free-form targets resolved at runtime
     "judgment_denied": ["strategy_confidence"],
+    "judgment_incorrect": ["strategy_confidence"],
+    "not_right_direction": ["strategy_confidence"],
     "calibration_dismissed": ["aurora_wake_intent"],
 }
 
@@ -84,6 +93,7 @@ _SEMANTIC_TO_STATE_KEYS: dict[str, list[str]] = {
 # routing stance. Values drive RoutingProfileService.record_session_outcome().
 _ROUTING_CORRECTION_MAP: dict[str, dict[str, Any]] = {
     "strategy_too_aggressive": {"route_mode": "execution_first", "execution_suggestion_ignored": True},
+    "strategy_adjust_needed": {"route_mode": "execution_first", "execution_suggestion_ignored": True},
     "avoidance_not_disengaged": {"route_mode": "execution_first", "execution_suggestion_ignored": True},
     "scope_ok_low_motivation": {"route_mode": "execution_first", "execution_suggestion_ignored": True},
     "genuinely_fatigued": {"route_mode": "cognitive_first", "frustration_after_cognitive": True},
@@ -151,7 +161,26 @@ class CorrectionFeedbackProcessor:
             is_disconfirming=is_disconfirming,
             is_freeform=is_freeform,
         )
+        result.user_visible_effect = self._build_user_visible_effect(
+            semantic_value=semantic_value,
+            result=result,
+        )
         return result
+
+    def _build_user_visible_effect(
+        self,
+        *,
+        semantic_value: str,
+        result: CorrectionResult,
+    ) -> dict[str, Any]:
+        """Small product-facing receipt for status surfaces."""
+        return {
+            "visible": result.action in {"disconfirmed", "freeform_correction"},
+            "semantic_value": semantic_value,
+            "action": result.action,
+            "affected_state_keys": result.affected_state_keys,
+            "updated_at": _utcnow().isoformat(),
+        }
 
     async def _update_bayesian_policy(
         self,
@@ -195,7 +224,8 @@ class CorrectionFeedbackProcessor:
         for sk in state_keys:
             try:
                 updated = await register.lower_confidence(
-                    user_id, sk,
+                    user_id,
+                    sk,
                     amount=self.CONFIDENCE_DECREASE,
                     reason=reason,
                 )
@@ -204,13 +234,15 @@ class CorrectionFeedbackProcessor:
                     result.new_confidence[sk] = updated.confidence
             except Exception:
                 logger.debug(
-                    "CorrectionFeedback: state lower_confidence failed key={}", sk,
+                    "CorrectionFeedback: state lower_confidence failed key={}",
+                    sk,
                     exc_info=True,
                 )
 
         # 2. Record in self_model
         try:
             from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+
             self_model = SparkleSelfModelService(self.redis)
             correction_context = {
                 "semantic_value": semantic_value,
@@ -234,11 +266,14 @@ class CorrectionFeedbackProcessor:
                 original_claim=f"Aurora hypothesis: {semantic_value}",
                 corrected_claim=freeform_text or f"User rejected: {semantic_value}",
                 reason=reason,
-                state_patches=[{
-                    "state_key": sk,
-                    "action": "lower_confidence",
-                    "amount": self.CONFIDENCE_DECREASE,
-                } for sk in state_keys],
+                state_patches=[
+                    {
+                        "state_key": sk,
+                        "action": "lower_confidence",
+                        "amount": self.CONFIDENCE_DECREASE,
+                    }
+                    for sk in state_keys
+                ],
             )
             result.correction_id = correction.correction_id
             result.correction_recorded = True
@@ -250,7 +285,9 @@ class CorrectionFeedbackProcessor:
 
         logger.info(
             "CorrectionFeedback: disconfirmation user={} semantic={} affected_states={}",
-            user_id, semantic_value, result.affected_state_keys,
+            user_id,
+            semantic_value,
+            result.affected_state_keys,
         )
 
     async def _update_routing_profile(self, user_id: str, semantic_value: str) -> None:
@@ -268,7 +305,8 @@ class CorrectionFeedbackProcessor:
                 await svc.record_session_outcome(UUID(user_id), **routing_kwargs)
         except Exception:
             logger.debug(
-                "CorrectionFeedback: routing profile update failed semantic={}", semantic_value,
+                "CorrectionFeedback: routing profile update failed semantic={}",
+                semantic_value,
                 exc_info=True,
             )
 
@@ -297,11 +335,14 @@ class CorrectionFeedbackProcessor:
                 result.new_confidence[sk] = entry.confidence
             except Exception:
                 logger.debug(
-                    "CorrectionFeedback: confirmation boost failed key={}", sk,
+                    "CorrectionFeedback: confirmation boost failed key={}",
+                    sk,
                     exc_info=True,
                 )
 
         logger.debug(
             "CorrectionFeedback: confirmation user={} semantic={} affected={}",
-            user_id, semantic_value, result.affected_state_keys,
+            user_id,
+            semantic_value,
+            result.affected_state_keys,
         )

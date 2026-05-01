@@ -44,6 +44,7 @@ ALLOWED_EVIDENCE_TYPES = {
 
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
+MEMORY_REFERENCE_OUTCOMES = {"accepted", "corrected", "ignored", "denied"}
 SUMMARY_MAX_LEN = 48
 SESSION_MOOD_TTL_SECONDS = 7 * 24 * 60 * 60
 SESSION_MOOD_LAST_KEY_TEMPLATE = "memory:session_mood:{user_id}:last"
@@ -386,11 +387,13 @@ class MemoryService:
         **updates: Any,
     ) -> MemoryGoal | None:
         result = await self.db.execute(
-            select(MemoryGoal).where(
+            select(MemoryGoal)
+            .where(
                 MemoryGoal.user_id == user_id,
                 MemoryGoal.id == goal_id,
                 MemoryGoal.deleted_at.is_(None),
-            ).with_for_update()
+            )
+            .with_for_update()
         )
         record = result.scalar_one_or_none()
         if record is None:
@@ -1062,6 +1065,92 @@ class MemoryService:
             ),
         )
         return record
+
+    async def record_memory_reference_outcome(
+        self,
+        *,
+        kind: str,
+        memory_id: UUID,
+        user_id: UUID,
+        outcome: str,
+        response_id: str | None = None,
+        reason: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Record how a memory reference landed without changing the storage schema.
+
+        Outcomes are stored as trace rows and folded back into confidence so future
+        prompt selection can become quieter after denial/correction.
+        """
+        normalized_outcome = str(outcome or "").strip().lower()
+        if normalized_outcome not in MEMORY_REFERENCE_OUTCOMES:
+            raise ValueError(f"Unsupported memory reference outcome: {outcome}")
+
+        model = {
+            "preference": MemoryPreference,
+            "goal": MemoryGoal,
+            "episodic": EpisodicMemory,
+        }.get(kind)
+        if model is None:
+            raise ValueError(f"Unsupported memory kind: {kind}")
+
+        result = await self.db.execute(
+            select(model).where(
+                model.id == memory_id,
+                model.user_id == user_id,
+                model.deleted_at.is_(None),
+            )
+        )
+        record = result.scalar_one_or_none()
+        if record is None:
+            return None
+
+        now = _utcnow()
+        if hasattr(record, "last_consumed_at"):
+            record.last_consumed_at = now
+
+        if normalized_outcome == "accepted":
+            if hasattr(record, "confidence") and record.confidence is not None:
+                record.confidence = min(1.0, float(record.confidence or 0.0) + 0.03)
+            if hasattr(record, "evidence_score"):
+                record.evidence_score = min(1.0, float(record.evidence_score or 0.0) + 0.02)
+        elif normalized_outcome in {"corrected", "denied"}:
+            if hasattr(record, "confidence") and record.confidence is not None:
+                record.confidence = max(0.0, float(record.confidence or 0.0) - CONFIDENCE_DECREMENT)
+            if hasattr(record, "evidence_score"):
+                record.evidence_score = max(0.0, float(record.evidence_score or 0.0) - CONFIDENCE_DECREMENT)
+            record.correction_count = (record.correction_count or 0) + 1
+            if normalized_outcome == "denied" and isinstance(record, EpisodicMemory):
+                snapshot = record.evidence_snapshot or {}
+                if not isinstance(snapshot, dict):
+                    snapshot = {"history": snapshot}
+                snapshot["reference_denied_at"] = now.isoformat()
+                snapshot["reference_denial_reason"] = reason or "memory_reference_denied"
+                record.evidence_snapshot = snapshot
+        record.updated_at = now
+
+        trace_reason = reason or normalized_outcome
+        if response_id:
+            trace_reason = f"{trace_reason}; response_id={response_id}"
+        correction_entry = MemoryCorrection(
+            user_id=user_id,
+            memory_type=kind,
+            memory_id=record.id,
+            action=f"memory_reference_{normalized_outcome}",
+            reason=trace_reason,
+        )
+        self.db.add(correction_entry)
+        await self.db.commit()
+        await self.db.refresh(record)
+
+        return {
+            "memory_reference_outcome": normalized_outcome,
+            "memory_type": kind,
+            "memory_id": str(record.id),
+            "response_id": response_id,
+            "confidence": getattr(record, "confidence", None),
+            "evidence_score": getattr(record, "evidence_score", None),
+            "correction_count": getattr(record, "correction_count", None),
+        }
 
     def _apply_retraction(self, record: Any, reason: str | None) -> None:
         updated_refs = []

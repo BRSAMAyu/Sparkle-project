@@ -153,6 +153,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensoryHapticSubtitle => '关闭后，成就、星图等所有触感反馈都会停止';
 
   @override
+  String get sensoryAuroraLinkTitle => 'Aurora 感官联动';
+
+  @override
+  String get sensoryAuroraLinkSubtitle => '允许 Aurora 根据状态轻柔调整音乐、触感和庆祝反馈';
+
+  @override
   String get sensoryAmbientSceneTitle => '专注环境音';
 
   @override
@@ -10692,6 +10698,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatContinueInChat => '继续在对话里';
 
   @override
+  String get chatNewMessagesDivider => '新消息';
+
+  @override
   String get chatViewLatestReport => '查看最新学习报告';
 
   @override
@@ -18298,7 +18307,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraCalibrationConfirm => '需要你确认';
 
   @override
-  String get auroraCalibrationComplete => '校准完成，回到标准层。';
+  String get auroraCalibrationComplete => '校准完成';
 
   @override
   String get auroraCalibrationExit => 'Aurora 已退回后台';
@@ -18307,13 +18316,109 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraCorrectNotRight => '不是这个方向';
 
   @override
+  String get auroraCorrectNotRightSubtitle => '判断偏了';
+
+  @override
   String get auroraCorrectShorter => '更短一点';
+
+  @override
+  String get auroraCorrectShorterSubtitle => '收短回复';
 
   @override
   String get auroraCorrectDirect => '直接出题';
 
   @override
+  String get auroraCorrectDirectSubtitle => '切到练习';
+
+  @override
   String get auroraCorrectRecalibrate => '重新校准';
+
+  @override
+  String get auroraCorrectRecalibrateSubtitle => '深度检查';
+
+  @override
+  String get auroraCorrectionRiskFalsePositive => '我其实不焦虑，只是忙';
+
+  @override
+  String get auroraCorrectionRiskOverstated => '没那么严重';
+
+  @override
+  String get auroraCorrectionRiskSubtitle => '判断偏高';
+
+  @override
+  String get auroraCorrectionJudgmentOff => '这次判断不太准';
+
+  @override
+  String get auroraCorrectionJudgmentSubtitle => '更新判断';
+
+  @override
+  String get auroraCorrectionTemporaryBusy => '只是临时忙';
+
+  @override
+  String get auroraCorrectionTemporarySubtitle => '临时情境';
+
+  @override
+  String get auroraCorrectionStrategyAdjust => '方向需要调整';
+
+  @override
+  String get auroraCorrectionStrategyFaster => '可以再快一点';
+
+  @override
+  String get auroraCorrectionStrategySubtitle => '调整策略';
+
+  @override
+  String get auroraCorrectionKnowledgeBlocker => '我是内容卡住';
+
+  @override
+  String get auroraCorrectionKnowledgeSubtitle => '改判断原因';
+
+  @override
+  String get auroraCorrectionCareless => '这次是粗心';
+
+  @override
+  String get auroraCorrectionCarelessSubtitle => '不是概念问题';
+
+  @override
+  String get auroraCorrectionGenericDisconfirm => '这不太对';
+
+  @override
+  String get auroraCorrectionGenericConfirm => '这个方向对';
+
+  @override
+  String get auroraCorrectionFactSubtitle => '确认事实';
+
+  @override
+  String get auroraCorrectionToneSubtitle => '调整语气';
+
+  @override
+  String get auroraCorrectionFreeformLabel => 'Aurora 理解错了？';
+
+  @override
+  String get auroraCorrectionFreeformSubtitle => '我来说明';
+
+  @override
+  String get auroraCorrectionReceivedTitle => '已收到';
+
+  @override
+  String get auroraCorrectionReceivedSubtitle => 'Aurora 正在更新理解';
+
+  @override
+  String get auroraCorrectionApplied => '上次纠正已生效';
+
+  @override
+  String get auroraCorrectionInputTitle => '想让 Aurora 知道什么？';
+
+  @override
+  String get auroraCorrectionInputHint => '哪里判断错了？说说你的纠正…';
+
+  @override
+  String get auroraCorrectionInputCancel => '取消';
+
+  @override
+  String get auroraCorrectionInputSend => '发送';
+
+  @override
+  String get auroraCorrectionSubmitted => '已收到，Aurora 正在更新理解。';
 
   @override
   String auroraSourceBadge(Object source) {
@@ -18355,6 +18460,81 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auroraBandCoolingDown => 'Aurora 校准冷却中';
+
+  @override
+  String get auroraBandShortSensing => '在感知';
+
+  @override
+  String get auroraBandShortCalibrated => '节奏不错';
+
+  @override
+  String get auroraBandShortRiskFound => '可能卡住';
+
+  @override
+  String get auroraBandShortNeedsConfirm => '需你确认';
+
+  @override
+  String get auroraBandShortCalibrationAvailable => '可深聊';
+
+  @override
+  String get auroraBandShortCoolingDown => '稍后再聊';
+
+  @override
+  String get auroraLayerJudgmentPrefix => '我觉得现在';
+
+  @override
+  String get auroraLayerCorrectionQuestion => '可能是因为';
+
+  @override
+  String get auroraCorrectionTimeNotEnough => '时间不够';
+
+  @override
+  String get auroraCorrectionTooHard => '内容太难';
+
+  @override
+  String get auroraCorrectionLowEnergy => '最近状态不好';
+
+  @override
+  String get auroraCorrectionNoneOfThese => '都不是';
+
+  @override
+  String get auroraCorrectionRecorded => '已记录，下轮会按这个校准。';
+
+  @override
+  String get auroraActionDeepConversation => '进入深度对话';
+
+  @override
+  String get auroraActionWakeDeepConversation => '唤醒 Aurora 深度对话';
+
+  @override
+  String get auroraLayerCurrentStatus => '当前状态';
+
+  @override
+  String get auroraLayerMemoryReferences => '记忆引用';
+
+  @override
+  String get auroraLayerNextSuggestion => '下一步建议';
+
+  @override
+  String get auroraLayerSelfEvaluation => 'Aurora 自评';
+
+  @override
+  String get auroraLayerMemoryFallback => '还没有足够可靠的近因记忆。';
+
+  @override
+  String get auroraLayerNextSuggestionFallback => '先做一个 10 分钟的最小推进。';
+
+  @override
+  String get auroraLayerNextSuggestionTimeConflict => '先快速调整这个时间冲突。';
+
+  @override
+  String get auroraLayerSelfEvalFallback => '我会先保持轻量判断，等更多信号再加深校准。';
+
+  @override
+  String get auroraLayerExpand => '展开';
+
+  @override
+  String get auroraLayerCollapse => '收起';
 
   @override
   String auroraWakeAvailable(Object count) {
@@ -20193,6 +20373,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatContextDetail => '上下文资料详情';
 
   @override
+  String get chatSocialContextDetail => '社群参考详情';
+
+  @override
+  String get chatSocialContextUsed => '参考了学习伙伴的动态';
+
+  @override
+  String get chatSocialContextDisableAction => '不需要参考他的进度';
+
+  @override
+  String get chatSocialContextDisablePrompt => '以后请不要参考学习伙伴的进度来调整回复。';
+
+  @override
   String chatContextUnused(Object count) {
     return '未使用 ($count)';
   }
@@ -20487,6 +20679,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatMemoryOriginalTurn => '原 turn';
+
+  @override
+  String get chatMemoryReferenceCorrectFailed => '记忆纠正失败';
+
+  @override
+  String get chatMemoryReferenceDetailTitle => '相关记忆';
+
+  @override
+  String get chatMemoryReferenceNeedsConfirmation => '待确认';
+
+  @override
+  String get chatMemoryReferenceNotRight => '不对';
+
+  @override
+  String chatMemoryReferenceReceiptLabel(Object count) {
+    return 'Aurora 引用了 $count 条相关记忆';
+  }
+
+  @override
+  String chatMemoryReferenceUsed(Object count) {
+    return '引用了 $count 条相关记忆';
+  }
 
   @override
   String chatMemorySessionCount(Object count) {
@@ -23873,6 +24087,83 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraSend => '发送';
 
   @override
+  String get auroraCoreSessionTitle => 'Aurora 深度校准';
+
+  @override
+  String auroraTurnsRemaining(int count) {
+    return '剩余 $count 轮';
+  }
+
+  @override
+  String get auroraPauseCalibration => '暂停校准';
+
+  @override
+  String get auroraResumeTitle => '继续上次的深度对话';
+
+  @override
+  String get auroraResumeSubtitle => 'Aurora 还保留着你暂停时的阶段和消息。';
+
+  @override
+  String get auroraResumeBannerSubtitle => '从上次停下的位置继续，不用重新开始';
+
+  @override
+  String get auroraResumeAction => '继续';
+
+  @override
+  String get auroraCoreSessionResumed => '继续我们刚才聊的。Aurora 保留了前面的阶段和消息。';
+
+  @override
+  String get auroraSessionExpiredTitle => '上次的深度对话已结束';
+
+  @override
+  String get auroraSessionExpiredSubtitle => '它已经超过可恢复时间，Aurora 不会从过期状态里继续判断。';
+
+  @override
+  String get auroraLastSessionSummary => '上次摘要';
+
+  @override
+  String get auroraJustChat => '只是聊天';
+
+  @override
+  String get auroraStartNewSession => '开始新的深度对话';
+
+  @override
+  String get auroraExpandSheet => '展开校准面板';
+
+  @override
+  String get auroraShrinkSheet => '收起校准面板';
+
+  @override
+  String get auroraStatePatchesTitle => '已更新的状态';
+
+  @override
+  String get auroraNextChangesTitle => '接下来会变化什么';
+
+  @override
+  String get auroraReturnedToBackground => 'Aurora 已退回后台';
+
+  @override
+  String get auroraViewAdjustedPlan => '查看调整后的计划';
+
+  @override
+  String get auroraExplainPrompt => '解释一下';
+
+  @override
+  String get auroraFreeformLabel => '自由描述';
+
+  @override
+  String get auroraCoreCheckpointCta => '深入校准';
+
+  @override
+  String get auroraCheckpointWhyNow => '这个 checkpoint 正好适合确认计划和真实进度是否还对齐';
+
+  @override
+  String get auroraCoreTaskStuckCta => '和 Aurora 深度校准';
+
+  @override
+  String get auroraTaskStuckWhyNow => '任务已经出现卡点，现在校准可以避免下一步继续建立在错误判断上';
+
+  @override
   String get settingsQueueCleared => '等待队列已清空';
 
   @override
@@ -26491,6 +26782,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userNoRevertibleActions => '暂无可回退动作。';
 
   @override
+  String get userCorrectionHistoryTitle => '我纠正过 Aurora 什么';
+
+  @override
+  String get userCorrectionHistoryHint => '最近会影响后续判断的画像和聊天纠正。';
+
+  @override
+  String get userCorrectionHistoryEmpty => '还没有 Aurora 纠正记录。';
+
+  @override
+  String get userCorrectionHistoryUndo => '恢复原判断';
+
+  @override
   String get userTransparentNotEnabled => '透明画像暂未接入';
 
   @override
@@ -27700,4 +28003,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ebLoadError => '加载错题失败，请重试';
+
+  @override
+  String chatContextReceiptSummary(int used, int skipped) {
+    return 'Aurora · 使用 $used 个上下文 / 跳过 $skipped 个';
+  }
+
+  @override
+  String chatContextUsedTools(int count) {
+    return '使用的工具上下文（$count）';
+  }
+
+  @override
+  String toolsContextEffectMessage(String tool) {
+    return '已让 Aurora 知道这次$tool';
+  }
+
+  @override
+  String get toolsContextEffectUndo => '不让 Aurora 知道';
+
+  @override
+  String get toolsContextEffectUndone => '已撤回这次工具上下文';
+
+  @override
+  String get toolsContextEffectUndoFailed => '撤回失败，请稍后再试';
+
+  @override
+  String get toolsNotesSyncedToPrism => '已同步到认知棱镜';
 }

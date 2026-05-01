@@ -113,7 +113,7 @@ class _CommunityHeroState extends State<_CommunityHero> {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: const Icon(Icons.hub_outlined, color: Colors.white),
+                child: Icon(Icons.hub_outlined, color: DS.neutral0),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -129,7 +129,8 @@ class _CommunityHeroState extends State<_CommunityHero> {
                     Text(
                       directory == null
                           ? context.l10n.communityBrowseOrCreate
-                          : context.l10n.communityPublicGroupsCount(directory.totalCount),
+                          : context.l10n
+                              .communityPublicGroupsCount(directory.totalCount),
                       style: theme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -138,7 +139,9 @@ class _CommunityHeroState extends State<_CommunityHero> {
                 ),
               ),
               SparkleButton(
-                label: _collapsed ? context.l10n.communityExpand : context.l10n.communityCollapse,
+                label: _collapsed
+                    ? context.l10n.communityExpand
+                    : context.l10n.communityCollapse,
                 variant: ButtonVariant.ghost,
                 size: ButtonSize.small,
                 onPressed: _toggleCollapsed,
@@ -210,83 +213,84 @@ class _RecommendationsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(context.l10n.communityRecommendedForYou, style: Theme.of(context).textTheme.titleMedium),
-            const Spacer(),
-            SparkleButton(
-              label: context.l10n.communityViewAll,
-              variant: ButtonVariant.ghost,
-              size: ButtonSize.small,
-              onPressed: () => context.push('/community/groups/discover'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        state.when(
-          data: (items) {
-            if (items.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return SizedBox(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(context.l10n.communityRecommendedForYou,
+                  style: Theme.of(context).textTheme.titleMedium),
+              const Spacer(),
+              SparkleButton(
+                label: context.l10n.communityViewAll,
+                variant: ButtonVariant.ghost,
+                size: ButtonSize.small,
+                onPressed: () => context.push('/community/groups/discover'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          state.when(
+            data: (items) {
+              if (items.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return SizedBox(
+                height: 220,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return SizedBox(
+                      width: 292,
+                      child: GroupRecommendationCard(
+                        recommendation: item,
+                        onTap: () =>
+                            context.push('/community/groups/${item.group.id}'),
+                        onJoin: () {
+                          ref
+                              .read(groupRecommendationsProvider.notifier)
+                              .join(item.group.id);
+                          ref.invalidate(myGroupsProvider);
+                        },
+                        onDismiss: () {
+                          ref
+                              .read(groupRecommendationsProvider.notifier)
+                              .dismiss(item.group.id);
+                        },
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+            loading: () => SizedBox(
               height: 220,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: items.length,
+                itemCount: 2,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return SizedBox(
+                itemBuilder: (_, __) => Shimmer.fromColors(
+                  baseColor: DS.surfaceOverlay,
+                  highlightColor: DS.surfacePrimary,
+                  child: Container(
                     width: 292,
-                    child: GroupRecommendationCard(
-                      recommendation: item,
-                      onTap: () =>
-                          context.push('/community/groups/${item.group.id}'),
-                      onJoin: () {
-                        ref
-                            .read(groupRecommendationsProvider.notifier)
-                            .join(item.group.id);
-                        ref.invalidate(myGroupsProvider);
-                      },
-                      onDismiss: () {
-                        ref
-                            .read(groupRecommendationsProvider.notifier)
-                            .dismiss(item.group.id);
-                      },
+                    decoration: BoxDecoration(
+                      color: DS.surfaceOverlay,
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                  );
-                },
-              ),
-            );
-          },
-          loading: () => SizedBox(
-            height: 220,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: 2,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, __) => Shimmer.fromColors(
-                baseColor: DS.surfaceOverlay,
-                highlightColor: DS.surfacePrimary,
-                child: Container(
-                  width: 292,
-                  decoration: BoxDecoration(
-                    color: DS.surfaceOverlay,
-                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
               ),
             ),
+            error: (_, __) => Text(
+              context.l10n.communityRecommendLoadError,
+              style: TextStyle(color: DS.textSecondary),
+            ),
           ),
-          error: (_, __) => Text(
-            context.l10n.communityRecommendLoadError,
-            style: TextStyle(color: DS.textSecondary),
-          ),
-        ),
-      ],
-    );
+        ],
+      );
 }
 
 class _MyGroupsSection extends StatelessWidget {
@@ -296,61 +300,62 @@ class _MyGroupsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => state.when(
-      data: (groups) {
-        if (groups.isEmpty) {
-          return CompactEmptyState(
-            message: context.l10n.communityNoGroupsYet,
-            icon: Icons.groups_outlined,
-            actionText: context.l10n.communityDiscoverGroups,
-            onAction: () => context.push('/community/groups/discover'),
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(context.l10n.communityMyGroups, style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                SparkleButton(
-                  label: context.l10n.communityViewAllGroups,
-                  variant: ButtonVariant.ghost,
-                  size: ButtonSize.small,
-                  onPressed: () => context.push('/community/groups'),
+        data: (groups) {
+          if (groups.isEmpty) {
+            return CompactEmptyState(
+              message: context.l10n.communityNoGroupsYet,
+              icon: Icons.groups_outlined,
+              actionText: context.l10n.communityDiscoverGroups,
+              onAction: () => context.push('/community/groups/discover'),
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(context.l10n.communityMyGroups,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const Spacer(),
+                  SparkleButton(
+                    label: context.l10n.communityViewAllGroups,
+                    variant: ButtonVariant.ghost,
+                    size: ButtonSize.small,
+                    onPressed: () => context.push('/community/groups'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ...List.generate(groups.length > 4 ? 4 : groups.length, (index) {
+                final group = groups[index];
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: index == (groups.length > 4 ? 3 : groups.length - 1)
+                        ? 0
+                        : 12,
+                  ),
+                  child: _JoinedGroupTile(group: group),
+                );
+              }),
+              if (groups.length > 4) ...[
+                const SizedBox(height: 12),
+                Text(
+                  context.l10n.communityMoreGroupsFolded(groups.length - 4),
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: DS.fontSizeSm,
+                  ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            ...List.generate(groups.length > 4 ? 4 : groups.length, (index) {
-              final group = groups[index];
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: index == (groups.length > 4 ? 3 : groups.length - 1)
-                      ? 0
-                      : 12,
-                ),
-                child: _JoinedGroupTile(group: group),
-              );
-            }),
-            if (groups.length > 4) ...[
-              const SizedBox(height: 12),
-              Text(
-                context.l10n.communityMoreGroupsFolded(groups.length - 4),
-                style: TextStyle(
-                  color: DS.textSecondary,
-                  fontSize: DS.fontSizeSm,
-                ),
-              ),
             ],
-          ],
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Text(
-        context.l10n.communityMyGroupsLoadError(error.toString()),
-        style: TextStyle(color: DS.textSecondary),
-      ),
-    );
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Text(
+          context.l10n.communityMyGroupsLoadError(error.toString()),
+          style: TextStyle(color: DS.textSecondary),
+        ),
+      );
 }
 
 class _JoinedGroupTile extends StatelessWidget {
@@ -404,7 +409,8 @@ class _JoinedGroupTile extends StatelessWidget {
               ),
             const SizedBox(height: 6),
             Text(
-              context.l10n.communityGroupSubtitle(roleLabel, group.memberCount, group.todayCheckinCount),
+              context.l10n.communityGroupSubtitle(
+                  roleLabel, group.memberCount, group.todayCheckinCount),
               style: TextStyle(color: DS.textSecondary, fontSize: 12),
             ),
           ],

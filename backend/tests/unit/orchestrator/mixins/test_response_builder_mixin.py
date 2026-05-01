@@ -3,6 +3,7 @@ Unit tests for ResponseBuilderMixin.
 
 Tests the response-building and cleanup helpers for the orchestrator.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,6 +17,7 @@ from app.orchestration.response_builder import ResponseBuilderMixin
 # Create a minimal class that includes the mixin
 class MinimalOrchestrator(ResponseBuilderMixin):
     """Minimal orchestrator with ResponseBuilderMixin for testing."""
+
     def __init__(self):
         pass
 
@@ -59,7 +61,7 @@ def test_extract_response_outcome_stats_counts_task_entities(orchestrator):
                 "entity_type": "task",
                 "entity_id": "task-1",
                 "schema_version": "1.0",
-                "primary_action": "start"
+                "primary_action": "start",
             }
         },
         {
@@ -68,7 +70,7 @@ def test_extract_response_outcome_stats_counts_task_entities(orchestrator):
                 "entity_id": "task-2",
                 "schema_version": "1.0",
             }
-        }
+        },
     ]
     mock_state.context_data = {}
 
@@ -107,7 +109,7 @@ def test_extract_response_outcome_stats_counts_execution_actions(orchestrator):
                 "entity_type": "task",
                 "entity_id": "task-1",
                 "schema_version": "1.0",
-                "secondary_actions": ["complete", "archive"]
+                "secondary_actions": ["complete", "archive"],
             }
         }
     ]
@@ -136,7 +138,7 @@ def test_extract_response_outcome_stats_deduplicates_entities(orchestrator):
                 "entity_id": "task-1",
                 "schema_version": "1.0",
             }
-        }
+        },
     ]
     mock_state.context_data = {}
 
@@ -223,6 +225,79 @@ def test_dual_core_response_metadata_exposes_decision_and_structured_adjustments
     assert json.loads(metadata["dual_core_decision"])["mode"] == "cognitive_first"
     structured = json.loads(metadata["structured_cognitive_adjustments"])
     assert structured[0]["dimension"] == "explanation_depth"
+
+
+def test_unified_aurora_receipts_normalize_all_receipt_lanes(orchestrator):
+    metadata = {
+        "adaptation_summary": json.dumps(
+            {
+                "title": "我刚做了一个调整",
+                "summary": "这轮改成更短的推进方式。",
+                "what_changed": ["降低解释密度"],
+            },
+            ensure_ascii=False,
+        ),
+        "memory_reference_receipt": json.dumps(
+            {
+                "response_id": "resp-1",
+                "used_count": 1,
+                "decision_reason": "Aurora 引用了相关记忆。",
+                "referenced_memories": [{"id": "mem-1", "content": "明天考高数"}],
+            },
+            ensure_ascii=False,
+        ),
+        "context_receipt": json.dumps(
+            {
+                "used_count": 1,
+                "used_names": ["线性代数课件"],
+                "decision_reason": "已优先引用课件",
+            },
+            ensure_ascii=False,
+        ),
+        "spine_receipt": json.dumps(
+            {
+                "receipt_id": "rcpt-1",
+                "summary": "已把下一步拆小。",
+                "correctable": True,
+                "correction_options": ["这个判断不准确"],
+            },
+            ensure_ascii=False,
+        ),
+    }
+
+    receipts = orchestrator._build_unified_aurora_receipts(metadata)
+
+    assert [receipt["receipt_type"] for receipt in receipts] == [
+        "aurora_experience_receipt",
+        "memory_reference_receipt",
+        "source_context_receipt",
+        "next_action_changed_by_aurora",
+    ]
+    assert receipts[0]["what_changed"] == ["降低解释密度"]
+    assert receipts[1]["referenced_memories"][0]["content"] == "明天考高数"
+    assert receipts[2]["source_key"] == "context_receipt"
+    assert receipts[3]["correction_actions"][0]["label"] == "这个判断不准确"
+
+
+def test_unified_aurora_receipts_keep_social_receipt_privacy_boundary(orchestrator):
+    metadata = {
+        "social_context_receipt": {
+            "type": "social_context_receipt",
+            "used_count": 1,
+            "used_names": ["学习伙伴动态"],
+            "decision_reason": "参考了学习伙伴的动态",
+            "privacy_boundary": "只使用匿名角色标签，不展示伙伴姓名、原文或联系方式。",
+        }
+    }
+
+    receipts = orchestrator._build_unified_aurora_receipts(metadata)
+
+    assert len(receipts) == 1
+    receipt = receipts[0]
+    assert receipt["receipt_type"] == "source_context_receipt"
+    assert receipt["source_kind"] == "social"
+    assert receipt["privacy_boundary"] == "只使用匿名角色标签，不展示伙伴姓名、原文或联系方式。"
+    assert "不需要参考他的进度" in receipt["correction_actions"][0]["label"]
 
 
 def test_semantic_control_trace_metadata_is_emitted(orchestrator):

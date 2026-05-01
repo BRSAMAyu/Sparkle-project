@@ -42,6 +42,7 @@ from app.services.memory_service import MemoryService
 from app.services.plan_service import PlanService
 from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.simulation.seed_extractor import SeedExtractor
+from app.services.tool_history_service import ToolHistoryService
 from app.services.user_service import UserService
 from app.state_aggregator.service import StateAggregatorService
 
@@ -95,11 +96,17 @@ class ContextBuilderMixin:
             "summary": str(memory.summary or "").strip(),
             "subject_type": str(memory.subject_type or "").strip(),
             "source_type": str(memory.source_type or "").strip(),
+            "source_lane": str(getattr(memory, "source_lane", "") or "").strip(),
             "occurred_at": memory.occurred_at.isoformat() if memory.occurred_at else None,
             "importance_score": (
                 float(memory.importance_score) if getattr(memory, "importance_score", None) is not None else None
             ),
             "confidence": (float(memory.confidence) if getattr(memory, "confidence", None) is not None else None),
+            "evidence_score": (
+                float(memory.evidence_score) if getattr(memory, "evidence_score", None) is not None else None
+            ),
+            "correction_count": int(getattr(memory, "correction_count", 0) or 0),
+            "user_confirmed": str(getattr(memory, "source_lane", "") or "").strip() != "inferred_extraction",
             "tags": list(memory.tags or []),
         }
 
@@ -226,6 +233,22 @@ class ContextBuilderMixin:
             cognitive_context["galaxy_snapshot"] = dict(galaxy_snapshot)
         return payload
 
+    async def _get_recent_tool_usage_context(
+        self,
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+    ) -> list[dict[str, Any]]:
+        try:
+            return await ToolHistoryService(db_session).get_recent_context_effects(
+                uuid.UUID(user_id),
+                limit=4,
+                hours=24,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to build recent tool usage context for {user_id}: {exc}")
+            return []
+
     # ------------------------------------------------------------------
     # _build_profile_payload
     # ------------------------------------------------------------------
@@ -350,7 +373,9 @@ class ContextBuilderMixin:
     # _get_cognitive_insights
     # ------------------------------------------------------------------
 
-    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession, locale: str = "en") -> dict[str, Any]:
+    async def _get_cognitive_insights(
+        self, user_id: str, db_session: AsyncSession, locale: str = "en"
+    ) -> dict[str, Any]:
         """获取认知模式摘要，注入 LLM 上下文
 
         当用户有已识别的行为模式时，LLM 可以在合适时机主动展示认知棱镜。
@@ -732,6 +757,10 @@ class ContextBuilderMixin:
                     user_id,
                     db_session,
                 )
+                recent_tool_usage = await self._get_recent_tool_usage_context(
+                    user_id=user_id,
+                    db_session=db_session,
+                )
 
                 profile_payload = self._build_profile_payload(
                     user_context_data=user_context_data,
@@ -769,6 +798,7 @@ class ContextBuilderMixin:
                     "profile_context": profile_context_payload,
                     "calendar_context": cognitive_context.calendar_context,
                     "working_memory_snapshot": working_memory_snapshot,
+                    "recent_tool_usage": recent_tool_usage,
                     "past_session_memory": cognitive_context.past_session_memory,
                     # New field for full context injection
                     "cognitive_context": cognitive_context_payload,
@@ -880,6 +910,10 @@ class ContextBuilderMixin:
                         "next_actions": next_actions,
                         "active_plans": active_plans,
                         "focus_stats": focus_stats,
+                        "recent_tool_usage": await self._get_recent_tool_usage_context(
+                            user_id=user_id,
+                            db_session=db_session,
+                        ),
                         "preference_version": preference_version,
                         "llm_profile": llm_profile_data,
                         "experiment_cohort": experiment_cohort,
@@ -913,6 +947,10 @@ class ContextBuilderMixin:
                         "next_actions": next_actions,
                         "active_plans": active_plans,
                         "focus_stats": focus_stats,
+                        "recent_tool_usage": await self._get_recent_tool_usage_context(
+                            user_id=user_id,
+                            db_session=db_session,
+                        ),
                         "preference_version": preference_version,
                         "llm_profile": llm_profile_data,
                         "experiment_cohort": experiment_cohort,
@@ -1033,7 +1071,9 @@ class ContextBuilderMixin:
 
             due_text = I18n.t("context.overdue_tasks", locale=locale, count=overdue_count)
             if next_due:
-                due_text = I18n.t("context.overdue_tasks_with_next", locale=locale, count=overdue_count, title=str(next_due[0]))
+                due_text = I18n.t(
+                    "context.overdue_tasks_with_next", locale=locale, count=overdue_count, title=str(next_due[0])
+                )
 
             welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
 
@@ -1230,7 +1270,11 @@ class ContextBuilderMixin:
                                         bump_version=False,
                                     )
 
-                                    locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
+                                    locale = (
+                                        user_context_payload.get("profile", {})
+                                        .get("identity", {})
+                                        .get("language", "en")
+                                    )
                                     plan_context["mode"] = "phase_rollback"
                                     plan_context["rollback_reason"] = I18n.t("context.rollback_reason", locale=locale)
                                     if plan_state.feedback_log:
