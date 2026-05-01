@@ -149,8 +149,8 @@ class _FakePersistenceStore:
 
 
 class _FakeControlSurfaceService:
-    def __init__(self, db, redis=None, enabled=True) -> None:
-        del db, redis, enabled
+    def __init__(self, db, redis=None, enabled=True, preference_service=None) -> None:
+        del db, redis, enabled, preference_service
 
     async def read_control_surface(self, user_id):
         del user_id
