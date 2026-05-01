@@ -13,8 +13,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// Max client message size: 256KB. Messages larger than this are dropped.
-const maxClientMessageSize = 256 * 1024
+// wsDefaultMaxMessageBytes is the fallback when WSMaxMessageBytes is not
+// configured or set to a non-positive value.  All handlers share this
+// default so behaviour is consistent across WebSocket endpoints.
+const wsDefaultMaxMessageBytes int64 = 256 * 1024 // 256 KB
 
 // Reconnect rate-limit constants
 const (
@@ -200,7 +202,7 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 
 	readLimit := p.config.WSMaxMessageBytes
 	if readLimit <= 0 {
-		readLimit = 1 << 20
+		readLimit = wsDefaultMaxMessageBytes
 	}
 	pongWait := time.Duration(p.config.WSPongWaitSeconds) * time.Second
 	if pongWait <= 0 {
@@ -263,11 +265,11 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				return
 			}
 			// Reject oversized messages
-			if len(data) > maxClientMessageSize {
+			if len(data) > int(wsDefaultMaxMessageBytes) {
 				p.logger.Warn("Dropping oversized client message",
 					zap.String("user_id", userID),
 					zap.Int("size", len(data)),
-					zap.Int("max", maxClientMessageSize))
+					zap.Int("max", int(wsDefaultMaxMessageBytes)))
 				continue
 			}
 			// Only allow text and binary message types

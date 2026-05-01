@@ -96,10 +96,12 @@ async def serve():
         options=[
             ('grpc.max_send_message_length', 50 * 1024 * 1024),  # 50MB
             ('grpc.max_receive_message_length', 50 * 1024 * 1024),  # 50MB
+            ('grpc.max_concurrent_streams', 1000),
             ('grpc.keepalive_time_ms', 10000),
             ('grpc.keepalive_timeout_ms', 5000),
             ('grpc.keepalive_permit_without_calls', True),
             ('grpc.http2.max_pings_without_data', 0),
+            ('grpc.http2.min_time_between_pings_ms', 10000),
         ]
     )
 

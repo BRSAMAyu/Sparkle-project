@@ -44,6 +44,10 @@ func SecurityHeadersMiddleware(cfg ...*config.Config) gin.HandlerFunc {
 		// Permissions-Policy: restrict browser features
 		c.Header("Permissions-Policy", "geolocation=(), camera=(), microphone=(), payment=()")
 
+		// Cross-Origin isolation: prevent cross-origin information leaks
+		c.Header("Cross-Origin-Opener-Policy", "same-origin")
+		c.Header("Cross-Origin-Resource-Policy", "same-origin")
+
 		c.Next()
 	}
 }

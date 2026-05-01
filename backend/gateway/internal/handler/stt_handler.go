@@ -69,7 +69,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	defer clientConn.Close()
 	readLimit := h.config.WSMaxMessageBytes
 	if readLimit <= 0 {
-		readLimit = 1 << 20
+		readLimit = wsDefaultMaxMessageBytes
 	}
 	clientConn.SetReadLimit(readLimit)
 

@@ -131,6 +131,10 @@ func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 			Timeout:             10 * time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(50*1024*1024),
+			grpc.MaxCallSendMsgSize(50*1024*1024),
+		),
 	}, nil
 }
 
