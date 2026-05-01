@@ -12,6 +12,7 @@ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_reposi
 import 'package:sparkle/features/galaxy/presentation/providers/node_source_materials_provider.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 typedef NodeReviewContextCallback = void Function(
   Map<String, dynamic> initialContext,
@@ -316,7 +317,7 @@ class _HistoryContent extends StatelessWidget {
           Row(
             children: [
               Text(
-                '掌握度',
+                context.l10n.galaxyNodeMastery,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: DS.textSecondary,
                       fontWeight: FontWeight.w600,
@@ -324,7 +325,7 @@ class _HistoryContent extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                history.mastery <= 0 ? '尚未学习' : '$percent%',
+                history.mastery <= 0 ? context.l10n.galaxyNodeNotLearned : '$percent%',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: history.mastery <= 0 ? DS.textSecondary : DS.info,
                       fontWeight: FontWeight.w800,
@@ -352,18 +353,18 @@ class _HistoryContent extends StatelessWidget {
               _MetricChip(
                 icon: Icons.history_rounded,
                 label: history.studyCount > 0
-                    ? '已学习 ${history.studyCount} 次'
-                    : '尚未学习',
+                    ? context.l10n.galaxyNodeStudiedCount(history.studyCount)
+                    : context.l10n.galaxyNodeNotLearned,
               ),
               _MetricChip(
                 icon: Icons.schedule_rounded,
                 label: history.lastStudiedAt == null
-                    ? '暂无记录'
-                    : '上次学习 ${_relativeTime(history.lastStudiedAt!)}',
+                    ? context.l10n.galaxyNodeNoRecord
+                    : context.l10n.galaxyNodeLastStudy(_relativeTime(history.lastStudiedAt!)),
               ),
               _MetricChip(
                 icon: Icons.assignment_late_rounded,
-                label: '相关错题 ${history.relatedErrors.length} 道',
+                label: context.l10n.galaxyNodeRelatedErrors(history.relatedErrors.length),
               ),
             ],
           ),
@@ -371,7 +372,7 @@ class _HistoryContent extends StatelessWidget {
           _SourceMaterialsSection(nodeId: nodeId, nodeLabel: label),
           const SizedBox(height: DS.spacing20),
           Text(
-            '最近错题',
+            context.l10n.galaxyNodeRecentErrors,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: DS.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -380,13 +381,15 @@ class _HistoryContent extends StatelessWidget {
           const SizedBox(height: DS.spacing10),
           if (relatedErrors.isEmpty)
             Text(
-              '暂无相关错题',
+              context.l10n.galaxyNodeNoRelatedErrors,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
             )
           else
             ...relatedErrors.map(_ErrorPreview.new),
+          const SizedBox(height: DS.spacing20),
+          _FocusReasonSection(nodeId: nodeId, mastery: history.mastery),
           const SizedBox(height: DS.spacing20),
           _CommunityInsightSection(nodeId: nodeId),
           const SizedBox(height: DS.spacing20),
@@ -400,7 +403,7 @@ class _HistoryContent extends StatelessWidget {
                         ? Icons.school_rounded
                         : Icons.play_arrow_rounded,
                   ),
-                  label: Text(history.mastery <= 0 ? '开始学习' : '开始复习'),
+                  label: Text(history.mastery <= 0 ? context.l10n.galaxyNodeStartLearn : context.l10n.galaxyNodeStartReview),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -408,7 +411,7 @@ class _HistoryContent extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => onViewErrors(history),
                   icon: const Icon(Icons.assignment_rounded),
-                  label: const Text('查看错题'),
+                  label: Text(context.l10n.galaxyNodeViewErrors),
                 ),
               ),
             ],
@@ -430,15 +433,15 @@ class _HistoryContent extends StatelessWidget {
   static String _relativeTime(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inDays >= 1) {
-      return '${diff.inDays} 天前';
+      return S.galaxyNodeDaysAgo(diff.inDays);
     }
     if (diff.inHours >= 1) {
-      return '${diff.inHours} 小时前';
+      return S.galaxyNodeHoursAgo(diff.inHours);
     }
     if (diff.inMinutes >= 1) {
-      return '${diff.inMinutes} 分钟前';
+      return S.galaxyNodeMinutesAgo(diff.inMinutes);
     }
-    return '刚刚';
+    return S.galaxyNodeJustNow;
   }
 }
 
@@ -1267,7 +1270,7 @@ class _ErrorPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = (error.questionText?.trim().isNotEmpty ?? false)
         ? error.questionText!.trim()
-        : '图片错题';
+        : context.l10n.galaxyNodeImageError;
     final subtitle = error.analysisSummary?.trim();
     return Container(
       width: double.infinity,
@@ -1331,14 +1334,14 @@ class _HistoryErrorState extends StatelessWidget {
             Icon(Icons.error_outline_rounded, color: DS.warning),
             const SizedBox(height: DS.spacing12),
             Text(
-              '节点历史加载失败',
+              context.l10n.galaxyNodeHistoryFailed,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: DS.spacing12),
             TextButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('重试'),
+              label: Text(context.l10n.galaxyNodeRetry),
             ),
           ],
         ),
@@ -1390,24 +1393,24 @@ class _SourceMaterialsCopy {
             'uploaded. It will appear here after processing and attachment.',
       );
     }
-    return const _SourceMaterialsCopy._(
-      title: '来源资料',
-      personalBadge: '我的上传',
-      systemBadge: '暂未附带个人笔记',
-      chunkUnit: '片段',
-      emptyTitle: '让这个节点回到你的真实资料里',
-      readMore: '阅读更多',
-      noPreview: '这份资料暂时还没有可展示的片段。',
-      openFailed: '暂时无法打开来源资料。',
-      retry: '重试',
-      pageLabel: '第',
-      pagesLabel: '第',
-      excerptLabel: '片段',
-      summaryLabel: '份文档 · 个知识片段',
-      uploadDateLabel: '上传于',
-      emptyBodyLabel: '为这个主题补充自己的讲义或笔记，让知识真正可追溯。',
-      addNotesLabel: '添加关于',
-      uploadSavedLabel: '已上传，处理并挂接后会显示在这里。',
+    return _SourceMaterialsCopy._(
+      title: context.l10n.galaxyNodeSourceAssets,
+      personalBadge: context.l10n.galaxyNodePersonalBadge,
+      systemBadge: context.l10n.galaxyNodeNoPersonalNote,
+      chunkUnit: context.l10n.galaxyNodeChunkUnit,
+      emptyTitle: context.l10n.galaxyNodeEmptySourceTitle,
+      readMore: context.l10n.galaxyNodeReadMore,
+      noPreview: context.l10n.galaxyNodeNoPreview,
+      openFailed: context.l10n.galaxyNodeOpenFailed,
+      retry: context.l10n.galaxyNodeRetry,
+      pageLabel: context.l10n.galaxyNodePageLabel,
+      pagesLabel: context.l10n.galaxyNodePagesLabel,
+      excerptLabel: context.l10n.galaxyNodeExcerptLabel,
+      summaryLabel: context.l10n.galaxyNodeUploadDateLabel,  // TODO: check this mapping
+      uploadDateLabel: context.l10n.galaxyNodeUploadDateLabel,
+      emptyBodyLabel: context.l10n.galaxyNodeEmptySourceBody,
+      addNotesLabel: context.l10n.galaxyNodeAddNotesLabel,
+      uploadSavedLabel: context.l10n.galaxyNodeUploadSaved,
     );
   }
 
@@ -1542,6 +1545,58 @@ String _buildExcerptReferenceLabel(
     parts.add(copy.excerpt(excerpt.fallbackOrdinal));
   }
   return parts.join(' · ');
+}
+
+/// KG-009: "Why is this node prioritized today?" explainable path section.
+class _FocusReasonSection extends StatelessWidget {
+  const _FocusReasonSection({required this.nodeId, required this.mastery});
+
+  final String nodeId;
+  final double mastery;
+
+  @override
+  Widget build(BuildContext context) {
+    final reason = _computeReason(mastery);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.lightbulb_outline_rounded, size: DS.iconSizeSm, color: DS.warning),
+            const SizedBox(width: DS.spacing8),
+            Text(
+              'Why today?',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: DS.warning.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(DS.radius8),
+            border: Border.all(color: DS.warning.withOpacity(0.15)),
+          ),
+          child: Text(
+            reason,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _computeReason(double m) {
+    if (m <= 0) return 'You haven\'t started this yet — it\'s unblocked and ready to begin.';
+    if (m < 0.3) return 'Early stage — building a foundation here will unlock dependent topics.';
+    if (m < 0.7) return 'Making progress! Reviewing now will solidify your understanding.';
+    return 'Almost mastered — a final review will help lock this in.';
+  }
 }
 
 class _CommunityInsightSection extends ConsumerWidget {

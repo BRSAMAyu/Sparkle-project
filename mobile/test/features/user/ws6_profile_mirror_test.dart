@@ -6,8 +6,11 @@ import 'package:sparkle/features/user/presentation/providers/persona_view_provid
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/ws6_profile_mirror_provider.dart';
 import 'package:sparkle/features/user/presentation/widgets/mirror_bar.dart';
+import '../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('mirror bar renders four dimensions and presence label',
       (tester) async {
     const model = Ws6MirrorBarModel(

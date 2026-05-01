@@ -436,6 +436,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
         envelope[key] = value;
       }
     }
+    final structuredAdjustments =
+        _parseJsonMapList(metadata['structured_cognitive_adjustments']);
+    if (structuredAdjustments.isNotEmpty) {
+      envelope['structured_cognitive_adjustments'] = structuredAdjustments;
+      final uxTurn =
+          Map<String, dynamic>.from(envelope['ux_turn'] as Map? ?? const {});
+      envelope['ux_turn'] = {
+        ...uxTurn,
+        'structured_cognitive_adjustments': structuredAdjustments,
+      };
+    }
     return envelope;
   }
 
@@ -569,9 +580,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'reason': reason,
         'source': suggestion['source']?.toString() ?? 'execution_suggestion',
         'delegate_preference': suggestion['delegate_preference'],
-        'title': tone == 'detailed_guidance' ? '这一步适合交给 AI 执行' : '我可以直接替你执行这一步',
-        'summary':
-            reason.isNotEmpty ? reason : '这个任务已经具备可委派的结构，Sparkle 可以直接进入执行链路。',
+        'title': tone == 'detailed_guidance'
+            ? S.chatAiExecutionSuitable
+            : S.chatAiExecutionDirect,
+        'summary': reason.isNotEmpty ? reason : S.chatExecutionDelegatable,
         'route': '${TaskRoutes.home}/$taskId/execute?origin=chat',
       });
     }
@@ -599,20 +611,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
             : 'success';
 
     final affectedObjects = <String>[
-      if (stepsTotal > 0) '步骤 $stepsPassed/$stepsTotal',
-      if (toolsTotal > 0) '工具 $toolsSuccessful/$toolsTotal',
+      if (stepsTotal > 0) S.chatValidationSteps(stepsPassed, stepsTotal),
+      if (toolsTotal > 0) S.chatValidationTools(toolsSuccessful, toolsTotal),
       if (qualityScore != null)
-        '质量 ${(qualityScore * 100).toStringAsFixed(0)}%',
+        S.chatValidationQuality((qualityScore * 100).toStringAsFixed(0)),
     ];
 
     _upsertWidget(target, 'execution_summary', {
       'status': status,
       'impact_summary': status == 'success'
-          ? '这次对话内的执行链路已经完成验证，可以直接把结果嵌回聊天上下文。'
+          ? S.chatExecutionSuccessSummary
           : status == 'partial'
-              ? '执行链路部分通过验证，建议先查看结果摘要，再决定是否继续委派。'
-              : '执行链路没有完全达标，Sparkle 会保留人工接管的空间。',
-      'next_action': status == 'success' ? '查看结果摘要' : '人工复核',
+              ? S.chatExecutionPartialSummary
+              : S.chatExecutionFailedSummary,
+      'next_action':
+          status == 'success' ? S.chatViewResults : S.chatManualReview,
       'affected_objects': affectedObjects,
       if (_parseJsonMap(validation['result_preview']) != null)
         'result_preview': _parseJsonMap(validation['result_preview']),
@@ -875,6 +888,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Map<String, dynamic>? accumulatedCollaboration;
     Map<String, dynamic>? accumulatedUxEnvelope;
     final accumulatedRawMetadata = <String, dynamic>{};
+    List<Map<String, dynamic>>? accumulatedStructuredAdjustments;
     Map<String, dynamic>? accumulatedOrchestrationTrace;
     Map<String, dynamic>? accumulatedModeSuggestion;
     Map<String, dynamic>? accumulatedRoutingPreview;
@@ -941,6 +955,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
         return;
       }
       upsertSourceSummaryCitations(citations);
+    }
+
+    void captureStructuredAdjustments(Map<String, dynamic>? metadata) {
+      if (metadata == null) {
+        return;
+      }
+      final adjustments =
+          _parseJsonMapList(metadata['structured_cognitive_adjustments']);
+      if (adjustments.isEmpty) {
+        return;
+      }
+      accumulatedStructuredAdjustments = adjustments;
+      accumulatedRawMetadata['structured_cognitive_adjustments'] = adjustments;
     }
 
     void flushPending({bool immediate = false}) {
@@ -1010,9 +1037,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         var resolvedContent = accumulatedContent;
         if (resolvedContent.trim().isEmpty && phase == ChatRunPhase.completed) {
           if (accumulatedWidgets.isNotEmpty || accumulatedUxEnvelope != null) {
-            resolvedContent = '已为你整理好下一步操作。';
+            resolvedContent = S.chatNextStepsReady;
           } else if (accumulatedCollaboration != null) {
-            resolvedContent = '本轮协作结果已准备好。';
+            resolvedContent = S.chatCollaborationResultReady;
           }
         }
         String? reasoningSummary;
@@ -1059,6 +1086,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           uxEnvelope: accumulatedUxEnvelope,
           rawMetadata:
               accumulatedRawMetadata.isNotEmpty ? accumulatedRawMetadata : null,
+          structuredCognitiveAdjustments:
+              accumulatedStructuredAdjustments ?? const [],
         );
 
         state = state.copyWith(
@@ -1083,7 +1112,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
             state.transparencyPresentationState.copyWith(
           isExpanded: false,
           isDismissed: false,
-          lastCompletedLabel: phase == ChatRunPhase.completed ? '已完成' : null,
+          lastCompletedLabel:
+              phase == ChatRunPhase.completed ? S.chatCompleted : null,
           clearLastCompletedLabel: phase != ChatRunPhase.completed,
         ),
         error: errorMessage,
@@ -1207,6 +1237,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
             captureCitationMetadata(metadata['citations']);
+            captureStructuredAdjustments(metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1400,6 +1431,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
             captureCitationMetadata(metadata['citations']);
+            captureStructuredAdjustments(metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1407,6 +1439,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
               ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
               ...uxEnvelope,
             };
+          }
+          // Extract dual_core_mode from ux_turn (lives in full_text event metadata)
+          final uxTurnMap =
+              accumulatedUxEnvelope?['ux_turn'] as Map<String, dynamic>?;
+          final newDualCoreMode = uxTurnMap?['dual_core_mode'] as String?;
+          if (newDualCoreMode != null) {
+            state = state.copyWith(dualCoreMode: newDualCoreMode);
           }
           if (metadata != null) {
             final selectedExpertsRaw = metadata['selected_experts'];
@@ -1598,6 +1637,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           accumulatedMeta.addAll(event.meta);
           accumulatedRawMetadata.addAll(event.meta);
           captureCitationMetadata(event.meta['citations']);
+          captureStructuredAdjustments(event.meta);
           flushPending();
         } else if (event is ReasoningStepEvent) {
           // 🆕 推理步骤事件 - Chain of Thought Visualization
@@ -1726,6 +1766,34 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is SprintModeSwitchEvent) {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
+          flushPending();
+        } else if (event is StaleRecoveryEvent) {
+          // Spine: StaleStateGuard recovery card
+          state = state.copyWith(pendingStaleCard: event);
+          flushPending();
+        } else if (event is SpineReceiptEvent) {
+          // Spine: UserVisibleReceipt card
+          state = state.copyWith(pendingSpineReceipt: event);
+          flushPending();
+        } else if (event is CommunityHintEvent) {
+          // Spine: community insight card (divine moment #6 社群经验转策略)
+          state = state.copyWith(pendingCommunityHint: event);
+          flushPending();
+        } else if (event is UXWarningEvent) {
+          // Spine: proactive risk warning (divine moment #5 阻止低收益)
+          state = state.copyWith(pendingUXWarning: event);
+          flushPending();
+        } else if (event is GrowthCardEvent) {
+          // Spine: growth milestone card (divine moment #1 看见坚持)
+          state = state.copyWith(pendingGrowthCard: event);
+          flushPending();
+        } else if (event is GoalArbitrationEvent) {
+          // Spine: multi-goal conflict surface
+          state = state.copyWith(pendingGoalArbitration: event);
+          flushPending();
+        } else if (event is SpineDegradedEvent) {
+          // STAB-012: Spine pipeline degraded — show subtle indicator
+          state = state.copyWith(spineDegraded: true);
           flushPending();
         } else if (event is NotificationEvent) {
           // Notification Event - 实时通知推送

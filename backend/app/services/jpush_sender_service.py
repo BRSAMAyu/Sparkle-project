@@ -1,4 +1,4 @@
-from __future__ import annotations
+# rule-at: orphan-by-design Standalone JPush REST client, activated by push_service.py when JPUSH_ENABLED=True
 """
 JPush Sender Service
 
@@ -14,11 +14,13 @@ Features:
 - Platform-specific configurations
 - Deep link support
 """
-import asyncio
+
+from __future__ import annotations
+
+import json
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
-from uuid import UUID
 
 import httpx
 from loguru import logger
@@ -48,6 +50,8 @@ class JPushPayload:
     title: str
     body: str
     data: dict[str, Any] | None = None
+    goal_context: dict[str, Any] | str | None = None
+    suggested_action: dict[str, Any] | str | None = None
     image: str | None = None
     deep_link: str | None = None
     notification_type: str = "system"
@@ -365,11 +369,12 @@ class JPushSenderService:
             body["audience"] = "all"
 
         # Add message (custom data)
-        if payload.data:
+        extras = self._prepare_extras(payload)
+        if extras:
             body["message"] = {
                 "msg_content": payload.body,
                 "title": payload.title,
-                "extras": self._prepare_extras(payload),
+                "extras": extras,
             }
 
         return body
@@ -425,7 +430,13 @@ class JPushSenderService:
         if payload.data:
             for key, value in payload.data.items():
                 if value is not None:
-                    extras[key] = value
+                    extras[key] = self._serialize_extra_value(value)
+
+        if payload.goal_context is not None:
+            extras["goal_context"] = self._serialize_extra_value(payload.goal_context)
+
+        if payload.suggested_action is not None:
+            extras["suggested_action"] = self._serialize_extra_value(payload.suggested_action)
 
         # Add deep link if provided
         if payload.deep_link:
@@ -435,9 +446,16 @@ class JPushSenderService:
         extras["notification_type"] = payload.notification_type
 
         # Add timestamp
-        extras["sent_at"] = datetime.now(timezone.utc).isoformat()
+        extras["sent_at"] = datetime.now(UTC).isoformat()
 
         return extras
+
+    @staticmethod
+    def _serialize_extra_value(value: Any) -> Any:
+        """Keep scalar extras as-is, encode structured context safely for JPush clients."""
+        if isinstance(value, (dict, list, tuple)):
+            return json.dumps(value, ensure_ascii=False)
+        return value
 
     async def _cleanup_invalid_registrations(
         self, registration_ids: list[str]
@@ -493,9 +511,6 @@ class JPushSenderService:
             )
 
             if response.status_code == 200:
-                data = response.json()
-                # Check if device is active
-                tags = data.get("tags", [])
                 return "valid"
             elif response.status_code == 404:
                 return "invalid"

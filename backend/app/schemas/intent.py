@@ -5,14 +5,15 @@ Multi-Intent Recognition Schemas
 用于识别和拆分用户输入中的多个意图
 """
 from __future__ import annotations
-from enum import Enum
+
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class IntentType(str, Enum):
+class IntentType(StrEnum):
     """意图类型枚举"""
     TASK_MANAGEMENT = "task_management"      # 任务管理
     KNOWLEDGE_QUERY = "knowledge_query"      # 知识查询

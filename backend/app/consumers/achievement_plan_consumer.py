@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 from app.db.session import AsyncSessionLocal
 from app.models.plan import Plan, PlanType
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
-
-from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 
 
 class AchievementPlanConsumer(JourneyEventConsumerBase):

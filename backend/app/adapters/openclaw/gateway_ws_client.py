@@ -8,26 +8,27 @@ import inspect
 import json
 import platform
 import random
-from pathlib import Path
+import unicodedata
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 from time import monotonic, time
-from typing import Any, Awaitable, Callable
+from typing import Any
 from urllib.parse import urlparse, urlunparse
-import unicodedata
 
 import websockets
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from loguru import logger
 
-from app.adapters.openclaw.config import OpenClawConfig
 from app.adapters.openclaw.client import (
     OpenClawConfigurationError,
     OpenClawError,
     OpenClawExecutionError,
     OpenClawTimeout,
 )
+from app.adapters.openclaw.config import OpenClawConfig
 
 EventCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
 _ED25519_SPKI_PREFIX = bytes.fromhex("302a300506032b6570032100")
@@ -252,7 +253,7 @@ class OpenClawGatewayWebSocketClient:
                 remaining = max(deadline - monotonic(), 0.1)
                 try:
                     frame = await self._recv_json(websocket, timeout_seconds=min(1.0, remaining))
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
 
                 frame_type = frame.get("type")
@@ -463,7 +464,7 @@ class OpenClawGatewayWebSocketClient:
             remaining = max(deadline - monotonic(), 0.1)
             try:
                 frame = await self._recv_json(websocket, timeout_seconds=min(1.0, remaining))
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
 
             if frame.get("type") != "event":
@@ -490,7 +491,7 @@ class OpenClawGatewayWebSocketClient:
             if frame.get("type") == "event" and frame.get("event") == "connect.challenge":
                 payload = frame.get("payload") or {}
                 nonce = payload.get("nonce")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.debug("OpenClaw gateway did not send connect.challenge before timeout; continuing with connect")
 
         auth_payload: dict[str, Any] = {}

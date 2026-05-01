@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,7 @@ import 'package:sparkle/features/insights/data/repositories/learning_path_reposi
 import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeApiClient extends Fake implements ApiClient {}
 
@@ -92,6 +95,8 @@ class _LearningPathDialogLauncher extends StatelessWidget {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('task path generation returns user to task system',
       (tester) async {
     final router = GoRouter(
@@ -118,7 +123,15 @@ void main() {
         ],
         child: MaterialApp.router(
           routerConfig: router,
-        ),
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+              ),
       ),
     );
 

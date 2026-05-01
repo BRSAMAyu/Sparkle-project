@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class MessageRole(str, enum.Enum):
+class MessageRole(enum.StrEnum):
     """消息角色枚举"""
 
     USER = "user"  # 用户消息

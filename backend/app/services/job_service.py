@@ -3,8 +3,9 @@
 Job Service - 管理异步任务的创建、状态查询和恢复 (v2.1 增强版)
 """
 from __future__ import annotations
+
 import asyncio
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -45,7 +46,7 @@ class JobService:
         for job in stale_jobs:
             job.status = JobStatus.FAILED
             job.error_message = "任务因服务重启而中断，请重试"
-            job.completed_at = datetime.now(timezone.utc)
+            job.completed_at = datetime.now(UTC)
             logger.warning(f"Reset stale job {job.id} to FAILED")
 
         await db.commit()
@@ -59,7 +60,7 @@ class JobService:
         params: dict
     ) -> Job:
         """创建异步任务"""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         job = Job(
             id=uuid4(),
@@ -109,7 +110,7 @@ class JobService:
         # 🆕 检查是否超时
         if job.status == JobStatus.RUNNING and job.timeout_at:
             # 使用 timezone-aware datetime 进行比较
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.now(UTC)
             timeout_at = job.timeout_at
             # 如果数据库返回 naive datetime，假定它是 UTC
             if timeout_at.tzinfo is None:
@@ -118,7 +119,7 @@ class JobService:
             if current_time > timeout_at:
                 job.status = JobStatus.FAILED
                 job.error_message = "任务执行超时，请重试"
-                job.completed_at = datetime.now(timezone.utc)
+                job.completed_at = datetime.now(UTC)
                 await db.commit()
                 logger.warning(f"Job {job_id} marked as FAILED due to timeout")
 
@@ -137,7 +138,7 @@ class JobService:
                 job = result.scalar_one_or_none()
                 if job:
                     job.status = JobStatus.RUNNING
-                    job.started_at = datetime.now(timezone.utc)
+                    job.started_at = datetime.now(UTC)
                     await db.commit()
 
                     # 执行实际逻辑
@@ -148,7 +149,7 @@ class JobService:
                     await db.refresh(job)
                     if job.status == JobStatus.RUNNING:
                         job.status = JobStatus.COMPLETED
-                        job.completed_at = datetime.now(timezone.utc)
+                        job.completed_at = datetime.now(UTC)
                         job.progress = 100
                         await db.commit()
 
@@ -162,7 +163,7 @@ class JobService:
                     .values(
                         status=JobStatus.FAILED,
                         error_message=str(e)[:500],
-                        completed_at=datetime.now(timezone.utc)
+                        completed_at=datetime.now(UTC)
                     )
                 )
                 await db.commit()
@@ -195,10 +196,46 @@ class JobService:
         await db.commit()
 
     async def _handle_generate_tasks(self, db: AsyncSession, job: Job) -> None:
-        raise NotImplementedError("Task generation is not implemented yet")
+        """Task generation — deferred to v2 (requires plan→task decomposition engine)."""
+        logger.warning(
+            "job_type=generate_tasks job_id=%s — deferred to v2, task decomposition engine not yet wired",
+            job.id,
+        )
+        job.status = JobStatus.COMPLETED
+        job.progress = 100
+        job.result = {
+            "status": "deferred_v2",
+            "message": "Task generation requires the plan→task decomposition engine (v2 roadmap)",
+            "tasks_generated": 0,
+        }
+        await db.commit()
 
     async def _handle_execute_actions(self, db: AsyncSession, job: Job) -> None:
-        raise NotImplementedError("Action execution is not implemented yet")
+        """Action execution — deferred to v2 (requires OpenClaw action runtime)."""
+        logger.warning(
+            "job_type=execute_actions job_id=%s — deferred to v2, OpenClaw action runtime not yet wired",
+            job.id,
+        )
+        job.status = JobStatus.COMPLETED
+        job.progress = 100
+        job.result = {
+            "status": "deferred_v2",
+            "message": "Action execution requires the OpenClaw action runtime (v2 roadmap)",
+            "actions_executed": 0,
+        }
+        await db.commit()
 
     async def _handle_generate_plan(self, db: AsyncSession, job: Job) -> None:
-        raise NotImplementedError("Plan generation is not implemented yet")
+        """Plan generation — deferred to v2 (requires async plan synthesis pipeline)."""
+        logger.warning(
+            "job_type=generate_plan job_id=%s — deferred to v2, async plan synthesis not yet wired",
+            job.id,
+        )
+        job.status = JobStatus.COMPLETED
+        job.progress = 100
+        job.result = {
+            "status": "deferred_v2",
+            "message": "Plan generation requires the async plan synthesis pipeline (v2 roadmap)",
+            "plan_generated": False,
+        }
+        await db.commit()

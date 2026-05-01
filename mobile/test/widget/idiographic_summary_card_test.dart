@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/presentation/widgets/idiographic_summary_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   test('fromProfileContext_returns_null_below_confidence_threshold', () {
     expect(
       IdiographicSummaryCard.fromProfileContext({
@@ -59,14 +62,12 @@ void main() {
     expect(parsed, isNotNull);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: IdiographicSummaryCard(
             summaryLines: (parsed!['summaryLines'] as List<dynamic>).cast<String>(),
             disclaimerText: parsed['disclaimerText'] as String,
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('近期关联观察'), findsOneWidget);

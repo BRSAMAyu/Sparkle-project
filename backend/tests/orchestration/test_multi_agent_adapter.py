@@ -133,7 +133,7 @@ async def test_execute_mode_workflow_falls_back_when_stream_empty(monkeypatch):
         responses.append(resp)
 
     deltas = [r.delta for r in responses if r.delta]
-    assert any("结构化摘要" in d for d in deltas)
+    assert any("structured summary" in d for d in deltas)
     assert responses[-1].finish_reason == 1
 
 
@@ -193,7 +193,7 @@ async def test_stream_synthesis_response_uses_role_scoped_llm_and_context(monkey
     assert capturing_llm.messages is not None
     assert capturing_llm.messages[0]["role"] == "system"
     assert "BASE_SYSTEM_PROMPT" in capturing_llm.messages[0]["content"]
-    assert "已验证的执行结果摘要" in capturing_llm.messages[0]["content"]
+    assert "Summarized Verified Execution Results" in capturing_llm.messages[0]["content"]
     assert captured_prompt_kwargs["dual_core_instruction"] == "先共情，再给步骤。"
     assert capturing_llm.messages[1]["content"] == "前一个问题"
     assert capturing_llm.messages[2]["content"] == "前一个回答"

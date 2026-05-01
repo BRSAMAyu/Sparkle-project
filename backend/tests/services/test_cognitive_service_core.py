@@ -151,7 +151,7 @@ class TestCreateFragment:
         )
 
         # 验证 embedding 被生成（可能因 SQLite 限制为 None，但 get_embedding 被调用）
-        mock_embedding_service.get_embedding.assert_called_once()
+        mock_embedding_service.get_embedding.assert_called_once_with("Test content for embedding")
 
     @pytest.mark.asyncio
     async def test_create_fragment_embedding_failure_continues_without_vector(

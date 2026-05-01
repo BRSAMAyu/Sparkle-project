@@ -7,6 +7,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
+import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
@@ -15,7 +17,10 @@ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboa
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
+import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_alert.dart';
+import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/aurora_status_band.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
@@ -75,6 +80,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         state.growth == null;
   }
 
+  AuroraBandState _resolveAuroraState(DashboardState state) {
+    final sprint = state.sprint;
+    if (sprint != null) {
+      if (sprint.daysLeft <= 2) return AuroraBandState.riskDetected;
+      return AuroraBandState.strategyActive;
+    }
+    if (state.nextActions.isEmpty && state.growth == null) {
+      return AuroraBandState.calibrated;
+    }
+    return AuroraBandState.calibrated;
+  }
+
+  String? _auroraBandLabel(DashboardState state) {
+    final sprint = state.sprint;
+    if (sprint != null) {
+      if (sprint.daysLeft <= 2) return context.l10n.dashboardSprintPhase;
+      return context.l10n.dashboardSprintDaysLeft(sprint.daysLeft);
+    }
+    return null;
+  }
+
   void _handleOmniBarHeightChanged(double height) {
     if (_omniBarHeight != null && (_omniBarHeight! - height).abs() < 0.5) {
       return;
@@ -100,8 +126,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ref.read(homeGrowthStateProvider.future),
         ref.read(homeDailyContextLineProvider.future),
       ]);
-    } catch (_) {
+    } catch (e, st) {
       // The card falls back to an empty-plan state if growth data is unavailable.
+      debugPrint('Dashboard: growth state refresh failed: $e\n$st');
     }
   }
 
@@ -156,6 +183,56 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   accentColor: DS.brandPrimary,
                   title: context.l10n.dashboardSetFirstGoal,
                   summary: context.l10n.dashboardSetFirstGoalSummary,
+                ),
+                const SizedBox(height: DS.spacing16),
+                Text(
+                  context.l10n.dashboardWhatToPush,
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing12),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    _GoalChip(
+                      label: context.l10n.dashboardGoalExamSprint,
+                      icon: Icons.local_fire_department_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalExamSprintPrompt)}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: context.l10n.dashboardGoalLongTerm,
+                      icon: Icons.school_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalLongTermPrompt)}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: context.l10n.dashboardGoalProject,
+                      icon: Icons.rocket_launch_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalProjectPrompt)}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: context.l10n.dashboardGoalSelfGrowth,
+                      icon: Icons.psychology_outlined,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalSelfGrowthPrompt)}',
+                      ),
+                    ),
+                    _GoalChip(
+                      label: context.l10n.dashboardGoalNotSure,
+                      icon: Icons.help_outline,
+                      onTap: () => context.go(
+                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalNotSurePrompt)}',
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: DS.spacing16),
                 Wrap(
@@ -322,7 +399,43 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     var sectionIndex = growthSections.length;
     final dashboardSections = <Widget>[];
-    if (dashboardState.isLoading) {
+    if (dashboardState.error != null) {
+      // R5-F04: Show error UI instead of silently falling back
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: CompactStatusBar(
+            user: user,
+            dashboardState: dashboardState,
+          ),
+        ),
+      );
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              children: [
+                Icon(Icons.cloud_off_outlined, size: 40, color: DS.textTertiary),
+                const SizedBox(height: 12),
+                Text(
+                  dashboardState.error ?? context.l10n.dashboardLoadFailed,
+                  style: TextStyle(color: DS.textSecondary, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () => ref.invalidate(dashboardProvider),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(context.l10n.dashboardRetry),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else if (dashboardState.isLoading) {
       dashboardSections.add(
         _staggeredSection(
           index: sectionIndex++,
@@ -348,6 +461,84 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             user: user,
             dashboardState: dashboardState,
           ),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: Builder(builder: (context) {
+            final bandAsync = ref.watch(spineStatusBandProvider);
+            return bandAsync.when(
+              data: (band) => AuroraStatusBand(
+                state: band != null
+                    ? AuroraStatusBand.mapBandStatus(band.bandStatus)
+                    : _resolveAuroraState(dashboardState),
+                label: band?.bandSummary.isNotEmpty == true
+                    ? band!.bandSummary
+                    : _auroraBandLabel(dashboardState),
+                correctionOptions: band?.correctionOptions ?? [],
+                cooldownRemainingSeconds: band?.cooldownRemainingSeconds,
+                cooldownCanOverride: band?.cooldownCanOverride ?? false,
+                onTap: () => context.push(ChatRoutes.chat),
+                onCorrectionTap: (opt) {
+                  final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
+                  unawaited(telemetry.recordStatusBandCorrection(
+                    label: opt.label,
+                    semanticValue: opt.semanticValue,
+                    isDisconfirming: opt.isDisconfirming,
+                    bandStatus: band?.bandStatus.protocolValue ?? '',
+                    isFreeform: opt.isFreeform,
+                  ));
+                  if (opt.isFreeform) {
+                    context.push(ChatRoutes.chat, extra: {
+                      'initial_user_message': '',
+                      'aurora_correction': {
+                        'type': 'freeform',
+                        'semantic_value': opt.semanticValue,
+                        'band_status': band?.bandStatus.protocolValue ?? '',
+                        'is_disconfirming': opt.isDisconfirming,
+                      },
+                    });
+                  } else {
+                    context.push(ChatRoutes.chat, extra: {
+                      'initial_user_message': opt.label,
+                      'aurora_correction': {
+                        'type': 'chip',
+                        'semantic_value': opt.semanticValue,
+                        'band_status': band?.bandStatus.protocolValue ?? '',
+                        'is_disconfirming': opt.isDisconfirming,
+                      },
+                    });
+                  }
+                },
+                onCooldownOverride: () {
+                  final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
+                  unawaited(telemetry.recordStatusBandCorrection(
+                    label: context.l10n.dashboardQuickCalibration,
+                    semanticValue: 'quick_calibration',
+                    isDisconfirming: false,
+                    bandStatus: band?.bandStatus.protocolValue ?? '',
+                  ));
+                  context.push(ChatRoutes.chat, extra: {
+                    'initial_user_message': context.l10n.dashboardQuickCalibration,
+                    'aurora_correction': {
+                      'type': 'cooldown_override',
+                      'semantic_value': 'quick_calibration',
+                      'band_status': band?.bandStatus.protocolValue ?? '',
+                    },
+                  });
+                },
+              ),
+              loading: () => AuroraStatusBand(
+                state: _resolveAuroraState(dashboardState),
+                label: _auroraBandLabel(dashboardState),
+                onTap: () => context.push(ChatRoutes.chat),
+              ),
+              error: (_, __) => AuroraStatusBand(
+                state: _resolveAuroraState(dashboardState),
+                label: _auroraBandLabel(dashboardState),
+                onTap: () => context.push(ChatRoutes.chat),
+              ),
+            );
+          }),
         ),
         _staggeredSection(
           index: sectionIndex++,
@@ -1213,6 +1404,50 @@ class _DashboardChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      );
+}
+
+class _GoalChip extends StatelessWidget {
+  const _GoalChip({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: DS.brandPrimary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: DS.labelSmall.copyWith(
+                  color: DS.brandPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
         ),
       );
 }

@@ -5,6 +5,7 @@ Intent Prediction API
 提供实时意图预测接口，用于前端打字时显示预测建议
 """
 from __future__ import annotations
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -73,7 +74,7 @@ async def predict_intent(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Intent prediction failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/intent/types", response_model=dict[str, Any])
@@ -129,4 +130,4 @@ async def get_shadow_prediction_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Shadow stats failed: {str(e)}"
-        )
+        ) from e

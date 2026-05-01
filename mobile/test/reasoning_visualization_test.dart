@@ -6,6 +6,7 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'shared/i18n_test_helper.dart';
 
 /// Mock Data Test for Chain of Thought Visualization
 ///
@@ -13,6 +14,8 @@ import 'package:sparkle/l10n/app_localizations.dart';
 /// without needing a live backend connection.
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('Reasoning visualization demo renders', (tester) async {

@@ -277,7 +277,7 @@ async def prepare_document_upload(
             )
         except ValueError as exc:
             await db.rollback()
-            raise HTTPException(status_code=403, detail=str(exc))
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
 
     await db.commit()
 
@@ -312,8 +312,8 @@ async def confirm_document_upload(
     except ClientError as exc:
         status_code = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
         if status_code == 404:
-            raise HTTPException(status_code=400, detail="Uploaded object not found")
-        raise HTTPException(status_code=502, detail="Failed to validate uploaded object")
+            raise HTTPException(status_code=400, detail="Uploaded object not found") from exc
+        raise HTTPException(status_code=502, detail="Failed to validate uploaded object") from exc
 
     if actual_size <= 0:
         raise HTTPException(status_code=400, detail="Uploaded object is empty")

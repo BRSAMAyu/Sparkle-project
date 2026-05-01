@@ -362,7 +362,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           border: Border.all(color: _VisualInk.hairline),
         ),
         child: Text(
-          '当前还没有成型的荣耀套装，去解锁并装备一组更有存在感的外观吧。',
+          context.l10n.visualPrestigeEmpty,
           style: TextStyle(
             fontSize: DS.fontSizeSm,
             color: _VisualInk.textSecondary,
@@ -414,7 +414,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '当前荣耀套装',
+            context.l10n.visualCurrentPrestigeSet,
             style: TextStyle(
               fontSize: DS.fontSizeBase,
               fontWeight: DS.fontWeightBold,
@@ -423,7 +423,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            setName.isNotEmpty ? setName.first.key : '自由搭配',
+            setName.isNotEmpty ? setName.first.key : context.l10n.visualMixMatch,
             style: TextStyle(
               fontSize: DS.fontSizeLg,
               fontWeight: DS.fontWeightBold,
@@ -518,12 +518,12 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                             _elementAccent(element),
                           ),
                           _miniChip(
-                            isUnlocked ? '已解锁' : '待征服',
+                            isUnlocked ? context.l10n.visualUnlocked : context.l10n.visualLocked,
                             isUnlocked ? DS.success : DS.warning,
                           ),
                           if (totalCount > 0)
                             _miniChip(
-                              '$ownedCount/$totalCount 已集齐',
+                              context.l10n.visualCollectedCount(ownedCount, totalCount),
                               ownedCount == totalCount ? DS.success : DS.info,
                             ),
                         ],
@@ -541,7 +541,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        element.description ?? '高曝光荣耀装扮套组',
+                        element.description ?? context.l10n.visualHighExposure,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: _VisualInk.textSecondary,
@@ -855,7 +855,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (pieces.isEmpty) {
       if (mounted) {
-        AppFeedback.warning(context, '还没有集齐这套荣耀装扮的部件');
+        AppFeedback.warning(context, context.l10n.visualBundleIncomplete);
       }
       return;
     }
@@ -868,9 +868,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (mounted) {
       if (success) {
-        AppFeedback.success(context, '已装备荣耀套装');
+        AppFeedback.success(context, context.l10n.visualBundleEquipped);
       } else {
-        AppFeedback.error(context, '装备套装时出现问题');
+        AppFeedback.error(context, context.l10n.visualEquipFailed);
       }
     }
   }
@@ -894,9 +894,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (mounted) {
       if (success) {
-        AppFeedback.info(context, '已卸下整套荣耀装扮');
+        AppFeedback.info(context, context.l10n.visualBundleUnequipped);
       } else {
-        AppFeedback.error(context, '卸下套装时出现问题');
+        AppFeedback.error(context, context.l10n.visualUnequipFailed);
       }
     }
   }
@@ -1368,7 +1368,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       else
                         const SizedBox(height: DS.spacing8),
                       Text(
-                        '${elements.length} 种风格',
+                        context.l10n.visualStyleCount(elements.length),
                         style: TextStyle(
                           fontSize: DS.fontSizeLg,
                           fontWeight: DS.fontWeightBold,
@@ -1377,7 +1377,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        '已拥有 $unlockedCount / ${elements.length}',
+                        context.l10n.visualOwnedCount(unlockedCount, elements.length),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1453,7 +1453,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             _miniChip(lead.displaySlotLabel, accent),
             const SizedBox(height: DS.spacing10),
             Text(
-              '${elements.length} 种风格',
+              context.l10n.visualStyleCount(elements.length),
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 fontWeight: DS.fontWeightBold,
@@ -1462,7 +1462,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             ),
             const SizedBox(height: DS.spacing4),
             Text(
-              '已拥有 $unlockedCount / ${elements.length}',
+              context.l10n.visualOwnedCount(unlockedCount, elements.length),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1510,7 +1510,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '当前查看: $label',
+                context.l10n.visualCurrentView(label),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1521,7 +1521,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               ),
               const SizedBox(height: DS.spacing4),
               Text(
-                '已切换到该槽位，共 $matchedCount 个可选样式',
+                context.l10n.visualSlotSwitched(matchedCount),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1533,7 +1533,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           );
           final clearButton = TextButton(
             onPressed: _clearDisplaySlotFilter,
-            child: const Text('清除筛选'),
+            child: Text(context.l10n.visualClearFilter),
           );
 
           if (stack) {
@@ -1579,31 +1579,32 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       math.min(math.max(196.0, width * 0.68), 232.0);
 
   String _displaySlotLabel(String slot) {
+    final l = context.l10n;
     switch (slot) {
       case 'avatar_border':
-        return '头像边框';
+        return l.visualSlotAvatarBorder;
       case 'title_bar':
-        return '称号条';
+        return l.visualSlotTitleBar;
       case 'profile_banner':
-        return '主页横幅';
+        return l.visualSlotProfileBanner;
       case 'achievement_frame':
-        return '成就主题框';
+        return l.visualSlotAchievementFrame;
       case 'home_ambience':
-        return '首页氛围';
+        return l.visualSlotHomeAmbience;
       case 'star_map_effect':
-        return '星图征服特效';
+        return l.visualSlotStarMapEffect;
       case 'streak_flame':
-        return '连胜火焰';
+        return l.visualSlotStreakFlame;
       case 'display_pedestal':
-        return '陈列台座';
+        return l.visualSlotDisplayPedestal;
       case 'background':
-        return '背景';
+        return l.visualSlotBackground;
       case 'particle':
-        return '粒子';
+        return l.visualSlotParticle;
       case 'effect':
-        return '特效';
+        return l.visualSlotEffect;
       case 'bundle':
-        return '套装';
+        return l.visualSlotBundle;
       default:
         return slot;
     }
@@ -1809,7 +1810,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             runSpacing: DS.spacing8,
             children: [
               _buildFilterChip(
-                '最值得炫耀',
+                AppLocalizations.of(context)!.visualSortPrestige,
                 _options.sortBy == VisualElementSortBy.prestige,
                 onTap: () {
                   setState(() {
@@ -1820,7 +1821,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 },
               ),
               _buildFilterChip(
-                '按套装',
+                AppLocalizations.of(context)!.visualSortBySet,
                 _options.sortBy == VisualElementSortBy.set,
                 onTap: () {
                   setState(() {
@@ -2007,7 +2008,7 @@ class _RecommendationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = _getRarityColors(element.rarity);
     final actionLabel =
-        element.isBundle ? '一键穿戴' : context.l10n.visualElementEquip;
+        element.isBundle ? AppLocalizations.of(context)!.visualOneClickEquip : context.l10n.visualElementEquip;
 
     return GestureDetector(
       onTap: onTap,
@@ -2110,7 +2111,7 @@ class _RecommendationCard extends StatelessWidget {
                               ),
                               if (element.isBundle && bundleTotalCount > 0)
                                 _miniInfoChip(
-                                  '$bundleOwnedCount/$bundleTotalCount 已集齐',
+                                  AppLocalizations.of(context)!.visualCollectedCount(bundleOwnedCount, bundleTotalCount),
                                   bundleOwnedCount == bundleTotalCount
                                       ? DS.success
                                       : DS.info,

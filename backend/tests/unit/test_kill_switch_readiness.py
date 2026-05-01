@@ -13,7 +13,7 @@ def test_promoted_settings_defaults() -> None:
 
     assert defaults["AURORA_STAGE39_COGLOAD_ROUTE_MODE"].default == "live"
     assert defaults["AURORA_STAGE39_GALAXY_INJECT_MODE"].default == "live"
-    assert defaults["AURORA_BAYESIAN_MODE"].default == "shadow"
+    assert defaults["AURORA_BAYESIAN_MODE"].default == "live"
     assert defaults["SPARKLE_MEMORY_INFERRED_WRITE_ENABLED"].default is True
 
 

@@ -5,6 +5,8 @@ Recommendations API
 提供协同过滤推荐接口
 """
 from __future__ import annotations
+
+from datetime import UTC
 from typing import Any
 from uuid import UUID
 
@@ -74,7 +76,7 @@ async def get_collaborative_recommendations(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Recommendation failed"
-        )
+        ) from e
 
 
 @router.get("/similar-users", response_model=dict[str, Any])
@@ -118,7 +120,7 @@ async def get_similar_users(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get similar users"
-        )
+        ) from e
 
 
 @router.get("/similar-items", response_model=dict[str, Any])
@@ -164,7 +166,7 @@ async def get_similar_items(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get similar items"
-        )
+        ) from e
 
 
 @router.get("/my-interactions", response_model=dict[str, Any])
@@ -198,7 +200,7 @@ async def get_my_interaction_summary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get interaction summary"
-        )
+        ) from e
 
 
 @router.post("/record-interaction", response_model=dict[str, Any])
@@ -255,7 +257,7 @@ async def record_interaction(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to record interaction"
-        )
+        ) from e
 
 
 @router.get("/stats", response_model=dict[str, Any])
@@ -275,7 +277,7 @@ async def get_recommendation_stats(
         - cache_hit_rate: 缓存命中率
     """
     try:
-        from datetime import timezone, datetime, timedelta
+        from datetime import datetime, timedelta
 
         from sqlalchemy import func, or_, select
 
@@ -290,7 +292,7 @@ async def get_recommendation_stats(
         total_interactions = interaction_result.scalar() or 0
 
         # 统计相似用户数量 (使用Python计算时间)
-        yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
+        yesterday = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24)
         similar_users_query = select(func.count(UserSimilarity.id)).where(
             UserSimilarity.last_calculated_at >= yesterday,
             or_(
@@ -325,4 +327,4 @@ async def get_recommendation_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get recommendation stats"
-        )
+        ) from e

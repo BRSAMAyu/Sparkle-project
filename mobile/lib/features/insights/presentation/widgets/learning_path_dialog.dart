@@ -12,6 +12,9 @@ import 'package:sparkle/features/insights/presentation/providers/learning_path_p
 import 'package:sparkle/features/knowledge/presentation/providers/knowledge_detail_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class LearningPathDialog extends ConsumerStatefulWidget {
   const LearningPathDialog({
@@ -76,7 +79,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '目标：${widget.targetNodeName}',
+            context.l10n.lpTarget(widget.targetNodeName),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -104,8 +107,8 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                     .toList(growable: false);
 
                 if (coreNodes.isEmpty && optionalNodes.isEmpty) {
-                  return const Center(
-                    child: Text('无需前置知识，可以直接开始学习！'),
+                  return Center(
+                    child: Text(context.l10n.insNoPrereq),
                   );
                 }
 
@@ -115,7 +118,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                     children: [
                       if (coreNodes.isNotEmpty) ...[
                         Text(
-                          '主干路径',
+                          context.l10n.lpMainPath,
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: DS.fontWeightBold,
@@ -138,7 +141,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => _LearningPathLoadError(
-                message: '加载失败：$err',
+                message: context.l10n.lpLoadFailed(err.toString()),
                 onRetry: () =>
                     ref.invalidate(learningPathProvider(widget.targetNodeId)),
               ),
@@ -150,14 +153,14 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '生成方式',
+                  context.l10n.lpGenMethod,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.xs),
                 Text(
-                  '快速任务路径不会占用计划额度，适合先生成几张可以立刻执行的任务卡；完整计划会创建正式方案。',
+                  context.l10n.lpGenMethodDesc,
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: DS.textSecondary),
@@ -167,7 +170,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                   builder: (context, constraints) {
                     final compact = constraints.maxWidth < 420;
                     final taskButton = SparkleButton(
-                      label: _isGeneratingTaskPath ? '正在生成...' : '快速生成任务路径',
+                      label: _isGeneratingTaskPath ? context.l10n.lpGenerating : context.l10n.insQuickPath,
                       icon: _isGeneratingTaskPath
                           ? const SizedBox(
                               width: 16,
@@ -181,7 +184,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                       loading: _isGeneratingTaskPath,
                     );
                     final planButton = SparkleButton(
-                      label: _isGeneratingFullPlan ? '正在生成...' : '生成完整计划',
+                      label: _isGeneratingFullPlan ? context.l10n.lpGenerating : context.l10n.insFullPlan,
                       icon: _isGeneratingFullPlan
                           ? const SizedBox(
                               width: 16,
@@ -230,14 +233,14 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '推荐拓展节点',
+              context.l10n.lpOptionalNodes,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.xs),
             Text(
-              '这些节点不是必须前置，但可以由你决定是否一并纳入学习计划。',
+              context.l10n.lpOptionalNodesDesc,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -248,8 +251,8 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               runSpacing: DS.sm,
               children: optionalNodes.map((node) {
                 final selected = _selectedRelatedNodeIds.contains(node.id);
-                final relationLabel = _relationLabel(node.relationType);
-                final sourceLabel = _sourceLabel(node.sourceType);
+                final relationLabel = _relationLabel(context.l10n, node.relationType);
+                final sourceLabel = _sourceLabel(context.l10n, node.sourceType);
                 return FilterChip(
                   selected: selected,
                   label: Text(
@@ -347,7 +350,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                       ),
                       const SizedBox(height: DS.xs),
                       Text(
-                        _statusLabel(node.status),
+                        _statusLabel(context.l10n, node.status),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: statusColor,
                             ),
@@ -384,7 +387,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               ),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: '查看详情',
+                label: context.l10n.insViewDetail,
                 icon: const Icon(Icons.open_in_new),
                 expand: true,
                 onPressed: () => _handleOpenNode(
@@ -395,7 +398,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               ),
               const SizedBox(height: DS.sm),
               SparkleButton.secondary(
-                label: '生成任务卡',
+                label: context.l10n.insGenTaskCard,
                 icon: const Icon(Icons.task_alt),
                 expand: true,
                 onPressed: () => _handleCreateTask(
@@ -406,7 +409,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
               ),
               const SizedBox(height: DS.sm),
               SparkleButton.ghost(
-                label: '生成学习计划',
+                label: context.l10n.insGenPlan,
                 icon: const Icon(Icons.event_note),
                 expand: true,
                 onPressed: () => _handleCreatePlan(
@@ -450,11 +453,11 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
   ) async {
     final feedbackContext = _feedbackContext(parentContext);
     Navigator.of(sheetContext).pop(); // close action sheet
-    _setInlineStatus('正在为「${node.name}」创建任务卡...');
+    _setInlineStatus(context.l10n.lpCreatingTask(node.name));
     try {
       final task = await ref.read(taskRepositoryProvider).createTask(
             TaskCreate(
-              title: '学习：${node.name}',
+              title: context.l10n.insLearnNode(node.name),
               type: TaskType.learning,
               estimatedMinutes: 25,
               difficulty: 2,
@@ -462,7 +465,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
             ),
           );
       if (!feedbackContext.mounted) return;
-      AppFeedback.success(feedbackContext, '任务卡已创建');
+      AppFeedback.success(feedbackContext, context.l10n.lpTaskCreated);
       _clearInlineFeedback();
       _closeThenPushFromRoot(
         parentContext,
@@ -470,7 +473,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('创建失败：$e');
+      _setInlineError(context.l10n.insCreateFailed(e.toString()));
     }
   }
 
@@ -484,7 +487,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     setState(() {
       _isGeneratingPlan = true;
     });
-    _setInlineStatus('正在为「${node.name}」生成学习计划，请稍候...');
+    _setInlineStatus(context.l10n.lpGeneratingPlan(node.name));
     try {
       final response =
           await ref.read(learningPathRepositoryProvider).generateLearningPlan(
@@ -494,7 +497,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                     : const [],
               );
       if (!feedbackContext.mounted) return;
-      final message = response.message ?? '学习计划已生成';
+      final message = response.message ?? context.l10n.lpPlanGenerated;
       if (response.retry ?? false) {
         AppFeedback.warning(feedbackContext, message);
       } else {
@@ -507,7 +510,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -524,7 +527,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     setState(() {
       _isGeneratingFullPlan = true;
     });
-    _setInlineStatus('正在生成完整学习路径计划，这可能需要十几秒...');
+    _setInlineStatus(context.l10n.lpGeneratingFullPath);
     try {
       final response =
           await ref.read(learningPathRepositoryProvider).generateFullPathPlan(
@@ -533,7 +536,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                     _selectedRelatedNodeIds.toList(growable: false),
               );
       if (!feedbackContext.mounted) return;
-      AppFeedback.success(feedbackContext, '学习计划已生成');
+      AppFeedback.success(feedbackContext, I18nService.instance.isChinese ? '学习计划已生成' : 'Learning plan generated');
       _clearInlineFeedback();
       _closeThenPushFromRoot(
         context,
@@ -541,7 +544,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         fallbackContext: feedbackContext,
       );
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -556,7 +559,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     setState(() {
       _isGeneratingTaskPath = true;
     });
-    _setInlineStatus('正在生成可立即执行的任务路径...');
+    _setInlineStatus(context.l10n.lpGeneratingTaskPath);
     try {
       final response =
           await ref.read(learningPathRepositoryProvider).generateTaskPath(
@@ -567,7 +570,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
       if (!feedbackContext.mounted) return;
       AppFeedback.success(
         feedbackContext,
-        response.message ?? '任务路径已生成',
+        response.message ?? context.l10n.lpTaskPathGenerated,
       );
       ref.invalidate(knowledgeDetailProvider(widget.targetNodeId));
       _clearInlineFeedback();
@@ -588,7 +591,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      _setInlineError('生成失败：$e');
+      _setInlineError(context.l10n.insGenFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -619,50 +622,42 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
     });
   }
 
-  void _pushFromRoot(String location, {required BuildContext fallbackContext}) {
-    final navigationContext = navigatorKey.currentContext ?? fallbackContext;
-    if (!navigationContext.mounted) {
-      return;
-    }
-    unawaited(navigationContext.push(location));
-  }
-
-  static String _statusLabel(String status) {
+  static String _statusLabel(AppLocalizations l, String status) {
     switch (status) {
       case 'mastered':
-        return '已掌握';
+        return l.lpStatusMastered;
       case 'unlocked':
-        return '可学习';
+        return l.lpStatusUnlocked;
       case 'locked':
-        return '待解锁';
+        return l.lpStatusLocked;
       default:
         return status;
     }
   }
 
-  static String? _relationLabel(String? relationType) {
+  static String? _relationLabel(AppLocalizations l, String? relationType) {
     switch (relationType) {
       case 'application':
-        return '应用';
+        return l.lpRelationApplication;
       case 'evolution':
-        return '进阶';
+        return l.lpRelationEvolution;
       case 'composition':
-        return '组成';
+        return l.lpRelationComposition;
       case 'related':
-        return '相关';
+        return l.lpRelationRelated;
       default:
         return null;
     }
   }
 
-  static String? _sourceLabel(String? sourceType) {
+  static String? _sourceLabel(AppLocalizations l, String? sourceType) {
     switch (sourceType) {
       case 'llm_expanded':
-        return 'AI推荐';
+        return l.lpSourceLlm;
       case 'seed':
-        return '预设';
+        return l.lpSourceSeed;
       case 'user_created':
-        return '用户添加';
+        return l.lpSourceUser;
       default:
         return null;
     }
@@ -679,7 +674,9 @@ class _LearningPathNodeSummary extends StatelessWidget {
   final Future<List<TaskModel>> relatedTasksFuture;
 
   @override
-  Widget build(BuildContext context) => GraphiteCardSurface(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return GraphiteCardSurface(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -689,33 +686,36 @@ class _LearningPathNodeSummary extends StatelessWidget {
               children: [
                 _MetaChip(
                   icon: Icons.radio_button_checked_rounded,
-                  label: _LearningPathDialogState._statusLabel(node.status),
+                  label: _LearningPathDialogState._statusLabel(l, node.status),
                 ),
                 if (node.isTarget)
-                  const _MetaChip(
+                  _MetaChip(
                     icon: Icons.flag_rounded,
-                    label: '目标节点',
+                    label: l.insTargetNode,
                   ),
                 if (node.isOptional)
-                  const _MetaChip(
+                  _MetaChip(
                     icon: Icons.extension_rounded,
-                    label: '可选拓展',
+                    label: l.insOptionalExtend,
                   ),
                 if (_LearningPathDialogState._relationLabel(
+                      l,
                       node.relationType,
                     ) !=
                     null)
                   _MetaChip(
                     icon: Icons.hub_rounded,
                     label: _LearningPathDialogState._relationLabel(
+                      l,
                       node.relationType,
                     )!,
                   ),
-                if (_LearningPathDialogState._sourceLabel(node.sourceType) !=
+                if (_LearningPathDialogState._sourceLabel(l, node.sourceType) !=
                     null)
                   _MetaChip(
                     icon: Icons.auto_awesome_rounded,
                     label: _LearningPathDialogState._sourceLabel(
+                      l,
                       node.sourceType,
                     )!,
                   ),
@@ -723,7 +723,7 @@ class _LearningPathNodeSummary extends StatelessWidget {
             ),
             const SizedBox(height: DS.md),
             Text(
-              node.isTarget ? '这是当前学习路径的目标节点。' : '你可以围绕这个节点单独建任务，或把它并入学习计划。',
+              node.isTarget ? l.lpTargetNodeDesc : l.lpNormalNodeDesc,
               style: DS.bodyMedium.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.md),
@@ -732,7 +732,7 @@ class _LearningPathNodeSummary extends StatelessWidget {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Text(
-                    '正在加载关联任务...',
+                    l.lpLoadingRelatedTasks,
                     style: DS.bodySmall.copyWith(color: DS.textTertiary),
                   );
                 }
@@ -740,7 +740,7 @@ class _LearningPathNodeSummary extends StatelessWidget {
                 final tasks = snapshot.data ?? const <TaskModel>[];
                 if (tasks.isEmpty) {
                   return Text(
-                    '当前还没有关联任务。',
+                    l.lpNoRelatedTasks,
                     style: DS.bodySmall.copyWith(color: DS.textTertiary),
                   );
                 }
@@ -750,7 +750,7 @@ class _LearningPathNodeSummary extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '关联任务',
+                      l.lpRelatedTasks,
                       style: DS.labelLarge.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -790,6 +790,7 @@ class _LearningPathNodeSummary extends StatelessWidget {
           ],
         ),
       );
+  }
 }
 
 class _MetaChip extends StatelessWidget {
@@ -903,7 +904,7 @@ class _LearningPathLoadError extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.md),
                 SparkleButton.secondary(
-                  label: '重试加载',
+                  label: context.l10n.insRetryLoad,
                   icon: const Icon(Icons.refresh_rounded),
                   onPressed: onRetry,
                 ),

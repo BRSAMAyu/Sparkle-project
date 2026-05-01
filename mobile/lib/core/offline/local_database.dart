@@ -13,6 +13,10 @@ part 'local_database.g.dart';
 // Global provider for the database instance
 final localDatabaseProvider = Provider<LocalDatabase>((ref) => LocalDatabase());
 
+/// Set to true in test setUp to suppress Isar-related crashes.
+/// When true, collection accessors return empty results instead of throwing.
+bool localDatabaseTestMode = false;
+
 enum SyncStatus {
 // ... existing code ...
   pending,
@@ -124,7 +128,33 @@ class LocalDatabase {
 
   LocalDatabase._internal();
   static final LocalDatabase _instance = LocalDatabase._internal();
-  late Isar isar;
+
+  Isar? _isar;
+  bool _initialized = false;
+
+  /// Returns the Isar instance, or null if not initialized (test mode).
+  Isar? get isarOrNull {
+    if (!_initialized || _isar == null) return null;
+    return _isar!;
+  }
+
+  Isar get isar {
+    if (!_initialized || _isar == null) {
+      if (localDatabaseTestMode) {
+        throw StateError('LocalDatabase.testMode: isar not available');
+      }
+      throw StateError('LocalDatabase not initialized. Call init() first.');
+    }
+    return _isar!;
+  }
+
+  bool get isInitialized => _initialized;
+
+  /// Test-only setter to inject a real Isar instance without calling init().
+  set isar(Isar value) {
+    _isar = value;
+    _initialized = true;
+  }
 
   Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -132,7 +162,7 @@ class LocalDatabase {
     // final secureStorage = const FlutterSecureStorage();
     // final encryptionKey = await secureStorage.read(key: 'db_key');
 
-    isar = await Isar.open(
+    _isar = await Isar.open(
       [
         LocalKnowledgeNodeSchema,
         PendingUpdateSchema,
@@ -149,29 +179,30 @@ class LocalDatabase {
       ],
       directory: dir.path,
     );
+    _initialized = true;
   }
 
   Future<void> clearUserScopedData() async {
-    if (!isar.isOpen) {
+    if (!_initialized || _isar == null || !_isar!.isOpen) {
       return;
     }
-    await isar.writeTxn(() async {
-      await knowledgeNodes.clear();
-      await pendingUpdates.clear();
-      await crdtSnapshots.clear();
-      await outboxItems.clear();
-      await analyticsEvents.clear();
-      await focusSessionRecords.clear();
-      await cachedStatistics.clear();
-      await offlineChatMessages.clear();
-      await translationWordLinks.clear();
-      await translationRecords.clear();
-      await vocabReviews.clear();
-      await vocabWords.clear();
+    await _isar!.writeTxn(() async {
+      await _isar!.localKnowledgeNodes.clear();
+      await _isar!.pendingUpdates.clear();
+      await _isar!.localCRDTSnapshots.clear();
+      await _isar!.outboxItems.clear();
+      await _isar!.userAnalyticsEvents.clear();
+      await _isar!.focusSessionRecords.clear();
+      await _isar!.cachedStatisticsModels.clear();
+      await _isar!.offlineChatMessages.clear();
+      await _isar!.translationWordLinks.clear();
+      await _isar!.translationRecords.clear();
+      await _isar!.vocabReviews.clear();
+      await _isar!.vocabWords.clear();
     });
   }
 
-  // Convenience accessors for collections
+  // Convenience accessors
   IsarCollection<TranslationRecord> get translationRecords => isar.translationRecords;
   IsarCollection<TranslationWordLink> get translationWordLinks => isar.translationWordLinks;
   IsarCollection<VocabWord> get vocabWords => isar.vocabWords;

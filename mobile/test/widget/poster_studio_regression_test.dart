@@ -18,8 +18,11 @@ import 'package:sparkle/features/user/presentation/screens/poster_studio_screen.
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('poster studio regression', () {
     testWidgets('poster studio stays stable on compact width', (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 760));
@@ -85,15 +88,7 @@ Future<void> _pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
-      child: MaterialApp(
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
+      child: testMaterialApp(
         home: Scaffold(body: child),
       ),
     ),

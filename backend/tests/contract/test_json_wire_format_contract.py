@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from google.protobuf.json_format import MessageToDict
 
-from app.gen import agent_service_pb2
+from app.gen.agent.v1 import agent_service_pb2
 
 
 def _wire_dict(message):

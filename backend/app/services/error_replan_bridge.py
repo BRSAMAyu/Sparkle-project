@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -17,14 +17,13 @@ from app.core.metrics import (
     ERROR_REPLAN_BRIDGE_EVALUATED_TOTAL,
     ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL,
 )
-from app.models.card_protocol import InterventionRecord
+from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionRecord, InterventionTriggerType
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
-from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionTriggerType
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.intervention_record_service import InterventionRecordService
@@ -35,7 +34,7 @@ AuroraStage34KillSwitchService = AuroraStage38KillSwitchService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BridgeEvaluationError(RuntimeError):
@@ -89,8 +88,13 @@ class ErrorReplanBridge:
         "knowledge_transfer_fail",
         "prerequisite_missing",
         "careless_error",
+        "memory_lapse",
+        "calculation_error",
+        "method_wrong",
+        "logic_error",
+        "reading_careless",
     }
-    REPLAN_ELIGIBLE_ERROR_TYPES = TRIGGERING_ERROR_TYPES - {"careless_error"}
+    REPLAN_ELIGIBLE_ERROR_TYPES = TRIGGERING_ERROR_TYPES - {"careless_error", "reading_careless"}
     HIGH_SEVERITY_VALUES = {"high", "critical", "severe", "urgent", "error", "3", "4", "5"}
     SPECIALIZED_REPAIR_DURATION_MINUTES = 30
     SPECIALIZED_REPAIR_SCHEDULE_OPTIONS = ("today", "tomorrow")
@@ -824,7 +828,7 @@ class ErrorReplanBridge:
         locale: str = "zh",
     ) -> MistakeClusterMatch | None:
         feature_bundle = self._extract_error_feature_bundle(error, node_name_map)
-        feature_text = str(feature_bundle["raw_text"])
+        str(feature_bundle["raw_text"])
         normalized_text = str(feature_bundle["normalized_text"])
         best_rule: dict[str, Any] | None = None
         best_hits: tuple[str, ...] = ()
@@ -918,7 +922,7 @@ class ErrorReplanBridge:
 
     def _match_pack_nodes(self, pack: dict[str, Any], feature_bundle: dict[str, object]) -> set[str]:
         matched: set[str] = set()
-        feature_text = str(feature_bundle["raw_text"])
+        str(feature_bundle["raw_text"])
         normalized_text = str(feature_bundle["normalized_text"])
 
         for node in pack.get("knowledge_nodes", []):

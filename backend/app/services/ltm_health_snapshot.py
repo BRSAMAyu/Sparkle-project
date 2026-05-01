@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -11,7 +11,7 @@ from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, Memo
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LtmHealthSnapshotService:

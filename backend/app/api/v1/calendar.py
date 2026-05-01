@@ -3,29 +3,30 @@ Calendar API Endpoints
 日历事件 CRUD 接口
 """
 from __future__ import annotations
-from datetime import date, datetime, UTC
+
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from loguru import logger
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.core.event_bus import event_bus, CalendarEventCreated, CalendarEventUpdated, CalendarEventDeleted
+from app.core.event_bus import CalendarEventCreated, CalendarEventDeleted, CalendarEventUpdated, event_bus
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.calendar_event import CalendarEvent
 from app.models.user import User
 from app.schemas.calendar_event import (
+    BatchOperationResult,
     CalendarEventBatchRequest,
     CalendarEventBatchResponse,
     CalendarEventCreate,
     CalendarEventDetail,
     CalendarEventListResponse,
     CalendarEventUpdate,
-    BatchOperationResult,
 )
 from app.schemas.smart_schedule import (
     SmartScheduleRequest,

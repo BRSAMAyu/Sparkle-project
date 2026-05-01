@@ -8,6 +8,7 @@ import 'package:sparkle/features/plan/data/models/learning_path_progress_model.d
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class PlanRepository {
   PlanRepository(this._apiClient);
@@ -562,7 +563,7 @@ class PlanRepository {
       return LearningPathProgressModel(
         targetNode: LearningPathNodeProgress(
           id: 'demo_target',
-          name: '目标节点',
+          name: S.planTargetNode,
           status: 'unlocked',
           mastery: 45,
           isTarget: true,
@@ -570,19 +571,19 @@ class PlanRepository {
         nodes: [
           LearningPathNodeProgress(
             id: 'demo_1',
-            name: '已掌握节点',
+            name: S.planMasteredNode,
             status: 'mastered',
             mastery: 92,
           ),
           LearningPathNodeProgress(
             id: 'demo_2',
-            name: '学习中节点',
+            name: S.planLearningNode,
             status: 'unlocked',
             mastery: 45,
           ),
           LearningPathNodeProgress(
             id: 'demo_target',
-            name: '目标节点',
+            name: S.planTargetNode,
             status: 'locked',
             mastery: 0,
             isTarget: true,

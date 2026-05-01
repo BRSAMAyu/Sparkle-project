@@ -7,7 +7,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -16,13 +16,13 @@ from pydantic import ValidationError
 from app.config import settings
 from app.core.business_metrics import COMPENSATION_TRIGGERED
 from app.core.event_bus import event_bus
-from app.core.llm_secure_io import refresh_llm_safety_mode, sanitize_exception_message
 from app.core.event_types import (
     TOOL_EXECUTION_COMPLETED,
     TOOL_EXECUTION_FAILED,
     TOOL_EXECUTION_STARTED,
     TOOL_EXECUTION_TIMED_OUT,
 )
+from app.core.llm_secure_io import refresh_llm_safety_mode, sanitize_exception_message
 from app.core.metrics import TOOL_EXECUTION_COUNT
 from app.db.session import AsyncSessionLocal
 from app.services.tool_history_service import ToolHistoryService
@@ -74,7 +74,7 @@ class ToolExecutor:
 
     @staticmethod
     def _utcnow_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     @staticmethod
     def _tool_timeout_seconds(tool: Any) -> float:
@@ -408,7 +408,7 @@ class ToolExecutor:
                     )
 
                 return result
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 execution_time_ms = int((time.time() - start_time) * 1000)
                 timeout_message = f"工具执行超时（>{timeout_seconds:.0f}s）"
                 logger.error(f"Tool execution timeout: {tool_name} after {timeout_seconds}s")
@@ -678,7 +678,7 @@ class ToolExecutor:
 
     async def execute_plan(
         self,
-        plan: "ExecutablePlan",
+        plan: ExecutablePlan,
         user_id: str,
         db_session: Any | None,
         progress_callback: Any | None = None,
@@ -743,7 +743,7 @@ class ToolExecutor:
 
             # Process results
             layer_aborted = False
-            for tc, sr in zip(resolved_layer, step_results):
+            for tc, sr in zip(resolved_layer, step_results, strict=False):
                 if isinstance(sr, BaseException):
                     sr = StepResult(
                         step_id=tc.id,
@@ -831,7 +831,7 @@ class ToolExecutor:
 
     async def _execute_step(
         self,
-        spec: "ToolCallSpec",
+        spec: ToolCallSpec,
         user_id: str,
         db_session: Any | None,
         progress_callback: Any | None,
@@ -870,9 +870,9 @@ class ToolExecutor:
 
     @staticmethod
     def _resolve_layer_params(
-        layer: list["ToolCallSpec"],
+        layer: list[ToolCallSpec],
         output_store: dict[str, dict[str, Any]],
-    ) -> list["ToolCallSpec"]:
+    ) -> list[ToolCallSpec]:
         """Substitute placeholder params with outputs from completed steps.
 
         If a step's param value matches a pattern like

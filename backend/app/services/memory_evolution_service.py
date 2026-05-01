@@ -5,8 +5,9 @@ Memory Evolution Service
 Tracks and manages memory evolution history, predictions, and analysis.
 """
 from __future__ import annotations
+
 import inspect
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +20,7 @@ from app.models.memory_evolution import EvolutionPrediction, MemoryEvolution
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MemoryEvolutionService:

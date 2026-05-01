@@ -19,9 +19,9 @@ Sparkle Celery 应用配置
 创建时间: 2026-01-03
 """
 
+import asyncio
 import logging
 import os
-import asyncio
 
 from celery import Celery
 from celery.schedules import crontab
@@ -177,7 +177,6 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
     Returns:
         dict: 包含embedding和状态
     """
-    import asyncio
 
     from loguru import logger
 
@@ -211,7 +210,7 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
         return _run_async(_generate())
     except Exception as exc:
         logger.error(f"Task failed, attempt {self.request.retries + 1}: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="batch_error_analysis")
@@ -226,7 +225,6 @@ def batch_error_analysis(self, error_ids: list[str], user_id: str):
     Returns:
         dict: 分析结果统计
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -260,7 +258,7 @@ def batch_error_analysis(self, error_ids: list[str], user_id: str):
         return _run_async(_analyze())
     except Exception as exc:
         logger.error(f"Batch analysis failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="cleanup_old_data")
@@ -274,7 +272,6 @@ def cleanup_old_data(self, days_to_keep: int = 30):
     Returns:
         dict: 清理统计
     """
-    import asyncio
     from datetime import datetime, timedelta
 
     from loguru import logger
@@ -301,7 +298,7 @@ def cleanup_old_data(self, days_to_keep: int = 30):
         return _run_async(_cleanup())
     except Exception as exc:
         logger.error(f"Cleanup failed: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="notify_user")
@@ -314,7 +311,6 @@ def notify_user(self, user_id: str, message: str, notification_type: str = "syst
         message: 消息内容
         notification_type: 通知类型
     """
-    import asyncio
 
     from loguru import logger
 
@@ -337,7 +333,7 @@ def notify_user(self, user_id: str, message: str, notification_type: str = "syst
     try:
         return _run_async(_notify())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=10)
+        raise self.retry(exc=exc, countdown=10) from exc
 
 
 @celery_app.task(bind=True, name="daily_report")
@@ -368,7 +364,7 @@ def daily_report(self):
     try:
         return _run_async(_generate())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="generate_capsules_batch")
@@ -401,7 +397,6 @@ def generate_capsules_batch(
             "capsule_ids": list[str],
         }
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -470,7 +465,7 @@ def generate_capsules_batch(
         logger.error(f"Capsule generation task failed: {exc}")
         # 指数退避重试
         countdown = 60 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="analyze_cognitive_fragment_batch")
@@ -481,7 +476,6 @@ def analyze_cognitive_fragment_batch(
     model_key: str | None = None,
 ):
     """使用 GLM batch 队列分析认知碎片。"""
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -501,7 +495,7 @@ def analyze_cognitive_fragment_batch(
     except Exception as exc:
         logger.error(f"Cognitive batch analysis task failed: {exc}")
         countdown = 60 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="classify_node_sector_batch")
@@ -531,7 +525,7 @@ def classify_node_sector_batch(
     except Exception as exc:
         logger.error(f"Node sector batch classification failed: {exc}")
         countdown = 60 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="update_knowledge_galaxy")
@@ -565,7 +559,6 @@ def update_knowledge_galaxy(
             "nodes_updated": int,
         }
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -736,7 +729,7 @@ def update_knowledge_galaxy(
     except Exception as exc:
         logger.error(f"Galaxy update task failed: {exc}")
         countdown = 30 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="sync_plan_progress_to_galaxy")
@@ -752,7 +745,6 @@ def sync_plan_progress_to_galaxy(self, user_id: str):
     Returns:
         dict: 同步结果统计
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -806,7 +798,7 @@ def sync_plan_progress_to_galaxy(self, user_id: str):
     try:
         return _run_async(_sync())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="generate_daily_capsules_for_all")
@@ -879,7 +871,7 @@ def generate_daily_capsules_for_all(self):
     try:
         return _run_async(_generate())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="verify_intervention_outcomes_engaged")
@@ -898,7 +890,7 @@ def verify_intervention_outcomes_engaged(self):
         return _run_async(_verify())
     except Exception as exc:
         logger.error(f"Engaged intervention outcome verification failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="verify_intervention_outcomes_full")
@@ -917,7 +909,7 @@ def verify_intervention_outcomes_full(self):
         return _run_async(_verify())
     except Exception as exc:
         logger.error(f"Full intervention outcome verification failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="sweep_profile_outcome_learning")
@@ -940,7 +932,7 @@ def sweep_profile_outcome_learning(self):
         return _run_async(_sweep())
     except Exception as exc:
         logger.error(f"Profile outcome learning sweep failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 # =============================================================================
@@ -1152,6 +1144,37 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=12, minute=0),
         "args": (500,),
         "options": {"queue": "default"},
+    },
+    # ========== Signal-to-Action Spine Maintenance ==========
+    "spine-snapshot-daily": {
+        "task": "app.core.celery_tasks.scan_spine_snapshots",
+        "schedule": crontab(hour=3, minute=30),
+        "args": (500,),
+        "options": {"queue": "low_priority"},
+    },
+    "spine-recall-notification-scan": {
+        "task": "app.core.celery_tasks.scan_recall_notifications",
+        "schedule": crontab(minute=0, hour="*/4"),
+        "args": (500,),
+        "options": {"queue": "default"},
+    },
+    "spine-expire-stale-states": {
+        "task": "app.core.celery_tasks.spine_expire_stale_states",
+        "schedule": crontab(minute=30, hour="*/6"),
+        "args": (500,),
+        "options": {"queue": "low_priority"},
+    },
+    "spine-auto-deprecate-skills": {
+        "task": "app.core.celery_tasks.spine_auto_deprecate_skills",
+        "schedule": crontab(hour=4, minute=0),
+        "args": (500,),
+        "options": {"queue": "low_priority"},
+    },
+    "spine-community-cohort-scan": {
+        "task": "app.core.celery_tasks.scan_community_cohort_signals",
+        "schedule": crontab(minute=0, hour="*/8"),
+        "args": (200,),
+        "options": {"queue": "low_priority"},
     },
 }
 

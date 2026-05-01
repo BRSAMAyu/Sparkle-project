@@ -1,14 +1,19 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_completion_screen.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets(
     'sprint completion screen renders mastered and repaired counts',
     (tester) async {
@@ -93,6 +98,14 @@ void main() {
         child: MaterialApp.router(
           theme: AppThemes.lightTheme,
           routerConfig: router,
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
         ),
       ),
     );
@@ -111,7 +124,7 @@ Future<void> _useTallSurface(WidgetTester tester) async {
 }
 
 Widget _buildApp(Widget child) => ProviderScope(
-      child: MaterialApp(
+      child: testMaterialApp(
         theme: AppThemes.lightTheme,
         home: child,
       ),

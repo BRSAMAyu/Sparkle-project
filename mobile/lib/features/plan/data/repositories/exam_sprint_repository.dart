@@ -36,7 +36,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '考试冲刺设置提交失败');
+      throw Exception(e.message ?? 'Submit failed');
     }
   }
 
@@ -54,7 +54,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '考试复盘提交失败');
+      throw Exception(e.message ?? 'Submit failed');
     }
   }
 
@@ -79,7 +79,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '冲刺完成检测失败');
+      throw Exception(e.message ?? 'Submit failed');
     }
   }
 
@@ -110,7 +110,7 @@ class ExamSprintRepository {
           throw Exception(detail);
         }
       }
-      throw Exception(e.message ?? '学习档案加载失败');
+      throw Exception(e.message ?? 'Failed to load learning portfolio');
     }
   }
 }

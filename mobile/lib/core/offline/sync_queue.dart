@@ -43,6 +43,9 @@ class OfflineSyncQueue {
         durationMs: 0,
       );
 
+      // KG-008: Local CRDT merge — max-wins for mastery before queuing
+      final mergedMastery = await _localMergeMastery(nodeId, mastery);
+
       // 1. Immediately store to local DB (Optimistic Update)
       await _localDb.isar.writeTxn(() async {
         final node = await _localDb.isar.localKnowledgeNodes
@@ -52,7 +55,7 @@ class OfflineSyncQueue {
 
         var currentRevision = 0;
         if (node != null) {
-          node.mastery = mastery;
+          node.mastery = mergedMastery;
           node.lastUpdated = DateTime.now();
           node.revision = node.revision + 1; // Increment revision
           currentRevision = node.revision;
@@ -64,7 +67,7 @@ class OfflineSyncQueue {
         await _localDb.isar.pendingUpdates.put(
           PendingUpdate()
             ..nodeId = nodeId
-            ..newMastery = mastery
+            ..newMastery = mergedMastery
             ..timestamp = DateTime.now()
             ..synced = false
             ..createdAt = DateTime.now()
@@ -83,7 +86,7 @@ class OfflineSyncQueue {
             ..entityId = nodeId
             ..payloadJson = jsonEncode({
               'nodeId': nodeId,
-              'mastery': mastery,
+              'mastery': mergedMastery,
               'revision': currentRevision,
             })
             ..dedupeKey = OutboxDedupeKey.knowledgeUpdate(nodeId, requestId)
@@ -203,6 +206,23 @@ class OfflineSyncQueue {
         await _localDb.isar.localKnowledgeNodes.put(newNode);
       }
     });
+  }
+
+  /// KG-008: Local CRDT merge for offline mastery updates.
+  /// Max-wins strategy: take the higher of pending local value and new value.
+  Future<int> _localMergeMastery(String nodeId, int newMastery) async {
+    final pending = await _localDb.isar.pendingUpdates
+        .filter()
+        .nodeIdEqualTo(nodeId)
+        .and()
+        .syncedEqualTo(false)
+        .findAll();
+
+    if (pending.isEmpty) return newMastery;
+
+    // Max-wins: use the highest pending mastery value
+    final maxPending = pending.map((p) => p.newMastery).reduce((a, b) => a > b ? a : b);
+    return newMastery > maxPending ? newMastery : maxPending;
   }
 
   Future<bool> _isOnline() async {

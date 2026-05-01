@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/calendar/data/datasources/calendar_remote_datasource.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
@@ -126,7 +127,9 @@ class CalendarRepository {
       return CalendarMutationResult(
         event: localEvent,
         persistedRemotely: false,
-        message: '云端暂时不可用，已先保存到本地并将在稍后同步。',
+        message: I18nService.instance.isChinese
+            ? '云端暂时不可用，已先保存到本地并将在稍后同步。'
+            : 'Cloud temporarily unavailable, saved locally and will sync later.',
       );
     }
   }
@@ -366,6 +369,7 @@ class CalendarRepository {
   }
 
   Future<void> _scheduleReminders(CalendarEventModel event) async {
+    final zh = I18nService.instance.isChinese;
     final baseId = event.id.hashCode;
 
     DateTimeComponents? matchComponents;
@@ -384,8 +388,10 @@ class CalendarRepository {
       if (matchComponents != null || reminderTime.isAfter(DateTime.now())) {
         await _notificationService.scheduleNotification(
           id: baseId + i,
-          title: '日程提醒: ${event.title}',
-          body: minutes == 0 ? '现在开始' : '还有 $minutes 分钟开始',
+          title: zh ? '日程提醒: ${event.title}' : 'Schedule: ${event.title}',
+          body: minutes == 0
+              ? (zh ? '现在开始' : 'Starting now')
+              : (zh ? '还有 $minutes 分钟开始' : '$minutes minutes until start'),
           scheduledDate: reminderTime,
           payload: {'eventId': event.id},
           matchDateTimeComponents: matchComponents,

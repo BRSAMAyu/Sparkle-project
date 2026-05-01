@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_cards.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('concept evidence routes to galaxy detail', (tester) async {
     final routed = <String>[];
     final router = GoRouter(
@@ -187,8 +192,7 @@ void main() {
 
   testWidgets('unsupported evidence stays non-routable', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: EvidenceCard(
             item: EvidenceResolveItem(
               type: 'summary',
@@ -203,8 +207,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('去星图看'), findsNothing);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -83,9 +84,9 @@ class _LearningPortfolioScreenState
               ..hideCurrentSnackBar()
               ..showSnackBar(
                 SparkleSnackBar.error(
-                  '学习档案加载失败',
+                  context.l10n.planPortfolioLoadFailed(nextMessage),
                   onRetry: () => ref.invalidate(learningPortfolioProvider),
-                  retryLabel: '重试',
+                  retryLabel: context.l10n.planPortfolioRetry,
                 ),
               );
           },
@@ -108,7 +109,7 @@ class _LearningPortfolioScreenState
               fallbackRoute: UserRoutes.profile,
             ),
           ),
-          title: const Text('我的学习档案'),
+          title: Text(context.l10n.planMyArchive),
         ),
         child: ContentConstraint(
           child: RefreshIndicator(
@@ -141,14 +142,14 @@ class _LearningPortfolioScreenState
                     _PortfolioSummaryCard(portfolio: portfolio),
                     const SizedBox(height: DS.spacing16),
                     _PortfolioGroupSection(
-                      title: '进行中',
-                      subtitle: '继续追踪每一门课当前冲刺的节奏与掌握进展。',
+                      title: context.l10n.planPortfolioActiveTitle,
+                      subtitle: context.l10n.planPortfolioActiveSubtitle,
                       entries: portfolio.activeEntries,
                     ),
                     const SizedBox(height: DS.spacing16),
                     _PortfolioGroupSection(
-                      title: '已完成',
-                      subtitle: '回看已经跑完的冲刺，保留每次考试前后的成长轨迹。',
+                      title: context.l10n.planPortfolioCompletedTitle,
+                      subtitle: context.l10n.planPortfolioCompletedSubtitle,
                       entries: portfolio.completedEntries,
                     ),
                     if (portfolio.hasMore) ...[
@@ -161,8 +162,8 @@ class _LearningPortfolioScreenState
                     ],
                     const SizedBox(height: DS.spacing16),
                     _PortfolioGroupSection(
-                      title: '计划中',
-                      subtitle: '已经排进学习档案，但还没正式开跑的冲刺。',
+                      title: context.l10n.planPortfolioPlannedTitle,
+                      subtitle: context.l10n.planPortfolioPlannedSubtitle,
                       entries: portfolio.plannedEntries,
                     ),
                     const SizedBox(height: DS.spacing32),
@@ -222,7 +223,7 @@ class _PortfolioSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '所有科目掌握度合计',
+            context.l10n.planPortfolioTotalMastery,
             style: DS.labelLarge.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
@@ -238,9 +239,9 @@ class _PortfolioSummaryCard extends StatelessWidget {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _SummaryPill(label: '进行中 ${portfolio.activeCount}'),
-              _SummaryPill(label: '已完成 ${portfolio.completedCount}'),
-              _SummaryPill(label: '计划中 ${portfolio.plannedCount}'),
+              _SummaryPill(label: context.l10n.planPortfolioActivePill(portfolio.activeCount)),
+              _SummaryPill(label: context.l10n.planPortfolioCompletedPill(portfolio.completedCount)),
+              _SummaryPill(label: context.l10n.planPortfolioPlannedPill(portfolio.plannedCount)),
             ],
           ),
         ],
@@ -308,7 +309,7 @@ class _PortfolioGroupSection extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(DS.spacing16),
               child: Text(
-                '这一组里暂时还没有冲刺记录。',
+                context.l10n.planPortfolioEmptyGroup,
                 style: DS.bodyMedium.copyWith(color: DS.textSecondary),
               ),
             ),
@@ -353,7 +354,7 @@ class _PortfolioEntryCard extends StatelessWidget {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: DS.spacing6),
             child: Text(
-              _statusLine(entry),
+              _statusLine(context, entry),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
           ),
@@ -368,7 +369,7 @@ class _PortfolioEntryCard extends StatelessWidget {
               border: Border.all(color: const Color(0xFFD8DED3)),
             ),
             child: Text(
-              '掌握度 ${entry.masteredNodesCount}%',
+              context.l10n.planPortfolioMasteryPercent(entry.masteredNodesCount),
               style: DS.labelLarge.copyWith(
                 color: const Color(0xFF355543),
                 fontWeight: DS.fontWeightSemibold,
@@ -379,7 +380,7 @@ class _PortfolioEntryCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Galaxy 掌握度摘要',
+                context.l10n.planPortfolioGalaxySummary,
                 style: DS.labelLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
@@ -398,17 +399,17 @@ class _PortfolioEntryCard extends StatelessWidget {
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
               children: [
-                _DetailChip(label: _scoreLabel(entry)),
-                _DetailChip(label: _modeLabel(entry.sprintMode)),
+                _DetailChip(label: _scoreLabel(context, entry)),
+                _DetailChip(label: _modeLabel(context, entry.sprintMode)),
                 if (entry.resultRating != null)
-                  _DetailChip(label: '结果评分 ${entry.resultRating}/5'),
+                  _DetailChip(label: context.l10n.planPortfolioResultRating(entry.resultRating!)),
                 if (entry.selfRating != null)
-                  _DetailChip(label: '自评 ${entry.selfRating}/10'),
+                  _DetailChip(label: context.l10n.planPortfolioSelfRating(entry.selfRating!)),
               ],
             ),
             const SizedBox(height: DS.spacing12),
             _DetailRow(
-              title: '最薄弱的点',
+              title: context.l10n.planPortfolioWeakestTitle,
               content: _joinDetails(
                 entry.weakestPoints.isNotEmpty
                     ? entry.weakestPoints
@@ -417,12 +418,12 @@ class _PortfolioEntryCard extends StatelessWidget {
                           entry.growthArea,
                         ].whereType<String>()
                       ],
-                fallback: '这一轮还没有记录到明显薄弱点',
+                fallback: context.l10n.planPortfolioWeakestFallback,
               ),
             ),
             const SizedBox(height: DS.spacing10),
             _DetailRow(
-              title: '值得引以为豪的节点',
+              title: context.l10n.planPortfolioProudTitle,
               content: _joinDetails(
                 entry.proudNodes.isNotEmpty
                     ? entry.proudNodes
@@ -431,13 +432,13 @@ class _PortfolioEntryCard extends StatelessWidget {
                           entry.strongestArea,
                         ].whereType<String>()
                       ],
-                fallback: '继续推进后，这里会累计你最亮眼的节点',
+                fallback: context.l10n.planPortfolioProudFallback,
               ),
             ),
             if ((entry.resultDescription ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: DS.spacing10),
               _DetailRow(
-                title: '成绩备注',
+                title: context.l10n.planPortfolioGradeNotes,
                 content: entry.resultDescription!,
               ),
             ],
@@ -536,20 +537,20 @@ class _PortfolioEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '你的学习档案还没有任何冲刺记录',
+              context.l10n.planPortfolioNoArchiveTitle,
               textAlign: TextAlign.center,
               style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '先创建一门考试冲刺吧。之后每次完成、进行中和计划中的科目，都会在这里自动归档。',
+              context.l10n.planPortfolioNoArchiveSubtitle,
               textAlign: TextAlign.center,
               style: DS.bodyMedium.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing20),
             SparkleButton(
               onPressed: onStartSprint,
-              label: '去创建考试冲刺',
+              label: context.l10n.planPortfolioCreateSprint,
             ),
           ],
         ),
@@ -576,13 +577,13 @@ class _PortfolioErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '学习档案加载失败：$message',
+              context.l10n.planPortfolioLoadFailed(message),
               textAlign: TextAlign.center,
               style: DS.bodyMedium.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing16),
             SparkleButton(
-              label: '重试',
+              label: context.l10n.planPortfolioRetry,
               icon: const Icon(Icons.refresh_rounded),
               onPressed: onRetry,
             ),
@@ -603,59 +604,60 @@ class _LoadMoreButton extends StatelessWidget {
     return Center(
       child: SparkleButton(
         onPressed: onLoadMore,
-        label: '加载更多',
+        label: context.l10n.planPortfolioLoadMore,
         icon: const Icon(Icons.expand_more),
       ),
     );
   }
 }
 
-String _statusLine(LearningPortfolioEntry entry) {
-  final mode = _modeLabel(entry.sprintMode);
+String _statusLine(BuildContext context, LearningPortfolioEntry entry) {
+  final l10n = context.l10n;
+  final mode = _modeLabel(context, entry.sprintMode);
   if (entry.isCompleted) {
-    final completedOn = _formatDate(entry.completedAt ?? entry.targetDate);
-    return '$mode（已完成，$completedOn）';
+    final completedOn = _formatDate(context, entry.completedAt ?? entry.targetDate);
+    return l10n.planPortfolioCompletedOn(mode, completedOn);
   }
   if (entry.isActive) {
     final totalDays = _totalDays(entry);
     final currentDay = _currentDay(entry, totalDays);
     final remainingDays = totalDays == null ? null : (totalDays - currentDay);
     if (remainingDays != null) {
-      return '$mode · 进行中（第 $currentDay 天，还剩 $remainingDays 天）';
+      return l10n.planPortfolioActiveDay(mode, currentDay, remainingDays);
     }
-    return '$mode · 进行中';
+    return l10n.planPortfolioActiveShort(mode);
   }
-  return '$mode · 计划中';
+  return l10n.planPortfolioPlannedShort(mode);
 }
 
-String _scoreLabel(LearningPortfolioEntry entry) {
+String _scoreLabel(BuildContext context, LearningPortfolioEntry entry) {
   if ((entry.resultDescription ?? '').trim().isNotEmpty) {
     return entry.resultDescription!;
   }
   if (entry.currentScore != null) {
-    return '成绩 ${entry.currentScore!.round()} 分';
+    return context.l10n.planPortfolioScoreLabel(entry.currentScore!.round());
   }
-  return '成绩待记录';
+  return context.l10n.planPortfolioScorePending;
 }
 
-String _modeLabel(String? sprintMode) {
+String _modeLabel(BuildContext context, String? sprintMode) {
   switch (sprintMode) {
     case 'last_24h_cram':
-      return '24小时抢救';
+      return context.l10n.planMode24h;
     case 'seven_day_survival':
-      return '7天冲刺';
+      return context.l10n.planMode7Day;
     case 'fourteen_day_build_and_retrieve':
-      return '14天冲刺';
+      return context.l10n.planMode14Day;
     case 'standard_exam_sprint':
-      return '标准冲刺';
+      return context.l10n.planModeStandard;
     default:
-      return '考试冲刺';
+      return context.l10n.planModeExam;
   }
 }
 
-String _formatDate(DateTime? value) {
+String _formatDate(BuildContext context, DateTime? value) {
   if (value == null) {
-    return '日期待定';
+    return context.l10n.planDateTbd;
   }
   final local = value.toLocal();
   final year = local.year.toString().padLeft(4, '0');

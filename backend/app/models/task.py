@@ -33,7 +33,7 @@ from app.models.base import GUID, BaseModel
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
-class TaskType(str, enum.Enum):
+class TaskType(enum.StrEnum):
     LEARNING = "LEARNING"
     TRAINING = "TRAINING"
     ERROR_FIX = "ERROR_FIX"
@@ -43,7 +43,7 @@ class TaskType(str, enum.Enum):
     OCR = "OCR"
 
 
-class TaskStatus(str, enum.Enum):
+class TaskStatus(enum.StrEnum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     STUCK = "STUCK"
@@ -51,7 +51,7 @@ class TaskStatus(str, enum.Enum):
     ABANDONED = "ABANDONED"
 
 
-class SubTaskStatus(str, enum.Enum):
+class SubTaskStatus(enum.StrEnum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"

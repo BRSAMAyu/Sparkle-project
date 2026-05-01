@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class BottleneckCard extends StatelessWidget {
   const BottleneckCard({required this.data, super.key});
@@ -17,7 +18,7 @@ class BottleneckCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '这轮最需要优先处理的瓶颈',
+          context.l10n.chatBottleneckPriority,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),

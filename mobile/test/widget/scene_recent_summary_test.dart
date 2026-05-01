@@ -5,6 +5,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _SceneSummaryApiService implements MemoryApiService {
   _SceneSummaryApiService({required this.recentScenes});
@@ -162,6 +163,8 @@ class _SceneSummaryApiService implements MemoryApiService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   Future<void> pumpPanel(
     WidgetTester tester, {
     required bool v2,
@@ -175,10 +178,11 @@ void main() {
             _SceneSummaryApiService(recentScenes: scenes),
           ),
         ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: MemoryPanelScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
   }
 
   final scenes = [

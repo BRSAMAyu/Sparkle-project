@@ -1,3 +1,4 @@
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 
 /// Unified notification model combining system and intervention notifications
@@ -243,13 +244,13 @@ class UnifiedNotification {
         return label.trim();
       }
     }
-    return '发个鼓励';
+    return I18nService.instance.isChinese ? '发个鼓励' : 'Send encouragement';
   }
 
   String get previewText {
     final step = suggestedStep;
     if (isIntervention && step != null && step.trim().isNotEmpty) {
-      return '$content\n建议动作：$step';
+      return I18nService.instance.isChinese ? '$content\n建议动作：$step' : '$content\nSuggested action: $step';
     }
     return content;
   }

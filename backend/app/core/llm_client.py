@@ -3,6 +3,9 @@ LLM Client Wrapper
 Provides a unified interface for different LLM providers (Qwen, DeepSeek, OpenAI)
 """
 from __future__ import annotations
+
+from typing import Any
+
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -242,7 +245,7 @@ class SecureLLMClient:
         api_key: str,
         base_url: str,
         timeout_seconds: float = 60.0,
-    ) -> "SecureLLMClient":
+    ) -> SecureLLMClient:
         return cls(
             OpenAICompatibleProvider(
                 api_key=api_key,

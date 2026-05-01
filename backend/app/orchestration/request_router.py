@@ -664,7 +664,7 @@ class RequestRouter:
             temperature=0,  # 降低随机性，提高一致性
             max_tokens=10,  # 限制输出长度，减少延迟
         )
-        intent = response.strip().lower() if response else "chat"
+        response.strip().lower() if response else "chat"
 
 
 

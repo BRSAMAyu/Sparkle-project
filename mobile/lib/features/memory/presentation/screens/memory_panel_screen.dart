@@ -683,7 +683,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   label: _revokingIds.contains(entry.id) ? context.l10n.memoryPanelRevoking : context.l10n.memoryPanelRevoke,
                   onPressed: _revokingIds.contains(entry.id)
                       ? () {}
-                      : () => _revokeAutoMemory(episodic!),
+                      : () => _revokeAutoMemory(episodic),
                   disabled: _revokingIds.contains(entry.id),
                   variant: ButtonVariant.ghost,
                 ),

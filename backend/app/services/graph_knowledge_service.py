@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -24,7 +24,7 @@ from app.services.node_sector_service import dominant_sector_from_weights
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GraphKnowledgeService:

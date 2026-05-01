@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart'
@@ -148,7 +149,7 @@ class _NotificationAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '干预漏斗（按触发类型）',
+            context.l10n.notificationAnalyticsFunnelTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
@@ -166,22 +167,22 @@ class _NotificationAnalyticsScreenState
                   ),
                   const SizedBox(height: DS.spacing12),
                   _buildProgressBar(
-                      '创建', funnel.created, funnel.created.toDouble()),
+                      context.l10n.notificationAnalyticsCreated, funnel.created, funnel.created.toDouble()),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      '送达', funnel.delivered, funnel.created.toDouble()),
+                      context.l10n.notificationAnalyticsDelivered, funnel.delivered, funnel.created.toDouble()),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      '看见', funnel.seen, funnel.delivered.toDouble()),
+                      context.l10n.notificationAnalyticsSeen, funnel.seen, funnel.delivered.toDouble()),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      '接受', funnel.accepted, funnel.seen.toDouble()),
+                      context.l10n.notificationAnalyticsAccepted, funnel.accepted, funnel.seen.toDouble()),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      '行动', funnel.acted, funnel.accepted.toDouble()),
+                      context.l10n.notificationAnalyticsActed, funnel.acted, funnel.accepted.toDouble()),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    '接受率 ${funnel.acceptanceRate.toStringAsFixed(1)}% · 行动率 ${funnel.actionRate.toStringAsFixed(1)}%',
+                    context.l10n.notificationAnalyticsAcceptanceActionRate(funnel.acceptanceRate.toStringAsFixed(1), funnel.actionRate.toStringAsFixed(1)),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -200,7 +201,7 @@ class _NotificationAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '语气效果（按 tone / channel）',
+            context.l10n.notificationAnalyticsToneEffectivenessTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
@@ -222,13 +223,13 @@ class _NotificationAnalyticsScreenState
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: DS.spacing8),
-                          Text('创建 ${item.created}'),
-                          Text('接受 ${item.accepted}'),
-                          Text('行动 ${item.acted}'),
-                          Text('有效 ${item.effective}'),
+                          Text(context.l10n.notificationAnalyticsCreatedCount(item.created)),
+                          Text(context.l10n.notificationAnalyticsAcceptedCount(item.accepted)),
+                          Text(context.l10n.notificationAnalyticsActedCount(item.acted)),
+                          Text(context.l10n.notificationAnalyticsEffectiveCount(item.effective)),
                           const SizedBox(height: DS.spacing8),
                           Text(
-                            '行动率 ${item.actedRate.toStringAsFixed(1)}% · 有效率 ${item.effectiveRate.toStringAsFixed(1)}%',
+                            context.l10n.notificationAnalyticsActedEffectiveRate(item.actedRate.toStringAsFixed(1), item.effectiveRate.toStringAsFixed(1)),
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: DS.textSecondary,
@@ -251,7 +252,7 @@ class _NotificationAnalyticsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '行动耗时分布',
+            context.l10n.notificationAnalyticsTimeToActionTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
@@ -301,12 +302,12 @@ class _NotificationAnalyticsScreenState
                   Icons.touch_app,
                 ),
                 _buildStatCard(
-                  '接受建议',
+                  context.l10n.notificationAnalyticsAcceptSuggestion,
                   '${summary.totalAccepted}',
                   Icons.check_circle_outline,
                 ),
                 _buildStatCard(
-                  '开始执行',
+                  context.l10n.notificationAnalyticsStartExecution,
                   '${summary.totalActed}',
                   Icons.play_circle_outline,
                 ),
@@ -316,12 +317,12 @@ class _NotificationAnalyticsScreenState
                   Icons.pie_chart,
                 ),
                 _buildStatCard(
-                  '接受率',
+                  context.l10n.notificationAnalyticsAcceptanceRate,
                   '${summary.acceptanceRate.toStringAsFixed(1)}%',
                   Icons.trending_up,
                 ),
                 _buildStatCard(
-                  '行动率',
+                  context.l10n.notificationAnalyticsActionRate,
                   '${summary.actionRate.toStringAsFixed(1)}%',
                   Icons.directions_run,
                 ),
@@ -491,7 +492,7 @@ class _NotificationAnalyticsScreenState
                   children: [
                     Expanded(
                       child: _buildProgressBar(
-                        '已接受',
+                        context.l10n.notificationAnalyticsAcceptedLabel,
                         stats.accepted,
                         stats.viewed.toDouble(),
                       ),
@@ -503,7 +504,7 @@ class _NotificationAnalyticsScreenState
                   children: [
                     Expanded(
                       child: _buildProgressBar(
-                        '已开始',
+                        context.l10n.notificationAnalyticsStartedLabel,
                         stats.acted,
                         stats.accepted.toDouble(),
                       ),
@@ -579,11 +580,11 @@ class _NotificationAnalyticsScreenState
             runSpacing: DS.spacing8,
             children: [
               _buildTrendMetricChip(
-                  '查看', trends.fold(0, (sum, item) => sum + item.viewed)),
+                  I18nService.instance.isChinese ? '查看' : 'Viewed', trends.fold(0, (sum, item) => sum + item.viewed)),
               _buildTrendMetricChip(
-                  '接受', trends.fold(0, (sum, item) => sum + item.accepted)),
+                  I18nService.instance.isChinese ? '接受' : 'Accepted', trends.fold(0, (sum, item) => sum + item.accepted)),
               _buildTrendMetricChip(
-                  '开始', trends.fold(0, (sum, item) => sum + item.acted)),
+                  I18nService.instance.isChinese ? '开始' : 'Acted', trends.fold(0, (sum, item) => sum + item.acted)),
             ],
           ),
         ],

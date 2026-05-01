@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 class TestApiClient implements ApiClient {
   Future<Response<dynamic>> Function(
@@ -134,6 +135,7 @@ void main() {
   late ShopRepository repository;
 
   setUp(() {
+    setUpI18nForTesting();
     mockApiClient = TestApiClient();
     repository = ShopRepository(mockApiClient);
   });

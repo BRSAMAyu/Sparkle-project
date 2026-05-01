@@ -16,8 +16,11 @@ import 'package:sparkle/features/community/presentation/screens/accountability_d
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('detail screen shows pending policy summary count and next trigger',
       (tester) async {
     await _pumpHarness(

@@ -4,8 +4,7 @@ FastAPI 依赖注入函数
 """
 import logging
 
-from fastapi import Depends, HTTPException, status
-from fastapi import Request
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,7 +41,7 @@ async def get_current_user_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="登录信息已过期，请重新登录~",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
 
 async def get_current_user(
     request: Request,

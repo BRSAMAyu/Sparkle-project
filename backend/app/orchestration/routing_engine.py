@@ -18,9 +18,9 @@ from app.aurora.migration import (
     resolve_cutover_state,
     route_dual_core_via_aurora,
 )
+from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
 from app.aurora.schemas import SignalSnapshot
-from app.config import aurora_flags
-from app.config import settings
+from app.config import aurora_flags, settings
 from app.core.metrics import (
     ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL,
     AURORA_STAGE33_FALLBACK_TOTAL,
@@ -36,9 +36,9 @@ from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwi
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
 from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
+from app.services.bayesian_routing_wire_service import BayesianRoutingWireService
 from app.services.cognitive_service import CognitiveService
 from app.services.follow_up_question_service import FollowUpQuestionService
-from app.services.bayesian_routing_wire_service import BayesianRoutingWireService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.plan_progress_service import PlanProgressService
 from app.services.route_history_service import RouteHistoryService
@@ -52,6 +52,7 @@ from app.services.source_state_encoder import SourceStateEncoder
 from app.services.srl_phase_types import SRLPhaseHint
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
+from app.signals.state_register import StateRegister
 from app.state_aggregator.schema import (
     ActiveSkillsSummaryValue,
     MetacognitionHintV1,
@@ -607,6 +608,7 @@ class RoutingEngineMixin:
                 added_strategy_adjustments,
                 limit=5,
             ),
+            structured_adjustments=list(decision.structured_adjustments),
         )
 
     @classmethod
@@ -646,6 +648,7 @@ class RoutingEngineMixin:
                 added_strategy_adjustments,
                 limit=5,
             ),
+            structured_adjustments=list(decision.structured_adjustments),
         )
 
     # ------------------------------------------------------------------
@@ -709,6 +712,14 @@ class RoutingEngineMixin:
             user_context_payload=user_context_payload,
         )
 
+        # Read Aurora communication preferences (T3.4 — user preferences → router)
+        aurora_preferences: dict[str, str] = {}
+        if active_db is not None:
+            try:
+                aurora_preferences = await AuroraUserPreferencesService(active_db).get(user_id)
+            except Exception as exc:
+                logger.warning("Failed to read Aurora preferences for routing: {}", exc)
+
         return DualCoreRoutingInput(
             intent=(
                 unified_routing_result.primary_intent.value
@@ -739,6 +750,8 @@ class RoutingEngineMixin:
             metacognition_hint=metacognition_hint,
             cognitive_load=self._extract_cognitive_load(user_context_payload, plan_context),
             capsule_preferences=self._extract_capsule_preferences(user_context_payload),
+            spine_active_states=await self._get_spine_active_states(user_id),
+            aurora_preferences=aurora_preferences,
         )
 
     async def _build_metacognition_hint(
@@ -762,6 +775,67 @@ class RoutingEngineMixin:
         return self._derive_metacognition_hint_from_payload(
             self._extract_stage35_metacognition_payload(user_context_payload)
         )
+
+    async def _get_spine_active_states(self, user_id: str) -> list[dict[str, Any]]:
+        """Fetch active Spine StateRegister entries for routing.
+
+        Also runs L0 rule evaluations (deadline_pressure, quiet_hours) to ensure
+        StateRegister is up-to-date before the routing decision.
+        """
+        redis_client = getattr(self, "redis", None)
+        if redis_client is None:
+            return []
+        try:
+            # L0: Evaluate deadline pressure if calendar context is available
+            await self._apply_l0_rules(user_id, redis_client)
+
+            register = StateRegister(redis_client)
+            entries = await register.get_active_states(user_id)
+            return [
+                {
+                    "state_key": e.state_key,
+                    "value": e.value,
+                    "confidence": e.confidence,
+                    "scope": e.scope,
+                }
+                for e in entries
+            ]
+        except Exception as exc:
+            logger.debug("Failed to load Spine StateRegister for dual-core routing: {}", exc)
+            return []
+
+    async def _apply_l0_rules(self, user_id: str, redis_client: Any) -> None:
+        """Run L0 deterministic rules: deadline_pressure from calendar context."""
+        try:
+            from app.aurora.runtime_v1.l0_rules import L0RuleEngine
+
+            engine = L0RuleEngine(redis_client)
+
+            # Extract upcoming deadlines from user context if available
+            deadlines = await self._get_upcoming_deadlines_for_l0(user_id)
+            if deadlines:
+                await engine.evaluate_deadline_pressure(user_id, upcoming_deadlines=deadlines)
+        except Exception as exc:
+            logger.debug("L0 rule evaluation skipped for user={}: {}", user_id, exc)
+
+    async def _get_upcoming_deadlines_for_l0(self, user_id: str) -> list[dict[str, Any]]:
+        """Extract upcoming deadlines from cache or context for L0 evaluation."""
+        try:
+            # Read cached calendar context from state aggregator
+            raw = await self.redis.get(f"state_aggregator:calendar:{user_id}")
+            if not raw:
+                return []
+            cal_data = json.loads(raw)
+            deadlines = []
+            for item in cal_data.get("upcoming_deadlines", []):
+                deadlines.append({
+                    "title": item.get("title", ""),
+                    "deadline_at": item.get("start_time") or item.get("end_time", ""),
+                    "type": "exam",
+                })
+            return deadlines[:6]
+        except Exception:
+            return []
 
     async def _emit_dual_core_status(self, decision, stream_callback) -> None:
         stage = "planning"
@@ -1024,17 +1098,9 @@ class RoutingEngineMixin:
         elif srl_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, srl_phase_hint=None)
 
-        if metacog_mode == "off":
+        if metacog_mode == "off" or routing_input.metacognition_hint is None or metacog_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
-        elif routing_input.metacognition_hint is None:
-            effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
-        elif metacog_mode == "shadow":
-            effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
-        if cogload_mode == "off":
-            effective_routing_input = replace(effective_routing_input, cognitive_load=None)
-        elif routing_input.cognitive_load is None:
-            effective_routing_input = replace(effective_routing_input, cognitive_load=None)
-        elif cogload_mode == "shadow":
+        if cogload_mode == "off" or routing_input.cognitive_load is None or cogload_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, cognitive_load=None)
 
         if routing_input.social_signals is not None and social_mode in {"shadow", "live"}:

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// 责任伙伴打卡热力图组件
@@ -24,20 +25,23 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
   late final PageController _pageController;
   late int _currentMonthPage;
 
-  static const _monthLabels = <String>[
-    '1月',
-    '2月',
-    '3月',
-    '4月',
-    '5月',
-    '6月',
-    '7月',
-    '8月',
-    '9月',
-    '10月',
-    '11月',
-    '12月',
-  ];
+  List<String> _monthLabels(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      l10n.communityMonthLabel1,
+      l10n.communityMonthLabel2,
+      l10n.communityMonthLabel3,
+      l10n.communityMonthLabel4,
+      l10n.communityMonthLabel5,
+      l10n.communityMonthLabel6,
+      l10n.communityMonthLabel7,
+      l10n.communityMonthLabel8,
+      l10n.communityMonthLabel9,
+      l10n.communityMonthLabel10,
+      l10n.communityMonthLabel11,
+      l10n.communityMonthLabel12,
+    ];
+  }
 
   @override
   void initState() {
@@ -68,7 +72,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '月度打卡视图 · ${widget.year}',
+              context.l10n.communityMonthlyCheckinView(widget.year),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -78,7 +82,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
         ),
         const SizedBox(height: 8),
         Text(
-          '左右滑动切换月份，比全年 365 格更容易看清每天状态。',
+          context.l10n.communitySwipeMonthsHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -120,7 +124,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
                 padding: EdgeInsets.only(right: index == 11 ? 0 : 8),
                 child: ChoiceChip(
                   selected: selected,
-                  label: Text('${_monthLabels[index]} · $count天'),
+                  label: Text(context.l10n.communityMonthDayCount(_monthLabels(context)[index], count)),
                   onSelected: (_) {
                     unawaited(
                       _pageController.animateToPage(
@@ -171,7 +175,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
           Expanded(
             child: Center(
               child: Text(
-                '${widget.year}年${_currentMonthPage + 1}月',
+                context.l10n.communityYearMonth(widget.year, _currentMonthPage + 1),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -206,7 +210,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
             ),
             const SizedBox(height: 12),
             Text(
-              '暂无打卡记录',
+              context.l10n.communityNoCheckinRecord,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -221,19 +225,19 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
           _legendItem(
             context,
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            label: '未打卡',
+            label: context.l10n.communityNotCheckedIn,
           ),
           const SizedBox(width: 8),
           _legendItem(
             context,
             color: const Color(0xFF9BE9A8),
-            label: '单人',
+            label: context.l10n.communitySingleChecked,
           ),
           const SizedBox(width: 8),
           _legendItem(
             context,
             color: const Color(0xFF2E7D32),
-            label: '双方',
+            label: context.l10n.communityBothChecked,
           ),
         ],
       );
@@ -276,7 +280,15 @@ class MonthlyHeatmap extends StatelessWidget {
   final int year;
   final List<Map<String, dynamic>> heatmap;
 
-  static const _weekdayLabels = <String>['一', '二', '三', '四', '五', '六', '日'];
+  List<String> _weekdayLabels(BuildContext context) => [
+        context.l10n.communityWeekdayMon,
+        context.l10n.communityWeekdayTue,
+        context.l10n.communityWeekdayWed,
+        context.l10n.communityWeekdayThu,
+        context.l10n.communityWeekdayFri,
+        context.l10n.communityWeekdaySat,
+        context.l10n.communityWeekdaySun,
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +312,7 @@ class MonthlyHeatmap extends StatelessWidget {
               (index) => Expanded(
                 child: Center(
                   child: Text(
-                    _weekdayLabels[index],
+                    _weekdayLabels(context)[index],
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

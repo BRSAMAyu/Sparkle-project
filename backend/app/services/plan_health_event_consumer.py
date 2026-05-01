@@ -22,7 +22,6 @@ from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
-
 # Actions where断点1 already handles user-facing notification
 _ALREADY_NOTIFIED_ACTIONS = frozenset({
     "incremental_adjustment_applied",
@@ -130,7 +129,7 @@ class PlanHealthEventConsumer:
                     )
                     if record:
                         await db.commit()
-                        
+
                         # --- Delivery Step ---
                         from app.models.card_protocol import DeliveryChannel
                         if record.delivery_channel == DeliveryChannel.IN_APP:
@@ -156,7 +155,7 @@ class PlanHealthEventConsumer:
                                 intervention_id=str(record.id),
                                 payload=record.diagnosis_payload or {}
                             )
-                            
+
                 except Exception as bridge_exc:
                     await db.rollback()
                     logger.warning("PlanHealth→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)

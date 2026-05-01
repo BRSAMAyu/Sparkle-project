@@ -11,11 +11,15 @@ class ExecutionCopy {
     return ExecutionCopy._(l10n!);
   }
 
-  static String get engineOfflineQueuedMessage =>
-      'AI execution engine is currently offline, the task has been added to the waiting queue';
+  static String engineOfflineQueuedMessage([bool isChinese = false]) =>
+      isChinese
+          ? 'AI 执行引擎当前离线，任务已加入等待队列'
+          : 'AI execution engine is currently offline, the task has been added to the waiting queue';
 
-  static String get engineNotConnectedMessage =>
-      'AI execution engine is not connected. Please connect it in settings first.';
+  static String engineNotConnectedMessage([bool isChinese = false]) =>
+      isChinese
+          ? 'AI 执行引擎未连接，请先在设置中连接。'
+          : 'AI execution engine is not connected. Please connect it in settings first.';
 
   String get engineTitle => _l10n.executionEngineTitle;
 

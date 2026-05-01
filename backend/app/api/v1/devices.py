@@ -4,19 +4,18 @@ Device Registration API
 Handles registration and management of user device tokens for push notifications.
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.user import User, UserDevice
 from app.services.push_sender_service import PushSenderService
-
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
@@ -88,7 +87,7 @@ async def register_device(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to register device: {str(e)}",
-        )
+        ) from e
 
 
 @router.delete("/unregister", response_model=DeviceRegistrationResponse)
@@ -130,7 +129,7 @@ async def unregister_device(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to unregister device: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/list")
@@ -144,7 +143,7 @@ async def list_devices(
     try:
         query = select(UserDevice).where(
             UserDevice.user_id == str(current_user.id),
-            UserDevice.is_active == True,
+            UserDevice.is_active,
         ).order_by(UserDevice.last_used_at.desc())
 
         result = await db.execute(query)
@@ -168,4 +167,4 @@ async def list_devices(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list devices: {str(e)}",
-        )
+        ) from e

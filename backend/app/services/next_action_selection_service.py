@@ -4,7 +4,8 @@ Next Action Selection Service
 追踪用户对next_action的点击/跳过行为，学习用户偏好
 """
 from __future__ import annotations
-from datetime import timezone, datetime, timedelta
+
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +18,7 @@ from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NextActionSelectionService:

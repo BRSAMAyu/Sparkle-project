@@ -26,7 +26,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from google.protobuf import struct_pb2  # noqa: F401 — kept for backward compat
@@ -48,6 +48,7 @@ from app.core.business_metrics import (  # noqa: F401
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
     HITL_REQUESTED,
 )
+from app.core.execution_router import ExecutionRouter
 from app.core.metrics import (
     ACTIVE_SESSIONS,
     ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL,  # noqa: F401
@@ -62,43 +63,36 @@ from app.core.metrics import (
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,  # noqa: F401
     TOKEN_USAGE,  # noqa: F401
 )
-from app.core.execution_router import ExecutionRouter
 from app.core.pending_actions import pending_actions_store  # noqa: F401
 from app.core.safe_error_messages import build_safe_chat_error
 from app.core.task_manager import task_manager  # noqa: F401
 from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType  # noqa: F401
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole  # noqa: F401
-from app.models.plan import Plan  # noqa: F401
 from app.models.cognitive import CognitiveFragment  # noqa: F401
 from app.models.galaxy import KnowledgeNode  # noqa: F401
+from app.models.plan import Plan  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.task import TaskStatus as ModelTaskStatus  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
-
-# Phase 3: Circuit Breaker, Observability, Shadow Mode
-from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
-from app.orchestration.composer import ResponseComposer
-from app.orchestration.context_focus import (  # noqa: F401
-    FocusedContextAssembler,
-    KNOWLEDGE_ACTION_KEYWORDS,
-    PLAN_ACTION_KEYWORDS,
-    TASK_ACTION_KEYWORDS,
-    infer_route_intent_from_chat_mode,
+from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
+from app.orchestration.agent_memory import AgentMemoryService  # noqa: F401
+from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
+from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
+from app.orchestration.memory_helpers import (
+    build_aurora_modeling_memory_summary,
+    build_aurora_runtime_metadata as _build_aurora_runtime_metadata,
+    build_error_memory_summary,
+    extract_completion_state_from_response_data,
+    extract_struggle_score as _extract_struggle_score,
+    first_memory_value as _first_memory_value,
+    memory_dict as _memory_dict,
+    memory_json_dict as _memory_json_dict,
+    memory_text as _memory_text,
+    safe_float as _safe_float,
+    should_record_stressed_session_mood as _should_record_stressed,
+    wake_policy_energy as _wake_policy_energy,
 )
-from app.orchestration.context_pruner import ContextPruner
-from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
-from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router  # noqa: F401
-from app.orchestration.experience_actuator import ExperienceActuator
-from app.orchestration.executor import ToolExecutor
-from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
-from app.orchestration.grounding_validator import GroundingValidator
-from app.orchestration.graph_rag import (
-    GraphRAGRetriever,
-    filter_graph_rag_result,
-    format_graph_rag_document_context,
-)
-from app.orchestration.lang_graph_planner import LangGraphPlanner
 
 # Multi-Agent Mode Support
 from app.orchestration.chat_modes import (
@@ -108,19 +102,57 @@ from app.orchestration.chat_modes import (
     normalize_chat_mode,
     parse_team_spec,
 )
-from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
+
+# Phase 3: Circuit Breaker, Observability, Shadow Mode
+from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
+from app.orchestration.composer import ResponseComposer
+
+# ---------------------------------------------------------------------------
+# Mixin imports
+# ---------------------------------------------------------------------------
+from app.orchestration.context_builder import ContextBuilderMixin
+from app.orchestration.context_focus import (  # noqa: F401
+    KNOWLEDGE_ACTION_KEYWORDS,
+    PLAN_ACTION_KEYWORDS,
+    TASK_ACTION_KEYWORDS,
+    FocusedContextAssembler,
+    infer_route_intent_from_chat_mode,
+)
+from app.orchestration.context_pruner import ContextPruner
+from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router  # noqa: F401
+from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.execution_engine import ExecutionEngineMixin
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.expert_strategy import ExpertStrategyV1
+from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
+from app.orchestration.graph_rag import (
+    GraphRAGRetriever,
+    filter_graph_rag_result,
+    format_graph_rag_document_context,
+)
+from app.orchestration.grounding_validator import GroundingValidator
+from app.orchestration.lang_graph_planner import LangGraphPlanner
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config  # noqa: F401
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow  # noqa: F401
-from app.orchestration.agent_memory import AgentMemoryService  # noqa: F401
-from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
-from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
-from app.orchestration.orchestration_trace import OrchestrationTrace
-from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
-from app.orchestration.planning_workflow import EXAM_SPRINT_FAST_TRACK_FLAG, PlanningWorkflowManager
 from app.orchestration.observability_logger import observability_logger
+from app.orchestration.observability_mixin import ObservabilityMixin
+from app.orchestration.orchestration_trace import OrchestrationTrace
+from app.orchestration.persistence_layer import PersistenceLayerMixin
+from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service  # noqa: F401
+from app.orchestration.planning_workflow import EXAM_SPRINT_FAST_TRACK_FLAG, PlanningWorkflowManager
+from app.orchestration.response_builder import ResponseBuilderMixin
+
+# Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
+from app.orchestration.route_adapter import to_route_decision  # noqa: F401
+from app.orchestration.routing_engine import RoutingEngineMixin
 from app.orchestration.run_ledger import RunLedgerRecorder
+from app.orchestration.schemas import (
+    ExecutablePlan,  # noqa: F401
+    RouteDecision,  # noqa: F401
+    StateSnapshot,  # noqa: F401
+)
 from app.orchestration.session_feedback import (
     SESSION_FEEDBACK_TTL_SECONDS,  # noqa: F401
     SessionAdaptationContext,  # noqa: F401
@@ -132,16 +164,8 @@ from app.orchestration.session_feedback import (
     build_session_feedback_instruction,
     detect_session_feedback_signal,  # noqa: F401
 )
+from app.orchestration.session_state_mixin import SessionStateMixin
 from app.orchestration.soul_compiler import attach_shadow_soul_runtime
-from app.services.capability_registry_service import CapabilityRegistryService
-
-# Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
-from app.orchestration.route_adapter import to_route_decision  # noqa: F401
-from app.orchestration.schemas import (
-    ExecutablePlan,  # noqa: F401
-    RouteDecision,  # noqa: F401
-    StateSnapshot,  # noqa: F401
-)
 from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.state_snapshot import StateSnapshotManager
 from app.orchestration.statechart_engine import WorkflowState
@@ -154,41 +178,30 @@ from app.orchestration.token_tracker import TokenTracker
 from app.orchestration.tool_result_extractor import ToolResultExtractor  # noqa: F401
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator  # noqa: F401
 from app.orchestration.ux_envelope import ux_envelope_builder  # noqa: F401
+from app.orchestration.validation_engine import ValidationEngineMixin
 from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter  # noqa: F401
-from app.services.chat_signal_collector import ChatSignalCollector
-from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
+from app.services.chat_signal_collector import ChatSignalCollector
+from app.services.checkpoint_nudge_service import CheckpointDebriefService
+from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
 from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.focus_service import focus_service  # noqa: F401
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service  # noqa: F401
 from app.services.memory_service import MemoryService
-from app.services.plan_progress_service import PlanProgressService  # noqa: F401
-from app.services.progress_narrative_service import ProgressNarrativeService  # noqa: F401
-from app.services.plan_execution_record_service import PlanExecutionRecordService  # noqa: F401
-from app.services.plan_execution_validator import PlanExecutionValidator  # noqa: F401
 from app.services.perceptible_intelligence_service import (  # noqa: F401
     PerceptibleInsightService,
     ProgressComparisonService,
 )
+from app.services.plan_execution_record_service import PlanExecutionRecordService  # noqa: F401
+from app.services.plan_execution_validator import PlanExecutionValidator  # noqa: F401
+from app.services.plan_progress_service import PlanProgressService  # noqa: F401
+from app.services.progress_narrative_service import ProgressNarrativeService  # noqa: F401
 from app.services.self_evolution_service import UnderstandingDepthService  # noqa: F401
 from app.services.shadow_prediction_service import shadow_prediction_service
 from app.services.system_update_service import SystemUpdateService, build_system_update  # noqa: F401
 from app.services.user_service import UserService  # noqa: F401
-from app.services.checkpoint_nudge_service import CheckpointDebriefService
-
-# ---------------------------------------------------------------------------
-# Mixin imports
-# ---------------------------------------------------------------------------
-from app.orchestration.context_builder import ContextBuilderMixin
-from app.orchestration.routing_engine import RoutingEngineMixin
-from app.orchestration.validation_engine import ValidationEngineMixin
-from app.orchestration.session_state_mixin import SessionStateMixin
-from app.orchestration.execution_engine import ExecutionEngineMixin
-from app.orchestration.response_builder import ResponseBuilderMixin
-from app.orchestration.persistence_layer import PersistenceLayerMixin
-from app.orchestration.observability_mixin import ObservabilityMixin
 
 # ---------------------------------------------------------------------------
 # Constants (exported for backward compatibility)
@@ -214,7 +227,7 @@ SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def get_agent_type_for_tool(tool_name: str) -> int:
@@ -853,31 +866,15 @@ class ChatOrchestrator(
 
     @staticmethod
     def _safe_float(value: Any) -> float | None:
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
+        return _safe_float(value)
 
     @classmethod
     def _extract_struggle_score(cls, payload: Any) -> float | None:
-        if not isinstance(payload, dict):
-            return None
-        direct = cls._safe_float(payload.get("struggle_score"))
-        if direct is not None:
-            return direct
-        for key in ("task_state", "checkpoint_state", "signals", "context", "metadata"):
-            nested = payload.get(key)
-            if isinstance(nested, dict):
-                score = cls._extract_struggle_score(nested)
-                if score is not None:
-                    return score
-        return None
+        return _extract_struggle_score(payload)
 
     @staticmethod
     def _wake_policy_energy(wake_policy: dict[str, Any] | None) -> str:
-        if not isinstance(wake_policy, dict):
-            return ""
-        return str(wake_policy.get("energy") or "").strip().lower()
+        return _wake_policy_energy(wake_policy)
 
     @classmethod
     def _should_record_stressed_session_mood(
@@ -887,36 +884,11 @@ class ChatOrchestrator(
         conversation_context: dict[str, Any] | None = None,
         wake_policy: dict[str, Any] | None = None,
     ) -> bool:
-        if cls._wake_policy_energy(wake_policy) == "full":
-            return True
-
-        request_context = dict(request_extra_context or {})
-        nested_wake_policy = request_context.get("wake_policy")
-        if isinstance(nested_wake_policy, dict) and cls._wake_policy_energy(nested_wake_policy) == "full":
-            return True
-
-        candidates: list[Any] = [request_context]
-        conversation = dict(conversation_context or {})
-        messages = conversation.get("messages")
-        if isinstance(messages, list):
-            candidates.extend(item for item in messages[-6:] if isinstance(item, dict))
-        for candidate in candidates:
-            if isinstance(candidate, dict):
-                candidate_wake_policy = candidate.get("wake_policy")
-                if isinstance(candidate_wake_policy, dict) and cls._wake_policy_energy(candidate_wake_policy) == "full":
-                    return True
-                metadata = candidate.get("metadata")
-                if isinstance(metadata, dict):
-                    metadata_wake_policy = metadata.get("wake_policy")
-                    if (
-                        isinstance(metadata_wake_policy, dict)
-                        and cls._wake_policy_energy(metadata_wake_policy) == "full"
-                    ):
-                        return True
-            score = cls._extract_struggle_score(candidate)
-            if score is not None and score > 0.6:
-                return True
-        return False
+        return _should_record_stressed(
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            wake_policy=wake_policy,
+        )
 
     async def _maybe_upsert_session_mood(
         self,
@@ -964,145 +936,42 @@ class ChatOrchestrator(
         modeling_complete: bool,
         modeling_snapshot: dict[str, Any] | None = None,
     ) -> dict[str, str]:
-        meta: dict[str, str] = {
-            "aurora_surface": surface,
-            "aurora_runtime_enabled": "true",
-            "surface_complete": str(surface_complete).lower(),
-            "modeling_complete": str(modeling_complete).lower(),
-        }
-        if modeling_complete and modeling_snapshot:
-            try:
-                meta["modeling_output_json"] = json.dumps(modeling_snapshot, ensure_ascii=False, default=str)
-            except Exception:
-                pass
-        return meta
+        return _build_aurora_runtime_metadata(
+            surface=surface,
+            surface_complete=surface_complete,
+            modeling_complete=modeling_complete,
+            modeling_snapshot=modeling_snapshot,
+        )
+
+    # ── Memory helpers (delegated to memory_helpers module) ────────────
 
     @staticmethod
     def _memory_dict(value: Any) -> dict[str, Any]:
-        return value if isinstance(value, dict) else {}
+        return _memory_dict(value)
 
     @staticmethod
     def _memory_text(value: Any) -> str:
-        if value in (None, "", [], {}):
-            return ""
-        if isinstance(value, (list, tuple)):
-            return "、".join(str(item).strip() for item in value if str(item).strip())
-        return str(value).strip()
+        return _memory_text(value)
 
     @classmethod
     def _first_memory_value(cls, sources: list[dict[str, Any]], keys: tuple[str, ...]) -> str:
-        for source in sources:
-            if not isinstance(source, dict):
-                continue
-            for key in keys:
-                text = cls._memory_text(source.get(key))
-                if text:
-                    return text
-        return ""
+        return _first_memory_value(sources, keys)
 
     @staticmethod
     def _memory_json_dict(value: Any) -> dict[str, Any]:
-        if isinstance(value, dict):
-            return value
-        if isinstance(value, str) and value.strip():
-            with contextlib.suppress(Exception):
-                parsed = json.loads(value)
-                if isinstance(parsed, dict):
-                    return parsed
-        return {}
+        return _memory_json_dict(value)
 
     @classmethod
-    def _build_aurora_modeling_memory_summary(
-        cls,
-        *,
-        modeling_snapshot: dict[str, Any] | None,
-        request_extra_context: dict[str, Any] | None,
-        user_context_payload: dict[str, Any] | None,
-    ) -> str:
-        snapshot = cls._memory_dict(modeling_snapshot)
-        request_context = cls._memory_dict(request_extra_context)
-        user_context = cls._memory_dict(user_context_payload)
-        profile_context = cls._memory_dict(user_context.get("profile_context") or snapshot.get("user_model_snapshot"))
-        preferences = cls._memory_dict(profile_context.get("preferences"))
-        cold_start = cls._memory_dict(
-            snapshot.get("cold_start_context")
-            or user_context.get("cold_start_context")
-            or profile_context.get("cold_start_context")
-            or preferences.get("cold_start_context")
+    def _build_aurora_modeling_memory_summary(cls, *, modeling_snapshot, request_extra_context, user_context_payload) -> str:
+        return build_aurora_modeling_memory_summary(
+            modeling_snapshot=modeling_snapshot,
+            request_extra_context=request_extra_context,
+            user_context_payload=user_context_payload,
         )
-        task_state = cls._memory_dict(request_context.get("task_state") or user_context.get("task_state"))
-        galaxy_baseline = cls._memory_dict(
-            snapshot.get("galaxy_baseline")
-            or request_context.get("galaxy_baseline")
-            or user_context.get("galaxy_baseline")
-        )
-
-        sources = [
-            request_context,
-            task_state,
-            cold_start,
-            profile_context,
-            preferences,
-            snapshot,
-        ]
-        subject = cls._first_memory_value(
-            sources,
-            ("subject", "exam_subject", "course", "topic", "goal_subject"),
-        )
-        goal = cls._first_memory_value(
-            sources,
-            ("goal_raw", "primary_goal_description", "goal", "target", "learning_goal"),
-        )
-        scope = cls._first_memory_value(
-            sources,
-            ("exam_scope", "scope", "study_scope", "material_scope"),
-        )
-        baseline = cls._first_memory_value(
-            sources,
-            ("knowledge_baseline", "baseline", "foundation", "starting_point"),
-        )
-        time_text = cls._first_memory_value(
-            sources,
-            ("time_available", "available_time", "time_constraint", "time_budget"),
-        )
-        if not time_text:
-            daily_hours = cls._first_memory_value(sources, ("daily_available_hours",))
-            days_left = cls._first_memory_value(sources, ("time_constraint_days", "days_left"))
-            time_parts = []
-            if daily_hours:
-                time_parts.append(f"每天约 {daily_hours} 小时")
-            if days_left:
-                time_parts.append(f"剩余约 {days_left} 天")
-            time_text = "，".join(time_parts)
-
-        weak_nodes = cls._memory_text(
-            galaxy_baseline.get("weak_nodes")
-            or cold_start.get("confirmed_weak_nodes")
-            or cold_start.get("galaxy_weak_nodes")
-        )
-        strong_nodes = cls._memory_text(galaxy_baseline.get("strong_nodes"))
-        if weak_nodes and weak_nodes not in baseline:
-            baseline = f"{baseline}；薄弱={weak_nodes}" if baseline else f"薄弱={weak_nodes}"
-        if strong_nodes and strong_nodes not in baseline:
-            baseline = f"{baseline}；优势={strong_nodes}" if baseline else f"优势={strong_nodes}"
-
-        parts = [
-            ("subject", subject),
-            ("goal", goal),
-            ("scope", scope),
-            ("baseline", baseline),
-            ("time", time_text),
-        ]
-        rendered = [f"{label}={text}" for label, text in parts if text]
-        if not rendered:
-            return "Aurora 建模完成：已完成用户学习建模。"
-        return "Aurora 建模完成：" + "；".join(rendered)
 
     @classmethod
     def _extract_completion_state_from_response_data(cls, final_response_data: dict[str, Any] | None) -> str:
-        metadata = cls._memory_dict((final_response_data or {}).get("metadata"))
-        ux_result = cls._memory_json_dict(metadata.get("ux_result"))
-        return str(ux_result.get("completion_state") or metadata.get("completion_state") or "").strip().lower()
+        return extract_completion_state_from_response_data(final_response_data)
 
     async def _find_completed_task_since(
         self,
@@ -1197,30 +1066,12 @@ class ChatOrchestrator(
         user_message: str,
         error: Exception | None,
     ) -> str:
-        context = cls._memory_dict(request_extra_context)
-        bridge = cls._memory_dict(context.get("error_replan_bridge"))
-        state_context = getattr(final_state, "context_data", {}) or {}
-        candidate = cls._memory_text(
-            bridge.get("node_name")
-            or bridge.get("node")
-            or state_context.get("failed_node")
-            or state_context.get("current_node")
-            or state_context.get("node_name")
+        return build_error_memory_summary(
+            request_extra_context=request_extra_context,
+            final_state=final_state,
+            user_message=user_message,
+            error=error,
         )
-        if not candidate:
-            errors = getattr(final_state, "errors", None) or []
-            if errors:
-                last_error = str(errors[-1])
-                marker = "Node "
-                if marker in last_error and " failed" in last_error:
-                    candidate = last_error.split(marker, 1)[1].split(" failed", 1)[0].strip()
-                else:
-                    candidate = last_error[:80].strip()
-        if not candidate and error is not None:
-            candidate = type(error).__name__
-        if not candidate:
-            candidate = cls._memory_text(user_message)[:80] or "current turn"
-        return f"struggled with {candidate}"
 
     async def _write_turn_end_episodic_memory(
         self,
@@ -1454,6 +1305,22 @@ class ChatOrchestrator(
                 modeling_snapshot=modeling_snapshot,
             )
 
+        # Feed Aurora decision back to Spine for attribution tracking
+        try:
+            from app.signals.spine_aurora_bridge import SpineAuroraBridge
+            _bridge = SpineAuroraBridge(self.redis)
+            await _bridge.feed_aurora_decision(
+                user_id=user_id,
+                action=plan.action or "emit_message",
+                surface=surface or "",
+                chat_directive=plan.chat_directive if hasattr(plan, "chat_directive") else None,
+            )
+        except Exception:
+            logger.warning(
+                "feed_aurora_decision failed for user=%s action=%s",
+                user_id, plan.action or "emit_message", exc_info=True,
+            )
+
     async def _emit_early_ack_progress(
         self,
         *,
@@ -1505,6 +1372,7 @@ class ChatOrchestrator(
         try:
             return uuid.UUID(raw)
         except Exception:
+            logger.debug("Non-standard session_id format, using uuid5 fallback: %s", raw[:50])
             return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
 
     def _response_priority(self, resp: agent_service_pb2.ChatResponse) -> str:
@@ -1951,6 +1819,7 @@ class ChatOrchestrator(
         try:
             injection_mode = (await AuroraDocContextKillSwitchService().get_mode()).strip().lower()
         except Exception:
+            logger.warning("AuroraDocContextKillSwitchService.get_mode failed, falling back to settings", exc_info=True)
             injection_mode = (
                 str(getattr(settings, "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE", "live") or "live")
                 .strip()
@@ -2014,10 +1883,17 @@ class ChatOrchestrator(
                 for c in filtered_rag.chunks
                 if c.relevance_score >= 0.3
             ]
+            used_filenames = {c["filename"] for c in used_chunks}
+            all_filenames = {c.filename for c in filtered_rag.chunks}
+            excluded_names = sorted(all_filenames - used_filenames)
             excluded_count = filtered_rag.total_retrieved - len(used_chunks)
             context_receipt = {
                 "used": used_chunks,
+                "used_names": sorted(used_filenames),
                 "used_count": len(used_chunks),
+                "excluded_names": [
+                    f"{name}（相关度过低）" for name in excluded_names
+                ],
                 "excluded_count": excluded_count,
                 "total_retrieved": filtered_rag.total_retrieved,
                 "mode": mode,
@@ -2336,6 +2212,103 @@ class ChatOrchestrator(
                     ),
                 )
 
+                # P3: Signal-to-Action Spine — exam rescue & stale state + Aurora bridge
+                _spine_context: dict[str, Any] = {}
+                if not request.HasField("tool_result") and user_message:
+                    try:
+                        from app.signals.spine_aurora_bridge import SpineAuroraBridge
+                        from app.signals.spine_orchestrator import SpineOrchestrator
+                        _spine = SpineOrchestrator(self.redis)
+                        _spine_bridge = SpineAuroraBridge(self.redis)
+
+                        # First-message exam rescue detection
+                        _conv_msgs = (conversation_context or {}).get("messages") or []
+                        if len(_conv_msgs) == 0:
+                            await _spine.on_first_message(
+                                user_id=user_id,
+                                message=user_message,
+                            )
+
+                        # Stale-state guard on user return
+                        _analytics = (user_context_payload or {}).get("analytics_summary") or {}
+                        _last_active = _analytics.get("last_activity_time") or _analytics.get("last_login")
+                        if _last_active:
+                            from datetime import datetime as _dt
+                            if isinstance(_last_active, str):
+                                with contextlib.suppress(ValueError):
+                                    _last_active = _dt.fromisoformat(_last_active)
+                            if isinstance(_last_active, _dt):
+                                _elapsed_min = (_utcnow().replace(tzinfo=None) - _last_active.replace(tzinfo=None)).total_seconds() / 60
+                                if _elapsed_min >= 60:
+                                    await _spine.on_user_return(
+                                        user_id=user_id,
+                                        time_context={
+                                            "now": _utcnow().isoformat(),
+                                            "elapsed_since_last_interaction_min": _elapsed_min,
+                                            "active_task_id": None,
+                                        },
+                                    )
+
+                        # Aurora ↔ Spine bridge: fetch Spine context for Aurora
+                        _spine_context = await _spine_bridge.get_context_for_aurora(user_id)
+                        if _spine_context:
+                            if isinstance(request_extra_context, dict):
+                                request_extra_context["spine_signals"] = _spine_context
+                            else:
+                                request_extra_context = {"spine_signals": _spine_context}
+
+                        # v2.9: Fetch structured directives for prompt/RAG modulation
+                        _spine_resp_dir = await _spine.get_response_directive(user_id)
+                        if _spine_resp_dir:
+                            request_extra_context["spine_response_directive"] = _spine_resp_dir.to_dict()
+                        _spine_ret_dir = await _spine.get_retrieval_directive(user_id)
+                        if _spine_ret_dir:
+                            request_extra_context["spine_retrieval_directive"] = _spine_ret_dir.to_dict()
+                        try:
+                            from app.signals.growth_chronicle import GrowthChronicleService
+                            _chronicle_svc = GrowthChronicleService(self.redis)
+                            _chronicle_entries = await _chronicle_svc.get_chronicle(user_id, limit=3)
+                            if _chronicle_entries:
+                                request_extra_context["spine_chronicle_summary"] = "\n".join(
+                                    f"- {e.title}: {e.narrative}" for e in _chronicle_entries if e.narrative
+                                )
+                        except Exception:
+                            logger.warning(
+                                "GrowthChronicleService.get_chronicle failed for user=%s", user_id, exc_info=True,
+                            )
+                        try:
+                            # Track interaction count for fatigue detection
+                            _inter_key = f"spine:interaction_count:{user_id}:24h"
+                            await self.redis.incr(_inter_key)
+                            await self.redis.expire(_inter_key, 24 * 3600)
+                            _inter_count_raw = await self.redis.get(_inter_key)
+                            _inter_count = int(_inter_count_raw) if _inter_count_raw else 0
+                            _fatigue = await _spine.check_fatigue(
+                                user_id=user_id,
+                                interactions_last_24h=_inter_count,
+                            )
+                            if _fatigue and _fatigue.get("fatigue_level") not in ("low", "normal"):
+                                request_extra_context["spine_fatigue_context"] = _fatigue
+                        except Exception:
+                            logger.warning(
+                                "Spine fatigue check failed for user=%s", user_id, exc_info=True,
+                            )
+                        _spine_ux = await _spine.get_ux_directive(user_id)
+                        if _spine_ux:
+                            request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
+                        _spine_comm = await _spine.get_community_directive(user_id)
+                        if _spine_comm:
+                            request_extra_context["spine_community_directive"] = _spine_comm.to_dict()
+                        _spine_skill = await _spine.get_skill_directive(user_id)
+                        if _spine_skill:
+                            request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
+                    except Exception as _spine_err:
+                        from app.core.business_metrics import record_spine_degradation
+
+                        record_spine_degradation("chat_turn", _spine_err)
+                        logger.warning("Spine signal check degraded: {}", _spine_err)
+                        request_extra_context["spine_degraded"] = True
+
                 expert_routing_decision = None
                 requested_experts: list[str] = []
                 answer_experts: list[str] = []
@@ -2399,6 +2372,14 @@ class ChatOrchestrator(
 
                 state = WorkflowState()
                 state.context_data.update(initial_document_context_state)
+                # v2.9/v2.10: Inject spine directives into workflow state
+                for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
+                                   "spine_fatigue_context", "spine_retrieval_directive",
+                                   "spine_ux_directive", "spine_community_directive",
+                                   "spine_skill_directive"):
+                    _spine_val = (request_extra_context or {}).get(_spine_key)
+                    if _spine_val:
+                        state.context_data[_spine_key] = _spine_val
                 if user_message:
                     state.append_message("user", user_message)
                 if session_feedback_signal is not None:
@@ -2441,7 +2422,7 @@ class ChatOrchestrator(
                     resp.trace_id = resp.trace_id or trace_id
                     try:
                         await self._enqueue_stream_response(queue, resp)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.error(
                             "Timed out while enqueueing critical stream response "
                             f"(response_id={resp.response_id}, finish_reason={resp.finish_reason}, "
@@ -2474,6 +2455,49 @@ class ChatOrchestrator(
                     stream_callback=stream_callback,
                     chat_mode=chat_mode,
                 )
+
+                # v2.10: Emit UXDirective metadata for Flutter status band + receipt display
+                # R5-DF4: Use 'spine_ux_warning' to match Flutter websocket_chat_service_v2 listener
+                _spine_ux_data = (request_extra_context or {}).get("spine_ux_directive")
+                if _spine_ux_data and stream_callback:
+                    try:
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                metadata={
+                                    "spine_ux_warning": json.dumps(_spine_ux_data, ensure_ascii=False),
+                                },
+                            )
+                        )
+                    except Exception as _ux_err:
+                        logger.debug(f"Spine UX directive emission skipped: {_ux_err}")
+
+                # v2.11: Emit growth card metadata for Flutter (divine moment #1 看见坚持)
+                if stream_callback:
+                    try:
+                        _growth_raw = await self.redis.get(f"spine:card:growth:{user_id}:latest")
+                        if _growth_raw:
+                            _growth_data = json.loads(_growth_raw if isinstance(_growth_raw, str) else _growth_raw.decode())
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    metadata={
+                                        "spine_growth_card": json.dumps(_growth_data, ensure_ascii=False),
+                                    },
+                                ),
+                            )
+                    except Exception:
+                        logger.debug("stream_callback failed for spine_growth_card, stream may be closed")
+
+                # STAB-012: Emit spine degraded flag when Spine pipeline failed
+                if request_extra_context and request_extra_context.get("spine_degraded"):
+                    if stream_callback:
+                        try:
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    metadata={"spine_degraded": "true"},
+                                ),
+                            )
+                        except Exception:
+                            logger.debug("stream_callback failed for spine_degraded, stream may be closed")
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
 
@@ -3069,6 +3093,7 @@ class ChatOrchestrator(
                     metadata={
                         "mode": dual_core_decision.get("mode"),
                         "cognitive_adjustments": dual_core_decision.get("cognitive_adjustments", []),
+                        "structured_adjustments": dual_core_decision.get("structured_adjustments", []),
                         "execution_constraints": dual_core_decision.get("execution_constraints", []),
                         "session_id": session_id,
                     },

@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_expression_function_bodies
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
@@ -56,8 +57,8 @@ class ProfileTransparentScreen extends ConsumerWidget {
               const SizedBox(height: DS.spacing12),
               _buildItemSection(
                 context,
-                title: '可见画像',
-                subtitle: 'open_editable / open_discussable 条目会在这里直接呈现。',
+                title: context.l10n.userVisibleProfile,
+                subtitle: context.l10n.userVisibleProfileHint,
                 items: view.visibleItems,
                 onMarkWrong: (item) => submitInsightControl(
                   targetId: item.key,
@@ -72,8 +73,8 @@ class ProfileTransparentScreen extends ConsumerWidget {
               const SizedBox(height: DS.spacing12),
               _buildItemSection(
                 context,
-                title: '中介画像',
-                subtitle: 'sensitive_mediated 条目只在合适上下文里展开。',
+                title: context.l10n.userMediatedProfile,
+                subtitle: context.l10n.userMediatedProfileHint,
                 items: view.mediatedItems,
                 onMarkWrong: (item) => submitInsightControl(
                   targetId: item.key,
@@ -113,7 +114,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '透明画像',
+                context.l10n.userTransparentProfile,
                 style: DS.titleLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
@@ -148,7 +149,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '概要',
+            context.l10n.userSummary,
             style: DS.labelLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightSemibold,
@@ -169,7 +170,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
           if (view.unknowns.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '当前未知项',
+              context.l10n.userCurrentUnknowns,
               style: DS.labelSmall.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightSemibold,
@@ -227,7 +228,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
           const SizedBox(height: DS.spacing12),
           if (items.isEmpty)
             Text(
-              '暂无内容。',
+              context.l10n.userNoContent,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             )
           else
@@ -261,7 +262,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '可回退更改',
+            context.l10n.userRevertibleChanges,
             style: DS.labelLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightSemibold,
@@ -269,13 +270,13 @@ class ProfileTransparentScreen extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            '这里只展示 Aurora 介入过的变化，不做静默覆盖。',
+            context.l10n.userRevertibleHint,
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing12),
           if (view.revertActions.isEmpty)
             Text(
-              '暂无可回退动作。',
+              context.l10n.userNoRevertibleActions,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             )
           else
@@ -334,7 +335,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '透明画像暂未接入',
+                context.l10n.userTransparentNotEnabled,
                 style: DS.titleMedium.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightSemibold,
@@ -342,7 +343,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                'WS6 目前保持 inert，等后续路由或后端绑定补齐后再启用。',
+                context.l10n.userTransparentNotEnabledHint,
                 style: DS.bodySmall.copyWith(color: DS.textSecondary),
                 textAlign: TextAlign.center,
               ),
@@ -427,13 +428,13 @@ class _ProfileItemCard extends StatelessWidget {
                   OutlinedButton(
                     onPressed:
                         onExamModeOnly == null ? null : () => onExamModeOnly!(),
-                    child: const Text('仅考试模式'),
+                    child: Text(context.l10n.userExamModeOnly),
                   ),
                 if (item.canRevert)
                   OutlinedButton(
                     onPressed:
                         onMarkWrong == null ? null : () => onMarkWrong!(),
-                    child: const Text('标记不准确'),
+                    child: Text(context.l10n.userMarkInaccurate),
                   ),
               ],
             ),
@@ -503,7 +504,7 @@ class _RevertActionCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: onMarkWrong == null ? null : () => onMarkWrong!(),
-                  child: Text(action.requiresDialogue ? '标记需重校' : '标记不准确'),
+                  child: Text(action.requiresDialogue ? context.l10n.userMarkNeedsRecalibration : context.l10n.userMarkInaccurate),
                 ),
               ),
             ],

@@ -762,3 +762,5 @@ class TestEdgeCases:
             for msg in emoji_messages:
                 result = await classifier.classify(msg)
                 assert result is not None
+                assert "intent" in result
+                assert result["confidence"] > 0

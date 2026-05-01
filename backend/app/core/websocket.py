@@ -14,6 +14,7 @@ Production-grade features:
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
 import hashlib
@@ -449,7 +450,7 @@ class ConnectionManager:
                     await asyncio.wait_for(ack_event.wait(), timeout=timeout)
                     logger.debug(f"ACK received for message {message_id} from user {user_id} (attempt {attempt + 1})")
                     return True
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     if attempt < max_retries - 1:
                         # Exponential backoff
                         backoff = min(2 ** attempt, 5)
@@ -605,7 +606,7 @@ class ConnectionManager:
 
         # 3. Send via FCM/APNs using PushSenderService
         try:
-            from app.services.push_sender_service import PushSenderService, PushPayload
+            from app.services.push_sender_service import PushPayload, PushSenderService
 
             async with AsyncSessionLocal() as db:
                 push_service = PushSenderService(db)

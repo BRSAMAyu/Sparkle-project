@@ -4,7 +4,7 @@ import json
 import random
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -13,7 +13,7 @@ from app.orchestration.agent_memory import AgentMemoryService, extract_topics
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    return datetime.now(UTC).replace(tzinfo=None).isoformat()
 
 
 @dataclass
@@ -281,7 +281,7 @@ class AgentScoringService:
         ]
         comparable.sort(key=lambda item: item[1])
 
-        speed_scores: dict[str, float] = {agent_id: 0.5 for agent_id in agent_ids}
+        speed_scores: dict[str, float] = dict.fromkeys(agent_ids, 0.5)
         total = len(comparable)
         if total > 1:
             for rank, (agent_id, _) in enumerate(comparable):

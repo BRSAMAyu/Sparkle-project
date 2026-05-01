@@ -96,7 +96,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
         child: Padding(
           padding: const EdgeInsets.all(DS.spacing16),
           child: Text(
-            '任务助手仅在已同步到服务器的任务中可用。',
+            context.l10n.taskAssistantServerOnly,
             style: TextStyle(color: DS.neutral500),
           ),
         ),

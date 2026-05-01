@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.subject import Subject
 
-
 _SECTOR_COLORS = {
     "COSMOS": "#00BFFF",
     "TECH": "#C0C0C0",

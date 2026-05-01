@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
 from uuid import UUID
@@ -48,7 +48,7 @@ from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @lru_cache(maxsize=1)
@@ -436,7 +436,7 @@ def _document_recency_boost(item: Any) -> float:
     if updated_at is None:
         return 1.0
     if updated_at.tzinfo is not None:
-        updated_at = updated_at.astimezone(timezone.utc).replace(tzinfo=None)
+        updated_at = updated_at.astimezone(UTC).replace(tzinfo=None)
     age_days = max(0.0, (_utcnow() - updated_at).total_seconds() / 86400)
     window_days = max(1.0, float(getattr(settings, "DOCUMENT_CONTEXT_RECENCY_BOOST_DAYS", 30) or 30))
     if age_days >= window_days:

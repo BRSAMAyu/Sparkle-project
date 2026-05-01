@@ -4,8 +4,11 @@ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('ActionCard handles task_list correctly', (WidgetTester tester) async {
     // 1. Arrange: Create a task_list payload
     final taskListPayload = WidgetPayload(
@@ -32,13 +35,9 @@ void main() {
 
     // 2. Act: Pump the ActionCard with Sparkle theme extension
     await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.light().copyWith(
+      testMaterialApp(theme: ThemeData.light().copyWith(
           extensions: [SparkleThemeExtension.light()],
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
         home: Scaffold(
           body: SingleChildScrollView(
             child: Padding(
@@ -49,8 +48,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
     // Use pump instead of pumpAndSettle — card has repeating shimmer animation
     await tester.pump();

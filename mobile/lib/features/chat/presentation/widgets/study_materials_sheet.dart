@@ -2,25 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
-class StudyMaterialsSheet extends ConsumerWidget {
+/// Source Tray — full-featured material selection sheet.
+///
+/// Vision demo point #5: Shows source relevance, allows toggling, supports
+/// retrieval mode selection (auto/user-selected/task/goal/off), and displays
+/// knowledge node coverage per source.
+class StudyMaterialsSheet extends ConsumerStatefulWidget {
   const StudyMaterialsSheet({
     required this.retrievalEnabled,
+    this.documentContextMode = DocumentContextMode.auto,
+    this.onModeChanged,
     super.key,
   });
 
   final bool retrievalEnabled;
+  final DocumentContextMode documentContextMode;
+  final ValueChanged<DocumentContextMode>? onModeChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StudyMaterialsSheet> createState() =>
+      _StudyMaterialsSheetState();
+}
+
+class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
+  final Set<String> _toggledOff = {};
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(documentLibraryProvider);
     final readyDocs = (state.documents.valueOrNull ??
             const <DocumentLibraryItem>[])
         .where((doc) => doc.effectiveStatus == DocumentStatus.ready)
         .toList()
-      ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+      ..sort((a, b) => _relevanceOf(b).index.compareTo(_relevanceOf(a).index));
 
     return SafeArea(
       top: false,
@@ -52,55 +72,27 @@ class StudyMaterialsSheet extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: DS.spacing16),
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: retrievalEnabled
-                        ? DS.primaryBase.withValues(alpha: 0.12)
-                        : DS.surfaceSecondary,
-                    borderRadius: DS.borderRadius12,
-                  ),
-                  child: Icon(
-                    retrievalEnabled
-                        ? Icons.menu_book_rounded
-                        : Icons.menu_book_outlined,
-                    color: retrievalEnabled ? DS.primaryBase : DS.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.l10n.chatStudyMaterialsLabel,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: DS.textPrimary,
-                                  fontWeight: DS.fontWeightSemibold,
-                                ),
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        retrievalEnabled
-                            ? context.l10n.chatStudyMaterialsAvailable(
-                                readyDocs.length,
-                              )
-                            : context.l10n.chatStudyMaterialsPausedDescription,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.4,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            _Header(
+              mode: widget.documentContextMode,
+              docCount: readyDocs.length,
+              onModeChanged: (mode) {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                widget.onModeChanged?.call(mode);
+              },
+            ),
+            const SizedBox(height: DS.spacing12),
+            _ModeSelector(
+              currentMode: widget.documentContextMode,
+              onModeChanged: (mode) {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                widget.onModeChanged?.call(mode);
+              },
             ),
             const SizedBox(height: DS.spacing16),
+            if (widget.documentContextMode != DocumentContextMode.off)
+              _RelevanceLegend(),
+            if (widget.documentContextMode != DocumentContextMode.off)
+              const SizedBox(height: DS.spacing8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 320),
               child: state.documents.when(
@@ -127,10 +119,11 @@ class StudyMaterialsSheet extends ConsumerWidget {
                       ),
                       child: Text(
                         context.l10n.chatStudyMaterialsEmptySubtitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.5,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.5,
+                                ),
                       ),
                     );
                   }
@@ -141,7 +134,28 @@ class StudyMaterialsSheet extends ConsumerWidget {
                         const SizedBox(height: DS.spacing10),
                     itemBuilder: (context, index) {
                       final doc = readyDocs[index];
-                      return _StudyMaterialRow(document: doc);
+                      final relevance = _relevanceOf(doc);
+                      final isToggledOff = _toggledOff.contains(doc.fileId);
+                      return _SourceRow(
+                        document: doc,
+                        relevance: relevance,
+                        isEnabled: !isToggledOff &&
+                            widget.documentContextMode !=
+                                DocumentContextMode.off,
+                        canToggle:
+                            widget.documentContextMode ==
+                                DocumentContextMode.userSelected,
+                        onToggle: () {
+                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          setState(() {
+                            if (isToggledOff) {
+                              _toggledOff.remove(doc.fileId);
+                            } else {
+                              _toggledOff.add(doc.fileId);
+                            }
+                          });
+                        },
+                      );
                     },
                   );
                 },
@@ -152,67 +166,357 @@ class StudyMaterialsSheet extends ConsumerWidget {
       ),
     );
   }
+
+  _SourceRelevance _relevanceOf(DocumentLibraryItem doc) {
+    if (doc.citationInsight.totalReferences > 3) {
+      return _SourceRelevance.high;
+    }
+    if (doc.knowledgeStarCount > 0 || doc.qualityScore != null && doc.qualityScore! > 0.5) {
+      return _SourceRelevance.medium;
+    }
+    return _SourceRelevance.low;
+  }
 }
 
-class _StudyMaterialRow extends StatelessWidget {
-  const _StudyMaterialRow({required this.document});
+enum _SourceRelevance { high, medium, low }
 
-  final DocumentLibraryItem document;
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.mode,
+    required this.docCount,
+    required this.onModeChanged,
+  });
+
+  final DocumentContextMode mode;
+  final int docCount;
+  final ValueChanged<DocumentContextMode> onModeChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
-          borderRadius: DS.borderRadius16,
-          border: Border.all(color: DS.borderSubtle),
+  Widget build(BuildContext context) {
+    final isActive = mode != DocumentContextMode.off;
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isActive
+                ? DS.primaryBase.withValues(alpha: 0.12)
+                : DS.surfaceSecondary,
+            borderRadius: DS.borderRadius12,
+          ),
+          child: Icon(
+            isActive
+                ? Icons.auto_awesome_outlined
+                : Icons.auto_awesome_outlined,
+            color: isActive ? DS.primaryBase : DS.textSecondary,
+            size: 20,
+          ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: DS.primaryBase.withValues(alpha: 0.1),
-                borderRadius: DS.borderRadius12,
+        const SizedBox(width: DS.spacing12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.chatStudyMaterialsLabel,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
               ),
-              child: Icon(
-                _iconForType(document.fileType),
-                color: DS.primaryBase,
-                size: 18,
+              const SizedBox(height: DS.spacing4),
+              Text(
+                isActive
+                    ? context.l10n.chatStudyMaterialsAvailable(docCount)
+                    : context.l10n.chatStudyMaterialsPausedDescription,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ModeSelector extends StatelessWidget {
+  const _ModeSelector({
+    required this.currentMode,
+    required this.onModeChanged,
+  });
+
+  final DocumentContextMode currentMode;
+  final ValueChanged<DocumentContextMode> onModeChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: DS.borderRadius8,
+      ),
+      child: Row(
+        children: [
+          _ModeChip(
+            label: '自动',
+            selected: currentMode == DocumentContextMode.auto,
+            onTap: () => onModeChanged(DocumentContextMode.auto),
+          ),
+          _ModeChip(
+            label: context.l10n.chatStudyMySelection,
+            selected: currentMode == DocumentContextMode.userSelected,
+            onTap: () => onModeChanged(DocumentContextMode.userSelected),
+          ),
+          _ModeChip(
+            label: '任务',
+            selected: currentMode == DocumentContextMode.taskScope,
+            onTap: () => onModeChanged(DocumentContextMode.taskScope),
+          ),
+          _ModeChip(
+            label: context.l10n.chatStudyNoMaterial,
+            selected: currentMode == DocumentContextMode.off,
+            onTap: () => onModeChanged(DocumentContextMode.off),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? DS.surfacePrimary : Colors.transparent,
+            borderRadius: DS.borderRadius8,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: DS.borderSubtle.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: DS.labelSmall.copyWith(
+                color: selected ? DS.textPrimary : DS.textTertiary,
+                fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
               ),
             ),
-            const SizedBox(width: DS.spacing12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    document.filename,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: DS.textPrimary,
-                          fontWeight: DS.fontWeightSemibold,
-                        ),
-                  ),
-                  const SizedBox(height: DS.spacing4),
-                  Text(
-                    document.knowledgeStarCount > 0
-                        ? context.l10n.chatStudyMaterialsKnowledgeNodes(
-                            document.knowledgeStarCount,
-                          )
-                        : context.l10n.chatStudyMaterialsReady,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _RelevanceLegend extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          _LegendDot(color: DS.success, label: context.l10n.chatStudyHighRelevance),
+          const SizedBox(width: 12),
+          _LegendDot(color: DS.warning, label: context.l10n.chatStudyMediumRelevance),
+          const SizedBox(width: 12),
+          _LegendDot(color: DS.textTertiary, label: context.l10n.chatStudyNotAnalyzed),
+        ],
       );
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: DS.labelSmall.copyWith(color: DS.textTertiary, fontSize: 11),
+          ),
+        ],
+      );
+}
+
+class _SourceRow extends StatelessWidget {
+  const _SourceRow({
+    required this.document,
+    required this.relevance,
+    required this.isEnabled,
+    required this.canToggle,
+    required this.onToggle,
+  });
+
+  final DocumentLibraryItem document;
+  final _SourceRelevance relevance;
+  final bool isEnabled;
+  final bool canToggle;
+  final VoidCallback onToggle;
+
+  Color get _relevanceColor {
+    if (!isEnabled) return DS.textTertiary;
+    switch (relevance) {
+      case _SourceRelevance.high:
+        return DS.success;
+      case _SourceRelevance.medium:
+        return DS.warning;
+      case _SourceRelevance.low:
+        return DS.textTertiary;
+    }
+  }
+
+  String get _relevanceLabel {
+    if (!isEnabled) return S.chatStudyClosed;
+    switch (relevance) {
+      case _SourceRelevance.high:
+        return S.chatStudyHighRelevance;
+      case _SourceRelevance.medium:
+        return S.chatStudyMediumRelevance;
+      case _SourceRelevance.low:
+        return S.chatStudyNotAnalyzed;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nodeCount = document.knowledgeStarCount;
+    return GestureDetector(
+      onTap: canToggle ? onToggle : null,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isEnabled ? 1.0 : 0.45,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: isEnabled
+                  ? _relevanceColor.withValues(alpha: 0.25)
+                  : DS.borderSubtle,
+            ),
+          ),
+          child: Row(
+            children: [
+              // Relevance indicator dot
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(right: 10),
+                decoration: BoxDecoration(
+                  color: _relevanceColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              // File icon
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: DS.primaryBase.withValues(alpha: 0.08),
+                  borderRadius: DS.borderRadius8,
+                ),
+                child: Icon(
+                  _iconForType(document.fileType),
+                  color: DS.primaryBase,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      document.filename,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightSemibold,
+                          ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Text(
+                          _relevanceLabel,
+                          style: DS.labelSmall.copyWith(
+                            color: _relevanceColor,
+                            fontSize: 11,
+                          ),
+                        ),
+                        if (nodeCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            context.l10n.chatStudyNodeCount(nodeCount),
+                            style: DS.labelSmall.copyWith(
+                              color: DS.textTertiary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                        if (document.citationInsight.totalReferences > 0) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            context.l10n.chatStudyCitationCount(document.citationInsight.totalReferences),
+                            style: DS.labelSmall.copyWith(
+                              color: DS.textTertiary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (canToggle)
+                Icon(
+                  isEnabled ? Icons.check_circle : Icons.remove_circle_outline,
+                  size: 18,
+                  color: isEnabled ? DS.success : DS.textTertiary,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   static IconData _iconForType(String fileType) {
     switch (fileType) {

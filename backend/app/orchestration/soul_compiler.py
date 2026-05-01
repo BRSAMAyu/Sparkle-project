@@ -305,7 +305,7 @@ class SoulCompiler:
             },
             "user_context": {
                 "has_preferences": bool(user_preferences),
-                "preference_keys": sorted(str(key) for key in user_preferences.keys())[:8],
+                "preference_keys": sorted(str(key) for key in user_preferences)[:8],
                 "current_query_present": bool(str(user_context.get("current_query") or "").strip()),
             },
             "plan_context": {

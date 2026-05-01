@@ -50,6 +50,11 @@ func (h *WSTicketHandler) Issue(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encode ticket"})
 		return
 	}
+	if h.rdb == nil {
+		metrics.WSTicketIssueErrors.Inc()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ticket service unavailable"})
+		return
+	}
 	if err := h.rdb.Set(ctx, key, string(encoded), ttl).Err(); err != nil {
 		metrics.WSTicketIssueErrors.Inc()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue ticket"})

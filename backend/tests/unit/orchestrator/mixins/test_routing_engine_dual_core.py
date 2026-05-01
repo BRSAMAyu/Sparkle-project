@@ -42,9 +42,16 @@ async def test_build_dual_core_input_uses_active_plan_from_user_context(orchestr
     active_plan_id = uuid.uuid4()
     fake_report = SimpleNamespace(severity="warning")
 
-    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls:
+    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls, \
+         patch("app.orchestration.routing_engine.RoutingProfileService") as profile_service_cls, \
+         patch("app.orchestration.routing_engine.CognitiveService") as cognitive_service_cls:
         progress_service = progress_service_cls.return_value
         progress_service.evaluate_progress = AsyncMock(return_value=fake_report)
+        profile_service_cls.return_value.get_profile = AsyncMock(return_value={})
+        cognitive_service_cls.return_value.get_user_patterns = AsyncMock(return_value=[])
+        orchestrator._get_recent_sentiment_distribution = AsyncMock(return_value={"anxious": 2, "calm": 1})
+        orchestrator._get_recent_task_feedback_distribution = AsyncMock(return_value={"too_long": 2, "too_difficult": 1})
+        orchestrator._build_metacognition_hint = AsyncMock(return_value={})
 
         routing_input = await orchestrator._build_dual_core_input(
             active_db=object(),
@@ -77,10 +84,69 @@ async def test_build_dual_core_input_uses_active_plan_from_user_context(orchestr
 
 
 @pytest.mark.asyncio
+async def test_build_dual_core_input_reads_spine_state_register(orchestrator):
+    user_id = str(uuid.uuid4())
+    orchestrator._get_routing_profile = AsyncMock(return_value={})
+    orchestrator._get_cognitive_routing_signals = AsyncMock(
+        return_value={
+            "pattern_names": [],
+            "pattern_types": {},
+            "pattern_details": [],
+            "emotional_block_detected": False,
+            "procrastination_pattern": False,
+            "cognitive_mode_suggested": False,
+            "suggested_verbosity": None,
+            "current_guidance": None,
+        }
+    )
+    orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
+
+    state_entry = SimpleNamespace(
+        state_key="knowledge_bottleneck",
+        value="transfer_failure",
+        confidence=0.86,
+        scope="session",
+    )
+
+    with patch("app.orchestration.routing_engine.StateRegister") as register_cls:
+        register_cls.return_value.get_active_states = AsyncMock(return_value=[state_entry])
+
+        routing_input = await orchestrator._build_dual_core_input(
+            active_db=None,
+            user_id=user_id,
+            plan_id=None,
+            user_context_payload={},
+            plan_context={},
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.88,
+            ),
+            information_sufficient=True,
+        )
+
+    assert routing_input.spine_active_states == [
+        {
+            "state_key": "knowledge_bottleneck",
+            "value": "transfer_failure",
+            "confidence": 0.86,
+            "scope": "session",
+        }
+    ]
+    register_cls.return_value.get_active_states.assert_awaited_once_with(user_id)
+
+
+@pytest.mark.asyncio
 async def test_build_dual_core_input_tolerates_plan_progress_failures(orchestrator):
-    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls:
+    with patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls, \
+         patch("app.orchestration.routing_engine.RoutingProfileService") as profile_service_cls, \
+         patch("app.orchestration.routing_engine.CognitiveService") as cognitive_service_cls:
         progress_service = progress_service_cls.return_value
         progress_service.evaluate_progress = AsyncMock(side_effect=RuntimeError("redis down"))
+        profile_service_cls.return_value.get_profile = AsyncMock(return_value={})
+        cognitive_service_cls.return_value.get_user_patterns = AsyncMock(return_value=[])
+        orchestrator._get_recent_sentiment_distribution = AsyncMock(return_value={"anxious": 2, "calm": 1})
+        orchestrator._get_recent_task_feedback_distribution = AsyncMock(return_value={"too_long": 2, "too_difficult": 1})
+        orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
 
         routing_input = await orchestrator._build_dual_core_input(
             active_db=object(),
@@ -88,7 +154,10 @@ async def test_build_dual_core_input_tolerates_plan_progress_failures(orchestrat
             plan_id=uuid.uuid4(),
             user_context_payload=None,
             plan_context=None,
-            unified_routing_result=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="chat"),
+                confidence=0.5,
+            ),
             information_sufficient=True,
         )
 
@@ -132,6 +201,7 @@ async def test_build_dual_core_input_includes_cognitive_patterns_and_routing_pro
             }
         )
         cognitive_service_cls.return_value.get_user_patterns = AsyncMock(return_value=fake_patterns)
+        orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
 
         routing_input = await orchestrator._build_dual_core_input(
             active_db=object(),
@@ -986,4 +1056,97 @@ async def test_apply_dual_core_routing_uses_aurora_projection_for_active_cohort(
     assert state.context_data["dual_core_decision"]["mode"] == "cognitive_first"
     assert state.context_data["aurora_cutover_state"]["mode"] == "active"
     assert state.context_data["plan_metadata"]["dual_core_source"] == "aurora"
+
+
+@pytest.mark.asyncio
+async def test_build_dual_core_input_reads_aurora_preferences_from_db(orchestrator):
+    mock_db = AsyncMock()
+    mock_prefs = {
+        "aurora_analysis_depth": "light",
+        "aurora_directness": "direct",
+        "aurora_explanation_level": "brief",
+        "aurora_pressure_style": "gentle",
+    }
+    orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
+    orchestrator._get_routing_profile = AsyncMock(return_value=None)
+    orchestrator._get_cognitive_routing_signals = AsyncMock(return_value={
+        "pattern_names": [], "pattern_types": [], "pattern_details": [],
+        "emotional_block_detected": False, "procrastination_pattern": False,
+        "cognitive_mode_suggested": False, "suggested_verbosity": "auto", "current_guidance": "balanced",
+    })
+    orchestrator._get_spine_active_states = AsyncMock(return_value=[])
+
+    with patch(
+        "app.orchestration.routing_engine.AuroraUserPreferencesService"
+    ) as mock_service_cls:
+        mock_service = mock_service_cls.return_value
+        mock_service.get = AsyncMock(return_value=mock_prefs)
+
+        routing_input = await orchestrator._build_dual_core_input(
+            active_db=mock_db,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="chat"),
+                confidence=0.5,
+            ),
+            information_sufficient=True,
+        )
+
+    assert routing_input.aurora_preferences == mock_prefs
+    mock_service.get.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_build_dual_core_input_falls_back_to_empty_prefs_when_db_none(orchestrator):
+    routing_input = await orchestrator._build_dual_core_input(
+        active_db=None,
+        user_id=str(uuid.uuid4()),
+        plan_id=None,
+        user_context_payload=None,
+        plan_context=None,
+        unified_routing_result=SimpleNamespace(
+            primary_intent=SimpleNamespace(value="chat"),
+            confidence=0.5,
+        ),
+        information_sufficient=True,
+    )
+
+    assert routing_input.aurora_preferences == {}
+
+
+@pytest.mark.asyncio
+async def test_build_dual_core_input_tolerates_preferences_service_failure(orchestrator):
+    mock_db = AsyncMock()
+    orchestrator._build_metacognition_hint = AsyncMock(return_value=None)
+    orchestrator._get_routing_profile = AsyncMock(return_value=None)
+    orchestrator._get_cognitive_routing_signals = AsyncMock(return_value={
+        "pattern_names": [], "pattern_types": [], "pattern_details": [],
+        "emotional_block_detected": False, "procrastination_pattern": False,
+        "cognitive_mode_suggested": False, "suggested_verbosity": "auto", "current_guidance": "balanced",
+    })
+    orchestrator._get_spine_active_states = AsyncMock(return_value=[])
+
+    with patch(
+        "app.orchestration.routing_engine.AuroraUserPreferencesService"
+    ) as mock_service_cls:
+        mock_service = mock_service_cls.return_value
+        mock_service.get = AsyncMock(side_effect=RuntimeError("DB down"))
+
+        routing_input = await orchestrator._build_dual_core_input(
+            active_db=mock_db,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="chat"),
+                confidence=0.5,
+            ),
+            information_sufficient=True,
+        )
+
+    assert routing_input.aurora_preferences == {}
     orchestrator.dual_core_router.route.assert_not_called()

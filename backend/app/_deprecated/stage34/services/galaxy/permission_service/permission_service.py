@@ -1,5 +1,6 @@
 from __future__ import annotations
-from enum import Enum
+
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import and_, select
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.galaxy import GalaxyUserPermission
 
 
-class GalaxyPermission(str, Enum):
+class GalaxyPermission(StrEnum):
     OWNER = "owner"
     EDITOR = "editor"
     VIEWER = "viewer"

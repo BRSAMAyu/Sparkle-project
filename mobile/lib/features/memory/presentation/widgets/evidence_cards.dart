@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class EvidenceCard extends StatelessWidget {
   const EvidenceCard({
@@ -53,7 +55,7 @@ class EvidenceCard extends StatelessWidget {
 
   Widget _buildContent(BuildContext context) {
     if (item.status != 'ok') {
-      return Text(item.redactionReason ?? '无法解析证据');
+      return Text(item.redactionReason ?? context.l10n.memEvidenceParseFail);
     }
     final payload = item.payload ?? const {};
     if (payload['event'] != null) {
@@ -118,7 +120,7 @@ class EvidenceCard extends StatelessWidget {
         'Sprint': state['sprint_mode']?.toString() ?? '-',
       },);
     }
-    return const Text('证据记录');
+    return Text(context.l10n.memEvidenceRecord);
   }
 
   _EvidenceRouteAction? _buildRouteAction() {
@@ -132,7 +134,7 @@ class EvidenceCard extends StatelessWidget {
       if (nodeId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/galaxy/node/$nodeId',
-          label: '去星图看',
+          label: S.memGoGalaxy,
         );
       }
     }
@@ -143,7 +145,7 @@ class EvidenceCard extends StatelessWidget {
       if (errorId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/errors/$errorId',
-          label: '去错题本看',
+          label: S.memGoErrorBook,
         );
       }
     }
@@ -154,7 +156,7 @@ class EvidenceCard extends StatelessWidget {
       if (errorId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/errors/$errorId',
-          label: '回到错题本看',
+          label: S.memBackToErrorBook,
         );
       }
     }
@@ -165,7 +167,7 @@ class EvidenceCard extends StatelessWidget {
       if (sessionId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/chat?session_id=$sessionId',
-          label: '打开相关对话',
+          label: S.memOpenRelatedChat,
         );
       }
     }
@@ -175,7 +177,7 @@ class EvidenceCard extends StatelessWidget {
       if (sessionId.isNotEmpty) {
         return _EvidenceRouteAction(
           route: '/chat?session_id=$sessionId',
-          label: '打开原对话',
+          label: S.memOpenOriginalChat,
         );
       }
     }

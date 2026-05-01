@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -93,7 +94,7 @@ class DailyDetailScreen extends ConsumerWidget {
               if (streakRecord != null) ...[
                 _buildSectionTitle(
                   context,
-                  '打卡详情',
+                  I18nService.instance.isChinese ? '打卡详情' : 'Check-in Details',
                   Icons.local_fire_department_rounded,
                 ),
                 const SizedBox(height: DS.spacing10),
@@ -105,7 +106,7 @@ class DailyDetailScreen extends ConsumerWidget {
               if (activePlans.isNotEmpty) ...[
                 _buildSectionTitle(
                   context,
-                  '活跃计划',
+                  I18nService.instance.isChinese ? '活跃计划' : 'Active Plans',
                   Icons.flag_rounded,
                 ),
                 const SizedBox(height: DS.spacing10),
@@ -117,7 +118,7 @@ class DailyDetailScreen extends ConsumerWidget {
               if (closeToUnlock.isNotEmpty) ...[
                 _buildSectionTitle(
                   context,
-                  '即将解锁',
+                  I18nService.instance.isChinese ? '即将解锁' : 'Close to Unlock',
                   Icons.emoji_events_rounded,
                 ),
                 const SizedBox(height: DS.spacing10),
@@ -249,22 +250,24 @@ class DailyDetailScreen extends ConsumerWidget {
     StreakDayRecord record,
     List<TaskModel> dayTasks,
   ) {
+    final zh = I18nService.instance.isChinese;
+    final completedCount = dayTasks.where((task) => task.status == TaskStatus.completed).length;
     final (title, description, color, icon) = switch (record.status) {
       StreakDayStatus.active => (
-          '今日已形成有效打卡',
-          '已完成 ${dayTasks.where((task) => task.status == TaskStatus.completed).length} 个任务，连击记录已计入系统。',
+          zh ? '今日已形成有效打卡' : 'Valid check-in recorded today',
+          zh ? '已完成 $completedCount 个任务，连击记录已计入系统。' : '$completedCount tasks completed. Streak recorded.',
           DS.semanticSuccess,
           Icons.local_fire_department_rounded,
         ),
       StreakDayStatus.frozen => (
-          '今日触发了连击保护',
-          '系统保留了连击，但这一天没有形成标准完成记录。',
+          zh ? '今日触发了连击保护' : 'Streak protection triggered',
+          zh ? '系统保留了连击，但这一天没有形成标准完成记录。' : 'Streak preserved, but no standard completion record for today.',
           DS.semanticWarning,
           Icons.ac_unit_rounded,
         ),
       StreakDayStatus.missed => (
-          '今日没有形成打卡',
-          '任务与专注记录不足以计入当日连击。',
+          zh ? '今日没有形成打卡' : 'No check-in today',
+          zh ? '任务与专注记录不足以计入当日连击。' : 'Not enough task or focus records for today\'s streak.',
           DS.textSecondary,
           Icons.event_busy_rounded,
         ),
@@ -306,7 +309,7 @@ class DailyDetailScreen extends ConsumerWidget {
                     record.sourceEvent!.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing6),
                   Text(
-                    '来源事件：${record.sourceEvent}',
+                    zh ? '来源事件：${record.sourceEvent}' : 'Source: ${record.sourceEvent}',
                     style: TextStyle(
                       color: DS.textTertiary,
                       fontSize: DS.fontSizeXs,
@@ -383,7 +386,7 @@ class DailyDetailScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: DS.spacing8),
                             Text(
-                              '还差 ${remaining.toInt()}%',
+                              I18nService.instance.isChinese ? '还差 ${remaining.toInt()}%' : '${remaining.toInt()}% remaining',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: DS.textSecondary,
@@ -778,7 +781,7 @@ class DailyDetailScreen extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '编辑日程',
+                      I18nService.instance.isChinese ? '编辑日程' : 'Edit Schedule',
                       style: TextStyle(
                         color: DS.textPrimary,
                         fontWeight: FontWeight.bold,
@@ -788,32 +791,32 @@ class DailyDetailScreen extends ConsumerWidget {
                     const SizedBox(height: DS.spacing16),
                     TextField(
                       controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: '标题',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.calTitle,
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: DS.spacing12),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('全天'),
+                      title: Text(context.l10n.calAllDay),
                       value: isAllDay,
                       onChanged: (value) => setModalState(() => isAllDay = value),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('开始时间'),
+                      title: Text(context.l10n.calStartTime),
                       subtitle: Text(Formatters.formatDateTime(startTime)),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('结束时间'),
+                      title: Text(context.l10n.calEndTime),
                       subtitle: Text(Formatters.formatDateTime(endTime)),
                     ),
                     TextField(
                       controller: locationController,
-                      decoration: const InputDecoration(
-                        labelText: '地点',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.calLocation,
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -821,24 +824,24 @@ class DailyDetailScreen extends ConsumerWidget {
                     TextField(
                       controller: descController,
                       maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: '描述',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.calDescription,
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(height: DS.spacing12),
+                    SizedBox(height: DS.spacing12),
                     DropdownButtonFormField<int>(
                       initialValue: reminderMinutes,
-                      decoration: const InputDecoration(
-                        labelText: '提醒',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.calReminderLabel,
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 0, child: Text('开始时')),
-                        DropdownMenuItem(value: 5, child: Text('提前 5 分钟')),
-                        DropdownMenuItem(value: 15, child: Text('提前 15 分钟')),
-                        DropdownMenuItem(value: 30, child: Text('提前 30 分钟')),
-                        DropdownMenuItem(value: 60, child: Text('提前 1 小时')),
+                      items: [
+                        DropdownMenuItem(value: 0, child: Text(context.l10n.calAtStart)),
+                        DropdownMenuItem(value: 5, child: Text(context.l10n.cal5MinBefore)),
+                        DropdownMenuItem(value: 15, child: Text(context.l10n.cal15MinBefore)),
+                        DropdownMenuItem(value: 30, child: Text(context.l10n.cal30MinBefore)),
+                        DropdownMenuItem(value: 60, child: Text(context.l10n.cal1HourBefore)),
                       ],
                       onChanged: (value) {
                         if (value != null) {
@@ -851,14 +854,14 @@ class DailyDetailScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: SparkleButton.ghost(
-                            label: '取消',
+                            label: context.l10n.calCancel,
                             onPressed: () => Navigator.of(sheetContext).pop(),
                           ),
                         ),
                         const SizedBox(width: DS.spacing12),
                         Expanded(
                           child: SparkleButton(
-                            label: '保存',
+                            label: context.l10n.calSave,
                             onPressed: () async {
                               final updated = event.copyWith(
                                 title: titleController.text.trim().isEmpty

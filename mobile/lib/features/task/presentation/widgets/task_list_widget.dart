@@ -68,7 +68,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   children: [
                     Expanded(
                       child: SparkleButton.ghost(
-                        label: '查看计划',
+                        label: context.l10n.taskViewPlan,
                         icon: const Icon(Icons.map_outlined, size: 16),
                         onPressed: () => context.push('/plans/$planId'),
                       ),
@@ -76,7 +76,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     const SizedBox(width: DS.spacing8),
                     Expanded(
                       child: SparkleButton.ghost(
-                        label: '分享计划',
+                        label: context.l10n.taskSharePlan,
                         icon: const Icon(Icons.share_outlined, size: 16),
                         onPressed: () => _sharePlan(context),
                       ),
@@ -103,7 +103,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     widget.onConfirmAll != null &&
                     !_confirmed)
                   SparkleButton(
-                    label: _isConfirming ? '确认中...' : '确认全部任务',
+                    label: _isConfirming ? context.l10n.taskConfirming : context.l10n.taskConfirmAll,
                     icon: const Icon(Icons.check_circle_outline),
                     onPressed: _isConfirming ? null : _handleConfirmAll,
                   ),
@@ -170,7 +170,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: SparkleButton.ghost(
-                      label: '分享',
+                      label: context.l10n.taskShare,
                       icon: const Icon(Icons.share_outlined, size: 16),
                       onPressed: () => _shareTask(context, taskData),
                     ),
@@ -221,7 +221,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       context,
       resourceType: 'task',
       resourceId: taskData['id'] as String,
-      title: taskData['title'] as String? ?? '任务卡片',
+      title: taskData['title'] as String? ?? context.l10n.taskCardDefault,
       subtitle: taskData['guide_content'] as String? ??
           taskData['description'] as String?,
     );
@@ -242,8 +242,8 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       context,
       resourceType: 'plan',
       resourceId: planId,
-      title: _asString(listPayload.linkedEntities['plan_title']) ?? '学习计划',
-      subtitle: '包含 ${widget.tasks.length} 个可执行任务',
+      title: _asString(listPayload.linkedEntities['plan_title']) ?? context.l10n.taskLearningPlan,
+      subtitle: context.l10n.taskContainsCount(widget.tasks.length),
     );
   }
 

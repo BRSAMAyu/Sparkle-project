@@ -15,6 +15,7 @@ import 'package:sparkle/features/focus/presentation/providers/focus_statistics_p
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
 enum FocusTimerPreset {
@@ -265,8 +266,8 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
     final notificationService = ref.read(notificationServiceProvider);
     await notificationService.scheduleNotification(
       id: _completionNotificationId,
-      title: widget.preset == FocusTimerPreset.pomodoro ? '番茄完成' : '专注完成',
-      body: '专注时段已经结束，回来收尾并记录这次投入。',
+      title: widget.preset == FocusTimerPreset.pomodoro ? context.l10n.toolsFocusPomodoroComplete : context.l10n.toolsFocusComplete,
+      body: context.l10n.toolsFocusNotificationBody,
       scheduledDate: DateTime.now().add(Duration(seconds: remainingSeconds)),
       payload: <String, dynamic>{
         'type': 'focus_timer_complete',
@@ -407,10 +408,10 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
     if (!suppressForegroundNotification) {
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.showSmartPush(
-        title: isPomodoro ? '番茄完成' : '专注完成',
+        title: isPomodoro ? context.l10n.toolsFocusPomodoroComplete : context.l10n.toolsFocusComplete,
         body: response == null
-            ? '本次专注 $durationMinutes 分钟，已记录到本地专注统计。'
-            : '本次专注 $durationMinutes 分钟，获得 ${response.response.rewards.flameEarned} 点火苗奖励。',
+            ? context.l10n.toolsFocusRecorded(durationMinutes)
+            : context.l10n.toolsFocusReward(durationMinutes, response.response.rewards.flameEarned),
         payload: <String, dynamic>{
           'type': 'focus_complete',
           'session_id': response?.response.id,
@@ -449,10 +450,10 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
   Widget build(BuildContext context) {
     final isPomodoro = widget.preset == FocusTimerPreset.pomodoro;
     final accent = isPomodoro ? DS.warning : DS.brandPrimary;
-    final title = isPomodoro ? '番茄钟' : '专注计时';
+    final title = isPomodoro ? context.l10n.toolsFocusPomodoro : context.l10n.toolsFocusStopwatch;
     final subtitle = isPomodoro
-        ? '把单次专注收束成稳定节奏。适合复习块、冲刺块和长时深潜。'
-        : '正计时和倒计时同台使用，适合任务推进、自由练习和时间校准。';
+        ? context.l10n.toolsFocusPomodoroSubtitle
+        : context.l10n.toolsFocusStopwatchSubtitle;
     final initialSeconds = _restoredInitialSeconds ??
         (_mode == TimerMode.countDown ? _selectedMinutes * 60 : 0);
     final maxSeconds =
@@ -470,12 +471,12 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: _mode == TimerMode.countDown ? '倒计时模式' : '正计时模式',
+          label: _mode == TimerMode.countDown ? context.l10n.toolsCountdownMode : context.l10n.toolsStopwatchMode,
           accentColor: accent,
           icon: _mode == TimerMode.countDown ? Icons.timelapse : Icons.schedule,
         ),
         ToolHeroChip(
-          label: _isRunning ? '进行中' : '待开始',
+          label: _isRunning ? context.l10n.toolsStatusRunning : context.l10n.toolsStatusPending,
           accentColor: accent,
           icon: _isRunning ? Icons.play_circle_fill_rounded : Icons.pause,
         ),
@@ -485,8 +486,8 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '主计时盘',
-            subtitle: '直接开始、暂停或重置。计时完成后会给出本地提示。',
+            title: context.l10n.toolsMainTimer,
+            subtitle: context.l10n.toolsMainTimerDesc,
             child: LayoutBuilder(
               builder: (context, constraints) => Center(
                 child: ConstrainedBox(
@@ -549,29 +550,29 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
           ToolMetricRow(
             children: [
               ToolMetricCard(
-                label: '当前时长',
+                label: context.l10n.toolsCurrentDuration,
                 value:
-                    _mode == TimerMode.countDown ? '$_selectedMinutes 分' : '开放',
+                    _mode == TimerMode.countDown ? context.l10n.toolsMinutesCount(_selectedMinutes) : context.l10n.toolsOpenDuration,
                 accentColor: accent,
                 icon: Icons.flag_rounded,
-                caption: _mode == TimerMode.countDown ? '单次目标时长' : '适合追踪投入长度',
+                caption: _mode == TimerMode.countDown ? context.l10n.toolsSingleGoalDuration : context.l10n.toolsTrackEffort,
               ),
               ToolMetricCard(
-                label: '预计结束',
+                label: context.l10n.toolsEstimatedEnd,
                 value: estimatedEnd == null
-                    ? '不限'
+                    ? context.l10n.toolsNoLimit
                     : '${estimatedEnd.hour.toString().padLeft(2, '0')}:${estimatedEnd.minute.toString().padLeft(2, '0')}',
                 accentColor: accent,
                 icon: Icons.event_available_rounded,
-                caption: estimatedEnd == null ? '由你主动暂停' : '方便衔接下一段计划',
+                caption: estimatedEnd == null ? context.l10n.toolsPauseManually : context.l10n.toolsPlanLinked,
               ),
             ],
           ),
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '背景音',
-            subtitle: '计时期间播放，有助于进入专注状态。',
+            title: context.l10n.toolsBgAudio,
+            subtitle: context.l10n.toolsBgAudioDesc,
             child: _AmbientSelector(
               selected: _ambientScene,
               accentColor: accent,
@@ -581,8 +582,8 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '计时设置',
-            subtitle: '先选模式，再选时长。',
+            title: context.l10n.toolsTimerSettings,
+            subtitle: context.l10n.toolsTimerSettingsDesc,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -592,14 +593,14 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
                     runSpacing: DS.spacing10,
                     children: [
                       ToolChoiceChip(
-                        label: '正计时',
+                        label: context.l10n.toolsCountUp,
                         selected: _mode == TimerMode.countUp,
                         onTap: () => unawaited(_updateMode(TimerMode.countUp)),
                         accentColor: accent,
                         icon: Icons.schedule_rounded,
                       ),
                       ToolChoiceChip(
-                        label: '倒计时',
+                        label: context.l10n.toolsCountDown,
                         selected: _mode == TimerMode.countDown,
                         onTap: () =>
                             unawaited(_updateMode(TimerMode.countDown)),
@@ -616,7 +617,7 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
                       children: _countdownOptions
                           .map(
                             (minutes) => ToolChoiceChip(
-                              label: '$minutes 分钟',
+                              label: context.l10n.toolsMinutesCount(minutes),
                               selected: _selectedMinutes == minutes,
                               onTap: () => unawaited(_updateMinutes(minutes)),
                               accentColor: accent,
@@ -632,7 +633,7 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
                     children: _pomodoroOptions
                         .map(
                           (minutes) => ToolChoiceChip(
-                            label: '$minutes 分钟',
+                            label: context.l10n.toolsMinutesCount(minutes),
                             selected: _selectedMinutes == minutes,
                             onTap: () => unawaited(_updateMinutes(minutes)),
                             accentColor: accent,
@@ -652,14 +653,14 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
           final resetButton = SparkleButton(
-            label: '重置',
+            label: context.l10n.toolsReset,
             variant: ButtonVariant.ghost,
             onPressed: _resetTimer,
             icon: const Icon(Icons.refresh_rounded),
             expand: true,
           );
           final switchButton = SparkleButton(
-            label: _mode == TimerMode.countUp ? '切到倒计时' : '切到正计时',
+            label: _mode == TimerMode.countUp ? context.l10n.toolsSwitchToCountdown : context.l10n.toolsSwitchToStopwatch,
             onPressed: () {
               final nextMode = _mode == TimerMode.countUp
                   ? TimerMode.countDown
@@ -712,7 +713,7 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
       );
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '专注记录保存失败：$e');
+        AppFeedback.error(context, context.l10n.toolsFocusSaveFailed(e.toString()));
       }
     }
     if (!mounted) {
@@ -721,7 +722,7 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
     if (!completedFromBackground) {
       AppFeedback.success(
         context,
-        isPomodoro ? '番茄时段已完成 🎉' : '倒计时已结束',
+        isPomodoro ? context.l10n.toolsPomodoroCompleteEmoji : context.l10n.toolsCountdownEnded,
       );
     }
     setState(() {

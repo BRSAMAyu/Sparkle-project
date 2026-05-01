@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from app.config import settings
 
 
-class ModelTier(str, Enum):
+class ModelTier(StrEnum):
     EDGE = "EDGE"
     STD = "STD"
     HIGH = "HIGH"

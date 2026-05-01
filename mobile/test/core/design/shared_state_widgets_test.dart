@@ -10,8 +10,11 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('shared state widgets', () {
     testWidgets('EmptyState renders in light and dark with large text', (
       tester,

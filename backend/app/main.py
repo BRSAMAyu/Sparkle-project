@@ -28,19 +28,19 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.middleware import IdempotencyMiddleware, RequestContextMiddleware
 from app.api.v1.health import set_start_time
 from app.api.v1.router import api_router
+from app.config import settings
 from app.consumers.achievement_plan_consumer import AchievementPlanConsumer
 from app.consumers.galaxy_plan_consumer import GalaxyPlanConsumer
 from app.consumers.plan_task_generation_consumer import PlanTaskGenerationConsumer
 from app.consumers.user_memory_seed_consumer import UserMemorySeedConsumer
 from app.consumers.user_profile_bootstrap_consumer import UserProfileBootstrapConsumer
 from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
-from app.config import settings
 from app.core.cache import cache_service
-from app.core.redis_search_client import redis_search_client
 from app.core.exceptions import SparkleException
 from app.core.idempotency import get_idempotency_store
 from app.core.pending_actions import pending_actions_store
 from app.core.rate_limiting import setup_rate_limiting
+from app.core.redis_search_client import redis_search_client
 from app.core.websocket import manager
 from app.db.extensions import ensure_database_extensions
 from app.db.init_db import init_db
@@ -49,22 +49,22 @@ from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
 from app.services.billing_worker import BillingWorker
 from app.services.capsule_event_consumer import CapsuleEventConsumer
+from app.services.cognitive_event_consumer import CognitiveEventConsumer
 from app.services.document_feedback_event_consumer import DocumentFeedbackEventConsumer
 from app.services.execution_event_consumer import ExecutionEventConsumer
-from app.services.galaxy_execution_consumer import GalaxyExecutionConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
+from app.services.galaxy_execution_consumer import GalaxyExecutionConsumer
 from app.services.group_file_event_consumer import GroupFileEventConsumer
-from app.services.job_service import JobService
 from app.services.idiographic_association_service import IdiographicAssociationService
+from app.services.intervention_event_consumer import InterventionEventConsumer
+from app.services.job_service import JobService
+from app.services.main_chain_artifact_consumer import MainChainArtifactConsumer
+from app.services.nudge_event_consumer import NudgeEventConsumer
+from app.services.plan_health_event_consumer import PlanHealthEventConsumer
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
-from app.services.plan_health_event_consumer import PlanHealthEventConsumer
-from app.services.intervention_event_consumer import InterventionEventConsumer
-from app.services.main_chain_artifact_consumer import MainChainArtifactConsumer
-from app.services.cognitive_event_consumer import CognitiveEventConsumer
-from app.services.nudge_event_consumer import NudgeEventConsumer
-from app.services.social_signal_event_consumer import SocialSignalEventConsumer
 from app.services.scheduler_service import scheduler_service
+from app.services.social_signal_event_consumer import SocialSignalEventConsumer
 from app.services.srl_phase_tracker_service import SRLPhaseTrackerService
 from app.services.subject_service import SubjectService
 from app.services.task_event_consumer import TaskEventConsumer
@@ -126,6 +126,15 @@ async def lifespan(app: FastAPI):
     # ==================== 启动时 ====================
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
+
+    # Initialize Sentry crash reporting
+    if settings.SENTRY_DSN:
+        from app.core.sentry import init_sentry
+        init_sentry(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.SENTRY_ENVIRONMENT or settings.ENVIRONMENT,
+            traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        )
 
     # 版本兼容性检查 (passlib/bcrypt)
     try:
@@ -375,12 +384,12 @@ async def lifespan(app: FastAPI):
 
             # 0.5 确保全局成就和皮肤定义存在 (所有用户共享)
             try:
+                from app.data.seed_content_initial import initialize_seed_libraries
                 from app.services.guest_seed_service import (
                     _ensure_achievements,
                     _ensure_galaxy_skins,
                     ensure_global_galaxy_baseline,
                 )
-                from app.data.seed_content_initial import initialize_seed_libraries
 
                 await _ensure_achievements(db)
                 await _ensure_galaxy_skins(db)

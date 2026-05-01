@@ -5,15 +5,16 @@ Leaderboard System Schemas
 支持多种类型的排行榜：全局、好友、群组、学科、周榜、连胜榜
 """
 from __future__ import annotations
+
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class LeaderboardType(str, Enum):
+class LeaderboardType(StrEnum):
     """排行榜类型"""
     GLOBAL = "global"          # 全局综合排行榜
     FRIENDS = "friends"        # 好友排行榜
@@ -26,7 +27,7 @@ class LeaderboardType(str, Enum):
     PHOTON_WEEKLY = "photon_weekly"  # 本周光子收入排行榜
 
 
-class LeaderboardPeriod(str, Enum):
+class LeaderboardPeriod(StrEnum):
     """排行榜周期"""
     ALL_TIME = "all_time"      # 全部时间
     WEEKLY = "weekly"          # 本周

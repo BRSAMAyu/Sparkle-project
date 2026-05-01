@@ -4,8 +4,9 @@ Achievements API Endpoints
 """
 
 from __future__ import annotations
+
 import secrets
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
@@ -18,7 +19,6 @@ from app.db.session import get_db
 from app.models.achievement import AchievementRarity
 from app.models.user import User
 from app.schemas.achievement import (
-    AchievementDetail,
     AchievementDetailResponse,
     AchievementEventProcessResponse,
     AchievementPinResponse,
@@ -369,7 +369,7 @@ async def create_contract(
             ).model_dump(),
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.delete("/contracts", response_model=dict[str, Any])
@@ -400,7 +400,7 @@ async def cancel_contract(
         raise HTTPException(status_code=404, detail="No active contract found")
 
     contract.status = ContractStatus.FAILED
-    contract.failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    contract.failed_at = datetime.now(UTC).replace(tzinfo=None)
     contract.failure_reason = "User cancelled"
 
     try:
@@ -494,7 +494,7 @@ async def equip_galaxy_skin(
         result = await service.equip_achievement_skin(str(current_user.id), skin_id)
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/titles", response_model=dict[str, Any])
@@ -548,7 +548,7 @@ async def equip_title(
         result = await service.equip_achievement_title(str(current_user.id), title_id)
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 # ========== Internal Event Endpoint ==========
@@ -626,7 +626,6 @@ async def get_share_templates(
 
     Returns available share card templates.
     """
-    from app.services.share_card_templates import get_all_templates
 
     resolved_locale = _resolve_locale(locale, accept_language)
     templates = get_all_templates()

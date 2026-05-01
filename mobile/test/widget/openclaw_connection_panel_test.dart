@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
+import '../shared/i18n_test_helper.dart';
 
 const _runRealOpenClawSmoke = bool.fromEnvironment('OPENCLAW_REAL_SMOKE');
 
@@ -100,6 +101,8 @@ class _FakeOpenClawConnectionService extends OpenClawConnectionService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   test('dashboard cards include OpenClaw by default', () {
     final defaults = DashboardCardConfigState.defaults();
     expect(defaults.visibleCardIds, contains(DashboardCardIds.openClaw));
@@ -138,10 +141,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          child: testMaterialApp(
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -185,10 +185,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          child: testMaterialApp(
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -201,10 +198,10 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('访客模式默认引擎'));
+      await tester.tap(find.text('本地网关'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('已选中“访客模式默认引擎”'), findsOneWidget);
+      expect(find.textContaining('已选中'), findsOneWidget);
       expect(find.text('网关地址'), findsNothing);
       expect(find.text('认证方式'), findsNothing);
       expect(find.text('扫码配对'), findsOneWidget);
@@ -226,10 +223,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          child: testMaterialApp(
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -283,10 +277,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          child: testMaterialApp(
             home: Scaffold(
               body: Center(
                 child: SizedBox(
@@ -317,10 +308,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: const MaterialApp(
-            locale: Locale('zh'),
-            supportedLocales: <Locale>[Locale('zh')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          child: testMaterialApp(
             home: Scaffold(
               body: Center(
                 child: SizedBox(

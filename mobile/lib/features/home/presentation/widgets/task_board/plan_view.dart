@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
@@ -42,7 +43,7 @@ class PlanView extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: DS.spacing12),
             child: _PlanFilterBanner(
-              planName: selectedPlanName ?? '当前计划',
+              planName: selectedPlanName ?? context.l10n.planViewCurrentPlan,
             ),
           ),
         if (filteredKeys.isEmpty)
@@ -91,8 +92,8 @@ class PlanView extends ConsumerWidget {
           const SizedBox(height: DS.spacing12),
           Text(
             isFiltered
-                ? '${selectedPlanName ?? '当前计划'} 暂无任务'
-                : '暂无方案任务',
+                ? '${selectedPlanName ?? context.l10n.planViewCurrentPlan} 暂无任务'
+                : context.l10n.planViewNoPlanTasks,
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
@@ -102,7 +103,7 @@ class PlanView extends ConsumerWidget {
             TextButton.icon(
               onPressed: onClearFilter,
               icon: const Icon(Icons.layers_clear_rounded),
-              label: const Text('查看全部计划任务'),
+              label: Text(context.l10n.planViewAllPlanTasks),
             ),
           ],
         ],
@@ -204,7 +205,7 @@ class DashboardPlanManager extends ConsumerWidget {
             if (!hasQuota) ...[
               const SizedBox(height: DS.spacing10),
               Text(
-                '当前已占满 3 个活跃计划位，先停用或归档旧计划再创建新的。',
+                context.l10n.planViewQuotaFull,
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -213,7 +214,7 @@ class DashboardPlanManager extends ConsumerWidget {
             if (inactivePlans.isNotEmpty) ...[
               const SizedBox(height: DS.spacing16),
               Text(
-                compact ? '可恢复计划' : '计划库',
+                compact ? context.l10n.planViewRecoverablePlans : context.l10n.planViewPlanLibrary,
                 style: context.sparkleTypography.labelLarge.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                   color: DS.textPrimary,
@@ -261,8 +262,8 @@ class _PlanManagerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = selectedPlanId == null
-        ? '把 3 个活跃计划位和任务看板放在一起管理'
-        : '已按单个计划聚焦任务，回到全部即可恢复总览';
+        ? context.l10n.planViewManageSubtitle
+        : context.l10n.planViewFocusSubtitle;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,7 +287,7 @@ class _PlanManagerHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '计划管理',
+                context.l10n.planViewPlanManagement,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
@@ -294,7 +295,7 @@ class _PlanManagerHeader extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing4),
               Text(
-                compact ? '活跃 $activeCount/3 · 全部 $totalCount' : subtitle,
+                compact ? context.l10n.planViewActiveCount(activeCount.toString(), totalCount.toString()) : subtitle,
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -352,7 +353,7 @@ class _PlanFilterBanner extends ConsumerWidget {
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
-                '当前聚焦：$planName',
+                context.l10n.planViewCurrentFocus(planName),
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightSemibold,
@@ -362,7 +363,7 @@ class _PlanFilterBanner extends ConsumerWidget {
             TextButton(
               onPressed: () =>
                   ref.read(taskBoardProvider.notifier).clearPlanSelection(),
-              child: const Text('查看全部'),
+              child: Text(context.l10n.planViewViewAll),
             ),
           ],
         ),
@@ -399,7 +400,7 @@ class _ActivePlanSlot extends ConsumerWidget {
     Future<void> setChatContext() async {
       ref.read(activePlanProvider.notifier).selectPlan(plan.id);
       if (!context.mounted) return;
-      AppFeedback.success(context, '已切换到 ${plan.name} 作为当前计划上下文');
+      AppFeedback.success(context, context.l10n.planViewSwitchedContext(plan.name));
     }
 
     Future<void> deactivatePlan() async {
@@ -412,7 +413,7 @@ class _ActivePlanSlot extends ConsumerWidget {
           ref.read(taskBoardProvider.notifier).clearPlanSelection();
         }
         if (!context.mounted) return;
-        AppFeedback.success(context, '已停用 ${plan.name}');
+        AppFeedback.success(context, context.l10n.planViewDeactivated(plan.name));
       } catch (e) {
         if (!context.mounted) return;
         AppFeedback.error(context, e.toString());
@@ -423,7 +424,7 @@ class _ActivePlanSlot extends ConsumerWidget {
       try {
         await ref.read(planListProvider.notifier).setPrimaryPlan(plan.id);
         if (!context.mounted) return;
-        AppFeedback.success(context, '已将 ${plan.name} 设为主计划');
+        AppFeedback.success(context, context.l10n.planViewSetPrimary(plan.name));
       } catch (e) {
         if (!context.mounted) return;
         AppFeedback.error(context, e.toString());
@@ -464,7 +465,7 @@ class _ActivePlanSlot extends ConsumerWidget {
                     ),
                     const SizedBox(height: DS.spacing4),
                     Text(
-                      _planMetaLabel(plan),
+                      _planMetaLabel(context, plan),
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -489,26 +490,26 @@ class _ActivePlanSlot extends ConsumerWidget {
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'detail',
-                    child: Text('查看详情'),
+                    child: Text(context.l10n.planViewViewDetail),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'chat',
-                    child: Text('设为当前计划'),
+                    child: Text(context.l10n.planViewSetCurrentPlan),
                   ),
                   if (!plan.isPrimary)
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'primary',
-                      child: Text('设为主计划'),
+                      child: Text(context.l10n.planViewSetPrimaryPlan),
                     ),
                   PopupMenuItem(
                     value: 'filter',
-                    child: Text(isSelected ? '取消聚焦' : '聚焦任务'),
+                    child: Text(isSelected ? context.l10n.planViewUnfocus : context.l10n.planViewFocusTasks),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'deactivate',
-                    child: Text('停用计划'),
+                    child: Text(context.l10n.planViewDeactivatePlan),
                   ),
                 ],
               ),
@@ -519,10 +520,10 @@ class _ActivePlanSlot extends ConsumerWidget {
             spacing: DS.spacing6,
             runSpacing: DS.spacing6,
             children: [
-              _PlanTag(label: plan.isPrimary ? '主计划' : '活跃中'),
+              _PlanTag(label: plan.isPrimary ? context.l10n.planViewPrimaryPlan : context.l10n.planViewActivePlan),
               if (isChatContext)
-                const _PlanTag(label: '当前对话', highlighted: true),
-              if (isSelected) const _PlanTag(label: '任务已聚焦'),
+                _PlanTag(label: context.l10n.planViewCurrentSession, highlighted: true),
+              if (isSelected) _PlanTag(label: context.l10n.planViewTasksFocused),
             ],
           ),
           const SizedBox(height: DS.spacing10),
@@ -537,7 +538,7 @@ class _ActivePlanSlot extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '进度 $progressPercent% · ${taskCount > 0 ? '$taskCount 个任务' : '任务待生成'}',
+            context.l10n.planViewProgress(progressPercent, taskCount > 0 ? context.l10n.planViewTaskCount(taskCount) : context.l10n.planViewTasksPending),
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
             ),
@@ -555,12 +556,12 @@ class _ActivePlanSlot extends ConsumerWidget {
                       : Icons.filter_alt_rounded,
                   size: 16,
                 ),
-                label: Text(isSelected ? '查看全部' : '聚焦任务'),
+                label: Text(isSelected ? context.l10n.planViewViewAll : context.l10n.planViewFocusTasks),
               ),
               TextButton.icon(
                 onPressed: () => context.push('/plans/${plan.id}'),
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: const Text('详情'),
+                label: Text(context.l10n.planViewDetail),
               ),
             ],
           ),
@@ -569,7 +570,7 @@ class _ActivePlanSlot extends ConsumerWidget {
             TextButton.icon(
               onPressed: setChatContext,
               icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-              label: Text(isChatContext ? '当前对话已绑定' : '设为当前计划'),
+              label: Text(isChatContext ? context.l10n.planViewCurrentSessionBound : context.l10n.planViewSetCurrentPlan),
             ),
           ],
         ],
@@ -577,10 +578,10 @@ class _ActivePlanSlot extends ConsumerWidget {
     );
   }
 
-  String _planMetaLabel(PlanModel plan) {
+  String _planMetaLabel(BuildContext context, PlanModel plan) {
     final typeLabel = switch (plan.type) {
-      PlanType.sprint => '冲刺计划',
-      PlanType.growth => '成长计划',
+      PlanType.sprint => context.l10n.planViewSprintPlan,
+      PlanType.growth => context.l10n.planViewGrowthPlan,
     };
     if (plan.subject?.isNotEmpty ?? false) {
       return '$typeLabel · ${plan.subject}';
@@ -612,7 +613,7 @@ class _EmptyPlanSlot extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '空闲计划位',
+              context.l10n.planViewEmptySlot,
               style: context.sparkleTypography.labelLarge.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightSemibold,
@@ -620,7 +621,7 @@ class _EmptyPlanSlot extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing6),
             Text(
-              hasQuota ? '可以继续新建冲刺或成长计划' : '先释放一个计划位再继续',
+              hasQuota ? context.l10n.planViewCanCreate : context.l10n.planViewReleaseFirst,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -635,20 +636,20 @@ class _EmptyPlanSlot extends StatelessWidget {
                       ? () => context.push('/plans/new?type=sprint')
                       : null,
                   icon: const Icon(Icons.flash_on_rounded, size: 16),
-                  label: const Text('新建冲刺'),
+                  label: Text(context.l10n.planViewNewSprint),
                 ),
                 OutlinedButton.icon(
                   onPressed: hasQuota
                       ? () => context.push('/plans/new?type=growth')
                       : null,
                   icon: const Icon(Icons.trending_up_rounded, size: 16),
-                  label: const Text('新建成长'),
+                  label: Text(context.l10n.planViewNewGrowth),
                 ),
                 if (!compact)
                   TextButton.icon(
                     onPressed: () => context.push('/plans/history'),
                     icon: const Icon(Icons.history_rounded, size: 16),
-                    label: const Text('查看历史'),
+                    label: Text(context.l10n.planViewHistory),
                   ),
               ],
             ),
@@ -697,8 +698,8 @@ class _InactivePlanRow extends ConsumerWidget {
                         plan.subject?.isNotEmpty ?? false
                             ? plan.subject!
                             : (plan.type == PlanType.sprint
-                                ? '冲刺计划'
-                                : '成长计划'),
+                                ? context.l10n.planViewSprintPlan
+                                : context.l10n.planViewGrowthPlan),
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -717,14 +718,14 @@ class _InactivePlanRow extends ConsumerWidget {
                             .read(planListProvider.notifier)
                             .activatePlan(plan.id);
                         if (!context.mounted) return;
-                        AppFeedback.success(context, '已恢复 ${plan.name}');
+                        AppFeedback.success(context, context.l10n.planViewRestored(plan.name));
                       } catch (e) {
                         if (!context.mounted) return;
                         AppFeedback.error(context, e.toString());
                       }
                     }
                   : null,
-              child: const Text('恢复'),
+              child: Text(context.l10n.planViewRestore),
             ),
           ],
         ),
@@ -792,7 +793,7 @@ class _PlanSection extends ConsumerWidget {
               ),
               const SizedBox(width: DS.spacing8),
               Text(
-                planName ?? planId ?? '未分类',
+                planName ?? planId ?? context.l10n.planViewUncategorized,
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: (planName != null || planId != null)
                       ? DS.textPrimary

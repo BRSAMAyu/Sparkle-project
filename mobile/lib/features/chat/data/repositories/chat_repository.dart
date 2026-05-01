@@ -11,6 +11,7 @@ import 'package:sparkle/features/chat/data/models/chat_response_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class ChatRepository {
   ChatRepository(
@@ -209,7 +210,7 @@ class ChatRepository {
       final conversations = <Map<String, dynamic>>[
         {
           'id': 'demo_conv_1',
-          'title': '学习效率与链表复习',
+          'title': S.chatDemoTopic1,
           'updated_at': DemoDataService()
               .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_1')
@@ -222,7 +223,7 @@ class ChatRepository {
         },
         {
           'id': 'demo_conv_2',
-          'title': '动态规划状态转移',
+          'title': S.chatDemoTopic2,
           'updated_at': DemoDataService()
               .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_2')
@@ -235,7 +236,7 @@ class ChatRepository {
         },
         {
           'id': 'demo_conv_3',
-          'title': '计算机网络学习路线',
+          'title': S.chatDemoTopic3,
           'updated_at': DemoDataService()
               .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_3')
@@ -265,8 +266,8 @@ class ChatRepository {
         final title = (raw['title']?.toString().trim().isNotEmpty ?? false)
             ? raw['title']!.toString().trim()
             : ((raw['task_id']?.toString().isNotEmpty ?? false)
-                ? '任务助手对话'
-                : '历史对话');
+                ? S.chatDemoTaskHelper
+                : S.chatDemoHistory);
 
         return {
           ...raw,

@@ -4,6 +4,7 @@ Unified Notification Schemas
 Combines system notifications and intervention requests into a single API format.
 """
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 

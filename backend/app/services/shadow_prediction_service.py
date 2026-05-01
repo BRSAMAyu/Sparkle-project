@@ -8,11 +8,12 @@ Responsibilities:
 4. No modification to user state or strategy
 """
 from __future__ import annotations
+
 import json
 import math
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -21,7 +22,7 @@ from app.orchestration.schemas import ExecutablePlan, RouteDecision, ShadowPredi
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ShadowPredictionService:

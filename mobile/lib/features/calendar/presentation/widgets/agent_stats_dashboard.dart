@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_avatar_switcher.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Agent协作统计面板
 ///
@@ -47,7 +48,7 @@ class AgentStatsDashboard extends StatelessWidget {
           const SizedBox(height: DS.xl),
 
           // Overall Stats Cards
-          _buildOverallStats(theme, overall),
+          _buildOverallStats(context, theme, overall),
           const SizedBox(height: DS.xl),
 
           // Usage Pie Chart
@@ -59,7 +60,7 @@ class AgentStatsDashboard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: DS.lg),
-            _buildUsagePieChart(theme, byAgent),
+            _buildUsagePieChart(context, theme, byAgent),
             const SizedBox(height: DS.xl),
           ],
 
@@ -72,20 +73,20 @@ class AgentStatsDashboard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: DS.lg),
-            ...byAgent.take(5).map((agent) => _buildAgentCard(theme, agent)),
+            ...byAgent.take(5).map((agent) => _buildAgentCard(context, theme, agent)),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildOverallStats(ThemeData theme, Map<String, dynamic> overall) =>
+  Widget _buildOverallStats(BuildContext context, ThemeData theme, Map<String, dynamic> overall) =>
       Row(
         children: [
           Expanded(
             child: _buildStatCard(
               theme,
-              title: '总执行次数',
+              title: context.l10n.calTotalExecutions,
               value: '${overall['total_executions'] ?? 0}',
               icon: Icons.sync_alt,
               color: DS.brandPrimaryConst,
@@ -95,7 +96,7 @@ class AgentStatsDashboard extends StatelessWidget {
           Expanded(
             child: _buildStatCard(
               theme,
-              title: '平均耗时',
+              title: context.l10n.calAvgDuration,
               value: '${overall['avg_duration_ms'] ?? 0}ms',
               icon: Icons.timer,
               color: DS.brandPrimaryConst,
@@ -105,7 +106,7 @@ class AgentStatsDashboard extends StatelessWidget {
           Expanded(
             child: _buildStatCard(
               theme,
-              title: '会话数',
+              title: context.l10n.calSessionCount,
               value: '${overall['total_sessions'] ?? 0}',
               icon: Icons.chat_bubble_outline,
               color: DS.success,
@@ -153,19 +154,19 @@ class AgentStatsDashboard extends StatelessWidget {
         ),
       );
 
-  Widget _buildUsagePieChart(ThemeData theme, List<dynamic> byAgent) =>
+  Widget _buildUsagePieChart(BuildContext context, ThemeData theme, List<dynamic> byAgent) =>
       SizedBox(
         height: 250,
         child: PieChart(
           PieChartData(
             sections: byAgent.take(6).map((agent) {
               final agentType = _parseAgentType(agent['agent_type'] as String);
-              final config = AgentConfig.forType(agentType);
+              final config = AgentConfig.forType(agentType, context);
               final count = agent['count'] as int;
 
               return PieChartSectionData(
                 value: count.toDouble(),
-                title: '${agent['count']}次',
+                title: '${agent['count']}x',
                 color: config.color,
                 radius: 100,
                 titleStyle: TextStyle(
@@ -182,9 +183,9 @@ class AgentStatsDashboard extends StatelessWidget {
         ),
       );
 
-  Widget _buildAgentCard(ThemeData theme, dynamic agentData) {
+  Widget _buildAgentCard(BuildContext context, ThemeData theme, dynamic agentData) {
     final agentType = _parseAgentType(agentData['agent_type'] as String);
-    final config = AgentConfig.forType(agentType);
+    final config = AgentConfig.forType(agentType, context);
     final count = agentData['count'] as int;
     final avgDuration = agentData['avg_duration_ms'] as int? ?? 0;
     final successRate = agentData['success_rate'] as num? ?? 100;

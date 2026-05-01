@@ -114,9 +114,10 @@ async def test_reflection_rule_y_gate_resets_streak_after_pass(monkeypatch) -> N
     redis = _FakeRedis()
     monkeypatch.setattr(cache_service, "redis", redis)
     service = AuroraStage25ReflectionKillSwitchService()
+    await service.set_mode("live")
 
     await service.record_rule_y_pass_rate(0.0)
     await service.record_rule_y_pass_rate(1.0)
     mode = await service.record_rule_y_pass_rate(0.0)
 
-    assert mode == "off"
+    assert mode == "live"

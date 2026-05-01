@@ -1,5 +1,3 @@
-import 'package:sparkle/core/services/i18n_service.dart';
-
 enum IntentKeywordType {
   chat,
   learning,

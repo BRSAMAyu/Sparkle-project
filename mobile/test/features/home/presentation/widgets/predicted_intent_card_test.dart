@@ -5,8 +5,11 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 
 import '../../dashboard_test_harness.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {

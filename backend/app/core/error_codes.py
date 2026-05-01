@@ -7,10 +7,10 @@ H7 Security Fix: 统一错误代码定义
 创建时间: 2026-03-17
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """标准化错误代码枚举"""
 
     # 连接相关错误

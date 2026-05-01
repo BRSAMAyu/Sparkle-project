@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
@@ -78,10 +79,10 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     final l10n = context.l10n;
     final isChinese = Localizations.localeOf(context).languageCode == 'zh';
     final confidencePercent = (forecast.confidence * 100).round();
-    final sourceLabel = _sourceLabel(forecast.predictionSource, isChinese: isChinese);
-    final windowLabel = _windowLabel(forecast.predictedWindow, isChinese: isChinese);
-    final actionLabel = _actionLabel(forecast.predictedActionType, isChinese: isChinese);
-    final freshnessLabel = _freshnessLabel(forecast.generatedAt, isChinese: isChinese);
+    final sourceLabel = _sourceLabel(forecast.predictionSource, l: l10n);
+    final windowLabel = _windowLabel(forecast.predictedWindow, l: l10n);
+    final actionLabel = _actionLabel(forecast.predictedActionType, l: l10n);
+    final freshnessLabel = _freshnessLabel(forecast.generatedAt, l: l10n);
     final primaryAction = forecast.recommendedActions.isNotEmpty
         ? forecast.recommendedActions.first
         : null;
@@ -481,73 +482,73 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
         },
       };
 
-  String _actionLabel(String actionType, {required bool isChinese}) {
+  String _actionLabel(String actionType, {required AppLocalizations l}) {
     switch (actionType) {
       case 'resume_priority_task':
       case 'resume_task':
-        return isChinese ? '继续重点任务' : 'Resume Priority Task';
+        return l.intentResumePriorityTask;
       case 'study_plan':
-        return isChinese ? '生成学习计划' : 'Build Study Plan';
+        return l.intentBuildStudyPlan;
       case 'error_diagnosis':
-        return isChinese ? '问题诊断' : 'Diagnose Issue';
+        return l.intentDiagnoseIssue;
       case 'create_task':
-        return isChinese ? '落成任务' : 'Turn Into Task';
+        return l.intentTurnIntoTask;
       case 'translate':
-        return isChinese ? '即时结果' : 'Instant Result';
+        return l.intentInstantResults;
       case 'review_progress':
-        return isChinese ? '复盘进展' : 'Review Progress';
+        return l.intentReviewProgress;
       case 'plan_next_step':
-        return isChinese ? '规划下一步' : 'Plan Next Step';
+        return l.intentPlanNextStep;
       case 'reflection':
-        return isChinese ? '快速反思' : 'Quick Reflection';
+        return l.intentQuickReflection;
       default:
-        return isChinese ? '预测意图' : 'Predicted Intent';
+        return l.intentPredictedIntent;
     }
   }
 
-  String _windowLabel(String window, {required bool isChinese}) {
+  String _windowLabel(String window, {required AppLocalizations l}) {
     switch (window) {
       case 'now':
-        return isChinese ? '就是现在' : 'Right Now';
+        return l.intentRightNow;
       case 'next_30m':
-        return isChinese ? '未来 30 分钟' : 'Next 30 Minutes';
+        return l.intentNext30Min;
       case 'next_1h':
-        return isChinese ? '未来 1 小时' : 'Next Hour';
+        return l.intentNext1Hour;
       case 'next_2h':
-        return isChinese ? '未来 2 小时' : 'Next 2 Hours';
+        return l.intentNext2Hours;
       case 'next_6h':
-        return isChinese ? '未来 6 小时' : 'Next 6 Hours';
+        return l.intentNext6Hours;
       case 'today':
-        return isChinese ? '今天内' : 'Later Today';
+        return l.intentLaterToday;
       default:
         return window.replaceAll('_', ' ');
     }
   }
 
-  String _sourceLabel(String source, {required bool isChinese}) {
+  String _sourceLabel(String source, {required AppLocalizations l}) {
     switch (source) {
       case 'glm_batch':
-        return isChinese ? '长期预测' : 'Long-Range Forecast';
+        return l.intentLongRangeForecast;
       case 'rules':
-        return isChinese ? '规则兜底' : 'Rules Fallback';
+        return l.intentRulesFallback;
       default:
         return source;
     }
   }
 
-  String? _freshnessLabel(DateTime? generatedAt, {required bool isChinese}) {
+  String? _freshnessLabel(DateTime? generatedAt, {required AppLocalizations l}) {
     if (generatedAt == null) return null;
     final diff = DateTime.now().difference(generatedAt);
     if (diff.inMinutes < 1) {
-      return isChinese ? '刚刚更新' : 'just now';
+      return l.intentJustNow;
     }
     if (diff.inHours < 1) {
-      return isChinese ? '${diff.inMinutes} 分钟前' : '${diff.inMinutes} min ago';
+      return l.intentMinutesAgo(diff.inMinutes);
     }
     if (diff.inDays < 1) {
-      return isChinese ? '${diff.inHours} 小时前' : '${diff.inHours} hr ago';
+      return l.intentHoursAgo(diff.inHours);
     }
-    return isChinese ? '${diff.inDays} 天前' : '${diff.inDays} d ago';
+    return l.intentDaysAgo(diff.inDays);
   }
 }
 
@@ -578,7 +579,7 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isChinese ? '同类请求里的近期偏好' : 'Recent same-category signal',
+            context.l10n.intentRecentCategorySignal,
             style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textTertiary,
               fontWeight: DS.fontWeightBold,

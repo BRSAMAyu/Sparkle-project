@@ -8,6 +8,7 @@ import 'package:sparkle/core/models/skill_models.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeSkillApiService implements SkillApiService {
   @override
@@ -63,6 +64,8 @@ class _FakeSkillApiService implements SkillApiService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('profile can navigate to skill management screen', (
     tester,
   ) async {
@@ -98,6 +101,7 @@ void main() {
           theme: AppThemes.lightTheme,
           darkTheme: AppThemes.darkTheme,
           routerConfig: router,
+          locale: const Locale('zh'),
           localizationsDelegates: const [
             ...AppLocalizations.localizationsDelegates,
             GlobalMaterialLocalizations.delegate,

@@ -6,7 +6,7 @@ import hmac
 import json
 import re
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -31,7 +31,7 @@ from app.services.scene_consolidation_service import SceneConsolidationService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)
@@ -833,7 +833,7 @@ class MemoryInferredWriteLaneService:
         # party is not resolved to a registered Sparkle user. This preserves the
         # Rule Z no-cross-user-join boundary; a future explicit user-to-user
         # mention system would need a separate governed upgrade path.
-        key = f"{user_id}:null".encode("utf-8")
+        key = f"{user_id}:null".encode()
         msg = MemoryInferredWriteLaneService._normalize_semantic(person_name).encode("utf-8")
         return hmac.new(key, msg, hashlib.sha256).hexdigest()
 

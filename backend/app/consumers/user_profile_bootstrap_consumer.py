@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
-
-from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 
 
 class UserProfileBootstrapConsumer(JourneyEventConsumerBase):

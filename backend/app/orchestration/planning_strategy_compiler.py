@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 from app.orchestration.plan_quality_contract import (
@@ -16,7 +16,7 @@ PLANNING_STRATEGY_VERSION = "2026-04-05.v1"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _as_dict(value: Any) -> dict[str, Any]:

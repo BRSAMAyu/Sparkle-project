@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-import pytest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
-from app.models.card_protocol import CardLifecycleStatus, CardType, EdgeType
+import pytest
+from sqlalchemy import select
+
+from app.models.card_protocol import BindingMode, Card, CardEdge, CardLifecycleStatus, CardType, EdgeType
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
+from app.schemas.plan import PlanCreate
+from app.schemas.task import TaskCreate
 from app.services.card_protocol.legacy_adapter import PlanAdapter, TaskAdapter
 from app.services.card_protocol.mastery_bridge import ErrorMasteryBridge
 from app.services.card_service import CardService
+from app.services.plan_service import PlanService
 from app.services.task_occurrence_service import OccurrenceStatus, TaskOccurrenceService
+from app.services.task_service import TaskService
 
 
 class FakeEventBus:
@@ -138,3 +146,131 @@ async def test_occurrence_events_use_consistent_status_change_contract(db_sessio
     assert status_payloads[0]["new_status"] == OccurrenceStatus.DEFERRED.value
     assert status_payloads[1]["old_status"] == OccurrenceStatus.DEFERRED.value
     assert status_payloads[1]["new_status"] == OccurrenceStatus.COMPLETED.value
+
+
+@pytest.mark.asyncio
+async def test_card_service_facade_manages_edges_snapshots_and_soft_delete(db_session, test_user):
+    fake_bus = FakeEventBus()
+    service = CardService(db_session, fake_bus)
+    plan = await service.create_card(
+        card_type=CardType.PLAN,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"name": "Card facade plan"},
+        lifecycle_status=CardLifecycleStatus.ACTIVE,
+    )
+    task = await service.create_card(
+        card_type=CardType.TASK,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"title": "Card facade task"},
+        lifecycle_status=CardLifecycleStatus.ACTIVE,
+    )
+
+    edge = await service.create_edge(
+        from_card_id=plan.id,
+        to_card_id=task.id,
+        edge_type=EdgeType.CONTAINS,
+        binding_mode=BindingMode.OWNED,
+        order_index=1000,
+    )
+    await db_session.commit()
+
+    children = await service.get_children(plan.id, edge_type=EdgeType.CONTAINS)
+    parents = await service.get_parents(task.id, edge_type=EdgeType.CONTAINS)
+    assert [(item.id, item.order_index) for item, _ in children] == [(edge.id, 1000)]
+    assert [parent.id for _, parent in parents] == [plan.id]
+
+    first_snapshot = await service.create_snapshot(card_id=plan.id, include_children=True, max_depth=2)
+    second_snapshot = await service.create_snapshot(card_id=plan.id, include_children=False, max_depth=1)
+    await db_session.commit()
+
+    snapshots = await service.get_snapshots(plan.id)
+    latest = await service.get_latest_snapshot(plan.id)
+    assert [snapshot.id for snapshot in snapshots[:2]] == [second_snapshot.id, first_snapshot.id]
+    assert latest is not None
+    assert latest.id == second_snapshot.id
+
+    deleted = await service.delete_card(task.id)
+    await db_session.commit()
+
+    assert deleted is True
+    assert await service.get_card(task.id) is None
+    assert await service.get_children(plan.id, edge_type=EdgeType.CONTAINS) == []
+
+    event_types = [event_type for event_type, _ in fake_bus.events]
+    assert "card_edge.created" in event_types
+    assert "card.deleted" in event_types
+
+
+@pytest.mark.asyncio
+async def test_plan_and_task_services_dual_write_card_projection(db_session, test_user):
+    with (
+        patch("app.services.plan_quota_service.PlanQuotaService") as quota_service_cls,
+        patch("app.services.plan_service.Stage33JourneyEventService.publish", AsyncMock(return_value="1-0")),
+        patch("app.services.task_service.task_document_service.auto_link_from_task_context", AsyncMock()),
+        patch("app.services.focus_context_service.focus_context_service.preload_for_task", AsyncMock()),
+        patch("app.services.task_state_sync.TaskStateSyncService.on_task_created", AsyncMock()),
+    ):
+        quota_service_cls.return_value.get_quota_status = AsyncMock(return_value=SimpleNamespace(used=0))
+        plan = await PlanService.create(
+            db=db_session,
+            obj_in=PlanCreate(
+                name="Card dual-write plan",
+                type=PlanType.SPRINT,
+                plan_stage=PlanStage.SPRINT,
+                subject="计算机网络",
+                daily_available_minutes=90,
+            ),
+            user_id=test_user.id,
+            skip_quota_check=True,
+        )
+        task = await TaskService.create(
+            db=db_session,
+            obj_in=TaskCreate(
+                title="Card dual-write task",
+                type=TaskType.LEARNING,
+                plan_id=plan.id,
+                estimated_minutes=45,
+                difficulty=2,
+                energy_cost=2,
+                guide_content="完成一次闭卷复述",
+                tags=["规划生成", "day:1"],
+            ),
+            user_id=test_user.id,
+        )
+
+    plan_card = (
+        await db_session.execute(
+            select(Card).where(
+                Card.card_type == CardType.PLAN,
+                Card.metadata_["legacy_plan_id"].as_string() == str(plan.id),
+                Card.not_deleted_filter(),
+            )
+        )
+    ).scalar_one()
+    task_card = (
+        await db_session.execute(
+            select(Card).where(
+                Card.card_type == CardType.TASK,
+                Card.metadata_["legacy_task_id"].as_string() == str(task.id),
+                Card.not_deleted_filter(),
+            )
+        )
+    ).scalar_one()
+
+    assert plan_card.metadata_["name"] == plan.name
+    assert task_card.metadata_["legacy_plan_id"] == str(plan.id)
+
+    phase_card_id = plan_card.metadata_["current_phase_card_id"]
+    edge = (
+        await db_session.execute(
+            select(CardEdge).where(
+                CardEdge.from_card_id == phase_card_id,
+                CardEdge.to_card_id == task_card.id,
+                CardEdge.edge_type == EdgeType.CONTAINS,
+                CardEdge.active.is_(True),
+            )
+        )
+    ).scalar_one()
+    assert edge.metadata_["source"] == "legacy_task_adapter"

@@ -10,13 +10,13 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class FocusType(str, enum.Enum):
+class FocusType(enum.StrEnum):
     """专注类型"""
     POMODORO = "pomodoro"    # 番茄钟
     STOPWATCH = "stopwatch"  # 正计时
 
 
-class FocusStatus(str, enum.Enum):
+class FocusStatus(enum.StrEnum):
     """专注状态"""
     COMPLETED = "completed"       # 完成
     INTERRUPTED = "interrupted"   # 中断/放弃

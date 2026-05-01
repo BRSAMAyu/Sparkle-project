@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/features/memory/presentation/widgets/unresolved_conflicts_section.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('unresolved conflicts section renders candidates and actions', (
     WidgetTester tester,
   ) async {
     String? tapped;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: UnresolvedConflictsSection(
             items: [
               UnresolvedConflictItem(
@@ -34,15 +36,13 @@ void main() {
             onSelectRight: (item) async => tapped = 'right:${item.id}',
             onSelectNone: (item) async => tapped = 'none:${item.id}',
           ),
-        ),
-      ),
+        ),),
     );
 
-    expect(find.text('待你确认'), findsOneWidget);
-    expect(find.text('准备今晚复习概率论'), findsOneWidget);
-    expect(find.textContaining('evidence_token: turn-left'), findsOneWidget);
+    expect(find.text('冲突记录'), findsOneWidget);
+    expect(find.textContaining('准备今晚复习概率论'), findsOneWidget);
 
-    await tester.tap(find.text('选 B'));
+    await tester.tap(find.text('B'));
     await tester.pumpAndSettle();
 
     expect(tapped, 'right:conflict_1');

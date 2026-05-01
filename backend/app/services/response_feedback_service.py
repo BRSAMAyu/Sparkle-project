@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import json
 import time
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -21,9 +22,9 @@ from app.core.metrics import (
 from app.learning.prompt_bandit import PromptBandit
 from app.models.context_pack import ContextPackFeedback, ContextPackRun
 from app.models.response_feedback import ResponseFeedback
-from app.orchestration.run_ledger import RunLedgerStore
 from app.orchestration.agent_memory import AgentMemoryService
 from app.orchestration.agent_scoring import AgentScoringService
+from app.orchestration.run_ledger import RunLedgerStore
 from app.services.budget_tuning_service import BudgetTuningService
 from app.services.content_quality_evaluator import ContentQualityEvaluator
 
@@ -51,7 +52,7 @@ class FeedbackResult:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ResponseFeedbackService:

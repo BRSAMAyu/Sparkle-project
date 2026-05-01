@@ -1,12 +1,13 @@
 """Smart Schedule Schemas - 智能排程请求/响应模型"""
 from __future__ import annotations
+
 from datetime import date as DateType
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class TimeSlotQuality(str, Enum):
+class TimeSlotQuality(StrEnum):
     """时间槽质量等级"""
     PEAK = "peak"      # 高效时段
     NORMAL = "normal"  # 常规时段

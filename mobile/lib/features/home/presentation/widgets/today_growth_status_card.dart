@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 
 class TodayGrowthStatusCard extends StatelessWidget {
@@ -34,11 +35,12 @@ class TodayGrowthStatusCard extends StatelessWidget {
       );
     }
 
+    final zh = I18nService.instance.isChinese;
     final tone = _GrowthTone.resolve(growthState);
     final completionRate = growthState.completionRate;
     final taskLabel =
-        '今天 ${growthState.tasksCompleted}/${growthState.tasksTotal} 项任务';
-    final phaseLabel = growthState.activePlan?.phaseLabel ?? '进行中';
+        zh ? '今天 ${growthState.tasksCompleted}/${growthState.tasksTotal} 项任务' : 'Today ${growthState.tasksCompleted}/${growthState.tasksTotal} tasks';
+    final phaseLabel = growthState.activePlan?.phaseLabel ?? (zh ? '进行中' : 'In Progress');
 
     return _GrowthStatusFrame(
       key: const ValueKey('today-growth-status-card'),
@@ -68,7 +70,7 @@ class TodayGrowthStatusCard extends StatelessWidget {
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    '计划健康度 ${_healthDots(growthState.planHealth)}',
+                    zh ? '计划健康度 ${_healthDots(growthState.planHealth)}' : 'Plan Health ${_healthDots(growthState.planHealth)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.sparkleTypography.bodyMedium.copyWith(
@@ -78,7 +80,7 @@ class TodayGrowthStatusCard extends StatelessWidget {
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    '连续学习 ${growthState.streak} 天 🔥',
+                    zh ? '连续学习 ${growthState.streak} 天 🔥' : '${growthState.streak} day streak 🔥',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.sparkleTypography.bodyMedium.copyWith(
@@ -193,7 +195,9 @@ class _NoActivePlanContent extends StatelessWidget {
   final VoidCallback? onCreatePlan;
 
   @override
-  Widget build(BuildContext context) => ConstrainedBox(
+  Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 126),
         child: Row(
           children: [
@@ -220,7 +224,7 @@ class _NoActivePlanContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '开始制定你的第一个计划',
+                    zh ? '开始制定你的第一个计划' : 'Create Your First Plan',
                     style: context.sparkleTypography.titleLarge.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
@@ -228,7 +232,7 @@ class _NoActivePlanContent extends StatelessWidget {
                   ),
                   const SizedBox(height: DS.spacing6),
                   Text(
-                    '我会把目标拆成今天就能迈出的一小步。',
+                    zh ? '我会把目标拆成今天就能迈出的一小步。' : 'I will break down your goal into small, actionable steps for today.',
                     style: context.sparkleTypography.bodySmall.copyWith(
                       color: DS.textSecondary,
                       height: 1.35,
@@ -236,7 +240,7 @@ class _NoActivePlanContent extends StatelessWidget {
                   ),
                   const SizedBox(height: DS.spacing12),
                   SparkleButton(
-                    label: '开始制定你的第一个计划',
+                    label: zh ? '开始制定你的第一个计划' : 'Create Your First Plan',
                     size: ButtonSize.small,
                     icon: const Icon(Icons.add_rounded),
                     onPressed: onCreatePlan,
@@ -248,6 +252,7 @@ class _NoActivePlanContent extends StatelessWidget {
           ],
         ),
       );
+  }
 }
 
 class _ProgressRing extends StatelessWidget {
@@ -343,16 +348,17 @@ class _GrowthTone {
   String message(HomeGrowthTask? nextAction) => messageBuilder(nextAction);
 
   static _GrowthTone resolve(HomeGrowthState state) {
+    final zh = I18nService.instance.isChinese;
     if (state.tasksTotal > 0 && state.tasksCompleted >= state.tasksTotal) {
       return _GrowthTone(
         color: DS.success,
-        messageBuilder: (_) => '今天收束得很漂亮，可以带着成就感收尾。',
+        messageBuilder: (_) => zh ? '今天收束得很漂亮，可以带着成就感收尾。' : 'You wrapped up beautifully today. End with a sense of accomplishment.',
       );
     }
     if (state.tasksCompleted > 0) {
       return _GrowthTone(
         color: DS.info,
-        messageBuilder: (_) => '保持这个节奏，下一步已经很清楚。',
+        messageBuilder: (_) => zh ? '保持这个节奏，下一步已经很清楚。' : 'Keep this rhythm, next steps are clear.',
       );
     }
     return _GrowthTone(
@@ -360,9 +366,9 @@ class _GrowthTone {
       messageBuilder: (nextAction) {
         final title = nextAction?.title.trim();
         if (title == null || title.isEmpty) {
-          return '今天的第一件事是选一个轻量任务。';
+          return zh ? '今天的第一件事是选一个轻量任务。' : 'Your first task today is to pick a lightweight one.';
         }
-        return '今天的第一件事是$title。';
+        return zh ? '今天的第一件事是$title。' : 'First task today: $title.';
       },
     );
   }

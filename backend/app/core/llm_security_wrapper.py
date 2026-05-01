@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 LLM 安全包装器 - 为现有 LLM 服务提供无缝安全集成
 

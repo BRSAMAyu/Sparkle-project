@@ -117,6 +117,7 @@ async def test_maybe_short_circuit_bridge_tool_launch_prediction_builds_correct_
     assert call_args.kwargs["arguments"]["topic"] == "Will I succeed in learning Python?"
     assert call_args.kwargs["arguments"]["source_chat_session_id"] == "session-1"
     assert result is not None
+    assert len(result) > 0
 
 
 @pytest.mark.asyncio
@@ -147,6 +148,7 @@ async def test_maybe_short_circuit_bridge_tool_run_quick_simulation_builds_argum
     assert call_args.kwargs["arguments"]["seed_topic"] == "Simulate a Pomodoro session"
     assert call_args.kwargs["arguments"]["source_chat_session_id"] == "session-1"
     assert result is not None
+    assert len(result) > 0
 
 
 @pytest.mark.asyncio
@@ -178,6 +180,7 @@ async def test_maybe_short_circuit_bridge_tool_generate_learning_report_builds_a
     assert call_args.kwargs["arguments"]["delivery_mode"] == "chat_bridge"
     assert call_args.kwargs["arguments"]["source_chat_session_id"] == "session-1"
     assert result is not None
+    assert len(result) > 0
 
 
 @pytest.mark.asyncio

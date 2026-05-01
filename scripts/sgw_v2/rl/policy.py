@@ -1,9 +1,10 @@
-"""Policy system: rule-based, Thompson Sampling bandit, and LinUCB contextual bandit.
+"""Policy system: rule-based, Thompson Sampling bandit, LinUCB contextual bandit, and DPO.
 
-Three-stage policy progression for SGW RL:
+Four-stage policy progression for SGW RL:
   Stage 1 (RULE): Deterministic rules from diagnostic hypotheses
   Stage 2 (BANDIT): Thompson Sampling with Beta posterior per arm
   Stage 3 (CONTEXTUAL): LinUCB with state-conditioned linear models
+  Stage 4 (DPO): DPO-informed response strategy selection
 """
 from __future__ import annotations
 
@@ -13,9 +14,10 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
+from .dpo_policy import DPOPolicy, StrategyPreference
 from .spec import (
     Action, ActionSpec, ACTION_SPECS, BANDIT_ARMS,
-    StateVector, PolicyStage, clamp_amplitude,
+    StateVector, PolicyStage, StrategyRecommendation, clamp_amplitude,
     check_direction_history, check_config_novelty,
     should_explore, compute_config_hash,
 )
@@ -452,11 +454,12 @@ def _solve_linear(A: list[list[float]], b: list[float]) -> list[float]:
 
 
 class PolicyRouter:
-    """Routes between rule/bandit/contextual based on data availability.
+    """Routes between rule/bandit/contextual/dpo based on data availability.
 
     Transition criteria:
     - Rule → Bandit: ≥ 20 iterations, rule success rate < 60%
     - Bandit → Contextual: ≥ 50 iterations, ≥ 3 state clusters identified
+    - Contextual → +DPO: ≥ 30 iterations, trained DPO model available
     """
 
     def __init__(
@@ -465,11 +468,13 @@ class PolicyRouter:
         rule: RulePolicy | None = None,
         bandit: ThompsonSamplingBandit | None = None,
         contextual: LinUCBBandit | None = None,
+        dpo: DPOPolicy | None = None,
         rng_seed: int | None = None,
     ):
         self.rule = rule or RulePolicy()
         self.bandit = bandit or ThompsonSamplingBandit(rng_seed=rng_seed)
         self.contextual = contextual or LinUCBBandit(rng_seed=rng_seed)
+        self.dpo = dpo or DPOPolicy()
         self.rng = random.Random(rng_seed)
         self._current_stage = PolicyStage.RULE
 
@@ -531,6 +536,16 @@ class PolicyRouter:
 
         return action
 
+    def select_strategy(self, context_vector: list[float]) -> StrategyPreference | None:
+        """Select AI behavior strategy via DPO policy (Stage 4).
+
+        Returns None when DPO is not available (no trained model, or
+        iteration count too low to enable Stage 4).
+        """
+        if self._current_stage != PolicyStage.DPO and not self.dpo.is_available:
+            return None
+        return self.dpo.select_strategy(context_vector)
+
     def update(
         self,
         action: Action,
@@ -545,9 +560,13 @@ class PolicyRouter:
 
     def _determine_stage(self, iteration: int, history: list[dict[str, Any]]) -> PolicyStage:
         """Determine which policy stage to use."""
+        # Stage 4 (DPO) is additive: if the model is trained and iteration
+        # count is sufficient, DPO runs in parallel with config-stage policies.
+        dpo_ready = iteration >= 30 and self.dpo.is_available
+
         if iteration < 20:
-            self._current_stage = PolicyStage.RULE
-            return PolicyStage.RULE
+            self._current_stage = PolicyStage.DPO if dpo_ready else PolicyStage.RULE
+            return self._current_stage
 
         # Check rule success rate
         recent = history[-20:] if len(history) >= 20 else history
@@ -556,10 +575,10 @@ class PolicyRouter:
             rule_rate = successes / len(recent)
             if rule_rate < 0.6:
                 if iteration >= 50:
-                    self._current_stage = PolicyStage.CONTEXTUAL
-                    return PolicyStage.CONTEXTUAL
-                self._current_stage = PolicyStage.BANDIT
-                return PolicyStage.BANDIT
+                    self._current_stage = PolicyStage.DPO if dpo_ready else PolicyStage.CONTEXTUAL
+                    return self._current_stage
+                self._current_stage = PolicyStage.DPO if dpo_ready else PolicyStage.BANDIT
+                return self._current_stage
 
-        self._current_stage = PolicyStage.RULE
-        return PolicyStage.RULE
+        self._current_stage = PolicyStage.DPO if dpo_ready else PolicyStage.RULE
+        return self._current_stage

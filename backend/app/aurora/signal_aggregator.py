@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Awaitable, Callable
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
-from app.orchestration.signal_samplers.achievement_sampler import sample_achievement_growth_signal
 from app.aurora.schemas import RetentionTier, SignalSnapshot, SignalTier
+from app.orchestration.signal_samplers.achievement_sampler import sample_achievement_growth_signal
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _safe_dump(value: Any) -> Any:
@@ -407,7 +408,7 @@ class SignalAggregator:
                         parsed = datetime.fromisoformat(candidate.replace("Z", "+00:00"))
                     except ValueError:
                         continue
-                    return parsed.astimezone(timezone.utc).replace(tzinfo=None) if parsed.tzinfo else parsed
+                    return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
         return collected_at
 
     def _find_stale_signals(self, readings: dict[str, SignalSourceReading], now: datetime) -> list[str]:

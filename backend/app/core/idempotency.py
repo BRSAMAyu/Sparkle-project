@@ -3,8 +3,9 @@
 Idempotency Store - 用于管理幂等性键
 """
 from __future__ import annotations
+
 import json
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -21,7 +22,7 @@ from app.models.idempotency_key import IdempotencyKey
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class IdempotencyStore:

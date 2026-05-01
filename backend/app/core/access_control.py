@@ -1,3 +1,4 @@
+# DEPRECATED: no active importers — candidate for removal in next cleanup
 """
 Access Control Middleware
 Ensures that only authorized users can access certain endpoints
@@ -20,6 +21,6 @@ async def verify_token(request: Request, credentials: HTTPAuthorizationCredentia
     try:
         await decode_token(token, expected_type="access")
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token") from None
 
     return token

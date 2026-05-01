@@ -3,6 +3,7 @@ Shop API Endpoints
 商城系统 API 端点
 """
 from __future__ import annotations
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
@@ -141,13 +142,13 @@ async def purchase_item(
 
     except IdempotencyConflictError as e:
         logger.error(f"Purchase idempotency conflict: {e}")
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except ValueError as e:
         logger.error(f"Purchase error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Unexpected purchase error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to complete purchase")
+        raise HTTPException(status_code=500, detail="Failed to complete purchase") from e
 
 
 @router.get("/purchases", response_model=dict[str, Any])

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.config.aurora import aurora_flags
 from app.aurora.schemas import AuroraPresenceLevel, UXIntent
+from app.config.aurora import aurora_flags
 
 
 @dataclass(frozen=True)

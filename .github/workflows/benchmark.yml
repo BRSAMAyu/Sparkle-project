@@ -207,6 +207,71 @@ jobs:
             mobile/test/goldens/failures/
           retention-days: 30
 
+  # Stress Tests (Celery + Backend)
+  stress-tests:
+    name: Stress Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: sparkle
+          POSTGRES_DB: sparkle_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio pytest-timeout psutil
+
+      - name: Run Celery stress tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://sparkle:sparkle@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          PYTHONPATH=backend python3 -m pytest \
+            backend/tests/performance/test_celery_stress.py \
+            -v --timeout=300
+
+      - name: Upload stress test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stress-test-results
+          retention-days: 30
+          path: |
+            backend/stress_test_*
+
   # Load Tests (Lightweight)
   load-tests:
     name: Load Tests (Lightweight)
@@ -275,6 +340,55 @@ jobs:
           path: |
             backend/load_test_results_*
           retention-days: 30
+
+  # OBS-011: Scenario regression gate (SparkleGoalBench)
+  scenario-regression-gate:
+    name: Scenario Regression Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -e .
+          pip install pytest pytest-asyncio
+
+      - name: Run SparkleGoalBench scenarios
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          cd backend
+          python -m pytest tests/unit/test_simulation_lab.py -v -k "goal_bench or scenario" --tb=short
+
+      - name: Run spine quality guard tests
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          cd backend
+          python -m pytest tests/unit/ -k "quality_guard" -v --tb=short
 
   # Performance Regression Report
   regression-report:

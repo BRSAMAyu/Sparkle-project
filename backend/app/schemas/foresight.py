@@ -23,7 +23,7 @@ class AttractorState:
     updated_at: datetime
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "AttractorState":
+    def from_dict(cls, payload: dict[str, Any]) -> AttractorState:
         return cls(
             dim=str(payload.get("dim") or ""),
             baseline=float(payload.get("baseline") or 0.0),
@@ -45,7 +45,7 @@ class Deviation:
     confidence: float
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "Deviation":
+    def from_dict(cls, payload: dict[str, Any]) -> Deviation:
         return cls(
             dim=str(payload.get("dim") or ""),
             current_value=float(payload.get("current_value") or 0.0),
@@ -68,7 +68,7 @@ class ForesightHint:
     template_id: str
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "ForesightHint":
+    def from_dict(cls, payload: dict[str, Any]) -> ForesightHint:
         return cls(
             hint_id=str(payload.get("hint_id") or ""),
             dim=str(payload.get("dim") or ""),
@@ -91,7 +91,7 @@ class ForesightSnapshot:
     version: str = "v1"
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "ForesightSnapshot":
+    def from_dict(cls, payload: dict[str, Any]) -> ForesightSnapshot:
         attractors = {
             str(dim): AttractorState.from_dict(state)
             for dim, state in dict(payload.get("attractors") or {}).items()

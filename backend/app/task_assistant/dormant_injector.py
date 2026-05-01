@@ -17,9 +17,9 @@ Otherwise reuse the cached sidecar.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from loguru import logger
 
@@ -33,7 +33,7 @@ from app.task_assistant.store import CacheBackedDormantStore
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class DormantInjector:
@@ -138,8 +138,8 @@ class DormantInjector:
             )
         # Try to load from TaskGuidance sidecar store
         try:
-            from app.task_guidance.store import CacheBackedTaskGuidanceStore
             from app.task_guidance.schemas import TaskGuidanceAudience
+            from app.task_guidance.store import CacheBackedTaskGuidanceStore
 
             guidance_store = CacheBackedTaskGuidanceStore()
             guidance = await guidance_store.get_for_task(task_id, TaskGuidanceAudience.AI)

@@ -5,38 +5,32 @@ the full app with realistic pre-populated content.
 """
 import math
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from loguru import logger
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
 from app.data.populate_achievements import sync_achievement_definitions
-from app.models.accountability import (
-    AccountabilityCheckin,
-    AccountabilityPartnership,
-    AccountabilityStatus,
-)
-from app.models.cognitive import AnalysisStatus
 from app.models import (
-    Achievement,
     AchievementRarity,
-    AchievementType,
     BehaviorPattern,
     CalendarEvent,
-    CapsuleFeedback,
     CapsuleFavorite,
+    CapsuleFeedback,
     CapsuleGenerationJob,
+    ChatMessage,
+    ChatSession,
     CognitiveFragment,
     CuriosityCapsule,
     DepthLevel,
     EventSource,
-    Friendship,
-    FriendshipStatus,
     FocusSession,
     FocusStatus,
     FocusType,
+    Friendship,
+    FriendshipStatus,
     GalaxySkin,
     GenerationType,
     Group,
@@ -73,9 +67,13 @@ from app.models import (
     UserTitle,
     UserVisualConfig,
     UserVisualElement,
-    ChatMessage,
-    ChatSession,
 )
+from app.models.accountability import (
+    AccountabilityCheckin,
+    AccountabilityPartnership,
+    AccountabilityStatus,
+)
+from app.models.cognitive import AnalysisStatus
 from app.models.community import MessageFavorite
 from app.models.galaxy import NodeRelation
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
@@ -96,26 +94,26 @@ async def _ensure_achievements(session: AsyncSession):
 async def _ensure_galaxy_skins(session: AsyncSession):
     now = datetime.utcnow()
     skins = [
-        dict(
-            id="skin_nebula",
-            name="星云幻彩",
-            description="轻量星云渐变皮肤",
-            preview_url="/skins/nebula.png",
-            unlock_type="achievement",
-            unlock_requirement={"achievement_id": "streak_7"},
-            rarity=AchievementRarity.RARE,
-            sort_order=1,
-        ),
-        dict(
-            id="skin_solar",
-            name="日耀核心",
-            description="高亮太阳核心皮肤",
-            preview_url="/skins/solar.png",
-            unlock_type="achievement",
-            unlock_requirement={"achievement_id": "study_100hours"},
-            rarity=AchievementRarity.EPIC,
-            sort_order=2,
-        ),
+        {
+            "id": "skin_nebula",
+            "name": "星云幻彩",
+            "description": "轻量星云渐变皮肤",
+            "preview_url": "/skins/nebula.png",
+            "unlock_type": "achievement",
+            "unlock_requirement": {"achievement_id": "streak_7"},
+            "rarity": AchievementRarity.RARE,
+            "sort_order": 1,
+        },
+        {
+            "id": "skin_solar",
+            "name": "日耀核心",
+            "description": "高亮太阳核心皮肤",
+            "preview_url": "/skins/solar.png",
+            "unlock_type": "achievement",
+            "unlock_requirement": {"achievement_id": "study_100hours"},
+            "rarity": AchievementRarity.EPIC,
+            "sort_order": 2,
+        },
     ]
     for item in skins:
         existing = await session.execute(
@@ -1571,7 +1569,6 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
 
     # Knowledge Nodes (Galaxy) - Create a rich demo knowledge graph
     # Mirrors the 6-sector structure from DemoDataService (COSMOS/TECH/ART/CIVILIZATION/LIFE/WISDOM)
-    import math
 
     # Define nodes: (name, description, importance, keywords, sector_label, unlocked, mastery, study_count)
     _DEMO_NODES = [
@@ -1870,55 +1867,55 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
 
     # Tasks
     for task_data in [
-        dict(
-            title="数据结构 - 二叉树遍历算法",
-            type=TaskType.LEARNING,
-            tags=["CS", "Data Structures", "Tree"],
-            estimated_minutes=90,
-            difficulty=4,
-            energy_cost=4,
-            status=TaskStatus.IN_PROGRESS,
-            priority=3,
-            due_date=date.today(),
-            started_at=now - timedelta(minutes=30),
-            plan_id=sprint_plan.id,
-        ),
-        dict(
-            title="操作系统 - 死锁处理机制",
-            type=TaskType.LEARNING,
-            tags=["OS", "Concurrency"],
-            estimated_minutes=75,
-            difficulty=4,
-            energy_cost=3,
-            status=TaskStatus.PENDING,
-            priority=3,
-            due_date=date.today(),
-            plan_id=sprint_plan.id,
-        ),
-        dict(
-            title="离散数学 - 图论着色问题",
-            type=TaskType.LEARNING,
-            tags=["Math", "Graph Theory"],
-            estimated_minutes=120,
-            difficulty=4,
-            energy_cost=4,
-            status=TaskStatus.PENDING,
-            priority=3,
-            due_date=date.today() + timedelta(days=2),
-            plan_id=growth_plan.id,
-        ),
-        dict(
-            title="计算机网络 - TCP协议分析",
-            type=TaskType.LEARNING,
-            tags=["Network", "Protocol"],
-            estimated_minutes=90,
-            difficulty=3,
-            energy_cost=3,
-            status=TaskStatus.PENDING,
-            priority=2,
-            due_date=date.today() + timedelta(days=3),
-            plan_id=growth_plan.id,
-        ),
+        {
+            "title": "数据结构 - 二叉树遍历算法",
+            "type": TaskType.LEARNING,
+            "tags": ["CS", "Data Structures", "Tree"],
+            "estimated_minutes": 90,
+            "difficulty": 4,
+            "energy_cost": 4,
+            "status": TaskStatus.IN_PROGRESS,
+            "priority": 3,
+            "due_date": date.today(),
+            "started_at": now - timedelta(minutes=30),
+            "plan_id": sprint_plan.id,
+        },
+        {
+            "title": "操作系统 - 死锁处理机制",
+            "type": TaskType.LEARNING,
+            "tags": ["OS", "Concurrency"],
+            "estimated_minutes": 75,
+            "difficulty": 4,
+            "energy_cost": 3,
+            "status": TaskStatus.PENDING,
+            "priority": 3,
+            "due_date": date.today(),
+            "plan_id": sprint_plan.id,
+        },
+        {
+            "title": "离散数学 - 图论着色问题",
+            "type": TaskType.LEARNING,
+            "tags": ["Math", "Graph Theory"],
+            "estimated_minutes": 120,
+            "difficulty": 4,
+            "energy_cost": 4,
+            "status": TaskStatus.PENDING,
+            "priority": 3,
+            "due_date": date.today() + timedelta(days=2),
+            "plan_id": growth_plan.id,
+        },
+        {
+            "title": "计算机网络 - TCP协议分析",
+            "type": TaskType.LEARNING,
+            "tags": ["Network", "Protocol"],
+            "estimated_minutes": 90,
+            "difficulty": 3,
+            "energy_cost": 3,
+            "status": TaskStatus.PENDING,
+            "priority": 2,
+            "due_date": date.today() + timedelta(days=3),
+            "plan_id": growth_plan.id,
+        },
     ]:
         exists = await session.execute(
             select(Task).where(Task.user_id == user.id, Task.title == task_data["title"])
@@ -1929,39 +1926,39 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     # Curiosity Capsules
     capsule_ids = []
     for capsule_data in [
-        dict(
-            title="为什么二叉树的遍历有三种方式？",
-            content="二叉树的三种遍历方式（前序、中序、后序）源于访问节点的不同时机。前序先访问根，适合复制树结构；中序产生有序序列，适合BST；后序最后访问根，适合释放资源。",
-            related_subject="数据结构",
-            depth_level=DepthLevel.DEEP,
-            generation_method="knowledge_gap_analysis",
-            quality_score=0.92,
-            feedback_count=0,
-            share_count=0,
-            is_read=False,
-        ),
-        dict(
-            title="进程和线程的本质区别是什么？",
-            content="进程=资源容器+执行轨迹；线程=共享资源+独立执行轨迹。进程是OS资源分配单位，线程是CPU调度单位。同一进程内线程共享内存空间，这是并发编程中数据竞争问题的根源。",
-            related_subject="操作系统",
-            depth_level=DepthLevel.DEEP,
-            generation_method="concept_clarification",
-            quality_score=0.88,
-            feedback_count=1,
-            share_count=2,
-            is_read=True,
-        ),
-        dict(
-            title="TCP为什么需要三次握手？",
-            content="三次握手用于同步序列号并确认双方收发能力。一次握手无法确认服务器发送能力；两次握手会导致历史连接复用问题。三次是双方确认各自收发正常的最少次数。",
-            related_subject="计算机网络",
-            depth_level=DepthLevel.MEDIUM,
-            generation_method="why_question",
-            quality_score=0.85,
-            feedback_count=0,
-            share_count=1,
-            is_read=True,
-        ),
+        {
+            "title": "为什么二叉树的遍历有三种方式？",
+            "content": "二叉树的三种遍历方式（前序、中序、后序）源于访问节点的不同时机。前序先访问根，适合复制树结构；中序产生有序序列，适合BST；后序最后访问根，适合释放资源。",
+            "related_subject": "数据结构",
+            "depth_level": DepthLevel.DEEP,
+            "generation_method": "knowledge_gap_analysis",
+            "quality_score": 0.92,
+            "feedback_count": 0,
+            "share_count": 0,
+            "is_read": False,
+        },
+        {
+            "title": "进程和线程的本质区别是什么？",
+            "content": "进程=资源容器+执行轨迹；线程=共享资源+独立执行轨迹。进程是OS资源分配单位，线程是CPU调度单位。同一进程内线程共享内存空间，这是并发编程中数据竞争问题的根源。",
+            "related_subject": "操作系统",
+            "depth_level": DepthLevel.DEEP,
+            "generation_method": "concept_clarification",
+            "quality_score": 0.88,
+            "feedback_count": 1,
+            "share_count": 2,
+            "is_read": True,
+        },
+        {
+            "title": "TCP为什么需要三次握手？",
+            "content": "三次握手用于同步序列号并确认双方收发能力。一次握手无法确认服务器发送能力；两次握手会导致历史连接复用问题。三次是双方确认各自收发正常的最少次数。",
+            "related_subject": "计算机网络",
+            "depth_level": DepthLevel.MEDIUM,
+            "generation_method": "why_question",
+            "quality_score": 0.85,
+            "feedback_count": 0,
+            "share_count": 1,
+            "is_read": True,
+        },
     ]:
         exists = await session.execute(
             select(CuriosityCapsule).where(
@@ -2048,39 +2045,39 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         session,
         owner_id=user.id,
         title="操作系统 - 线程同步错题回顾",
-        defaults=dict(
-            type=TaskType.LEARNING,
-            tags=["OS", "线程同步", "错题"],
-            estimated_minutes=45,
-            difficulty=3,
-            energy_cost=3,
-            status=TaskStatus.COMPLETED,
-            priority=2,
-            due_date=date.today() - timedelta(days=1),
-            completed_at=now - timedelta(days=1, hours=2),
-            actual_minutes=55,
-            user_note="把锁、信号量、条件变量的易混点重新过了一遍。",
-            plan_id=growth_plan.id,
-        ),
+        defaults={
+            "type": TaskType.LEARNING,
+            "tags": ["OS", "线程同步", "错题"],
+            "estimated_minutes": 45,
+            "difficulty": 3,
+            "energy_cost": 3,
+            "status": TaskStatus.COMPLETED,
+            "priority": 2,
+            "due_date": date.today() - timedelta(days=1),
+            "completed_at": now - timedelta(days=1, hours=2),
+            "actual_minutes": 55,
+            "user_note": "把锁、信号量、条件变量的易混点重新过了一遍。",
+            "plan_id": growth_plan.id,
+        },
     )
     user_english_task = await _ensure_task(
         session,
         owner_id=user.id,
         title="英语口语 - 晨读复述 15 分钟",
-        defaults=dict(
-            type=TaskType.LEARNING,
-            tags=["English", "Speaking", "Checkin"],
-            estimated_minutes=20,
-            difficulty=2,
-            energy_cost=2,
-            status=TaskStatus.COMPLETED,
-            priority=2,
-            due_date=date.today(),
-            completed_at=now - timedelta(hours=1, minutes=5),
-            actual_minutes=30,
-            user_note="把昨天群里提到的微反馈模板顺口复述了一遍。",
-            plan_id=growth_plan.id,
-        ),
+        defaults={
+            "type": TaskType.LEARNING,
+            "tags": ["English", "Speaking", "Checkin"],
+            "estimated_minutes": 20,
+            "difficulty": 2,
+            "energy_cost": 2,
+            "status": TaskStatus.COMPLETED,
+            "priority": 2,
+            "due_date": date.today(),
+            "completed_at": now - timedelta(hours=1, minutes=5),
+            "actual_minutes": 30,
+            "user_note": "把昨天群里提到的微反馈模板顺口复述了一遍。",
+            "plan_id": growth_plan.id,
+        },
     )
 
     default_visual_unlock_at = now - timedelta(days=30)
@@ -2197,7 +2194,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         error_tags=[],
         context_tags={"scene": "morning_reading", "mood": "steady"},
     )
-    fragment_5 = await _ensure_cognitive_fragment(
+    await _ensure_cognitive_fragment(
         session,
         user_id=user.id,
         task_id=user_primary_task.id,
@@ -2243,85 +2240,85 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     # Community: seed a richer guest social graph, shared resources, task boards,
     # favorites, and accountability history so the simulator has realistic data.
     friend_specs = [
-        dict(
-            username="spark_friend_1",
-            email="friend1@sparkle.demo",
-            nickname="阿泽",
-            flame_level=18,
-            flame_brightness=0.83,
-            depth_preference=0.72,
-            curiosity_preference=0.58,
-            status=UserStatus.ONLINE,
-            match_reason={"courses": ["数据结构", "操作系统"], "scene": "晚间复盘搭子"},
-        ),
-        dict(
-            username="spark_friend_2",
-            email="friend2@sparkle.demo",
-            nickname="小林",
-            flame_level=14,
-            flame_brightness=0.74,
-            depth_preference=0.61,
-            curiosity_preference=0.67,
-            status=UserStatus.ONLINE,
-            match_reason={"courses": ["离散数学", "算法"], "scene": "题目互改"},
-        ),
-        dict(
-            username="spark_friend_3",
-            email="friend3@sparkle.demo",
-            nickname="Nora",
-            flame_level=20,
-            flame_brightness=0.86,
-            depth_preference=0.69,
-            curiosity_preference=0.79,
-            status=UserStatus.ONLINE,
-            match_reason={"courses": ["英语", "微反馈"], "scene": "责任伙伴候选"},
-        ),
-        dict(
-            username="spark_friend_4",
-            email="friend4@sparkle.demo",
-            nickname="Mia",
-            flame_level=11,
-            flame_brightness=0.66,
-            depth_preference=0.52,
-            curiosity_preference=0.73,
-            status=UserStatus.OFFLINE,
-            match_reason={"courses": ["产品设计", "表达"], "scene": "分享任务卡"},
-        ),
-        dict(
-            username="spark_friend_5",
-            email="friend5@sparkle.demo",
-            nickname="Ethan",
-            flame_level=13,
-            flame_brightness=0.69,
-            depth_preference=0.58,
-            curiosity_preference=0.57,
-            status=UserStatus.ONLINE,
-            match_reason={"courses": ["计算机网络", "系统"], "scene": "资料收藏党"},
-        ),
-        dict(
-            username="spark_friend_6",
-            email="friend6@sparkle.demo",
-            nickname="苏苏",
-            flame_level=9,
-            flame_brightness=0.61,
-            depth_preference=0.49,
-            curiosity_preference=0.81,
-            status=UserStatus.OFFLINE,
-            match_reason={"courses": ["英语", "共学打卡"], "scene": "晨读搭子"},
-        ),
+        {
+            "username": "spark_friend_1",
+            "email": "friend1@sparkle.demo",
+            "nickname": "阿泽",
+            "flame_level": 18,
+            "flame_brightness": 0.83,
+            "depth_preference": 0.72,
+            "curiosity_preference": 0.58,
+            "status": UserStatus.ONLINE,
+            "match_reason": {"courses": ["数据结构", "操作系统"], "scene": "晚间复盘搭子"},
+        },
+        {
+            "username": "spark_friend_2",
+            "email": "friend2@sparkle.demo",
+            "nickname": "小林",
+            "flame_level": 14,
+            "flame_brightness": 0.74,
+            "depth_preference": 0.61,
+            "curiosity_preference": 0.67,
+            "status": UserStatus.ONLINE,
+            "match_reason": {"courses": ["离散数学", "算法"], "scene": "题目互改"},
+        },
+        {
+            "username": "spark_friend_3",
+            "email": "friend3@sparkle.demo",
+            "nickname": "Nora",
+            "flame_level": 20,
+            "flame_brightness": 0.86,
+            "depth_preference": 0.69,
+            "curiosity_preference": 0.79,
+            "status": UserStatus.ONLINE,
+            "match_reason": {"courses": ["英语", "微反馈"], "scene": "责任伙伴候选"},
+        },
+        {
+            "username": "spark_friend_4",
+            "email": "friend4@sparkle.demo",
+            "nickname": "Mia",
+            "flame_level": 11,
+            "flame_brightness": 0.66,
+            "depth_preference": 0.52,
+            "curiosity_preference": 0.73,
+            "status": UserStatus.OFFLINE,
+            "match_reason": {"courses": ["产品设计", "表达"], "scene": "分享任务卡"},
+        },
+        {
+            "username": "spark_friend_5",
+            "email": "friend5@sparkle.demo",
+            "nickname": "Ethan",
+            "flame_level": 13,
+            "flame_brightness": 0.69,
+            "depth_preference": 0.58,
+            "curiosity_preference": 0.57,
+            "status": UserStatus.ONLINE,
+            "match_reason": {"courses": ["计算机网络", "系统"], "scene": "资料收藏党"},
+        },
+        {
+            "username": "spark_friend_6",
+            "email": "friend6@sparkle.demo",
+            "nickname": "苏苏",
+            "flame_level": 9,
+            "flame_brightness": 0.61,
+            "depth_preference": 0.49,
+            "curiosity_preference": 0.81,
+            "status": UserStatus.OFFLINE,
+            "match_reason": {"courses": ["英语", "共学打卡"], "scene": "晨读搭子"},
+        },
     ]
     pending_specs = [
-        dict(
-            username="spark_friend_pending_1",
-            email="pending1@sparkle.demo",
-            nickname="Vega",
-            flame_level=10,
-            flame_brightness=0.63,
-            depth_preference=0.57,
-            curiosity_preference=0.62,
-            status=UserStatus.ONLINE,
-            note="最近在搜集能一起验收社群系统的人",
-        ),
+        {
+            "username": "spark_friend_pending_1",
+            "email": "pending1@sparkle.demo",
+            "nickname": "Vega",
+            "flame_level": 10,
+            "flame_brightness": 0.63,
+            "depth_preference": 0.57,
+            "curiosity_preference": 0.62,
+            "status": UserStatus.ONLINE,
+            "note": "最近在搜集能一起验收社群系统的人",
+        },
     ]
 
     friends: list[User] = []
@@ -2379,79 +2376,79 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     friend_learning_profiles = [
         (
             aze,
-            dict(
-                streak=(8, 21, 38),
-                achievements=[
+            {
+                "streak": (8, 21, 38),
+                "achievements": [
                     ("streak_7", 1.0, 7, 7, now - timedelta(days=14)),
                     ("sprint_first", 1.0, 1, 1, now - timedelta(days=10)),
                 ],
-                nodes=[
+                "nodes": [
                     ("程序设计基础", 82, 9),
                     ("数据结构", 88, 11),
                     ("算法设计与分析", 76, 7),
                     ("高等数学", 68, 6),
                 ],
-            ),
+            },
         ),
         (
             xiaolin,
-            dict(
-                streak=(6, 16, 29),
-                achievements=[
+            {
+                "streak": (6, 16, 29),
+                "achievements": [
                     ("streak_7", 1.0, 7, 7, now - timedelta(days=9)),
                     ("night_owl", 1.0, 10, 10, now - timedelta(days=7)),
                 ],
-                nodes=[
+                "nodes": [
                     ("离散数学", 73, 8),
                     ("算法设计与分析", 79, 9),
                     ("数据结构", 71, 7),
                     ("概率论与数理统计", 58, 5),
                 ],
-            ),
+            },
         ),
         (
             nora,
-            dict(
-                streak=(11, 25, 52),
-                achievements=[
+            {
+                "streak": (11, 25, 52),
+                "achievements": [
                     ("streak_7", 1.0, 7, 7, now - timedelta(days=18)),
                     ("sprint_first", 1.0, 1, 1, now - timedelta(days=16)),
                 ],
-                nodes=[
+                "nodes": [
                     ("写作技巧", 74, 7),
                     ("心理学导论", 66, 6),
                     ("学习科学", 72, 8),
                     ("时间管理", 70, 7),
                 ],
-            ),
+            },
         ),
         (
             ethan,
-            dict(
-                streak=(5, 13, 24),
-                achievements=[
+            {
+                "streak": (5, 13, 24),
+                "achievements": [
                     ("night_owl", 1.0, 10, 10, now - timedelta(days=8)),
                 ],
-                nodes=[
+                "nodes": [
                     ("计算机网络", 69, 6),
                     ("数据库系统", 64, 6),
                     ("Web后端开发", 55, 4),
                 ],
-            ),
+            },
         ),
         (
             susu,
-            dict(
-                streak=(9, 15, 33),
-                achievements=[
+            {
+                "streak": (9, 15, 33),
+                "achievements": [
                     ("streak_7", 1.0, 7, 7, now - timedelta(days=12)),
                 ],
-                nodes=[
+                "nodes": [
                     ("学习科学", 61, 5),
                     ("时间管理", 63, 6),
                     ("写作技巧", 54, 4),
                 ],
-            ),
+            },
         ),
     ]
     for friend, profile in friend_learning_profiles:
@@ -2498,63 +2495,63 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         session,
         owner_id=aze.id,
         name="阿泽的树与图复盘计划",
-        defaults=dict(
-            type=PlanType.SPRINT,
-            description="用 5 天完成树、图和堆的高频题回顾。",
-            target_date=date.today() + timedelta(days=5),
-            daily_available_minutes=80,
-            total_estimated_hours=10,
-            mastery_level=0.55,
-            progress=0.64,
-            is_active=True,
-        ),
+        defaults={
+            "type": PlanType.SPRINT,
+            "description": "用 5 天完成树、图和堆的高频题回顾。",
+            "target_date": date.today() + timedelta(days=5),
+            "daily_available_minutes": 80,
+            "total_estimated_hours": 10,
+            "mastery_level": 0.55,
+            "progress": 0.64,
+            "is_active": True,
+        },
     )
     nora_plan = await _ensure_plan(
         session,
         owner_id=nora.id,
         name="Nora 的口语微反馈计划",
-        defaults=dict(
-            type=PlanType.GROWTH,
-            description="晨读、复述、微反馈三段式练口语。",
-            target_date=date.today() + timedelta(days=21),
-            daily_available_minutes=45,
-            total_estimated_hours=18,
-            mastery_level=0.48,
-            progress=0.58,
-            is_active=True,
-        ),
+        defaults={
+            "type": PlanType.GROWTH,
+            "description": "晨读、复述、微反馈三段式练口语。",
+            "target_date": date.today() + timedelta(days=21),
+            "daily_available_minutes": 45,
+            "total_estimated_hours": 18,
+            "mastery_level": 0.48,
+            "progress": 0.58,
+            "is_active": True,
+        },
     )
     mia_task = await _ensure_task(
         session,
         owner_id=mia.id,
         title="把任务卡改成更易读的三段结构",
-        defaults=dict(
-            type=TaskType.LEARNING,
-            tags=["Design", "Task Card"],
-            estimated_minutes=35,
-            difficulty=2,
-            energy_cost=2,
-            status=TaskStatus.COMPLETED,
-            priority=2,
-            due_date=date.today() - timedelta(days=1),
-            completed_at=now - timedelta(hours=18),
-        ),
+        defaults={
+            "type": TaskType.LEARNING,
+            "tags": ["Design", "Task Card"],
+            "estimated_minutes": 35,
+            "difficulty": 2,
+            "energy_cost": 2,
+            "status": TaskStatus.COMPLETED,
+            "priority": 2,
+            "due_date": date.today() - timedelta(days=1),
+            "completed_at": now - timedelta(hours=18),
+        },
     )
     susu_task = await _ensure_task(
         session,
         owner_id=susu.id,
         title="英语晨读 shadowing 20 分钟",
-        defaults=dict(
-            type=TaskType.LEARNING,
-            tags=["English", "Speaking"],
-            estimated_minutes=20,
-            difficulty=2,
-            energy_cost=2,
-            status=TaskStatus.IN_PROGRESS,
-            priority=2,
-            due_date=date.today(),
-            started_at=now - timedelta(minutes=40),
-        ),
+        defaults={
+            "type": TaskType.LEARNING,
+            "tags": ["English", "Speaking"],
+            "estimated_minutes": 20,
+            "difficulty": 2,
+            "energy_cost": 2,
+            "status": TaskStatus.IN_PROGRESS,
+            "priority": 2,
+            "due_date": date.today(),
+            "started_at": now - timedelta(minutes=40),
+        },
     )
 
     feed_posts = [
@@ -2588,116 +2585,116 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     algorithm_group = await _ensure_group(
         session,
         name="算法冲刺小队",
-        defaults=dict(
-            description="一起冲刺算法与数据结构的学习群",
-            avatar_url="https://picsum.photos/seed/algosprint/200/200",
-            type=GroupType.SPRINT,
-            focus_tags=["数据结构", "算法", "期中复习"],
-            deadline=now + timedelta(days=10),
-            sprint_goal="完成算法专题复习并拿下期中考试",
-            max_members=30,
-            is_public=True,
-            join_requires_approval=False,
-            total_flame_power=980,
-            today_checkin_count=8,
-            total_tasks_completed=24,
-            announcement="今晚 20:00 语音复盘 + 微反馈验收。",
-        ),
+        defaults={
+            "description": "一起冲刺算法与数据结构的学习群",
+            "avatar_url": "https://picsum.photos/seed/algosprint/200/200",
+            "type": GroupType.SPRINT,
+            "focus_tags": ["数据结构", "算法", "期中复习"],
+            "deadline": now + timedelta(days=10),
+            "sprint_goal": "完成算法专题复习并拿下期中考试",
+            "max_members": 30,
+            "is_public": True,
+            "join_requires_approval": False,
+            "total_flame_power": 980,
+            "today_checkin_count": 8,
+            "total_tasks_completed": 24,
+            "announcement": "今晚 20:00 语音复盘 + 微反馈验收。",
+        },
     )
     study_group = await _ensure_group(
         session,
         name="期末自习室",
-        defaults=dict(
-            description="长期自习陪伴群，适合静默学习、资料收藏和复盘。",
-            avatar_url="https://picsum.photos/seed/finalstudy/200/200",
-            type=GroupType.SQUAD,
-            focus_tags=["自习", "复盘", "资料整理"],
-            deadline=None,
-            sprint_goal=None,
-            max_members=80,
-            is_public=True,
-            join_requires_approval=False,
-            total_flame_power=1640,
-            today_checkin_count=14,
-            total_tasks_completed=66,
-            announcement="收藏值得二次复习的消息，周日晚统一回顾。",
-        ),
+        defaults={
+            "description": "长期自习陪伴群，适合静默学习、资料收藏和复盘。",
+            "avatar_url": "https://picsum.photos/seed/finalstudy/200/200",
+            "type": GroupType.SQUAD,
+            "focus_tags": ["自习", "复盘", "资料整理"],
+            "deadline": None,
+            "sprint_goal": None,
+            "max_members": 80,
+            "is_public": True,
+            "join_requires_approval": False,
+            "total_flame_power": 1640,
+            "today_checkin_count": 14,
+            "total_tasks_completed": 66,
+            "announcement": "收藏值得二次复习的消息，周日晚统一回顾。",
+        },
     )
     english_group = await _ensure_group(
         session,
         name="英语口语晨读营",
-        defaults=dict(
-            description="口语晨读、shadowing、微反馈快回路。",
-            avatar_url="https://picsum.photos/seed/englishclub/200/200",
-            type=GroupType.SPRINT,
-            focus_tags=["英语", "口语", "晨读"],
-            deadline=now + timedelta(days=14),
-            sprint_goal="连续 14 天完成晨读与跟读打卡",
-            max_members=40,
-            is_public=True,
-            join_requires_approval=False,
-            total_flame_power=760,
-            today_checkin_count=11,
-            total_tasks_completed=31,
-            announcement="今天重点测试任务卡分享和打卡互动。",
-        ),
+        defaults={
+            "description": "口语晨读、shadowing、微反馈快回路。",
+            "avatar_url": "https://picsum.photos/seed/englishclub/200/200",
+            "type": GroupType.SPRINT,
+            "focus_tags": ["英语", "口语", "晨读"],
+            "deadline": now + timedelta(days=14),
+            "sprint_goal": "连续 14 天完成晨读与跟读打卡",
+            "max_members": 40,
+            "is_public": True,
+            "join_requires_approval": False,
+            "total_flame_power": 760,
+            "today_checkin_count": 11,
+            "total_tasks_completed": 31,
+            "announcement": "今天重点测试任务卡分享和打卡互动。",
+        },
     )
     design_group = await _ensure_group(
         session,
         name="产品设计共学社",
-        defaults=dict(
-            description="讨论计划卡、任务卡、社群体验和表达设计。",
-            avatar_url="https://picsum.photos/seed/designlab/200/200",
-            type=GroupType.SQUAD,
-            focus_tags=["产品", "设计", "验收"],
-            deadline=None,
-            sprint_goal=None,
-            max_members=60,
-            is_public=True,
-            join_requires_approval=False,
-            total_flame_power=540,
-            today_checkin_count=5,
-            total_tasks_completed=18,
-            announcement="优先看移动端展示是否完整，再看数据结构是否一致。",
-        ),
+        defaults={
+            "description": "讨论计划卡、任务卡、社群体验和表达设计。",
+            "avatar_url": "https://picsum.photos/seed/designlab/200/200",
+            "type": GroupType.SQUAD,
+            "focus_tags": ["产品", "设计", "验收"],
+            "deadline": None,
+            "sprint_goal": None,
+            "max_members": 60,
+            "is_public": True,
+            "join_requires_approval": False,
+            "total_flame_power": 540,
+            "today_checkin_count": 5,
+            "total_tasks_completed": 18,
+            "announcement": "优先看移动端展示是否完整，再看数据结构是否一致。",
+        },
     )
     await _ensure_group(
         session,
         name="考研政治夜航团",
-        defaults=dict(
-            description="夜间陪伴复习群，适合政治和公共课冲刺。",
-            avatar_url="https://picsum.photos/seed/politicsnight/200/200",
-            type=GroupType.SPRINT,
-            focus_tags=["考研", "政治"],
-            deadline=now + timedelta(days=30),
-            sprint_goal="完成冲刺背诵",
-            max_members=120,
-            is_public=True,
-            join_requires_approval=False,
-            total_flame_power=1320,
-            today_checkin_count=27,
-            total_tasks_completed=84,
-            announcement="新成员可以直接浏览群任务。",
-        ),
+        defaults={
+            "description": "夜间陪伴复习群，适合政治和公共课冲刺。",
+            "avatar_url": "https://picsum.photos/seed/politicsnight/200/200",
+            "type": GroupType.SPRINT,
+            "focus_tags": ["考研", "政治"],
+            "deadline": now + timedelta(days=30),
+            "sprint_goal": "完成冲刺背诵",
+            "max_members": 120,
+            "is_public": True,
+            "join_requires_approval": False,
+            "total_flame_power": 1320,
+            "today_checkin_count": 27,
+            "total_tasks_completed": 84,
+            "announcement": "新成员可以直接浏览群任务。",
+        },
     )
     await _ensure_group(
         session,
         name="AIGC 创作实验室",
-        defaults=dict(
-            description="分享 Prompt、计划卡和创作复盘。",
-            avatar_url="https://picsum.photos/seed/aigclab/200/200",
-            type=GroupType.SQUAD,
-            focus_tags=["AI", "创作", "Prompt"],
-            deadline=None,
-            sprint_goal=None,
-            max_members=90,
-            is_public=True,
-            join_requires_approval=True,
-            total_flame_power=1880,
-            today_checkin_count=19,
-            total_tasks_completed=59,
-            announcement="入群前先完成作品集自评表。",
-        ),
+        defaults={
+            "description": "分享 Prompt、计划卡和创作复盘。",
+            "avatar_url": "https://picsum.photos/seed/aigclab/200/200",
+            "type": GroupType.SQUAD,
+            "focus_tags": ["AI", "创作", "Prompt"],
+            "deadline": None,
+            "sprint_goal": None,
+            "max_members": 90,
+            "is_public": True,
+            "join_requires_approval": True,
+            "total_flame_power": 1880,
+            "today_checkin_count": 19,
+            "total_tasks_completed": 59,
+            "announcement": "入群前先完成作品集自评表。",
+        },
     )
 
     for member, role, flame, tasks_completed, streak, joined_delta in [
@@ -2806,7 +2803,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         content="今晚 20:00 一起复盘二叉树遍历？我想顺手把微反馈流程也走一遍。",
         created_at=now - timedelta(hours=5),
     )
-    algo_msg_2 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=algorithm_group.id,
         sender_id=user.id,
@@ -2816,7 +2813,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         reply_to_id=algo_msg_1.id,
         thread_root_id=algo_msg_1.id,
     )
-    algo_msg_3 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=algorithm_group.id,
         sender_id=mia.id,
@@ -2836,7 +2833,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "comment": "这张任务卡适合测试分享和采纳。",
         },
     )
-    algo_msg_4 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=algorithm_group.id,
         sender_id=aze.id,
@@ -2858,7 +2855,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "comment": "计划卡里有每日节奏，可以直接验收。",
         },
     )
-    algo_msg_5 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=algorithm_group.id,
         sender_id=nora.id,
@@ -2887,7 +2884,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         thread_root_id=algo_msg_6.id,
     )
 
-    study_msg_1 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=study_group.id,
         sender_id=ethan.id,
@@ -2895,7 +2892,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         content="自习室今天先别刷太快，把值得回看的消息收藏起来，验收会更顺。",
         created_at=now - timedelta(days=1, hours=2),
     )
-    study_msg_2 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=study_group.id,
         sender_id=aze.id,
@@ -2911,7 +2908,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "comment": "收藏后再打开看看预览是否完整。",
         },
     )
-    study_msg_3 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=study_group.id,
         sender_id=mia.id,
@@ -2927,7 +2924,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         },
     )
 
-    english_msg_1 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=english_group.id,
         sender_id=nora.id,
@@ -2935,7 +2932,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         content="晨读营今天重点看微反馈是不是足够轻，别把打卡流程做重了。",
         created_at=now - timedelta(hours=9),
     )
-    english_msg_2 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=english_group.id,
         sender_id=susu.id,
@@ -2967,7 +2964,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         },
     )
 
-    design_msg_1 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=design_group.id,
         sender_id=mia.id,
@@ -2975,7 +2972,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         content="我把计划卡和任务卡的文案层级重新排了下，移动端看起来会更稳。",
         created_at=now - timedelta(days=2, hours=4),
     )
-    design_msg_2 = await _ensure_group_message(
+    await _ensure_group_message(
         session,
         group_id=design_group.id,
         sender_id=ethan.id,
@@ -3018,45 +3015,45 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         group_id=algorithm_group.id,
         created_by=aze.id,
         title="把二叉树前中后序都手写一遍",
-        defaults=dict(
-            description="用于检查群任务列表、认领按钮和完成状态展示。",
-            tags=["二叉树", "高频题"],
-            estimated_minutes=40,
-            difficulty=3,
-            total_claims=3,
-            total_completions=1,
-            due_date=now + timedelta(days=1),
-        ),
+        defaults={
+            "description": "用于检查群任务列表、认领按钮和完成状态展示。",
+            "tags": ["二叉树", "高频题"],
+            "estimated_minutes": 40,
+            "difficulty": 3,
+            "total_claims": 3,
+            "total_completions": 1,
+            "due_date": now + timedelta(days=1),
+        },
     )
     algo_task_2 = await _ensure_group_task(
         session,
         group_id=algorithm_group.id,
         created_by=xiaolin.id,
         title="把最近 5 条错题做成分享任务卡",
-        defaults=dict(
-            description="验收任务卡分享后，顺手看群任务池刷新是否正常。",
-            tags=["错题整理", "分享"],
-            estimated_minutes=25,
-            difficulty=2,
-            total_claims=2,
-            total_completions=0,
-            due_date=now + timedelta(days=2),
-        ),
+        defaults={
+            "description": "验收任务卡分享后，顺手看群任务池刷新是否正常。",
+            "tags": ["错题整理", "分享"],
+            "estimated_minutes": 25,
+            "difficulty": 2,
+            "total_claims": 2,
+            "total_completions": 0,
+            "due_date": now + timedelta(days=2),
+        },
     )
     english_task_1 = await _ensure_group_task(
         session,
         group_id=english_group.id,
         created_by=susu.id,
         title="shadowing 15 分钟并发一句微反馈",
-        defaults=dict(
-            description="用来验证打卡和任务卡之间的节奏衔接。",
-            tags=["晨读", "微反馈"],
-            estimated_minutes=15,
-            difficulty=2,
-            total_claims=4,
-            total_completions=2,
-            due_date=now + timedelta(days=1),
-        ),
+        defaults={
+            "description": "用来验证打卡和任务卡之间的节奏衔接。",
+            "tags": ["晨读", "微反馈"],
+            "estimated_minutes": 15,
+            "difficulty": 2,
+            "total_claims": 4,
+            "total_completions": 2,
+            "due_date": now + timedelta(days=1),
+        },
     )
     await _ensure_group_task_claim(
         session,
@@ -3303,7 +3300,7 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
             encouragements=encouragements,
         )
 
-    reminder_notification = await _ensure_notification(
+    await _ensure_notification(
         session,
         user_id=user.id,
         title="责任伙伴提醒",
@@ -3516,15 +3513,15 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         select(func.count(CalendarEvent.id)).where(CalendarEvent.user_id == user.id)
     )
     if not existing_calendar_count:
-        today = now.date()
+        now.date()
         cal_events = [
             CalendarEvent(
                 id=uuid.uuid4(),
                 user_id=user.id,
                 title="数据结构复习 — 二叉树专题",
                 description="复习二叉树遍历（前序/中序/后序），完成 3 道课后习题",
-                start_time=datetime(now.year, now.month, now.day, 9, 0, tzinfo=timezone.utc) + timedelta(days=1),
-                end_time=datetime(now.year, now.month, now.day, 11, 0, tzinfo=timezone.utc) + timedelta(days=1),
+                start_time=datetime(now.year, now.month, now.day, 9, 0, tzinfo=UTC) + timedelta(days=1),
+                end_time=datetime(now.year, now.month, now.day, 11, 0, tzinfo=UTC) + timedelta(days=1),
                 is_all_day=False,
                 color="#4A90D9",
                 reminder_minutes=[15, 60],
@@ -3535,8 +3532,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="算法刷题打卡",
                 description="LeetCode 每日一题 + 算法小组讨论",
-                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=timezone.utc) + timedelta(days=1),
-                end_time=datetime(now.year, now.month, now.day, 16, 0, tzinfo=timezone.utc) + timedelta(days=1),
+                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=UTC) + timedelta(days=1),
+                end_time=datetime(now.year, now.month, now.day, 16, 0, tzinfo=UTC) + timedelta(days=1),
                 is_all_day=False,
                 color="#7B68EE",
                 reminder_minutes=[15],
@@ -3547,8 +3544,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="英语听力训练",
                 description="精听 BBC 6-minute English 一篇 + 跟读练习",
-                start_time=datetime(now.year, now.month, now.day, 20, 0, tzinfo=timezone.utc) + timedelta(days=2),
-                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=timezone.utc) + timedelta(days=2),
+                start_time=datetime(now.year, now.month, now.day, 20, 0, tzinfo=UTC) + timedelta(days=2),
+                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=UTC) + timedelta(days=2),
                 is_all_day=False,
                 color="#50C878",
                 reminder_minutes=[15, 30],
@@ -3559,8 +3556,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="操作系统期中复习",
                 description="进程管理 + 内存管理章节回顾，做思维导图",
-                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=timezone.utc) + timedelta(days=3),
-                end_time=datetime(now.year, now.month, now.day, 12, 30, tzinfo=timezone.utc) + timedelta(days=3),
+                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=UTC) + timedelta(days=3),
+                end_time=datetime(now.year, now.month, now.day, 12, 30, tzinfo=UTC) + timedelta(days=3),
                 is_all_day=False,
                 color="#FF6B6B",
                 reminder_minutes=[15, 60, 1440],
@@ -3572,8 +3569,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="算法小组会议",
                 description="讨论本周 DP 专题，阿泽主讲",
-                start_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=timezone.utc) + timedelta(days=4),
-                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=timezone.utc) + timedelta(days=4),
+                start_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=UTC) + timedelta(days=4),
+                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=UTC) + timedelta(days=4),
                 is_all_day=False,
                 location="图书馆 3F 研讨室",
                 color="#FFD700",
@@ -3585,8 +3582,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="数学建模练习",
                 description="完成建模作业第一部分，线性规划建模",
-                start_time=datetime(now.year, now.month, now.day, 15, 0, tzinfo=timezone.utc) + timedelta(days=5),
-                end_time=datetime(now.year, now.month, now.day, 17, 0, tzinfo=timezone.utc) + timedelta(days=5),
+                start_time=datetime(now.year, now.month, now.day, 15, 0, tzinfo=UTC) + timedelta(days=5),
+                end_time=datetime(now.year, now.month, now.day, 17, 0, tzinfo=UTC) + timedelta(days=5),
                 is_all_day=False,
                 color="#4A90D9",
                 reminder_minutes=[15],
@@ -3599,8 +3596,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="数据结构实验课",
                 description="AVL 树插入与旋转操作实验",
-                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=timezone.utc) - timedelta(days=1),
-                end_time=datetime(now.year, now.month, now.day, 12, 0, tzinfo=timezone.utc) - timedelta(days=1),
+                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=UTC) - timedelta(days=1),
+                end_time=datetime(now.year, now.month, now.day, 12, 0, tzinfo=UTC) - timedelta(days=1),
                 is_all_day=False,
                 color="#4A90D9",
                 reminder_minutes=[15, 60],
@@ -3611,8 +3608,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="离散数学复习",
                 description="图论章节复习，重点看最短路径算法",
-                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=timezone.utc) - timedelta(days=2),
-                end_time=datetime(now.year, now.month, now.day, 16, 30, tzinfo=timezone.utc) - timedelta(days=2),
+                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=UTC) - timedelta(days=2),
+                end_time=datetime(now.year, now.month, now.day, 16, 30, tzinfo=UTC) - timedelta(days=2),
                 is_all_day=False,
                 color="#7B68EE",
                 reminder_minutes=[15],
@@ -3623,8 +3620,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="英语角活动",
                 description="本周话题：AI 在教育中的应用",
-                start_time=datetime(now.year, now.month, now.day, 18, 0, tzinfo=timezone.utc) - timedelta(days=3),
-                end_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=timezone.utc) - timedelta(days=3),
+                start_time=datetime(now.year, now.month, now.day, 18, 0, tzinfo=UTC) - timedelta(days=3),
+                end_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=UTC) - timedelta(days=3),
                 is_all_day=False,
                 location="外语学院 B201",
                 color="#50C878",
@@ -3636,8 +3633,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="期中考试倒计时 — 全天复习",
                 description="数据结构 + 操作系统综合复习日",
-                start_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=timezone.utc) - timedelta(days=5),
-                end_time=datetime(now.year, now.month, now.day, 22, 0, tzinfo=timezone.utc) - timedelta(days=5),
+                start_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=UTC) - timedelta(days=5),
+                end_time=datetime(now.year, now.month, now.day, 22, 0, tzinfo=UTC) - timedelta(days=5),
                 is_all_day=False,
                 color="#FF6B6B",
                 reminder_minutes=[0],
@@ -3650,8 +3647,8 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 user_id=user.id,
                 title="每日晨读",
                 description="30 分钟英语晨读 + 单词复习",
-                start_time=datetime(now.year, now.month, now.day, 7, 30, tzinfo=timezone.utc),
-                end_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=timezone.utc),
+                start_time=datetime(now.year, now.month, now.day, 7, 30, tzinfo=UTC),
+                end_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=UTC),
                 is_all_day=False,
                 color="#50C878",
                 recurrence_rule="FREQ=DAILY;COUNT=14",

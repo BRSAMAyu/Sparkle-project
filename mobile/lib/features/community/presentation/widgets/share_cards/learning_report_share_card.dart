@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class LearningReportShareCardFactory {
   static Widget fromPayload(
@@ -80,11 +81,11 @@ class LearningReportShareCardFactory {
               runSpacing: DS.spacing6,
               children: [
                 if (metadata['active_plans'] != null)
-                  _chip('活跃计划', '${metadata['active_plans']}'),
+                  _chip(S.communityShareActivePlans, '${metadata['active_plans']}'),
                 if (metadata['unlocked_achievements'] != null)
-                  _chip('成就', '${metadata['unlocked_achievements']}'),
+                  _chip(S.communityShareAchievements, '${metadata['unlocked_achievements']}'),
                 if (metadata['flame_brightness'] != null)
-                  _chip('亮度', metadata['flame_brightness'].toString()),
+                  _chip(S.communityShareBrightness, metadata['flame_brightness'].toString()),
               ],
             ),
           ],

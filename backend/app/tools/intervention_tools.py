@@ -41,7 +41,7 @@ class RecordInterventionFeedbackParams(BaseModel):
     detail: str | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
-    def _normalize(self) -> "RecordInterventionFeedbackParams":
+    def _normalize(self) -> RecordInterventionFeedbackParams:
         normalized_sentiment = str(self.sentiment or self.feedback_kind or "").strip().lower()
         normalized_words = " ".join(str(self.user_words or self.detail or self.summary or "").split())
         if normalized_sentiment not in _ALLOWED_FEEDBACK_SENTIMENTS:

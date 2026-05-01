@@ -4,6 +4,7 @@ Curiosity Capsules API
 增强版API - 支持胶囊生成、反馈、收藏、分享等功能
 """
 from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID
 
@@ -263,7 +264,7 @@ async def submit_feedback(
         )
         return feedback
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{id}/share")
@@ -301,7 +302,7 @@ async def share_capsule(
             raise HTTPException(status_code=400, detail="请选择要分享给好友还是学习小组")
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/generation/jobs", response_model=list[CapsuleGenerationJobSchema])

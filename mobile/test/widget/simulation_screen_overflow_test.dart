@@ -6,6 +6,7 @@ import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/simulation/presentation/screens/simulation_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
   @override
@@ -118,6 +119,8 @@ class _FakeRef implements Ref {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
@@ -201,7 +204,7 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),
@@ -230,7 +233,7 @@ void main() {
         overrides: <Override>[
           simulationProvider.overrideWith((ref) => notifier),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),

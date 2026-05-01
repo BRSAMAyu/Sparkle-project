@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
@@ -8,14 +9,14 @@ from dataclasses import dataclass
 from typing import Any
 
 import grpc
+from google.api import annotations_pb2  # noqa: F401
 from loguru import logger
 
 from app.config import settings
-from app.core.agent_profiles import AgentRole, ModelTier, TaskType as RouterTaskType
+from app.core.agent_profiles import AgentRole, ModelTier
+from app.core.agent_profiles import TaskType as RouterTaskType
 from app.core.cache import cache_service
 from app.core.metrics import AI_PREDICTION_DURATION, AI_PREDICTION_FALLBACK_TOTAL
-from google.api import annotations_pb2  # noqa: F401
-
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.services.candidate_generation_service import candidate_generation_service
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service

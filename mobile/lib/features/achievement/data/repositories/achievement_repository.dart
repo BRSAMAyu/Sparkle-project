@@ -456,10 +456,10 @@ class AchievementRepository {
   Future<List<ShareTemplateInfo>> getShareTemplates() async {
     if (DemoDataService.isDemoMode) {
       return [
-        ShareTemplateInfo(id: 'cosmic', name: '星空'),
-        ShareTemplateInfo(id: 'minimal', name: '简约'),
-        ShareTemplateInfo(id: 'neon', name: '霓虹'),
-        ShareTemplateInfo(id: 'elegant', name: '典雅'),
+        ShareTemplateInfo(id: 'cosmic', name: S.achievementShareTemplateCosmic),
+        ShareTemplateInfo(id: 'minimal', name: S.achievementShareTemplateMinimal),
+        ShareTemplateInfo(id: 'neon', name: S.achievementShareTemplateNeon),
+        ShareTemplateInfo(id: 'elegant', name: S.achievementShareTemplateElegant),
       ];
     }
 
@@ -567,8 +567,8 @@ class AchievementRepository {
           AchievementWithProgress(
             achievement: AchievementModel(
               id: 'streak_7',
-              name: '一周坚持',
-              description: '连续学习7天',
+              name: S.achievementDemoStreak7Name,
+              description: S.achievementDemoStreak7Desc,
               iconUrl: '/icons/streak_7.png',
               type: AchievementType.streak,
               rarity: AchievementRarity.common,
@@ -591,8 +591,8 @@ class AchievementRepository {
           AchievementWithProgress(
             achievement: AchievementModel(
               id: 'streak_30',
-              name: '月度冠军',
-              description: '连续学习30天',
+              name: S.achievementDemoStreak30Name,
+              description: S.achievementDemoStreak30Desc,
               iconUrl: '/icons/streak_30.png',
               type: AchievementType.streak,
               rarity: AchievementRarity.rare,
@@ -614,8 +614,8 @@ class AchievementRepository {
           AchievementWithProgress(
             achievement: AchievementModel(
               id: 'nodes_100',
-              name: '星图探索者',
-              description: '解锁100个知识点',
+              name: S.achievementDemoNodes100Name,
+              description: S.achievementDemoNodes100Desc,
               iconUrl: '/icons/nodes_100.png',
               type: AchievementType.nodeExplore,
               rarity: AchievementRarity.rare,
@@ -652,7 +652,7 @@ class AchievementRepository {
       // === Streak Achievements (左上区域) ===
       AchievementMapNode(
         id: 'streak_3',
-        name: '起步启航',
+        name: S.achievementDemoStreak3Name,
         rarity: AchievementRarity.common,
         category: 'streak',
         position: {'x': 80, 'y': 150},
@@ -661,7 +661,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_7',
-        name: '一周坚持',
+        name: S.achievementDemoStreak7Name,
         rarity: AchievementRarity.common,
         category: 'streak',
         position: {'x': 80, 'y': 280},
@@ -671,7 +671,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_14',
-        name: '双周达人',
+        name: S.achievementDemoStreak14Name,
         rarity: AchievementRarity.rare,
         category: 'streak',
         position: {'x': 80, 'y': 410},
@@ -681,7 +681,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_30',
-        name: '月度冠军',
+        name: S.achievementDemoStreak30Name,
         rarity: AchievementRarity.rare,
         category: 'streak',
         position: {'x': 80, 'y': 540},
@@ -691,7 +691,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'streak_100',
-        name: '百日传奇',
+        name: S.achievementDemoStreak100Name,
         rarity: AchievementRarity.epic,
         category: 'streak',
         position: {'x': 80, 'y': 670},
@@ -703,7 +703,7 @@ class AchievementRepository {
       // === Mastery Achievements (中间区域) ===
       AchievementMapNode(
         id: 'mastery_first',
-        name: '初窥门径',
+        name: S.achievementDemoMasteryFirstName,
         rarity: AchievementRarity.common,
         category: 'mastery',
         position: {'x': 280, 'y': 150},
@@ -712,7 +712,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'mastery_10',
-        name: '小有所成',
+        name: S.achievementDemoMastery10Name,
         rarity: AchievementRarity.rare,
         category: 'mastery',
         position: {'x': 280, 'y': 280},
@@ -722,7 +722,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'mastery_50',
-        name: '炉火纯青',
+        name: S.achievementDemoMastery50Name,
         rarity: AchievementRarity.epic,
         category: 'mastery',
         position: {'x': 280, 'y': 410},
@@ -732,7 +732,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'mastery_100',
-        name: '登峰造极',
+        name: S.achievementDemoMastery100Name,
         rarity: AchievementRarity.legendary,
         category: 'mastery',
         position: {'x': 280, 'y': 540},
@@ -744,7 +744,7 @@ class AchievementRepository {
       // === Exploration Achievements (右侧区域) ===
       AchievementMapNode(
         id: 'explore_10',
-        name: '初探星海',
+        name: S.achievementDemoExplore10Name,
         rarity: AchievementRarity.common,
         category: 'exploration',
         position: {'x': 480, 'y': 150},
@@ -753,7 +753,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'explore_50',
-        name: '星图漫游',
+        name: S.achievementDemoExplore50Name,
         rarity: AchievementRarity.rare,
         category: 'exploration',
         position: {'x': 480, 'y': 280},
@@ -763,7 +763,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'explore_100',
-        name: '星图探索者',
+        name: S.achievementDemoExplore100Name,
         rarity: AchievementRarity.epic,
         category: 'exploration',
         position: {'x': 480, 'y': 410},
@@ -773,7 +773,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'explore_500',
-        name: '宇宙开拓者',
+        name: S.achievementDemoExplore500Name,
         rarity: AchievementRarity.legendary,
         category: 'exploration',
         position: {'x': 480, 'y': 540},
@@ -785,7 +785,7 @@ class AchievementRepository {
       // === Hidden/Special Achievements (底部隐藏区域) ===
       AchievementMapNode(
         id: 'night_owl',
-        name: '深夜学者',
+        name: S.achievementDemoNightOwlName,
         rarity: AchievementRarity.epic,
         category: 'hidden',
         position: {'x': 180, 'y': 700},
@@ -795,7 +795,7 @@ class AchievementRepository {
       ),
       AchievementMapNode(
         id: 'early_bird',
-        name: '早起鸟儿',
+        name: S.achievementDemoEarlyBirdName,
         rarity: AchievementRarity.rare,
         category: 'hidden',
         position: {'x': 380, 'y': 700},
@@ -829,10 +829,10 @@ class AchievementRepository {
     ];
 
     final categories = <Map<String, dynamic>>[
-      {'id': 'streak', 'name': '连胜', 'count': 5},
-      {'id': 'mastery', 'name': '精通', 'count': 4},
-      {'id': 'exploration', 'name': '探索', 'count': 4},
-      {'id': 'hidden', 'name': '隐藏', 'count': 2},
+      {'id': 'streak', 'name': S.achievementDemoCategoryStreak, 'count': 5},
+      {'id': 'mastery', 'name': S.achievementDemoCategoryMastery, 'count': 4},
+      {'id': 'exploration', 'name': S.achievementDemoCategoryExploration, 'count': 4},
+      {'id': 'hidden', 'name': S.achievementDemoCategoryHidden, 'count': 2},
     ];
 
     return AchievementMapData(
@@ -846,8 +846,8 @@ class AchievementRepository {
         skins: [
           GalaxySkin(
             id: 'default',
-            name: '经典星系',
-            description: '默认的星系主题',
+            name: S.achievementDemoSkinDefaultName,
+            description: S.achievementDemoSkinDefaultDesc,
             rarity: AchievementRarity.common,
             sortOrder: 0,
             createdAt: DateTime.now(),
@@ -857,8 +857,8 @@ class AchievementRepository {
           ),
           GalaxySkin(
             id: 'nebula_purple',
-            name: '紫色星云',
-            description: '神秘的紫色星云主题',
+            name: S.achievementDemoSkinNebulaName,
+            description: S.achievementDemoSkinNebulaDesc,
             rarity: AchievementRarity.rare,
             sortOrder: 1,
             createdAt: DateTime.now(),
@@ -866,8 +866,8 @@ class AchievementRepository {
           ),
           GalaxySkin(
             id: 'cyberpunk',
-            name: '赛博朋克',
-            description: '霓虹闪烁的赛博朋克风格',
+            name: S.achievementDemoSkinCyberpunkName,
+            description: S.achievementDemoSkinCyberpunkDesc,
             rarity: AchievementRarity.legendary,
             sortOrder: 2,
             createdAt: DateTime.now(),
@@ -880,15 +880,15 @@ class AchievementRepository {
   List<UserTitle> _getDemoTitles() => [
         UserTitle(
           titleId: 'early_explorer',
-          titleName: '星际探索者',
-          titleDisplay: '星际探索者',
+          titleName: S.achievementDemoTitleEarlyExplorer,
+          titleDisplay: S.achievementDemoTitleEarlyExplorer,
           unlockedAt: DateTime.now().subtract(const Duration(days: 7)),
           isEquipped: true,
         ),
         UserTitle(
           titleId: 'week_warrior',
-          titleName: '周常战士',
-          titleDisplay: '周常战士',
+          titleName: S.achievementDemoTitleWeeklyWarrior,
+          titleDisplay: S.achievementDemoTitleWeeklyWarrior,
           unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
       ];
@@ -921,8 +921,8 @@ class AchievementRepository {
         AchievementWithProgress(
           achievement: AchievementModel(
             id: 'streak_30',
-            name: '月度冠军',
-            description: '连续学习30天',
+            name: S.achievementDemoStreak30Name,
+            description: S.achievementProgressDescription30,
             iconUrl: '/icons/streak_30.png',
             type: AchievementType.streak,
             rarity: AchievementRarity.rare,
@@ -944,8 +944,8 @@ class AchievementRepository {
         AchievementWithProgress(
           achievement: AchievementModel(
             id: 'nodes_100',
-            name: '星图探索者',
-            description: '解锁100个知识点',
+            name: S.achievementDemoExplore100Name,
+            description: S.achievementProgressDescription100,
             iconUrl: '/icons/nodes_100.png',
             type: AchievementType.nodeExplore,
             rarity: AchievementRarity.rare,

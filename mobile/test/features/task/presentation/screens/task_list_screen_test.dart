@@ -13,8 +13,11 @@ import 'package:sparkle/features/task/presentation/screens/task_list_screen.dart
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('task list shows guided empty state when there are no tasks', (
     tester,
   ) async {
@@ -25,11 +28,8 @@ void main() {
             (ref) => _RecoveryTaskNotifier(TaskListState()),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const TaskListScreen(),
         ),
       ),
@@ -56,11 +56,8 @@ void main() {
         overrides: [
           taskListProvider.overrideWith((ref) => notifier),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const TaskListScreen(),
         ),
       ),

@@ -5,8 +5,9 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
-import json
+import re
 from types import SimpleNamespace
 from typing import Any
 from uuid import UUID
@@ -273,7 +274,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     )
                     task_create = TaskCreate(
                         title=validated.title,
-                        description=validated.description,
+                        guide_content=validated.description or None,
                         type=coerce_task_type(validated.type, default=ModelTaskType.LEARNING),
                         estimated_minutes=validated.estimated_minutes,
                         difficulty=self._infer_difficulty(validated.type, validated.priority),
@@ -453,7 +454,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     },
                     {
                         "title": f"定位 {topic_name} 易错点",
-                        "description": f"回顾练习结果，记录最容易混淆的概念、公式或步骤，并补齐对应薄弱点。",
+                        "description": "回顾练习结果，记录最容易混淆的概念、公式或步骤，并补齐对应薄弱点。",
                         "type": "error_fix",
                         "estimated_minutes": min(max_session_minutes, 20),
                         "priority": 4,
@@ -530,7 +531,8 @@ class GenerateTasksForPlanTool(BaseTool):
 
         haystack = f"{validated.title} {validated.description}".lower()
         for node_ref in node_refs:
-            if node_ref.name.lower() in haystack:
+            pattern = r'\b' + re.escape(node_ref.name.lower()) + r'\b'
+            if re.search(pattern, haystack):
                 return node_ref.id
 
         if len(node_refs) == 1:

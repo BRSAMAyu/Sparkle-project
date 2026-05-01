@@ -1,9 +1,11 @@
+# DEPRECATED: no active importers — candidate for removal in next cleanup
 """
 Milestone interaction tools for LLM.
 
 Allows the LLM to confirm or dismiss milestone task proposals.
 """
 from __future__ import annotations
+
 from typing import Any
 
 from pydantic import BaseModel, Field

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
@@ -93,7 +95,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '学习洞察',
+              context.l10n.insightHubTitle,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -101,6 +103,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             const SizedBox(height: DS.spacing8),
             Text(
               _heroSummary(
+                context,
                 latestTheater,
                 latestReportPayload,
                 simulationState,
@@ -118,7 +121,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
               children: [
                 _InsightHubQuickAction(
                   icon: Icons.groups_rounded,
-                  title: '学习仿真',
+                  title: context.l10n.insightHubSimulation,
                   subtitle: _simulationSubtitle(
                     simulationState,
                     latestSimulation: latestSimulation,
@@ -132,14 +135,14 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
                 ),
                 _InsightHubQuickAction(
                   icon: Icons.auto_graph_rounded,
-                  title: '推演剧场',
+                  title: context.l10n.insightHubTheater,
                   subtitle: _theaterSubtitle(latestTheater),
                   accent: DS.info,
                   onTap: () => _openTheater(context, latestTheater),
                 ),
                 _InsightHubQuickAction(
                   icon: Icons.article_outlined,
-                  title: '学习报告',
+                  title: context.l10n.insightHubReport,
                   subtitle: _reportSubtitle(latestReportPayload),
                   accent: DS.success,
                   onTap: () => _openReport(context, latestReportPayload),
@@ -152,7 +155,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
               child: FilledButton.tonalIcon(
                 onPressed: () => _openOverview(context),
                 icon: const Icon(Icons.wb_iridescent_rounded),
-                label: const Text('进入洞察总览'),
+                label: Text(context.l10n.insightHubEnterOverview),
               ),
             ),
             if (hasRefreshError) ...[
@@ -175,13 +178,14 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
   }
 
   String _heroSummary(
+    BuildContext context,
     Map<String, dynamic>? latestTheater,
     LearningReport? report,
     SimulationState simulationState,
     Map<String, dynamic>? latestSimulation,
   ) {
     if (simulationState.recommendedSeeds.isNotEmpty) {
-      return '现在有 ${simulationState.recommendedSeeds.length} 个推荐场景可以直接开始模拟。';
+      return context.l10n.insightHubRecommendedSeeds(simulationState.recommendedSeeds.length);
     }
     if (latestSimulation != null) {
       return _simulationSubtitle(
@@ -195,7 +199,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     if (latestTheater != null) {
       return _theaterSubtitle(latestTheater);
     }
-    return '把推演、仿真和报告收进一条更轻量的学习动线。';
+    return context.l10n.insightHubFallbackSummary;
   }
 
   void _openOverview(BuildContext context, {String? initialPanel}) {
@@ -258,6 +262,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contentPadding = dense ? DS.spacing10 : DS.spacing12;
     final summary = _heroSummary(
+      context,
       latestTheater,
       latestReportPayload,
       simulationState,
@@ -325,7 +330,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '学习洞察',
+                                context.l10n.insightHubTitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: context.sparkleTypography.labelLarge
@@ -365,7 +370,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        '进入洞察总览',
+                        context.l10n.insightHubEnterOverview,
                         style: context.sparkleTypography.labelSmall.copyWith(
                           color: DS.info,
                           fontWeight: DS.fontWeightBold,
@@ -382,7 +387,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                 builder: (context, constraints) {
                   final actions = <Widget>[
                     _CompactInsightAction(
-                      title: '仿真',
+                      title: context.l10n.insightHubCompactSimulation,
                       subtitle: _simulationSubtitle(
                         simulationState,
                         latestSimulation: latestSimulation,
@@ -408,7 +413,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                       },
                     ),
                     _CompactInsightAction(
-                      title: '推演',
+                      title: context.l10n.insightHubCompactTheater,
                       subtitle: _theaterSubtitle(latestTheater),
                       icon: Icons.auto_graph_rounded,
                       accent: DS.info,
@@ -424,7 +429,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                       },
                     ),
                     _CompactInsightAction(
-                      title: '报告',
+                      title: context.l10n.insightHubCompactReport,
                       subtitle: _reportSubtitle(latestReportPayload),
                       icon: Icons.article_outlined,
                       accent: DS.success,
@@ -468,7 +473,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
             if (hasRefreshError) ...[
               const SizedBox(height: DS.spacing8),
               Text(
-                '部分洞察数据尚未刷新，点击后会继续显示已有内容。',
+                context.l10n.insightHubRefreshWarning,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.sparkleTypography.labelSmall.copyWith(
@@ -483,13 +488,14 @@ class _CompactInsightHubCard extends ConsumerWidget {
   }
 
   String _heroSummary(
+    BuildContext context,
     Map<String, dynamic>? latestTheater,
     LearningReport? report,
     SimulationState simulationState,
     Map<String, dynamic>? latestSimulation,
   ) {
     if (simulationState.recommendedSeeds.isNotEmpty) {
-      return '${simulationState.recommendedSeeds.length} 个推荐场景待探索';
+      return context.l10n.insightHubSeedsToExplore(simulationState.recommendedSeeds.length);
     }
     if (latestSimulation != null) {
       return _simulationSubtitle(
@@ -503,7 +509,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
     if (latestTheater != null) {
       return _theaterSubtitle(latestTheater);
     }
-    return '仿真、推演和报告现在收在同一张卡里';
+    return context.l10n.insightHubCompactFallback;
   }
 }
 
@@ -655,7 +661,7 @@ class _InsightHubStatusBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '洞察内容暂时没有刷新成功，当前先显示已有内容。',
+              context.l10n.insightHubRefreshFailed,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.4,
@@ -666,7 +672,7 @@ class _InsightHubStatusBanner extends StatelessWidget {
           const SizedBox(width: 10),
           TextButton(
             onPressed: onRetry,
-            child: const Text('重试'),
+            child: Text(context.l10n.insightHubRetry),
           ),
         ],
       ),
@@ -676,7 +682,7 @@ class _InsightHubStatusBanner extends StatelessWidget {
 
 String _theaterSubtitle(Map<String, dynamic>? latestTheater) {
   if (latestTheater == null) {
-    return '最近暂无推演';
+    return S.insightHubNoRecentTheater;
   }
   final metadata = Map<String, dynamic>.from(
     latestTheater['metadata'] as Map? ?? const {},
@@ -685,7 +691,7 @@ String _theaterSubtitle(Map<String, dynamic>? latestTheater) {
   if (title != null && title.isNotEmpty) {
     return title;
   }
-  return latestTheater['description']?.toString() ?? '继续上次推演';
+  return latestTheater['description']?.toString() ?? S.insightHubContinueLastTheater;
 }
 
 String _resolveTheaterLocation(Map<String, dynamic>? latestTheater) {
@@ -727,27 +733,27 @@ String _simulationSubtitle(
     if (sessionPayload is Map) {
       final topic = sessionPayload['topic']?.toString().trim();
       if (topic != null && topic.isNotEmpty) {
-        return '继续 $topic';
+        return S.insightHubContinueTopic(topic);
       }
     }
-    return latestSimulation['description']?.toString() ?? '继续上次仿真';
+    return latestSimulation['description']?.toString() ?? S.insightHubContinueLastSimulation;
   }
   if (simulationState.recommendedSeeds.isNotEmpty) {
-    return '${simulationState.recommendedSeeds.length} 个推荐场景';
+    return S.insightHubRecommendedSeedsCount(simulationState.recommendedSeeds.length);
   }
   if (simulationState.session != null) {
-    return '继续 ${simulationState.session!.topic}';
+    return S.insightHubContinueSession(simulationState.session!.topic);
   }
-  return '开始一轮新模拟';
+  return S.insightHubStartSimulation;
 }
 
 String _reportSubtitle(LearningReport? report) {
   if (report == null || report.mastery.isEmpty) {
-    return '最近暂无报告';
+    return S.insightHubNoRecentReport;
   }
   final avg = report.mastery
           .map((item) => item.masteryScore)
           .fold<double>(0, (sum, value) => sum + value) /
       report.mastery.length;
-  return '掌握度 ${avg.round()}%';
+  return S.insightHubMasteryPercent(avg.round());
 }

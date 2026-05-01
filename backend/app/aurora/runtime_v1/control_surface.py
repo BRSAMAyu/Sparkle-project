@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import inspect
 import json
-from datetime import datetime, timezone
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -19,7 +20,6 @@ from app.aurora.runtime_v1.state import (
     normalize_expression_update,
 )
 from app.config import settings
-from app.services.personalization.preference_service import PreferenceService
 
 
 def _normalize_text(value: Any) -> str:
@@ -31,7 +31,7 @@ def _coerce_datetime(value: Any) -> datetime | None:
         return None
     if isinstance(value, datetime):
         if value.tzinfo is not None:
-            return value.astimezone(timezone.utc).replace(tzinfo=None)
+            return value.astimezone(UTC).replace(tzinfo=None)
         return value
     raw = _normalize_text(value)
     if not raw:
@@ -39,7 +39,7 @@ def _coerce_datetime(value: Any) -> datetime | None:
     normalized = raw.replace("Z", "+00:00")
     parsed = datetime.fromisoformat(normalized)
     if parsed.tzinfo is not None:
-        return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        return parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed
 
 
@@ -116,9 +116,9 @@ class AuroraHardBounds(AuroraSchemaBase):
 
     def _to_local_time(self, when: datetime) -> datetime:
         if when.tzinfo is None:
-            aware = when.replace(tzinfo=timezone.utc)
+            aware = when.replace(tzinfo=UTC)
         else:
-            aware = when.astimezone(timezone.utc)
+            aware = when.astimezone(UTC)
         return aware.astimezone(ZoneInfo(self.timezone_name))
 
 
@@ -152,12 +152,12 @@ class ControlSurfaceService:
         db,
         redis=None,
         *,
-        preference_service: PreferenceService | None = None,
+        preference_service: Any | None = None,
         enabled: bool | None = None,
     ) -> None:
         self.db = db
         self.redis = redis
-        self.preference_service = preference_service or PreferenceService(db, redis)
+        self.preference_service = preference_service
         self._enabled = enabled
 
     @property
@@ -169,6 +169,12 @@ class ControlSurfaceService:
 
     async def read_control_surface(self, user_id: UUID | str) -> ControlSurfaceReading:
         adjustable_payload = await self._read_adjustable_payload(user_id)
+        if self.preference_service is None:
+            return ControlSurfaceReading(
+                adjustable=ActivityProfile.model_validate(adjustable_payload),
+                hard_bounds=AuroraHardBounds(),
+                runtime_enabled=self.enabled,
+            )
         prefs = await self.preference_service.get_preferences(UUID(str(user_id)))
         explicit = dict(getattr(prefs, "explicit", {}) or {})
         hard_bounds = self._hard_bounds_from_explicit(explicit)

@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_COUNT_PER_USER
 from app.models.aurora_stage21 import SharedSkill, UserSkill
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService

@@ -1,6 +1,5 @@
 from app.agents.graph.nodes.expert_node_factory import create_specialist_node
 
-
 study_buddy_node = create_specialist_node(
     agent_id="study_buddy",
     planning_prompt=(

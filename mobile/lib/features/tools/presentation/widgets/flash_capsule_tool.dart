@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -15,31 +16,50 @@ import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 const List<String> _errorTypes = [
-  '概念混淆',
-  '计算错误',
-  '审题不清',
-  '知识遗忘',
-  '方法不当',
-  '其他',
+  'concept_confusion',
+  'calculation_error',
+  'misreading',
+  'knowledge_fading',
+  'wrong_method',
+  'other',
 ];
 
+String _errorTypeLabel(AppLocalizations l, String key) => switch (key) {
+  'concept_confusion' => l.fcConceptConfusion,
+  'calculation_error' => l.fcCalculationError,
+  'misreading' => l.fcMisreading,
+  'knowledge_fading' => l.fcKnowledgeFading,
+  'wrong_method' => l.fcWrongMethod,
+  _ => l.fcOther,
+};
+
 class _SubjectOption {
-  const _SubjectOption(this.code, this.label);
+  const _SubjectOption(this.code);
 
   final String code;
-  final String label;
 }
 
 const List<_SubjectOption> _subjectOptions = [
-  _SubjectOption('math', '数学'),
-  _SubjectOption('physics', '物理'),
-  _SubjectOption('chemistry', '化学'),
-  _SubjectOption('biology', '生物'),
-  _SubjectOption('english', '英语'),
-  _SubjectOption('chinese', '语文'),
-  _SubjectOption('computer', '计算机'),
-  _SubjectOption('other', '其他'),
+  _SubjectOption('math'),
+  _SubjectOption('physics'),
+  _SubjectOption('chemistry'),
+  _SubjectOption('biology'),
+  _SubjectOption('english'),
+  _SubjectOption('chinese'),
+  _SubjectOption('computer'),
+  _SubjectOption('other'),
 ];
+
+String _subjectLabel(AppLocalizations l, String code) => switch (code) {
+  'math' => l.fcSubjectMath,
+  'physics' => l.fcSubjectPhysics,
+  'chemistry' => l.fcSubjectChemistry,
+  'biology' => l.fcSubjectBiology,
+  'english' => l.fcSubjectEnglish,
+  'chinese' => l.fcSubjectChinese,
+  'computer' => l.fcSubjectComputer,
+  _ => l.fcOther,
+};
 
 class FlashCapsuleTool extends ConsumerStatefulWidget {
   const FlashCapsuleTool({
@@ -87,10 +107,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     }
     final normalized = initialSubject.trim().toLowerCase();
     final match = _subjectOptions.cast<_SubjectOption?>().firstWhere(
-          (subject) =>
-              subject!.code == normalized ||
-              subject.label == initialSubject ||
-              subject.label.toLowerCase() == normalized,
+          (subject) => subject!.code == normalized,
           orElse: () => null,
         );
     return match?.code ?? _subjectOptions.first.code;
@@ -98,13 +115,13 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
 
   CognitiveDimension _inferCognitiveDimension() {
     switch (_selectedErrorType) {
-      case '概念混淆':
-      case '知识遗忘':
+      case 'concept_confusion':
+      case 'knowledge_fading':
         return CognitiveDimension.memory;
-      case '计算错误':
-      case '方法不当':
+      case 'calculation_error':
+      case 'wrong_method':
         return CognitiveDimension.application;
-      case '审题不清':
+      case 'misreading':
         return CognitiveDimension.analysis;
       default:
         return CognitiveDimension.analysis;
@@ -116,7 +133,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       await ref.read(cognitiveProvider.notifier).loadFragments(limit: 50);
     } catch (e) {
       if (!silent && mounted) {
-        AppFeedback.error(context, '加载历史胶囊失败: $e');
+        AppFeedback.error(context, context.l10n.toolsFlashLoadFailed(e.toString()));
       }
     }
   }
@@ -295,7 +312,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final topic = _topicController.text.trim();
     final description = _descriptionController.text.trim();
     if (topic.isEmpty || description.isEmpty) {
-      AppFeedback.info(context, '请补全知识点和错误描述');
+      AppFeedback.info(context, context.l10n.fcFillRequired);
       return;
     }
 
@@ -315,7 +332,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 taskId: widget.taskId,
               );
       if (fragment == null) {
-        throw Exception('胶囊保存失败，请稍后重试');
+        throw Exception(context.l10n.fcSaveFailed);
       }
 
       var syncedToErrorBook = true;
@@ -324,7 +341,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               questionText: topic,
               userAnswer: description,
               subject: selectedSubject.code,
-              chapter: selectedSubject.label,
+              chapter: selectedSubject.code,
             );
       } catch (_) {
         syncedToErrorBook = false;
@@ -336,15 +353,15 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       if (mounted) {
         Navigator.pop(context);
         if (syncedToErrorBook) {
-          AppFeedback.success(context, '已保存胶囊，并同步到错题本');
+          AppFeedback.success(context, context.l10n.fcSavedWithSync);
         } else {
-          AppFeedback.info(context, '胶囊已保存，错题本同步稍后重试');
+          AppFeedback.info(context, context.l10n.fcSavedSyncLater);
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
-        AppFeedback.error(context, '记录失败: $e');
+        AppFeedback.error(context, context.l10n.toolsFlashSaveFailed(e.toString()));
       }
     }
   }
@@ -354,17 +371,16 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final accent = DS.warning;
     final cognitiveState = ref.watch(cognitiveProvider);
     final historyCount = _historyEntries(cognitiveState.fragments).length;
-    final l10n = context.l10n;
     return ToolShell(
       surface: widget.surface,
       icon: Icons.lightbulb_outline_rounded,
-      title: '闪念胶囊',
-      subtitle: '把一闪而过的疑点及时落地成错题线索，减少“知道有问题但没记住”的损耗。',
+      title: context.l10n.toolsFlashTitle,
+      subtitle: context.l10n.toolsFlashSubtitle,
       accentColor: accent,
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: '${_subjectOptions.length} 个科目',
+          label: context.l10n.toolsFlashSubjectCount(_subjectOptions.length),
           accentColor: accent,
           icon: Icons.category_rounded,
         ),
@@ -374,7 +390,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           icon: Icons.label_rounded,
         ),
         ToolHeroChip(
-          label: historyCount == 0 ? context.l10n.flashCapsuleNoHistory : '$historyCount 条历史胶囊',
+          label: historyCount == 0 ? context.l10n.flashCapsuleNoHistory : context.l10n.fcHistoryCount(historyCount),
           accentColor: accent,
           icon: Icons.history_rounded,
         ),
@@ -383,8 +399,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '记录内容',
-            subtitle: '选择科目、错误类型，再补充知识点和描述。',
+            title: context.l10n.toolsFlashContent,
+            subtitle: context.l10n.toolsFlashContentDesc,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -401,9 +417,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 const SizedBox(height: DS.spacing16),
                 TextField(
                   controller: _topicController,
-                  decoration: const InputDecoration(
-                    labelText: '知识点',
-                    hintText: '例如：三角函数求导、牛顿第二定律...',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.toolsFlashKnowledge,
+                    hintText: context.l10n.toolsFlashKnowledgeHint,
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -416,7 +432,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                     children: _errorTypes
                         .map(
                           (type) => ToolChoiceChip(
-                            label: type,
+                            label: _errorTypeLabel(context.l10n, type),
                             selected: _selectedErrorType == type,
                             onTap: () => setState(() {
                               _selectedErrorType = type;
@@ -431,9 +447,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 TextField(
                   controller: _descriptionController,
                   maxLines: 8,
-                  decoration: const InputDecoration(
-                    labelText: '错误描述',
-                    hintText: '记录你是怎么错的、卡在什么地方、下次要如何避免。',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.toolsFlashErrorDesc,
+                    hintText: context.l10n.toolsFlashErrorDescHint,
                     alignLabelWithHint: true,
                   ),
                   onChanged: (_) => setState(() {}),
@@ -445,19 +461,19 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           ToolMetricRow(
             children: [
               ToolMetricCard(
-                label: '知识点长度',
+                label: context.l10n.toolsFlashKnowledgeLen,
                 value: '${_topicController.text.trim().length}',
                 accentColor: accent,
                 icon: Icons.topic_rounded,
               ),
               ToolMetricCard(
-                label: '描述长度',
+                label: context.l10n.toolsFlashDescLen,
                 value: '${_descriptionController.text.trim().length}',
                 accentColor: accent,
                 icon: Icons.notes_rounded,
               ),
               ToolMetricCard(
-                label: '认知维度',
+                label: context.l10n.toolsFlashCognitiveDim,
                 value: _inferCognitiveDimension().label,
                 accentColor: accent,
                 icon: Icons.psychology_alt_rounded,
@@ -470,14 +486,14 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 520;
           final historyButton = SparkleButton(
-            label: '查看历史',
+            label: context.l10n.toolsFlashViewHistory,
             variant: ButtonVariant.ghost,
             onPressed: _isSubmitting ? null : _openHistory,
             icon: const Icon(Icons.history_rounded),
             expand: true,
           );
           final saveButton = SparkleButton(
-            label: _isSubmitting ? '记录中...' : '保存胶囊',
+            label: _isSubmitting ? context.l10n.fcRecording : context.l10n.toolsFlashSaveCapsule,
             onPressed: _isSubmitting ? null : _submit,
             icon: const Icon(Icons.check_rounded),
             loading: _isSubmitting,
@@ -540,12 +556,12 @@ class _SubjectDropdown extends StatelessWidget {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              hint: const Text('选择科目'),
+              hint: Text(context.l10n.toolsFlashSelectSubject),
               items: subjects
                   .map(
                     (subject) => DropdownMenuItem<String>(
                       value: subject.code,
-                      child: Text(subject.label),
+                      child: Text(_subjectLabel(AppLocalizations.of(context)!, subject.code)),
                     ),
                   )
                   .toList(),

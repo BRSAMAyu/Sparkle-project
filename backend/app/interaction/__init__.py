@@ -6,8 +6,8 @@ from .config import (
     load_interaction_model_registry,
 )
 from .profiles import InteractionVariantProfile
-from .variant_router import InteractionRoute, route_interaction_model
 from .ux_renderer import AuroraUxProjection, project_ux_signals
+from .variant_router import InteractionRoute, route_interaction_model
 
 __all__ = [
     "AuroraUxProjection",

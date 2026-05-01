@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -9,7 +9,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
-from app.models.notification_interaction import NotificationPreferences
+from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.models.user import PushPreference
 from app.schemas.notification import NotificationCreate
 
@@ -147,6 +147,63 @@ class NotificationService:
         ):
             return False, "notification_type_disabled"
 
+        # NUDGE-007: Consecutive ignore backoff (runs regardless of quiet hours)
+        try:
+            from app.core.cache import cache_service
+            if cache_service.redis:
+                _ignore_key = f"nudge:consecutive_ignore:{user_id}"
+                _ignore_raw = await cache_service.redis.get(_ignore_key)
+                consecutive_ignores = int(_ignore_raw) if _ignore_raw else 0
+                if consecutive_ignores == 0:
+                    _recent_result = await db.execute(
+                        select(NotificationInteraction)
+                        .where(
+                            NotificationInteraction.user_id == user_id,
+                            NotificationInteraction.action_type == "dismissed",
+                            NotificationInteraction.action_time
+                            >= datetime.now(UTC) - timedelta(days=7),
+                        )
+                        .order_by(desc(NotificationInteraction.action_time))
+                        .limit(5)
+                    )
+                    _recent_dismissals = _recent_result.scalars().all()
+                    if len(_recent_dismissals) >= 3:
+                        consecutive_ignores = len(_recent_dismissals)
+                        await cache_service.redis.setex(
+                            _ignore_key, 7 * 24 * 3600, str(consecutive_ignores)
+                        )
+                if consecutive_ignores >= 5:
+                    return False, "consecutive_ignore_backoff_critical"
+                if consecutive_ignores >= 3:
+                    _cooldown_key = f"nudge:cooldown:{user_id}"
+                    if await cache_service.redis.exists(_cooldown_key):
+                        return False, "consecutive_ignore_cooldown"
+                    await cache_service.redis.setex(
+                        _cooldown_key,
+                        int(timedelta(hours=6 + (consecutive_ignores - 3) * 12).total_seconds()),
+                        "1",
+                    )
+        except Exception:
+            pass
+
+        # NUDGE-005: Fatigue protection — suppress non-critical notifications under stress
+        try:
+            from app.core.cache import cache_service
+            if cache_service.redis:
+                fatigue_key = f"spine:fatigue:{user_id}:latest"
+                fatigue_raw = await cache_service.redis.get(fatigue_key)
+                if fatigue_raw:
+                    import json
+                    fatigue_data = json.loads(fatigue_raw if isinstance(fatigue_raw, str) else fatigue_raw.decode())
+                    fatigue_level = fatigue_data.get("fatigue_level", "low")
+                    if fatigue_level == "critical":
+                        return False, "fatigue_protection_critical"
+                    if fatigue_level == "high" and cls.source_type_for_notification(notification_type) == "system":
+                        return False, "fatigue_protection_high"
+        except Exception:
+            pass
+
+        # Quiet hours check
         if not prefs or not prefs.quiet_hours_enabled:
             return True, None
 
@@ -311,6 +368,108 @@ class NotificationService:
             )
         )
         return result.scalar() or 0
+
+
+    # ── Spine NotificationDirective Consumer ────────────────────────────
+
+    @classmethod
+    async def consume_spine_notification_directive(
+        cls,
+        db: AsyncSession,
+        user_id: UUID,
+        *,
+        redis_client,
+        title: str,
+        content: str,
+        notification_type: str = "intervention",
+    ) -> Notification | None:
+        """
+        Consume a NotificationDirective from the Spine and send the notification
+        if the directive permits it.
+
+        This is the integration point between SpineOrchestrator's NotificationDirective
+        and the actual notification delivery pipeline. Call this instead of create()
+        when the notification originates from a Spine-generated directive.
+
+        Returns the created Notification or None if suppressed by the directive.
+        """
+        from app.signals.spine_orchestrator import SpineOrchestrator
+
+        spine = SpineOrchestrator(redis_client)
+        directive = await spine.get_notification_directive(str(user_id))
+
+        if directive is None:
+            # No active directive — fall back to standard notification creation
+            return await cls.create(
+                db,
+                user_id,
+                NotificationCreate(title=title, content=content, type=notification_type),
+            )
+
+        if not directive.allowed:
+            logger.info(
+                "NotificationDirective suppressed notification for user {}: allowed=False",
+                user_id,
+            )
+            return None
+
+        # Respect quiet hours if directive demands it
+        if directive.respect_quiet_hours:
+            should_push, reason = await cls._should_push_notification(
+                db,
+                user_id=user_id,
+                notification_type=notification_type,
+            )
+            if not should_push:
+                logger.info(
+                    "NotificationDirective: quiet hours suppressed for user {}: {}",
+                    user_id, reason,
+                )
+                return None
+
+        # Frequency throttle — directive max_frequency maps to a per-day cap
+        freq_cap = {
+            "1_per_day": 1,
+            "2_per_day": 2,
+            "1_per_sprint": 1,
+        }.get(directive.max_frequency, 1)
+        freq_key = f"spine:notif_freq:{user_id}:{directive.trigger}"
+        sent_today = await redis_client.incr(freq_key)
+        if sent_today == 1:
+            await redis_client.expire(freq_key, 86400)  # reset each 24 h
+        if sent_today > freq_cap:
+            logger.info(
+                "NotificationDirective: frequency cap ({}) reached for user {} trigger={}",
+                freq_cap, user_id, directive.trigger,
+            )
+            return None
+
+        # Choose push channel
+        push_via_ws = directive.channel in ("push", "in_app")
+        notification = await cls.create(
+            db,
+            user_id,
+            NotificationCreate(
+                title=title,
+                content=content,
+                type=notification_type,
+                data={
+                    "spine_directive_id": directive.directive_id,
+                    "trigger": directive.trigger,
+                    "message_strategy": directive.message_strategy,
+                    "channel": directive.channel,
+                },
+            ),
+            push_via_websocket=push_via_ws,
+        )
+
+        # Clear the directive after consumption (one-shot)
+        await redis_client.delete(f"spine:notification_directive:{user_id}:latest")
+        logger.info(
+            "NotificationDirective consumed for user {}: trigger={} channel={}",
+            user_id, directive.trigger, directive.channel,
+        )
+        return notification
 
 
 notification_service = NotificationService()

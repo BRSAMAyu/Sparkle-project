@@ -8,14 +8,15 @@ Achievement Engine Service
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
-from datetime import timezone, date, datetime, timedelta
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from loguru import logger
-from sqlalchemy import event
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, event, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
@@ -45,7 +46,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"
@@ -172,9 +173,30 @@ class AchievementEngine:
     _achievement_cache: dict[str, Achievement] = {}
     _cache_last_update: datetime = None
     _cache_ttl = timedelta(minutes=5)
+    _cache_lock = asyncio.Lock()
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def _append_recent_event(self, user_id: str, event: dict[str, Any]) -> None:
+        """DF-10: Store recent achievement events in Redis for StateAggregator consumption."""
+        import json as _json
+        key = f"spine:achievement_events:{user_id}"
+        try:
+            await cache_service.set(
+                f"{key}:latest",
+                _json.dumps(event),
+                ttl=3600,
+            )
+            # Also maintain a rolling list via pipeline
+            pipe = cache_service.redis.pipeline() if hasattr(cache_service, 'redis') else None
+            if pipe:
+                await pipe.lpush(key, _json.dumps(event))
+                await pipe.ltrim(key, 0, 9)  # Keep last 10
+                await pipe.expire(key, 3600)
+                await pipe.execute()
+        except Exception:
+            logger.debug("Failed to cache recent achievement event for user={}", user_id, exc_info=True)
 
     def _enqueue_after_commit(self, callback: Callable[[], Awaitable[None]]) -> None:
         callbacks = self.db.sync_session.info.setdefault(_AFTER_COMMIT_TASKS_KEY, [])
@@ -266,15 +288,17 @@ class AchievementEngine:
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
         now = _utcnow()
-        if self._cache_last_update and (now - self._cache_last_update < self._cache_ttl):
-            return
+        async with self._cache_lock:
+            if self._cache_last_update and (now - self._cache_last_update < self._cache_ttl):
+                return
 
         query = select(Achievement)
         result = await self.db.execute(query)
         achievements = result.scalars().all()
 
-        self._achievement_cache = {a.id: a for a in achievements}
-        self._cache_last_update = now
+        async with self._cache_lock:
+            self._achievement_cache = {a.id: a for a in achievements}
+            self._cache_last_update = now
 
     async def _get_achievement(self, achievement_id: str) -> Achievement | None:
         """获取成就定义（带缓存）"""
@@ -317,7 +341,7 @@ class AchievementEngine:
             await self._update_streak_stats(user_id, event_type, **kwargs)
 
             # 2. 获取相关成就定义
-            relevant_achievements = await self._get_relevant_achievements(event_type)
+            relevant_achievements = await self._get_relevant_achievements(event_type, **kwargs)
 
             # 3. 检查每个成就的条件
             unlocked = []
@@ -397,7 +421,7 @@ class AchievementEngine:
 
             return unlocked
 
-    async def _get_relevant_achievements(self, event_type: str) -> list[Achievement]:
+    async def _get_relevant_achievements(self, event_type: str, **kwargs) -> list[Achievement]:
         """获取与事件类型相关的成就"""
         all_achievements = await self._get_all_achievements()
 
@@ -1419,17 +1443,17 @@ class AchievementEngine:
             if await cache_service.get(throttle_key):
                 return
             await cache_service.set(throttle_key, "1", ex=3600)
-            await event_bus.publish(
-                "achievement.progress",
-                {
-                    "event_type": "achievement.progress",
-                    "user_id": str(user_id),
-                    "achievement_id": achievement_id,
-                    "achievement_name": achievement_name,
-                    "progress_percent": progress_percent,
-                    "timestamp": _utcnow().isoformat(),
-                },
-            )
+            payload = {
+                "event_type": "achievement.progress",
+                "user_id": str(user_id),
+                "achievement_id": achievement_id,
+                "achievement_name": achievement_name,
+                "progress_percent": progress_percent,
+                "timestamp": _utcnow().isoformat(),
+            }
+            await event_bus.publish("achievement.progress", payload)
+            # DF-10: Store recent event for StateAggregator consumption
+            await self._append_recent_event(user_id, payload)
         except Exception as exc:
             logger.warning(f"Failed to publish achievement progress event: {exc}")
 
@@ -1437,22 +1461,22 @@ class AchievementEngine:
         try:
             rarity = unlock_payload.get("rarity")
             rarity_value = rarity.value if hasattr(rarity, "value") else str(rarity)
-            await event_bus.publish(
-                "achievement.unlocked",
-                {
-                    "event_type": "achievement.unlocked",
-                    "user_id": str(user_id),
-                    "achievement_id": unlock_payload["achievement_id"],
-                    "achievement_name": unlock_payload["name"],
-                    "achievement_type": "achievement_unlock",
-                    "rarity": rarity_value,
-                    "visual_effect_type": unlock_payload.get("visual_effect_type"),
-                    "trigger_reason": "achievement_condition_met",
-                    "context_snapshot": unlock_payload.get("context_snapshot"),
-                    "context_story": unlock_payload.get("context_story"),
-                    "timestamp": _utcnow().isoformat(),
-                },
-            )
+            payload = {
+                "event_type": "achievement.unlocked",
+                "user_id": str(user_id),
+                "achievement_id": unlock_payload["achievement_id"],
+                "achievement_name": unlock_payload["name"],
+                "achievement_type": "achievement_unlock",
+                "rarity": rarity_value,
+                "visual_effect_type": unlock_payload.get("visual_effect_type"),
+                "trigger_reason": "achievement_condition_met",
+                "context_snapshot": unlock_payload.get("context_snapshot"),
+                "context_story": unlock_payload.get("context_story"),
+                "timestamp": _utcnow().isoformat(),
+            }
+            await event_bus.publish("achievement.unlocked", payload)
+            # DF-10: Store recent event for StateAggregator consumption
+            await self._append_recent_event(user_id, payload)
             highlight = str(unlock_payload.get("context_story") or "").strip()
             await SystemUpdateService().enqueue(
                 user_id,
@@ -2729,7 +2753,8 @@ class ContractService:
         contract.current_minutes += study_minutes
         if contract.current_minutes >= contract.target_study_minutes:
             contract.current_days += 1
-            contract.current_minutes = 0  # 重置当日分钟数
+            # R5-P1-9: Carry over excess minutes instead of discarding
+            contract.current_minutes = max(0, contract.current_minutes - contract.target_study_minutes)
 
         await self.db.commit()
 

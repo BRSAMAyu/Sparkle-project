@@ -188,11 +188,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                           mergedMessages.length + (showAgentStatus ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (showAgentStatus && index == 0) {
-                          return const Padding(
+                          return Padding(
                             padding: EdgeInsets.only(bottom: DS.spacing16),
                             child: AiStatusIndicator(
                               status: 'THINKING',
-                              details: '思考中...',
+                              details: context.l10n.chatPrivateThinking,
                               enableStatusTrack: false,
                             ),
                           );
@@ -261,7 +261,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                     children: [
                       FilterChip(
                         selected: _agentMode,
-                        label: Text(_agentMode ? 'AI助手 已开启' : 'AI助手'),
+                        label: Text(_agentMode ? context.l10n.chatPrivateAiAssistantOn : context.l10n.chatPrivateAiAssistant),
                         avatar: Icon(
                           Icons.auto_awesome,
                           size: DS.iconSizeXs,
@@ -272,7 +272,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       const Spacer(),
                       if (agentState.isSending)
                         Text(
-                          '思考中...',
+                          context.l10n.chatPrivateThinking,
                           style: TextStyle(
                             fontSize: DS.fontSizeSm,
                             color: DS.brandPrimary70,
@@ -288,7 +288,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                         runSpacing: DS.spacing4,
                         children: [
                           _PrivateAgentQuickChip(
-                            label: '润色回复',
+                            label: context.l10n.chatPrivatePolishReply,
                             onTap: () => _runAssistantPreset(
                               preset: 'polish_reply',
                               sendStyle:
@@ -296,7 +296,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             ),
                           ),
                           _PrivateAgentQuickChip(
-                            label: '温和提醒',
+                            label: context.l10n.chatPrivateGentleReminder,
                             onTap: () => _runAssistantPreset(
                               preset: 'gentle_reminder',
                               sendStyle:
@@ -304,7 +304,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             ),
                           ),
                           _PrivateAgentQuickChip(
-                            label: '协调时间',
+                            label: context.l10n.chatPrivateScheduleTime,
                             onTap: () => _runAssistantPreset(
                               preset: 'schedule_sync',
                               sendStyle:
@@ -313,7 +313,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             ),
                           ),
                           _PrivateAgentQuickChip(
-                            label: '快速总结',
+                            label: context.l10n.chatPrivateQuickSummary,
                             onTap: () => _runAssistantPreset(
                               preset: 'summary',
                               sendStyle:
@@ -321,7 +321,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             ),
                           ),
                           _PrivateAgentQuickChip(
-                            label: '提炼下一步',
+                            label: context.l10n.chatPrivateExtractNextSteps,
                             onTap: () => _runAssistantPreset(
                               preset: 'next_step',
                               sendStyle:
@@ -351,7 +351,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'AI 草稿已放入输入框，你确认后再发送。',
+                                context.l10n.chatPrivateDraftInComposer,
                                 style: TextStyle(
                                   fontSize: DS.fontSizeSm,
                                   color: DS.neutral700,
@@ -360,7 +360,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             ),
                             TextButton(
                               onPressed: _restoreOriginalDraft,
-                              child: const Text('恢复原文'),
+                              child: Text(context.l10n.chatPrivateRestoreOriginal),
                             ),
                           ],
                         ),
@@ -456,7 +456,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
             preset == 'gentle_reminder' ||
             preset == 'schedule_sync') &&
         composerText.isEmpty) {
-      AppFeedback.info(context, '先在输入框写一点内容，我再帮你处理。');
+      AppFeedback.info(context, context.l10n.chatPrivateWriteFirst);
       _composerFocusNode.requestFocus();
       return;
     }
@@ -479,7 +479,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     if (!mounted) return;
     if (draft == null || draft.trim().isEmpty) {
       final error = ref.read(privateChatAgentProvider(widget.friendId)).error;
-      AppFeedback.error(context, error ?? '这次没有生成可用内容，请再试一次。');
+      AppFeedback.error(context, error ?? context.l10n.chatPrivateGenerationFailed);
       return;
     }
     await _showDraftPreview(
@@ -504,11 +504,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     }
     return switch (preset) {
       'polish_reply' =>
-        '$base\n\n我当前输入框里的原始草稿是：\n$composerText\n\n请保留我的原意和口吻，只做润色，不要换成第三方视角。',
+        context.l10n.chatPrivatePolishPrompt(base, composerText),
       'gentle_reminder' =>
-        '$base\n\n我当前输入框里的草稿和补充上下文是：\n$composerText\n\n请在尽量保留我表达意图的前提下，改成更温和自然的提醒。',
+        context.l10n.chatPrivateGentlePrompt(base, composerText),
       'schedule_sync' =>
-        '$base\n\n我当前输入框里的草稿和补充上下文是：\n$composerText\n\n请基于这段内容生成一条适合我直接发出的时间协调消息。',
+        context.l10n.chatPrivateSchedulePrompt(base, composerText),
       _ => base,
     };
   }
@@ -571,7 +571,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   runSpacing: DS.spacing8,
                   children: [
                     _PreviewActionButton(
-                      label: '仅自己可见',
+                      label: context.l10n.chatPrivateOnlyVisibleToMe,
                       onTap: () async {
                         Navigator.of(sheetContext).pop();
                         await ref
@@ -579,11 +579,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                                 .notifier)
                             .saveSelfVisibleDraft(content: draft);
                         if (!mounted) return;
-                        AppFeedback.success(context, '已保存为仅自己可见。');
+                        AppFeedback.success(context, context.l10n.chatPrivateSavedOnlyToMe);
                       },
                     ),
                     _PreviewActionButton(
-                      label: '双方都可见',
+                      label: context.l10n.chatPrivateVisibleToBoth,
                       primary: true,
                       onTap: () {
                         Navigator.of(sheetContext).pop();
@@ -609,7 +609,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       onTap: () => Navigator.of(sheetContext).pop(),
                     ),
                     _PreviewActionButton(
-                      label: '放入输入框',
+                      label: context.l10n.chatPrivatePutInComposer,
                       primary: true,
                       onTap: () {
                         Navigator.of(sheetContext).pop();
@@ -629,12 +629,12 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
   }
 
   String _previewTitleForPreset(String preset) => switch (preset) {
-        'polish_reply' => '润色后的回复',
-        'gentle_reminder' => '温和提醒草稿',
-        'schedule_sync' => '协调时间草稿',
-        'summary' => '快速总结',
-        'next_step' => '提炼出的下一步',
-        _ => 'AI 生成结果',
+        'polish_reply' => context.l10n.chatPrivatePolishedReply,
+        'gentle_reminder' => context.l10n.chatPrivateGentleReminderDraft,
+        'schedule_sync' => context.l10n.chatPrivateScheduleDraft,
+        'summary' => context.l10n.chatPrivateQuickSummary,
+        'next_step' => context.l10n.chatPrivateExtractedNextSteps,
+        _ => context.l10n.chatPrivateAiGeneratedResult,
       };
 
   void _applyDraftToComposer(
@@ -649,7 +649,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       );
     });
     _composerFocusNode.requestFocus();
-    AppFeedback.success(context, '已放入输入框，请确认后发送。');
+    AppFeedback.success(context, context.l10n.chatPrivatePutInComposerConfirm);
   }
 
   void _restoreOriginalDraft() {
@@ -663,7 +663,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       _assistantOriginalDraft = null;
     });
     _composerFocusNode.requestFocus();
-    AppFeedback.info(context, '已恢复你原本的输入。');
+    AppFeedback.info(context, context.l10n.chatPrivateOriginalRestored);
   }
 
   void _promoteAgentDraftToComposer(PrivateMessageInfo message) {
@@ -678,7 +678,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       draft,
       originalText: _composerController.text.trim(),
     );
-    AppFeedback.info(context, '已切换为双方可见，请确认后发送。');
+    AppFeedback.info(context, context.l10n.chatPrivateSwitchedBothVisible);
   }
 
   Future<void> _handleQuickShare(UniversalSharePayload payload) async {

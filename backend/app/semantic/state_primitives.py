@@ -219,7 +219,7 @@ class StudyDomainSemanticAdapter:
         cognitive_insights = _as_dict(user_context.get("cognitive_insights"))
         context_focus = _as_dict(user_context.get("context_focus"))
         dual_core_snapshot = _as_dict(user_context.get("dual_core_snapshot"))
-        dual_core_decision = _as_dict(dual_core_snapshot.get("decision"))
+        _as_dict(dual_core_snapshot.get("decision"))
         dual_core_signals = _as_dict(dual_core_snapshot.get("signal_snapshot"))
 
         active_goals = [item for item in _as_list(user_context.get("active_goals") or focused_memory.get("active_goals")) if isinstance(item, dict)]
@@ -326,7 +326,7 @@ class StudyDomainSemanticAdapter:
         context_focus: dict[str, Any],
         dual_core_signals: dict[str, Any],
     ) -> CurrentStatePrimitive:
-        analytics = _as_dict(user_context.get("analytics_summary"))
+        _as_dict(user_context.get("analytics_summary"))
         focus_stats = _as_dict(user_context.get("focus_stats"))
         active_subjects = [_strip(item) for item in _as_list(knowledge_summary.get("active_learning_subjects")) if _strip(item)]
         progress_highlights = [_strip(item) for item in _as_list(progress_snapshot.get("highlights")) if _strip(item)]

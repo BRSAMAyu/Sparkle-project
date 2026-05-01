@@ -7,7 +7,8 @@
 - 清理 MinIO 存储
 """
 from __future__ import annotations
-from datetime import timezone, datetime, timedelta
+
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -21,7 +22,7 @@ from app.models.galaxy import KnowledgeNode
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FileCascadeService:

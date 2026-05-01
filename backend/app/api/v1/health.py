@@ -3,7 +3,8 @@ Health Check API
 健康检查端点 - 包含数据库连接状态检查
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -18,7 +19,7 @@ router = APIRouter()
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class DatabaseHealth(BaseModel):

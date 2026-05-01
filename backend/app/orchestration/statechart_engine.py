@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import inspect
 import json
@@ -6,11 +7,12 @@ import uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Union
+from typing import Any
+
+from loguru import logger
 
 from app.config import settings
 from app.core.metrics import FSM_CONTEXT_EVICTION_TOTAL, FSM_CONTEXT_SIZE_BYTES
-from loguru import logger
 
 # ==========================================
 # 1. Core Data Structures
@@ -47,7 +49,7 @@ class WorkflowState:
             msg["name"] = name
         self.messages.append(msg)
 
-    def clone(self) -> "WorkflowState":
+    def clone(self) -> WorkflowState:
         """Create a shallow copy of the state for parallel execution."""
         new_state = WorkflowState(
             messages=list(self.messages),
@@ -141,7 +143,7 @@ class StateGraph:
         self.on_event: Callable[[GraphEvent], Coroutine[Any, Any, None]] | None = None
         self.checkpointer: Any = None  # Optional checkpointer interface
 
-    def add_node(self, name: str, action: Union[Callable, "StateGraph"]):
+    def add_node(self, name: str, action: Callable | StateGraph):
         """
         Register a node.
         'action' can be a function or another StateGraph (Nested State).

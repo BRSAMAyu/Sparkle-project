@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -77,7 +79,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('海报工坊'),
+        title: Text(context.l10n.posterTitle),
       ),
       child: ContentConstraint(
         child: ListView(
@@ -89,7 +91,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
             ),
             const SizedBox(height: DS.spacing20),
             Text(
-              '海报类型',
+              context.l10n.posterTypeLabel,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -125,7 +127,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
             ),
             const SizedBox(height: DS.spacing20),
             Text(
-              '视觉模板',
+              context.l10n.posterTemplateLabel,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -150,7 +152,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
             _SelectedTemplateCaption(templateId: _selectedTemplateId),
             const SizedBox(height: DS.spacing20),
             Text(
-              '实时预览',
+              context.l10n.posterPreviewLabel,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -171,7 +173,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                   child: SparkleButton(
                     expand: true,
                     icon: const Icon(Icons.share_outlined),
-                    label: '分享或下载',
+                    label: context.l10n.posterShareOrDownload,
                     onPressed: () => showUniversalShareSheet(
                       context,
                       payload: selectedPayload,
@@ -185,7 +187,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                   child: SparkleButton(
                     expand: true,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: '重新生成预览',
+                    label: context.l10n.posterRegenerate,
                     variant: ButtonVariant.secondary,
                     disabled: _isGeneratingPreview,
                     onPressed: () => unawaited(
@@ -234,17 +236,17 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
       if (!mounted) return;
       setState(() {
         _previewFile = file;
-        _previewError = file == null ? '暂时无法生成预览，请稍后重试。' : null;
+        _previewError = file == null ? context.l10n.posterPreviewFailed : null;
       });
       if (file == null) {
-        AppFeedback.error(context, '海报预览生成失败，请稍后重试');
+        AppFeedback.error(context, context.l10n.posterPreviewError);
       }
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _previewError = _friendlyError(error);
       });
-      AppFeedback.error(context, '海报预览生成失败：${_friendlyError(error)}');
+      AppFeedback.error(context, context.l10n.posterPreviewErrorWith(_friendlyError(error)));
     } finally {
       if (!mounted) return;
       setState(() {
@@ -256,7 +258,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
   String _friendlyError(Object error) {
     final message = error.toString().trim();
     if (message.isEmpty) {
-      return '未知错误';
+      return context.l10n.posterUnknownError;
     }
     return message.replaceFirst('Exception: ', '');
   }
@@ -267,6 +269,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
     List<PlanModel> activePlans,
     List<CuriosityCapsuleModel> capsules,
   ) {
+    final l10n = context.l10n;
     final unlocked = achievementState.achievements
         .where((achievement) => achievement.isUnlocked)
         .toList()
@@ -288,43 +291,43 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
     return [
       _PosterPreset(
         id: 'identity',
-        title: '荣耀身份海报',
-        subtitle: '展示你的称号、等级与代表成就',
+        title: l10n.posterIdentityTitle,
+        subtitle: l10n.posterIdentitySubtitle,
         icon: Icons.workspace_premium_rounded,
         accent: const Color(0xFFF0C676),
         payload: UniversalSharePayload(
           contentType: ShareableContentType.achievement,
           resourceId: topAchievement?.achievement.id ?? user.id,
-          title: '$userName 的荣耀身份',
-          subtitle: topAchievement?.achievement.name ?? '把成长高光分享给朋友',
+          title: l10n.posterIdentityPayloadTitle(userName),
+          subtitle: topAchievement?.achievement.name ?? l10n.posterIdentityDefaultSubtitle,
           description: topAchievement?.achievement.description,
           metadata: {
-            'rarity': topAchievement?.achievement.rarity.name ?? '荣耀',
+            'rarity': topAchievement?.achievement.rarity.name ?? l10n.posterIdentityDefaultRarity,
             'unlocked_count': unlocked.length,
             'flame_level': user.flameLevel,
             'equipped_title': achievementState.titles
                     .where((title) => title.isEquipped)
                     .firstOrNull
                     ?.titleDisplay ??
-                '持续成长中',
+                l10n.posterIdentityGrowing,
           },
           templateId: 'elegant',
         ),
       ),
       _PosterPreset(
         id: 'growth',
-        title: '本周成长海报',
-        subtitle: '把成长趋势、亮度和活跃计划做成一张战报',
+        title: l10n.posterGrowthTitle,
+        subtitle: l10n.posterGrowthSubtitle,
         icon: Icons.insights_rounded,
         accent: const Color(0xFF7AA5F8),
         payload: UniversalSharePayload(
           contentType: ShareableContentType.learningReport,
           resourceId: user.id,
-          title: '$userName 的本周成长',
-          subtitle: '等级 Lv.${user.flameLevel} · 亮度 $flameBrightness%',
-          description: '继续保持这个节奏，你的学习势能已经在持续上升。',
+          title: l10n.posterGrowthPayloadTitle(userName),
+          subtitle: l10n.posterGrowthPayloadSubtitle(user.flameLevel, flameBrightness),
+          description: l10n.posterGrowthDesc,
           metadata: {
-            'report_type': '成长周报',
+            'report_type': l10n.posterGrowthReportType,
             'active_plans': activePlans.length,
             'unlocked_achievements': unlocked.length,
             'flame_brightness': '$flameBrightness%',
@@ -333,15 +336,15 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
       ),
       _PosterPreset(
         id: 'plan',
-        title: '计划战报海报',
-        subtitle: '把当前正在推进的计划做成一张高质感进度卡',
+        title: l10n.posterPlanTitle,
+        subtitle: l10n.posterPlanSubtitle,
         icon: Icons.flag_rounded,
         accent: const Color(0xFF5BA8FF),
         payload: UniversalSharePayload(
           contentType: ShareableContentType.planProgress,
           resourceId: activePlan?.id ?? user.id,
-          title: activePlan?.name ?? '我的下一阶段计划',
-          subtitle: activePlan?.description ?? '把目标拆成任务，稳定推进。',
+          title: activePlan?.name ?? l10n.posterPlanDefaultTitle,
+          subtitle: activePlan?.description ?? l10n.posterPlanDefaultSubtitle,
           description: activePlan?.description,
           metadata: {
             'progress': activePlan?.progress ?? 0.0,
@@ -350,7 +353,7 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                     .length ??
                 0,
             'total_tasks': activePlan?.tasks?.length ?? 0,
-            'subject': activePlan?.subject ?? '个人成长',
+            'subject': activePlan?.subject ?? l10n.posterPlanDefaultSubject,
             'deadline': activePlan?.targetDate?.toIso8601String(),
           },
           templateId: 'minimal',
@@ -358,20 +361,20 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
       ),
       _PosterPreset(
         id: 'capsule',
-        title: '灵感胶囊海报',
-        subtitle: '把最近一次洞察或好奇心胶囊做成可分享的思考卡片',
+        title: l10n.posterCapsuleTitle,
+        subtitle: l10n.posterCapsuleSubtitle,
         icon: Icons.auto_awesome_rounded,
         accent: const Color(0xFFD29BFF),
         payload: UniversalSharePayload(
           contentType: ShareableContentType.capsule,
           resourceId: latestCapsule?.id ?? user.id,
-          title: latestCapsule?.title ?? '今天的灵感胶囊',
+          title: latestCapsule?.title ?? l10n.posterCapsuleDefaultTitle,
           subtitle: latestCapsule == null
-              ? '把一个新的想法，留成值得回看的海报。'
+              ? l10n.posterCapsuleDefaultSubtitle
               : latestCapsule.content.split('\n').first,
-          description: latestCapsule?.content ?? '新的洞察正在生成，等你点亮。',
+          description: latestCapsule?.content ?? l10n.posterCapsuleDefaultDesc,
           metadata: {
-            'depth_label': latestCapsule?.depthLabel ?? '灵感',
+            'depth_label': latestCapsule?.depthLabel ?? l10n.posterCapsuleDefaultDepth,
             'word_count': latestCapsule?.content.length ?? 0,
             'created_at': latestCapsule?.createdAt.toIso8601String(),
             'related_subject': latestCapsule?.relatedSubject,
@@ -534,7 +537,7 @@ class _PosterPreviewCard extends StatelessWidget {
                           ? Image.file(previewFile!, fit: BoxFit.cover)
                           : Center(
                               child: Text(
-                                '预览生成中',
+                                AppLocalizations.of(context)!.posterPreviewGenerating,
                                 style: DS.bodyMedium.copyWith(
                                   color: DS.textSecondary,
                                 ),
@@ -600,14 +603,14 @@ class _PosterStudioHero extends StatelessWidget {
               ),
               _HeroBadge(
                 icon: template.icon ?? Icons.auto_awesome,
-                label: '${template.name} 模板',
+                label: AppLocalizations.of(context)!.posterTemplateSuffix(template.name),
                 color: template.color ?? DS.brandPrimary,
               ),
             ],
           ),
           const SizedBox(height: DS.spacing16),
           Text(
-            '把你的成长，做成值得分享的一张图',
+            AppLocalizations.of(context)!.posterHeroHeadline,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -623,7 +626,7 @@ class _PosterStudioHero extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '海报工坊会自动读取你的真实成就、计划、胶囊和成长数据，生成适合分享到社交平台或保存到相册的高质感海报。',
+            AppLocalizations.of(context)!.posterHeroDesc,
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
             style: DS.bodyMedium.copyWith(
@@ -632,14 +635,14 @@ class _PosterStudioHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          const Wrap(
+          Wrap(
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _HeroChip(label: '4 种核心海报'),
-              _HeroChip(label: '实时预览'),
-              _HeroChip(label: '下载图片'),
-              _HeroChip(label: '系统分享'),
+              _HeroChip(label: AppLocalizations.of(context)!.communityShareCorePosters),
+              _HeroChip(label: AppLocalizations.of(context)!.posterChipLivePreview),
+              _HeroChip(label: AppLocalizations.of(context)!.posterChipDownload),
+              _HeroChip(label: AppLocalizations.of(context)!.posterChipSystemShare),
             ],
           ),
         ],
@@ -763,7 +766,7 @@ class _SelectedTemplateCaption extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${template.name} 模板',
+                  AppLocalizations.of(context)!.posterTemplateSuffix(template.name),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: DS.bodyMedium.copyWith(
@@ -773,7 +776,7 @@ class _SelectedTemplateCaption extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.spacing2),
                 Text(
-                  template.description ?? '适合分享你的成长亮点',
+                  template.description ?? AppLocalizations.of(context)!.posterTemplateDefaultDesc,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: DS.bodySmall.copyWith(

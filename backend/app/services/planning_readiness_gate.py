@@ -1,13 +1,16 @@
 from __future__ import annotations
+
 from typing import Any, Literal
+
 from app.orchestration.schemas import CompiledInsightState
+
 
 class PlanningReadinessGate:
     """
     Planning Readiness Gate - Phase A3
     Decides if Sparkle is ready to plan or needs to ask questions.
     """
-    
+
     LEVEL_LOW = "low"
     LEVEL_MEDIUM = "medium"
     LEVEL_HIGH = "high"
@@ -19,7 +22,7 @@ class PlanningReadinessGate:
         gaps: list[str]
     ) -> dict[str, Any]:
         """Compute readiness and recommend action."""
-        
+
         # Scoring logic
         score = 1.0
         # Deduct per gap
@@ -49,13 +52,13 @@ class PlanningReadinessGate:
                 blocking_contradictions.append(description)
 
         score -= contradiction_penalty
-        
+
         score = max(0.0, score)
-        
+
         # Determination
         level = self.LEVEL_HIGH
         action: Literal["ask", "provisional", "proceed"] = "proceed"
-        
+
         if score <= 0.4:
             level = self.LEVEL_LOW
             action = "ask"
@@ -65,7 +68,7 @@ class PlanningReadinessGate:
         else:
             level = self.LEVEL_HIGH
             action = "proceed"
-            
+
         return {
             "readiness_score": round(score, 2),
             "readiness_level": level,

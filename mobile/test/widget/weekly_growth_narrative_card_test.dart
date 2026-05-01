@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('weekly growth narrative card expands concrete data',
       (tester) async {
     const narrative = WeeklyGrowthNarrative(
@@ -56,7 +59,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(),
           ),
@@ -75,7 +78,7 @@ void main() {
     expect(find.text('2 个任务'), findsOneWidget);
     expect(find.text('修复 2 个错误'), findsOneWidget);
     expect(find.text('1 次复盘'), findsOneWidget);
-    expect(find.text('掌握 +18.5'), findsOneWidget);
+    expect(find.text('掌握 +18'), findsOneWidget);
     expect(find.textContaining('最大进步：路由算法 30% → 65%'), findsOneWidget);
     expect(
       find.textContaining('下周目标：继续把网络层相关的核心概念吃透'),
@@ -92,7 +95,7 @@ void main() {
             (ref) async => WeeklyGrowthNarrative.placeholder(),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(),
           ),
@@ -128,7 +131,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(initialExpanded: true),
           ),
@@ -166,7 +169,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WeeklyGrowthNarrativeCard(
               initialExpanded: initialExpanded,

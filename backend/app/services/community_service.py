@@ -8,9 +8,10 @@ Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
 
 from __future__ import annotations
+
 import asyncio
 import math
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -30,8 +31,8 @@ from app.models.community import (
     GroupMessage,
     GroupMessageRead,
     GroupRole,
-    GroupTaskClaim,
     GroupTask,
+    GroupTaskClaim,
     GroupType,
     MessageType,
     SharedResource,
@@ -39,16 +40,15 @@ from app.models.community import (
 )
 from app.models.file_storage import StoredFile
 from app.models.galaxy import CollaborativeGalaxy, KnowledgeNode, KnowledgeNodeDocument, NodeRelation
-from app.models.group_files import GroupFile
-from app.models.group_files import GroupFileTrustLevel
+from app.models.group_files import GroupFile, GroupFileTrustLevel
 from app.models.plan import Plan, PlanType
 from app.models.user import User
 from app.schemas.community import (
     CheckinRequest,
+    GroupCollaborativeGalaxyNode,
     GroupCollaborativeGalaxyRelation,
     GroupCollaborativeGalaxyResponse,
     GroupCollaborativeGalaxyStats,
-    GroupCollaborativeGalaxyNode,
     GroupCreate,
     GroupKnowledgeBaseStats,
     GroupTaskCreate,
@@ -61,7 +61,7 @@ from app.services.group_file_service import GroupFileService
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _record_community_signal(
@@ -258,8 +258,8 @@ class FriendshipService:
                     await db.refresh(existing_rel)
                     return existing_rel
                 if existing_rel.status == FriendshipStatus.BLOCKED:
-                    raise ValueError("由于对方的隐私设置，无法发送请求")
-                raise ValueError("已存在好友关系或待处理请求")
+                    raise ValueError("由于对方的隐私设置，无法发送请求") from None
+                raise ValueError("已存在好友关系或待处理请求") from None
             raise
 
         await db.refresh(friendship)
@@ -811,7 +811,7 @@ class GroupService:
                 db.add(member)
                 await db.flush()
         except IntegrityError:
-            raise ValueError("已是群组成员")
+            raise ValueError("已是群组成员") from None
         await db.refresh(member)
         _record_community_signal(
             user_id=user_id,
@@ -986,7 +986,7 @@ class GroupService:
                 file_id=str(file_id),
                 group_file_id=str(group_file_id),
                 shared_by_user_id=str(shared_by_id),
-                triggered_at=deleted_at.replace(tzinfo=timezone.utc).isoformat(),
+                triggered_at=deleted_at.replace(tzinfo=UTC).isoformat(),
             )
             await event_bus.publish(event.event_type, event.to_dict())
 
@@ -1546,7 +1546,7 @@ class GroupMessageService:
         group = await db.get(Group, group_id)
         if group and group.slow_mode_seconds and group.slow_mode_seconds > 0:
             if member.last_active_at:
-                elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - member.last_active_at).total_seconds()
+                elapsed = (datetime.now(UTC).replace(tzinfo=None) - member.last_active_at).total_seconds()
                 if elapsed < group.slow_mode_seconds:
                     raise ValueError(f"慢速模式：请等待 {int(group.slow_mode_seconds - elapsed)} 秒后再发送")
 
@@ -2155,7 +2155,8 @@ class GroupTaskService:
             raise ValueError("已认领此任务")
 
         # 创建个人任务副本
-        from app.models.task import Task, TaskStatus, TaskType as PersonalTaskType
+        from app.models.task import Task, TaskStatus
+        from app.models.task import TaskType as PersonalTaskType
         from app.services.task_service import TaskService
 
         # 转换日期 (DateTime -> Date)
@@ -2204,7 +2205,7 @@ class GroupTaskService:
                 group_task.total_claims += 1
                 await db.flush()
         except IntegrityError:
-            raise ValueError("已认领此任务")
+            raise ValueError("已认领此任务") from None
 
         await db.refresh(claim)
         return claim
@@ -2651,7 +2652,7 @@ class PrivateMessageService:
             and_(
                 PrivateMessage.receiver_id == user_id,
                 PrivateMessage.sender_id == sender_id,
-                PrivateMessage.is_read == False
+                not PrivateMessage.is_read
             )
         ).values(
             is_read=True,
@@ -2874,7 +2875,7 @@ class UserSearchService:
 
         # 构建查询
         search_query = select(User).where(
-            User.is_active == True,
+            User.is_active,
             User.id != current_user_id,
             or_(
                 User.username.ilike(f"%{query}%"),
@@ -2933,7 +2934,7 @@ class UserSearchService:
         try:
             user.searchable_by = SearchVisibility(searchable_by)
         except ValueError:
-            raise ValueError(f"无效的搜索可见性设置: {searchable_by}")
+            raise ValueError(f"无效的搜索可见性设置: {searchable_by}") from None
 
         await db.flush()
         return True

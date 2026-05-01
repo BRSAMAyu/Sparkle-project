@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_transparent.dart';
+import '../../shared/i18n_test_helper.dart';
 
 class _FakeUserRepository implements UserRepository {
   final List<Map<String, dynamic>> controlCalls = <Map<String, dynamic>>[];
@@ -58,6 +59,8 @@ class _FakeUserRepository implements UserRepository {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets(
     'profile transparent screen renders canonical transparency payload and submits control actions',
     (tester) async {
@@ -73,7 +76,7 @@ void main() {
           overrides: [
             userRepositoryProvider.overrideWithValue(repo),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: ProfileTransparentScreen(),
           ),
         ),

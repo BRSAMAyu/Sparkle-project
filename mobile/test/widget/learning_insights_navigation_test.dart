@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,7 @@ import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
   @override
@@ -116,6 +119,8 @@ class _FakeRef implements Ref {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
@@ -203,7 +208,17 @@ void main() {
               (ref) async => WeeklyGrowthNarrative.placeholder(),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            locale: const Locale('zh'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
 
@@ -308,7 +323,17 @@ void main() {
               (ref) async => WeeklyGrowthNarrative.placeholder(),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            locale: const Locale('zh'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
 

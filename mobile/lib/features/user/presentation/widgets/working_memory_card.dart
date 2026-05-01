@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class WorkingMemoryCard extends StatelessWidget {
   const WorkingMemoryCard({required this.snapshot, super.key});
@@ -18,7 +20,7 @@ class WorkingMemoryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '工作记忆快照',
+              context.l10n.userWorkingMemory,
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -26,13 +28,13 @@ class WorkingMemoryCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '把最近还在脑海前台的事项收紧成一个短视图。',
+              context.l10n.userWorkingMemoryHint,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing12),
             if (items.isEmpty)
               Text(
-                '最近没有需要继续挂在前台的工作记忆，先按当前节奏推进就好。',
+                context.l10n.userWorkingMemoryEmpty,
                 style: DS.bodyMedium.copyWith(color: DS.textSecondary),
               ),
             if (items.isNotEmpty)
@@ -78,7 +80,7 @@ class WorkingMemoryCard extends StatelessWidget {
     final parts = <String>[
       item.subjectType,
       '提及 ${item.mentionCount} 次',
-      if (item.consolidated) '已整合' else '仍在前台',
+      if (item.consolidated) S.userConsolidated else S.userStillInForeground,
     ];
     if (item.lastSeenAt != null) {
       parts.add(DateFormat('M月d日 HH:mm').format(item.lastSeenAt!));

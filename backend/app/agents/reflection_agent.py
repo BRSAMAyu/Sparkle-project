@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Reflection Agent - 自我反思与修正Agent
 
@@ -15,13 +16,13 @@ Reflection Agent - 自我反思与修正Agent
 创建时间: 2026-01-25
 """
 
-import uuid
 import json
 import math
 import time
+import uuid
 from dataclasses import dataclass
-from datetime import timezone, datetime
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
@@ -40,10 +41,10 @@ from app.core.llm_router import ModelProvider
 # ============================================
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-class ReflectionStrategy(str, Enum):
+class ReflectionStrategy(StrEnum):
     """反思修正策略"""
     DIRECT_FIX = "direct_fix"           # 直接修复：根据建议直接修改
     REGENERATE = "regenerate"            # 重新生成：完全重新生成内容
@@ -52,7 +53,7 @@ class ReflectionStrategy(str, Enum):
     ESCALATE = "escalate"                # 升级处理：无法自动修正
 
 
-class ReflectionOutcome(str, Enum):
+class ReflectionOutcome(StrEnum):
     """反思结果"""
     FIXED = "fixed"                     # 已修正
     IMPROVED = "improved"               # 有改善

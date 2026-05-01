@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Arbitration Service - Phase 2g
 
@@ -14,8 +15,8 @@ Arbitration Service - Phase 2g
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
@@ -40,9 +41,9 @@ from app.services.review_history_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
-class ArbitratorRole(str, Enum):
+class ArbitratorRole(StrEnum):
     """仲裁员角色"""
     AUTO = "auto"               # 自动仲裁
     REVIEWER = "reviewer"       # 审查员
@@ -50,7 +51,7 @@ class ArbitratorRole(str, Enum):
     ADMIN = "admin"             # 管理员
 
 
-class ArbitrationPriority(str, Enum):
+class ArbitrationPriority(StrEnum):
     """仲裁优先级"""
     LOW = "low"
     NORMAL = "normal"
@@ -58,7 +59,7 @@ class ArbitrationPriority(str, Enum):
     URGENT = "urgent"
 
 
-class EscalationReason(str, Enum):
+class EscalationReason(StrEnum):
     """升级原因"""
     SCORE_DISCREPANCY = "score_discrepancy"       # 一二次审查分数差异大
     LOW_CONFIDENCE = "low_confidence"             # 低置信度

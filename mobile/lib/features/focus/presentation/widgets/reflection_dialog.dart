@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
@@ -54,15 +55,16 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
   }
 
   String _buildReflectionContent() {
+    final zh = I18nService.instance.isChinese;
     final parts = <String>[
-      '专注复盘',
-      '卡点：${_stuckController.text.trim()}',
+      zh ? '专注复盘' : 'Focus Reflection',
+      zh ? '卡点：${_stuckController.text.trim()}' : 'Friction: ${_stuckController.text.trim()}',
     ];
     if (_methodController.text.trim().isNotEmpty) {
-      parts.add('有效方法：${_methodController.text.trim()}');
+      parts.add(zh ? '有效方法：${_methodController.text.trim()}' : 'What helped: ${_methodController.text.trim()}');
     }
     if (_adjustmentController.text.trim().isNotEmpty) {
-      parts.add('下次调整：${_adjustmentController.text.trim()}');
+      parts.add(zh ? '下次调整：${_adjustmentController.text.trim()}' : 'Next adjustment: ${_adjustmentController.text.trim()}');
     }
     return parts.join('\n');
   }
@@ -71,8 +73,7 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
     required String zh,
     required String en,
   }) {
-    final code = Localizations.localeOf(context).languageCode.toLowerCase();
-    return code.startsWith('zh') ? zh : en;
+    return I18nService.instance.isChinese ? zh : en;
   }
 
   @override

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 from app.core.i18n import I18n
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.system_update_service import SystemUpdateService, build_system_update
-
-from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 
 
 class WelcomeOnboardingConsumer(JourneyEventConsumerBase):

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, this.initialToken});
@@ -70,7 +72,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
         ),
-        title: const Text('重置密码'),
+        title: Text(context.l10n.authResetPassword),
         centerTitle: true,
       ),
       child: ContentConstraint(
@@ -83,10 +85,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SparkleStaggerItem(
+                  SparkleStaggerItem(
                     index: 0,
                     child: Text(
-                      '请输入邮件中的重置码，并设置一个新的登录密码。',
+                      I18nService.instance.isChinese ? '请输入邮件中的重置码，并设置一个新的登录密码。' : 'Enter the reset code from the email and set a new password.',
                     ),
                   ),
                   const SizedBox(height: DS.spacing24),
@@ -94,14 +96,14 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     index: 1,
                     child: TextFormField(
                     controller: _tokenController,
-                    decoration: const InputDecoration(
-                      labelText: '重置码',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.mark_email_read_outlined),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.authResetCode,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.mark_email_read_outlined),
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)
-                            ? '请输入重置码'
+                            ? (I18nService.instance.isChinese ? '请输入重置码' : 'Enter the reset code')
                             : null,
                     ),
                   ),
@@ -112,7 +114,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: '新密码',
+                      labelText: context.l10n.authNewPassword,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: SparkleIconButton(
@@ -134,7 +136,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.length < 6) {
-                        return '密码至少需要 6 位';
+                        return I18nService.instance.isChinese ? '密码至少需要 6 位' : 'Password must be at least 6 characters';
                       }
                       return null;
                     },
@@ -147,7 +149,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
-                      labelText: '确认新密码',
+                      labelText: context.l10n.authConfirmNewPassword,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_person_outlined),
                       suffixIcon: SparkleIconButton(
@@ -172,7 +174,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     ),
                     validator: (value) {
                       if (value != _passwordController.text) {
-                        return '两次输入的密码不一致';
+                        return I18nService.instance.isChinese ? '两次输入的密码不一致' : 'Passwords do not match';
                       }
                       return null;
                     },
@@ -182,7 +184,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   SparkleStaggerItem(
                     index: 4,
                     child: SparkleButton(
-                      label: '确认重置',
+                      label: context.l10n.authConfirmReset,
                       onPressed: authState.isLoading ? null : _submit,
                       loading: authState.isLoading,
                       disabled: authState.isLoading,

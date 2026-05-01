@@ -1586,10 +1586,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskOverdue => 'Overdue';
 
   @override
-  String get taskDueToday => 'Due today';
+  String get taskDueToday => 'Today';
 
   @override
-  String get taskDueTomorrow => 'Due tomorrow';
+  String get taskDueTomorrow => 'Tomorrow';
 
   @override
   String get taskDueThisWeek => 'Due this week';
@@ -10201,7 +10201,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskTypeLabel => 'Task Type Label';
 
   @override
-  String get taskTypeOcr => 'Task Type Ocr';
+  String get taskTypeOcr => 'OCR';
 
   @override
   String get taskUntitled => 'Task Untitled';
@@ -11445,6 +11445,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardUpdatesInsights => 'Updates & Insights';
+
+  @override
+  String get dashboardSprintPhase => 'Exam sprint phase, strategy adjusted';
+
+  @override
+  String dashboardSprintDaysLeft(int days) {
+    return '$days days left in sprint, today\'s tasks aligned';
+  }
+
+  @override
+  String get dashboardWhatToPush =>
+      'What do you want to push forward most right now?';
+
+  @override
+  String get dashboardGoalExamSprint => 'Exam Sprint';
+
+  @override
+  String get dashboardGoalLongTerm => 'Long-term Study';
+
+  @override
+  String get dashboardGoalProject => 'Project Delivery';
+
+  @override
+  String get dashboardGoalSelfGrowth => 'Self Growth';
+
+  @override
+  String get dashboardGoalNotSure => 'Not Sure';
+
+  @override
+  String get dashboardGoalExamSprintPrompt =>
+      'I want to prepare for an exam sprint';
+
+  @override
+  String get dashboardGoalLongTermPrompt =>
+      'I want to systematically study a course';
+
+  @override
+  String get dashboardGoalProjectPrompt => 'I have a project to complete';
+
+  @override
+  String get dashboardGoalSelfGrowthPrompt => 'I want to better manage myself';
+
+  @override
+  String get dashboardGoalNotSurePrompt => 'I\'m not sure what I want';
+
+  @override
+  String get dashboardLoadFailed => 'Load failed';
+
+  @override
+  String get dashboardRetry => 'Retry';
+
+  @override
+  String get dashboardQuickCalibration => 'Quick Calibration';
 
   @override
   String planEditTypeTitle(Object type) {
@@ -13527,10 +13580,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Simulations, what-ifs, and reports — now in one lighter learning flow.';
 
   @override
-  String get insightHubSimulation => 'Learning Simulation';
+  String get insightHubSimulation => 'Simulation';
 
   @override
-  String get insightHubTheater => 'Deduction Theater';
+  String get insightHubTheater => 'What-If Theater';
 
   @override
   String get insightHubReport => 'Learning Report';
@@ -14539,7 +14592,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please enter a valid OpenClaw address';
 
   @override
-  String get openclawDisconnected => 'OpenClaw connection disconnected';
+  String get openclawDisconnected => 'Disconnected';
 
   @override
   String openclawPairingCodeGenerated(Object code) {
@@ -17932,7 +17985,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statisticsWatermark => 'Sparkle AI';
 
   @override
-  String statisticsDateFormat(Object day, Object month, Object year) {
+  String statisticsDateFormat(Object year, Object month, Object day) {
     return '$year/$month/$day';
   }
 
@@ -18056,7 +18109,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileUploadSelected => 'File selected';
 
   @override
-  String fileUploadFormat(Object size, Object type) {
+  String fileUploadFormat(Object type, Object size) {
     return '$type · $size';
   }
 
@@ -19120,4 +19173,9700 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraWakeViewUpdates => 'View recent updates';
+
+  @override
+  String get intentResumePriorityTask => 'Resume Priority Task';
+
+  @override
+  String get intentBuildStudyPlan => 'Build Study Plan';
+
+  @override
+  String get intentDiagnoseIssue => 'Diagnose Issue';
+
+  @override
+  String get intentTurnIntoTask => 'Turn Into Task';
+
+  @override
+  String get intentInstantResults => 'Instant Results';
+
+  @override
+  String get intentReviewProgress => 'Review Progress';
+
+  @override
+  String get intentPlanNextStep => 'Plan Next Step';
+
+  @override
+  String get intentQuickReflection => 'Quick Reflection';
+
+  @override
+  String get intentPredictedIntent => 'Predicted Intent';
+
+  @override
+  String get intentRightNow => 'Right Now';
+
+  @override
+  String get intentNext30Min => 'Next 30 Minutes';
+
+  @override
+  String get intentNext1Hour => 'Next Hour';
+
+  @override
+  String get intentNext2Hours => 'Next 2 Hours';
+
+  @override
+  String get intentNext6Hours => 'Next 6 Hours';
+
+  @override
+  String get intentLaterToday => 'Later Today';
+
+  @override
+  String get intentLongRangeForecast => 'Long-Range Forecast';
+
+  @override
+  String get intentRulesFallback => 'Rules Fallback';
+
+  @override
+  String get intentJustNow => 'just now';
+
+  @override
+  String intentMinutesAgo(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String intentHoursAgo(int count) {
+    return '$count hr ago';
+  }
+
+  @override
+  String intentDaysAgo(int count) {
+    return '$count d ago';
+  }
+
+  @override
+  String get intentRecentCategorySignal => 'Recent same-category signal';
+
+  @override
+  String get examHighFreqCoverage => 'High-Freq Coverage';
+
+  @override
+  String get examMistakeRepair => 'Mistake Repair';
+
+  @override
+  String get examStudyStreak => 'Study Streak';
+
+  @override
+  String get examKeepRhythm => 'Keep the rhythm';
+
+  @override
+  String get examTips => 'Exam Tips';
+
+  @override
+  String get examRecordResult => 'Record Exam Result';
+
+  @override
+  String get examSprintDashboard => 'Exam Sprint Dashboard';
+
+  @override
+  String get examDay => 'Exam day';
+
+  @override
+  String get examTodaySprintTasks => 'Today Sprint Tasks';
+
+  @override
+  String get examHideLaterDays => 'Hide later days';
+
+  @override
+  String examDayIndex(Object dayIndex) {
+    return 'Day $dayIndex';
+  }
+
+  @override
+  String get examNoSprintTasks => 'No sprint tasks yet';
+
+  @override
+  String get examStatusCompleted => 'Done';
+
+  @override
+  String get examStatusInProgress => 'In progress';
+
+  @override
+  String get examStatusPending => 'Pending';
+
+  @override
+  String get examModeHighScore => 'High Score';
+
+  @override
+  String get examModeHold => 'Hold';
+
+  @override
+  String get examModePass => 'Pass';
+
+  @override
+  String get examModeSprint => 'Sprint';
+
+  @override
+  String get taskBoardPlanManagement => 'Plan Management';
+
+  @override
+  String get taskBoardHelpfulNotes => 'Helpful Notes';
+
+  @override
+  String get taskBoardBrowseByDate => 'Browse by Date';
+
+  @override
+  String get taskBoardOverdueTasks => 'Overdue Tasks';
+
+  @override
+  String get taskBoardPriorityOrder => 'Priority Order';
+
+  @override
+  String get taskBoardCustomPriority => 'Custom Priority';
+
+  @override
+  String get taskBoardSprintFocus => 'Sprint Focus Mode';
+
+  @override
+  String get taskBoardSprintTiming => 'Sprint Timing';
+
+  @override
+  String get taskBoardNoTasksToday => 'No tasks due today';
+
+  @override
+  String get taskBoardTitle => 'Task Board';
+
+  @override
+  String get taskBoardExpand => 'Expand';
+
+  @override
+  String get taskBoardCollapse => 'Collapse';
+
+  @override
+  String get taskBoardWorkspaceSummary => 'Workspace Summary';
+
+  @override
+  String get taskBoardScheduleView => 'Schedule';
+
+  @override
+  String get taskBoardPriorityView => 'Priority';
+
+  @override
+  String get taskBoardPlanView => 'Plan';
+
+  @override
+  String get taskBoardSprintView => 'Sprint';
+
+  @override
+  String get heatmapTitle => 'Learning Heatmap';
+
+  @override
+  String heatmapDays(Object count) {
+    return '$count days';
+  }
+
+  @override
+  String get heatmapNotStarted => 'Heatmap not started yet';
+
+  @override
+  String get heatmapCreateTask => 'Create task';
+
+  @override
+  String get heatmapLess => 'Less';
+
+  @override
+  String get heatmapMore => 'More';
+
+  @override
+  String get heatmapMinutes => '(minutes)';
+
+  @override
+  String get openclawReadyTakeOver => 'Ready to take over';
+
+  @override
+  String get openclawRecentExecution => 'Most recent execution';
+
+  @override
+  String get openclawLatestRun => 'Latest run';
+
+  @override
+  String get openclawRecorded => 'Recorded';
+
+  @override
+  String get openclawOpenCenter => 'Open Execution Center';
+
+  @override
+  String get openclawConnected => 'Connected';
+
+  @override
+  String get recentInsightsTitle => 'Recent Insights';
+
+  @override
+  String get metricsTodayFocus => 'Today Focus';
+
+  @override
+  String get metricsTodayTasks => 'Today Tasks';
+
+  @override
+  String get galaxyStartReview => 'Start Review';
+
+  @override
+  String get galaxyBestReviewWindow => 'Best Review Window';
+
+  @override
+  String get workspaceModules => 'Workspace Modules';
+
+  @override
+  String examHighYieldWeakSpots(Object topics) {
+    return 'High-yield weak spots: $topics';
+  }
+
+  @override
+  String get examNoSprintScheduled => 'No sprint tasks scheduled today.';
+
+  @override
+  String get examDayReady => 'Exam Day · You\'re Ready 🎓';
+
+  @override
+  String examDaysUntil(Object days) {
+    return '$days days until exam';
+  }
+
+  @override
+  String examTodayProgress(Object completed, Object total) {
+    return 'Today: $completed/$total tasks';
+  }
+
+  @override
+  String examDaysLeft(Object days) {
+    return '$days days left';
+  }
+
+  @override
+  String examTodayCompleted(Object completed, Object total) {
+    return 'Today $completed/$total done';
+  }
+
+  @override
+  String examShowNextDays(Object count) {
+    return 'Show next $count days';
+  }
+
+  @override
+  String examStreakDays(Object count) {
+    return '$count d';
+  }
+
+  @override
+  String examTaskMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String examPlanSubject(Object planName) {
+    return '$planName';
+  }
+
+  @override
+  String openclawAutomationScheduleCount(Object count) {
+    return '$count automations';
+  }
+
+  @override
+  String openclawBatchCandidateCount(Object count) {
+    return '$count batch candidates';
+  }
+
+  @override
+  String get openclawAutomationIntro =>
+      'Centralize one-off batch delegations and recurring scheduled executions here. You can manage both \"do now\" and \"automate later\" without leaving the OpenClaw Hub.';
+
+  @override
+  String get openclawBatchDelegation => 'Batch Delegation';
+
+  @override
+  String get openclawBatchDelegationDesc =>
+      'Select multiple executable tasks, send them to OpenClaw at once, and review completed, failed, and queued items in one summary.';
+
+  @override
+  String get openclawOrchestrationStrategy => 'Orchestration Strategy';
+
+  @override
+  String get openclawOrchestrationStrategyHelper =>
+      'Auto mode selects sequential or parallel based on task differences.';
+
+  @override
+  String get openclawModeAuto => 'Auto';
+
+  @override
+  String get openclawModeSequential => 'Sequential';
+
+  @override
+  String get openclawModeParallel => 'Parallel';
+
+  @override
+  String get openclawBatchEmptyHint =>
+      'Wait for the task list to load, or create some tasks on the task page. Candidates for batch delegation will appear here.';
+
+  @override
+  String get openclawStartBatchDelegation => 'Start Batch Delegation';
+
+  @override
+  String get openclawScheduledConditionExecution => 'Scheduled / Conditional';
+
+  @override
+  String get openclawScheduledConditionDesc =>
+      'Set a rhythm for routine tasks, or listen for external events and conditions. Once created, Sparkle will automatically hand them to OpenClaw on schedule.';
+
+  @override
+  String get openclawNeedTaskFirst =>
+      'You need at least one task before creating an automation.';
+
+  @override
+  String get openclawBindTask => 'Bind Task';
+
+  @override
+  String get openclawTriggerMethod => 'Trigger Method';
+
+  @override
+  String get openclawTriggerDaily => 'Daily Schedule';
+
+  @override
+  String get openclawTriggerEvent => 'Event Trigger';
+
+  @override
+  String get openclawTriggerCondition => 'Condition Poll';
+
+  @override
+  String get openclawHour => 'Hour';
+
+  @override
+  String get openclawMinute => 'Minute';
+
+  @override
+  String get openclawEventType => 'Event Type';
+
+  @override
+  String get openclawEventTypeHelper => 'e.g. pr_merged / inbox_arrived';
+
+  @override
+  String get openclawCheckUrl => 'Check URL';
+
+  @override
+  String get openclawConditionExpression => 'Condition Expression';
+
+  @override
+  String get openclawConditionHelper =>
+      'e.g. contains(\'merged\') or equals(\'ok\')';
+
+  @override
+  String get openclawPollingInterval => 'Polling Interval (min)';
+
+  @override
+  String get openclawCreateAutomation => 'Create Automation';
+
+  @override
+  String get openclawNoAutomationHint =>
+      'No automations yet. Create a \"daily schedule\" or \"condition poll\" and upcoming runs will appear here.';
+
+  @override
+  String get openclawBatchSubmitted => 'Batch delegation submitted';
+
+  @override
+  String get openclawBatchFailed => 'Batch delegation failed';
+
+  @override
+  String get openclawAutomationCreated => 'Automation created';
+
+  @override
+  String get openclawAutomationCreateFailed => 'Failed to create automation';
+
+  @override
+  String openclawCompletedCount(Object count) {
+    return '$count completed';
+  }
+
+  @override
+  String openclawFailedCount(Object count) {
+    return '$count failed';
+  }
+
+  @override
+  String openclawQueuedCount(Object count) {
+    return '$count queued';
+  }
+
+  @override
+  String get openclawRunning => 'Running';
+
+  @override
+  String get openclawPaused => 'Paused';
+
+  @override
+  String openclawNextRunLastRun(Object last, Object next) {
+    return 'Next: $next · Last: $last';
+  }
+
+  @override
+  String get openclawPause => 'Pause';
+
+  @override
+  String get openclawResume => 'Resume';
+
+  @override
+  String get openclawDelete => 'Delete';
+
+  @override
+  String openclawEventTriggerLabel(Object eventType) {
+    return 'Event trigger: $eventType';
+  }
+
+  @override
+  String openclawConditionTriggerLabel(Object condition) {
+    return 'Condition poll: $condition';
+  }
+
+  @override
+  String openclawCronTriggerLabel(Object cron) {
+    return 'Daily schedule: $cron';
+  }
+
+  @override
+  String get openclawNotFilled => 'Not filled';
+
+  @override
+  String get openclawNoDate => 'N/A';
+
+  @override
+  String openclawNodeCount(Object count) {
+    return '$count devices';
+  }
+
+  @override
+  String openclawOnlineCount(Object count) {
+    return '$count online';
+  }
+
+  @override
+  String get openclawUnsavedPreference => 'Unsaved device preferences';
+
+  @override
+  String get openclawNodeIntro =>
+      'Assign preferred devices for different task types. When not specified, Sparkle auto-selects by availability, capability, and load.';
+
+  @override
+  String get openclawNoPairedNodes => 'No paired nodes discovered yet.';
+
+  @override
+  String get openclawRefreshDeviceList => 'Refresh device list';
+
+  @override
+  String get openclawAffinityHelper =>
+      'Select a fixed device, or keep \"Auto Select\" to let Sparkle handle scheduling.';
+
+  @override
+  String get openclawAutoSelect => 'Auto Select';
+
+  @override
+  String get openclawNodeOnline => 'Online';
+
+  @override
+  String get openclawNodeOffline => 'Offline';
+
+  @override
+  String get openclawSaveDeviceAffinity => 'Save Device Affinity';
+
+  @override
+  String get openclawDeviceAffinitySaved => 'Device affinity saved';
+
+  @override
+  String get openclawSaveDeviceAffinityFailed =>
+      'Failed to save device affinity';
+
+  @override
+  String get openclawRefreshDevice => 'Refresh Devices';
+
+  @override
+  String openclawRunningCount(Object count) {
+    return '$count running';
+  }
+
+  @override
+  String openclawCapsLabel(Object caps) {
+    return 'Capabilities $caps';
+  }
+
+  @override
+  String openclawCommandsLabel(Object commands) {
+    return 'Commands $commands';
+  }
+
+  @override
+  String get openclawBrowserTask => 'Browser tasks';
+
+  @override
+  String get openclawShellTask => 'Shell tasks';
+
+  @override
+  String get openclawDocumentTask => 'Document tasks';
+
+  @override
+  String get openclawApiTask => 'API tasks';
+
+  @override
+  String get openclawConnectionDiagnostics => 'Connection Diagnostics';
+
+  @override
+  String get openclawRediagnose => 'Re-diagnose';
+
+  @override
+  String get openclawConnectionNormal => 'Connected';
+
+  @override
+  String get openclawConnectionWarning => 'Needs confirmation';
+
+  @override
+  String get openclawConnectionSkipped => 'Partially skipped';
+
+  @override
+  String get openclawConnectionFixNeeded => 'Needs fix';
+
+  @override
+  String openclawGeneratedAt(Object datetime) {
+    return 'Generated: $datetime';
+  }
+
+  @override
+  String openclawSuggestion(Object suggestion) {
+    return 'Suggestion: $suggestion';
+  }
+
+  @override
+  String get openclawDiagnoseFailed =>
+      'Unable to complete connection diagnostics at this time';
+
+  @override
+  String get heatmapStatTotal => 'Total';
+
+  @override
+  String get heatmapStatPending => 'Pending';
+
+  @override
+  String get heatmapStatDone => 'Done';
+
+  @override
+  String get heatmapOverview => 'Overview';
+
+  @override
+  String get heatmapTodayNoSchedule => 'No intensive schedule today';
+
+  @override
+  String get heatmapToday => 'Today';
+
+  @override
+  String heatmapSelectedDayTasks(Object count, Object day) {
+    return 'Day $day · $count items';
+  }
+
+  @override
+  String heatmapSelectedDayNoTasks(Object day) {
+    return 'Day $day · No tasks';
+  }
+
+  @override
+  String get heatmapWeekdayMon => 'M';
+
+  @override
+  String get heatmapWeekdayTue => 'T';
+
+  @override
+  String get heatmapWeekdayWed => 'W';
+
+  @override
+  String get heatmapWeekdayThu => 'T';
+
+  @override
+  String get heatmapWeekdayFri => 'F';
+
+  @override
+  String get heatmapWeekdaySat => 'S';
+
+  @override
+  String get heatmapWeekdaySun => 'S';
+
+  @override
+  String get dashboardEditTitle => 'Edit Card Section';
+
+  @override
+  String get dashboardLayoutMode => 'Layout Mode';
+
+  @override
+  String get dashboardLayoutSwipe => 'Swipe Cards';
+
+  @override
+  String get dashboardLayoutGrid => 'Two-column Grid';
+
+  @override
+  String get dashboardDisplayAndSort => 'Display & Sort';
+
+  @override
+  String get dashboardRestoreDefaults => 'Restore Defaults';
+
+  @override
+  String get dashboardCardInsights => 'Learning Insights';
+
+  @override
+  String get dashboardCardFocus => 'Focus Core';
+
+  @override
+  String get dashboardCardCalendar => 'Calendar Heatmap';
+
+  @override
+  String get dashboardCardTools => 'Quick Tools';
+
+  @override
+  String get dashboardCardOpenclaw => 'OpenClaw';
+
+  @override
+  String get dashboardCardStreak => 'Streak Card';
+
+  @override
+  String get dashboardCardNextActions => 'Next Steps';
+
+  @override
+  String get dashboardCardCuriosity => 'Curiosity Capsule';
+
+  @override
+  String get dashboardCardLongTermPlan => 'Long-term Plan';
+
+  @override
+  String get dashboardCardSeedLibrary => 'Seed Library';
+
+  @override
+  String get dashboardCardInsightsSubtitle =>
+      'Unified entry for learning simulations, what-if analysis, and reports';
+
+  @override
+  String get dashboardCardFocusSubtitle => 'Focus duration and flame status';
+
+  @override
+  String get dashboardCardCalendarSubtitle => 'View monthly task heatmap';
+
+  @override
+  String get dashboardCardToolsSubtitle => 'Quick access to pinned tools';
+
+  @override
+  String get dashboardCardOpenclawSubtitle =>
+      'Standalone AI execution hub, connections, and queue';
+
+  @override
+  String get dashboardCardStreakSubtitle => 'Continuous learning achievements';
+
+  @override
+  String get dashboardCardNextActionsSubtitle => 'Key actions to push forward';
+
+  @override
+  String get dashboardCardCuriositySubtitle =>
+      'Recent cognitive and exploration summary';
+
+  @override
+  String get dashboardCardLongTermPlanSubtitle =>
+      'Long-term growth goal progress';
+
+  @override
+  String get dashboardCardSeedLibrarySubtitle =>
+      'Frequently used knowledge seeds and inspiration';
+
+  @override
+  String get cognitiveToolHubQuickTools => 'Quick Tools';
+
+  @override
+  String get cognitiveToolHubToolSettings => 'Tool Settings';
+
+  @override
+  String get cognitiveToolHubQuickToolsSection => 'Quick Tools';
+
+  @override
+  String get cognitiveToolHubManageTools => 'Manage Tools';
+
+  @override
+  String cognitiveToolHubExpandedTools(Object count, Object extra) {
+    return '$count tools expanded$extra';
+  }
+
+  @override
+  String get cognitiveToolHubExpandedMore => ', swipe for more';
+
+  @override
+  String get cognitiveToolHubCollapsedTools => 'Showing first 4 pinned tools';
+
+  @override
+  String get cognitiveToolHubCollapse => 'Collapse';
+
+  @override
+  String get cognitiveToolHubExpand => 'Expand';
+
+  @override
+  String get cognitiveToolCognitivePrism => 'Cognitive Prism';
+
+  @override
+  String get cognitiveToolPrismReady => 'Cognitive core summary ready';
+
+  @override
+  String get cognitiveToolPatternUpdated =>
+      'Behavioral pattern analysis updated. Your frequently used tool shortcuts are below.';
+
+  @override
+  String get cognitiveToolSyncPrompt =>
+      'Tap to sync thoughts and error data, and quickly review recent pattern changes.';
+
+  @override
+  String get cognitiveToolCoreTag => '#CognitiveCore';
+
+  @override
+  String get cognitiveToolReviewWeakness => 'Review Weakness: Analysis';
+
+  @override
+  String get cognitiveToolNoPinnedTools => 'No pinned tools yet';
+
+  @override
+  String get cognitiveToolGoToLibrary =>
+      'Go to the tool library to pick shortcuts for your home screen.';
+
+  @override
+  String get taskBoardOverdue => 'Overdue';
+
+  @override
+  String get taskBoardToday => 'Today';
+
+  @override
+  String get taskBoardTomorrow => 'Tomorrow';
+
+  @override
+  String get taskBoardThisWeek => 'This Week';
+
+  @override
+  String get taskBoardLater => 'Later';
+
+  @override
+  String get taskBoardNoDate => 'No Date';
+
+  @override
+  String get taskBoardTodayNoTasks => 'No tasks today';
+
+  @override
+  String taskBoardTodaySummary(Object completed, Object total) {
+    return 'Today $total items · $completed done';
+  }
+
+  @override
+  String get unnamedTask => 'Unnamed Task';
+
+  @override
+  String taskConfirmAbandon(Object title) {
+    return 'Are you sure you want to abandon \"$title\"?';
+  }
+
+  @override
+  String get taskAbandonTitle => 'Abandon Task';
+
+  @override
+  String get taskAbandonAction => 'Abandon';
+
+  @override
+  String get taskStartAction => 'Start';
+
+  @override
+  String get taskEditAction => 'Edit';
+
+  @override
+  String get taskCompleteTask => 'Complete Task';
+
+  @override
+  String taskEstimatedMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get taskTypeErrorFix => 'Debugging';
+
+  @override
+  String get taskDueOverdue => 'Overdue';
+
+  @override
+  String taskDueDateLabel(Object day, Object month) {
+    return '$month/$day';
+  }
+
+  @override
+  String get planViewCurrentSession => 'Current Session';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get achievementShareTemplateCosmic => 'Starry Sky';
+
+  @override
+  String get achievementShareTemplateMinimal => 'Minimal';
+
+  @override
+  String get achievementShareTemplateNeon => 'Neon';
+
+  @override
+  String get achievementShareTemplateElegant => 'Elegant';
+
+  @override
+  String get achievementDemoStreak7Name => 'Weekly Streak';
+
+  @override
+  String get achievementDemoStreak7Desc => 'Study 7 days in a row';
+
+  @override
+  String get achievementDemoStreak30Name => 'Monthly Champion';
+
+  @override
+  String get achievementDemoStreak30Desc => 'Study 30 days in a row';
+
+  @override
+  String get achievementDemoNodes100Name => 'Galaxy Explorer';
+
+  @override
+  String get achievementDemoNodes100Desc => 'Unlock 100 knowledge nodes';
+
+  @override
+  String get achievementDemoStreak3Name => 'First Launch';
+
+  @override
+  String get achievementDemoStreak14Name => 'Biweekly Master';
+
+  @override
+  String get achievementDemoStreak100Name => 'Centurion Legend';
+
+  @override
+  String get achievementDemoMasteryFirstName => 'First Steps';
+
+  @override
+  String get achievementDemoMastery10Name => 'Getting There';
+
+  @override
+  String get achievementDemoMastery50Name => 'Refined';
+
+  @override
+  String get achievementDemoMastery100Name => 'Peak Mastery';
+
+  @override
+  String get achievementDemoExplore10Name => 'Starfield Initiate';
+
+  @override
+  String get achievementDemoExplore50Name => 'Galaxy Voyager';
+
+  @override
+  String get achievementDemoExplore100Name => 'Galaxy Explorer';
+
+  @override
+  String get achievementDemoExplore500Name => 'Cosmic Pioneer';
+
+  @override
+  String get achievementDemoNightOwlName => 'Night Scholar';
+
+  @override
+  String get achievementDemoEarlyBirdName => 'Early Bird';
+
+  @override
+  String get achievementDemoCategoryStreak => 'Streak';
+
+  @override
+  String get achievementDemoCategoryMastery => 'Mastery';
+
+  @override
+  String get achievementDemoCategoryExploration => 'Exploration';
+
+  @override
+  String get achievementDemoCategoryHidden => 'Hidden';
+
+  @override
+  String get achievementDemoSkinDefaultName => 'Classic Galaxy';
+
+  @override
+  String get achievementDemoSkinDefaultDesc => 'Default galaxy theme';
+
+  @override
+  String get achievementDemoSkinNebulaName => 'Purple Nebula';
+
+  @override
+  String get achievementDemoSkinNebulaDesc => 'Mysterious purple nebula theme';
+
+  @override
+  String get achievementDemoSkinCyberpunkName => 'Cyberpunk';
+
+  @override
+  String get achievementDemoSkinCyberpunkDesc => 'Neon-lit cyberpunk style';
+
+  @override
+  String get achievementDemoTitleEarlyExplorer => 'Star Explorer';
+
+  @override
+  String get achievementDemoTitleWeeklyWarrior => 'Weekly Warrior';
+
+  @override
+  String get achievementMilestoneUnitNodes => 'nodes';
+
+  @override
+  String get achievementMilestoneUnitSprints => 'sprints';
+
+  @override
+  String get achievementMilestoneUnitDays => 'days';
+
+  @override
+  String get achievementMilestoneHeadlineNodes =>
+      'You\'ve lit up 50 knowledge nodes';
+
+  @override
+  String get achievementMilestoneHeadlineSprints =>
+      'You\'ve completed 2 exam sprints';
+
+  @override
+  String get achievementMilestoneHeadlineDefault =>
+      'You\'ve studied 30 days in a row';
+
+  @override
+  String get achievementMilestoneSubheadlineNodes =>
+      'Your knowledge galaxy is bright enough to see itself.';
+
+  @override
+  String get achievementMilestoneSubheadlineSprints =>
+      'Two sprints aren\'t luck — you\'ve found your rhythm.';
+
+  @override
+  String get achievementMilestoneSubheadlineDefault =>
+      'This month\'s persistence has grown into a visible growth curve.';
+
+  @override
+  String get achievementMilestoneHashtagDefault => '#SparkleMilestone';
+
+  @override
+  String get achievementMilestoneHashtag30Day => '#30DayChallenge';
+
+  @override
+  String get achievementMilestoneShareOpened => 'Share opened';
+
+  @override
+  String achievementMilestoneShareText(
+      Object completedSprints,
+      Object errorCount,
+      Object hashtag,
+      Object headline,
+      Object masteredNodes,
+      Object studyDays) {
+    return '$hashtag I reached the \"$headline\" milestone on Sparkle. Studied $studyDays days, mastered $masteredNodes nodes, completed $completedSprints sprints, recorded $errorCount errors.';
+  }
+
+  @override
+  String get achievementMilestoneShareInProgress => 'Sharing...';
+
+  @override
+  String get achievementMilestoneShareNow => 'Share this moment';
+
+  @override
+  String get achievementMilestoneContinueLearning => 'Continue learning';
+
+  @override
+  String get achievementMilestoneStatStudyDays => 'Study days';
+
+  @override
+  String get achievementMilestoneStatMasteredNodes => 'Mastered nodes';
+
+  @override
+  String get achievementMilestoneStatCompletedSprints => 'Completed sprints';
+
+  @override
+  String get achievementMilestoneStatErrorCount => 'Errors recorded';
+
+  @override
+  String get achievementMilestoneCoreUserMessage =>
+      'You\'ve become a core Sparkle user. Share this growth, and save it for yourself.';
+
+  @override
+  String get achievementListEmptyNoUnlock => 'No achievements unlocked yet';
+
+  @override
+  String get achievementListEmptyDescription =>
+      'Complete a task, maintain a study streak, or light up a knowledge node — your milestones will start appearing here.';
+
+  @override
+  String get achievementListClearFilter => 'Clear filters';
+
+  @override
+  String get achievementListCreateTask => 'Create today\'s task';
+
+  @override
+  String get achievementMapNextHighValue => 'Next high-value target';
+
+  @override
+  String get achievementMapUnlockReward => 'Rewards after unlocking';
+
+  @override
+  String get achievementMapClose => 'Close';
+
+  @override
+  String get achievementMapViewDetails => 'View details';
+
+  @override
+  String get achievementMapStateUnlocked => 'Unlocked';
+
+  @override
+  String get achievementMapStateReady => 'Ready to pursue';
+
+  @override
+  String get achievementMapStateClose => 'Almost there';
+
+  @override
+  String get achievementMapStateHidden => 'Hidden';
+
+  @override
+  String get achievementMapStateBlocked => 'Prerequisite locked';
+
+  @override
+  String get achievementMapOverlayTitle => 'Conquest Map';
+
+  @override
+  String get achievementMapOverlayHint =>
+      'Pinch to zoom or use the controls to explore different tracks. Recommended targets are highlighted.';
+
+  @override
+  String get achievementMapZoomIn => 'Zoom in';
+
+  @override
+  String get achievementMapZoomOut => 'Zoom out';
+
+  @override
+  String get achievementMapResetView => 'Reset view';
+
+  @override
+  String get achievementDetailUnlockMoment => 'Unlock Moment';
+
+  @override
+  String achievementDetailUnlockStory(Object date, Object name) {
+    return '$date, you unlocked \"$name\".';
+  }
+
+  @override
+  String achievementDetailDaysBeforeTarget(Object days, Object planName) {
+    return '$planName · $days days before target';
+  }
+
+  @override
+  String achievementDetailDaysAfterTarget(Object days, Object planName) {
+    return '$planName · $days days after target';
+  }
+
+  @override
+  String get achievementCardFirstUnlocker => 'First solver';
+
+  @override
+  String get achievementCardGloryReward => 'Glory rewards';
+
+  @override
+  String get achievementCardCompleted => 'Completed & displayable';
+
+  @override
+  String get achievementCardKeepPursuing => 'Keep pursuing to unlock';
+
+  @override
+  String get achievementCardAchieved => 'Achieved';
+
+  @override
+  String get achievementCardNewTitle => 'New title';
+
+  @override
+  String get achievementCardVisualElement => 'Visual element';
+
+  @override
+  String get achievementCardGalaxySkin => 'Galaxy skin';
+
+  @override
+  String get achievementCardAvatarBorder => 'Avatar border';
+
+  @override
+  String get achievementCardProfileBadge => 'Profile badge';
+
+  @override
+  String get achievementCardBanner => 'Banner';
+
+  @override
+  String get achievementCardCategoryStreak => 'Streak';
+
+  @override
+  String get achievementCardCategoryMastery => 'Mastery';
+
+  @override
+  String get achievementCardCategoryTask => 'Task';
+
+  @override
+  String get achievementCardCategoryExploration => 'Exploration';
+
+  @override
+  String get achievementCardCategoryStudyTime => 'Study Time';
+
+  @override
+  String get achievementCardCategoryHidden => 'Hidden';
+
+  @override
+  String get achievementCardCategoryMilestone => 'Milestone';
+
+  @override
+  String get achievementCardCategorySocial => 'Social';
+
+  @override
+  String get achievementCardCategoryContract => 'Contract';
+
+  @override
+  String get achievementCardCategorySprint => 'Sprint';
+
+  @override
+  String get achievementStatsNotStarted => 'Not started';
+
+  @override
+  String get achievementStatsWaitingToLight => 'Waiting to light up';
+
+  @override
+  String get achievementStatsToAccumulate => 'To accumulate';
+
+  @override
+  String get achievementStatsNotStartedUnlock => 'Not started unlocking';
+
+  @override
+  String get achievementShareLoading => 'Loading...';
+
+  @override
+  String get achievementUnlockBarrierLabel => 'Achievement unlocked';
+
+  @override
+  String get achievementUnlockFirstUnlocker => 'First to unlock!';
+
+  @override
+  String get achievementUnlockViewRewards => 'View rewards';
+
+  @override
+  String get achievementUnlockClose => 'Close';
+
+  @override
+  String get achievementUnlockShare => 'Share';
+
+  @override
+  String get achievementUnlockProcessing => 'Processing...';
+
+  @override
+  String get achievementUnlockGloryHarvest => 'Glory harvest';
+
+  @override
+  String get achievementUnlockIdentityChange => 'Identity changes appear in';
+
+  @override
+  String get achievementUnlockTitleCommon => 'Achievement unlocked!';
+
+  @override
+  String get achievementUnlockTitleRare => 'Rare achievement unlocked!';
+
+  @override
+  String get achievementUnlockTitleEpic => 'Epic achievement unlocked!';
+
+  @override
+  String get achievementUnlockTitleLegendary =>
+      'Legendary achievement unlocked!';
+
+  @override
+  String get achievementUnlockTimeJustNow => 'Just now';
+
+  @override
+  String achievementUnlockTimeMinutesAgo(Object minutes) {
+    return '$minutes min ago';
+  }
+
+  @override
+  String achievementUnlockTimeHoursAgo(Object hours) {
+    return '$hours hr ago';
+  }
+
+  @override
+  String achievementUnlockTimeDate(
+      Object day, Object hour, Object minute, Object month) {
+    return '$month/$day $hour:$minute';
+  }
+
+  @override
+  String achievementUnlockCombo(Object count) {
+    return '$count combo!';
+  }
+
+  @override
+  String get achievementUnlockMilestoneReached => 'Milestone reached!';
+
+  @override
+  String get achievementUnlockComboGodlike => 'Godlike!';
+
+  @override
+  String get achievementUnlockComboAmazing => 'Amazing!';
+
+  @override
+  String get achievementUnlockComboKeepGoing => 'Keep going!';
+
+  @override
+  String get achievementUnlockComboNice => 'Nice!';
+
+  @override
+  String achievementUnlockMilestoneProgress(Object percentage) {
+    return 'Reached $percentage% progress!';
+  }
+
+  @override
+  String get achievementUnlockPhotonReward10 => '+10 Photons';
+
+  @override
+  String get achievementUnlockPhotonReward25 => '+25 Photons';
+
+  @override
+  String get achievementUnlockPhotonReward50 => '+50 Photons';
+
+  @override
+  String get achievementUnlockPhotonReward100 => '+100 Photons';
+
+  @override
+  String get achievementProgressDescription30 => 'Study 30 days in a row';
+
+  @override
+  String get achievementProgressDescription100 => 'Unlock 100 knowledge nodes';
+
+  @override
+  String get notificationPushReminder => 'Smart Reminder';
+
+  @override
+  String get notificationDismissPush => 'Not this time';
+
+  @override
+  String get notificationDisablePushCategory => 'Don\'t remind this type';
+
+  @override
+  String get notificationEncouraged => 'Encouraged';
+
+  @override
+  String get notificationPushDismissed =>
+      'This smart reminder has been dismissed';
+
+  @override
+  String get notificationPushCategoryDisabled =>
+      'This type of smart reminder has been disabled';
+
+  @override
+  String get notificationEncouragementSent =>
+      'They received your encouragement';
+
+  @override
+  String get notificationEncouragementSentFallback =>
+      'They received your encouragement';
+
+  @override
+  String get notificationInteractionSeen => 'Seen';
+
+  @override
+  String get notificationInteractionAccepted => 'Advice accepted';
+
+  @override
+  String get notificationInteractionActed => 'Started executing';
+
+  @override
+  String get notificationInteractionDismissed => 'Dismissed';
+
+  @override
+  String get notificationInteractionSnoozed => 'Later';
+
+  @override
+  String get notificationInteractionApproved => 'Confirmed';
+
+  @override
+  String get notificationOutcomeEffective => 'Verified effective';
+
+  @override
+  String get notificationOutcomeIneffective => 'Not yet effective';
+
+  @override
+  String get notificationOutcomeUnknown => 'Still observing';
+
+  @override
+  String get notificationOutcomePending => 'Awaiting verification';
+
+  @override
+  String notificationCompilationSummary(
+      Object affected, Object hidden, Object inserted, Object result) {
+    return 'Result: $result, affected $affected tasks, added $inserted, hidden $hidden';
+  }
+
+  @override
+  String get notificationEvidencePlanHealthRecovered => 'Plan health recovered';
+
+  @override
+  String get notificationEvidenceMasteryImproved => 'Mastery improved';
+
+  @override
+  String notificationEvidenceFeedbackCount(Object count) {
+    return '$count follow-up feedback';
+  }
+
+  @override
+  String notificationEvidenceNegativeFeedback(Object count) {
+    return '$count negative feedback';
+  }
+
+  @override
+  String get notificationEvidenceRecorded =>
+      'System has recorded follow-up evidence for this intervention';
+
+  @override
+  String get notificationPushCategoryCommitmentFollowUp =>
+      'Commitment follow-up';
+
+  @override
+  String get notificationPushCategoryEngagementRecovery =>
+      'Engagement recovery';
+
+  @override
+  String get notificationPushCategoryUnknown => 'Unknown';
+
+  @override
+  String get notificationCurrentState => 'Current state';
+
+  @override
+  String get notificationVerificationResult => 'Verification result';
+
+  @override
+  String notificationSuggestedAction(Object step) {
+    return 'Suggested action: $step';
+  }
+
+  @override
+  String get notificationParameterAdjustment => 'Parameter adjustment';
+
+  @override
+  String get notificationVerificationEvidence => 'Verification evidence';
+
+  @override
+  String get notificationTriggerEvidence => 'Trigger evidence';
+
+  @override
+  String get notificationNotProvided => 'Not provided';
+
+  @override
+  String get notificationReminderCategory => 'Reminder category';
+
+  @override
+  String get notificationRetractableTo => 'Retractable to';
+
+  @override
+  String get notificationSendEncouragement => 'Send encouragement';
+
+  @override
+  String notificationPreviewWithStep(Object content, Object step) {
+    return '$content\nSuggested action: $step';
+  }
+
+  @override
+  String get notificationUnknownError => 'Unknown error';
+
+  @override
+  String get notificationAnalyticsFunnelTitle =>
+      'Intervention funnel (by trigger type)';
+
+  @override
+  String get notificationAnalyticsCreated => 'Created';
+
+  @override
+  String get notificationAnalyticsDelivered => 'Delivered';
+
+  @override
+  String get notificationAnalyticsSeen => 'Seen';
+
+  @override
+  String get notificationAnalyticsAccepted => 'Accepted';
+
+  @override
+  String get notificationAnalyticsActed => 'Acted';
+
+  @override
+  String notificationAnalyticsAcceptanceActionRate(
+      Object acceptanceRate, Object actionRate) {
+    return 'Acceptance rate $acceptanceRate% · Action rate $actionRate%';
+  }
+
+  @override
+  String get notificationAnalyticsToneEffectivenessTitle =>
+      'Tone effectiveness (by tone / channel)';
+
+  @override
+  String notificationAnalyticsCreatedCount(Object count) {
+    return 'Created $count';
+  }
+
+  @override
+  String notificationAnalyticsAcceptedCount(Object count) {
+    return 'Accepted $count';
+  }
+
+  @override
+  String notificationAnalyticsActedCount(Object count) {
+    return 'Acted $count';
+  }
+
+  @override
+  String notificationAnalyticsEffectiveCount(Object count) {
+    return 'Effective $count';
+  }
+
+  @override
+  String notificationAnalyticsActedEffectiveRate(
+      Object actedRate, Object effectiveRate) {
+    return 'Action rate $actedRate% · Effective rate $effectiveRate%';
+  }
+
+  @override
+  String get notificationAnalyticsTimeToActionTitle =>
+      'Time to action distribution';
+
+  @override
+  String get notificationAnalyticsAcceptSuggestion => 'Accept suggestion';
+
+  @override
+  String get notificationAnalyticsStartExecution => 'Start execution';
+
+  @override
+  String get notificationAnalyticsAcceptanceRate => 'Acceptance rate';
+
+  @override
+  String get notificationAnalyticsActionRate => 'Action rate';
+
+  @override
+  String get notificationAnalyticsAcceptedLabel => 'Accepted';
+
+  @override
+  String get notificationAnalyticsStartedLabel => 'Started';
+
+  @override
+  String get notificationAnalyticsTrendView => 'Viewed';
+
+  @override
+  String get notificationAnalyticsTrendAccept => 'Accepted';
+
+  @override
+  String get notificationAnalyticsTrendStart => 'Started';
+
+  @override
+  String notificationAnalyticsRateSuffix(
+      Object acceptanceRate, Object actionRate) {
+    return 'Acceptance rate: $acceptanceRate% · Action rate: $actionRate%';
+  }
+
+  @override
+  String get focusNoTaskHint =>
+      'Pick a task to start, or enter free focus mode.';
+
+  @override
+  String get focusCompletionHint =>
+      'Completion reveals a focus summary and today\'s total';
+
+  @override
+  String get focusSessionComplete => 'Focus complete';
+
+  @override
+  String get focusSessionGotIt => 'Got it';
+
+  @override
+  String focusSessionMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String focusSessionFlameEarned(Object flame) {
+    return '+$flame flame';
+  }
+
+  @override
+  String focusSessionMasteryUpdate(
+      Object newMastery, Object nodeName, Object oldMastery) {
+    return 'Today\'s focus raised $nodeName mastery from $oldMastery to $newMastery';
+  }
+
+  @override
+  String get focusReflectionTitleLabel => 'Focus review';
+
+  @override
+  String focusReflectionStuckLabel(Object content) {
+    return 'Stuck point: $content';
+  }
+
+  @override
+  String focusReflectionMethodLabel(Object content) {
+    return 'Effective method: $content';
+  }
+
+  @override
+  String focusReflectionAdjustmentLabel(Object content) {
+    return 'Next adjustment: $content';
+  }
+
+  @override
+  String get focusReflectionPromptHint =>
+      'Take half a minute to capture the friction so future-you can use it.';
+
+  @override
+  String get focusReflectionStuckQuestion =>
+      'Where did you get stuck in this session?';
+
+  @override
+  String get focusReflectionStuckHint =>
+      'Example: once I started, I did not know how to begin.';
+
+  @override
+  String get focusReflectionMethodQuestion => 'What helped you feel progress?';
+
+  @override
+  String get focusReflectionMethodHint =>
+      'Example: marking the givens before solving.';
+
+  @override
+  String get focusReflectionAdjustmentQuestion =>
+      'What would you change next time?';
+
+  @override
+  String get focusReflectionAdjustmentHint =>
+      'Example: do a five-minute warm-up before deep focus.';
+
+  @override
+  String get focusOfflineSaved =>
+      'Focus record saved offline, will auto-sync later.';
+
+  @override
+  String focusSaveFailed(Object error) {
+    return 'Focus record save failed: $error';
+  }
+
+  @override
+  String get focusMockLlmGuidance =>
+      'Try the Pomodoro technique: break tasks into 25-minute focus blocks with 5-minute breaks. Keep your environment quiet and notifications off.';
+
+  @override
+  String get focusMockSubtasks =>
+      'Create project outline,Write core feature code,Add test cases,Improve documentation';
+
+  @override
+  String chatAchievementProgress(Object name, Object percent) {
+    return '$name progress reached $percent%';
+  }
+
+  @override
+  String get chatActionAiExecutionSuggestion => 'AI Execution Suggestion';
+
+  @override
+  String get chatActionAiGeneratedPlan => 'AI-generated task plan';
+
+  @override
+  String get chatActionAuroraReminder => 'Aurora reminder';
+
+  @override
+  String get chatActionAutoExecution => 'Auto execution';
+
+  @override
+  String get chatActionBottleneckAnalysis => 'Bottleneck analysis';
+
+  @override
+  String get chatActionCanDelegate => 'Can be directly delegated';
+
+  @override
+  String get chatActionCheckItems => 'Check items';
+
+  @override
+  String get chatActionConfirmAllTasks => 'Confirm all tasks';
+
+  @override
+  String get chatActionConfirmTask => 'Confirm task';
+
+  @override
+  String get chatActionConfirming => 'Confirming...';
+
+  @override
+  String get chatActionCurrentProfileFrontDoor => 'Current profile front door';
+
+  @override
+  String get chatActionCurrentRoundAdjust => 'This round\'s adjustment';
+
+  @override
+  String get chatActionDelegateToAi => 'Delegate to AI';
+
+  @override
+  String chatActionEnvironment(Object env) {
+    return 'Environment $env';
+  }
+
+  @override
+  String get chatActionExampleDoOneProblem =>
+      'Example: solve 1 representative problem first';
+
+  @override
+  String get chatActionExampleDrawThenFormula =>
+      'Example: draw first, then write formulas';
+
+  @override
+  String get chatActionExampleFormulaMemorize =>
+      'Example: formulas memorized but don\'t know when to apply';
+
+  @override
+  String get chatActionExecutionSteps => 'Execution steps';
+
+  @override
+  String get chatActionHybridExecution => 'Hybrid execution';
+
+  @override
+  String get chatActionMadeAdjustment => 'I just made an adjustment';
+
+  @override
+  String get chatActionManualSteps => 'Manual steps';
+
+  @override
+  String get chatActionNeedsReview => 'Needs your review to complete';
+
+  @override
+  String get chatActionOpenclawDelegation => 'OpenClaw delegation suggestion';
+
+  @override
+  String get chatActionOpenclawDelegationDesc =>
+      'Delegate suitable tasks to OpenClaw, return to task page for review as needed';
+
+  @override
+  String get chatActionOpenclawResult => 'OpenClaw execution result';
+
+  @override
+  String get chatActionOpenclawResultDesc =>
+      'View summary first, then expand replay, comparison, and self-verification details as needed';
+
+  @override
+  String chatActionPlanQuality(Object quality) {
+    return 'Plan quality: $quality';
+  }
+
+  @override
+  String get chatActionPlanningProcess => 'Planning process';
+
+  @override
+  String chatActionQualityScore(Object percent) {
+    return 'Quality $percent%';
+  }
+
+  @override
+  String get chatActionRecoverySuggestion => 'Recovery suggestion';
+
+  @override
+  String get chatActionResultComparison => 'Result comparison';
+
+  @override
+  String chatActionSelfCheck(Object percent) {
+    return 'Self-check $percent%';
+  }
+
+  @override
+  String get chatActionShareCard => 'Share card';
+
+  @override
+  String get chatActionSharePlan => 'Share plan';
+
+  @override
+  String get chatActionStrategyPlan => 'Strategy plan';
+
+  @override
+  String get chatActionStudyPlan => 'Study plan';
+
+  @override
+  String get chatActionSwitchedToManual => 'Switched to manual collaboration';
+
+  @override
+  String get chatActionTaskList => 'Task list';
+
+  @override
+  String chatActionTrust(Object score) {
+    return 'Trust $score';
+  }
+
+  @override
+  String chatActionValidationSteps(Object passed, Object total) {
+    return 'Steps $passed/$total';
+  }
+
+  @override
+  String get chatActionViewExecutionPage => 'View execution page';
+
+  @override
+  String get chatActionViewPlan => 'View plan';
+
+  @override
+  String get chatActionViewTask => 'View task';
+
+  @override
+  String get chatActionWhatWouldYouChange =>
+      'What would you do differently next time?';
+
+  @override
+  String get chatActionWhereStuck => 'Where did you get stuck in this task?';
+
+  @override
+  String get chatActionWhichMethodProgress =>
+      'Which method made you feel progress?';
+
+  @override
+  String get chatAiExecutionDirect =>
+      'I can execute this step directly for you';
+
+  @override
+  String get chatAiExecutionSuitable =>
+      'This step is suitable for AI execution';
+
+  @override
+  String get chatAnimBreathPulse => 'Breathing pulse';
+
+  @override
+  String get chatAnimCursorBlink => 'Cursor blink';
+
+  @override
+  String get chatAnimDataFlow => 'Data flow';
+
+  @override
+  String get chatAnimExperimentAnalysis => 'Experiment analysis';
+
+  @override
+  String get chatAnimLanguageTransform => 'Language transform';
+
+  @override
+  String get chatAnimLogicDeduction => 'Logic deduction';
+
+  @override
+  String get chatAnimNumberBounce => 'Number bounce';
+
+  @override
+  String get chatAnimPixelRender => 'Pixel render';
+
+  @override
+  String get chatAnimRotatingScan => 'Rotating scan';
+
+  @override
+  String get chatAnimScanningSearch => 'Scanning search';
+
+  @override
+  String get chatAnimTextFlow => 'Text flow';
+
+  @override
+  String get chatAnimWaveVibration => 'Wave vibration';
+
+  @override
+  String get chatAttachAiDocClean => 'AI Document cleaning';
+
+  @override
+  String get chatAttachAiDocCleanDesc =>
+      'Extract text, OCR recognition and organize';
+
+  @override
+  String get chatAttachDirectUpload => 'Upload file directly';
+
+  @override
+  String get chatAttachTitle => 'Attachments & Documents';
+
+  @override
+  String get chatAttachUploadDesc => 'Upload documents or images to chat';
+
+  @override
+  String get chatBalancedMode => 'Balanced Mode';
+
+  @override
+  String get chatBottleneckPriority => 'Top priority bottleneck this round';
+
+  @override
+  String get chatBubbleSelfIntro => 'Self introduction';
+
+  @override
+  String get chatCausalDecisionChain => 'Decision chain';
+
+  @override
+  String get chatCausalDescribeCorrect =>
+      'Describe what you think is correct...';
+
+  @override
+  String get chatCausalLoadFailed => 'Load failed';
+
+  @override
+  String get chatCausalNoRecords => 'No decision records yet';
+
+  @override
+  String get chatCausalNoRecordsHint =>
+      'Decision reasons will appear here after chatting with AI';
+
+  @override
+  String get chatCausalTellMeWrong => 'Tell me what\'s wrong';
+
+  @override
+  String get chatCausalWhyDecisions => 'Why these decisions for me';
+
+  @override
+  String get chatCitationImprove =>
+      'Improvement feedback recorded for this citation';
+
+  @override
+  String get chatCitationPositive =>
+      'Positive feedback received for this citation';
+
+  @override
+  String get chatCognitiveMode => 'Cognitive Mode';
+
+  @override
+  String get chatCollaborationResultReady =>
+      'This round\'s collaboration results are ready.';
+
+  @override
+  String get chatCommunityInsightRefer => 'Refer to this suggestion';
+
+  @override
+  String get chatCommunityShareDesc => 'Share learning materials';
+
+  @override
+  String get chatCommunityShareMaterial => 'Group material sharing';
+
+  @override
+  String get chatCommunityShareUploadHint =>
+      'After upload, it syncs to group chat and enters group knowledge base';
+
+  @override
+  String chatCommunitySuggestion(Object summary, Object tip) {
+    return 'Community suggestion: $summary. $tip';
+  }
+
+  @override
+  String get chatCompleted => 'Completed';
+
+  @override
+  String get chatContextDetail => 'Context detail';
+
+  @override
+  String chatContextUnused(Object count) {
+    return 'Unused ($count)';
+  }
+
+  @override
+  String chatContextUsed(Object count) {
+    return 'Used ($count)';
+  }
+
+  @override
+  String get chatContextViewDecisionChain => 'View full decision chain';
+
+  @override
+  String chatCurrentMastery(Object percent) {
+    return ' · Current mastery $percent%';
+  }
+
+  @override
+  String get chatDelegateToOpenclaw => 'Delegate to OpenClaw';
+
+  @override
+  String get chatDelegationStarted => 'Delegation started';
+
+  @override
+  String get chatDemoHistory => 'Chat history';
+
+  @override
+  String get chatDemoTaskHelper => 'Task assistant chat';
+
+  @override
+  String get chatDemoTopic1 => 'Study efficiency & linked list review';
+
+  @override
+  String get chatDemoTopic2 => 'Dynamic programming state transition';
+
+  @override
+  String get chatDemoTopic3 => 'Computer networking learning path';
+
+  @override
+  String get chatExecutionDelegatable =>
+      'This task has a delegatable structure. Sparkle can proceed with the execution chain.';
+
+  @override
+  String get chatExecutionFailedSummary =>
+      'Execution chain did not fully pass. Sparkle will preserve room for manual takeover.';
+
+  @override
+  String get chatExecutionLaunchFailed => 'AI execution launch failed';
+
+  @override
+  String get chatExecutionMode => 'Execution Mode';
+
+  @override
+  String get chatExecutionPartialSummary =>
+      'Execution chain partially verified. Please review the summary before continuing delegation.';
+
+  @override
+  String get chatExecutionSuccessSummary =>
+      'The execution chain in this conversation has been verified. Results can be embedded into the chat context.';
+
+  @override
+  String get chatExpertCoding => 'Coding Expert';
+
+  @override
+  String get chatExpertDeepAnalyst => 'Deep Analyst';
+
+  @override
+  String get chatExpertDispatcher => 'Dispatcher';
+
+  @override
+  String get chatExpertErrorAnalyst => 'Error Analyst';
+
+  @override
+  String get chatExpertExamPredictor => 'Exam Predictor';
+
+  @override
+  String get chatExpertGalaxyGuide => 'Galaxy Guide';
+
+  @override
+  String get chatExpertMath => 'Math Expert';
+
+  @override
+  String get chatExpertScience => 'Science Expert';
+
+  @override
+  String get chatExpertSearch => 'Search Expert';
+
+  @override
+  String get chatExpertStudyBuddy => 'Study Buddy';
+
+  @override
+  String get chatExpertTimeCoach => 'Time Coach';
+
+  @override
+  String get chatExpertWriting => 'Writing Expert';
+
+  @override
+  String get chatFeedbackHelpful =>
+      'Feedback received, this reply is marked as helpful';
+
+  @override
+  String get chatFeedbackImprove =>
+      'Feedback received, we will improve this type of reply';
+
+  @override
+  String chatFileAdded(Object fileName, Object status) {
+    return '$fileName added, current status: $status';
+  }
+
+  @override
+  String get chatFileLearningMaterial => 'Learning material';
+
+  @override
+  String chatFileSaveFailed(Object error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get chatFileSaveToLibrary => 'Save to my library';
+
+  @override
+  String get chatFileSavedToLibrary => 'Saved to my library';
+
+  @override
+  String get chatFileSaving => 'Saving...';
+
+  @override
+  String chatFocusOnGoal(Object title) {
+    return 'I want to focus on the goal \"$title\" first.';
+  }
+
+  @override
+  String get chatGoalBottleneckGoal => 'Bottleneck goal detected';
+
+  @override
+  String get chatGoalConflictDetection => 'Multi-goal conflict detection';
+
+  @override
+  String get chatGoalContinueParallel => 'Continue parallel progress';
+
+  @override
+  String get chatGoalFocusPrimary => 'Focus on primary goal';
+
+  @override
+  String get chatGoalMultipleDeadlines => 'Multiple urgent deadlines';
+
+  @override
+  String get chatGoalStagnantGoal => 'Stagnant goal detected';
+
+  @override
+  String get chatGoalTimeAllocation => 'Recommended time allocation';
+
+  @override
+  String chatGraphAffectedLater(Object items) {
+    return 'Affected later: $items';
+  }
+
+  @override
+  String get chatGraphContinueExplain => 'Continue explanation';
+
+  @override
+  String get chatGraphGoToGalaxy => 'View in Galaxy';
+
+  @override
+  String get chatGraphNextStepDesc =>
+      'Pick a minimum review entry from these points.';
+
+  @override
+  String get chatGraphNextStepSuggestion => 'Next step suggestion';
+
+  @override
+  String chatGraphPrerequisites(Object items) {
+    return 'Prerequisites: $items';
+  }
+
+  @override
+  String get chatGraphRiskDesc =>
+      'Not at the bottom yet, but worth reinforcing early.';
+
+  @override
+  String get chatGraphRiskZone => 'Risk zone';
+
+  @override
+  String get chatGraphWeakestDesc =>
+      'These points are most likely to slow your progress.';
+
+  @override
+  String get chatGraphWeakestPoints => 'Weakest points';
+
+  @override
+  String chatGroupFavoriteFailed(Object error) {
+    return 'Favorite failed: $error';
+  }
+
+  @override
+  String get chatGroupFavorited => 'Favorited';
+
+  @override
+  String chatGroupForwardFailed(Object error) {
+    return 'Forward failed: $error';
+  }
+
+  @override
+  String get chatGroupForwardToGroup => 'Forward to group';
+
+  @override
+  String chatGroupForwardedTo(Object name) {
+    return 'Forwarded to $name';
+  }
+
+  @override
+  String chatGroupMemberCount(Object count) {
+    return '$count members';
+  }
+
+  @override
+  String get chatGroupReportAdditionalNote => 'Additional notes (optional)';
+
+  @override
+  String chatGroupReportFailed(Object error) {
+    return 'Report failed: $error';
+  }
+
+  @override
+  String get chatGroupReportHate => 'Hate speech';
+
+  @override
+  String get chatGroupReportMessage => 'Report message';
+
+  @override
+  String get chatGroupReportMisinfo => 'Misinformation';
+
+  @override
+  String get chatGroupReportSpam => 'Spam';
+
+  @override
+  String get chatGroupReportSubmit => 'Submit report';
+
+  @override
+  String get chatGroupReportSubmitted =>
+      'Report submitted, thank you for your feedback';
+
+  @override
+  String get chatGroupTasks => 'Group tasks';
+
+  @override
+  String get chatGrowthNotNeeded => 'Not needed';
+
+  @override
+  String chatGrowthStreakDays(int days) {
+    return '$days d';
+  }
+
+  @override
+  String get chatHistoryOpenTimeout =>
+      'Opening chat history timed out, please retry';
+
+  @override
+  String get chatHistorySwitchFailed =>
+      'Failed to switch chat history, please retry';
+
+  @override
+  String chatInputQuoting(Object name) {
+    return 'Quoting $name';
+  }
+
+  @override
+  String get chatInterventionIgnore => 'Ignore for now';
+
+  @override
+  String get chatLoadHistoryTimeout =>
+      'Loading chat history timed out, please try later';
+
+  @override
+  String get chatLoadingDailyOverview => 'Loading today\'s overview...';
+
+  @override
+  String get chatManualReview => 'Manual review';
+
+  @override
+  String get chatMemoryAiRemembers => 'AI currently remembers';
+
+  @override
+  String get chatMemoryArchivedToLongTerm => 'Archived to long-term memory';
+
+  @override
+  String get chatMemoryCurrentSession => 'Current session';
+
+  @override
+  String get chatMemoryEmptyHint =>
+      'No visible working memory in current session yet.';
+
+  @override
+  String get chatMemoryManualForget => 'Manual forget';
+
+  @override
+  String get chatMemoryMarkCorrect => 'Mark as correct';
+
+  @override
+  String get chatMemoryMarkedCorrect => 'Marked as correct';
+
+  @override
+  String chatMemoryMentionCount(Object count, Object type) {
+    return '$count mentions · $type';
+  }
+
+  @override
+  String get chatMemoryOriginalTurn => 'Original turn';
+
+  @override
+  String chatMemorySessionCount(Object count) {
+    return '$count current session memories';
+  }
+
+  @override
+  String get chatMemorySyncing => 'Syncing current session memory';
+
+  @override
+  String get chatMemoryUnavailable => 'Memory drawer temporarily unavailable';
+
+  @override
+  String get chatMetaCacheMiss => 'Cache miss';
+
+  @override
+  String get chatMetaEventCount => 'Event count';
+
+  @override
+  String get chatMetaFirstTokenLatency => 'First token latency';
+
+  @override
+  String get chatMetaModelTier => 'Model tier';
+
+  @override
+  String get chatMetaStreamingPhase => 'Streaming phase';
+
+  @override
+  String get chatMetaTotalDuration => 'Total duration';
+
+  @override
+  String get chatMinutes30 => '30 min';
+
+  @override
+  String get chatMinutes45 => '45 min';
+
+  @override
+  String get chatMinutes60 => '60 min';
+
+  @override
+  String get chatModeAiGear => 'AI Gear';
+
+  @override
+  String get chatModeBalancedDesc =>
+      'Recommended default, balanced speed and quality';
+
+  @override
+  String get chatModeFastDesc => 'Faster, cheaper, for instant back-and-forth';
+
+  @override
+  String get chatModeStrongAnalysisDesc =>
+      'Stronger analysis, for complex breakdown';
+
+  @override
+  String get chatModeSwitchStrategy =>
+      'Switch current chat\'s dispatch strategy';
+
+  @override
+  String get chatMoreActions => 'More chat actions';
+
+  @override
+  String get chatNextStepsReady => 'Next steps are ready for you.';
+
+  @override
+  String get chatNotNeeded => 'Not needed';
+
+  @override
+  String get chatNudgeReviewText => 'Let me review';
+
+  @override
+  String get chatNudgeStartReview => 'Start review';
+
+  @override
+  String chatOpenclawHubQueued(Object count) {
+    return 'OpenClaw Hub, $count queued tasks';
+  }
+
+  @override
+  String get chatOpenclawSuitable =>
+      'Suitable for web research, organizing, and scraping tasks';
+
+  @override
+  String get chatOriginalTurn => 'Original turn';
+
+  @override
+  String get chatOriginalTurnUnavailable =>
+      'Original turn temporarily unavailable';
+
+  @override
+  String get chatPlanProgress => 'Plan progress';
+
+  @override
+  String get chatPlanReviewAutoAgent => 'Auto-delegate to Agent after approval';
+
+  @override
+  String get chatPlanReviewSelectiveDelegate =>
+      'Sparkle will only auto-delegate tasks suitable for OpenClaw, keeping the rest as manual.';
+
+  @override
+  String get chatPredictionBestFit => '^Best fit';
+
+  @override
+  String get chatPredictionGuessingNext =>
+      'Determining what you want to do next';
+
+  @override
+  String get chatPredictionMoreSuitable => '^More suitable';
+
+  @override
+  String get chatPredictionMostLikelyAction =>
+      'Predicting your most likely next action';
+
+  @override
+  String get chatPredictionNextLabel => '^Your next';
+
+  @override
+  String get chatPredictionNextStepsReady =>
+      'Next step predictions are ready for you';
+
+  @override
+  String get chatPredictionSystemLabel => '^System prediction';
+
+  @override
+  String get chatPredictionUnderstandingInput => 'Understanding your input';
+
+  @override
+  String get chatPredictionUpdating => 'Prediction updating...';
+
+  @override
+  String get chatPredictionUpdatingByBehavior =>
+      'Updating suggestions based on recent behavior';
+
+  @override
+  String chatPredictionYouCanDoFirst(Object action) {
+    return 'You can start with: $action';
+  }
+
+  @override
+  String get chatPrivateAiAssistant => 'AI Assistant';
+
+  @override
+  String get chatPrivateAiAssistantOn => 'AI Assistant enabled';
+
+  @override
+  String get chatPrivateAiGeneratedResult => 'AI generated result';
+
+  @override
+  String get chatPrivateDraftInComposer =>
+      'AI draft placed in input box. Please confirm before sending.';
+
+  @override
+  String get chatPrivateExtractNextSteps => 'Extract next steps';
+
+  @override
+  String get chatPrivateExtractedNextSteps => 'Extracted next steps';
+
+  @override
+  String get chatPrivateGenerationFailed =>
+      'No usable content generated this time. Please try again.';
+
+  @override
+  String chatPrivateGentlePrompt(Object base, Object composerText) {
+    return '$base\\n\\nMy draft and context:\\n$composerText\\n\\nPlease rewrite as a gentler, more natural reminder while keeping my intent.';
+  }
+
+  @override
+  String get chatPrivateGentleReminder => 'Gentle reminder';
+
+  @override
+  String get chatPrivateGentleReminderDraft => 'Gentle reminder draft';
+
+  @override
+  String get chatPrivateOnlyVisibleToMe => 'Only visible to me';
+
+  @override
+  String get chatPrivateOriginalRestored =>
+      'Your original input has been restored.';
+
+  @override
+  String chatPrivatePolishPrompt(Object base, Object composerText) {
+    return '$base\\n\\nMy current draft is:\\n$composerText\\n\\nPlease polish while keeping my original intent and voice. Don\'t switch to third person.';
+  }
+
+  @override
+  String get chatPrivatePolishReply => 'Polish reply';
+
+  @override
+  String get chatPrivatePolishedReply => 'Polished reply';
+
+  @override
+  String get chatPrivatePutInComposer => 'Put in input box';
+
+  @override
+  String get chatPrivatePutInComposerConfirm =>
+      'Placed in input box. Please confirm before sending.';
+
+  @override
+  String get chatPrivateQuickSummary => 'Quick summary';
+
+  @override
+  String get chatPrivateQuickSummaryLabel => 'Quick summary';
+
+  @override
+  String get chatPrivateRestoreOriginal => 'Restore original';
+
+  @override
+  String get chatPrivateSavedOnlyToMe => 'Saved as only visible to me.';
+
+  @override
+  String get chatPrivateScheduleDraft => 'Schedule time draft';
+
+  @override
+  String chatPrivateSchedulePrompt(Object base, Object composerText) {
+    return '$base\\n\\nMy draft and context:\\n$composerText\\n\\nPlease generate a suitable time coordination message I can send directly.';
+  }
+
+  @override
+  String get chatPrivateScheduleTime => 'Schedule time';
+
+  @override
+  String get chatPrivateSwitchedBothVisible =>
+      'Switched to visible to both. Please confirm before sending.';
+
+  @override
+  String get chatPrivateThinking => 'Thinking...';
+
+  @override
+  String get chatPrivateVisibleToBoth => 'Visible to both';
+
+  @override
+  String get chatPrivateWriteFirst =>
+      'Please write something in the input box first.';
+
+  @override
+  String get chatProcessing => 'Processing';
+
+  @override
+  String get chatProfileCompileConclusion => 'Compiled conclusion';
+
+  @override
+  String chatProfileConfidence(Object level) {
+    return 'Confidence $level';
+  }
+
+  @override
+  String get chatProfileCurrentJudgment => 'Current judgment';
+
+  @override
+  String get chatProfileCurrentJudgmentDesc =>
+      'Top conclusions from the current canonical profile.';
+
+  @override
+  String chatProfileFreshness(Object level) {
+    return 'Freshness $level';
+  }
+
+  @override
+  String get chatProfileInferencePrediction => 'Inference/Prediction';
+
+  @override
+  String chatProfileSource(Object source) {
+    return 'Source $source';
+  }
+
+  @override
+  String chatProfileSuggestedAction(Object action) {
+    return 'Suggested action: $action';
+  }
+
+  @override
+  String get chatProfileTrendDesc =>
+      'These are inferences/predictions, not established facts.';
+
+  @override
+  String get chatProfileTrendJudgment => 'Trend judgment';
+
+  @override
+  String get chatProfileUnknownDesc =>
+      'Insufficient confidence on these items.';
+
+  @override
+  String get chatProfileUnknownItems => 'Current unknowns';
+
+  @override
+  String get chatProfileUpdated => 'Profile updated';
+
+  @override
+  String get chatProfileViewEvidence => 'View evidence';
+
+  @override
+  String get chatReady => 'Ready';
+
+  @override
+  String get chatReasoningFast => 'Fast';
+
+  @override
+  String get chatReasoningDeep => 'Deep';
+
+  @override
+  String get chatReasoningBalanced => 'Balanced';
+
+  @override
+  String get chatAttachmentFailed => 'Failed';
+
+  @override
+  String get chatRetryGeneric => 'Retry';
+
+  @override
+  String get chatRetryDailyOverview => 'Retry today\'s overview';
+
+  @override
+  String get chatRetryLaunchFailed => 'Retry failed to launch';
+
+  @override
+  String get chatReviewNeedsImprove => 'Needs improvement';
+
+  @override
+  String get chatReviewStart => 'Let me review';
+
+  @override
+  String chatReviewingNode(Object label, Object mastery) {
+    return 'Reviewing: $label$mastery';
+  }
+
+  @override
+  String chatRoundtableAboutSeconds(Object seconds) {
+    return 'About ${seconds}s';
+  }
+
+  @override
+  String get chatRoundtableCodingExpert => 'Coding Expert';
+
+  @override
+  String get chatRoundtableConclusion => 'Overall conclusion';
+
+  @override
+  String get chatRoundtableCoordinator => 'Coordinator';
+
+  @override
+  String get chatRoundtableDeepAnalyst => 'Deep Analyst';
+
+  @override
+  String get chatRoundtableErrorSpecialist => 'Error Specialist';
+
+  @override
+  String get chatRoundtableEstimatedProcessing => 'Estimated processing';
+
+  @override
+  String get chatRoundtableExamStrategist => 'Exam Strategist';
+
+  @override
+  String get chatRoundtableExpertCollab => 'Expert collaboration';
+
+  @override
+  String chatRoundtableExpertCollabCount(Object count) {
+    return 'Expert collaboration ($count)';
+  }
+
+  @override
+  String get chatRoundtableGalaxyNavigator => 'Galaxy Navigator';
+
+  @override
+  String chatRoundtableHiddenTurns(Object count) {
+    return '$count more viewpoints';
+  }
+
+  @override
+  String get chatRoundtableHighComplexity => 'High complexity';
+
+  @override
+  String get chatRoundtableLowComplexity => 'Low complexity';
+
+  @override
+  String get chatRoundtableMathExpert => 'Math Expert';
+
+  @override
+  String get chatRoundtableMediumComplexity => 'Medium complexity';
+
+  @override
+  String chatRoundtableMoreExperts(Object count) {
+    return '$count';
+  }
+
+  @override
+  String get chatRoundtableScienceExpert => 'Science Expert';
+
+  @override
+  String get chatRoundtableSearchExpert => 'Search Expert';
+
+  @override
+  String get chatRoundtableTimeCoach => 'Time Coach';
+
+  @override
+  String chatRoundtableTurnCount(Object count) {
+    return '$count viewpoints';
+  }
+
+  @override
+  String get chatRoundtableWritingExpert => 'Writing Expert';
+
+  @override
+  String chatSettingsCurrentSeeds(Object names) {
+    return 'Currently active: $names';
+  }
+
+  @override
+  String get chatSettingsEnableSeedDesc =>
+      'Inject enabled seed library content and answer style into current chat.';
+
+  @override
+  String get chatSettingsEnableSeedEnhancement =>
+      'Enable Seed Library Enhancement';
+
+  @override
+  String get chatSettingsExperience => 'Chat Experience';
+
+  @override
+  String get chatSettingsExperienceDesc =>
+      'Adjust chat display, prediction components, and seed library enhancement.';
+
+  @override
+  String get chatSettingsOpenAdvanced => 'Open Advanced Settings';
+
+  @override
+  String get chatSettingsOpenAdvancedDesc =>
+      'Enter detailed transparency configuration page.';
+
+  @override
+  String get chatSettingsPureMode => 'Pure Mode';
+
+  @override
+  String get chatSettingsPureModeDesc =>
+      'Keep only text messages. Hide extra cards and feedback below messages.';
+
+  @override
+  String get chatSettingsSeedDisableHint =>
+      'When disabled, no seed library is injected to avoid context pollution.';
+
+  @override
+  String get chatSettingsSeedEnableHint =>
+      'After enabling, enhancement starts from the next message.';
+
+  @override
+  String get chatSettingsSeedLibrary => 'Seed Library';
+
+  @override
+  String get chatSettingsSeedsDefaultOff =>
+      'Seed library enhancement is off by default';
+
+  @override
+  String chatSettingsSeedsEnabledCount(Object count) {
+    return '$count enabled seed libraries connected';
+  }
+
+  @override
+  String get chatSettingsSeedsEnabledNone =>
+      'Seed library enhancement enabled but no seed libraries available';
+
+  @override
+  String get chatSettingsShowAgentCollab => 'Show Agent Collaboration';
+
+  @override
+  String get chatSettingsShowAgentCollabDesc =>
+      'Show participating experts, responsibilities, and model collaboration.';
+
+  @override
+  String get chatSettingsShowAiPanel => 'Show AI System Panel';
+
+  @override
+  String get chatSettingsShowAiPanelDesc =>
+      'On by default. Show collaboration and reasoning on chat page.';
+
+  @override
+  String get chatSettingsShowPrediction => 'Show Prediction Component';
+
+  @override
+  String get chatSettingsShowPredictionDesc =>
+      'Control behavior prediction and quick suggestions above input.';
+
+  @override
+  String get chatSettingsShowReasoningDesc =>
+      'Show key steps, review, and reflection process.';
+
+  @override
+  String get chatSettingsShowReasoningTimeline => 'Show Reasoning Timeline';
+
+  @override
+  String get chatSettingsShowTokenCost => 'Show Tokens & Cost';
+
+  @override
+  String get chatSettingsShowTokenCostDesc =>
+      'Show current usage, cost estimate, and system resource consumption.';
+
+  @override
+  String get chatSettingsShowTopBar => 'Show Top Selector Bar';
+
+  @override
+  String get chatSettingsShowTopBarDesc =>
+      'Control plan, mode, and gear entry points on chat page.';
+
+  @override
+  String get chatSettingsShowTransparencyCapsule => 'Show Transparency Capsule';
+
+  @override
+  String get chatSettingsShowTransparencyDesc =>
+      'Control floating AI completion and transparency info at bottom.';
+
+  @override
+  String get chatSettingsSyncingSeeds => 'Syncing seed library status';
+
+  @override
+  String get chatSettingsTitle => 'Chat Settings';
+
+  @override
+  String get chatSettingsTransparencyDetails => 'Transparency Details';
+
+  @override
+  String get chatSettingsUiCapabilities => 'UI & Capabilities';
+
+  @override
+  String get chatSmartAdjustUnavailable =>
+      'Smart adjustment temporarily unavailable';
+
+  @override
+  String get chatSpineAccurateAsk => 'Is this judgment accurate?';
+
+  @override
+  String get chatSpineSorryMistake =>
+      'Sorry, my previous judgment was incorrect';
+
+  @override
+  String chatStaleDaysHours(Object days, Object hours) {
+    return '${days}d ${hours}h';
+  }
+
+  @override
+  String chatStaleDaysOnly(Object days) {
+    return '${days}d';
+  }
+
+  @override
+  String chatStaleHoursMins(Object hours, Object mins) {
+    return '${hours}h ${mins}min';
+  }
+
+  @override
+  String chatStaleHoursOnly(Object hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String get chatStaleLastTaskProgress => 'Where did you leave off last task?';
+
+  @override
+  String chatStaleMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String chatStaleWelcomeBack(Object elapsed) {
+    return 'You left for $elapsed, welcome back 👋';
+  }
+
+  @override
+  String get chatStatusQuickCalibrate => 'Quick calibrate';
+
+  @override
+  String get chatStatusRealtimeThinking => 'Thinking in real-time';
+
+  @override
+  String get chatStatusSystemProcessing =>
+      'System is continuously processing current request';
+
+  @override
+  String get chatStrategyCheckpoint => 'Checkpoint';
+
+  @override
+  String chatStrategyDailyHours(String hours, String method) {
+    return '${hours}h/day · $method';
+  }
+
+  @override
+  String chatStrategyMethod(String method) {
+    return 'Method: $method';
+  }
+
+  @override
+  String chatStrategyPhaseOutput(String output) {
+    return 'Phase output: $output';
+  }
+
+  @override
+  String get chatStrategySuggestPace => 'I suggest following this pace first';
+
+  @override
+  String get chatStrategyCollapse => 'Collapse';
+
+  @override
+  String get chatStrategyExpand => 'Expand';
+
+  @override
+  String get chatStrategyPhaseLabel => 'Phase';
+
+  @override
+  String get chatStrategyContinue => 'Continue';
+
+  @override
+  String get chatStreamAdjustStrategy => 'Help me adjust strategy';
+
+  @override
+  String get chatStreamCommunityInsight => 'Community insight';
+
+  @override
+  String get chatStreamCompleted => 'Completed';
+
+  @override
+  String chatStreamHoursMins(Object hours, Object mins) {
+    return '${hours}h ${mins}min';
+  }
+
+  @override
+  String chatStreamHoursOnly(Object hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String chatStreamMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get chatStreamNotStarted => 'Not started';
+
+  @override
+  String get chatStreamReallyTired => 'I\'m actually tired';
+
+  @override
+  String get chatStreamSeePersistence => 'Seeing your persistence';
+
+  @override
+  String get chatStreamStrategyRisk => 'Strategy risk';
+
+  @override
+  String get chatStreamStuck => 'Stuck';
+
+  @override
+  String get chatStreamSwitchTask => 'Switch to smaller task';
+
+  @override
+  String chatStudyCitationCount(Object count) {
+    return '$count citations';
+  }
+
+  @override
+  String get chatStudyClosed => 'Closed';
+
+  @override
+  String get chatStudyHighRelevance => 'High relevance';
+
+  @override
+  String get chatStudyMediumRelevance => 'Medium relevance';
+
+  @override
+  String get chatStudyMySelection => 'My selection';
+
+  @override
+  String get chatStudyNoMaterial => 'No material';
+
+  @override
+  String chatStudyNodeCount(Object count) {
+    return '$count knowledge nodes';
+  }
+
+  @override
+  String get chatStudyNotAnalyzed => 'Not analyzed';
+
+  @override
+  String get chatTeamBaseExpert => 'Base expert';
+
+  @override
+  String get chatTeamCreateCustomExpert => 'Create custom expert';
+
+  @override
+  String chatTeamExpertCustom(Object name) {
+    return '$name · Custom';
+  }
+
+  @override
+  String get chatTeamExpertName => 'Expert name';
+
+  @override
+  String get chatTeamFinalExperts => 'Experts in final answer';
+
+  @override
+  String get chatTeamMyExperts => 'My experts';
+
+  @override
+  String get chatTeamSaveExpertTeam => 'Save expert team';
+
+  @override
+  String get chatTeamSaveTeam => 'Save team';
+
+  @override
+  String get chatTeamSaved => 'Team saved';
+
+  @override
+  String get chatTeamSystemPrompt => 'System prompt';
+
+  @override
+  String get chatTeamTeamName => 'Team name';
+
+  @override
+  String chatTransparencyStep(Object step) {
+    return 'Step $step';
+  }
+
+  @override
+  String chatValidationQuality(Object percent) {
+    return 'Quality $percent%';
+  }
+
+  @override
+  String chatValidationSteps(Object passed, Object total) {
+    return 'Steps $passed/$total';
+  }
+
+  @override
+  String chatValidationTools(Object passed, Object total) {
+    return 'Tools $passed/$total';
+  }
+
+  @override
+  String get chatViewResults => 'View results summary';
+
+  @override
+  String get chatVoiceEndToInput =>
+      'Text enters input box after recording ends';
+
+  @override
+  String get chatVoiceHoldHint =>
+      'Hold to record, swipe up to send / swipe left-up to undo, release to input';
+
+  @override
+  String get chatVoiceLongPressStart => 'Long press to start voice input';
+
+  @override
+  String get chatVoiceReleaseToInput => 'Release to input';
+
+  @override
+  String get chatVoiceSwipeSend => 'Swipe up to send';
+
+  @override
+  String get chatVoiceSwipeUndo => 'Swipe up to undo';
+
+  @override
+  String get chatVoiceTapToEnd => 'Tap microphone to end recording';
+
+  @override
+  String get chatWaitingInQueue => 'Waiting in queue';
+
+  @override
+  String chatWarningAction(Object action, Object reason) {
+    return '$action. Reason: $reason';
+  }
+
+  @override
+  String get chatWidgetAchievementUnlock => 'Achievement unlock';
+
+  @override
+  String get chatWidgetCognitiveAnalysis => 'Cognitive analysis';
+
+  @override
+  String get chatWidgetCollaborationProcess => 'Collaboration process';
+
+  @override
+  String get chatWidgetErrorHint => 'Error hint';
+
+  @override
+  String get chatWidgetKnowledge => 'Knowledge card';
+
+  @override
+  String get chatWidgetPlanStatus => 'Plan status';
+
+  @override
+  String get chatWidgetPlanSummary => 'Plan summary';
+
+  @override
+  String get chatWidgetTaskList => 'Task list';
+
+  @override
+  String get chatWsUnknownError => 'Unknown error';
+
+  @override
+  String get toolsFocusPomodoroComplete => 'Pomodoro Complete';
+
+  @override
+  String get toolsFocusComplete => 'Focus Complete';
+
+  @override
+  String get toolsFocusPomodoro => 'Pomodoro Timer';
+
+  @override
+  String get toolsFocusStopwatch => 'Focus Timer';
+
+  @override
+  String get toolsFocusPomodoroSubtitle =>
+      'Build a steady rhythm for each focus session. Great for review blocks, sprints, and deep dives.';
+
+  @override
+  String get toolsFocusStopwatchSubtitle =>
+      'Count-up and count-down on one screen. Ideal for task tracking, free practice, and time calibration.';
+
+  @override
+  String get toolsCountdownMode => 'Countdown Mode';
+
+  @override
+  String get toolsStopwatchMode => 'Stopwatch Mode';
+
+  @override
+  String get toolsStatusRunning => 'Running';
+
+  @override
+  String get toolsStatusPending => 'Ready';
+
+  @override
+  String get toolsMainTimer => 'Timer Dial';
+
+  @override
+  String get toolsMainTimerDesc =>
+      'Start, pause, or reset directly. A local notification fires on completion.';
+
+  @override
+  String get toolsCurrentDuration => 'Current Duration';
+
+  @override
+  String get toolsEstimatedEnd => 'Estimated End';
+
+  @override
+  String get toolsBgAudio => 'Background Audio';
+
+  @override
+  String get toolsBgAudioDesc =>
+      'Plays during the session to help you enter focus.';
+
+  @override
+  String get toolsTimerSettings => 'Timer Settings';
+
+  @override
+  String get toolsTimerSettingsDesc => 'Pick a mode first, then a duration.';
+
+  @override
+  String get toolsCountUp => 'Stopwatch';
+
+  @override
+  String get toolsCountDown => 'Countdown';
+
+  @override
+  String toolsMinutesCount(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get toolsReset => 'Reset';
+
+  @override
+  String get toolsSwitchToCountdown => 'Switch to Countdown';
+
+  @override
+  String get toolsSwitchToStopwatch => 'Switch to Stopwatch';
+
+  @override
+  String toolsFocusSaveFailed(Object e) {
+    return 'Failed to save focus session: $e';
+  }
+
+  @override
+  String get toolsFocusNotificationBody =>
+      'Focus session ended. Come back to wrap up and log your effort.';
+
+  @override
+  String get toolsPomodoroCompleteEmoji => 'Pomodoro session complete!';
+
+  @override
+  String get toolsCountdownEnded => 'Countdown ended';
+
+  @override
+  String toolsFocusRecorded(Object durationMinutes) {
+    return '$durationMinutes min focused, saved to local stats.';
+  }
+
+  @override
+  String toolsFocusReward(Object durationMinutes, Object flameEarned) {
+    return '$durationMinutes min focused, earned $flameEarned flame!';
+  }
+
+  @override
+  String get toolsOpenDuration => 'Open';
+
+  @override
+  String get toolsSingleGoalDuration => 'Target per session';
+
+  @override
+  String get toolsTrackEffort => 'Tracks total effort time';
+
+  @override
+  String get toolsNoLimit => 'No limit';
+
+  @override
+  String get toolsPauseManually => 'Pause whenever you like';
+
+  @override
+  String get toolsPlanChainNext => 'Easy to chain into your next block';
+
+  @override
+  String get toolsBreathQuickDesc =>
+      'Quick calm-down for anxiety or pre-sleep wind-down.';
+
+  @override
+  String get toolsBreathBox => 'Box Breathing';
+
+  @override
+  String get toolsBreathBoxDesc =>
+      'Even and steady. Good for calibrating rhythm before focus.';
+
+  @override
+  String get toolsBreathRelax => 'Relax Breathing';
+
+  @override
+  String get toolsBreathRelaxDesc =>
+      'Longer exhales. Great for post-stress recovery.';
+
+  @override
+  String get toolsBreathInhale => 'Inhale';
+
+  @override
+  String get toolsBreathHold => 'Hold';
+
+  @override
+  String get toolsBreathExhale => 'Exhale';
+
+  @override
+  String get toolsBreathComplete => 'Breathing Complete';
+
+  @override
+  String get toolsBreathTitle => 'Breathing Exercise';
+
+  @override
+  String get toolsBreathSubtitle =>
+      'A real tool for breathing rhythm, not a one-time animation. Multiple modes and durations to shift states between tasks.';
+
+  @override
+  String get toolsBreathStage => 'Breathing Stage';
+
+  @override
+  String get toolsBreathCurrentRhythm => 'Current Rhythm';
+
+  @override
+  String get toolsBreathTargetRounds => 'Target Rounds';
+
+  @override
+  String get toolsBreathConfig => 'Practice Setup';
+
+  @override
+  String toolsBreathDurationMin(int duration) {
+    return '$duration min';
+  }
+
+  @override
+  String get toolsBreathContinue => 'Resume';
+
+  @override
+  String get toolsBreathPause => 'Pause';
+
+  @override
+  String get toolsBreathStart => 'Start';
+
+  @override
+  String get toolsBreathStop => 'Stop';
+
+  @override
+  String get toolsBreathReset => 'Reset';
+
+  @override
+  String get toolsCalcTitle => 'Calculator';
+
+  @override
+  String get toolsCalcSubtitle =>
+      'Quick math for task execution, expression checks, and multi-step derivations. Recent history kept.';
+
+  @override
+  String get toolsCalcNoHistory => 'No history';
+
+  @override
+  String toolsCalcHistoryCount(Object count) {
+    return '$count entries';
+  }
+
+  @override
+  String get toolsCalcWaiting => 'Waiting';
+
+  @override
+  String get toolsCalcResultReady => 'Result Ready';
+
+  @override
+  String get toolsCalcExpression => 'Expression';
+
+  @override
+  String get toolsCalcExpressionDesc =>
+      'Supports parentheses and chained input. ANS recalls the last result.';
+
+  @override
+  String get toolsCalcReady => 'Ready';
+
+  @override
+  String get toolsCalcCopyResult => 'Copy Result';
+
+  @override
+  String get toolsCalcCompute => 'Calculate';
+
+  @override
+  String get toolsCalcKeyboard => 'Keyboard';
+
+  @override
+  String get toolsCalcKeyboardDesc =>
+      'Number and operator keys layered for fewer mis-taps.';
+
+  @override
+  String get toolsCalcRecentHistory => 'Recent History';
+
+  @override
+  String get toolsCalcRecentHistoryDesc =>
+      'Keeps the last 6 entries for quick recall and checking.';
+
+  @override
+  String get toolsCalcNoHistoryLabel => 'No history yet';
+
+  @override
+  String get toolsCalcNoHistoryDesc => 'Complete an expression to see it here.';
+
+  @override
+  String get toolsTransFailed => 'Translation Failed';
+
+  @override
+  String toolsTransError(String e) {
+    return 'Translation error: $e';
+  }
+
+  @override
+  String toolsTransAddWordFailed(String e) {
+    return 'Failed to add to wordbook: $e';
+  }
+
+  @override
+  String get toolsTransTitle => 'Translator';
+
+  @override
+  String get toolsTransSubtitle =>
+      'Dual-pane translator for study and tasks. Auto-archiving, scoring, and favorites built in.';
+
+  @override
+  String get toolsTransFavorited => 'Favorited';
+
+  @override
+  String get toolsTransAutoSave => 'Auto-save history';
+
+  @override
+  String get toolsTransInputLen => 'Input length';
+
+  @override
+  String get toolsTransOutputLen => 'Output length';
+
+  @override
+  String get toolsTransDirection => 'Language direction';
+
+  @override
+  String get toolsTransDirectionDesc =>
+      'Auto-detect for quick starts, or switch to manual source.';
+
+  @override
+  String get toolsTransSwap => 'Swap';
+
+  @override
+  String get toolsTransSource => 'Source';
+
+  @override
+  String get toolsTransSourceDesc =>
+      'Supports multi-line paste for paragraph translation.';
+
+  @override
+  String get toolsTransInputHint => 'Enter text to translate...';
+
+  @override
+  String get toolsTransTarget => 'Translation';
+
+  @override
+  String get toolsTransTargetDesc =>
+      'Copy, favorite, or rate after translation.';
+
+  @override
+  String get toolsTransIncomplete => 'Translation incomplete';
+
+  @override
+  String get toolsTransWaiting => 'Waiting for result';
+
+  @override
+  String get toolsTransWaitingDesc =>
+      'Tap Translate below to see the result here.';
+
+  @override
+  String toolsTransStarCount(int count) {
+    return '$count star';
+  }
+
+  @override
+  String get toolsTransWordbookLink => 'Wordbook Link';
+
+  @override
+  String get toolsTransWordbookDesc =>
+      'Add translated words directly to your wordbook for review.';
+
+  @override
+  String get toolsTransAddWordbook => 'Add to Wordbook';
+
+  @override
+  String get toolsTransCopyResult => 'Copy Translation';
+
+  @override
+  String get toolsTransTranslating => 'Translating...';
+
+  @override
+  String get toolsTransStart => 'Translate';
+
+  @override
+  String get toolsSttTitle => 'Speech to Text';
+
+  @override
+  String get toolsSttSubtitle =>
+      'Lightweight transcription for real capture scenarios. Max 30 s per recording, powered by GLM ASR.';
+
+  @override
+  String toolsSttCharCount(Object _charCount) {
+    return '$_charCount chars captured';
+  }
+
+  @override
+  String get toolsSttRecordingInfo => '30 s per recording';
+
+  @override
+  String get toolsSttCharCountLabel => 'Characters';
+
+  @override
+  String get toolsSttWordCountLabel => 'Words';
+
+  @override
+  String get toolsSttRecordControl => 'Recording';
+
+  @override
+  String get toolsSttRecordDesc =>
+      'Tap the mic to start, tap again to stop transcription.';
+
+  @override
+  String get toolsSttResult => 'Transcription';
+
+  @override
+  String get toolsSttResultDesc =>
+      'Copy the result directly as a raw draft for writing or summaries.';
+
+  @override
+  String get toolsSttEmpty => 'No transcription yet';
+
+  @override
+  String get toolsSttEmptyDesc =>
+      'Start a recording and text appears here in real time. Great for lecture notes, ideas, and meeting minutes.';
+
+  @override
+  String get toolsSttClear => 'Clear';
+
+  @override
+  String get toolsSttCopy => 'Copy Text';
+
+  @override
+  String get toolsSttInsert => 'Insert';
+
+  @override
+  String get toolsWbSetImportance => 'Set Importance';
+
+  @override
+  String toolsWbStarCount(int starValue) {
+    return '$starValue star';
+  }
+
+  @override
+  String get toolsWbCancel => 'Cancel';
+
+  @override
+  String get toolsWbSave => 'Save';
+
+  @override
+  String get toolsWbTitle => 'Wordbook';
+
+  @override
+  String get toolsWbSubtitle =>
+      'Turn lookups into reviewable assets. Search, filter by importance, flash-card review.';
+
+  @override
+  String toolsWbTotalCount(Object totalCount) {
+    return '$totalCount entries';
+  }
+
+  @override
+  String toolsWbDueCount(Object dueCount) {
+    return '$dueCount due for review';
+  }
+
+  @override
+  String get toolsWbTotal => 'Total';
+
+  @override
+  String get toolsWbDue => 'Due';
+
+  @override
+  String get toolsWbHighImportance => 'High Priority';
+
+  @override
+  String get toolsWbFilter => 'Filter & Search';
+
+  @override
+  String get toolsWbFilterDesc =>
+      'Narrow with filters, then search for a specific entry.';
+
+  @override
+  String get toolsWbSearchHint => 'Search word or definition';
+
+  @override
+  String get toolsWbAll => 'All';
+
+  @override
+  String get toolsWbStartReview => 'Start Review';
+
+  @override
+  String get toolsWbEmptyNoDue => 'No words due for review';
+
+  @override
+  String get toolsWbEmpty => 'Wordbook is empty';
+
+  @override
+  String get toolsWbDeleteTitle => 'Delete Word';
+
+  @override
+  String get toolsWbDeleteConfirm => 'Are you sure you want to delete';
+
+  @override
+  String get toolsWbDeleteSuffix => '?';
+
+  @override
+  String get toolsWbDelete => 'Delete';
+
+  @override
+  String get toolsWbReviewMode => 'Review Mode';
+
+  @override
+  String get toolsWbReviewDesc =>
+      'Flash cards to confirm whether you remember each entry.';
+
+  @override
+  String get toolsWbAnswerRevealed => 'Answer Revealed';
+
+  @override
+  String get toolsWbTapForAnswer => 'Tap card to see answer';
+
+  @override
+  String get toolsWbDontKnow => 'Don\'t Know';
+
+  @override
+  String get toolsWbKnow => 'Know It';
+
+  @override
+  String get toolsWbExitReview => 'Exit Review';
+
+  @override
+  String get toolsWbShowAnswer => 'Show Answer';
+
+  @override
+  String get toolsNotesSyncFailed => 'Sync failed, please try again';
+
+  @override
+  String get toolsNotesSubtitle =>
+      'Capture ideas, meeting notes, and task snippets. Auto-saved for use as a short-term external brain.';
+
+  @override
+  String get toolsNotesWaiting => 'Waiting';
+
+  @override
+  String toolsNotesCharCount(Object _charCount) {
+    return '$_charCount chars';
+  }
+
+  @override
+  String get toolsNotesCharLabel => 'Characters';
+
+  @override
+  String get toolsNotesLineLabel => 'Lines';
+
+  @override
+  String get toolsNotesContent => 'Note Content';
+
+  @override
+  String get toolsNotesContentDesc =>
+      'Auto-saved as you type. No need to submit.';
+
+  @override
+  String get toolsNotesHint => 'Drop that flash of insight here...';
+
+  @override
+  String get toolsNotesClear => 'Clear';
+
+  @override
+  String get toolsNotesCopy => 'Copy Content';
+
+  @override
+  String get toolsNotesSaveNow => 'Save Now';
+
+  @override
+  String get toolsNotesSyncing => 'Syncing...';
+
+  @override
+  String get toolsNotesSyncToPrism => 'Sync to Prism';
+
+  @override
+  String toolsFlashLoadFailed(String e) {
+    return 'Failed to load history: $e';
+  }
+
+  @override
+  String toolsFlashSaveFailed(String e) {
+    return 'Failed to save: $e';
+  }
+
+  @override
+  String get toolsFlashTitle => 'Flash Capsule';
+
+  @override
+  String get toolsFlashSubtitle =>
+      'Capture fleeting doubts as error-book leads before they slip away.';
+
+  @override
+  String toolsFlashSubjectCount(int count) {
+    return '$count subjects';
+  }
+
+  @override
+  String get toolsFlashContent => 'Record';
+
+  @override
+  String get toolsFlashContentDesc =>
+      'Pick a subject and error type, then add knowledge point and description.';
+
+  @override
+  String get toolsFlashKnowledge => 'Knowledge Point';
+
+  @override
+  String get toolsFlashKnowledgeHint =>
+      'e.g., trig derivatives, Newton\'s second law...';
+
+  @override
+  String get toolsFlashErrorDesc => 'Error Description';
+
+  @override
+  String get toolsFlashErrorDescHint =>
+      'Describe what went wrong, where you got stuck, and how to avoid it next time.';
+
+  @override
+  String get toolsFlashKnowledgeLen => 'Knowledge point length';
+
+  @override
+  String get toolsFlashDescLen => 'Description length';
+
+  @override
+  String get toolsFlashCognitiveDim => 'Cognitive Dimension';
+
+  @override
+  String get toolsFlashViewHistory => 'View History';
+
+  @override
+  String get toolsFlashRecording => 'Saving...';
+
+  @override
+  String get toolsFlashSaveCapsule => 'Save Capsule';
+
+  @override
+  String get toolsFlashSelectSubject => 'Select Subject';
+
+  @override
+  String toolsVocabEntryCount(int count) {
+    return '$count entries';
+  }
+
+  @override
+  String get toolsVocabRemove => 'Remove';
+
+  @override
+  String get toolsVocabTitle => 'Word Lookup';
+
+  @override
+  String get toolsVocabSubtitle =>
+      'Quick definition check, example sentences, and related words. Save results to your wordbook.';
+
+  @override
+  String get toolsVocabInWordbook => 'In Wordbook';
+
+  @override
+  String get toolsVocabAddToWordbook => 'Add to Wordbook';
+
+  @override
+  String get toolsVocabInput => 'Search';
+
+  @override
+  String get toolsVocabInputDesc =>
+      'Enter an English word and press Enter or tap Search. Oxford first, offline packages before network.';
+
+  @override
+  String get toolsVocabManageOffline => 'Manage Offline Dictionaries';
+
+  @override
+  String get toolsVocabDownloadOffline => 'Download Offline Dictionary';
+
+  @override
+  String get toolsVocabInputHint => 'Enter an English word...';
+
+  @override
+  String get toolsVocabSearch => 'Search';
+
+  @override
+  String get toolsVocabResult => 'Results';
+
+  @override
+  String get toolsVocabResultDesc =>
+      'Definitions, examples, related words, and AI-generated sentences.';
+
+  @override
+  String get toolsVocabStartHint => 'Enter a word to search';
+
+  @override
+  String get toolsVocabSearchFailed => 'Search temporarily failed';
+
+  @override
+  String get toolsVocabResultHint =>
+      'Save to wordbook and generate more sentences after searching.';
+
+  @override
+  String get toolsVocabRemoveFromWordbook => 'Remove from Wordbook';
+
+  @override
+  String get toolsVocabAddToWordbookAction => 'Add to Wordbook';
+
+  @override
+  String get toolsVocabGenerateExample => 'Generate Example';
+
+  @override
+  String get toolsStatsTitle => 'Focus Stats';
+
+  @override
+  String get toolsStatsSubtitle =>
+      'Turn timer and focus behavior into structured insights. Check if your rhythm is steady or needs tuning.';
+
+  @override
+  String toolsStatsStreak(int days) {
+    return '$days-day focus streak';
+  }
+
+  @override
+  String get toolsStatsWaitingData => 'Waiting for data';
+
+  @override
+  String toolsStatsRecentCount(Object totalSessions) {
+    return '$totalSessions recent sessions';
+  }
+
+  @override
+  String get toolsStatsTodayFocus => 'Today\'s Focus';
+
+  @override
+  String get toolsStatsWeekTotal => 'This Week';
+
+  @override
+  String get toolsStatsDailyAvg => 'Daily Average';
+
+  @override
+  String get toolsStatsWeekTrend => 'Weekly Trend';
+
+  @override
+  String get toolsStatsWeekTrendDesc => 'Focus duration over the last 7 days.';
+
+  @override
+  String get toolsStatsNoTrend => 'No trend data yet';
+
+  @override
+  String get toolsStatsNoTrendDesc =>
+      'Complete a few sessions to build a meaningful trend chart.';
+
+  @override
+  String get toolsStatsRecentSessions => 'Recent Sessions';
+
+  @override
+  String get toolsStatsRecentDesc =>
+      'Review your recent focus rhythm and duration breakdown.';
+
+  @override
+  String get visualDefaultBgDesc =>
+      'Default dark-blue gradient, calm and restrained';
+
+  @override
+  String get visualInkBlue => 'Ink Blue';
+
+  @override
+  String get visualAuroraDesc =>
+      'Green aurora on dark blue, quiet and mysterious';
+
+  @override
+  String get visualNightAurora => 'Night Aurora';
+
+  @override
+  String get visualAmberDesc => 'Warm amber blended into deep blue';
+
+  @override
+  String get visualAmberEcho => 'Amber Echo';
+
+  @override
+  String get visualNebulaDesc => 'Purple nebula flowing through deep blue';
+
+  @override
+  String get visualGalaxy => 'Galaxy Conquest';
+
+  @override
+  String get visualNeonDesc => 'Neon lines on dark blue, futuristic';
+
+  @override
+  String get visualObsidian => 'Obsidian Circuit';
+
+  @override
+  String get visualMeteorDesc =>
+      'Limited event exclusive: golden meteor shower on dark blue';
+
+  @override
+  String get visualMeteor => 'Limited Meteor';
+
+  @override
+  String get visualStarDefault => 'Default twinkling stars';
+
+  @override
+  String get visualStarTrack => 'Star Trail';
+
+  @override
+  String get visualPetalDesc => 'Pink petals falling';
+
+  @override
+  String get visualAuroraShard => 'Aurora Shard';
+
+  @override
+  String get visualGlowDesc => 'Yellow-green floating glow';
+
+  @override
+  String get visualFirefly => 'Firefly Glow';
+
+  @override
+  String get visualSnowDesc => 'White snowflakes falling';
+
+  @override
+  String get visualColdTrail => 'Cold Trail';
+
+  @override
+  String get visualEnergyDesc => 'Colorful energy orbs floating';
+
+  @override
+  String get visualStarCore => 'Star Core';
+
+  @override
+  String get visualDefaultLight => 'Default center glow';
+
+  @override
+  String get visualInkGlow => 'Ink Glow';
+
+  @override
+  String get visualPulseRingDesc => 'Center pulse ring';
+
+  @override
+  String get visualNightRing => 'Night Ring';
+
+  @override
+  String get visualRippleDesc => 'Ripple spread';
+
+  @override
+  String get visualGravity => 'Gravity Conquest';
+
+  @override
+  String get visualScholarDesc =>
+      'Deep ink-blue base with star trails and soft glow. A timeless learner backdrop.';
+
+  @override
+  String get visualScholar => 'Ink Scholar';
+
+  @override
+  String get visualSilentAuroraDesc =>
+      'Restrained teal glow, floating fireflies, and pulse ring. Focus made visible in the night.';
+
+  @override
+  String get visualSilentNightAurora => 'Silent Aurora Set';
+
+  @override
+  String get visualGalaxyConquerorDesc =>
+      'Legendary galaxy theme. Golden gravity waves, star-core particles, and deep-space nebula react to milestones.';
+
+  @override
+  String get visualGalaxyConqueror => 'Galaxy Conqueror';
+
+  @override
+  String get visualMixMatch => 'Mix & Match';
+
+  @override
+  String get visualHighExposure => 'High-Visibility Glory Sets';
+
+  @override
+  String get visualEquipFailed => 'Failed to equip set';
+
+  @override
+  String get visualUnequipFailed => 'Failed to unequip set';
+
+  @override
+  String get visualClearFilter => 'Clear Filter';
+
+  @override
+  String get visualAffectedScenes => 'Affected Scenes';
+
+  @override
+  String get visualCollectionProgress => 'Collection Progress';
+
+  @override
+  String get visualSetParts => 'Set Pieces';
+
+  @override
+  String get visualPreviewing => 'Previewing';
+
+  @override
+  String get visualCurrentLook => 'Current Look';
+
+  @override
+  String get visualTapToggle => 'Tap to Toggle';
+
+  @override
+  String get visualPrestigeEmpty =>
+      'No prestige set yet — unlock and equip a set for a more striking look.';
+
+  @override
+  String get visualCurrentPrestigeSet => 'Current Prestige Set';
+
+  @override
+  String get visualUnlocked => 'Unlocked';
+
+  @override
+  String get visualLocked => 'Locked';
+
+  @override
+  String visualCollectedCount(int owned, int total) {
+    return '$owned/$total Collected';
+  }
+
+  @override
+  String get visualBundleIncomplete =>
+      'Haven\'t collected all pieces of this prestige set';
+
+  @override
+  String get visualBundleEquipped => 'Prestige set equipped';
+
+  @override
+  String get visualBundleUnequipped => 'Prestige set removed';
+
+  @override
+  String visualStyleCount(int count) {
+    return '$count Styles';
+  }
+
+  @override
+  String visualOwnedCount(int unlocked, int total) {
+    return 'Owned $unlocked / $total';
+  }
+
+  @override
+  String visualCurrentView(String label) {
+    return 'Viewing: $label';
+  }
+
+  @override
+  String visualSlotSwitched(int count) {
+    return 'Switched to this slot, $count styles available';
+  }
+
+  @override
+  String get visualSortPrestige => 'Most Flauntable';
+
+  @override
+  String get visualSortBySet => 'By Set';
+
+  @override
+  String get visualOneClickEquip => 'Equip All';
+
+  @override
+  String get execPrefTitle => 'Execution Preferences';
+
+  @override
+  String get execPrefDescription =>
+      'You decide which actions run automatically and which ones still need your confirmation.';
+
+  @override
+  String get execPrefCautious => 'Cautious';
+
+  @override
+  String get execPrefBalanced => 'Balanced';
+
+  @override
+  String get execPrefAutonomous => 'Trusted';
+
+  @override
+  String get execPrefCustom => 'Custom';
+
+  @override
+  String get execPrefCautiousDesc =>
+      'Confirm every step — best when you\'re just starting with remote execution.';
+
+  @override
+  String get execPrefAutonomousDesc =>
+      'Low-to-medium risk actions run automatically; only dangerous ones pause for confirmation.';
+
+  @override
+  String get execPrefCustomDesc =>
+      'Specify auto, confirm, skip, or reject per action type.';
+
+  @override
+  String get execPrefBalancedDesc =>
+      'Read actions run automatically; writes and high-risk actions require confirmation.';
+
+  @override
+  String get execPrefBrowserRead => 'Browser Read';
+
+  @override
+  String get execPrefBrowserWrite => 'Browser Write';
+
+  @override
+  String get execPrefFileRead => 'File Read';
+
+  @override
+  String get execPrefFileWrite => 'File Write';
+
+  @override
+  String get execPrefFileDelete => 'File Delete';
+
+  @override
+  String get execPrefShellExec => 'Terminal Execute';
+
+  @override
+  String get execPrefShellRead => 'Terminal Read-Only';
+
+  @override
+  String get execPrefInstall => 'Install Actions';
+
+  @override
+  String get execPrefSend => 'Send / Submit';
+
+  @override
+  String get execPrefAuto => 'Auto';
+
+  @override
+  String get execPrefSkip => 'Skip';
+
+  @override
+  String get execPrefReject => 'Reject';
+
+  @override
+  String get execPrefAutoExtendDesc =>
+      'When long-running tasks approach timeout, try auto-extending first.';
+
+  @override
+  String get execPrefTrustUpgradeDesc =>
+      'When an action type has a stable success record, Sparkle will suggest reducing confirmation frequency.';
+
+  @override
+  String get execPrefNotificationLevel => 'Notification Level';
+
+  @override
+  String get execPrefBudgetTitle => 'Execution Budget';
+
+  @override
+  String get execPrefBudgetDescription =>
+      'Budgets take effect before actual execution. Leave empty for no limit; current token usage shown below.';
+
+  @override
+  String execPrefTokensUsed(int count) {
+    return '$count tokens used';
+  }
+
+  @override
+  String get execPrefSystemSuggestion => 'System Suggestion';
+
+  @override
+  String get execPrefSynced => 'Already in sync';
+
+  @override
+  String lpTarget(String name) {
+    return 'Target: $name';
+  }
+
+  @override
+  String get lpMainPath => 'Main Path';
+
+  @override
+  String lpLoadFailed(String error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get lpGenMethod => 'Generation Method';
+
+  @override
+  String get lpGenMethodDesc =>
+      'Quick task paths don\'t count against your plan quota — great for generating a few actionable task cards right away. Full plans create formal proposals.';
+
+  @override
+  String get lpGenerating => 'Generating...';
+
+  @override
+  String get lpOptionalNodes => 'Recommended Extensions';
+
+  @override
+  String get lpOptionalNodesDesc =>
+      'These nodes aren\'t required prerequisites, but you can choose to include them in your study plan.';
+
+  @override
+  String lpCreatingTask(String name) {
+    return 'Creating task card for \"$name\"...';
+  }
+
+  @override
+  String get lpTaskCreated => 'Task card created';
+
+  @override
+  String lpGeneratingPlan(String name) {
+    return 'Generating study plan for \"$name\"...';
+  }
+
+  @override
+  String get lpPlanGenerated => 'Study plan generated';
+
+  @override
+  String get lpGeneratingFullPath =>
+      'Generating full learning path plan — this may take a few seconds...';
+
+  @override
+  String get lpGeneratingTaskPath => 'Generating an executable task path...';
+
+  @override
+  String get lpTaskPathGenerated => 'Task path generated';
+
+  @override
+  String get lpStatusMastered => 'Mastered';
+
+  @override
+  String get lpStatusUnlocked => 'Available';
+
+  @override
+  String get lpStatusLocked => 'Locked';
+
+  @override
+  String get lpRelationApplication => 'Application';
+
+  @override
+  String get lpRelationEvolution => 'Advanced';
+
+  @override
+  String get lpRelationComposition => 'Composition';
+
+  @override
+  String get lpRelationRelated => 'Related';
+
+  @override
+  String get lpSourceLlm => 'AI Recommended';
+
+  @override
+  String get lpSourceSeed => 'Preset';
+
+  @override
+  String get lpSourceUser => 'User Added';
+
+  @override
+  String get lpTargetNodeDesc =>
+      'This is the target node of the current learning path.';
+
+  @override
+  String get lpNormalNodeDesc =>
+      'You can create a task around this node, or merge it into a study plan.';
+
+  @override
+  String get lpLoadingRelatedTasks => 'Loading related tasks...';
+
+  @override
+  String get lpNoRelatedTasks => 'No related tasks yet.';
+
+  @override
+  String get lpRelatedTasks => 'Related Tasks';
+
+  @override
+  String get ptTitle => 'Transfer Photons';
+
+  @override
+  String get ptGuestWarning =>
+      'Guest mode doesn\'t support transfers. Please register to access full features.';
+
+  @override
+  String get ptCurrentBalance => 'Current Balance';
+
+  @override
+  String get ptRecipientId => 'Recipient ID';
+
+  @override
+  String get ptRecipientIdHint => 'Enter user ID';
+
+  @override
+  String get ptRecipientIdRequired => 'Please enter a recipient ID';
+
+  @override
+  String get ptAmount => 'Amount';
+
+  @override
+  String get ptAmountHint => 'Enter transfer amount';
+
+  @override
+  String get ptAmountRequired => 'Please enter an amount';
+
+  @override
+  String get ptAmountInvalid => 'Please enter a valid amount';
+
+  @override
+  String get ptInsufficientBalance => 'Insufficient balance';
+
+  @override
+  String get ptAmountExceedLimit =>
+      'Single transfer cannot exceed 10,000 photons';
+
+  @override
+  String get ptMessageOptional => 'Message (Optional)';
+
+  @override
+  String get ptMessageHint => 'Say something...';
+
+  @override
+  String get ptConfirmTransfer => 'Confirm Transfer';
+
+  @override
+  String get ptCannotUndo => 'Transfers cannot be undone';
+
+  @override
+  String get ptLimitNote => 'Maximum 10,000 photons per transfer';
+
+  @override
+  String get ptVerifyRecipient => 'Please verify the recipient ID is correct';
+
+  @override
+  String get ptSelectAmount => 'Select Amount';
+
+  @override
+  String get ptConfirmDialogTitle => 'Confirm Transfer';
+
+  @override
+  String ptRecipientLabel(String id) {
+    return 'Recipient ID: $id';
+  }
+
+  @override
+  String ptAmountLabel(int amount) {
+    return 'Amount: $amount Photons';
+  }
+
+  @override
+  String ptRemainingLabel(int balance) {
+    return 'Remaining: $balance Photons';
+  }
+
+  @override
+  String ptMessageLabel(String message) {
+    return 'Message: $message';
+  }
+
+  @override
+  String get ptConfirmWarning => 'Transfers cannot be undone. Continue?';
+
+  @override
+  String get ptCancel => 'Cancel';
+
+  @override
+  String get ptConfirm => 'Confirm';
+
+  @override
+  String get ptSuccess => 'Transfer successful';
+
+  @override
+  String ptFailed(String error) {
+    return 'Transfer failed: $error';
+  }
+
+  @override
+  String gdSprintCountdown(int days) {
+    return 'Sprint countdown: $days days';
+  }
+
+  @override
+  String get gdMembers => 'Members';
+
+  @override
+  String get gdFlamePower => 'Flame Power';
+
+  @override
+  String get gdTodayCheckin => 'Today\'s Check-in';
+
+  @override
+  String get gdAbout => 'About';
+
+  @override
+  String get gdNoDescription => 'No description';
+
+  @override
+  String get gdAnnouncement => 'Announcement';
+
+  @override
+  String get gdNoAnnouncement => 'No announcement';
+
+  @override
+  String get gdEnterChat => 'Enter Chat';
+
+  @override
+  String get gdTasks => 'Tasks';
+
+  @override
+  String get gdOpenKnowledge => 'Open Knowledge Base';
+
+  @override
+  String get gdJoinGroup => 'Join Group';
+
+  @override
+  String gdJoinFailed(String error) {
+    return 'Join failed: $error';
+  }
+
+  @override
+  String get gdLeaveGroup => 'Leave Group';
+
+  @override
+  String get gdConfirmLeave => 'Leave Group?';
+
+  @override
+  String get gdLeaveConfirmMsg => 'Are you sure you want to leave this group?';
+
+  @override
+  String get gdCancel => 'Cancel';
+
+  @override
+  String get gdLeave => 'Leave';
+
+  @override
+  String get gdEditAnnouncement => 'Edit Announcement';
+
+  @override
+  String get gdAnnouncementHint => 'Enter group announcement...';
+
+  @override
+  String get gdSave => 'Save';
+
+  @override
+  String get gdAnnouncementUpdated => 'Announcement updated';
+
+  @override
+  String gdUpdateFailed(String error) {
+    return 'Update failed: $error';
+  }
+
+  @override
+  String get gdOverview => 'Overview';
+
+  @override
+  String get gdKnowledgeBase => 'Knowledge Base';
+
+  @override
+  String get fpTitle => 'Friend Profile';
+
+  @override
+  String get fpDefaultName => 'Friend';
+
+  @override
+  String get fpPartnerGoals => 'Partner Goals';
+
+  @override
+  String get fpNoSyncedGoals => 'No synced goals yet';
+
+  @override
+  String get fpChat => 'Chat';
+
+  @override
+  String get fpEnterWorkbench => 'Open Workbench';
+
+  @override
+  String get fpViewAchievements => 'View Achievements';
+
+  @override
+  String get fpInviteAccountability => 'Invite Accountability Partner';
+
+  @override
+  String get fpEnterPartnerWorkbench => 'Open Partner Workbench';
+
+  @override
+  String get fpInviteDialogTitle => 'Invite Accountability Partner';
+
+  @override
+  String fpInviteMessage(String name) {
+    return 'Invite $name to be your accountability partner';
+  }
+
+  @override
+  String get fpMyGoal => 'My Goal';
+
+  @override
+  String get fpCheckinFrequency => 'Check-in frequency:';
+
+  @override
+  String get fpEveryDay => 'Daily';
+
+  @override
+  String fpEveryNDays(int n) {
+    return 'Every $n days';
+  }
+
+  @override
+  String get fpCancel => 'Cancel';
+
+  @override
+  String get fpSendInvite => 'Send Invite';
+
+  @override
+  String get fpGoalRequired => 'Please enter your goal';
+
+  @override
+  String get fpInviteSent => 'Accountability partner invite sent!';
+
+  @override
+  String fpInviteFailed(String error) {
+    return 'Send failed: $error';
+  }
+
+  @override
+  String get fpAccountabilityRelation => 'Accountability Partner';
+
+  @override
+  String get fpFriendRelation => 'Friend';
+
+  @override
+  String fpDaysTogether(int days) {
+    return '$days days together';
+  }
+
+  @override
+  String fpMyStreak(int days) {
+    return 'Me: $days days';
+  }
+
+  @override
+  String fpPartnerStreak(int days) {
+    return 'Them: $days days';
+  }
+
+  @override
+  String get fpGrowTogether => 'Growing Together';
+
+  @override
+  String fpAchievementSummary(int my, int partner) {
+    return 'I unlocked $my accountability achievements, they unlocked $partner.';
+  }
+
+  @override
+  String get fpMotivationSummary => 'Motivation Summary';
+
+  @override
+  String fpStreakLeaderboard(String myRank, String partnerRank) {
+    return 'Streak leaderboard: You #$myRank, Them #$partnerRank.';
+  }
+
+  @override
+  String get fpRecentShares => 'Recent Shares';
+
+  @override
+  String get fpSharedContent => 'Shared content';
+
+  @override
+  String get fcConceptConfusion => 'Concept Confusion';
+
+  @override
+  String get fcCalculationError => 'Calculation Error';
+
+  @override
+  String get fcMisreading => 'Misreading';
+
+  @override
+  String get fcKnowledgeFading => 'Knowledge Fading';
+
+  @override
+  String get fcWrongMethod => 'Wrong Method';
+
+  @override
+  String get fcOther => 'Other';
+
+  @override
+  String get fcSubjectMath => 'Math';
+
+  @override
+  String get fcSubjectPhysics => 'Physics';
+
+  @override
+  String get fcSubjectChemistry => 'Chemistry';
+
+  @override
+  String get fcSubjectBiology => 'Biology';
+
+  @override
+  String get fcSubjectEnglish => 'English';
+
+  @override
+  String get fcSubjectChinese => 'Chinese';
+
+  @override
+  String get fcSubjectComputer => 'Computer Science';
+
+  @override
+  String get fcFillRequired =>
+      'Please fill in the knowledge point and error description';
+
+  @override
+  String get fcSaveFailed => 'Capsule save failed, please try again later';
+
+  @override
+  String get fcSavedWithSync => 'Capsule saved and synced to error book';
+
+  @override
+  String get fcSavedSyncLater =>
+      'Capsule saved, error book sync will retry later';
+
+  @override
+  String fcHistoryCount(int count) {
+    return '$count history capsules';
+  }
+
+  @override
+  String get fcRecording => 'Recording...';
+
+  @override
+  String get simSocratic => 'Socratic Dialogue';
+
+  @override
+  String get simErrorDiag => 'Error Diagnosis';
+
+  @override
+  String get simSocraticShort => 'Socratic';
+
+  @override
+  String get simSkeptic => 'Skeptic';
+
+  @override
+  String get simBreakdown => 'Breakdown';
+
+  @override
+  String get simApplicator => 'Applicator';
+
+  @override
+  String get simErrorAnalyst => 'Error Analyst';
+
+  @override
+  String get simCorrectCoach => 'Correction Coach';
+
+  @override
+  String get simValidator => 'Validator';
+
+  @override
+  String get simDeconstructor => 'Deconstructor';
+
+  @override
+  String get simTransferCoach => 'Transfer Coach';
+
+  @override
+  String get simSocraticDesc =>
+      'Drill down through follow-up questions. Ideal for clarifying fuzzy concepts and logical gaps.';
+
+  @override
+  String get simErrorDiagDesc =>
+      'Identify error causes, correction paths, and verification methods. Great for gap-filling.';
+
+  @override
+  String get simStudyBuddy => 'Study Buddy';
+
+  @override
+  String get simQuestioner => 'Questioner';
+
+  @override
+  String get simSummarizer => 'Summarizer';
+
+  @override
+  String get simGenerate => 'Generate';
+
+  @override
+  String get simRefresh => 'Refresh';
+
+  @override
+  String get simSocraticCopy => 'Socratic Dialogue';
+
+  @override
+  String get simErrorDiagCopy => 'Error Diagnosis';
+
+  @override
+  String get simGenFailed => 'Simulation generation failed';
+
+  @override
+  String get simStudyGroup => 'Study Group';
+
+  @override
+  String get simKnowledgeDebate => 'Knowledge Debate';
+
+  @override
+  String get simHistoricalRoleplay => 'Historical Roleplay';
+
+  @override
+  String get simCaseAnalysis => 'Case Analysis';
+
+  @override
+  String get simWhatIfPath => 'What-If Path';
+
+  @override
+  String get simConceptMapBuild => 'Concept Map';
+
+  @override
+  String get simStudyGroupDesc =>
+      'Multi-role collaborative learning around a topic. Great for covering concepts, examples, and misconceptions together.';
+
+  @override
+  String get simKnowledgeDebateDesc =>
+      'Clash of perspectives. Ideal for testing viewpoints, evidence, and boundary conditions.';
+
+  @override
+  String get simHistoricalRoleplayDesc =>
+      'Step into characters and era constraints, making discussion feel like a real historical scene.';
+
+  @override
+  String get simCaseAnalysisDesc =>
+      'Deconstruct, diagnose, and decide around specific cases. Suited for practical topics.';
+
+  @override
+  String get simWhatIfPathDesc =>
+      'Compare different learning or action paths. Good for planning, trade-offs, and resource allocation.';
+
+  @override
+  String get simConceptMapBuildDesc =>
+      'Weave knowledge points into a structured map. Ideal for building a global framework and connections.';
+
+  @override
+  String get simTopStudent => 'Top Student';
+
+  @override
+  String get simMidStudent => 'Average Student';
+
+  @override
+  String get simPracticeCoach => 'Practice Coach';
+
+  @override
+  String get simProExpert => 'Pro Expert';
+
+  @override
+  String get simConExpert => 'Con Expert';
+
+  @override
+  String get simModerator => 'Moderator';
+
+  @override
+  String get simEvidenceReviewer => 'Evidence Reviewer';
+
+  @override
+  String get simChallenger => 'Challenger';
+
+  @override
+  String get simHistoryTutor => 'History Tutor';
+
+  @override
+  String get simKeyFigure => 'Key Figure';
+
+  @override
+  String get simEraObserver => 'Era Observer';
+
+  @override
+  String get simStrategyAdvisor => 'Strategy Advisor';
+
+  @override
+  String get simRecorder => 'Recorder';
+
+  @override
+  String get simCaseTutor => 'Case Tutor';
+
+  @override
+  String get simDiagnostician => 'Diagnostician';
+
+  @override
+  String get simPractitioner => 'Practitioner';
+
+  @override
+  String get simCounterExampler => 'Counter-example Finder';
+
+  @override
+  String get simDecisionRecorder => 'Decision Recorder';
+
+  @override
+  String get simCurrentPath => 'Current Path';
+
+  @override
+  String get simAggressivePath => 'Aggressive Path';
+
+  @override
+  String get simRiskObserver => 'Risk Observer';
+
+  @override
+  String get simResourceDispatcher => 'Resource Dispatcher';
+
+  @override
+  String get simStructurer => 'Structurer';
+
+  @override
+  String get simConnector => 'Connector';
+
+  @override
+  String get simCounterChecker => 'Counter-checker';
+
+  @override
+  String get simBridgeBuilder => 'Bridge Builder';
+
+  @override
+  String get simBalanced => 'Balanced';
+
+  @override
+  String get simDebateStyle => 'Debate';
+
+  @override
+  String get simGuided => 'Guided';
+
+  @override
+  String get simPractical => 'Practical';
+
+  @override
+  String get simBalancedDesc =>
+      'Suited for most topics. Emphasizes balanced multi-role progression without any side dominating.';
+
+  @override
+  String get simDebateStyleDesc =>
+      'Actively amplifies controversy and evidence conflicts. Better for topics that need viewpoint clashes.';
+
+  @override
+  String get simGuidedDesc =>
+      'More like a tutor-led discussion. Emphasizes clarifying premises, step-by-step breakdown, and keeping users on track.';
+
+  @override
+  String get simPracticalDesc =>
+      'Prioritizes action, verification, and real-world constraints. Ideal for skills and scenario planning.';
+
+  @override
+  String get simRecommended => 'Recommended';
+
+  @override
+  String get simGenerating => 'Generating simulation...';
+
+  @override
+  String get simStartHint =>
+      'Start a learning scenario simulation and let characters discuss the topic round by round.';
+
+  @override
+  String simRound(int round) {
+    return 'Round $round';
+  }
+
+  @override
+  String get docCleanerSelectFileFirst => 'Please select a file first';
+
+  @override
+  String get docCleanerResultCopied => 'Cleaning result copied';
+
+  @override
+  String get docCleanerTitle => 'Document Cleaner';
+
+  @override
+  String get docCleanerSubtitle =>
+      'Clean scanned documents, lecture notes, and slides into readable text. Supports real GLM OCR pipeline, ideal for note consolidation and material preprocessing.';
+
+  @override
+  String get docCleanerOcrOn => 'OCR Enabled';
+
+  @override
+  String get docCleanerPlainText => 'Plain Text Clean';
+
+  @override
+  String get docCleanerSupportFormats => 'Supports PDF / DOCX / PPTX / Images';
+
+  @override
+  String get docCleanerFileSelected => 'File selected';
+
+  @override
+  String get docCleanerEngine => 'Engine';
+
+  @override
+  String get docCleanerSkipOcr => 'Skip OCR';
+
+  @override
+  String get docCleanerScanOcrHint =>
+      'GLM OCR recommended for scanned documents';
+
+  @override
+  String get docCleanerFileSize => 'File Size';
+
+  @override
+  String get docCleanerNoFile => 'No file selected';
+
+  @override
+  String get docCleanerCurrentFile => 'Current file to process';
+
+  @override
+  String get docCleanerFileSelectTitle => 'File Selection';
+
+  @override
+  String get docCleanerFileSelectSubtitle =>
+      'Select a file first, then decide whether to enable OCR. Recognition results will flow back to the cleaning task automatically.';
+
+  @override
+  String get docCleanerClickSelect => 'Click to select file';
+
+  @override
+  String get docCleanerSupportedTypes =>
+      'Supports PDF, DOCX, PPTX, JPG, PNG, WebP. OCR recommended for scanned documents.';
+
+  @override
+  String get docCleanerDocFile => 'Document file';
+
+  @override
+  String get docCleanerChangeFile => 'Change file';
+
+  @override
+  String get docCleanerChange => 'Change';
+
+  @override
+  String get docCleanerStrategyTitle => 'Processing Strategy';
+
+  @override
+  String get docCleanerStrategySubtitle =>
+      'Enable OCR for scanned documents. Disable OCR when the source already has a text layer for faster processing.';
+
+  @override
+  String get docCleanerEnableOcr => 'Enable OCR recognition';
+
+  @override
+  String get docCleanerLocalFast => 'Local Fast';
+
+  @override
+  String get docCleanerStartClean => 'Start AI Cleaning';
+
+  @override
+  String get docCleanerProcessingTitle => 'Processing';
+
+  @override
+  String get docCleanerProcessingSubtitle =>
+      'Uploading, parsing, and cleaning the document. Progress updates in real time.';
+
+  @override
+  String get docCleanerSuccessTitle => 'Cleaning Complete';
+
+  @override
+  String get docCleanerSuccessSubtitle =>
+      'Results are ready. You can copy, send, or continue with another round.';
+
+  @override
+  String get docCleanerCharCount => 'Characters';
+
+  @override
+  String get docCleanerMode => 'Mode';
+
+  @override
+  String get docCleanerDeepSummary => 'Deep Summary';
+
+  @override
+  String get docCleanerFullClean => 'Full Clean';
+
+  @override
+  String get docCleanerFullPreview => 'Full Preview';
+
+  @override
+  String get docCleanerSendChat => 'Send to Chat';
+
+  @override
+  String get docCleanerUseResult => 'Use Result';
+
+  @override
+  String get docCleanerCopySummary => 'Copy Summary';
+
+  @override
+  String get docCleanerFailedTitle => 'Cleaning Failed';
+
+  @override
+  String get docCleanerFailedSubtitle =>
+      'The pipeline returned an error. You can retry or change the file.';
+
+  @override
+  String get docCleanerIncompleteTitle => 'Task Incomplete';
+
+  @override
+  String get docCleanerRetry => 'Retry';
+
+  @override
+  String get seedCatFewShot => 'Few Shot';
+
+  @override
+  String get seedCatTeaching => 'Teaching Content';
+
+  @override
+  String get seedCatReplyTemplate => 'Reply Template';
+
+  @override
+  String get seedCatCustom => 'Custom';
+
+  @override
+  String get seedVisPrivate => 'Private';
+
+  @override
+  String get seedVisPublic => 'Public';
+
+  @override
+  String get seedVisOfficial => 'Official';
+
+  @override
+  String get seedTypeExample => 'Example';
+
+  @override
+  String get seedTypeExercise => 'Exercise';
+
+  @override
+  String get seedTypeKnowledge => 'Knowledge Point';
+
+  @override
+  String get seedTypeTemplate => 'Template';
+
+  @override
+  String get seedTypeFlashcard => 'Flashcard';
+
+  @override
+  String get seedDiffBeginner => 'Beginner';
+
+  @override
+  String get seedDiffIntermediate => 'Intermediate';
+
+  @override
+  String get seedDiffAdvanced => 'Advanced';
+
+  @override
+  String get seedDiffExpert => 'Expert';
+
+  @override
+  String get seedCatFewShotFull => 'Few-shot Example';
+
+  @override
+  String get cogMockPattern1 =>
+      'Whenever I hit a tough problem I instinctively reach for my phone — it seems like an avoidance mechanism.';
+
+  @override
+  String get cogMockPattern2 =>
+      'Finishing advanced math homework gives a real sense of achievement. This positive feedback matters.';
+
+  @override
+  String get cogMockPattern3 =>
+      'Planned to memorize vocab today but club activities got in the way. Need more schedule flexibility.';
+
+  @override
+  String get cogMockPattern4 =>
+      'When facing hard or uncertain tasks (like physics projects), I tend to stall with busywork (tidying up, replying to messages).';
+
+  @override
+  String get cogMockPattern5 =>
+      'I habitually start the hardest study tasks after 10 pm, which delays sleep and drains the next day\'s energy.';
+
+  @override
+  String get cogMockPattern6 =>
+      'I overthink layout and wording when making slides or writing reports, hurting core content output.';
+
+  @override
+  String get cogCapsuleUnavailable => 'This capsule is currently unavailable';
+
+  @override
+  String get cogCapsuleUnavailableDesc =>
+      'It may have been removed or is still generating.';
+
+  @override
+  String get cogCapsuleOpenFailed => 'Failed to open capsule';
+
+  @override
+  String get cogJobsLoadFailed => 'Failed to load generation jobs';
+
+  @override
+  String get cogCapsuleListFailed => 'Failed to load capsule list';
+
+  @override
+  String cogPatternFreq(Object count) {
+    return 'Appeared $count times';
+  }
+
+  @override
+  String get insLearnBasic => 'Learn basic concepts';
+
+  @override
+  String get insQuickCore => 'Quickly grasp core concepts';
+
+  @override
+  String get insSmallPractice => 'Complete a round of practice';
+
+  @override
+  String insLoadFailed(String e) {
+    return 'Load failed: $e';
+  }
+
+  @override
+  String get insForecastTitle => 'Learning Forecast';
+
+  @override
+  String get insForecastEmpty => 'Forecast data is not ready yet';
+
+  @override
+  String get insReload => 'Reload';
+
+  @override
+  String get insNightReview => 'Night Review';
+
+  @override
+  String get insActivityAnalysis => 'Activity Analysis';
+
+  @override
+  String get insAiInsights => 'AI Insights';
+
+  @override
+  String get insNotEnoughData =>
+      'Not enough data for stable recommendations yet.';
+
+  @override
+  String get insOverviewTitle => 'Learning Insights';
+
+  @override
+  String get insOverviewEmpty => 'Learning insights has no data yet';
+
+  @override
+  String get insOverviewEmptyDesc =>
+      'Complete a learning task, log an error, or start a simulation first — then weekly reports and insights become useful.';
+
+  @override
+  String get insSimLabel => 'Learning Simulation';
+
+  @override
+  String get insTheaterLabel => 'Simulation Theater';
+
+  @override
+  String get insOpenSim => 'Open Simulation';
+
+  @override
+  String get insReportLabel => 'Learning Report';
+
+  @override
+  String get insViewReport => 'View Report';
+
+  @override
+  String get insBackToCockpit => 'Back to Cockpit';
+
+  @override
+  String get insContinueSim => 'Continue Simulation';
+
+  @override
+  String get insContinueLearnSim => 'Continue Learning Simulation';
+
+  @override
+  String get insHasContinue => 'Content available to continue';
+
+  @override
+  String get insNoPrereq => 'No prerequisites needed — dive right in!';
+
+  @override
+  String get insGenerating => 'Generating...';
+
+  @override
+  String get insQuickPath => 'Quick Task Path';
+
+  @override
+  String get insFullPlan => 'Full Plan';
+
+  @override
+  String get insViewDetail => 'View Details';
+
+  @override
+  String get insGenTaskCard => 'Generate Task Card';
+
+  @override
+  String get insGenPlan => 'Generate Study Plan';
+
+  @override
+  String insLearnNode(Object name) {
+    return 'Study: $name';
+  }
+
+  @override
+  String insCreateFailed(String e) {
+    return 'Create failed: $e';
+  }
+
+  @override
+  String insGenFailed(String e) {
+    return 'Generate failed: $e';
+  }
+
+  @override
+  String get insTargetNode => 'Target Node';
+
+  @override
+  String get insOptionalExtend => 'Optional Extensions';
+
+  @override
+  String get insRetryLoad => 'Retry';
+
+  @override
+  String get insPredictNext => 'Predict next study time';
+
+  @override
+  String get insCollapse => 'Collapse';
+
+  @override
+  String get insExpand => 'Expand';
+
+  @override
+  String insStudyDays(int count) {
+    return '$count study days';
+  }
+
+  @override
+  String insTasksDone(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String insErrorsFixed(int count) {
+    return 'Fixed $count errors';
+  }
+
+  @override
+  String insReflections(int count) {
+    return '$count reflections';
+  }
+
+  @override
+  String insMasteryGain(int delta) {
+    return 'Mastery +$delta';
+  }
+
+  @override
+  String get insFirstWeek => 'Week 1';
+
+  @override
+  String get insRetry => 'Retry';
+
+  @override
+  String get calNoActivity => 'No activity';
+
+  @override
+  String calReminder(Object eventTitle) {
+    return 'Schedule reminder: $eventTitle';
+  }
+
+  @override
+  String get calSuggestedSlot => 'Suggested Slot';
+
+  @override
+  String get calStreakDays => 'Streak Days';
+
+  @override
+  String get calActiveDays => 'Active Days';
+
+  @override
+  String get calCompletedTasks => 'Completed Tasks';
+
+  @override
+  String get calFocusDuration => 'Focus Duration';
+
+  @override
+  String get calHottestDay => 'Busiest Day';
+
+  @override
+  String get calCurrentMainGoal => 'Current Main Goal';
+
+  @override
+  String get calAchievementMomentum => 'Achievement Momentum';
+
+  @override
+  String get calEndAfterStart => 'End time must be after start time';
+
+  @override
+  String calCreateEventFailed(String e) {
+    return 'Failed to create event: $e';
+  }
+
+  @override
+  String get calTitle => 'Title';
+
+  @override
+  String get calAllDay => 'All Day';
+
+  @override
+  String get calStartTime => 'Start Time';
+
+  @override
+  String get calEndTime => 'End Time';
+
+  @override
+  String get calLocation => 'Location';
+
+  @override
+  String get calDescription => 'Description';
+
+  @override
+  String get calReminderLabel => 'Reminder';
+
+  @override
+  String get calAtStart => 'At start';
+
+  @override
+  String get cal5MinBefore => '5 min before';
+
+  @override
+  String get cal15MinBefore => '15 min before';
+
+  @override
+  String get cal30MinBefore => '30 min before';
+
+  @override
+  String get cal1HourBefore => '1 hour before';
+
+  @override
+  String get calCancel => 'Cancel';
+
+  @override
+  String get calSave => 'Save';
+
+  @override
+  String get calTotalExecutions => 'Total Executions';
+
+  @override
+  String get calAvgDuration => 'Avg Duration';
+
+  @override
+  String get calSessionCount => 'Sessions';
+
+  @override
+  String get ebCreateFailed => 'Failed to create error record';
+
+  @override
+  String get ebListFailed => 'Failed to fetch error list';
+
+  @override
+  String get ebDetailFailed => 'Failed to fetch error detail';
+
+  @override
+  String get ebUpdateFailed => 'Failed to update error record';
+
+  @override
+  String get ebDeleteFailed => 'Failed to delete error record';
+
+  @override
+  String get ebAnalysisFailed => 'Re-analysis failed';
+
+  @override
+  String get ebReviewFailed => 'Failed to submit review record';
+
+  @override
+  String get ebTodayReviewFailed => 'Failed to fetch today\'s review list';
+
+  @override
+  String get ebStatsFailed => 'Failed to fetch statistics';
+
+  @override
+  String get ebSummaryFailed => 'Failed to fetch semantic summary';
+
+  @override
+  String get ebBadParams => 'Invalid request parameters';
+
+  @override
+  String ebImageUploadFailed(String e) {
+    return 'Image upload failed: $e';
+  }
+
+  @override
+  String get ebRemove => 'Remove';
+
+  @override
+  String get ebReuploadImage => 'Re-upload Image';
+
+  @override
+  String get ebUploadImage => 'Upload Question Image';
+
+  @override
+  String get ebEditError => 'Edit Error';
+
+  @override
+  String get ebAddError => 'Add Error';
+
+  @override
+  String ebLoadErrorFailed(String error) {
+    return 'Failed to load error: $error';
+  }
+
+  @override
+  String get ebSaving => 'Saving...';
+
+  @override
+  String get ebSave => 'Save';
+
+  @override
+  String get ebChapterOptional => 'Chapter (optional)';
+
+  @override
+  String get ebChapterHint => 'e.g., Chapter 3 Newton\'s Laws';
+
+  @override
+  String get ebChapterHelper => 'Fill in to filter by chapter during review';
+
+  @override
+  String get ebQuestionContent => 'Question';
+
+  @override
+  String get ebQuestionHint => 'Enter the full question or upload an image...';
+
+  @override
+  String get ebQuestionHelper =>
+      'Text or image is enough; both is recommended for better analysis';
+
+  @override
+  String get ebYourAnswer => 'Your Answer';
+
+  @override
+  String get ebYourAnswerHint => 'The wrong answer you wrote...';
+
+  @override
+  String get ebCorrectAnswer => 'Correct Answer';
+
+  @override
+  String get ebCorrectAnswerHint => 'The correct answer or solution process...';
+
+  @override
+  String get ebChapter => 'Chapter';
+
+  @override
+  String get ebChapterFilterHint =>
+      'e.g., Functions, Mechanics, Electromagnetics';
+
+  @override
+  String get ebShowDueOnly => 'Show due only';
+
+  @override
+  String get ebShowDueDesc => 'Use with the Due tab above';
+
+  @override
+  String get ebAll => 'All';
+
+  @override
+  String get ebNoMatchingErrors => 'No matching errors';
+
+  @override
+  String get ebHide => 'Hide';
+
+  @override
+  String get ebViewAnswer => 'View Answer';
+
+  @override
+  String get ebViewAnalysis => 'View AI Analysis';
+
+  @override
+  String ebSubmitFailed(Object e) {
+    return 'Submit failed: $e';
+  }
+
+  @override
+  String get ebBack => 'Back';
+
+  @override
+  String get ebBackToList => 'Back to List';
+
+  @override
+  String get ebAnotherRound => 'Another Round';
+
+  @override
+  String get ebRetry => 'Retry';
+
+  @override
+  String get ebConfirmExit => 'Confirm Exit';
+
+  @override
+  String get ebConfirmExitDesc => 'Review is not finished. Are you sure?';
+
+  @override
+  String get ebContinueReview => 'Continue Review';
+
+  @override
+  String get ebExit => 'Exit';
+
+  @override
+  String get ebForgot => 'Forgot';
+
+  @override
+  String get ebForgotHint => 'Will review earlier next time';
+
+  @override
+  String get ebFuzzy => 'Fuzzy';
+
+  @override
+  String get ebFuzzyHint => 'Keep current interval';
+
+  @override
+  String get ebRemembered => 'Remembered';
+
+  @override
+  String get ebRememberedHint => 'Extend review interval';
+
+  @override
+  String get ebPerfectRecall => 'Perfect Recall ✓';
+
+  @override
+  String get ebPerfectRecallHint => 'Can recall and explain the solution';
+
+  @override
+  String get ebFuzzyRecall => 'Fuzzy ≈';
+
+  @override
+  String get ebFuzzyRecallHint => 'Roughly remember but details are blurry';
+
+  @override
+  String get ebCompleteForgot => 'Completely Forgot ✗';
+
+  @override
+  String get ebCompleteForgotHint => 'Can\'t recall or remembered wrong';
+
+  @override
+  String get ebMath => 'Math';
+
+  @override
+  String get ebPhysics => 'Physics';
+
+  @override
+  String get ebChemistry => 'Chemistry';
+
+  @override
+  String get ebBiology => 'Biology';
+
+  @override
+  String get ebEnglish => 'English';
+
+  @override
+  String get ebChinese => 'Chinese';
+
+  @override
+  String get ebOther => 'Other';
+
+  @override
+  String get memDetailMissing => 'Memory detail parameter missing';
+
+  @override
+  String get memNotEnabled => 'Memory control is not enabled';
+
+  @override
+  String memLoadSettingsFailed(String e) {
+    return 'Failed to load memory settings: $e';
+  }
+
+  @override
+  String memSaveFailed(String e) {
+    return 'Save failed: $e';
+  }
+
+  @override
+  String get memBack => 'Back';
+
+  @override
+  String get memUnavailable => 'Memory control unavailable';
+
+  @override
+  String get memRetry => 'Retry';
+
+  @override
+  String get memEnabled => 'Memory Enabled';
+
+  @override
+  String get memPaused => 'Memory Paused';
+
+  @override
+  String get memPrefControlled => 'Preferences controlled';
+
+  @override
+  String get memEnableLongTerm => 'Enable Long-term Memory';
+
+  @override
+  String get memDisableDesc =>
+      'Disabling pauses new memory writes but does not delete history.';
+
+  @override
+  String get memSelfMemory => 'Self Memory';
+
+  @override
+  String get memPeopleMention => 'People Mentions';
+
+  @override
+  String get memRelationshipDynamics => 'Relationship Dynamics';
+
+  @override
+  String get memCommitments => 'Commitments';
+
+  @override
+  String get memCommitmentStageNote =>
+      'Stage 18 is off by default. Only after you enable it will the system send commitment follow-ups or activity recovery reminders.';
+
+  @override
+  String get memEnableProactive => 'Enable Proactive Reminders';
+
+  @override
+  String get memProactiveMaster =>
+      'Master switch. Turning off disables all Stage 18 proactive reminders.';
+
+  @override
+  String get memCommitmentFollowup => 'Commitment Follow-up';
+
+  @override
+  String get memCommitmentFollowupDesc =>
+      'Only for commitments you explicitly made that are past due.';
+
+  @override
+  String get memActivityRecovery => 'Activity Recovery';
+
+  @override
+  String get memActivityRecoveryDesc =>
+      'Only for users who were consistently active and inactive for 72 hours.';
+
+  @override
+  String get memQuietHoursNote =>
+      'You can narrow the default 22:00-08:00 window but cannot expand reminders into it.';
+
+  @override
+  String get memStartTime => 'Start Time';
+
+  @override
+  String get memEndTime => 'End Time';
+
+  @override
+  String get memViewInbox => 'View Reminder Inbox';
+
+  @override
+  String get memDecideWhat => 'Decide what gets stored long-term.';
+
+  @override
+  String get memPreference => 'Preferences';
+
+  @override
+  String get memPreferenceDesc =>
+      'Records answer style, study rhythm, and common preferences.';
+
+  @override
+  String get memGoals => 'Goals';
+
+  @override
+  String get memGoalsDesc =>
+      'Records confirmed long-term goals and phase intentions.';
+
+  @override
+  String get memExperience => 'Experiences';
+
+  @override
+  String get memExperienceDesc =>
+      'Records key events and feedback useful for future decisions.';
+
+  @override
+  String get memAiAutoMemory => 'AI Auto Memory';
+
+  @override
+  String get memAiAutoMemoryDesc =>
+      'Let the system infer short-term experiences from chats. Each entry is visible and revocable.';
+
+  @override
+  String get memSensitivityNote =>
+      'Higher is more aggressive but records more context.';
+
+  @override
+  String get memExcludeNote =>
+      'Turn off preferences you don\'t want stored long-term.';
+
+  @override
+  String get memSourceLimit =>
+      'Limit which sources can write to long-term memory.';
+
+  @override
+  String get memSaving => 'Saving...';
+
+  @override
+  String get memSaveSettings => 'Save Settings';
+
+  @override
+  String get memEvidenceParseFail => 'Cannot parse evidence';
+
+  @override
+  String get memEvidenceRecord => 'Evidence Record';
+
+  @override
+  String get memGoGalaxy => 'View in Galaxy';
+
+  @override
+  String get memGoErrorBook => 'View in Error Book';
+
+  @override
+  String get memBackToErrorBook => 'Back to Error Book';
+
+  @override
+  String get memOpenRelatedChat => 'Open Related Chat';
+
+  @override
+  String get memOpenOriginalChat => 'Open Original Chat';
+
+  @override
+  String get memSkip => 'Skip';
+
+  @override
+  String get seedDetailFailed =>
+      'Failed to load seed library details. Please try again.';
+
+  @override
+  String get seedStateFailed =>
+      'Failed to load seed library state. Please try again.';
+
+  @override
+  String seedCreateFailed(String e) {
+    return 'Create failed: $e';
+  }
+
+  @override
+  String get seedCreateTitle => 'Create Seed Library';
+
+  @override
+  String get seedNameLabel => 'Name';
+
+  @override
+  String get seedNameHint => 'Enter seed library name';
+
+  @override
+  String get seedDescLabel => 'Description';
+
+  @override
+  String get seedDescHint => 'Enter description (optional)';
+
+  @override
+  String get seedTagHint => 'Enter tags';
+
+  @override
+  String get seedOfficialOnly => 'Official Only';
+
+  @override
+  String get seedFeaturedOnly => 'Featured Only';
+
+  @override
+  String get seedOfficialFilter => 'Official Only';
+
+  @override
+  String get seedOfficialFilterDesc =>
+      'Show only system-maintained or officially recommended libraries';
+
+  @override
+  String get seedFeaturedFilter => 'Featured Only';
+
+  @override
+  String get seedFeaturedFilterDesc =>
+      'Filter for high-quality libraries marked as recommended';
+
+  @override
+  String get seedShare => 'Share';
+
+  @override
+  String get seedEdit => 'Edit';
+
+  @override
+  String get seedDelete => 'Delete';
+
+  @override
+  String get seedDeleteContent => 'Delete Content';
+
+  @override
+  String get seedDeleteConfirm => 'Are you sure you want to delete this?';
+
+  @override
+  String get authPasswordSet => 'Password set successfully';
+
+  @override
+  String get authPasswordReset => 'Password reset. Please log in again.';
+
+  @override
+  String get authVerifyEmailSent => 'Verification email sent';
+
+  @override
+  String get authEmailVerified => 'Email verified successfully';
+
+  @override
+  String get authBound => 'Bound successfully';
+
+  @override
+  String get authUnbound => 'Unbound successfully';
+
+  @override
+  String get authDeviceOffline => 'Device logged out';
+
+  @override
+  String get authOtherDeviceOffline => 'Other devices logged out';
+
+  @override
+  String get authAccountDeleted => 'Account deleted';
+
+  @override
+  String get authTermsOfService => 'Terms of Service';
+
+  @override
+  String get authAgreeTerms => 'I have read and agree to the Terms of Service';
+
+  @override
+  String get authViewTerms => 'View Terms of Service';
+
+  @override
+  String get authAgreePrivacy => 'I have read and agree to the Privacy Policy';
+
+  @override
+  String get authViewPrivacy => 'View Privacy Policy';
+
+  @override
+  String get authResetCode => 'Reset Code';
+
+  @override
+  String get authNewPassword => 'New Password';
+
+  @override
+  String get authConfirmNewPassword => 'Confirm New Password';
+
+  @override
+  String get authConfirmReset => 'Confirm Reset';
+
+  @override
+  String get reportRadarMinNodes =>
+      'At least 3 knowledge nodes are needed to draw a radar chart.';
+
+  @override
+  String get transTranslating => 'Translating...';
+
+  @override
+  String get transSaveToWordCard => 'Save to Word Card';
+
+  @override
+  String get transTranslate => 'Translate';
+
+  @override
+  String get transCopy => 'Copy';
+
+  @override
+  String get transSavedToWordCard => 'Saved to word card';
+
+  @override
+  String get transSaveFailed => 'Save failed, please retry';
+
+  @override
+  String transUnknownError(String e) {
+    return 'Unknown error: $e';
+  }
+
+  @override
+  String get transSaved => 'Saved';
+
+  @override
+  String get transSaving => 'Saving...';
+
+  @override
+  String get transWordCard => 'Word Card';
+
+  @override
+  String get auroraObserving => 'Aurora · Observing';
+
+  @override
+  String auroraFeedbackFailed(String error) {
+    return 'Calibration feedback failed: $error';
+  }
+
+  @override
+  String get auroraConfirm => 'Confirm';
+
+  @override
+  String get auroraNotRight => 'Not Right';
+
+  @override
+  String get auroraDontJudge => 'Don\'t Judge Like This';
+
+  @override
+  String get auroraStartFailed =>
+      'Failed to start Aurora calibration. Please retry later.';
+
+  @override
+  String get auroraExitCalibration => 'Exit Calibration';
+
+  @override
+  String get auroraPreparing => 'Aurora is preparing…';
+
+  @override
+  String get auroraClose => 'Close';
+
+  @override
+  String get auroraWhatDoYouThink => 'What do you think actually happened…';
+
+  @override
+  String get auroraSend => 'Send';
+
+  @override
+  String get settingsQueueCleared => 'Queue cleared';
+
+  @override
+  String get settingsRetryQueue => 'Retry Queue';
+
+  @override
+  String get settingsPureMode => 'Pure Mode';
+
+  @override
+  String get settingsCollapseFloating => 'Collapse Floating Capsule';
+
+  @override
+  String get settingsBottomDrawer => 'Bottom Drawer';
+
+  @override
+  String get settingsDetailOnly => 'Detail Only';
+
+  @override
+  String get settingsAutoCollapse => 'Auto-collapse on completion';
+
+  @override
+  String get settingsAllowSingleClose => 'Allow single-turn close';
+
+  @override
+  String get settingsConfirm => 'Confirm';
+
+  @override
+  String get settingsAutoExtend => 'Auto-extend long task timeout';
+
+  @override
+  String get settingsAutoSuggestTrust =>
+      'Allow system to auto-suggest trust upgrades based on history';
+
+  @override
+  String get settingsAllNotifications => 'All Notifications';
+
+  @override
+  String get settingsCriticalOnly => 'Critical Only';
+
+  @override
+  String get settingsQuietMode => 'Quiet Mode';
+
+  @override
+  String get settingsDailyLimit => 'Daily Limit';
+
+  @override
+  String get settingsMonthlyLimit => 'Monthly Limit';
+
+  @override
+  String get settingsPreferencesSaved => 'Execution preferences saved';
+
+  @override
+  String get settingsSavePreferences => 'Save Execution Preferences';
+
+  @override
+  String get settingsSynced => 'Currently synced';
+
+  @override
+  String taskMinutesUnit(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get taskCompletedToday => 'Done for today!';
+
+  @override
+  String get taskDone => 'Done it!';
+
+  @override
+  String get taskCompletedOneStep =>
+      'You finished the small step you set for today.';
+
+  @override
+  String get taskContinueNext => 'Next';
+
+  @override
+  String get taskViewPlan => 'View Plan';
+
+  @override
+  String get taskSharePlan => 'Share Plan';
+
+  @override
+  String get taskConfirming => 'Confirming...';
+
+  @override
+  String get taskConfirmAll => 'Confirm All Tasks';
+
+  @override
+  String get taskShare => 'Share';
+
+  @override
+  String get taskCardDefault => 'Task Card';
+
+  @override
+  String get taskLearningPlan => 'Learning Plan';
+
+  @override
+  String taskContainsCount(Object count) {
+    return '$count executable tasks';
+  }
+
+  @override
+  String get taskAuroraHelp => 'Aurora 2-Step Help';
+
+  @override
+  String get taskStuckFireOrder => 'Follow this order when stuck';
+
+  @override
+  String get taskStuckHowTo => 'What to do specifically';
+
+  @override
+  String get taskStuckChatHint =>
+      'Bring the current task and your block point to Sparkle so it can help break it into smaller problems.';
+
+  @override
+  String taskStepLabel(Object number, Object title) {
+    return 'Step $number · $title';
+  }
+
+  @override
+  String get taskAiReadyConfirm =>
+      'AI has prepared results, awaiting your confirmation.';
+
+  @override
+  String get taskNotRecorded => 'Not recorded';
+
+  @override
+  String taskDurationMinSec(Object minutes, Object seconds) {
+    return '${minutes}m${seconds}s';
+  }
+
+  @override
+  String taskDurationMin(Object minutes) {
+    return '${minutes}m';
+  }
+
+  @override
+  String taskDurationSec(Object seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String taskToolCallsCount(Object count) {
+    return 'Tools ${count}x';
+  }
+
+  @override
+  String get taskResultComparison => 'Result Comparison';
+
+  @override
+  String get taskExecutionStep => 'Execution Step';
+
+  @override
+  String get taskCheckItem => 'Check Item';
+
+  @override
+  String get taskFieldChange => 'Field Change';
+
+  @override
+  String taskPreviousValue(Object value) {
+    return 'Previous: $value';
+  }
+
+  @override
+  String taskCurrentValue(Object value) {
+    return 'Current: $value';
+  }
+
+  @override
+  String get taskTargetLabel => 'Target';
+
+  @override
+  String get taskAiResultLabel => 'AI Result';
+
+  @override
+  String taskStreakDaysPraise(Object days) {
+    return 'Persisted $days days, you are amazing';
+  }
+
+  @override
+  String get taskUnlockedAchievements => 'Achievements Unlocked';
+
+  @override
+  String get taskNewAchievement => 'New Achievement';
+
+  @override
+  String get taskTodayTotal => 'Today Total';
+
+  @override
+  String get taskDaysUnit => 'days';
+
+  @override
+  String get taskLinkCopied => 'Link copied';
+
+  @override
+  String get taskAttachmentLinkCopied => 'Attachment link copied';
+
+  @override
+  String get taskAssistantServerOnly =>
+      'Task assistant is only available for tasks synced to the server.';
+
+  @override
+  String taskExecutionStatusLabel(Object label) {
+    return 'Execution status: $label';
+  }
+
+  @override
+  String get taskGuidanceLoading =>
+      'Preparing the execution guide for this task...';
+
+  @override
+  String get taskGuidanceUserLabel => 'User Guide';
+
+  @override
+  String get taskGuidanceAiLabel => 'AI Guide';
+
+  @override
+  String taskGuidanceRefreshed(Object label) {
+    return '$label refreshed';
+  }
+
+  @override
+  String taskGuidanceGenerated(Object label) {
+    return '$label generated';
+  }
+
+  @override
+  String taskGuidanceFailed(Object error, Object label) {
+    return '$label generation failed: $error';
+  }
+
+  @override
+  String get taskGuidanceSubtitle =>
+      'User version generated by default, AI version on demand, always centered on current task context.';
+
+  @override
+  String get taskGuidanceForSelf => 'For Myself';
+
+  @override
+  String get taskGuidanceForAi => 'For AI';
+
+  @override
+  String get taskGuidanceDefaultDelivery => 'Default delivery';
+
+  @override
+  String get taskGuidanceOnDemand => 'On demand';
+
+  @override
+  String taskGuidanceUpdatedAt(Object time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String get taskGuidanceStaleRefresh => 'Task changed, consider refreshing';
+
+  @override
+  String get taskGuidanceRefreshUser => 'Refresh User Version';
+
+  @override
+  String get taskGuidanceGenerateUser => 'Generate User Version';
+
+  @override
+  String get taskGuidanceRefreshAi => 'Refresh AI Version';
+
+  @override
+  String get taskGuidanceGenerateAi => 'Generate AI Version';
+
+  @override
+  String get taskGuidanceNoUserYet => 'No user version yet';
+
+  @override
+  String get taskGuidanceNoAiYet => 'AI version not yet generated';
+
+  @override
+  String get taskGuidanceUserEmpty =>
+      'Sparkle will prepare a user version guide for this task by default, so you can execute directly without switching to other AI tools.';
+
+  @override
+  String get taskGuidanceAiEmpty =>
+      'An AI version will only be generated when you explicitly need it, preserving the current task context and constraints.';
+
+  @override
+  String get taskGuidanceGenerateNow => 'Generate User Version Now';
+
+  @override
+  String get taskGuidanceGenerateAiOnDemand => 'Generate AI Version On Demand';
+
+  @override
+  String get taskHelpPromptPrefix =>
+      'I need help with this task card, please bring the task context and break it down with me.';
+
+  @override
+  String taskHelpPromptTitle(Object title) {
+    return 'Task: $title';
+  }
+
+  @override
+  String taskHelpPromptType(Object type) {
+    return 'Type: $type';
+  }
+
+  @override
+  String taskHelpPromptEstimate(Object minutes) {
+    return 'Estimated time: ${minutes}min';
+  }
+
+  @override
+  String taskHelpPromptDifficulty(Object difficulty) {
+    return 'Difficulty: $difficulty/5';
+  }
+
+  @override
+  String taskHelpPromptDueDate(Object date) {
+    return 'Due date: $date';
+  }
+
+  @override
+  String taskHelpPromptCriteria(Object criteria) {
+    return 'Completion criteria: $criteria';
+  }
+
+  @override
+  String taskHelpPromptGuide(Object guide) {
+    return 'Task guide: $guide';
+  }
+
+  @override
+  String get taskHelpPromptSuffix =>
+      'First ask me one key clarifying question, then give me a next step I can start within 5 minutes.';
+
+  @override
+  String get taskModeHuman => 'Manual';
+
+  @override
+  String get taskModeHybrid => 'Collaborative';
+
+  @override
+  String get taskModeUnknown => 'Unknown';
+
+  @override
+  String get taskOpFailed => 'Operation failed';
+
+  @override
+  String get taskNetworkError => 'Network error';
+
+  @override
+  String get taskRetryFailed => 'Retry failed';
+
+  @override
+  String get taskLocalNoAiExec => 'Local tasks do not support AI execution';
+
+  @override
+  String taskQueued(Object message) {
+    return '$message, added to waiting queue.';
+  }
+
+  @override
+  String get taskNoExecRecord => 'No AI execution record to process';
+
+  @override
+  String get taskExecRecordUnavailable =>
+      'Execution record temporarily unavailable';
+
+  @override
+  String get taskFreeFocus => 'Free Focus';
+
+  @override
+  String taskLoadFailed(Object error) {
+    return 'Failed to load task: $error';
+  }
+
+  @override
+  String get taskUpdated => 'Task updated';
+
+  @override
+  String get taskEditTitle => 'Edit Task';
+
+  @override
+  String get taskEditHint =>
+      'Here you adjust the scheduling info of an existing task, such as estimated duration, difficulty, deadline, and tags.';
+
+  @override
+  String taskJoinPlan(Object planName) {
+    return 'This task will be added to plan: $planName';
+  }
+
+  @override
+  String get taskSaving => 'Saving...';
+
+  @override
+  String get taskSaveChanges => 'Save Changes';
+
+  @override
+  String taskReminderUpdateFailed(Object error) {
+    return 'Reminder settings update failed: $error';
+  }
+
+  @override
+  String taskReminderTimeFailed(Object error) {
+    return 'Reminder time update failed: $error';
+  }
+
+  @override
+  String taskReminderRefreshFailed(Object error) {
+    return 'Failed to refresh reminders: $error';
+  }
+
+  @override
+  String get taskLoadingPlan => 'Loading associated plan...';
+
+  @override
+  String get galaxyContribLoading =>
+      'Summarizing your contributions to the galaxy...';
+
+  @override
+  String get galaxyContribStartLearning => 'Start your first learning session';
+
+  @override
+  String get galaxyContribIntro =>
+      'After completing a study session, fixing an error, or correcting your understanding through conversation, your contributions to the galaxy will be recorded here.';
+
+  @override
+  String get galaxyContribFirstLight => 'First Activation';
+
+  @override
+  String get galaxyContribErrorFix => 'Error Repair';
+
+  @override
+  String get galaxyContribChatUpdate => 'Chat Update';
+
+  @override
+  String get galaxyContribTapDetails => 'Tap to view my contribution details';
+
+  @override
+  String get galaxyContribNodesSuffix => ' nodes';
+
+  @override
+  String get galaxyContribMyDetails => 'My Contribution Details';
+
+  @override
+  String get galaxyContribDetailIntro =>
+      'The galaxy records your first activations, error repairs, and conversation corrections.';
+
+  @override
+  String get galaxyContribFirstLearnTitle => 'First Learning Activation';
+
+  @override
+  String get galaxyContribFirstLearnEmpty =>
+      'No nodes have been activated by you yet.';
+
+  @override
+  String get galaxyContribChatCorrectionTitle => 'Corrected via Conversation';
+
+  @override
+  String get galaxyContribChatCorrectionEmpty =>
+      'No nodes updated via conversation write-back yet.';
+
+  @override
+  String get galaxyContribReviewTitle => 'Review and Consolidation';
+
+  @override
+  String get galaxyContribReviewEmpty =>
+      'No nodes improved via review repair yet.';
+
+  @override
+  String get galaxyNodeMastery => 'Mastery';
+
+  @override
+  String get galaxyNodeNotLearned => 'Not learned';
+
+  @override
+  String galaxyNodeStudiedCount(Object count) {
+    return 'Studied $count times';
+  }
+
+  @override
+  String get galaxyNodeNoRecord => 'No record';
+
+  @override
+  String galaxyNodeLastStudy(Object time) {
+    return 'Last studied $time';
+  }
+
+  @override
+  String galaxyNodeRelatedErrors(Object count) {
+    return 'Related errors: $count';
+  }
+
+  @override
+  String get galaxyNodeRecentErrors => 'Recent Errors';
+
+  @override
+  String get galaxyNodeNoRelatedErrors => 'No related errors';
+
+  @override
+  String get galaxyNodeStartLearn => 'Start Learning';
+
+  @override
+  String get galaxyNodeStartReview => 'Start Review';
+
+  @override
+  String get galaxyNodeViewErrors => 'View Errors';
+
+  @override
+  String galaxyNodeDaysAgo(Object days) {
+    return '$days days ago';
+  }
+
+  @override
+  String galaxyNodeHoursAgo(Object hours) {
+    return '$hours hours ago';
+  }
+
+  @override
+  String galaxyNodeMinutesAgo(Object minutes) {
+    return '$minutes min ago';
+  }
+
+  @override
+  String get galaxyNodeJustNow => 'Just now';
+
+  @override
+  String get galaxyNodeImageError => 'Image Error';
+
+  @override
+  String get galaxyNodeHistoryFailed => 'Node history failed to load';
+
+  @override
+  String get galaxyNodeRetry => 'Retry';
+
+  @override
+  String get galaxyNodeSourceAssets => 'Source Assets';
+
+  @override
+  String get galaxyNodePersonalBadge => 'My Upload';
+
+  @override
+  String get galaxyNodeNoPersonalNote => 'No personal notes attached';
+
+  @override
+  String get galaxyNodeChunkUnit => 'chunk';
+
+  @override
+  String get galaxyNodeEmptySourceTitle =>
+      'Bring this node back to your real materials';
+
+  @override
+  String get galaxyNodeReadMore => 'Read More';
+
+  @override
+  String get galaxyNodeNoPreview =>
+      'This material has no previewable chunks yet.';
+
+  @override
+  String get galaxyNodeOpenFailed => 'Unable to open source material.';
+
+  @override
+  String galaxyNodeSummaryDocChunks(Object chunks, Object documents) {
+    return '$documents docs · $chunks knowledge chunks';
+  }
+
+  @override
+  String get galaxyNodeEmptySourceBody =>
+      'Add your own notes or lectures for this topic to make knowledge truly traceable.';
+
+  @override
+  String get galaxyNodeAddNotesLabel => 'Add notes about';
+
+  @override
+  String get galaxyNodeUploadSaved =>
+      'Uploaded, will appear here after processing.';
+
+  @override
+  String get galaxyNodePageLabel => 'Page';
+
+  @override
+  String get galaxyNodePagesLabel => 'Pages';
+
+  @override
+  String get galaxyNodeExcerptLabel => 'Excerpt';
+
+  @override
+  String get galaxyNodeUploadDateLabel => 'Uploaded on';
+
+  @override
+  String get galaxySimSettings => 'Galaxy View Settings';
+
+  @override
+  String get galaxySimSettingsDesc =>
+      'Adjust display density, force field parameters, and replay speed for a smoother galaxy browsing experience.';
+
+  @override
+  String get galaxySimResetDefault => 'Reset to Default';
+
+  @override
+  String get galaxySimCommonAdjust => 'Common Adjustments';
+
+  @override
+  String get galaxySimCommonDesc =>
+      'Keep only the four most impactful settings visible at first glance.';
+
+  @override
+  String get galaxySimCenterGravity => 'Center Gravity';
+
+  @override
+  String get galaxySimNodeRepulsion => 'Node Repulsion';
+
+  @override
+  String get galaxySimLinkTension => 'Link Tension';
+
+  @override
+  String get galaxySimReplaySpeed => 'Replay Speed';
+
+  @override
+  String get galaxySimAdvanced => 'Advanced';
+
+  @override
+  String get galaxySimAdvancedDesc =>
+      'Expand when you need to fine-tune visual density; hidden by default.';
+
+  @override
+  String get galaxySimExpandAdvanced => 'Expand Advanced Options';
+
+  @override
+  String get galaxySimTextThreshold => 'Text Visibility Threshold';
+
+  @override
+  String get galaxySimNodeSize => 'Node Size';
+
+  @override
+  String get galaxySimLinkWidth => 'Link Width';
+
+  @override
+  String get galaxySimLinkDistance => 'Link Distance';
+
+  @override
+  String galaxyMasteryDeltaDown(Object delta) {
+    return ', down $delta';
+  }
+
+  @override
+  String galaxyMasteryDeltaUp(Object delta) {
+    return ', change +$delta';
+  }
+
+  @override
+  String galaxyNodeMasteryToast(Object delta, Object name, Object score) {
+    return '\"$name\" current mastery $score%$delta';
+  }
+
+  @override
+  String galaxyReviewPromptWithErrors(Object name, Object score) {
+    return 'Help me review \"$name\". My last mastery was $score, and there are recent errors here. Please identify the most likely re-error point, then give me a practice sequence I can start within 15 minutes.';
+  }
+
+  @override
+  String galaxyReviewPromptNoErrors(Object name, Object score) {
+    return 'Help me review \"$name\". My last mastery was $score. Based on my current forgetting risk, give me a reinforcement plan I can start within 15 minutes.';
+  }
+
+  @override
+  String get galaxySimMode => 'Simulation Mode';
+
+  @override
+  String get galaxyEmptyFirst =>
+      'Complete a learning task or create a sprint, and knowledge nodes with mastery records will gradually light up here.';
+
+  @override
+  String get galaxyEmptyHighlights1 => 'Complete tasks';
+
+  @override
+  String get galaxyEmptyHighlights2 => 'Log errors';
+
+  @override
+  String get galaxyEmptyHighlights3 => 'Start a sprint';
+
+  @override
+  String get galaxyEmptyActionLabel => 'Create a learning task';
+
+  @override
+  String get galaxyNotStarted => 'Not started';
+
+  @override
+  String get galaxyNotLit => 'Not lit';
+
+  @override
+  String get galaxyNoMasteryTitle => 'No mastery records yet';
+
+  @override
+  String get galaxyNoMasterySubtitle =>
+      'Complete a learning task or review a knowledge point first, then the galaxy will show real mastery data.';
+
+  @override
+  String get galaxyGoStudy => 'Go Study';
+
+  @override
+  String galaxyPreviewHighMastery(Object score) {
+    return 'Your last mastery for this knowledge point was $score. Based on your learning frequency, now is a good time to reinforce it.';
+  }
+
+  @override
+  String get galaxyPreviewErrorReturn =>
+      'Related errors have returned recently. It is easier to stabilize if you reinforce now.';
+
+  @override
+  String galaxyPreviewReviewWindow(Object days) {
+    return 'It has been about $days days since your last reinforcement, right in the review window.';
+  }
+
+  @override
+  String get galaxyPreviewReviewReady =>
+      'It has entered the review window. A reinforcement round would be more efficient.';
+
+  @override
+  String get galaxyPreviewUnstable =>
+      'Current mastery is unstable. Reinforce while the memory is still fresh.';
+
+  @override
+  String get galaxyPreviewReLight =>
+      'Reinforce now to relight it more smoothly.';
+
+  @override
+  String get galaxyUnknownError => 'Unknown error';
+
+  @override
+  String get galaxyUnnamedNode => 'Unnamed node';
+
+  @override
+  String get galaxyBasicConcepts => 'Related Basic Concepts';
+
+  @override
+  String get galaxyBasicConceptsDesc =>
+      'Supplement foundational prerequisite knowledge for the current node to build a more stable understanding framework.';
+
+  @override
+  String get galaxyAppScenarios => 'Common Application Scenarios';
+
+  @override
+  String get galaxyAppScenariosDesc =>
+      'Generate an application knowledge point around the current node that is close to everyday use.';
+
+  @override
+  String get galaxyAdvancedTopics => 'Advanced Extension Topics';
+
+  @override
+  String get galaxyAdvancedTopicsDesc =>
+      'Extend from the current node to a more worthwhile in-depth learning direction.';
+
+  @override
+  String get galaxyNodeNotExist =>
+      'The current node does not exist or has been cleaned up. Please return to the galaxy and try again';
+
+  @override
+  String get planLearningPathProgress => 'Learning Path Progress';
+
+  @override
+  String get planLegendMastered => 'Mastered';
+
+  @override
+  String get planLegendLearning => 'Learning';
+
+  @override
+  String get planLegendLocked => 'Locked';
+
+  @override
+  String planExamReviewSubject(Object subject) {
+    return 'Exam Review · $subject';
+  }
+
+  @override
+  String get planExamReviewNoSubject => 'Exam Review';
+
+  @override
+  String get planExamResult => 'Exam Result';
+
+  @override
+  String get planExamScoreLabel => 'Roughly how many points?';
+
+  @override
+  String get planExamScoreHint =>
+      'e.g., Multiple choice was okay, probably around 78';
+
+  @override
+  String get planExamBiggestChallenge => 'Biggest Challenge';
+
+  @override
+  String get planExamChallengeLabel =>
+      'What was the biggest difficulty in the exam?';
+
+  @override
+  String get planExamChallengeRequired =>
+      'Write down what blocked you the most';
+
+  @override
+  String get planExamStrategyFeel => 'Strategy Reflection';
+
+  @override
+  String get planExamStrategyLabel =>
+      'Looking back, what needs improvement in your review strategy?';
+
+  @override
+  String get planExamStrategyRequired =>
+      'Leave strategy feedback for the next exam prep';
+
+  @override
+  String get planExamFutureAdvice => 'Advice for Future Self';
+
+  @override
+  String get planExamFutureLabel => 'Advice for Future Self';
+
+  @override
+  String get planExamFutureHint =>
+      'Optional: Next time, where to start improving?';
+
+  @override
+  String get planExamSubmitReview => 'Submit Review';
+
+  @override
+  String get planExamReviewFeedback =>
+      'Record your results, difficulties, and strategy feedback. Sparkle will use them to calibrate the next exam prep pace.';
+
+  @override
+  String get planExamStarRating => 'Star Rating';
+
+  @override
+  String planExamStarTooltip(Object rating) {
+    return '$rating stars';
+  }
+
+  @override
+  String get planExamMissingPlanId =>
+      'Missing plan ID, cannot submit review for now';
+
+  @override
+  String get planExamSelectStarFirst => 'Please select a star rating first';
+
+  @override
+  String get planExamReviewSaved =>
+      'Review saved. Next time will be more accurate.';
+
+  @override
+  String get planExamReviewComplete => 'Review Complete';
+
+  @override
+  String get planExamReviewEnterNext =>
+      'This feedback will go into the next exam prep strategy.';
+
+  @override
+  String get planHistoryPlans => 'History Plans';
+
+  @override
+  String planHoursUnit(Object hours) {
+    return '$hours hours';
+  }
+
+  @override
+  String get planSprintSetupTitle => 'Exam Sprint Setup';
+
+  @override
+  String get planSprintStep1Title => '1. Which course?';
+
+  @override
+  String get planSprintStep1Hint =>
+      'e.g., Computer Networks / Advanced Math / CET-4';
+
+  @override
+  String get planSprintStep1Required =>
+      'Tell me which course you are sprinting for first';
+
+  @override
+  String get planSprintStep2Title => '2. When is the exam?';
+
+  @override
+  String get planSprintSelectDate => 'Select exam date';
+
+  @override
+  String get planSprintDateDecides =>
+      'The date determines sprint days and pace';
+
+  @override
+  String planSprintDaysLeft(Object days) {
+    return '$days days until exam';
+  }
+
+  @override
+  String get planSprintStep3Title => '3. Goal: pass, maintain, or excel?';
+
+  @override
+  String get planSprintStep4Title => '4. Exam scope / teacher focus?';
+
+  @override
+  String get planSprintStep4Subtitle =>
+      'Paste the key points directly, or upload PDF / DOCX / PPT / TXT.';
+
+  @override
+  String get planSprintStep4Hint =>
+      'e.g., Focus on transport and network layers; teacher said short answers and calculations.';
+
+  @override
+  String get planSprintUploadMaterials => 'Upload Materials';
+
+  @override
+  String get planSprintNoUpload => 'No materials uploaded yet';
+
+  @override
+  String planSprintUploadedCount(Object count) {
+    return '$count materials uploaded';
+  }
+
+  @override
+  String get planSprintStep5Title =>
+      '5. How much do you know? Which chapters scare you most?';
+
+  @override
+  String get planSprintScariestChapters => 'Which chapters scare you most?';
+
+  @override
+  String get planSprintStep6Title =>
+      '6. How long can you realistically study per day?';
+
+  @override
+  String planSprintDailySliderLabel(Object minutes) {
+    return '$minutes min / day';
+  }
+
+  @override
+  String planSprintDailyChipLabel(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get planSprintRealisticTime =>
+      'Use a time you can realistically stick to, not ideal conditions.';
+
+  @override
+  String get planSprintGenerateFirstDay => 'Generate My First Day Tasks';
+
+  @override
+  String get planSprintSubmitHint =>
+      'After submitting, you will get an initial assessment in 3 seconds, and be taken directly to the plan or first day task.';
+
+  @override
+  String get planSprintNotQuestionnaire =>
+      'This is not a questionnaire — it is determining the starting point together';
+
+  @override
+  String get planSprintFillPromise =>
+      'After filling these 6 questions, I will give you an initial assessment, recommended strategy, and first day task.';
+
+  @override
+  String get planSprintMaterialUploaded => 'Material uploaded';
+
+  @override
+  String get planSprintSelectDateFirst => 'Please select the exam date first';
+
+  @override
+  String get planSprintAssessmentDone => 'Initial assessment complete';
+
+  @override
+  String planSprintPassProbability(Object probability) {
+    return 'Pass probability $probability%';
+  }
+
+  @override
+  String planSprintRecommendedMode(Object mode) {
+    return 'Recommended mode $mode';
+  }
+
+  @override
+  String get planSprintFirstDayTodo => 'What to do first on day one';
+
+  @override
+  String get planSprintStartFirstDay => 'Start Day 1 Tasks';
+
+  @override
+  String get planSprintViewPlanAction => 'View Plan';
+
+  @override
+  String get planSprintViewWholePlan => 'View Full Plan';
+
+  @override
+  String get planSprintLevelZero => 'Starting almost from scratch';
+
+  @override
+  String get planSprintLevelBasic => 'Took classes, but foundation is shaky';
+
+  @override
+  String get planSprintLevelSome =>
+      'Have some foundation, can reinforce while sprinting';
+
+  @override
+  String get planSprintLevelGood =>
+      'Solid foundation, focus on score optimization';
+
+  @override
+  String planSprintDaysLabel(Object days) {
+    return '$days days';
+  }
+
+  @override
+  String get planSprintTargetPass => 'Pass';
+
+  @override
+  String get planSprintTargetHold => 'Maintain';
+
+  @override
+  String get planSprintTargetHighScore => 'Excel';
+
+  @override
+  String planSprintCompletionSubject(Object subject) {
+    return '$subject 7-Day Sprint Results';
+  }
+
+  @override
+  String get planSprintCompletionNoSubject => '7-Day Sprint Results';
+
+  @override
+  String get planSprintStillSummarizing =>
+      'Sprint results are still being summarized';
+
+  @override
+  String get planSprintShareOpened => 'Share opened';
+
+  @override
+  String planSprintShareText(int masteredNodes, int repairedErrors,
+      int completedTasks, String strongestArea) {
+    return 'My 7-day exam sprint is done: mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks. Strongest area: $strongestArea. #SparkleExam';
+  }
+
+  @override
+  String get planSprintBack => 'Back';
+
+  @override
+  String get planSprintShareAction => 'Share';
+
+  @override
+  String get planSprintRecordResult => 'Record Exam Result';
+
+  @override
+  String get planSprintBackHome => 'Back to Home';
+
+  @override
+  String get planSprintViewArchive => 'View Learning Archive';
+
+  @override
+  String get planSprintYourResult => 'Your 7-Day Sprint Results';
+
+  @override
+  String planSprintResultSummary(
+      Object completedTasks, Object masteredNodes, Object repairedErrors) {
+    return 'Mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks.';
+  }
+
+  @override
+  String get planSprintStrongest => 'Strongest';
+
+  @override
+  String get planSprintRoomToGrow => 'Room to Grow';
+
+  @override
+  String get planSprintHashtag => '#SparkleExam';
+
+  @override
+  String get planSprintKnowledgeNodes => 'Knowledge Nodes';
+
+  @override
+  String get planSprintErrorPatterns => 'Error Patterns';
+
+  @override
+  String get planSprintCompletedTasksLabel => 'Completed Tasks';
+
+  @override
+  String get planSprintStillSummarizingTitle =>
+      'Sprint results are still being summarized';
+
+  @override
+  String get planSprintWaitForSync =>
+      'Wait until Day 7 tasks are fully synced, then the results page can be generated.';
+
+  @override
+  String get planSprintRecheck => 'Recheck';
+
+  @override
+  String planTaskCount(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String get planShareCard => 'Share Card';
+
+  @override
+  String planPortfolioLoadFailed(String message) {
+    return 'Failed to load learning profile: $message';
+  }
+
+  @override
+  String get planMyArchive => 'My Learning Archive';
+
+  @override
+  String get planPortfolioActiveTitle => 'In Progress';
+
+  @override
+  String get planPortfolioActiveSubtitle =>
+      'Track the pace and mastery progress of each current sprint.';
+
+  @override
+  String get planPortfolioCompletedTitle => 'Completed';
+
+  @override
+  String get planPortfolioCompletedSubtitle =>
+      'Review finished sprints, preserving the growth trajectory before and after each exam.';
+
+  @override
+  String get planPortfolioPlannedTitle => 'Planned';
+
+  @override
+  String get planPortfolioPlannedSubtitle =>
+      'Sprints that are scheduled in the archive but have not officially started yet.';
+
+  @override
+  String get planPortfolioTotalMastery => 'All subjects mastery total';
+
+  @override
+  String planPortfolioActivePill(Object count) {
+    return 'Active $count';
+  }
+
+  @override
+  String planPortfolioCompletedPill(Object count) {
+    return 'Completed $count';
+  }
+
+  @override
+  String planPortfolioPlannedPill(Object count) {
+    return 'Planned $count';
+  }
+
+  @override
+  String get planPortfolioEmptyGroup => 'No sprint records in this group yet.';
+
+  @override
+  String planPortfolioMasteryPercent(Object percent) {
+    return 'Mastery $percent%';
+  }
+
+  @override
+  String get planPortfolioGalaxySummary => 'Galaxy Mastery Summary';
+
+  @override
+  String planPortfolioResultRating(int rating) {
+    return 'Result Rating $rating/5';
+  }
+
+  @override
+  String planPortfolioSelfRating(int rating) {
+    return 'Self Rating $rating/10';
+  }
+
+  @override
+  String get planPortfolioWeakestTitle => 'Weakest Points';
+
+  @override
+  String get planPortfolioWeakestFallback =>
+      'No obvious weak points recorded in this round yet';
+
+  @override
+  String get planPortfolioProudTitle => 'Points to Be Proud Of';
+
+  @override
+  String get planPortfolioProudFallback =>
+      'As you progress, your brightest nodes will accumulate here';
+
+  @override
+  String get planPortfolioGradeNotes => 'Grade Notes';
+
+  @override
+  String get planPortfolioNoArchiveTitle =>
+      'Your learning archive has no sprint records yet';
+
+  @override
+  String get planPortfolioNoArchiveSubtitle =>
+      'Create an exam sprint first. After that, every completed, active, and planned subject will be automatically archived here.';
+
+  @override
+  String get planPortfolioCreateSprint => 'Create Exam Sprint';
+
+  @override
+  String planPortfolioLoadError(Object message) {
+    return 'Failed to load learning archive: $message';
+  }
+
+  @override
+  String get planPortfolioLoadMore => 'Load More';
+
+  @override
+  String planPortfolioCompletedOn(Object completedOn, Object mode) {
+    return '$mode (completed, $completedOn)';
+  }
+
+  @override
+  String planPortfolioActiveDay(
+      Object currentDay, Object mode, Object remainingDays) {
+    return '$mode · In progress (Day $currentDay, $remainingDays days left)';
+  }
+
+  @override
+  String planPortfolioActiveShort(Object mode) {
+    return '$mode · In progress';
+  }
+
+  @override
+  String planPortfolioPlannedShort(Object mode) {
+    return '$mode · Planned';
+  }
+
+  @override
+  String planPortfolioScoreLabel(Object score) {
+    return 'Score $score';
+  }
+
+  @override
+  String get planPortfolioScorePending => 'Score pending';
+
+  @override
+  String get planMode24h => '24-Hour Rescue';
+
+  @override
+  String get planMode7Day => '7-Day Sprint';
+
+  @override
+  String get planMode14Day => '14-Day Sprint';
+
+  @override
+  String get planModeStandard => 'Standard Sprint';
+
+  @override
+  String get planModeExam => 'Exam Sprint';
+
+  @override
+  String get planDateTbd => 'Date TBD';
+
+  @override
+  String get planStartExamSprint => 'Start Exam Sprint';
+
+  @override
+  String get planLoadSprintFailed => 'Failed to load sprint plan';
+
+  @override
+  String get planSoonUnlock => 'Almost unlocked!';
+
+  @override
+  String planDaysMore(Object remaining) {
+    return '$remaining more';
+  }
+
+  @override
+  String get planCompletedExclaim => 'Done!';
+
+  @override
+  String planLoadFailedError(Object error) {
+    return 'Failed to load plan: $error';
+  }
+
+  @override
+  String planStageTaskTitle(Object number, Object planName) {
+    return '$planName - Stage $number Task';
+  }
+
+  @override
+  String get planTargetNode => 'Target Node';
+
+  @override
+  String get planMasteredNode => 'Mastered Node';
+
+  @override
+  String get planLearningNode => 'Learning Node';
+
+  @override
+  String get communityMonthLabel1 => 'Jan';
+
+  @override
+  String get communityMonthLabel2 => 'Feb';
+
+  @override
+  String get communityMonthLabel3 => 'Mar';
+
+  @override
+  String get communityMonthLabel4 => 'Apr';
+
+  @override
+  String get communityMonthLabel5 => 'May';
+
+  @override
+  String get communityMonthLabel6 => 'Jun';
+
+  @override
+  String get communityMonthLabel7 => 'Jul';
+
+  @override
+  String get communityMonthLabel8 => 'Aug';
+
+  @override
+  String get communityMonthLabel9 => 'Sep';
+
+  @override
+  String get communityMonthLabel10 => 'Oct';
+
+  @override
+  String get communityMonthLabel11 => 'Nov';
+
+  @override
+  String get communityMonthLabel12 => 'Dec';
+
+  @override
+  String communityMonthlyCheckinView(Object year) {
+    return 'Monthly check-in view · $year';
+  }
+
+  @override
+  String get communitySwipeMonthsHint => 'Swipe left/right to switch months.';
+
+  @override
+  String communityMonthDayCount(Object count, Object month) {
+    return '$month · ${count}d';
+  }
+
+  @override
+  String communityYearMonth(Object month, Object year) {
+    return '$year / $month';
+  }
+
+  @override
+  String get communityNoCheckinRecord => 'No check-in records yet';
+
+  @override
+  String get communityNotCheckedIn => 'Not checked in';
+
+  @override
+  String get communitySingleChecked => 'Single';
+
+  @override
+  String get communityBothChecked => 'Both';
+
+  @override
+  String get communityWeekdayMon => 'M';
+
+  @override
+  String get communityWeekdayTue => 'T';
+
+  @override
+  String get communityWeekdayWed => 'W';
+
+  @override
+  String get communityWeekdayThu => 'T';
+
+  @override
+  String get communityWeekdayFri => 'F';
+
+  @override
+  String get communityWeekdaySat => 'S';
+
+  @override
+  String get communityWeekdaySun => 'S';
+
+  @override
+  String get communityGroupEntry => 'Community';
+
+  @override
+  String get communityBrowseOrCreate => 'Browse or create your study groups';
+
+  @override
+  String communityPublicGroupsCount(Object count) {
+    return '$count public groups available';
+  }
+
+  @override
+  String get communityExpand => 'Expand';
+
+  @override
+  String get communityCollapse => 'Collapse';
+
+  @override
+  String get communityDiscoverCampusGroups =>
+      'Discover groups like campus clubs';
+
+  @override
+  String get communityDiscoverBrowseHint =>
+      'Browse public groups, filter by interest, or create your own study community.';
+
+  @override
+  String get communityDiscoverFilterHint =>
+      'Sort by popularity, latest, or random discovery. This section can be collapsed to save space.';
+
+  @override
+  String get communityBrowseGroups => 'Browse Groups';
+
+  @override
+  String get communityRecommendedForYou => 'Recommended for you';
+
+  @override
+  String get communityViewAll => 'View all';
+
+  @override
+  String get communityRecommendLoadError =>
+      'Recommendations temporarily unavailable. Pull down to refresh.';
+
+  @override
+  String get communityNoGroupsYet =>
+      'You haven\'t joined any groups yet. Explore the public groups hub.';
+
+  @override
+  String get communityDiscoverGroups => 'Discover Groups';
+
+  @override
+  String get communityMyGroups => 'My Groups';
+
+  @override
+  String get communityViewAllGroups => 'View All';
+
+  @override
+  String communityMoreGroupsFolded(Object count) {
+    return '$count more groups folded to save space.';
+  }
+
+  @override
+  String communityMyGroupsLoadError(Object error) {
+    return 'Failed to load groups: $error';
+  }
+
+  @override
+  String get communityRoleOwner => 'Owner';
+
+  @override
+  String get communityRoleAdmin => 'Admin';
+
+  @override
+  String get communityRoleMember => 'Member';
+
+  @override
+  String get communityRolePublic => 'Public';
+
+  @override
+  String communityGroupSubtitle(Object checkins, Object members, Object role) {
+    return '$role · $members members · $checkins check-ins today';
+  }
+
+  @override
+  String get communityFriends => 'Friends';
+
+  @override
+  String get communityGotIt => 'Got it';
+
+  @override
+  String get communityCollapsed => 'Collapsed';
+
+  @override
+  String get communityCorePartner => 'Accountability Partner';
+
+  @override
+  String communityPendingInvitesCount(int count) {
+    return 'You have $count pending partner invitations';
+  }
+
+  @override
+  String get communityPartnerDescription =>
+      'Put your most important study partner front and center. Check-ins, accountability, and growth all revolve around them.';
+
+  @override
+  String get communityViewPartnerInvites => 'View Invitations';
+
+  @override
+  String get communityChoosePartner => 'Choose a Partner';
+
+  @override
+  String get communityPartnerFallback => 'Partner';
+
+  @override
+  String get communityCorePartnerLabel => 'Core Partner';
+
+  @override
+  String get communityWorkspaceReady => 'Partner workspace is ready';
+
+  @override
+  String communityTogetherDays(int count) {
+    return 'Together for $count days';
+  }
+
+  @override
+  String get communityMe => 'Me';
+
+  @override
+  String communityMyStreakDays(int count) {
+    return '${count}d streak';
+  }
+
+  @override
+  String communityPartnerStreakDays(int count) {
+    return '${count}d streak';
+  }
+
+  @override
+  String communityTotalCheckins(int count) {
+    return '$count times';
+  }
+
+  @override
+  String get communityTotalCheckinsLabel => 'Total check-ins';
+
+  @override
+  String get communityChat => 'Chat';
+
+  @override
+  String get communityRemind => 'Remind';
+
+  @override
+  String get communityWorkshop => 'Workshop';
+
+  @override
+  String communityPartnerRequestCount(int count) {
+    return '$count partner/friend requests pending';
+  }
+
+  @override
+  String get communityViewRequests => 'View';
+
+  @override
+  String get communityAccountabilityPartner => 'Accountability Partner';
+
+  @override
+  String get communityPendingConfirm => 'Pending';
+
+  @override
+  String get communityDemoOnline => 'Demo Online';
+
+  @override
+  String get communityDemoOffline => 'Demo Offline';
+
+  @override
+  String get communityOnline => 'Online';
+
+  @override
+  String get communityOffline => 'Offline';
+
+  @override
+  String get communityPartnerEstablished =>
+      'Accountability partner established';
+
+  @override
+  String communityMyDays(Object count) {
+    return 'Me ${count}d';
+  }
+
+  @override
+  String communityPartnerDays(Object count) {
+    return 'Partner ${count}d';
+  }
+
+  @override
+  String get communityPartnerCheckedIn => 'Partner checked in today';
+
+  @override
+  String get communityPartnerNotCheckedIn => 'Partner hasn\'t checked in today';
+
+  @override
+  String get communityPendingFirst =>
+      'Handle partner invitations first, then grow your network';
+
+  @override
+  String get communityNoFriendsYet => 'No friends yet';
+
+  @override
+  String get communityChooseCorePartner =>
+      'Pick your most important friend as your core accountability partner.';
+
+  @override
+  String get communityMyCheckin => 'My check-in';
+
+  @override
+  String communityLikesCount(Object count) {
+    return '$count likes';
+  }
+
+  @override
+  String get communityEncourage => 'Encourage';
+
+  @override
+  String communityEncouragementsCount(Object count) {
+    return '$count encouragements';
+  }
+
+  @override
+  String get communityEncouragementMessages => 'Encouragements';
+
+  @override
+  String get communityUserFallback => 'User';
+
+  @override
+  String get communitySendEncouragement => 'Send Encouragement';
+
+  @override
+  String get communityWriteEncouragement => 'Write your encouragement...';
+
+  @override
+  String get communityNoCheckinYet => 'No check-in records yet';
+
+  @override
+  String get communityJustNow => 'Just now';
+
+  @override
+  String communityMinutesAgo(Object count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String communityHoursAgo(Object count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String communityDaysAgo(Object count) {
+    return '${count}d ago';
+  }
+
+  @override
+  String get communityQuickShare => 'Quick Share';
+
+  @override
+  String get communityTabAchievements => 'Achievements';
+
+  @override
+  String get communityTabPlans => 'Plans';
+
+  @override
+  String get communityTabTasks => 'Tasks';
+
+  @override
+  String get communityTabKnowledge => 'Knowledge';
+
+  @override
+  String get communityNoAchievementsYet => 'No achievements unlocked yet';
+
+  @override
+  String get communityNoPlansYet => 'No study plans yet';
+
+  @override
+  String get communityNoTasksYet => 'No completed tasks yet';
+
+  @override
+  String get communityNoKnowledgeYet => 'No knowledge nodes studied yet';
+
+  @override
+  String get communityTaskCompleted => 'Completed';
+
+  @override
+  String get communityTaskInProgress => 'In Progress';
+
+  @override
+  String get communityTaskStuck => 'Stuck';
+
+  @override
+  String get communityTaskPending => 'Pending';
+
+  @override
+  String get communityTaskAbandoned => 'Abandoned';
+
+  @override
+  String communityProgressPercent(Object percent) {
+    return 'Progress: $percent%';
+  }
+
+  @override
+  String communityTaskStatusMinutes(Object minutes, Object status) {
+    return '$status · ${minutes}min';
+  }
+
+  @override
+  String communityMasteryScore(Object score) {
+    return 'Mastery: $score%';
+  }
+
+  @override
+  String get communityNoDownloadPermission => 'No download permission';
+
+  @override
+  String get communitySavedToLibrary => 'Saved to my library';
+
+  @override
+  String communitySaveFailed(Object error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get communityMarkedOfficial => 'Marked as official';
+
+  @override
+  String get communityRemovedOfficial => 'Removed official mark';
+
+  @override
+  String get communityAddToKnowledgeBase => 'Add to Knowledge Base';
+
+  @override
+  String get communityUploadHint =>
+      'Fill in the description and start uploading. Files will automatically be added to the group knowledge base.';
+
+  @override
+  String get communityCategory => 'Category';
+
+  @override
+  String get communityCategoryHint =>
+      'e.g. past papers, writing templates, vocabulary lists';
+
+  @override
+  String get communityDescription => 'Description';
+
+  @override
+  String get communityDescriptionHint =>
+      'Who is this for, how to use it, what to focus on.';
+
+  @override
+  String get communityAddToGroupGalaxy => 'Add to Group Galaxy';
+
+  @override
+  String get communityGalaxyIndexHint =>
+      'Make this file appear in the group knowledge galaxy index';
+
+  @override
+  String get communityMarkAsOfficial => 'Mark as Official';
+
+  @override
+  String get communityOfficialHint =>
+      'Official files get a gold star and priority display';
+
+  @override
+  String get communityContinueUpload => 'Upload';
+
+  @override
+  String get communityFileAddedToKB => 'File added to group knowledge base';
+
+  @override
+  String communityDownloadsCount(Object count) {
+    return '$count downloads';
+  }
+
+  @override
+  String get communityOfficialFile => 'Official';
+
+  @override
+  String get communityGroupMemberFallback => 'Group Member';
+
+  @override
+  String get communityContributorProfile => 'Contributor Profile';
+
+  @override
+  String get communityView => 'View';
+
+  @override
+  String get communitySaveToMyLibrary => 'Save to Library';
+
+  @override
+  String get communityGroupKnowledgeBase => 'Group Knowledge Base';
+
+  @override
+  String get communityKBDescription =>
+      'Shared study materials, past papers, templates, and curated knowledge.';
+
+  @override
+  String get communitySearchKBHint =>
+      'Search files, categories, or contributors';
+
+  @override
+  String get communitySortLatest => 'Latest';
+
+  @override
+  String get communitySortPopular => 'Most Popular';
+
+  @override
+  String get communitySortTrustLevel => 'Trust Level';
+
+  @override
+  String get communityFilterAll => 'All';
+
+  @override
+  String get communityUncategorized => 'Uncategorized';
+
+  @override
+  String communityLoadFailed(Object error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String communityUploadedOn(Object date) {
+    return 'Uploaded $date';
+  }
+
+  @override
+  String get communityGroupGalaxy => 'Galaxy';
+
+  @override
+  String get communityClickToPreview => 'Tap to preview and view details';
+
+  @override
+  String get communityPreviewExcerpt => 'Preview Excerpt';
+
+  @override
+  String get communityPreviewHint =>
+      'File uploaded to group knowledge base. If a preview is generated, the first page thumbnail will appear here.';
+
+  @override
+  String get communityJoinToBrowse => 'Join the group to browse shared files';
+
+  @override
+  String get communityJoinToBrowseHint =>
+      'The knowledge base shows shared learning materials, official documents, and curated resources.';
+
+  @override
+  String get communityNoSharedFiles => 'No shared files yet';
+
+  @override
+  String get communityUploadPrompt =>
+      'Upload past papers, vocabulary lists, writing templates, or review notes to start growing the knowledge base.';
+
+  @override
+  String get communityFavorite => 'Favorite';
+
+  @override
+  String get communityForward => 'Forward';
+
+  @override
+  String get communityReport => 'Report';
+
+  @override
+  String communityStreakDaysSuffix(Object count) {
+    return '${count}d';
+  }
+
+  @override
+  String get communityTaskFallback => 'Task';
+
+  @override
+  String get communityPlanFallback => 'Plan';
+
+  @override
+  String communityProgressColon(Object percent) {
+    return 'Progress: $percent%';
+  }
+
+  @override
+  String get communityKnowledgeNode => 'Knowledge Node';
+
+  @override
+  String get communityTimeCapsule => 'Time Capsule';
+
+  @override
+  String get communitySeedLibrary => 'Seed Library';
+
+  @override
+  String get communitySeedContent => 'Seed Content';
+
+  @override
+  String get communitySeedLibraryShare => 'Seed Library Share';
+
+  @override
+  String get communitySeedContentShare => 'Seed Content Share';
+
+  @override
+  String get communityAdoptedRedirecting => 'Adopted, redirecting...';
+
+  @override
+  String communityAdoptFailed(Object error) {
+    return 'Adopt failed: $error';
+  }
+
+  @override
+  String get communityCognitivePrism => 'Cognitive Prism';
+
+  @override
+  String get communityLearningModeAnalysis => 'Learning Mode Analysis';
+
+  @override
+  String get communityAchievementUnlocked => 'Achievement Unlocked';
+
+  @override
+  String get communityNewAchievement => 'New Achievement';
+
+  @override
+  String get communityLinkCopied => 'Link copied';
+
+  @override
+  String communityUnblockConfirm(Object name) {
+    return 'Are you sure you want to unblock $name?\n\nThey will be able to send friend requests and messages again.';
+  }
+
+  @override
+  String communityUnblocked(Object name) {
+    return 'Unblocked $name';
+  }
+
+  @override
+  String communityOperationFailed(Object error) {
+    return 'Operation failed: $error';
+  }
+
+  @override
+  String communityMuteMember(Object name) {
+    return 'Mute $name';
+  }
+
+  @override
+  String get communityMute24h => '24h';
+
+  @override
+  String communityMuteMinutes(Object minutes) {
+    return '${minutes}m';
+  }
+
+  @override
+  String communityWarnMember(Object name) {
+    return 'Warn $name';
+  }
+
+  @override
+  String communityGroupMembers(Object name) {
+    return '$name - Members';
+  }
+
+  @override
+  String get communityGroupSearchHint => 'Search groups...';
+
+  @override
+  String communityGroupTasksMinutes(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String communitySlowModeSeconds(Object seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String get communityFriendGoalHint => 'e.g. study English 30 minutes daily';
+
+  @override
+  String get communityCreateGroupGoalHint =>
+      'e.g. finish 50 LeetCode problems in two weeks';
+
+  @override
+  String get communityPartnerCheckinCadence => 'Partner check-in cadence';
+
+  @override
+  String communityCadenceReminder(Object days, Object time) {
+    return 'Every $days days, next reminder at $time';
+  }
+
+  @override
+  String communityBoundMilestone(Object label) {
+    return 'Bound milestone: $label';
+  }
+
+  @override
+  String get communityCommunity => 'Community';
+
+  @override
+  String get communityLoadFailedTitle => 'Load failed';
+
+  @override
+  String get communityRetry => 'Retry';
+
+  @override
+  String get communityNoCommunitySpark => 'No community spark yet';
+
+  @override
+  String get communityRefreshFeed => 'Refresh feed';
+
+  @override
+  String get communityShareFailedRetry =>
+      'Share failed, please try again later';
+
+  @override
+  String get communityCorePartnerInvitePending =>
+      'Accountability partner invitation pending';
+
+  @override
+  String get communityNudgeDelivered =>
+      'Delivered via in-app notification. They\'ll see it when online.';
+
+  @override
+  String get communityNudgeCooldown =>
+      'Just nudged. Won\'t resend during cooldown. Notification will be delivered in-app and shown when they\'re online.';
+
+  @override
+  String communityNudgeFailed(String error) {
+    return 'Nudge failed: $error';
+  }
+
+  @override
+  String communityShareProgress(Object percent) {
+    return 'Progress: $percent%';
+  }
+
+  @override
+  String get communityShareLearningPlan => 'Learning Plan';
+
+  @override
+  String get communityShareTask => 'Task';
+
+  @override
+  String get communityShareMilestone => 'Milestone';
+
+  @override
+  String get communityShareDeadline => 'Deadline';
+
+  @override
+  String get communityShareAdoptPlan => 'Adopt Plan';
+
+  @override
+  String get communityShareExpired => 'Expired';
+
+  @override
+  String get communityShareToday => 'Today';
+
+  @override
+  String communityShareDaysLater(Object days) {
+    return '${days}d later';
+  }
+
+  @override
+  String get communityShareEvaluation => 'Evaluation';
+
+  @override
+  String get communityShareTaskComplete => 'Task Complete';
+
+  @override
+  String get communityShareDuration => 'Duration';
+
+  @override
+  String get communitySharePoints => 'Points';
+
+  @override
+  String get communityShareStreak => 'Streak';
+
+  @override
+  String communityShareStreakDays(Object streak) {
+    return '${streak}d';
+  }
+
+  @override
+  String get communityShareAdoptTask => 'Adopt Task';
+
+  @override
+  String get communityShareJustNow => 'Just now';
+
+  @override
+  String communityShareMinutesAgo(Object minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String communityShareHoursAgo(Object hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String communityShareMastery(Object percent) {
+    return 'Mastery: $percent%';
+  }
+
+  @override
+  String get communityShareKnowledgeNode => 'Knowledge Node';
+
+  @override
+  String get communityShareLearning => 'Learning';
+
+  @override
+  String communityShareLearningMinutes(Object minutes) {
+    return '${minutes}min';
+  }
+
+  @override
+  String get communityShareConnections => 'Connections';
+
+  @override
+  String communityShareConnectionsCount(Object count) {
+    return '$count';
+  }
+
+  @override
+  String get communityShareMastered => 'Mastered';
+
+  @override
+  String get communityShareProficient => 'Proficient';
+
+  @override
+  String get communityShareLearningStatus => 'Learning';
+
+  @override
+  String get communityShareBeginner => 'Beginner';
+
+  @override
+  String get communityShareRarity => 'Rarity';
+
+  @override
+  String get communityShareUnlocked => 'Unlocked';
+
+  @override
+  String get communityShareLevel => 'Level';
+
+  @override
+  String get communityShareActivePlans => 'Active Plans';
+
+  @override
+  String get communityShareAchievements => 'Achievements';
+
+  @override
+  String get communityShareBrightness => 'Brightness';
+
+  @override
+  String communityShareUnlockedAt(Object date) {
+    return 'Unlocked at $date';
+  }
+
+  @override
+  String get communityShareTodayDate => 'Today';
+
+  @override
+  String get communityShareYesterday => 'Yesterday';
+
+  @override
+  String communityShareDaysAgo(Object days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String communityShareWeeksAgo(Object weeks) {
+    return '${weeks}w ago';
+  }
+
+  @override
+  String communityShareMonthsAgo(Object months) {
+    return '${months}mo ago';
+  }
+
+  @override
+  String get communityShareNoAchievements => 'No achievements yet';
+
+  @override
+  String get communityShareStartCheckin =>
+      'Start checking in to unlock achievements!';
+
+  @override
+  String communitySharePointsValue(Object points) {
+    return '+$points points';
+  }
+
+  @override
+  String get communityShareClose => 'Close';
+
+  @override
+  String get communityShareTimeCapsule => 'Time Capsule';
+
+  @override
+  String communityShareWordCount(Object count) {
+    return '$count words';
+  }
+
+  @override
+  String communityShareDepthLevel(Object level) {
+    return 'Depth Lv.$level';
+  }
+
+  @override
+  String communitySharePosterTitle(Object name) {
+    return '$name\'s Glory Identity';
+  }
+
+  @override
+  String communityShareGrowthTitle(Object name) {
+    return '$name\'s Weekly Growth';
+  }
+
+  @override
+  String communityShareGrowthSubtitle(Object brightness, Object level) {
+    return 'Level Lv.$level · Brightness $brightness%';
+  }
+
+  @override
+  String communityShareTemplateName(Object name) {
+    return '$name Template';
+  }
+
+  @override
+  String get communityShareCorePosters => '4 Core Posters';
+
+  @override
+  String get userEngagementState => 'Engagement State';
+
+  @override
+  String userSessionCount7d(Object count) {
+    return '7d sessions $count';
+  }
+
+  @override
+  String userStreakDays(Object count) {
+    return '${count}d streak';
+  }
+
+  @override
+  String userLastActiveDate(Object date) {
+    return 'Last active $date';
+  }
+
+  @override
+  String get userNoRecentActivity => 'No recent activity';
+
+  @override
+  String get userForesightHint => 'Foresight Hint';
+
+  @override
+  String get userForesightEmpty =>
+      'No foresight hints to display yet. The backend will continue observing.';
+
+  @override
+  String userDeviationCount(Object count) {
+    return '$count deviations';
+  }
+
+  @override
+  String get userStabilityScore => 'Execution Stability';
+
+  @override
+  String get userRhythmFit => 'Rhythm Fit';
+
+  @override
+  String get userOverloadRisk => 'Overload Risk';
+
+  @override
+  String get userIdiographicObservations => 'Recent Association Observations';
+
+  @override
+  String get userAchievementSummary => 'Achievement Summary';
+
+  @override
+  String userTotalAchievementScore(Object score) {
+    return 'Total achievement score $score';
+  }
+
+  @override
+  String get userNoRecentHighlights =>
+      'No recent highlights or progress changes. Keep going and milestones will show here.';
+
+  @override
+  String get userLatestUnlock => 'Latest Unlock';
+
+  @override
+  String get userCurrentProgress => 'Current Progress';
+
+  @override
+  String get userTraitsColdstart => 'Initial Profile';
+
+  @override
+  String get userTraitsColdstartHint =>
+      'Used only as a weak prior, will be corrected by real interactions.';
+
+  @override
+  String get userSkip => 'Skip';
+
+  @override
+  String get userSubmitting => 'Submitting...';
+
+  @override
+  String get userSave => 'Save';
+
+  @override
+  String get userSRLPlanHint =>
+      'Better to clarify your goals, steps, and pace first.';
+
+  @override
+  String get userSRLEnforceHint =>
+      'Better to maintain execution rhythm and reduce extra switching.';
+
+  @override
+  String get userSRLReflectHint =>
+      'Better to review obstacles, reflect, and prepare for the next round.';
+
+  @override
+  String get userSRLUnknownHint =>
+      'Insufficient information for current phase. Default support will continue.';
+
+  @override
+  String get userSRLPlanning => 'SRL · Planning';
+
+  @override
+  String get userSRLEnforcing => 'SRL · Executing';
+
+  @override
+  String get userSRLReflecting => 'SRL · Reflecting';
+
+  @override
+  String get userSRLUnknown => 'SRL · Unknown';
+
+  @override
+  String get userTraitsPriorHint =>
+      'Based on historical observations, adjustable anytime';
+
+  @override
+  String get userTraitsLongTerm => 'Long-term tendencies';
+
+  @override
+  String get userTraitOpenness => 'Openness';
+
+  @override
+  String get userTraitConscientiousness => 'Conscientiousness';
+
+  @override
+  String get userTraitExtraversion => 'Extraversion';
+
+  @override
+  String get userTraitAgreeableness => 'Agreeableness';
+
+  @override
+  String get userTraitNeuroticism => 'Emotional Sensitivity';
+
+  @override
+  String get userTraitLevelHigh => 'High';
+
+  @override
+  String get userTraitLevelLow => 'Low';
+
+  @override
+  String get userTraitLevelNeutral => 'Neutral';
+
+  @override
+  String get userWorkingMemory => 'Working Memory Snapshot';
+
+  @override
+  String get userWorkingMemoryHint =>
+      'Keep recent foreground items in a compact view.';
+
+  @override
+  String get userWorkingMemoryEmpty =>
+      'No working memory in the foreground. Continue at your current pace.';
+
+  @override
+  String userMentionCount(Object count) {
+    return 'Mentioned $count times';
+  }
+
+  @override
+  String get userConsolidated => 'Consolidated';
+
+  @override
+  String get userStillInForeground => 'In foreground';
+
+  @override
+  String get userMetacognition => 'Self-awareness';
+
+  @override
+  String get userMetacognitionHint =>
+      'Showing judgment bias from past samples only, not labeling you.';
+
+  @override
+  String userMetacognitionDimensions(Object count) {
+    return '$count metacognitive dimensions observed';
+  }
+
+  @override
+  String get userHidePanel => 'Hide this panel';
+
+  @override
+  String userUpdatedAt(Object time) {
+    return 'Updated at $time';
+  }
+
+  @override
+  String get userActiveSkills => 'Active Skills';
+
+  @override
+  String get userActiveSkillsEmpty =>
+      'No skill matches detected this round. Default support will continue.';
+
+  @override
+  String get userAvatarPickerHint =>
+      'Pick an avatar that matches your style. The default one works too.';
+
+  @override
+  String get userCollectionAll => 'All';
+
+  @override
+  String get userCollectionPersona => 'Persona';
+
+  @override
+  String get userCollectionPlayful => 'Playful';
+
+  @override
+  String get userCollectionAbstract => 'Abstract';
+
+  @override
+  String get userCollectionCalm => 'Calm';
+
+  @override
+  String get userCollectionAllHint =>
+      'Pick from persona, abstract, and playful styles.';
+
+  @override
+  String get userCollectionPersonaHint =>
+      'More character-like, good for a distinctive profile.';
+
+  @override
+  String get userCollectionPlayfulHint =>
+      'More relaxed with emotional depth, for a lively profile.';
+
+  @override
+  String get userCollectionAbstractHint =>
+      'Clean, graphical, for a tech-savvy style.';
+
+  @override
+  String get userCollectionCalmHint =>
+      'Soft and restrained, for a long-term companion feel.';
+
+  @override
+  String get userUpgradeFullAccount => 'Upgrade to full account';
+
+  @override
+  String get userKeepCurrentData => 'Keep current data';
+
+  @override
+  String get userBindSocialHint =>
+      'You can also bind a social account directly to reduce repeated logins.';
+
+  @override
+  String userOnboardingPreviewMessage(Object goal) {
+    return 'I understand you want to work on \"$goal\". I\'ll give you your first study recommendations based on your goals and time.';
+  }
+
+  @override
+  String get userOnboardingAIUnderstanding =>
+      'AI has started understanding your goal';
+
+  @override
+  String get userOnboardingGenerating =>
+      'Generating your first insight and suggestions...';
+
+  @override
+  String get userSignOutOtherDevices => 'Sign out other devices';
+
+  @override
+  String get userSignOutOtherConfirm =>
+      'This will sign you out on all other devices. Continue?';
+
+  @override
+  String userTotalDevices(Object count) {
+    return '$count devices';
+  }
+
+  @override
+  String get userCurrentDeviceProtected => 'Current device protected';
+
+  @override
+  String get userAiOpsAnalysis => 'AI Ops Analysis';
+
+  @override
+  String get userAiOpsCopyExport => 'Copy Export';
+
+  @override
+  String get userAiOpsLoadFailed => 'AI ops analysis failed to load';
+
+  @override
+  String get userAiOpsPredictFailed =>
+      'Predict conversion analysis failed to load';
+
+  @override
+  String get userAiOpsAnalysisWindow => 'Analysis Window';
+
+  @override
+  String get userAiOpsWindowHint =>
+      'Switch between 7 / 14 / 30 day windows to observe trends in speed, cost, fallback, and execution conversion.';
+
+  @override
+  String userAiOpsDays(Object days) {
+    return '${days}d';
+  }
+
+  @override
+  String get userAiOpsDevOps => 'Dev Ops Perspective';
+
+  @override
+  String get userAiOpsDevOpsHint =>
+      'Focus on model chain stability, cost efficiency, and which patterns are producing real execution results.';
+
+  @override
+  String get userAiOpsSuccessRate => 'Success Rate';
+
+  @override
+  String get userAiOpsAvgFirstToken => 'Avg First Token';
+
+  @override
+  String get userAiOpsAvgTotalTime => 'Avg Total Time';
+
+  @override
+  String get userAiOpsTotalCost => 'Total Cost';
+
+  @override
+  String get userAiOpsExecutionConversion => 'Execution Conv.';
+
+  @override
+  String get userAiOpsPromptHit => 'Prompt Hit';
+
+  @override
+  String get userAiOpsInferenceHit => 'Inference Hit';
+
+  @override
+  String get userAiOpsPatternDetails => 'Pattern Details';
+
+  @override
+  String get userAiOpsPredictConversion => 'Predict Conversion Funnel';
+
+  @override
+  String get userAiOpsExposures => 'Exposures';
+
+  @override
+  String get userAiOpsAccepts => 'Accepts';
+
+  @override
+  String get userAiOpsExecutions => 'Executions';
+
+  @override
+  String get userAiOpsAcceptToExec => 'Accept→Exec';
+
+  @override
+  String get userAiOpsBySurface => 'By Surface';
+
+  @override
+  String get userAiOpsWorthOptimizing => 'Worth optimizing';
+
+  @override
+  String get userAiOpsLatestRequests => 'Latest requests';
+
+  @override
+  String get userAiOpsLatestFallback => 'Latest fallback';
+
+  @override
+  String get userAiOpsLatestCost => 'Latest cost';
+
+  @override
+  String get userAiOpsExportCopied => 'AI ops export copied to clipboard';
+
+  @override
+  String get userAiOpsDashboard => 'Dashboard';
+
+  @override
+  String get userAiOpsChatInput => 'Chat Input';
+
+  @override
+  String get userAiOpsChat => 'Chat';
+
+  @override
+  String get userAiOpsTrendHint =>
+      'Check if latency is decreasing steadily while confirming success rate and execution conversion aren\'t hurt by cost optimization.';
+
+  @override
+  String get userAiOpsTotalTime => 'Total Time';
+
+  @override
+  String get userAiOpsStandardChat => 'Standard Chat';
+
+  @override
+  String get userAiOpsStudyPlanning => 'Study Planning';
+
+  @override
+  String get userAiOpsDeepAnalysis => 'Deep Analysis';
+
+  @override
+  String get userAiOpsDiagnosisCorrection => 'Diagnosis & Correction';
+
+  @override
+  String get userAiOpsExpertCollaboration => 'Expert Collaboration';
+
+  @override
+  String userAiOpsFirstTokenTotal(Object first, Object rate, Object total) {
+    return 'First token ${first}ms · Total ${total}ms · Success $rate%';
+  }
+
+  @override
+  String userAiOpsFallbackCostExec(Object cost, Object fallback, Object rate) {
+    return 'Fallback $fallback% · Cost \$$cost · Execution $rate%';
+  }
+
+  @override
+  String userAiOpsPromptInferenceHit(Object inference, Object prompt) {
+    return 'Prompt hit $prompt% · Inference hit $inference%';
+  }
+
+  @override
+  String get userThemeMode => 'Theme Mode';
+
+  @override
+  String get userThemeModeHint =>
+      'Control light/dark mode to match your visual rhythm and environment.';
+
+  @override
+  String get userBrandPresets => 'Brand Presets';
+
+  @override
+  String get userBrandPresetsHint =>
+      'Switch the entire color palette to match your usage habits.';
+
+  @override
+  String get userColorPreview => 'Color Preview';
+
+  @override
+  String get userColorPreviewHint =>
+      'Quickly confirm how brand, semantic, and task colors look under the current theme.';
+
+  @override
+  String get userAvatarFromGallery =>
+      'Pick from a richer set of style avatars.';
+
+  @override
+  String get userAvatarFromCamera => 'Take a new photo for your avatar.';
+
+  @override
+  String get userAvatarFromPhotos => 'Pick a prepared photo from your album.';
+
+  @override
+  String get userVerifyEmailHint =>
+      'Enter the verification code from your email. After verification, security and notifications will be more complete.';
+
+  @override
+  String get userAvatarAndProfile => 'Avatar & Profile';
+
+  @override
+  String get userSecuritySync => 'Security & Sync';
+
+  @override
+  String get userProfileSectionHint =>
+      'Organize your avatar, nickname, and email into a consistent personal image while keeping security verification and account info clearly structured.';
+
+  @override
+  String get userPrepareDataArchive => 'Prepare your Sparkle data archive';
+
+  @override
+  String get userExportDescription =>
+      'The export package includes account data, learning records, settings, and exportable memory data. After generation, the system share panel will open for you to save or send to other apps.';
+
+  @override
+  String get userPrivacyReminder => 'Privacy Reminder';
+
+  @override
+  String get userPrivacyReminderBody =>
+      'The exported zip file may contain personal learning and usage records. Only share with trusted locations.';
+
+  @override
+  String get userCurrentStatus => 'Current Status';
+
+  @override
+  String get userNotGeneratedYet => 'No export file generated yet';
+
+  @override
+  String get userAlreadyGenerated =>
+      'Export file generated. Tap again to re-share';
+
+  @override
+  String get userExporting => 'Exporting...';
+
+  @override
+  String userSecurityLogCount(Object count) {
+    return '$count records';
+  }
+
+  @override
+  String userSecurityLogAnomalies(Object count) {
+    return '$count anomalies';
+  }
+
+  @override
+  String get userLoadMoreRecords => 'Load more records';
+
+  @override
+  String get userLoading => 'Loading...';
+
+  @override
+  String userProfileAdjustmentRecorded(Object targetId) {
+    return 'Recorded profile adjustment for \"$targetId\"';
+  }
+
+  @override
+  String get userVisibleProfile => 'Visible Profile';
+
+  @override
+  String get userVisibleProfileHint =>
+      'open_editable / open_discussable items are displayed here directly.';
+
+  @override
+  String get userMediatedProfile => 'Mediated Profile';
+
+  @override
+  String get userMediatedProfileHint =>
+      'sensitive_mediated items only expand in appropriate contexts.';
+
+  @override
+  String get userTransparentProfile => 'Transparent Profile';
+
+  @override
+  String get userSummary => 'Summary';
+
+  @override
+  String get userCurrentUnknowns => 'Current unknowns';
+
+  @override
+  String userHiddenItemsCount(Object count) {
+    return '$count hidden items, not shown in transparency panel.';
+  }
+
+  @override
+  String get userNoContent => 'No content.';
+
+  @override
+  String get userRevertibleChanges => 'Revertible Changes';
+
+  @override
+  String get userRevertibleHint =>
+      'Only showing Aurora-intervened changes, no silent overrides.';
+
+  @override
+  String get userNoRevertibleActions => 'No revertible actions.';
+
+  @override
+  String get userTransparentNotEnabled => 'Transparent profile not yet enabled';
+
+  @override
+  String get userTransparentNotEnabledHint =>
+      'WS6 remains inert until routing or backend bindings are complete.';
+
+  @override
+  String get userExamModeOnly => 'Exam Mode Only';
+
+  @override
+  String get userMarkInaccurate => 'Mark Inaccurate';
+
+  @override
+  String userSuggestedSummary(Object summary) {
+    return 'Suggestion: $summary';
+  }
+
+  @override
+  String get userMarkNeedsRecalibration => 'Mark for recalibration';
+
+  @override
+  String get userDownloadDataSubtitle =>
+      'Download account, learning, and memory data';
+
+  @override
+  String get userModelingChatTitle => 'Let me know you better (about 2 min)';
+
+  @override
+  String get userYou => 'You';
+
+  @override
+  String get userAurora => 'Aurora';
+
+  @override
+  String get userTyping => 'Typing...';
+
+  @override
+  String get userAuroraMultiHint =>
+      'Aurora may send several messages. You can also interrupt anytime.';
+
+  @override
+  String get userInputPlaceholder => 'Type your answer...';
+
+  @override
+  String userModelingFailed(Object error) {
+    return 'Modeling chat temporarily failed: $error';
+  }
+
+  @override
+  String userCannotSkipNow(Object error) {
+    return 'Cannot skip right now: $error';
+  }
+
+  @override
+  String get userStartPlanning => 'Start Planning';
+
+  @override
+  String get userPlanTimeoutMessage =>
+      'Plan generation timed out. Please try again.';
+
+  @override
+  String get userPlanNotReady =>
+      'Plan is still being prepared. Please try again shortly.';
+
+  @override
+  String userPlanGenerationError(Object error) {
+    return 'Plan generation encountered an issue: $error';
+  }
+
+  @override
+  String get userGeneratingSprintPlan => 'Generating your first sprint plan';
+
+  @override
+  String get userSprintPlanHint =>
+      'You\'ll be taken to the tasks page shortly. No need to click next.';
+
+  @override
+  String get userPlanGenerationFailed => 'Plan generation didn\'t succeed';
+
+  @override
+  String get userPlanRetryMessage =>
+      'Couldn\'t generate the plan. Please try again.';
+
+  @override
+  String get userRetryGeneratePlan => 'Retry';
+
+  @override
+  String get userLater => 'Later';
+
+  @override
+  String get userAdminPanel => 'Admin Operations Panel';
+
+  @override
+  String get userAdminCapacityLoadFailed => 'Capacity panel failed to load';
+
+  @override
+  String get userAdminAlertsLoadFailed => 'Alert panel failed to load';
+
+  @override
+  String get userAdminClientLoadFailed => 'Client observability failed to load';
+
+  @override
+  String get userAdminWindow => 'Admin Window';
+
+  @override
+  String get userAdminWindowHint =>
+      'View client anomalies, gateway/backend capacity, and Prometheus alerts together to quickly determine if it\'s a frontend degradation or infrastructure jitter.';
+
+  @override
+  String userAdminDays(Object days) {
+    return '${days}d';
+  }
+
+  @override
+  String get userAdminCapacityHealth => 'Capacity & Health';
+
+  @override
+  String get userAdminDBProbe => 'DB Probe';
+
+  @override
+  String get userAdminRedisConn => 'Redis Conn';
+
+  @override
+  String get userAdminQueueBacklog => 'Queue Backlog';
+
+  @override
+  String get userAdminDiskUsage => 'Disk Usage';
+
+  @override
+  String get userAdminServiceDrilldown => 'Service drill-down';
+
+  @override
+  String userAdminProbeLatency(Object latency) {
+    return 'Probe latency ${latency}ms';
+  }
+
+  @override
+  String userAdminConnPool(Object overflow, Object size) {
+    return 'Pool $size / overflow $overflow';
+  }
+
+  @override
+  String userAdminTimeout(Object seconds) {
+    return 'Timeout ${seconds}s';
+  }
+
+  @override
+  String userAdminRedisStatus(Object status) {
+    return 'Status $status';
+  }
+
+  @override
+  String userAdminRedisMemory(Object peak, Object used) {
+    return 'Memory $used / Peak $peak';
+  }
+
+  @override
+  String userAdminRedisClients(Object count) {
+    return 'Clients $count';
+  }
+
+  @override
+  String userAdminDiskDetail(Object free, Object used) {
+    return 'Used $used GB / Free $free GB';
+  }
+
+  @override
+  String userAdminDiskTotal(Object total) {
+    return 'Total $total GB';
+  }
+
+  @override
+  String userAdminDiskRatio(Object ratio) {
+    return 'Usage $ratio%';
+  }
+
+  @override
+  String get userAdminCurrentAlerts => 'Current Alerts';
+
+  @override
+  String get userAdminNoAlerts => 'No active Prometheus alerts.';
+
+  @override
+  String get userAdminClientObservability => 'Client Observability';
+
+  @override
+  String get userAdminTotalEvents => 'Total events';
+
+  @override
+  String get userAdminErrors => 'Errors';
+
+  @override
+  String get userAdminCrashes => 'Crashes';
+
+  @override
+  String get userAdminAvgDuration => 'Avg duration';
+
+  @override
+  String get userAdminTrendDays => '7/14/30 day trend';
+
+  @override
+  String get userAdminEventTypeDrilldown => 'Event type drill-down';
+
+  @override
+  String userAdminTotalCount(Object count) {
+    return 'Total $count';
+  }
+
+  @override
+  String userAdminErrorsCrashes(Object crashes, Object errors) {
+    return 'Errors $errors / Crashes $crashes';
+  }
+
+  @override
+  String userAdminSuccessRate(Object rate) {
+    return 'Success rate $rate%';
+  }
+
+  @override
+  String userAdminAvgDurationMs(Object duration) {
+    return 'Avg duration ${duration}ms';
+  }
+
+  @override
+  String get planViewCurrentPlan => 'Current Plan';
+
+  @override
+  String get planViewNoTasksForPlan => 'No Tasks';
+
+  @override
+  String get planViewNoPlanTasks => 'No Plan Tasks';
+
+  @override
+  String get planViewAllPlanTasks => 'View All Plan Tasks';
+
+  @override
+  String get planViewQuotaFull =>
+      'All 3 active plan slots are in use. Deactivate or archive an old plan before creating a new one.';
+
+  @override
+  String get planViewRecoverablePlans => 'Recoverable Plans';
+
+  @override
+  String get planViewPlanLibrary => 'Plan Library';
+
+  @override
+  String get planViewManageSubtitle =>
+      'Manage 3 active plan slots and the task board together';
+
+  @override
+  String get planViewFocusSubtitle =>
+      'Focused on a single plan\'s tasks. Switch back to see all.';
+
+  @override
+  String get planViewPlanManagement => 'Plan Management';
+
+  @override
+  String planViewActiveCount(String active, String total) {
+    return '$active/$total active · $total total';
+  }
+
+  @override
+  String planViewCurrentFocus(String planName) {
+    return 'Focused on: $planName';
+  }
+
+  @override
+  String get planViewViewAll => 'View All';
+
+  @override
+  String planViewSwitchedContext(String planName) {
+    return 'Switched to $planName as current plan context';
+  }
+
+  @override
+  String planViewDeactivated(String planName) {
+    return 'Deactivated $planName';
+  }
+
+  @override
+  String planViewSetPrimary(String planName) {
+    return 'Set $planName as primary plan';
+  }
+
+  @override
+  String get planViewViewDetail => 'View Details';
+
+  @override
+  String get planViewSetCurrentPlan => 'Set as Current Plan';
+
+  @override
+  String get planViewSetPrimaryPlan => 'Set as Primary';
+
+  @override
+  String get planViewUnfocus => 'Unfocus';
+
+  @override
+  String get planViewFocusTasks => 'Focus Tasks';
+
+  @override
+  String get planViewDeactivatePlan => 'Deactivate Plan';
+
+  @override
+  String get planViewPrimaryPlan => 'Primary';
+
+  @override
+  String get planViewActivePlan => 'Active';
+
+  @override
+  String get planViewTasksFocused => 'Tasks Focused';
+
+  @override
+  String planViewProgress(int percent, String taskInfo) {
+    return 'Progress $percent% · $taskInfo';
+  }
+
+  @override
+  String planViewTaskCount(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String get planViewTasksPending => 'Tasks pending';
+
+  @override
+  String get planViewDetail => 'Details';
+
+  @override
+  String get planViewCurrentSessionBound => 'Chat context bound';
+
+  @override
+  String get planViewSprintPlan => 'Sprint Plan';
+
+  @override
+  String get planViewGrowthPlan => 'Growth Plan';
+
+  @override
+  String get planViewEmptySlot => 'Empty Plan Slot';
+
+  @override
+  String get planViewCanCreate => 'Create a new sprint or growth plan';
+
+  @override
+  String get planViewReleaseFirst => 'Free up a slot first';
+
+  @override
+  String get planViewNewSprint => 'New Sprint';
+
+  @override
+  String get planViewNewGrowth => 'New Growth';
+
+  @override
+  String get planViewHistory => 'History';
+
+  @override
+  String planViewRestored(String planName) {
+    return 'Restored $planName';
+  }
+
+  @override
+  String get planViewRestore => 'Restore';
+
+  @override
+  String get planViewUncategorized => 'Uncategorized';
+
+  @override
+  String get planSprintWeakestChaptersLabel =>
+      'Which chapters scare you the most?';
+
+  @override
+  String get planSprintRealisticTimeHint =>
+      'Use the time you can realistically sustain, not ideal.';
+
+  @override
+  String get planSprintFirstDayFocus => 'What to do on Day 1';
+
+  @override
+  String get planSprintSevenDayResults => '7-Day Sprint Results';
+
+  @override
+  String planSprintSevenDayResultsFor(String subject) {
+    return '$subject 7-Day Sprint Results';
+  }
+
+  @override
+  String get friendPartnerInviteTitle => 'Accountability Partner Invite';
+
+  @override
+  String get friendPartnerAccepted => 'Accountability partner invite accepted!';
+
+  @override
+  String get friendPartnerConflict =>
+      'You already have a core accountability partner. Continue collaborating in your existing workspace.';
+
+  @override
+  String get friendInviteDeclined => 'Invite declined';
+
+  @override
+  String get friendMatchingTitle => 'Accountability Partner Matching';
+
+  @override
+  String get friendMatchingDescription =>
+      'The system combines public profiles, learning topics, community overlap, and partner status to recommend suitable core accountability partners.';
+
+  @override
+  String get friendPrivacyNotice =>
+      'Only users who allow public discovery are shown. Recommendation reasons come from explainable profile summaries—no private raw data is exposed.';
+
+  @override
+  String get friendCalibrationTitle => 'Calibration Needed';
+
+  @override
+  String get friendCalibrationDescription =>
+      'Feedback at each stage directly adjusts your future friend and partner matches.';
+
+  @override
+  String get friendEmptyTitle => 'No suitable candidates yet';
+
+  @override
+  String get friendEmptyDescription =>
+      'Try a different matching strategy or refresh later. We continuously update recommendations based on latest profiles and community activity.';
+
+  @override
+  String get friendFeedbackSubmitted =>
+      'Feedback submitted. Future recommendations will better match your preferences.';
+
+  @override
+  String friendSubmitFailed(String error) {
+    return 'Submit failed: $error';
+  }
+
+  @override
+  String get friendRecommendationHidden => 'Recommendation hidden';
+
+  @override
+  String friendActionFailed(String error) {
+    return 'Action failed: $error';
+  }
+
+  @override
+  String get friendRequestSent => 'Friend request sent';
+
+  @override
+  String get friendInviteDialogTitle => 'Send Accountability Partner Invite';
+
+  @override
+  String friendInviteDialogContent(String name) {
+    return 'Invite $name to be your accountability partner';
+  }
+
+  @override
+  String get friendGoalLabel => 'My Goal';
+
+  @override
+  String get friendCheckInFrequency => 'Check-in frequency:';
+
+  @override
+  String get friendCheckInEveryDay => 'Every day';
+
+  @override
+  String friendCheckInEveryDays(int days) {
+    return 'Every $days days';
+  }
+
+  @override
+  String get friendCancel => 'Cancel';
+
+  @override
+  String get friendSendInvite => 'Send Invite';
+
+  @override
+  String get friendGoalRequired => 'Please fill in your goal';
+
+  @override
+  String get friendInviteSent => 'Accountability partner invite sent!';
+
+  @override
+  String get friendStrategyCompatibility => 'Compatibility';
+
+  @override
+  String get friendStrategyComplementary => 'Complementary';
+
+  @override
+  String get friendCanInviteDirectly => 'Can invite as partner';
+
+  @override
+  String get friendAlreadyFriend => 'Already friends';
+
+  @override
+  String get friendAddFriendFirst => 'Add friend first';
+
+  @override
+  String get friendComplementaryRecommendation => 'Complementary match';
+
+  @override
+  String get friendCompatibilityRecommendation => 'Compatibility match';
+
+  @override
+  String get friendHide => 'Hide';
+
+  @override
+  String get friendRateRecommendation => 'Rate recommendation';
+
+  @override
+  String get friendStartPartnership => 'Start partnership';
+
+  @override
+  String get friendViewProfile => 'View profile';
+
+  @override
+  String get friendPartnersLoadFailed =>
+      'Failed to load accountability partners';
+
+  @override
+  String get friendMyPartnersTitle => 'My Accountability Partners';
+
+  @override
+  String get friendAddPartnerPrompt =>
+      'Tap to add an accountability partner and grow together';
+
+  @override
+  String friendActiveCount(int count) {
+    return '$count active';
+  }
+
+  @override
+  String friendPendingCount(int count) {
+    return '$count pending';
+  }
+
+  @override
+  String get ebReviewModeToday => 'Today\'s Review';
+
+  @override
+  String get ebReviewModeTodayDesc => 'Review all errors due today';
+
+  @override
+  String get ebReviewModeSubject => 'By Subject';
+
+  @override
+  String get ebReviewModeSubjectDesc => 'Choose a subject for focused review';
+
+  @override
+  String get ebReviewModeWeak => 'Weak Spots';
+
+  @override
+  String get ebReviewModeWeakDesc => 'Prioritize errors with lowest mastery';
+
+  @override
+  String get ebReviewModeRandom => 'Random Quiz';
+
+  @override
+  String get ebReviewModeRandomDesc => 'Randomly sample errors for review';
+
+  @override
+  String get ebExitReview => 'Exit Review';
+
+  @override
+  String ebProgress(int current, int total) {
+    return 'Progress: $current/$total';
+  }
+
+  @override
+  String get ebQuestion => 'Question';
+
+  @override
+  String get ebAiAnalysis => 'AI Analysis';
+
+  @override
+  String get ebThinkFirstHint =>
+      'Think about the answer first, then tap to reveal';
+
+  @override
+  String get ebNoReviewNeeded => 'No errors need review right now';
+
+  @override
+  String get ebNoReviewKeepUp => 'Great job! Keep it up';
+
+  @override
+  String get ebReviewComplete => 'Review Complete!';
+
+  @override
+  String ebReviewSummary(int count) {
+    return 'Reviewed $count questions this session';
+  }
+
+  @override
+  String get ebReviewResults => 'Review Results';
+
+  @override
+  String get ebStatusRemembered => 'Remembered';
+
+  @override
+  String get ebStatusFuzzy => 'Fuzzy';
+
+  @override
+  String get ebStatusForgot => 'Forgot';
+
+  @override
+  String get ebEncourageKeepGoing => 'Keep going!';
+
+  @override
+  String get ebEncourageExcellent => 'Excellent! Very solid mastery';
+
+  @override
+  String get ebEncourageGreat => 'Great! Keep up this momentum';
+
+  @override
+  String get ebEncourageGood => 'Good! A few more reviews will help';
+
+  @override
+  String get ebEncourageTryAgain =>
+      'You\'ll get it! More reviews will help it stick';
+
+  @override
+  String get ebLoadReviewFailed => 'Failed to load';
+
+  @override
+  String get posterTitle => 'Poster Studio';
+
+  @override
+  String get posterTypeLabel => 'Poster Type';
+
+  @override
+  String get posterTemplateLabel => 'Visual Template';
+
+  @override
+  String get posterPreviewLabel => 'Live Preview';
+
+  @override
+  String get posterShareOrDownload => 'Share or Download';
+
+  @override
+  String get posterRegenerate => 'Regenerate Preview';
+
+  @override
+  String get posterPreviewGenerating => 'Generating preview...';
+
+  @override
+  String get posterPreviewFailed =>
+      'Unable to generate preview. Please try again later.';
+
+  @override
+  String get posterPreviewError =>
+      'Poster preview failed, please try again later';
+
+  @override
+  String posterPreviewErrorWith(String error) {
+    return 'Poster preview failed: $error';
+  }
+
+  @override
+  String get posterUnknownError => 'Unknown error';
+
+  @override
+  String get posterIdentityTitle => 'Glory Identity';
+
+  @override
+  String get posterIdentitySubtitle =>
+      'Show your title, level, and signature achievement';
+
+  @override
+  String posterIdentityPayloadTitle(String name) {
+    return '$name\'s Glory Identity';
+  }
+
+  @override
+  String get posterIdentityDefaultSubtitle =>
+      'Share your growth highlights with friends';
+
+  @override
+  String get posterIdentityDefaultRarity => 'Glory';
+
+  @override
+  String get posterIdentityGrowing => 'Growing steadily';
+
+  @override
+  String get posterGrowthTitle => 'Weekly Growth';
+
+  @override
+  String get posterGrowthSubtitle =>
+      'Turn growth trends, brightness, and active plans into a battle report';
+
+  @override
+  String posterGrowthPayloadTitle(String name) {
+    return '$name\'s Weekly Growth';
+  }
+
+  @override
+  String posterGrowthPayloadSubtitle(int level, int brightness) {
+    return 'Level Lv.$level · Brightness $brightness%';
+  }
+
+  @override
+  String get posterGrowthDesc =>
+      'Keep up this pace — your learning momentum is rising.';
+
+  @override
+  String get posterGrowthReportType => 'Growth Weekly';
+
+  @override
+  String get posterPlanTitle => 'Plan Battle Report';
+
+  @override
+  String get posterPlanSubtitle =>
+      'Turn your current plan into a high-quality progress card';
+
+  @override
+  String get posterPlanDefaultTitle => 'My Next Stage Plan';
+
+  @override
+  String get posterPlanDefaultSubtitle =>
+      'Break goals into tasks and push forward steadily.';
+
+  @override
+  String get posterPlanDefaultSubject => 'Personal Growth';
+
+  @override
+  String get posterCapsuleTitle => 'Inspiration Capsule';
+
+  @override
+  String get posterCapsuleSubtitle =>
+      'Turn your latest insight or curiosity capsule into a shareable thought card';
+
+  @override
+  String get posterCapsuleDefaultTitle => 'Today\'s Inspiration Capsule';
+
+  @override
+  String get posterCapsuleDefaultSubtitle =>
+      'Save a new idea as a poster worth revisiting.';
+
+  @override
+  String get posterCapsuleDefaultDesc =>
+      'New insights are being generated, waiting for you to light them up.';
+
+  @override
+  String get posterCapsuleDefaultDepth => 'Inspiration';
+
+  @override
+  String get posterHeroHeadline =>
+      'Turn your growth into a poster worth sharing';
+
+  @override
+  String get posterHeroDesc =>
+      'Poster Studio automatically reads your real achievements, plans, capsules, and growth data to generate high-quality posters for sharing to social platforms or saving to your album.';
+
+  @override
+  String get posterChipLivePreview => 'Live Preview';
+
+  @override
+  String get posterChipDownload => 'Download Image';
+
+  @override
+  String get posterChipSystemShare => 'System Share';
+
+  @override
+  String posterTemplateSuffix(String name) {
+    return '$name Template';
+  }
+
+  @override
+  String get posterTemplateDefaultDesc =>
+      'Perfect for sharing your growth highlights';
+
+  @override
+  String gmMembersTitle(String groupName) {
+    return '$groupName - Members';
+  }
+
+  @override
+  String get gmTabMembers => 'Members';
+
+  @override
+  String get gmTabLeaderboard => 'Leaderboard';
+
+  @override
+  String get gmLoadFailed => 'Load failed';
+
+  @override
+  String get gmLoadMembersFailed =>
+      'Failed to load members, please try again later';
+
+  @override
+  String get gmTabFlame => 'Flame';
+
+  @override
+  String get gmTabCheckin => 'Check-in';
+
+  @override
+  String get gmTabTasks => 'Tasks';
+
+  @override
+  String gmFlameValue(int count) {
+    return '$count flame';
+  }
+
+  @override
+  String gmDayValue(int count) {
+    return '$count days';
+  }
+
+  @override
+  String gmTaskValue(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String get gmMute => 'Mute';
+
+  @override
+  String get gmSendWarning => 'Send Warning';
+
+  @override
+  String get gmKick => 'Remove from Group';
+
+  @override
+  String gmKickConfirm(String name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get gmKickConfirmMsg => 'This member will be removed from the group.';
+
+  @override
+  String gmKicked(String name) {
+    return '$name has been removed';
+  }
+
+  @override
+  String gmActionFailed(String error) {
+    return 'Action failed: $error';
+  }
+
+  @override
+  String get gmCancel => 'Cancel';
+
+  @override
+  String get gmConfirm => 'Confirm';
+
+  @override
+  String gmMuteTitle(String name) {
+    return 'Mute $name';
+  }
+
+  @override
+  String get gmMuteDuration => 'Mute duration:';
+
+  @override
+  String get gm24Hours => '24 hours';
+
+  @override
+  String gmMinutes(int m) {
+    return '$m minutes';
+  }
+
+  @override
+  String get gmMuteReason => 'Mute reason (optional)';
+
+  @override
+  String get gmConfirmMute => 'Confirm Mute';
+
+  @override
+  String gmMuted(String name) {
+    return '$name has been muted';
+  }
+
+  @override
+  String gmWarnTitle(String name) {
+    return 'Warn $name';
+  }
+
+  @override
+  String get gmWarnReason => 'Warning reason';
+
+  @override
+  String get gmSendWarningBtn => 'Send Warning';
+
+  @override
+  String get gmWarnReasonRequired => 'Please enter a warning reason';
+
+  @override
+  String gmWarned(String name) {
+    return 'Warning sent to $name';
+  }
+
+  @override
+  String skillLoadFailed(String error) {
+    return 'Skills load failed: $error';
+  }
+
+  @override
+  String get skillTitle => 'My Skills';
+
+  @override
+  String get skillFromDraft => 'Generate from draft';
+
+  @override
+  String get skillNewSkill => 'New skill';
+
+  @override
+  String get skillTabMySkills => 'My Skills';
+
+  @override
+  String get skillTabSharedCatalog => 'Shared Catalog';
+
+  @override
+  String get skillEmptyMy => 'No skills created yet';
+
+  @override
+  String get skillEmptyShared => 'Shared catalog is empty';
+
+  @override
+  String get skillIntroTitle => 'Save the approaches that work for you';
+
+  @override
+  String get skillIntroDesc =>
+      'Create manually, import from chat drafts, enable/disable, edit, delete, share, or fork from the anonymous catalog.';
+
+  @override
+  String get skillEdit => 'Edit';
+
+  @override
+  String get skillDelete => 'Delete';
+
+  @override
+  String get skillShare => 'Share';
+
+  @override
+  String get skillUnshare => 'Unshare';
+
+  @override
+  String get skillForkToMy => 'Fork to My Skills';
+
+  @override
+  String get skillSaved => 'Skill saved';
+
+  @override
+  String skillSaveFailed(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String skillActionFailed(String error) {
+    return 'Action failed: $error';
+  }
+
+  @override
+  String get skillEditorNew => 'New Skill';
+
+  @override
+  String get skillEditorEdit => 'Edit Skill';
+
+  @override
+  String get skillEditorName => 'Name';
+
+  @override
+  String get skillEditorTemplate => 'Pattern Template';
+
+  @override
+  String get skillEditorExamples => 'Examples (one per line)';
+
+  @override
+  String get skillCancel => 'Cancel';
+
+  @override
+  String get skillSave => 'Save';
+
+  @override
+  String get skillDraftDefaultConsent =>
+      'Do it this way from now on, remember this pattern';
+
+  @override
+  String get skillDraftTitle => 'Generate from Draft';
+
+  @override
+  String get skillDraftConsentLabel => 'Explicit consent text';
+
+  @override
+  String get skillDraftUserMessage => 'User\'s original words';
+
+  @override
+  String get skillDraftAiReply => 'AI reply';
+
+  @override
+  String get skillDraftGenerating => 'Generating...';
+
+  @override
+  String get skillDraftGenerate => 'Generate Draft';
+
+  @override
+  String skillDraftFailed(String error) {
+    return 'Draft generation failed: $error';
+  }
+
+  @override
+  String get gdTitle => 'Community Square';
+
+  @override
+  String get gdCalibrate => 'Calibrate for You';
+
+  @override
+  String get gdCalibrateDesc =>
+      'Tell us whether these recommended groups match your interests, and the system will keep optimizing.';
+
+  @override
+  String get gdPublicDir => 'Public Groups Directory';
+
+  @override
+  String gdResultCount(int count) {
+    return '$count results';
+  }
+
+  @override
+  String get gdEmpty =>
+      'No groups match your filters. Try different tags, sorting, or create one.';
+
+  @override
+  String get gdClearFilters => 'Clear Filters';
+
+  @override
+  String get gdFeedbackSuccess =>
+      'Feedback submitted. Recommendations will keep improving.';
+
+  @override
+  String gdFeedbackFailed(String e) {
+    return 'Submission failed: $e';
+  }
+
+  @override
+  String get gdSearchHint => 'Search groups, courses, or topics';
+
+  @override
+  String get gdSortHot => 'Hot';
+
+  @override
+  String get gdSortLatest => 'Latest';
+
+  @override
+  String get gdSortRandom => 'Random';
+
+  @override
+  String get gdTypeAll => 'All';
+
+  @override
+  String get gdTypeSquad => 'Study';
+
+  @override
+  String get gdTypeSprint => 'Sprint';
+
+  @override
+  String get gdApplyJoin => 'Apply';
+
+  @override
+  String get gdJoin => 'Join';
+
+  @override
+  String gdGroupStats(int members, int checkins, String flame) {
+    return '$members members · $checkins check-ins today · Flame $flame';
+  }
+
+  @override
+  String get gdPublicGroup => 'Public Group';
+
+  @override
+  String gdActivityScore(String score) {
+    return 'Activity $score';
+  }
+
+  @override
+  String aiopsDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String aiopsSurfaceRow(String surface, String ctr, String execRate) {
+    return '$surface · Accepted $ctr% · Executed $execRate%';
+  }
+
+  @override
+  String aiopsActionRow(String actionType, int executions, String rate) {
+    return '$actionType · Executed $executions times · Conversion $rate%';
+  }
+
+  @override
+  String get aiopsTrendDesc =>
+      'Check whether latency is declining steadily while confirming that success rate and execution conversion are not hurt by cost optimization.';
+
+  @override
+  String get aiopsTotalTime => 'Total Duration';
+
+  @override
+  String get aiopsLatestRequests => 'Latest Requests';
+
+  @override
+  String get aiopsLatestFallback => 'Latest Fallback';
+
+  @override
+  String get aiopsLatestCost => 'Latest Cost';
+
+  @override
+  String aiopsFirstPacket(String ms, String totalMs, String rate) {
+    return 'First token ${ms}ms · Total ${totalMs}ms · Success $rate%';
+  }
+
+  @override
+  String aiopsFallbackCost(String rate, String cost, String execRate) {
+    return 'Fallback $rate% · Cost USD$cost · Exec conversion $execRate%';
+  }
+
+  @override
+  String aiopsPromptHit(
+      String prompt, String inference, int promptCount, int inferenceCount) {
+    return 'Prompt hit $prompt% · Inference hit $inference% · Known $promptCount/$inferenceCount';
+  }
+
+  @override
+  String calTaskRescheduled(String title, String date) {
+    return 'Added \"$title\" to $date schedule.';
+  }
+
+  @override
+  String get calTaskTypeTask => 'Task';
+
+  @override
+  String get calTaskTypeTodo => 'To-Do';
+
+  @override
+  String calTaskWithDue(String type, String due) {
+    return '$type · $due';
+  }
+
+  @override
+  String picEstimatedHours(String hours) {
+    return 'Estimated study time: $hours hours';
+  }
+
+  @override
+  String picRiskScore(String score) {
+    return 'Risk index: $score/100';
+  }
+
+  @override
+  String picChurnRisk(String level) {
+    return 'Churn risk: $level';
+  }
+
+  @override
+  String picMinutesLater(int minutes) {
+    return 'In about $minutes minutes';
+  }
+
+  @override
+  String picTodayTime(String time) {
+    return 'Today $time';
+  }
+
+  @override
+  String picTomorrowTime(String time) {
+    return 'Tomorrow $time';
+  }
+
+  @override
+  String lioRecommendedSeeds(int count) {
+    return '$count recommended scenarios';
+  }
+
+  @override
+  String get lioStartNewSim => 'Start a new simulation now';
+
+  @override
+  String lioRecentAnalysis(int count) {
+    return 'Last analysis covered $count knowledge points';
+  }
+
+  @override
+  String get lioBuildConclusion =>
+      'Summarize key takeaways after a learning round';
+
+  @override
+  String get lioNoSimYet => 'No recent simulation generated yet';
+
+  @override
+  String lioRecentUpdate(String desc) {
+    return 'Recently updated · $desc';
+  }
+
+  @override
+  String get lioNoTheaterYet => 'No recent prediction generated yet';
+
+  @override
+  String get lioNoReportYet => 'No recent report generated yet';
+
+  @override
+  String lioMastery(String percent) {
+    return 'Mastery $percent%';
+  }
+
+  @override
+  String lfcConfidence(int sampleSize, String confidence) {
+    return 'Based on $sampleSize learning records, current recommendation confidence is $confidence%.';
+  }
+
+  @override
+  String get lfcTipMorning =>
+      'Based on your history, studying at 9am is most effective';
+
+  @override
+  String get lfcTipPomodoro =>
+      'Suggest 30-45 minute study sessions with 5-10 minute breaks';
+
+  @override
+  String wgnBiggestImprovement(String node) {
+    return 'Biggest improvement: $node';
+  }
+
+  @override
+  String wgnNextWeekGoal(String suggestion) {
+    return 'Next week goal: $suggestion';
+  }
+
+  @override
+  String get galaxySectorRational => 'Rational';
+
+  @override
+  String get galaxySectorCreation => 'Creation';
+
+  @override
+  String get galaxySectorInspiration => 'Inspiration';
+
+  @override
+  String get galaxySectorDarkMatter => 'Dark Matter';
+
+  @override
+  String get planSprintSubmitFailed =>
+      'Sprint submission failed, please try again';
+
+  @override
+  String get planPortfolioLoadFailedMsg => 'Failed to load learning portfolio';
+
+  @override
+  String get planPortfolioRetry => 'Retry';
+
+  @override
+  String get planGuideAiNotReturn =>
+      'AI did not return a result, please try again';
+
+  @override
+  String get planViewDetails => 'View details';
+
+  @override
+  String get toolsPlanLinked => 'Planned end time';
+
+  @override
+  String get ebLoadError => 'Failed to load errors, please try again';
 }

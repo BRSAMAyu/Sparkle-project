@@ -6,7 +6,10 @@ Stage: <首次引入 Stage 号>
 
 from __future__ import annotations
 
-import asyncio, contextlib, json, time, uuid
+import asyncio
+import json
+import time
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -14,6 +17,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.metrics import (
     ACTIVE_SESSIONS,
     AI_RESPONSE_TOTAL_DURATION,
@@ -21,7 +25,6 @@ from app.core.metrics import (
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
 )
-from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.agent_scoring import AgentScoringService
@@ -444,6 +447,13 @@ class ResponseBuilderMixin:
         strategy_state = final_state.context_data.get("user_strategy_state")
         if isinstance(strategy_state, dict):
             response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)
+        dual_core_decision = final_state.context_data.get("dual_core_decision")
+        if isinstance(dual_core_decision, dict):
+            structured = dual_core_decision.get("structured_adjustments") or []
+            if structured:
+                response_metadata["structured_cognitive_adjustments"] = json.dumps(
+                    structured, ensure_ascii=False,
+                )
         understanding_depth = (
             (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
         )
@@ -628,6 +638,58 @@ class ResponseBuilderMixin:
                     await active_db.flush()
                 except Exception as e:
                     logger.debug(f"Cognitive feedback loop flush skipped: {e}")
+
+        # Spine: inject UserVisibleReceipt and StaleStateGuard card for Flutter UI
+        if getattr(self, "redis", None) is not None:
+            try:
+                from app.signals.spine_orchestrator import SpineOrchestrator
+                _spine = SpineOrchestrator(self.redis)
+                _latest_receipt = await _spine.get_latest_receipt(user_id)
+                if _latest_receipt:
+                    _receipt_actions = list(_latest_receipt.actions or [])
+                    _correctable = "correct" in _receipt_actions
+                    response_metadata["spine_receipt"] = json.dumps({
+                        "receipt_id": _latest_receipt.receipt_id,
+                        "trigger": _latest_receipt.receipt_type,
+                        "summary": _latest_receipt.message,
+                        "correctable": _correctable,
+                        "correction_options": (
+                            ["这个判断不准确", "我不同意这个调整", "继续，先看看效果"]
+                            if _correctable else []
+                        ),
+                    }, ensure_ascii=False)
+                _community_hint = await _spine.get_latest_community_hint(user_id)
+                if _community_hint:
+                    response_metadata["spine_community_hint"] = json.dumps(
+                        _community_hint, ensure_ascii=False
+                    )
+                _ux_warning = await _spine.get_ux_risk_warning(user_id)
+                if _ux_warning:
+                    response_metadata["spine_ux_warning"] = json.dumps(
+                        _ux_warning, ensure_ascii=False
+                    )
+                _goal_arb = await _spine.get_goal_arbitration_summary(user_id)
+                if _goal_arb:
+                    response_metadata["spine_goal_arbitration"] = json.dumps(
+                        _goal_arb, ensure_ascii=False
+                    )
+                # T3.3.1: Inject predicted reply options into response metadata
+                try:
+                    from app.aurora.runtime_v1.reply_option_injector import ReplyOptionInjector
+                    _aurora_band = response_metadata.get("aurora_band_status", "sensing")
+                    _aurora_energy = response_metadata.get("aurora_energy_level", "L1")
+                    _injector = ReplyOptionInjector()
+                    _reply_groups = _injector.generate(
+                        band_status=_aurora_band,
+                        energy_level=_aurora_energy,
+                    )
+                    _injector.inject_into_metadata(
+                        response_metadata, _reply_groups, _aurora_band,
+                    )
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
         final_response = agent_service_pb2.ChatResponse(
             response_id=response_id,

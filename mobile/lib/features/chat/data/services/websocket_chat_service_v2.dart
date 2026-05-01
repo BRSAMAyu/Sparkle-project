@@ -13,6 +13,9 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/models/offline_chat_message.dart';
+import 'package:sparkle/core/offline/offline_message_queue_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -32,6 +35,25 @@ Map<String, dynamic>? _decodeMapOrString(dynamic value) {
   return null;
 }
 
+List<Map<String, dynamic>>? _decodeMapListOrString(dynamic value) {
+  dynamic decoded = value;
+  if (value is String && value.isNotEmpty) {
+    try {
+      decoded = json.decode(value);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (decoded is List) {
+    final items = decoded
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
+        .toList();
+    return items.isEmpty ? null : items;
+  }
+  return null;
+}
+
 Map<String, dynamic>? _normalizeMetadata(dynamic raw) {
   final metadata = _decodeMapOrString(raw);
   if (metadata == null) {
@@ -42,6 +64,13 @@ Map<String, dynamic>? _normalizeMetadata(dynamic raw) {
   final directUserState = _decodeUserStatePayload(normalized['user_state_v1']);
   if (directUserState != null) {
     normalized['user_state_v1'] = directUserState;
+  }
+
+  final structuredAdjustments = _decodeMapListOrString(
+    normalized['structured_cognitive_adjustments'],
+  );
+  if (structuredAdjustments != null) {
+    normalized['structured_cognitive_adjustments'] = structuredAdjustments;
   }
 
   final profileContext = _decodeMapOrString(normalized['profile_context']);
@@ -407,6 +436,101 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           );
         }
 
+        // Spine: StaleStateGuard recovery card
+        if (metadata != null && metadata['spine_stale_card'] != null) {
+          final staleData = _decodeMapOrString(metadata['spine_stale_card']);
+          if (staleData != null) {
+            return StaleRecoveryEvent(
+              staleData: staleData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: UserVisibleReceipt card
+        if (metadata != null && metadata['spine_receipt'] != null) {
+          final receiptData = _decodeMapOrString(metadata['spine_receipt']);
+          if (receiptData != null) {
+            return SpineReceiptEvent(
+              receiptData: receiptData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: UX risk warning (divine moment #5 阻止低收益)
+        if (metadata != null && metadata['spine_ux_warning'] != null) {
+          final warningData = _decodeMapOrString(metadata['spine_ux_warning']);
+          if (warningData != null) {
+            return UXWarningEvent(
+              warningData: warningData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Community hint card (divine moment #6 社群经验转策略)
+        if (metadata != null && metadata['spine_community_hint'] != null) {
+          final hintData = _decodeMapOrString(metadata['spine_community_hint']);
+          if (hintData != null) {
+            return CommunityHintEvent(
+              hintData: hintData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Growth card (divine moment #1 看见坚持)
+        if (metadata != null && metadata['spine_growth_card'] != null) {
+          final growthData = _decodeMapOrString(metadata['spine_growth_card']);
+          if (growthData != null) {
+            return GrowthCardEvent(
+              cardData: growthData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Goal Arbitration Card — multi-goal conflict surface
+        if (metadata != null && metadata['spine_goal_arbitration'] != null) {
+          final arbData =
+              _decodeMapOrString(metadata['spine_goal_arbitration']);
+          if (arbData != null) {
+            return GoalArbitrationEvent(
+              arbData: arbData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Degraded mode indicator (STAB-012)
+        if (metadata != null && metadata['spine_degraded'] == 'true') {
+          return SpineDegradedEvent(
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         return TextEvent(
           content: deltaContent,
           responseId: responseId,
@@ -591,7 +715,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           final code = (error['error_code'] as String?) ?? 'UNKNOWN';
           return ErrorEvent(
             code: code,
-            message: error['message'] as String? ?? '未知错误',
+            message: error['message'] as String? ?? S.chatWsUnknownError,
             retryable: error['retryable'] as bool? ?? false,
             responseId: responseId,
             traceId: traceId,
@@ -601,7 +725,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
         return ErrorEvent(
           code: 'UNKNOWN',
-          message: '未知错误',
+          message: S.chatWsUnknownError,
           retryable: false,
           responseId: responseId,
           traceId: traceId,
@@ -689,7 +813,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'nack':
         final messageId = data['message_id'] as String?;
         final errorCode = data['error_code'] as String? ?? 'unknown';
-        final errorMessage = data['error_message'] as String? ?? '未知错误';
+        final errorMessage =
+            data['error_message'] as String? ?? S.chatWsUnknownError;
         final retryAfterMs = data['retry_after_ms'] as int?;
         if (messageId != null) {
           return NackEvent(
@@ -1083,6 +1208,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _autoConnect = autoConnect,
         _terminalDoneFallbackDelay = terminalDoneFallbackDelay {
     WidgetsBinding.instance.addObserver(this);
+    _offlineQueue = OfflineMessageQueueService(
+      _container.read(localDatabaseProvider),
+    );
   }
 
   static const List<Duration> _reconnectSchedule = <Duration>[
@@ -1155,6 +1283,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
+
+  // Offline persistent queue (R3 O-01: survive app kill)
+  late final OfflineMessageQueueService _offlineQueue;
 
   // 401错误处理和Token刷新
   bool _isRefreshingToken = false;
@@ -1440,6 +1571,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       }
 
       final queryParameters = <String, String>{'user_id': userId};
+      // P0-1: Include session_id on reconnect so backend can restore context
+      if (_currentSessionId != null && _reconnectAttempts > 0) {
+        queryParameters['session_id'] = _currentSessionId!;
+      }
       if (wsTicket != null && wsTicket.isNotEmpty) {
         queryParameters['ticket'] = wsTicket;
       } else if (effectiveToken != null && effectiveToken.isNotEmpty) {
@@ -1485,6 +1620,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // 启动心跳
       _startHeartbeat();
+
+      // Restore pending messages from offline DB (R3 O-01)
+      unawaited(_restorePendingFromDb());
 
       // 发送待发送的消息
       _flushPendingMessages();
@@ -1603,6 +1741,15 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       return;
     }
     _safeAdd(controller, event);
+
+    // Mark message as acked in offline DB (R3 O-01)
+    if (event is AckEvent) {
+      unawaited(_offlineQueue.markAcked(
+        targetRequestId,
+        serverMessageId: event.messageId,
+      ));
+    }
+
     if (event is FullTextEvent) {
       _scheduleTerminalFallback(targetRequestId);
       return;
@@ -1647,8 +1794,30 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           retryable: false,
         ),
       );
+      // Remove overflowed message from offline DB (R3 O-01)
+      final droppedId = droppedPayload['request_id']?.toString();
+      if (droppedId != null && droppedId.isNotEmpty) {
+        unawaited(_offlineQueue.remove(droppedId));
+      }
     }
     _pendingMessages.add(payload);
+
+    // Persist to offline DB so messages survive app kill (R3 O-01)
+    final requestId = payload['request_id']?.toString();
+    if (requestId != null && requestId.isNotEmpty) {
+      unawaited(_offlineQueue.enqueue(
+        requestId: requestId,
+        sessionId: (payload['session_id'] ?? '').toString(),
+        message: (payload['message'] ?? '').toString(),
+        userId: _currentUserId ?? '',
+        extraContext: payload['extra_context']?.toString(),
+        fileIds: payload['file_ids'] is List
+            ? (payload['file_ids'] as List).map((e) => e.toString()).toList()
+            : null,
+        chatMode: payload['chat_mode']?.toString(),
+        nickname: payload['nickname']?.toString(),
+      ));
+    }
   }
 
   void _notifyPendingPayloadFailure(
@@ -1673,6 +1842,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         payload,
         ErrorEvent(code: code, message: message, retryable: false),
       );
+      // Remove from offline DB (R3 O-01)
+      final reqId = payload['request_id']?.toString();
+      if (reqId != null && reqId.isNotEmpty) {
+        unawaited(_offlineQueue.remove(reqId));
+      }
     }
   }
 
@@ -1694,17 +1868,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         return;
       }
 
-      // 快速检查是否是pong消息（心跳响应）
-      try {
-        final jsonData = json.decode(data) as Map<String, dynamic>;
-        final type = jsonData['type'] as String?;
-        if (type == 'pong') {
-          _onPongReceived();
-          _log('💓 Pong received');
-          return; // 心跳响应，静默处理
-        }
-      } catch (_) {
-        // 解析失败，继续正常处理
+      // Fast pong check without full JSON decode (avoids main-thread overhead for large frames)
+      if (data.length < 64 && data.contains('"pong"')) {
+        _onPongReceived();
+        _log('💓 Pong received');
+        return;
       }
 
       // Small control/status frames are latency-sensitive; large text frames
@@ -2130,6 +2298,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('📤 Full payload: ${json.encode(payload)}');
       _channel?.sink.add(json.encode(payload));
       _log('📤 Sent: ${payload['message']}');
+
+      // Mark as sent in offline DB (R3 O-01)
+      final reqId = payload['request_id']?.toString();
+      if (reqId != null && reqId.isNotEmpty) {
+        unawaited(_offlineQueue.markSent(reqId));
+      }
+
       span.end();
     } catch (e) {
       _log('❌ Send failed: $e');
@@ -2147,6 +2322,28 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _pendingMessages.clear();
 
     messages.forEach(_sendMessage);
+  }
+
+  /// Restore pending messages from offline Isar DB into the in-memory queue (R3 O-01).
+  Future<void> _restorePendingFromDb() async {
+    if (_currentUserId == null) return;
+    final pending = await _offlineQueue.loadPending();
+    if (pending.isEmpty) return;
+
+    _log('📨 Restoring ${pending.length} offline messages from DB');
+    for (final msg in pending) {
+      final payload = <String, dynamic>{
+        'message': msg.message,
+        'session_id': msg.sessionId,
+        'request_id': msg.requestId,
+        if (msg.nickname != null) 'nickname': msg.nickname,
+        if (msg.extraContext != null) 'extra_context': msg.extraContext,
+        if (msg.fileIds != null && msg.fileIds!.isNotEmpty)
+          'file_ids': msg.parsedFileIds,
+        if (msg.chatMode != null) 'chat_mode': msg.chatMode,
+      };
+      _pendingMessages.insert(0, payload);
+    }
   }
 
   String _applyWebSocketSchemeForEnvironment(
@@ -2312,6 +2509,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       unawaited(_heartbeatMetricsController.close());
     }
     _pendingMessages.clear();
+
+    // Cleanup old acked offline messages (R3 O-01)
+    unawaited(_offlineQueue.cleanupOldAcked());
   }
 
   // Helper for TRACKED(TD-001)

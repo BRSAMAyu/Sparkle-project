@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
@@ -18,7 +19,7 @@ class EngagementStateBadge extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '参与状态',
+              context.l10n.userEngagementState,
               style: DS.titleMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
@@ -34,7 +35,7 @@ class EngagementStateBadge extends StatelessWidget {
                 _StatusChip(
                   label: value?.lastActiveAt != null
                       ? '最近 ${DateFormat('M月d日').format(value!.lastActiveAt!)}'
-                      : '最近暂无记录',
+                      : context.l10n.userNoRecentActivity,
                 ),
               ],
             ),

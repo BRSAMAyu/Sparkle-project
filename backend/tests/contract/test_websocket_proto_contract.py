@@ -8,7 +8,8 @@ GEN_DIR = REPO_ROOT / "backend" / "app" / "gen"
 if str(GEN_DIR) not in sys.path:
     sys.path.insert(0, str(GEN_DIR))
 
-from app.gen import agent_service_pb2, websocket_pb2
+from app.gen.agent.v1 import agent_service_pb2
+from app.gen import websocket_pb2
 
 
 def test_websocket_envelope_field_numbers_are_stable():
@@ -59,6 +60,8 @@ def test_agent_chat_request_contract_keeps_input_and_context_fields_stable():
         "include_references": 11,
         "active_tools": 12,
         "chat_mode": 13,
+        "use_document_context": 14,
+        "document_filter": 15,
     }
     assert descriptor.oneofs_by_name["input"].fields[0].name == "message"
     assert descriptor.oneofs_by_name["input"].fields[1].name == "tool_result"

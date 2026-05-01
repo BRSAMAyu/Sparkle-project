@@ -13,13 +13,13 @@ permissions:
   packages: write
 
 env:
-  GO_VERSION: '1.22.0'
+  GO_VERSION: '1.24.0'
   PYTHON_VERSION: '3.11'
   FLUTTER_VERSION: '3.24.0'
   COVERAGE_RULES_FILE: 'quality/coverage_thresholds.json'
-  COVERAGE_THRESHOLD_GO: '4'
-  COVERAGE_THRESHOLD_PYTHON: '25'
-  COVERAGE_THRESHOLD_FLUTTER: '8'
+  COVERAGE_THRESHOLD_GO: '10'
+  COVERAGE_THRESHOLD_PYTHON: '35'
+  COVERAGE_THRESHOLD_FLUTTER: '15'
 
 jobs:
   # ==================== JOB 1: LINT ====================
@@ -77,6 +77,9 @@ jobs:
 
       - name: Technical Debt Budget Gate
         run: python3 scripts/check_tech_debt_budget.py
+
+      - name: Detect Duplicate Code Blocks
+        run: python3 scripts/check_duplicate_code_blocks.py backend/app/signals/spine_orchestrator.py
 
   # ==================== JOB 1B: RULE GUARDS ====================
   all-rule-guards:
@@ -169,7 +172,7 @@ jobs:
         with:
           files: backend/gateway/coverage.out
           flags: go-backend
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
       # Python Tests
       - name: Set up Python
@@ -242,7 +245,7 @@ jobs:
         with:
           files: coverage.xml
           flags: python-backend
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   # ==================== JOB 2B: JOURNEY SMOKE ====================
   journey-smoke:
@@ -306,7 +309,7 @@ jobs:
         with:
           files: mobile/coverage/lcov.info
           flags: flutter
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   # ==================== JOB 4: SECURITY SCAN ====================
   security-scan:
@@ -401,7 +404,7 @@ jobs:
 
       - name: Compare Schema Dump
         id: schema_dump_compare
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         env:
           PGPASSWORD: password
         run: |

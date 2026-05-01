@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 import base64
 import os
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -13,7 +14,7 @@ from app.services.compliance.key_provider import get_master_key_provider
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CryptoEraseManager:

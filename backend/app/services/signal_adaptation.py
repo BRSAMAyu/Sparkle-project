@@ -4,19 +4,19 @@ Shared helpers for recency-weighted signal aggregation and hysteresis.
 from __future__ import annotations
 
 import math
-from datetime import timezone, datetime
-from typing import Hashable, Iterable
+from collections.abc import Hashable, Iterable
+from datetime import UTC, datetime
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_timestamp(value: datetime | None) -> datetime | None:
     if value is None:
         return None
     if value.tzinfo is not None:
-        return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value.astimezone(UTC).replace(tzinfo=None)
     return value
 
 

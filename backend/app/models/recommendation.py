@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class InteractionType(str, enum.Enum):
+class InteractionType(enum.StrEnum):
     """用户交互类型"""
     VIEWED = "viewed"           # 查看
     LEARNED = "learned"         # 学习完成

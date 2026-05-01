@@ -2,7 +2,7 @@
 统计数据 API
 Statistics API
 """
-from datetime import date, timezone, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.achievement import UserAchievement
-from app.models.galaxy import StudyRecord, UserNodeStatus
 from app.models.focus import FocusSession, FocusStatus
+from app.models.galaxy import StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 
@@ -44,7 +44,7 @@ async def get_daily_stats(
     Get daily statistics for current user
     """
     user_id = current_user.id
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
     # Tasks completed today
     completed_query = select(func.count(Task.id)).where(
@@ -137,7 +137,7 @@ async def get_stats_overview(
     study_days = 0
     if first_task_date:
         # Use naive UTC to match DB TIMESTAMP WITHOUT TIME ZONE
-        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+        now_naive = datetime.now(UTC).replace(tzinfo=None)
         first_naive = first_task_date.replace(tzinfo=None) if first_task_date.tzinfo else first_task_date
         delta = now_naive - first_naive
         study_days = delta.days + 1
@@ -180,7 +180,7 @@ async def get_weekly_stats(
     Get weekly statistics
     """
     user_id = current_user.id
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     week_ago = now - timedelta(days=7)
 
     # 周内完成任务
@@ -248,7 +248,7 @@ async def get_learning_heatmap(
     Response: [{date: "2026-04-01", minutes: 45, tasks_completed: 3}, ...]
     """
     target_user_id = _resolve_heatmap_user_id(current_user, user_id)
-    today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+    today = datetime.now(UTC).replace(tzinfo=None).date()
     start_day = today - timedelta(days=days - 1)
     range_start = datetime.combine(start_day, datetime.min.time())
     range_end = datetime.combine(today + timedelta(days=1), datetime.min.time())

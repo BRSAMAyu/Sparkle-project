@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 DEFAULT_REPORT_SECTIONS = [
     "Executive Summary",
     "知识掌握度分析",

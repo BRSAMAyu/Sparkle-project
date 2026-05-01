@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Multi-Plan State Manager - 多计划状态管理系统
 
@@ -30,7 +31,7 @@ Design:
 
 import json
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -192,7 +193,7 @@ class ActivePlansTracker:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MultiPlanStateManager:

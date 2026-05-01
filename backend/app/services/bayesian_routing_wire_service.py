@@ -43,7 +43,7 @@ class BayesianRoutingWireService:
                 recommended_target=None,
                 applied_target=route_decision.execution_mode,
                 divergence=False,
-                scores=tuple(),
+                scores=(),
             )
         learner = PersistentBayesianLearner(self.redis, user_id=user_id)
         scores = tuple(await learner.rank_targets(source_state_key, list(ROUTE_EXECUTION_TARGETS)))

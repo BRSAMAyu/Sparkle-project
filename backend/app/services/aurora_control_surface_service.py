@@ -11,6 +11,7 @@ from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.aurora.runtime_v1.state import AuroraCognitiveSnapshot, AuroraEnergyStore, AuroraRuntimeStore, AuroraState
 from app.core.profile_context import ProfileContext
 from app.core.user_insight_state import UserInsightState
+from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 
 
@@ -94,6 +95,7 @@ class AuroraControlSurfaceService:
         control_surface = await ControlSurfaceService(
             self.db,
             self.redis,
+            preference_service=PreferenceService(self.db, self.redis),
             enabled=True,
         ).read_control_surface(user_id)
 
@@ -644,7 +646,11 @@ class AuroraControlSurfaceService:
                 _as_dict(getattr(insight, "current_state", None)).get("available_time")
             ),
             "goal_type_confirmed": bool(
-                _as_list(getattr(profile_context.goal_context, "goals", None))
+                _as_list(
+                    profile_context.user_insight_state.goals
+                    if profile_context.user_insight_state
+                    else None
+                )
             ),
         }
 

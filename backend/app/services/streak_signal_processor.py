@@ -3,7 +3,7 @@ Streak signal processor - infer profile signals from check-in consistency.
 """
 from __future__ import annotations
 
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -18,7 +18,7 @@ from app.services.signal_adaptation import classify_band_with_hysteresis, recenc
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class StreakSignalProcessor:

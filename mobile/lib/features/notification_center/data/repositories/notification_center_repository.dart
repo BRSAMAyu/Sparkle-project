@@ -6,6 +6,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 
@@ -213,7 +214,7 @@ class NotificationCenterRepository {
       }
       return {
         'success': true,
-        'message': '他收到了你的鼓励',
+        'message': I18nService.instance.isChinese ? '他收到了你的鼓励' : 'They received your encouragement',
       };
     }
 
@@ -598,8 +599,8 @@ class NotificationCenterRepository {
       final statusCode = e.response?.statusCode;
       final responseData = e.response?.data;
       final message = responseData is Map<String, dynamic>
-          ? responseData['message'] ?? '未知错误'
-          : '未知错误';
+          ? responseData['message'] ?? (I18nService.instance.isChinese ? '未知错误' : 'Unknown error')
+          : (I18nService.instance.isChinese ? '未知错误' : 'Unknown error');
 
       switch (statusCode) {
         case 400:

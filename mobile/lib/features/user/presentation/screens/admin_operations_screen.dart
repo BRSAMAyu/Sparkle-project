@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class AdminOperationsScreen extends ConsumerStatefulWidget {
@@ -23,7 +25,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('管理员运营面板'),
+        title: Text(context.l10n.userAdminPanel),
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(DS.spacing16),
@@ -41,7 +43,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                     child: LinearProgressIndicator(minHeight: 3),
                   ),
                   error: (error, _) => _buildErrorCard(
-                    '容量面板加载失败',
+                    context.l10n.userAdminCapacityLoadFailed,
                     '$error',
                   ),
                 ),
@@ -55,7 +57,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                     child: LinearProgressIndicator(minHeight: 3),
                   ),
                   error: (error, _) => _buildErrorCard(
-                    '告警面板加载失败',
+                    context.l10n.userAdminAlertsLoadFailed,
                     '$error',
                   ),
                 ),
@@ -69,7 +71,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                     child: LinearProgressIndicator(minHeight: 3),
                   ),
                   error: (error, _) => _buildErrorCard(
-                    '客户端观测加载失败',
+                    context.l10n.userAdminClientLoadFailed,
                     '$error',
                   ),
                 ),
@@ -86,14 +88,14 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '管理员窗口',
+              context.l10n.userAdminWindow,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '把客户端异常、网关/后端容量和当前 Prometheus 告警放在一起看，快速判断是前端退化还是基础设施抖动。',
+              context.l10n.userAdminWindowHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -105,7 +107,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
               children: [7, 14, 30]
                   .map(
                     (days) => ChoiceChip(
-                      label: Text('$days 天'),
+                      label: Text('$days ${I18nService.instance.isChinese ? '天' : 'days'}'),
                       selected: _days == days,
                       onSelected: (_) => setState(() => _days = days),
                     ),
@@ -135,7 +137,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '容量与健康',
+            context.l10n.userAdminCapacityHealth,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -146,21 +148,21 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             runSpacing: DS.spacing8,
             children: [
               _MetricChip(
-                label: 'DB 探针',
+                label: context.l10n.userAdminDBProbe,
                 value:
                     '${((database['probe_latency_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}ms',
               ),
               _MetricChip(
-                label: 'Redis 连接',
+                label: context.l10n.userAdminRedisConn,
                 value: '${redis['connected_clients'] ?? '-'}',
               ),
               _MetricChip(
-                label: '队列积压',
+                label: context.l10n.userAdminQueueBacklog,
                 value:
                     '${queues.values.fold<int>(0, (sum, item) => sum + ((item as num?)?.toInt() ?? 0))}',
               ),
               _MetricChip(
-                label: '磁盘使用',
+                label: context.l10n.userAdminDiskUsage,
                 value:
                     '${((disk['used_ratio_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
               ),
@@ -197,7 +199,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           ],
           const SizedBox(height: DS.spacing12),
           Text(
-            '服务级 drill-down',
+            context.l10n.userAdminServiceDrilldown,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -206,18 +208,18 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           _ServiceDetailTile(
             title: 'PostgreSQL',
             lines: [
-              '探针延迟 ${((database['probe_latency_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}ms',
-              '连接池 ${database['pool_size'] ?? '-'} / 溢出 ${database['max_overflow'] ?? '-'}',
-              '超时 ${database['pool_timeout_seconds'] ?? '-'}s',
+              '${I18nService.instance.isChinese ? '探针延迟' : 'Probe latency'} ${((database['probe_latency_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}ms',
+              '${I18nService.instance.isChinese ? '连接池' : 'Pool'} ${database['pool_size'] ?? '-'} / ${I18nService.instance.isChinese ? '溢出' : 'overflow'} ${database['max_overflow'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '超时' : 'Timeout'} ${database['pool_timeout_seconds'] ?? '-'}s',
             ],
           ),
           const SizedBox(height: DS.spacing8),
           _ServiceDetailTile(
             title: 'Redis',
             lines: [
-              '状态 ${redis['status'] ?? '-'}',
-              '内存 ${redis['used_memory_human'] ?? '-'} / 峰值 ${redis['used_memory_peak_human'] ?? '-'}',
-              '客户端 ${redis['connected_clients'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '状态' : 'Status'} ${redis['status'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '内存' : 'Memory'} ${redis['used_memory_human'] ?? '-'} / ${I18nService.instance.isChinese ? '峰值' : 'Peak'} ${redis['used_memory_peak_human'] ?? '-'}',
+              '${I18nService.instance.isChinese ? '客户端' : 'Clients'} ${redis['connected_clients'] ?? '-'}',
             ],
           ),
           const SizedBox(height: DS.spacing8),
@@ -231,9 +233,9 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           _ServiceDetailTile(
             title: 'Disk',
             lines: [
-              '已用 ${disk['used_gb'] ?? '-'} GB / 空闲 ${disk['free_gb'] ?? '-'} GB',
-              '总量 ${disk['total_gb'] ?? '-'} GB',
-              '使用率 ${((disk['used_ratio_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
+              '${I18nService.instance.isChinese ? '已用' : 'Used'} ${disk['used_gb'] ?? '-'} GB / ${I18nService.instance.isChinese ? '空闲' : 'Free'} ${disk['free_gb'] ?? '-'} GB',
+              '${I18nService.instance.isChinese ? '总量' : 'Total'} ${disk['total_gb'] ?? '-'} GB',
+              '${I18nService.instance.isChinese ? '使用率' : 'Usage'} ${((disk['used_ratio_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
             ],
           ),
         ],
@@ -252,7 +254,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '当前告警',
+            context.l10n.userAdminCurrentAlerts,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -260,7 +262,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           const SizedBox(height: DS.spacing12),
           if (!firing || alerts.isEmpty)
             Text(
-              '当前没有触发中的 Prometheus 告警。',
+              context.l10n.userAdminNoAlerts,
               style: Theme.of(context).textTheme.bodySmall,
             )
           else
@@ -318,7 +320,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '客户端观测',
+            context.l10n.userAdminClientObservability,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -328,11 +330,11 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _MetricChip(label: '总事件', value: '${overall['count'] ?? 0}'),
-              _MetricChip(label: '错误', value: '${overall['error_count'] ?? 0}'),
-              _MetricChip(label: '崩溃', value: '${overall['crash_count'] ?? 0}'),
+              _MetricChip(label: context.l10n.userAdminTotalEvents, value: '${overall['count'] ?? 0}'),
+              _MetricChip(label: context.l10n.userAdminErrors, value: '${overall['error_count'] ?? 0}'),
+              _MetricChip(label: context.l10n.userAdminCrashes, value: '${overall['crash_count'] ?? 0}'),
               _MetricChip(
-                label: '平均耗时',
+                label: context.l10n.userAdminAvgDuration,
                 value:
                     '${((overall['avg_duration_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}ms',
               ),
@@ -341,7 +343,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           if (dailyTotals.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '7/14/30 天趋势',
+              context.l10n.userAdminTrendDays,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -354,7 +356,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           if (byEventType.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '事件类型 drill-down',
+              context.l10n.userAdminEventTypeDrilldown,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -366,10 +368,10 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                     child: _ServiceDetailTile(
                       title: item['event_type']?.toString() ?? 'unknown',
                       lines: [
-                        '总量 ${item['count'] ?? 0}',
-                        '错误 ${item['error_count'] ?? 0} / 崩溃 ${item['crash_count'] ?? 0}',
-                        '成功率 ${item['success_rate_percent'] ?? 0}%',
-                        '平均耗时 ${item['avg_duration_ms'] ?? 0}ms',
+                        '${I18nService.instance.isChinese ? '总量' : 'Total'} ${item['count'] ?? 0}',
+                        '${I18nService.instance.isChinese ? '错误' : 'Errors'} ${item['error_count'] ?? 0} / ${I18nService.instance.isChinese ? '崩溃' : 'Crashes'} ${item['crash_count'] ?? 0}',
+                        '${I18nService.instance.isChinese ? '成功率' : 'Success rate'} ${item['success_rate_percent'] ?? 0}%',
+                        '${I18nService.instance.isChinese ? '平均耗时' : 'Avg duration'} ${item['avg_duration_ms'] ?? 0}ms',
                       ],
                     ),
                   ),
@@ -378,7 +380,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           if (recentEvents.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '最近事件',
+              I18nService.instance.isChinese ? '最近事件' : 'Recent Events',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -515,10 +517,10 @@ class _TelemetryTrendSummary extends StatelessWidget {
       spacing: DS.spacing8,
       runSpacing: DS.spacing8,
       children: [
-        _MetricChip(label: '窗口事件', value: '$totalEvents'),
-        _MetricChip(label: '窗口错误', value: '$totalErrors'),
+        _MetricChip(label: I18nService.instance.isChinese ? '窗口事件' : 'Window events', value: '$totalEvents'),
+        _MetricChip(label: I18nService.instance.isChinese ? '窗口错误' : 'Window errors', value: '$totalErrors'),
         _MetricChip(
-          label: '加权平均耗时',
+          label: I18nService.instance.isChinese ? '加权平均耗时' : 'Weighted avg duration',
           value: '${averageDuration.toStringAsFixed(0)}ms',
         ),
       ],

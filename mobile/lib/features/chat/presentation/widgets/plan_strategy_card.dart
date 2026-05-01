@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class PlanStrategyCard extends StatefulWidget {
   const PlanStrategyCard({
@@ -43,7 +44,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '我建议先按这个节奏推进',
+          context.l10n.chatStrategySuggestPace,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
@@ -70,7 +71,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${phase['label'] ?? '阶段'} · ${phase['days'] ?? ''}',
+                            '${phase['label'] ?? context.l10n.chatStrategyPhaseLabel} · ${phase['days'] ?? ''}',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -80,7 +81,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                           ),
                           const SizedBox(height: DS.spacing4),
                           Text(
-                            '每天 ${phase['daily_hours'] ?? '-'} 小时 · ${phase['focus'] ?? ''}',
+                            context.l10n.chatStrategyDailyHours('${phase['daily_hours'] ?? '-'}', '${phase['focus'] ?? ''}'),
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -99,14 +100,14 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                           }
                         });
                       },
-                      child: Text(isExpanded ? '收起' : '展开'),
+                      child: Text(isExpanded ? context.l10n.chatStrategyCollapse : context.l10n.chatStrategyExpand),
                     ),
                   ],
                 ),
                 if (isExpanded) ...[
                   const SizedBox(height: DS.spacing10),
                   Text(
-                    '方法：${phase['method'] ?? ''}',
+                    context.l10n.chatStrategyMethod(phase['method']?.toString() ?? ''),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textPrimary,
                           height: 1.45,
@@ -114,7 +115,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    '阶段产出：${phase['output'] ?? ''}',
+                    context.l10n.chatStrategyPhaseOutput(phase['output']?.toString() ?? ''),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
@@ -128,7 +129,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
         if (checkpoints.isNotEmpty) ...[
           const SizedBox(height: DS.spacing4),
           Text(
-            '检查点',
+            context.l10n.chatStrategyCheckpoint,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -151,7 +152,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
           Row(
             children: actions.take(2).map((action) {
               final type = action['type']?.toString() ?? '';
-              final label = action['label']?.toString() ?? '继续';
+              final label = action['label']?.toString() ?? context.l10n.chatStrategyContinue;
               return Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(

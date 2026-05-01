@@ -14,7 +14,6 @@ Design rules:
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -369,7 +368,7 @@ class PredictedReplyOptionEngine:
             group_id=f"tension_confirm_{domain}",
             question=description,
             question_type="assumption_check",
-            context_note=f"Aurora 需要确认这个判断",
+            context_note="Aurora 需要确认这个判断",
         )
         options = self._domain_options(domain, priority, context, meta)
         options.append(_freeform_option(context))

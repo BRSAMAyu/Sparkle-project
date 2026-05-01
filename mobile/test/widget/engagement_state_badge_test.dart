@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/features/user/presentation/widgets/engagement_state_badge.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('EngagementStateBadge renders engagement chips', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: EngagementStateBadge(
             state: UserStateFieldEnvelope(
               value: Stage35EngagementState(
@@ -17,8 +19,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('参与状态'), findsOneWidget);

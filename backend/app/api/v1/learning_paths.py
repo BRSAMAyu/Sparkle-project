@@ -5,8 +5,8 @@ Learning Paths API
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
-from typing import Any, Union
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -74,7 +74,7 @@ class LearningPathTaskResponse(BaseModel):
 # ============ Helpers ============
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 def _is_error_response(path: list[dict[str, Any]]) -> bool:
     """检查路径响应是否为错误响应"""
@@ -254,7 +254,7 @@ async def get_graph_reasoning_service(db: AsyncSession = Depends(get_db)) -> Gra
 
 @router.get(
     "/{target_node_id}",
-    response_model=Union[list[LearningPathNodeResponse], LearningPathErrorResponse],
+    response_model=list[LearningPathNodeResponse] | LearningPathErrorResponse,
 )
 async def get_dynamic_learning_path(
     target_node_id: UUID,
@@ -698,7 +698,7 @@ async def generate_full_path_plan(
     db.add(plan)
 
     # 4. 创建父任务
-    from app.models.task import TaskType, SubTask
+    from app.models.task import SubTask, TaskType
 
     # 第一次遍历：计算总预估时间
     total_estimated = 0

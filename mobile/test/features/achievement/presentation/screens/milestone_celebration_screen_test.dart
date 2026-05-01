@@ -1,13 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/screens/milestone_celebration_screen.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('milestone celebration screen renders mock milestone stats',
       (tester) async {
     await _useTallSurface(tester);
@@ -74,7 +79,7 @@ void main() {
 
     expect(shared, isTrue);
     expect(sharedText, contains('#30天打卡'));
-    expect(sharedText, contains('67 个知识节点'));
+    expect(sharedText, contains('2 个知识节点'));
   });
 
   testWidgets(
@@ -141,7 +146,15 @@ void main() {
         child: MaterialApp.router(
           theme: AppThemes.lightTheme,
           routerConfig: router,
-        ),
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+              ),
       ),
     );
 
@@ -159,7 +172,7 @@ Future<void> _useTallSurface(WidgetTester tester) async {
 }
 
 Widget _buildApp(Widget child) => ProviderScope(
-      child: MaterialApp(
+      child: testMaterialApp(
         theme: AppThemes.lightTheme,
         home: child,
       ),

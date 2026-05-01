@@ -8,9 +8,9 @@ ADR: docs/adr/0004-card-protocol-architecture.md
 from __future__ import annotations
 
 import enum
-import uuid
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     Date,
@@ -20,10 +20,8 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     UniqueConstraint,
-    event as sa_event,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -47,7 +45,7 @@ def _string_enum(enum_cls: type[enum.Enum], name: str) -> Enum:
 # ---------------------------------------------------------------------------
 
 
-class CardType(str, enum.Enum):
+class CardType(enum.StrEnum):
     PLAN = "PLAN"
     PHASE = "PHASE"
     TASK = "TASK"
@@ -56,7 +54,7 @@ class CardType(str, enum.Enum):
     CUSTOM = "CUSTOM"
 
 
-class CardLifecycleStatus(str, enum.Enum):
+class CardLifecycleStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
     PAUSED = "PAUSED"
@@ -65,14 +63,14 @@ class CardLifecycleStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
-class CardVisibility(str, enum.Enum):
+class CardVisibility(enum.StrEnum):
     PRIVATE = "PRIVATE"
     FRIENDS = "FRIENDS"
     COMMUNITY = "COMMUNITY"
     PUBLIC = "PUBLIC"
 
 
-class CardSourceType(str, enum.Enum):
+class CardSourceType(enum.StrEnum):
     ORIGINAL = "ORIGINAL"
     ADOPTED = "ADOPTED"
     FORKED = "FORKED"
@@ -80,13 +78,13 @@ class CardSourceType(str, enum.Enum):
     GENERATED = "GENERATED"
 
 
-class CardCreatedBy(str, enum.Enum):
+class CardCreatedBy(enum.StrEnum):
     USER = "USER"
     AI = "AI"
     SYSTEM = "SYSTEM"
 
 
-class EdgeType(str, enum.Enum):
+class EdgeType(enum.StrEnum):
     CONTAINS = "CONTAINS"
     REFERENCES = "REFERENCES"
     DEPENDS_ON = "DEPENDS_ON"
@@ -99,14 +97,14 @@ class EdgeType(str, enum.Enum):
     FORKED_FROM = "FORKED_FROM"
 
 
-class BindingMode(str, enum.Enum):
+class BindingMode(enum.StrEnum):
     OWNED = "OWNED"
     REFERENCE = "REFERENCE"
     MIRROR = "MIRROR"
     SNAPSHOT = "SNAPSHOT"
 
 
-class OccurrenceStatus(str, enum.Enum):
+class OccurrenceStatus(enum.StrEnum):
     PLANNED = "PLANNED"
     READY = "READY"
     IN_PROGRESS = "IN_PROGRESS"
@@ -116,7 +114,7 @@ class OccurrenceStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
-class ArtifactType(str, enum.Enum):
+class ArtifactType(enum.StrEnum):
     DISCOVERY_DOSSIER = "DISCOVERY_DOSSIER"
     GLOBAL_COMPASS = "GLOBAL_COMPASS"
     STRATEGY_MAP = "STRATEGY_MAP"
@@ -127,7 +125,7 @@ class ArtifactType(str, enum.Enum):
     RISK_REGISTER = "RISK_REGISTER"
 
 
-class ArtifactStatus(str, enum.Enum):
+class ArtifactStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     PROPOSED = "PROPOSED"
     APPROVED = "APPROVED"
@@ -135,7 +133,7 @@ class ArtifactStatus(str, enum.Enum):
     REJECTED = "REJECTED"
 
 
-class InterventionTriggerType(str, enum.Enum):
+class InterventionTriggerType(enum.StrEnum):
     CONCEPT_GAP = "CONCEPT_GAP"
     PLAN_RISK = "PLAN_RISK"
     STALL_PATTERN = "STALL_PATTERN"
@@ -143,21 +141,21 @@ class InterventionTriggerType(str, enum.Enum):
     MISALIGNMENT = "MISALIGNMENT"
 
 
-class DeliveryStrategy(str, enum.Enum):
+class DeliveryStrategy(enum.StrEnum):
     CURIOUS = "CURIOUS"
     SUPPORTIVE = "SUPPORTIVE"
     DIRECT = "DIRECT"
     MICRO_RESTART = "MICRO_RESTART"
 
 
-class DeliveryChannel(str, enum.Enum):
+class DeliveryChannel(enum.StrEnum):
     CHAT = "CHAT"
     PUSH = "PUSH"
     IN_APP = "IN_APP"
     FOCUS_MODE = "FOCUS_MODE"
 
 
-class InterventionAcceptanceStatus(str, enum.Enum):
+class InterventionAcceptanceStatus(enum.StrEnum):
     CREATED = "CREATED"
     DELIVERED = "DELIVERED"
     SEEN = "SEEN"
@@ -167,21 +165,21 @@ class InterventionAcceptanceStatus(str, enum.Enum):
     ACTED = "ACTED"
 
 
-class InterventionOutcomeStatus(str, enum.Enum):
+class InterventionOutcomeStatus(enum.StrEnum):
     PENDING = "PENDING"
     EFFECTIVE = "EFFECTIVE"
     INEFFECTIVE = "INEFFECTIVE"
     UNKNOWN = "UNKNOWN"
 
 
-class ShareScope(str, enum.Enum):
+class ShareScope(enum.StrEnum):
     USER = "USER"
     GROUP = "GROUP"
     COMMUNITY = "COMMUNITY"
     PUBLIC = "PUBLIC"
 
 
-class SharePermission(str, enum.Enum):
+class SharePermission(enum.StrEnum):
     VIEW = "VIEW"
     ADOPT = "ADOPT"
     FORK = "FORK"
@@ -189,7 +187,7 @@ class SharePermission(str, enum.Enum):
     EDIT = "EDIT"
 
 
-class ImportMode(str, enum.Enum):
+class ImportMode(enum.StrEnum):
     ADOPT = "ADOPT"
     FORK = "FORK"
 

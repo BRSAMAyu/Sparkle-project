@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 from loguru import logger
 
@@ -116,9 +115,9 @@ class StepFeedbackCollector:
 
     def collect(
         self,
-        plan: "ExecutablePlan",
-        plan_result: "PlanExecutionResult",
-        validation_result: "ExecutionValidationResult",
+        plan: ExecutablePlan,
+        plan_result: PlanExecutionResult,
+        validation_result: ExecutionValidationResult,
         user_id: str,
         session_id: str,
     ) -> PlanExecutionFeedback:

@@ -56,6 +56,9 @@ async def test_track_memory_change(evolution_service: MemoryEvolutionService):
                             assert result.change_reason == "user_edit"
                             assert abs(result.confidence_delta - 0.3) < 0.001  # 0.8 - 0.5 (浮点数容差)
                             evolution_service.db.add.assert_called_once()
+                            added_obj = evolution_service.db.add.call_args[0][0]
+                            assert added_obj.memory_id == memory_id
+                            assert added_obj.change_reason == "user_edit"
 
 
 @pytest.mark.asyncio

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
@@ -92,7 +93,7 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
             (item) => _InsightEntry(
               type: item['type']?.toString() ?? '',
               title: item['title']?.toString() ??
-                  (isChinese ? '最近洞察' : 'Recent Insights'),
+                  (context.l10n.recentInsightsTitle),
               subtitle: item['description']?.toString() ?? '',
               metadata: Map<String, dynamic>.from(
                 item['metadata'] as Map? ?? const {},
@@ -134,7 +135,7 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
               DashboardSectionHeader(
                 icon: Icons.auto_graph_rounded,
                 accentColor: DS.brandPrimary,
-                title: isChinese ? '最近洞察' : 'Recent Insights',
+                title: context.l10n.recentInsightsTitle,
                 summary: _isCollapsed
                     ? (isChinese
                         ? '已收起最近洞察，需要时可随时展开查看。'

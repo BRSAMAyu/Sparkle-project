@@ -3,17 +3,17 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import inspect
-import logging
 import json
+import logging
 import re
 import statistics
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
-from sqlalchemy import String, and_, cast, desc, func, or_, select
+from sqlalchemy import String, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -29,14 +29,14 @@ from app.models.theater_candidate_bundle import TheaterCandidateBundle
 from app.models.theater_prediction import TheaterPrediction
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
-from app.services.insight_copy import present_pattern_name
-from app.services.galaxy_service import GalaxyService
+from app.services.cognitive_service import CognitiveService
 from app.services.expansion_service import ExpansionService
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
+from app.services.galaxy_service import GalaxyService
+from app.services.graph_reasoning_service import GraphReasoningService
+from app.services.insight_copy import present_pattern_name
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.plan_service import PlanService
-from app.services.graph_reasoning_service import GraphReasoningService
-from app.services.cognitive_service import CognitiveService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.task_service import TaskService
 
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _clamp(value: float, lower: float, upper: float) -> float:
@@ -347,7 +347,7 @@ class PredictionTheaterService:
                 ),
                 timeout=self.PREDICTION_TIMEOUT_SECONDS,
             )
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise TheaterTimeoutError() from exc
 
     async def _generate_prediction_payload(
@@ -1317,7 +1317,7 @@ class PredictionTheaterService:
                 target_date=date.today() + timedelta(days=horizon_days),
                 daily_available_minutes=int(selected_route.get("daily_minutes") or 40),
                 total_estimated_hours=max(
-                    1.0, sum((int(step.get("estimated_minutes") or 25) for step in steps)) / 60.0
+                    1.0, sum(int(step.get("estimated_minutes") or 25) for step in steps) / 60.0
                 ),
             ),
             user_id=user_id,

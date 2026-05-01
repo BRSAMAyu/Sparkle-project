@@ -1,0 +1,43 @@
+# Phase 6 / T6.5.2: Prometheus recording rules for metric aggregation
+# Provides pre-computed SLO rates and 28-day rolling windows
+
+groups:
+  - name: sparkle_recording_rules
+    interval: 60s
+    rules:
+      # 5-minute rate recording rules
+      - record: sparkle:llm_calls:rate5m
+        expr: sum(rate(llm_calls_total[5m]))
+
+      - record: sparkle:llm_errors:rate5m
+        expr: sum(rate(llm_calls_total{status="error"}[5m]))
+
+      - record: sparkle:llm_error_ratio:rate5m
+        expr: |
+          sum(rate(llm_calls_total{status="error"}[5m]))
+          /
+          clamp_min(sum(rate(llm_calls_total[5m])), 1)
+
+      # Daily cost tracking
+      - record: sparkle:cost:daily_total
+        expr: sum(increase(sparkle_cost_estimated_usd_total[24h]))
+
+      - record: sparkle:cost:daily_by_category
+        expr: sum(increase(sparkle_cost_estimated_usd_total[24h])) by (category)
+
+      # SLO compliance ratios (28-day window)
+      - record: sparkle:slo:chat_first_token_compliance
+        expr: |
+          sum(rate(sparkle_ai_response_first_token_duration_seconds_bucket{le="2"}[28d]))
+          /
+          clamp_min(sum(rate(sparkle_ai_response_first_token_duration_seconds_count[28d])), 1)
+
+      - record: sparkle:slo:rag_retrieval_compliance
+        expr: |
+          sum(rate(sparkle_rag_retrieval_seconds_bucket{le="1"}[28d]))
+          /
+          clamp_min(sum(rate(sparkle_rag_retrieval_seconds_count[28d])), 1)
+
+      # Event bus health
+      - record: sparkle:eventbus:lag_seconds
+        expr: max(sparkle_event_bus_consumer_lag_seconds) by (stream, consumer_group)

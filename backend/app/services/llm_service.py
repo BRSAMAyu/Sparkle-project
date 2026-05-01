@@ -5,8 +5,8 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
-import inspect
 import json
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator
@@ -20,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.llm_monitoring import LLMMonitor
+from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.core.llm_secure_io import (
     refresh_llm_safety_mode,
     sanitize_llm_output,
@@ -29,12 +31,11 @@ from app.core.llm_secure_io import (
     wrap_tool_result,
     wrap_user_message,
 )
-from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
-from app.services.llm.providers import OpenAICompatibleProvider
-from app.services.llm.fallback import FallbackReason, llm_fallback_manager
 from app.services.llm.concurrency import llm_concurrency
+from app.services.llm.fallback import llm_fallback_manager
+from app.services.llm.providers import OpenAICompatibleProvider
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -157,6 +158,39 @@ class StreamChunk:
     annotations: list[dict] | None = None
 
 tracer = trace.get_tracer(__name__)
+_llm_monitor = LLMMonitor()
+
+
+def _record_token_usage(model: str, prompt_tokens: int, completion_tokens: int, source: str = "chat") -> None:
+    """Record token usage and estimated cost to Prometheus + LLMMonitor."""
+    try:
+        _llm_monitor.estimate_and_record_cost(
+            model=model, input_tokens=prompt_tokens,
+            output_tokens=completion_tokens, endpoint=source,
+        )
+    except Exception:
+        logger.debug("_record_token_usage: monitoring failed", exc_info=True)
+
+
+async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> None:
+    """Track per-user daily token usage in Redis for quota enforcement."""
+    if not user_id or total_tokens <= 0:
+        return
+    try:
+        from datetime import UTC, datetime
+
+        from app.core.cache import cache_service
+        date_key = datetime.now(UTC).strftime("%Y-%m-%d")
+        redis_key = f"llm_tokens:{user_id}:{date_key}"
+        r = cache_service.redis
+        await r.incrby(redis_key, total_tokens)
+        # Set 48h TTL on first write (in case key is new)
+        ttl = await r.ttl(redis_key)
+        if ttl is None or ttl < 0:
+            await r.expire(redis_key, 48 * 3600)
+    except Exception:
+        logger.debug("_track_daily_user_tokens: redis failed", exc_info=True)
+
 
 class LLMService:
     """
@@ -572,7 +606,7 @@ class LLMService:
 
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
             except Exception as e:
                 await circuit_breaker_service.record_failure("primary_llm")
                 logger.error(f"LLM Chat Error: {e}")
@@ -790,7 +824,7 @@ class LLMService:
                 )
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
             except Exception as e:
                 await circuit_breaker_service.record_failure("primary_llm")
                 logger.error(f"LLM Reason Error (Circuit Breaker recording): {e}")
@@ -952,7 +986,7 @@ class LLMService:
 
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
             except Exception as e:
                 await circuit_breaker_service.record_failure("primary_llm")
                 logger.error(f"LLM Stream Chat Error: {e}")
@@ -972,7 +1006,7 @@ class LLMService:
         带工具调用的聊天
         """
         await refresh_llm_safety_mode()
-        user_id = self._resolve_user_id(user_id=None)
+        user_id = self._resolve_user_id()
         safe_system_prompt = sanitize_text_for_llm(system_prompt, user_id=user_id)
         safe_user_message = wrap_user_message(sanitize_text_for_llm(user_message, user_id=user_id))
 
@@ -1031,6 +1065,11 @@ class LLMService:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
+                    _record_token_usage(
+                        selection.model_key, response.usage.prompt_tokens,
+                        response.usage.completion_tokens, source="chat_with_tools",
+                    )
+                    await _track_daily_user_tokens(user_id, response.usage.total_tokens or 0)
 
                 tool_calls_dicts = []
                 if message.tool_calls:
@@ -1133,6 +1172,10 @@ class LLMService:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
+                    _record_token_usage(
+                        selection.model_key, response.usage.prompt_tokens,
+                        response.usage.completion_tokens, source="tool_results",
+                    )
 
                 return LLMResponse(
                     content=sanitize_llm_output(
@@ -1158,6 +1201,7 @@ class LLMService:
         流式聊天（支持工具调用）
         """
         await refresh_llm_safety_mode()
+        user_id = self._resolve_user_id(user_context=user_context)
         safe_system_prompt = sanitize_text_for_llm(system_prompt)
         safe_user_message = wrap_user_message(sanitize_text_for_llm(user_message))
         messages = [{"role": "system", "content": safe_system_prompt}]
@@ -1262,6 +1306,12 @@ class LLMService:
                     span.set_attribute("llm.usage.prompt_tokens", usage_data.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", usage_data.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", usage_data.total_tokens)
+                    model_name = selection.model_key if selection else "unknown"
+                    _record_token_usage(
+                        model_name, usage_data.prompt_tokens or 0,
+                        usage_data.completion_tokens or 0, source="stream_chat",
+                    )
+                    await _track_daily_user_tokens(user_id, usage_data.total_tokens or 0)
                     yield StreamChunk(
                         type="usage",
                         prompt_tokens=usage_data.prompt_tokens,

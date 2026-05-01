@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import json
 import os
@@ -12,7 +13,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass as _dataclass
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from functools import wraps
 from typing import Any
 
@@ -44,7 +45,7 @@ class KnowledgeNodeUpdated(Event):
         self.user_id = user_id
         self.node_id = node_id
         self.new_mastery = new_mastery
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -63,7 +64,7 @@ class NodeMasteryUpdatedEvent(Event):
         self.old_mastery = old_mastery
         self.new_mastery = new_mastery
         self.reason = reason
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -82,7 +83,7 @@ class ErrorCreated(Event):
         self.user_id = user_id
         self.error_id = error_id
         self.linked_node_ids = linked_node_ids or []
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -184,7 +185,7 @@ class TaskCompleted(Event):
         self.plan_id = plan_id
         self.source = source
         self.source_metadata = source_metadata or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -223,7 +224,7 @@ class FocusSessionCompletedEvent(Event):
         self.mastery_updates = mastery_updates or []
         self.started_at = started_at
         self.completed = completed
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -256,7 +257,7 @@ class TaskAbandoned(Event):
         self.estimated_minutes = estimated_minutes
         self.time_spent = time_spent
         self.plan_id = plan_id
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -283,7 +284,7 @@ class TaskStartedEvent(Event):
         self.task_id = task_id
         self.plan_id = plan_id
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -314,7 +315,7 @@ class TaskStuckEvent(Event):
         self.recent_steps = recent_steps or []
         self.elapsed_seconds = elapsed_seconds
         self.diagnosis = diagnosis or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -344,7 +345,7 @@ class PlanCreatedEvent(Event):
         self.evidence_id = evidence_id
         self.source = source
         self.metadata = metadata or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -370,7 +371,7 @@ class UserRegisteredEvent(Event):
         self.username = username
         self.registration_source = registration_source
         self.metadata = metadata or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -397,7 +398,7 @@ class ReflectionCompletedEvent(Event):
         self.task_id = task_id
         self.plan_id = plan_id
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -424,8 +425,8 @@ class SRLPhaseTransitionEvent(Event):
         self.trigger_event_type = trigger_event_type
         self.evidence_id = evidence_id
         self.metadata = metadata or {}
-        self.published_at = published_at or datetime.now(timezone.utc).isoformat()
-        self.timestamp = datetime.now(timezone.utc)
+        self.published_at = published_at or datetime.now(UTC).isoformat()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -451,7 +452,7 @@ class ProfilePreferenceUpdated(Event):
         self.pref_keys = pref_keys
         self.preference_version = preference_version
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -474,7 +475,7 @@ class ProfilePreferenceDeleted(Event):
         self.user_id = user_id
         self.pref_key = pref_key
         self.preference_version = preference_version
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -496,7 +497,7 @@ class TraitObserved(Event):
         self.user_id = user_id
         self.evidence_id = evidence_id
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -516,7 +517,7 @@ class TraitsColdstartCompleted(Event):
     ):
         self.user_id = user_id
         self.completed_at = completed_at
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -524,28 +525,6 @@ class TraitsColdstartCompleted(Event):
             "user_id": self.user_id,
             "completed_at": self.completed_at,
             "timestamp": self.timestamp.isoformat(),
-        }
-
-
-class UserSettingsUpdatedEvent(Event):
-    """用户设置更新事件"""
-
-    def __init__(
-        self,
-        user_id: str,
-        setting_keys: list[str],
-        timestamp: str | None = None,
-    ):
-        self.user_id = user_id
-        self.setting_keys = setting_keys
-        self.timestamp = timestamp or datetime.now(timezone.utc).isoformat()
-
-    def to_dict(self):
-        return {
-            "event_type": "user_settings.updated",
-            "user_id": self.user_id,
-            "setting_keys": self.setting_keys,
-            "timestamp": self.timestamp,
         }
 
 
@@ -565,7 +544,7 @@ class CalendarEventCreated(Event):
         self.title = title
         self.start_time = start_time
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -591,7 +570,7 @@ class CalendarEventUpdated(Event):
         self.user_id = user_id
         self.event_id = event_id
         self.changes = changes
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -615,7 +594,7 @@ class CalendarEventDeleted(Event):
         self.user_id = user_id
         self.event_id = event_id
         self.hard_delete = hard_delete
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -629,167 +608,10 @@ class CalendarEventDeleted(Event):
 
 # ---------------------------------------------------------------------------
 # Card Protocol Events (Phase 1)
-# Aligned with: docs/product/SPARKLE_CARD_PROTOCOL_TAXONOMY_2026-04-02.md
+# NOTE: Card/Occurrence/Intervention events removed — zero publishers.
+# Re-add when Card Protocol Phase 1 publishers are implemented.
+# Reference: docs/product/SPARKLE_CARD_PROTOCOL_TAXONOMY_2026-04-02.md
 # ---------------------------------------------------------------------------
-
-
-class CardCreatedEvent(Event):
-    """Fired when a new canonical card is created."""
-
-    def __init__(self, card_id: str, card_type: str, owner_id: str):
-        self.card_id = card_id
-        self.card_type = card_type
-        self.owner_id = owner_id
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "card.created",
-            "card_id": self.card_id,
-            "card_type": self.card_type,
-            "owner_id": self.owner_id,
-            "timestamp": self.timestamp.isoformat(),
-        }
-
-
-class CardUpdatedEvent(Event):
-    """Fired when a card's metadata or version is updated."""
-
-    def __init__(self, card_id: str, card_type: str, version: int, changes: dict | None = None):
-        self.card_id = card_id
-        self.card_type = card_type
-        self.version = version
-        self.changes = changes or {}
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "card.updated",
-            "card_id": self.card_id,
-            "card_type": self.card_type,
-            "version": self.version,
-            "changes": self.changes,
-            "timestamp": self.timestamp.isoformat(),
-        }
-
-
-class CardLifecycleChangedEvent(Event):
-    """Fired when a card's lifecycle status changes."""
-
-    def __init__(self, card_id: str, card_type: str, old_status: str, new_status: str):
-        self.card_id = card_id
-        self.card_type = card_type
-        self.old_status = old_status
-        self.new_status = new_status
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "card.lifecycle_changed",
-            "card_id": self.card_id,
-            "card_type": self.card_type,
-            "old_status": self.old_status,
-            "new_status": self.new_status,
-            "timestamp": self.timestamp.isoformat(),
-        }
-
-
-class CardEdgeCreatedEvent(Event):
-    """Fired when a new edge is created between cards."""
-
-    def __init__(self, edge_id: str, from_card_id: str, to_card_id: str, edge_type: str):
-        self.edge_id = edge_id
-        self.from_card_id = from_card_id
-        self.to_card_id = to_card_id
-        self.edge_type = edge_type
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "card_edge.created",
-            "edge_id": self.edge_id,
-            "from_card_id": self.from_card_id,
-            "to_card_id": self.to_card_id,
-            "edge_type": self.edge_type,
-            "timestamp": self.timestamp.isoformat(),
-        }
-
-
-class CardEdgeDeactivatedEvent(Event):
-    """Fired when an existing edge is deactivated."""
-
-    def __init__(self, edge_id: str, from_card_id: str, to_card_id: str, edge_type: str):
-        self.edge_id = edge_id
-        self.from_card_id = from_card_id
-        self.to_card_id = to_card_id
-        self.edge_type = edge_type
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "card_edge.deactivated",
-            "edge_id": self.edge_id,
-            "from_card_id": self.from_card_id,
-            "to_card_id": self.to_card_id,
-            "edge_type": self.edge_type,
-            "timestamp": self.timestamp.isoformat(),
-        }
-
-
-class OccurrenceStatusChangedEvent(Event):
-    """Fired when a TaskOccurrence changes status."""
-
-    def __init__(
-        self,
-        occurrence_id: str,
-        series_card_id: str,
-        new_status: str,
-        old_status: str | None = None,
-    ):
-        self.occurrence_id = occurrence_id
-        self.series_card_id = series_card_id
-        self.old_status = old_status
-        self.new_status = new_status
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        payload = {
-            "event_type": "occurrence.status_changed",
-            "occurrence_id": self.occurrence_id,
-            "series_card_id": self.series_card_id,
-            "new_status": self.new_status,
-            "timestamp": self.timestamp.isoformat(),
-        }
-        if self.old_status is not None:
-            payload["old_status"] = self.old_status
-        return payload
-
-
-class OccurrenceCompletedEvent(Event):
-    """Fired when a TaskOccurrence is completed."""
-
-    def __init__(
-        self,
-        occurrence_id: str,
-        series_card_id: str,
-        actual_minutes: int | None = None,
-        completion_quality: int | None = None,
-    ):
-        self.occurrence_id = occurrence_id
-        self.series_card_id = series_card_id
-        self.actual_minutes = actual_minutes
-        self.completion_quality = completion_quality
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "occurrence.completed",
-            "occurrence_id": self.occurrence_id,
-            "series_card_id": self.series_card_id,
-            "actual_minutes": self.actual_minutes,
-            "completion_quality": self.completion_quality,
-            "timestamp": self.timestamp.isoformat(),
-        }
 
 
 class DocumentCitationFeedbackEvent(Event):
@@ -815,7 +637,7 @@ class DocumentCitationFeedbackEvent(Event):
         self.feedback_source = feedback_source
         self.conversation_id = conversation_id
         self.context = context or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     @property
     def event_type(self) -> str:
@@ -836,48 +658,6 @@ class DocumentCitationFeedbackEvent(Event):
         }
 
 
-class InterventionRecordCreatedEvent(Event):
-    """Fired when a new InterventionRecord is created."""
-
-    def __init__(self, record_id: str, user_id: str, trigger_type: str, delivery_channel: str):
-        self.record_id = record_id
-        self.user_id = user_id
-        self.trigger_type = trigger_type
-        self.delivery_channel = delivery_channel
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "intervention_record.created",
-            "record_id": self.record_id,
-            "user_id": self.user_id,
-            "trigger_type": self.trigger_type,
-            "delivery_channel": self.delivery_channel,
-            "timestamp": self.timestamp.isoformat(),
-        }
-
-
-class InterventionStatusChangedEvent(Event):
-    """Fired when an InterventionRecord's acceptance or outcome status changes."""
-
-    def __init__(self, record_id: str, user_id: str, acceptance_status: str, outcome_status: str):
-        self.record_id = record_id
-        self.user_id = user_id
-        self.acceptance_status = acceptance_status
-        self.outcome_status = outcome_status
-        self.timestamp = datetime.now(timezone.utc)
-
-    def to_dict(self):
-        return {
-            "event_type": "intervention_record.status_changed",
-            "record_id": self.record_id,
-            "user_id": self.user_id,
-            "acceptance_status": self.acceptance_status,
-            "outcome_status": self.outcome_status,
-            "timestamp": self.timestamp.isoformat(),
-        }
-
-
 class EventBus:
     """
     Event Bus - Redis Streams Implementation
@@ -886,7 +666,7 @@ class EventBus:
 
     def __init__(self, redis_url: str | None = None):
         # We delay connection until needed or explicitly initialized
-        self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url or os.getenv("REDIS_URL") or settings.REDIS_URL
         self.redis: redis.Redis | None = None
         self._consumers = []
         self._consumer_tasks: list[asyncio.Task] = []
@@ -1004,7 +784,7 @@ class EventBus:
             "consumer_name": consumer_name,
             "message_id": message_id,
             "retry_count": retry_count,
-            "failed_at": datetime.now(timezone.utc).isoformat(),
+            "failed_at": datetime.now(UTC).isoformat(),
         }
         if self.redis:
             await self.redis.xadd(
@@ -1051,26 +831,25 @@ class EventBus:
             return
 
         next_retry = retry_count + 1
-        delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
-        if delay_ms > 0:
-            await asyncio.sleep(delay_ms / 1000)
 
         retry_payload = dict(parsed_data)
         retry_payload["_retry_count"] = next_retry
         retry_payload["_last_error"] = str(error)
         retry_payload["_failed_consumer_group"] = group_name
         retry_payload["_failed_consumer_name"] = consumer_name
-        retry_payload["_failed_at"] = datetime.now(timezone.utc).isoformat()
+        retry_payload["_failed_at"] = datetime.now(UTC).isoformat()
         retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
 
-        # Ack original BEFORE requeue to prevent duplicate processing
-        # if xadd succeeds but xack fails.
-        await self.redis.xack(stream, group_name, message_id)
+        # Requeue FIRST, then ack. If ack fails the message may be
+        # reprocessed (idempotent consumers handle this), but the
+        # retry payload is never lost.
         await self.redis.xadd(
             stream,
             self._serialize_stream_body(retry_payload),
             maxlen=self.retry_stream_maxlen,
         )
+        await self.redis.xack(stream, group_name, message_id)
+        delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
         logger.warning(
             "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} delay_ms={} error={}",
             stream,
@@ -1288,7 +1067,8 @@ class EventBus:
         if not self.redis:
             return []
         try:
-            next_id, messages = await self.redis.xautoclaim(
+            # redis-py 7.0+ returns (next_id, messages, deleted_ids)
+            result = await self.redis.xautoclaim(
                 stream,
                 group_name,
                 consumer_name,
@@ -1296,6 +1076,7 @@ class EventBus:
                 start_id="0-0",
                 count=10,
             )
+            next_id, messages = result[0], result[1]
             if next_id:
                 _ = next_id
             return list(messages or [])
@@ -1361,18 +1142,27 @@ class EventBus:
                     await asyncio.sleep(1)
                     continue
 
-                entries = []
+                # Process stale messages first (from crashed/slow consumers)
                 stale_messages = await self._claim_stale_messages(stream, group_name, consumer_name)
                 if stale_messages:
-                    entries = [(stream, stale_messages)]
-                else:
-                    entries = await self.redis.xreadgroup(
-                        groupname=group_name,
-                        consumername=consumer_name,
-                        streams={stream: ">"},
-                        count=1,
-                        block=2000,
-                    )
+                    for msg_id, msg_data in stale_messages:
+                        await self._process_stream_message(
+                            stream=stream,
+                            group_name=group_name,
+                            consumer_name=consumer_name,
+                            callback=callback,
+                            message_id=msg_id,
+                            data=msg_data,
+                        )
+
+                # Always try to read new messages (non-blocking)
+                entries = await self.redis.xreadgroup(
+                    groupname=group_name,
+                    consumername=consumer_name,
+                    streams={stream: ">"},
+                    count=1,
+                    block=2000,
+                )
 
                 if not entries:
                     continue
@@ -1390,6 +1180,13 @@ class EventBus:
 
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")
+                # R5-P2-20: Attempt Redis reconnection on connection errors
+                if "ConnectionError" in type(e).__name__ or "connection" in str(e).lower():
+                    try:
+                        await self.connect()
+                        logger.info("EventBus consumer reconnected to Redis")
+                    except Exception as rc_err:
+                        logger.warning(f"EventBus reconnection failed: {rc_err}")
                 await asyncio.sleep(1)  # Backoff
 
     async def get_dlq_stats(self, stream: str = "sparkle_events") -> dict[str, Any]:
@@ -1415,7 +1212,7 @@ class EventBus:
                 if first_entry:
                     message_id = first_entry[0][0]
                     timestamp_ms = int(message_id.split("-")[0])
-                    oldest_age_seconds = (datetime.now(timezone.utc).timestamp() * 1000 - timestamp_ms) / 1000
+                    oldest_age_seconds = (datetime.now(UTC).timestamp() * 1000 - timestamp_ms) / 1000
 
             return {
                 "dlq_stream": dlq_stream,
@@ -1537,10 +1334,8 @@ class EventBusReliablePublisher:
 event_bus_reliable = EventBusReliablePublisher(event_bus)
 
 
-from dataclasses import dataclass
 
-
-@dataclass
+@_dataclass
 class InterventionRecorded:
     event_type: str = "intervention_recorded"
     user_id: str = ""
@@ -1558,7 +1353,7 @@ class InterventionRecorded:
         }
 
 
-@dataclass
+@_dataclass
 class InterventionOutcomeRecorded:
     event_type: str = "intervention_outcome_recorded"
     user_id: str = ""
@@ -1575,28 +1370,4 @@ class InterventionOutcomeRecorded:
             "effective": self.effective,
             "status": self.status,
             "checked_at": self.checked_at,
-        }
-
-
-@dataclass
-class DocumentCitationFeedbackEvent:
-    """Fired when a user provides feedback on a document citation / retrieved chunk."""
-
-    event_type: str = "document.citation.feedback"
-    user_id: str = ""
-    file_id: str = ""
-    chunk_id: str | None = None
-    feedback_score: int = 0  # 1=positive, -1=negative, 0=neutral
-    query_intent_type: str | None = None
-    conversation_id: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "event_type": self.event_type,
-            "user_id": self.user_id,
-            "file_id": self.file_id,
-            "chunk_id": self.chunk_id,
-            "feedback_score": self.feedback_score,
-            "query_intent_type": self.query_intent_type,
-            "conversation_id": self.conversation_id,
         }

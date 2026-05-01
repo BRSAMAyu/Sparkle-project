@@ -4,7 +4,7 @@ Authentication audit service.
 from __future__ import annotations
 
 import asyncio
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import Request
@@ -44,7 +44,7 @@ class AuthAuditService:
                     ip_address=_client_ip(request),
                     user_agent=request.headers.get("user-agent") if request else None,
                     metadata=metadata or {},
-                    occurred_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    occurred_at=datetime.now(UTC).replace(tzinfo=None),
                 )
                 db.add(entry)
                 await db.commit()
@@ -72,7 +72,7 @@ class AuthAuditService:
         limit: int = 100,
     ) -> list[AuthAuditLog]:
         async with AsyncSessionLocal() as db:
-            since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+            since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
             result = await db.execute(
                 select(AuthAuditLog)
                 .where(AuthAuditLog.user_id == user_id, AuthAuditLog.occurred_at >= since)

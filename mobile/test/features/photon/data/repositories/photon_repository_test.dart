@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/photon/data/repositories/photon_repository.dart';
 import 'package:sparkle/shared/entities/photon_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 class TestApiClient implements ApiClient {
   Future<Response<dynamic>> Function(
@@ -101,6 +102,7 @@ class TestApiClient implements ApiClient {
 }
 
 void main() {
+  setUp(setUpI18nForTesting);
   late TestApiClient mockApiClient;
   late PhotonRepository repository;
 

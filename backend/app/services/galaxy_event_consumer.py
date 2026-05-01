@@ -3,7 +3,7 @@ Galaxy 事件消费者 - 处理错题创建事件
 """
 
 import asyncio
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -17,15 +17,15 @@ from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.cognitive_service import CognitiveService
-from app.services.galaxy_service import GalaxyService
 from app.services.galaxy.graph_evolution_service import GraphEvolutionService
+from app.services.galaxy_service import GalaxyService
 from app.services.plan_state_service import PlanStateService
 from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyEventConsumer:
@@ -163,6 +163,22 @@ class GalaxyEventConsumer:
                         context={"affected_tasks": task_titles},
                     )
             await db.commit()
+
+        # P8: Signal-to-Action Spine — mistake detection
+        # Iron Rule: GalaxyService mastery is updated separately (ErrorBookMasterySyncService).
+        # This call only generates control signals (transfer_failure) for task strategy.
+        try:
+            from app.core.cache import cache_service
+            from app.signals.spine_orchestrator import SpineOrchestrator
+            spine = SpineOrchestrator(cache_service.redis)
+            await spine.on_mistake_event(
+                user_id=str(user_id),
+                error_id=str(error_id) if error_id else "",
+                linked_node_ids=[str(n) for n in linked_node_uuids],
+                error_type=event.get("error_type"),
+            )
+        except Exception as spine_err:
+            logger.debug(f"Spine on_mistake_event skipped: {spine_err}")
 
         logger.info(f"Processed error_created for user {user_id}")
 

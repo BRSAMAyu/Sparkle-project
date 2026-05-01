@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Model Fallback Service - Phase 2d
 
@@ -14,8 +15,8 @@ Model Fallback Service - Phase 2d
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
-from enum import Enum
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
@@ -28,10 +29,10 @@ from app.core.llm_router import llm_router
 # ============================================
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-class FallbackReason(str, Enum):
+class FallbackReason(StrEnum):
     """降级原因"""
     CONSISTENT_REJECTION = "consistent_rejection"     # 持续被用户拒绝
     LOW_QUALITY_SCORE = "low_quality_score"          # 质量分数持续过低
@@ -41,7 +42,7 @@ class FallbackReason(str, Enum):
     TIMEOUT = "timeout"                               # 响应超时
 
 
-class ModelTierPreference(str, Enum):
+class ModelTierPreference(StrEnum):
     """模型层级偏好"""
     """模型使用策略"""
     QUALITY_FIRST = "quality_first"     # 质量优先，使用最强模型

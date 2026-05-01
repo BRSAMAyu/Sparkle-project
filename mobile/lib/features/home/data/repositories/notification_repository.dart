@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
@@ -18,13 +19,14 @@ class NotificationRepository {
     bool unreadOnly = false,
   }) async {
     if (DemoDataService.isDemoMode) {
+      final zh = I18nService.instance.isChinese;
       // Return mock notifications for demo mode
       return [
         NotificationModel(
           id: 'demo-1',
           userId: 'demo-user',
-          title: '欢迎使用星火AI学习助手',
-          content: '开始您的学习之旅吧！',
+          title: zh ? '欢迎使用星火AI学习助手' : 'Welcome to Sparkle AI Learning Assistant',
+          content: zh ? '开始您的学习之旅吧！' : 'Start your learning journey!',
           type: 'system',
           isRead: false,
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
@@ -32,8 +34,8 @@ class NotificationRepository {
         NotificationModel(
           id: 'demo-2',
           userId: 'demo-user',
-          title: '新任务提醒',
-          content: '您有一个即将到期的任务',
+          title: zh ? '新任务提醒' : 'New Task Reminder',
+          content: zh ? '您有一个即将到期的任务' : 'You have a task due soon',
           type: 'task',
           isRead: false,
           createdAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -41,8 +43,8 @@ class NotificationRepository {
         NotificationModel(
           id: 'demo-3',
           userId: 'demo-user',
-          title: '学习成就解锁',
-          content: '恭喜您获得"连续学习7天"成就',
+          title: zh ? '学习成就解锁' : 'Learning Achievement Unlocked',
+          content: zh ? '恭喜您获得"连续学习7天"成就' : 'Congratulations! You\'ve unlocked "7-Day Learning Streak"',
           type: 'achievement',
           isRead: true,
           createdAt: DateTime.now().subtract(const Duration(days: 1)),

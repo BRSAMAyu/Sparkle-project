@@ -1,4 +1,6 @@
+# DEPRECATED: no active importers — candidate for removal in next cleanup
 from __future__ import annotations
+
 """
 ComplexityAnalyzer — 纯规则引擎，< 3ms 执行时间，零 LLM 调用。
 
@@ -7,11 +9,11 @@ ComplexityAnalyzer — 纯规则引擎，< 3ms 执行时间，零 LLM 调用。
 """
 
 import re
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 
 
-class ComplexityLevel(str, Enum):
+class ComplexityLevel(StrEnum):
     TRIVIAL = "trivial"       # 你好、谢谢、嗯
     SIMPLE = "simple"         # 短问句、简单查询
     MODERATE = "moderate"     # 标准知识问答

@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -15,7 +16,6 @@ from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS
 from app.models.aurora_stage21 import SharedSkill, SkillShareModerationQueue, UserSkill
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
-
 
 PHONE_PATTERN = re.compile(r"\b(?:\+?\d[\d\- ]{6,}\d)\b")
 EMAIL_PATTERN = re.compile(r"\b[\w.\-]+@[\w.\-]+\.\w+\b")

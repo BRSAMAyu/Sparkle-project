@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 import random
 import uuid
@@ -10,8 +11,8 @@ from app.learning.bayesian_learner import BayesianLearner
 from app.orchestration.statechart_engine import WorkflowState
 from app.routing.exploration_router import HybridExplorationRouter
 from app.routing.graph_router import GraphBasedRouter
-from app.routing.tool_preference_shadow import ToolPreferenceShadowRecorder
 from app.routing.tool_preference_router import ToolPreferenceRouter
+from app.routing.tool_preference_shadow import ToolPreferenceShadowRecorder
 
 
 class RouterNode:

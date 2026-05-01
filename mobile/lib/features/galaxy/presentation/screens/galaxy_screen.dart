@@ -554,13 +554,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final deltaText = masteryDelta == null
         ? ''
         : masteryDelta < 0
-            ? '，下降 ${masteryDelta.abs().toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1)}'
-            : '，变化 +${masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1)}';
+            ? context.l10n.galaxyMasteryDeltaDown(masteryDelta.abs().toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1))
+            : context.l10n.galaxyMasteryDeltaUp(masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1));
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('「${node.name}」当前掌握度 ${node.masteryScore}%$deltaText'),
+          content: Text(context.l10n.galaxyNodeMasteryToast(node.name, node.masteryScore, deltaText)),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
         ),
@@ -900,8 +900,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _startReviewForNode(GalaxyNodeModel node) {
     final focusPrompt = node.reviewUrgencyReason == 'recent_errors'
-        ? '带我复习「${node.name}」。我上次掌握度 ${node.masteryScore} 分，而且最近这里又出现了错题。请先帮我定位最容易再错的点，再给我一个 15 分钟内可以开始的练习顺序。'
-        : '带我复习「${node.name}」。我上次掌握度 ${node.masteryScore} 分，请根据我现在的遗忘风险，给我一个 15 分钟就能开始的强化步骤。';
+        ? context.l10n.galaxyReviewPromptWithErrors(node.name, node.masteryScore)
+        : context.l10n.galaxyReviewPromptNoErrors(node.name, node.masteryScore);
     final chatMode = node.reviewUrgencyReason == 'recent_errors'
         ? 'error_diagnosis'
         : 'study_plan';
@@ -2789,7 +2789,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       Icons.auto_graph_rounded,
                       size: 18,
                     ),
-                    label: const Text('推演模式'),
+                    label: Text(context.l10n.galaxySimMode),
                     onPressed: () => _openPredictionOverlay(null),
                   ),
                 ),
@@ -2814,7 +2814,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         message: context.l10n.galaxyLoadingMessage,
                         highlights: <String>[
                           context.l10n.searchNodes,
-                          '推演模式',
+                          context.l10n.galaxySimMode,
                           context.l10n.galaxyOverviewNodes,
                         ],
                         showLoader: true,
@@ -2839,9 +2839,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         foregroundColor:
                             isDarkMode ? Colors.white : Colors.black,
                         title: context.l10n.galaxyEmptyTitle,
-                        message: '先完成一个学习任务或创建一次冲刺，知识节点和掌握记录才会在这里慢慢点亮。',
-                        highlights: const <String>['完成任务', '记录错题', '开始冲刺'],
-                        actionLabel: '去创建学习任务',
+                        message: context.l10n.galaxyEmptyFirst,
+                        highlights: <String>[context.l10n.galaxyEmptyHighlights1, context.l10n.galaxyEmptyHighlights2, context.l10n.galaxyEmptyHighlights3],
+                        actionLabel: context.l10n.galaxyEmptyActionLabel,
                         onAction: () async {
                           await context.push(TaskRoutes.taskCreate);
                         },
@@ -3583,7 +3583,7 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewNodes,
                 value: stats.totalNodes.toDouble(),
                 suffix: '',
-                emptyLabel: '尚未开始',
+                emptyLabel: context.l10n.galaxyNotStarted,
                 isEmpty: stats.totalNodes == 0,
                 isDarkMode: isDarkMode,
               ),
@@ -3592,7 +3592,7 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewUnlocked,
                 value: stats.unlockRatio * 100,
                 suffix: '%',
-                emptyLabel: '尚未点亮',
+                emptyLabel: context.l10n.galaxyNotLit,
                 isEmpty: stats.unlockedNodes == 0,
                 isDarkMode: isDarkMode,
               ),
@@ -3601,7 +3601,7 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewMastery,
                 value: stats.masteryAverage.toDouble(),
                 suffix: '%',
-                emptyLabel: '尚未开始',
+                emptyLabel: context.l10n.galaxyNotStarted,
                 isEmpty: stats.masteryAverage == 0,
                 isDarkMode: isDarkMode,
               ),
@@ -3708,8 +3708,8 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '还没有点亮掌握记录',
+                    Text(
+                      context.l10n.galaxyNoMasteryTitle,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -3718,7 +3718,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '先完成一个学习任务或复习一个知识点，星图才会开始出现真实掌握度。',
+                      context.l10n.galaxyNoMasterySubtitle,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.72),
                         fontSize: 12,
@@ -3731,7 +3731,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
               const SizedBox(width: 12),
               FilledButton(
                 onPressed: onAction,
-                child: const Text('去学习'),
+                child: Text(context.l10n.galaxyGoStudy),
               ),
             ],
           ),

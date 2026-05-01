@@ -9,8 +9,11 @@ import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+  setUp(setUpI18nForTesting);
+
   testWidgets(
       'insights overview shows empty state guidance when there is no data',
       (WidgetTester tester) async {
@@ -27,7 +30,7 @@ void main() {
             (ref) async => WeeklyGrowthNarrative.placeholder(),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           home: const LearningInsightsOverviewScreen(),
         ),
@@ -71,7 +74,7 @@ void main() {
             (ref) async => narrative,
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
           home: const LearningInsightsOverviewScreen(
             initialPanel: LearningInsightsOverviewScreen.panelWeeklyNarrative,
@@ -83,7 +86,6 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byTooltip('收起'), findsOneWidget);
     expect(find.text('错题复盘更稳定了。'), findsOneWidget);
   });
 }

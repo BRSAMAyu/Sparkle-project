@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import shutil
 import time
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -41,7 +41,7 @@ START_TIME = time.time()
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @router.get("", response_model=dict[str, Any])
@@ -182,7 +182,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"status": "not_ready", "error": str(e)}
-        )
+        ) from e
 
 
 @router.get("/live")

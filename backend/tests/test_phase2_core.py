@@ -36,6 +36,10 @@ async def test_state_manager_basic():
     
     await manager.save_state("test-session", state)
     redis_mock.setex.assert_called_once()
+    # Verify setex was called with correct key prefix and serialized state
+    setex_args = redis_mock.setex.call_args[0]
+    assert "test-session" in setex_args[0]  # key contains session ID
+    assert setex_args[2] == state.to_json()  # value is the serialized state
     
     # 测试加载状态
     redis_mock.get.return_value = state.to_json()

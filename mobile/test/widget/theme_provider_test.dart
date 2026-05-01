@@ -6,8 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   Future<void> pumpWithApp(WidgetTester tester, Widget child) async {
     await tester.pumpWidget(MaterialApp(home: child));
   }

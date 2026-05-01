@@ -8,7 +8,6 @@ from uuid import UUID
 
 from app.aurora.schemas import FocusContract, ProjectionPolicy, WritePath
 
-
 _MISSING = object()
 
 

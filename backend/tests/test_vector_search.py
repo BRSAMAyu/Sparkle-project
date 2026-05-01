@@ -38,7 +38,10 @@ async def test_semantic_search_nodes():
         
         # 验证调用
         mock_embedding_service.get_embedding.assert_called_with("test query", text_type="query")
-        mock_db.execute.assert_called_once()
+        assert mock_db.execute.await_count >= 1  # DB was queried (pgvector check + search)
+        # Verify the last execute call contains the vector search select
+        last_call = mock_db.execute.call_args
+        assert last_call is not None
         
         # 验证 SQL 构建 (简单验证)
         # 这里的 call_args 比较复杂，通常只要验证 execute 被调用即可

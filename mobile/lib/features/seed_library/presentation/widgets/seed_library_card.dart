@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 
 /// Seed Library Card Widget
@@ -101,7 +102,7 @@ class SeedLibraryCard extends StatelessWidget {
                   spacing: DS.spacing8,
                   children: [
                     Chip(
-                      label: Text(library.categoryDisplayName),
+                      label: Text(library.categoryLabel(context.l10n)),
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
                         horizontal: DS.spacing8,
@@ -109,7 +110,7 @@ class SeedLibraryCard extends StatelessWidget {
                       ),
                     ),
                     Chip(
-                      label: Text(library.visibilityDisplayName),
+                      label: Text(library.visibilityLabel(context.l10n)),
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
                         horizontal: DS.spacing8,

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Widget for displaying a task share card preview
 ///
@@ -169,7 +171,7 @@ class TaskShareCard extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '任务完成',
+                                    context.l10n.communityShareTaskComplete,
                                     style: TextStyle(
                                       fontSize: DS.fontSizeXs,
                                       color: DS.textTertiary,
@@ -242,8 +244,8 @@ class TaskShareCard extends StatelessWidget {
                               child: TextButton.icon(
                                 icon: const Icon(Icons.add_task,
                                     size: DS.iconSizeSm),
-                                label: const Text(
-                                  '采纳任务',
+                                label: Text(
+                                  context.l10n.communityShareAdoptTask,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 onPressed: onAdopt,
@@ -287,7 +289,7 @@ class TaskShareCard extends StatelessWidget {
     final diff = now.difference(time);
 
     if (diff.inMinutes < 1) {
-      return '刚刚';
+      return S.communityShareJustNow;
     } else if (diff.inHours < 1) {
       return '${diff.inMinutes}分钟前';
     } else if (diff.inDays < 1) {

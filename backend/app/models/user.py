@@ -8,11 +8,12 @@ User Model - 核心用户信息和个性化偏好
 """
 
 from __future__ import annotations
+
 import enum
 
 
 # Python 3.9 compatible StrEnum
-class StrEnum(str, enum.Enum):
+class StrEnum(enum.StrEnum):
     """String enum for Python 3.9 compatibility"""
     def __new__(cls, value):
         obj = str.__new__(cls, value)
@@ -26,7 +27,6 @@ from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey,
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
-
 
 # 导出 SearchVisibility 供其他模块使用
 __all__ = ['UserStatus', 'AvatarStatus', 'SearchVisibility', 'User', 'PushPreference', 'UserDevice', 'LoginAttempt']

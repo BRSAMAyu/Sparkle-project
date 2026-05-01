@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.services.social_signal_types import SocialSignalsV1
@@ -10,7 +10,7 @@ from app.state_aggregator.schema import MetacognitionHintV1
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)
@@ -64,6 +64,34 @@ class DualCoreRoutingInput:
     metacognition_hint: MetacognitionHintV1 | None = None
     cognitive_load: float | None = None
     capsule_preferences: dict[str, Any] = field(default_factory=dict)
+    spine_active_states: list[dict[str, Any]] = field(default_factory=list)
+    aurora_preferences: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class CognitiveAdjustment:
+    """Structured cognitive adjustment from Dual-Core Router."""
+    dimension: str  # tone, verbosity, challenge_level, explanation_depth, etc.
+    value: str | int | float
+    reason: str
+    evidence: list[str] = field(default_factory=list)
+    scope: str = "turn"  # turn, session, sprint
+    user_visible: bool = False
+    ttl: str | None = None
+
+    def to_text(self) -> str:
+        return f"{self.dimension}={self.value} ({self.reason})"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "dimension": self.dimension,
+            "value": self.value,
+            "reason": self.reason,
+            "evidence": list(self.evidence),
+            "scope": self.scope,
+            "user_visible": self.user_visible,
+            "ttl": self.ttl,
+        }
 
 
 @dataclass(frozen=True)
@@ -74,12 +102,14 @@ class DualCoreDecision:
     execution_constraints: list[str]
     routing_debug: dict[str, Any] = field(default_factory=dict)
     strategy_adjustments: list[dict[str, Any]] = field(default_factory=list)
+    structured_adjustments: list[CognitiveAdjustment] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "mode": self.mode,
             "reason": self.reason,
             "cognitive_adjustments": list(self.cognitive_adjustments),
+            "structured_adjustments": [a.to_dict() for a in self.structured_adjustments],
             "execution_constraints": list(self.execution_constraints),
             "routing_debug": dict(self.routing_debug or {}),
             "strategy_adjustments": [dict(item) for item in self.strategy_adjustments if isinstance(item, dict)],
@@ -101,6 +131,10 @@ class DualCoreDecision:
                 "## 双核心认知调制\n"
                 + "\n".join(f"- {item}" for item in self.cognitive_adjustments)
             )
+        if self.structured_adjustments:
+            lines = [f"- {adj.to_text()}" for adj in self.structured_adjustments]
+            if lines:
+                sections.append("## 结构化认知调整\n" + "\n".join(lines))
         if self.execution_constraints:
             sections.append(
                 "## 双核心执行约束\n"
@@ -328,6 +362,100 @@ class DualCoreRouter:
                     reason="High metacognitive accuracy supports a lower-friction execution path with fewer interruptions.",
                 )
 
+        # ── Spine StateRegister signals ──
+        spine_states = routing_input.spine_active_states
+        spine_fatigue_detected = False
+        spine_execution_low = False
+        spine_knowledge_bottleneck = False
+        for ss in spine_states:
+            key = str(ss.get("state_key", ""))
+            value = str(ss.get("value", ""))
+            conf = float(ss.get("confidence", 0))
+            if conf < 0.45:
+                continue
+            if (
+                key in ("fatigue_accumulated", "affective_pressure", "cognitive_load", "notification_fatigue")
+                or value in {"high_load", "high_load_detected", "overloaded", "anxious", "tense"}
+            ) and conf >= 0.6:
+                spine_fatigue_detected = True
+                cognitive_adjustments.append("Spine 检测到累积疲劳或情绪压力，优先降负荷、给恢复建议。")
+                recommend_strategy(
+                    "intervention_intensity",
+                    "low",
+                    reason="Spine fatigue signal suggests reducing proactive pressure and offering recovery-oriented support.",
+                )
+            if key in ("execution_consistency", "task_granularity_fit") and conf >= 0.55:
+                spine_execution_low = True
+                execution_constraints.append("Spine 检测到执行连贯性或任务粒度偏差，优先给更容易启动的短步动作。")
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Spine execution-consistency signal suggests preserving momentum with smaller steps.",
+                )
+            if key in ("knowledge_bottleneck", "knowledge_transfer") and conf >= 0.55:
+                spine_knowledge_bottleneck = True
+                cognitive_adjustments.append("Spine 检测到知识瓶颈，先帮助理解核心概念再推进。")
+                recommend_strategy(
+                    "explanation_style",
+                    "step_by_step",
+                    reason="Knowledge bottleneck should slow down explanation and focus on foundational understanding.",
+                )
+            if key == "reward_engagement" and conf >= 0.55:
+                recommend_strategy(
+                    "push_vs_support",
+                    0.6,
+                    reason="Recent reward engagement indicates user is invested; moderate encouragement can sustain momentum.",
+                )
+            if key == "deadline_pressure" and conf >= 0.6:
+                execution_constraints.append("Spine 检测到截止日期压力，优先安排与截止日期相关的复习或冲刺任务。")
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Deadline pressure should focus planning into immediately actionable steps.",
+                )
+                recommend_strategy(
+                    "execution_window",
+                    "momentum_preserving",
+                    reason="Deadline pressure should preserve momentum and avoid opening new planning loops.",
+                )
+
+        # ── T3.4.4: Aurora user preferences ──
+        aurora_prefs = routing_input.aurora_preferences or {}
+        aurora_directness = str(aurora_prefs.get("aurora_directness", "guided"))
+        aurora_pressure = str(aurora_prefs.get("aurora_pressure_style", "motivating"))
+        aurora_explanation = str(aurora_prefs.get("aurora_explanation_level", "detailed"))
+        aurora_analysis = str(aurora_prefs.get("aurora_analysis_depth", "deep"))
+
+        if aurora_directness == "direct":
+            recommend_strategy(
+                "directness_mode",
+                "action_oriented",
+                reason="User prefers direct, action-oriented communication (aurora_directness=direct).",
+            )
+
+        if aurora_pressure == "gentle":
+            execution_constraints.append("用户偏好温和提醒方式，不使用压力驱动的催促策略。")
+            recommend_strategy(
+                "push_vs_support",
+                0.2,
+                reason="User prefers gentle pressure style (aurora_pressure_style=gentle).",
+            )
+
+        if aurora_explanation == "brief":
+            recommend_strategy(
+                "explanation_style",
+                "concise",
+                reason="User prefers brief explanations (aurora_explanation_level=brief).",
+            )
+
+        if aurora_analysis == "light":
+            cognitive_adjustments.append("用户偏好轻度分析，减少对行为模式的深入解读，先给可执行下一步。")
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="User prefers light analysis depth (aurora_analysis_depth=light).",
+            )
+
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
             execution_constraints.append(
                 f"用户偏好短冲刺，单次任务默认控制在 {routing_input.session_length_preference} 分钟以内。"
@@ -408,6 +536,22 @@ class DualCoreRouter:
             "explicit_capsule_signal": bool(capsule_preferences),
             "capsule_preferences": capsule_preferences or None,
             "capsule_method_preferences": capsule_method_preferences,
+            "explicit_spine_state_signal": bool(spine_states),
+            "spine_state_count": len(spine_states),
+            "spine_fatigue_detected": spine_fatigue_detected,
+            "spine_execution_low": spine_execution_low,
+            "spine_knowledge_bottleneck": spine_knowledge_bottleneck,
+            "spine_state_keys": [
+                str(item.get("state_key", ""))
+                for item in spine_states[:8]
+                if isinstance(item, dict) and item.get("state_key")
+            ],
+            "aurora_preferences": {
+                "directness": aurora_directness,
+                "pressure": aurora_pressure,
+                "explanation": aurora_explanation,
+                "analysis": aurora_analysis,
+            },
         }
         if social_signals is not None:
             routing_debug["social_relationship_count"] = social_signals.relationship_count
@@ -429,6 +573,8 @@ class DualCoreRouter:
             and not reflection_phase_detected
             and not low_metacognition_accuracy
             and not high_cognitive_load
+            and not spine_fatigue_detected
+            and not spine_knowledge_bottleneck
         ):
             return DualCoreDecision(
                 mode="execution_first",
@@ -437,8 +583,8 @@ class DualCoreRouter:
                     if strong_metacognition_execution_bias
                     else "目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。"
                 ),
-                cognitive_adjustments=cognitive_adjustments[:2],
-                execution_constraints=execution_constraints[:3],
+                cognitive_adjustments=cognitive_adjustments[:5],
+                execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
             )
@@ -450,6 +596,8 @@ class DualCoreRouter:
             or reflection_phase_detected
             or low_metacognition_accuracy
             or very_high_cognitive_load
+            or spine_fatigue_detected
+            or spine_knowledge_bottleneck
             or (cognitive_mode_suggested and not goal_clear)
             or (not goal_clear and routing_input.intent_confidence < low_conf_threshold)
         ):
@@ -462,8 +610,8 @@ class DualCoreRouter:
                     procrastination_pattern=procrastination_pattern,
                     cognitive_mode_suggested=cognitive_mode_suggested,
                 ),
-                cognitive_adjustments=cognitive_adjustments[:3],
-                execution_constraints=execution_constraints[:2],
+                cognitive_adjustments=cognitive_adjustments[:5],
+                execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
             )
@@ -471,13 +619,15 @@ class DualCoreRouter:
         balanced_reason = "当前同时存在推进任务和理解用户状态的需求，先保持双核心并行。"
         if goal_clear and high_cognitive_load:
             balanced_reason = "目标已经清楚，但当前还存在认知或执行摩擦，先在推进方案时同时做状态调制。"
+        elif spine_execution_low:
+            balanced_reason = "目标可以推进，但 Spine 状态寄存器提示近期执行连续性或任务颗粒度有风险，先压缩下一步。"
         elif not goal_clear:
             balanced_reason = "目标还有部分边界要澄清，但已经可以先给出轻量推进方向。"
         return DualCoreDecision(
             mode="balanced",
             reason=balanced_reason,
-            cognitive_adjustments=cognitive_adjustments[:2],
-            execution_constraints=execution_constraints[:3],
+            cognitive_adjustments=cognitive_adjustments[:5],
+            execution_constraints=execution_constraints[:5],
             routing_debug=routing_debug,
             strategy_adjustments=strategy_adjustments[:5],
         )

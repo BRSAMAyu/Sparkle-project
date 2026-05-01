@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import os
 import uuid
@@ -9,7 +10,6 @@ from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 
 from app.config import settings
-from app.services.llm_service import llm_service
 from app.services.stt.providers.base import STTProvider
 
 

@@ -3,13 +3,13 @@
 实现艾宾浩斯遗忘曲线，让知识点随时间逐渐暗淡
 """
 import math
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 
 def _utcnow() -> datetime:
     """Return current UTC time as timezone-naive datetime (matches DB TIMESTAMP WITHOUT TIME ZONE)."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -311,15 +311,10 @@ class DecayService:
 
             # 恢复到未衰减前的基线再计算
             # 简化：直接基于当前状态预测
-            if status is None:
+            if status is None or not status.decay_paused:
                 future_mastery = self._calculate_decay(
                     current_mastery=current_mastery,
                     days_elapsed=days_ahead,
-                )
-            elif not status.decay_paused:
-                future_mastery = self._calculate_decay(
-                    current_mastery=current_mastery,
-                    days_elapsed=days_ahead
                 )
             else:
                 future_mastery = current_mastery  # 暂停衰减

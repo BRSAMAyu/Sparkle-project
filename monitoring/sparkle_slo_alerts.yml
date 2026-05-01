@@ -81,3 +81,39 @@ groups:
           summary: "Context pack over-budget spikes"
           description: "More than 20 over-budget context-pack events in 10m"
           runbook: "monitoring/runbooks/incident_response.md#p3-contextpackoverbudgetspike"
+
+      - alert: SparkleSpineDegradation
+        expr: increase(sparkle_spine_degradation_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Spine degradation detected"
+          description: "Signal-to-Action Spine degraded during chat orchestration for at least 5 minutes"
+          runbook: "monitoring/runbooks/incident_response.md#p2-spine-degradation"
+
+      - alert: SparkleEventBusDLQGrowing
+        expr: increase(event_bus_dlq_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Event Bus DLQ is receiving events"
+          description: "More than 5 events moved to Dead Letter Queue in the last 10 minutes. Check event consumers for failures."
+          runbook: "monitoring/runbooks/incident_response.md#p2-eventbus-dlq"
+
+      - alert: SparkleEventBusConsumerLagHigh
+        expr: sparkle_event_stream_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Event Bus consumer lag exceeds 5 minutes"
+          description: "Redis Streams consumer group lag is above 300s. Consumers may be stalled or overwhelmed."
+          runbook: "monitoring/runbooks/incident_response.md#p2-eventbus-lag"

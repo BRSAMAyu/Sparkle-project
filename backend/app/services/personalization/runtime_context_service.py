@@ -1,7 +1,7 @@
 """
 运行时上下文服务 - 收集影响个性化的实时状态
 """
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -16,7 +16,7 @@ from app.models.user_state import UserStateSnapshot
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class RuntimeContextService:

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Service for integrating translations into knowledge graph
 class KnowledgeIntegrationService {
@@ -55,37 +56,37 @@ class KnowledgeIntegrationService {
         return null;
       }
     } on DioException catch (e) {
-      // Handle specific error cases for better UX
+      final zh = I18nService.instance.isChinese;
       if (e.response?.statusCode == 503) {
         debugPrint('🚨 Service unavailable (circuit breaker): ${e.message}');
         throw ServiceUnavailableException(
-          '服务繁忙，请稍后重试',
+          zh ? '服务繁忙，请稍后重试' : 'Service busy, please try again later',
           originalError: e,
         );
       } else if (e.response?.statusCode == 429) {
         debugPrint('⚠️ Rate limited: ${e.message}');
         throw RateLimitException(
-          '请求过于频繁，请稍后再试',
+          zh ? '请求过于频繁，请稍后再试' : 'Too many requests, please try again later',
           retryAfter: _parseRetryAfter(e.response?.headers),
         );
       } else if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
         debugPrint('⏱️ Timeout: ${e.message}');
         throw NetworkException(
-          '网络连接超时，请检查网络',
+          zh ? '网络连接超时，请检查网络' : 'Network timeout, please check your connection',
           originalError: e,
         );
       } else {
         debugPrint('❌ Failed to create vocabulary node: $e');
         throw NetworkException(
-          '保存失败，请重试',
+          zh ? '保存失败，请重试' : 'Save failed, please retry',
           originalError: e,
         );
       }
     } catch (e) {
       debugPrint('❌ Unexpected error: $e');
       throw NetworkException(
-        '未知错误，请重试',
+        I18nService.instance.isChinese ? '未知错误，请重试' : 'Unknown error, please retry',
         originalError: e,
       );
     }
@@ -197,7 +198,7 @@ class RateLimitException implements Exception {
 
   @override
   String toString() =>
-      retryAfter != null ? '$message (重试间隔: $retryAfter秒)' : message;
+      retryAfter != null ? '$message (${I18nService.instance.isChinese ? '重试间隔' : 'retry after'}: $retryAfter${I18nService.instance.isChinese ? '秒' : 's'})' : message;
 }
 
 /// Generic network exception

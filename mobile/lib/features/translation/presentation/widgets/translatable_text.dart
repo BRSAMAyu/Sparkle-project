@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/translation/translation.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// A widget that makes text translatable via long-press selection
 ///
@@ -171,12 +172,12 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                   _handleTextSelection(selection);
                   editableTextState.hideToolbar();
                 },
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.translate, size: 16),
                     SizedBox(width: 4),
-                    Text('翻译'),
+                    Text(context.l10n.transTranslate),
                   ],
                 ),
               ),
@@ -189,12 +190,12 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                   Clipboard.setData(ClipboardData(text: selectedText));
                   editableTextState.hideToolbar();
                 },
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.copy, size: 16),
                     SizedBox(width: 4),
-                    Text('复制'),
+                    Text(context.l10n.transCopy),
                   ],
                 ),
               ),
@@ -259,7 +260,7 @@ Caching improves performance by reducing the number of expensive operations, suc
                 ),
                 onSaveToKnowledge: (selectedText, translation) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SparkleSnackBar.success('已保存到生词卡'),
+                    SparkleSnackBar.success(context.l10n.transSavedToWordCard),
                   );
                 },
               ),

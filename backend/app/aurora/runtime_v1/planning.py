@@ -14,13 +14,13 @@ from app.aurora.runtime_v1.state import (
     ActivityProfile as PersistedActivityProfile,
 )
 from app.aurora.runtime_v1.state import (
-    AuroraTeachingStrategy as PersistedTeachingStrategy,
-)
-from app.aurora.runtime_v1.state import (
     AuroraIntent as PersistedAuroraIntent,
 )
 from app.aurora.runtime_v1.state import (
     AuroraState as PersistedAuroraState,
+)
+from app.aurora.runtime_v1.state import (
+    AuroraTeachingStrategy as PersistedTeachingStrategy,
 )
 from app.aurora.runtime_v1.state import (
     InformationalTension as PersistedInformationalTension,

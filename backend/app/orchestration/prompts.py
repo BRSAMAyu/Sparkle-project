@@ -25,15 +25,16 @@ Prompt 管理系统 - 统一的Agent Prompt管理
     prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
 """
 
-from datetime import datetime, timezone
-from typing import Any
 import json
 import math
 import random
 import re
+from datetime import UTC, datetime
+from typing import Any
 
 from loguru import logger
 
+from app.config import settings
 from app.core.agent_persona import build_agent_persona_prompt_section
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
@@ -41,12 +42,11 @@ from app.core.i18n import I18n
 from app.core.kill_switch import normalize_mode
 from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
 from app.core.plan_context import merge_plan_context
-from app.config import settings
 from app.core.user_insight_state import UserInsightState
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.context_focus import ContextFocusDecision
-from app.orchestration.social_context_renderer import render_social_context_lines
 from app.orchestration.situation_brief import format_situation_brief_section
+from app.orchestration.social_context_renderer import render_social_context_lines
 from app.services.srl_phase_types import SRLPhaseHint
 
 
@@ -389,7 +389,7 @@ def _apply_prompt_budget(
     for priority in sorted(set(priority_map.values()), reverse=True):
         section_names = [
             name
-            for name in adjusted.keys()
+            for name in adjusted
             if priority_map.get(name) == priority and str(adjusted.get(name) or "").strip()
         ]
         for section_name in section_names:
@@ -487,6 +487,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {preference_instructions}
 
 {capsule_preference_section}
+
+{spine_model_claims_section}
+
+{spine_community_skill_section}
 
 ## 对话历史
 
@@ -882,6 +886,9 @@ def build_system_prompt(
     context_level: str = "full",  # full | light
     chat_mode: str = "standard",
     model_key: str | None = None,  # P2: model-aware prompt budget
+    spine_response_directive: dict | None = None,  # Signal-to-Action Spine ResponseDirective
+    spine_chronicle_summary: str | None = None,  # Growth chronicle narrative
+    spine_fatigue_context: dict | None = None,  # Fatigue/crisis state for tone modulation
 ) -> str:
     """
 
@@ -999,6 +1006,8 @@ def build_system_prompt(
     )
     past_session_memory_section = _format_past_session_memory_section(user_context)
     capsule_preference_section = _format_capsule_preference_section(user_context)
+    _format_spine_model_claims_section(user_context)
+    _format_spine_community_skill_section(user_context)
 
     llm_profile = _extract_llm_profile(user_context)
     understanding_depth_hint = None
@@ -1295,7 +1304,7 @@ def build_system_prompt(
             if _mc and hasattr(_mc, "tier"):
                 _model_tier_str = _mc.tier.value
         except Exception:
-            pass
+            logger.debug("Failed to resolve model tier for key=%s", model_key, exc_info=True)
     _prompt_budget = _TIER_PROMPT_BUDGET.get(_model_tier_str or "", PROMPT_SECTION_SOFT_LIMIT_TOKENS)
 
     pre_budget_section_map = dict(section_map)
@@ -1390,9 +1399,7 @@ def build_system_prompt(
             for key, meta in prompt_signal_telemetry["high_value_fields"].items()
             if meta.get("collected") and not meta.get("prompt_visible")
         ]
-        prompt_signal_telemetry["model_facing_section_sizes"] = {
-            key: value for key, value in prompt_signal_telemetry.get("section_sizes", {}).items()
-        }
+        prompt_signal_telemetry["model_facing_section_sizes"] = dict(prompt_signal_telemetry.get("section_sizes", {}).items())
         prompt_signal_telemetry["utilization"] = _build_prompt_utilization_snapshot(
             pre_budget_section_map=pre_budget_section_map,
             model_facing_section_map=section_map,
@@ -1556,6 +1563,64 @@ def build_system_prompt(
     if prompt_version == "v2":
 
         prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
+
+    # Signal-to-Action Spine: inject ResponseDirective constraints
+    if spine_response_directive:
+        tone = spine_response_directive.get("tone", "calm_direct")
+        length = spine_response_directive.get("length", "medium")
+        avoid_list = spine_response_directive.get("avoid", [])
+        must_acknowledge = spine_response_directive.get("must_acknowledge", [])
+        include_options = spine_response_directive.get("include_user_options", True)
+
+        tone_map = {
+            "calm_direct": "稳定、直接",
+            "calm_urgent": "稳定但紧迫",
+            "direct_but_reassuring": "直接但让人安心",
+            "encouraging_diagnostic": "鼓励性诊断",
+            "encouraging_low_pressure": "鼓励、低压",
+            "recognition_not_praise": "认可但不空洞赞美",
+            "helpful_suggestion": "有帮助的建议",
+        }
+        length_map = {"short": "简短（1-3句）", "medium": "适中", "long": "详细"}
+
+        spine_section = "\n\n## 策略调整指令\n"
+        spine_section += f"- 语气：{tone_map.get(tone, tone)}\n"
+        spine_section += f"- 长度：{length_map.get(length, length)}\n"
+        if avoid_list:
+            spine_section += f"- 避免：{', '.join(avoid_list)}\n"
+        if must_acknowledge:
+            spine_section += f"- 必须承认：{', '.join(must_acknowledge)}\n"
+        if include_options:
+            spine_section += "- 提供可操作选项\n"
+        prompt += spine_section
+
+    # Signal-to-Action Spine: inject growth chronicle summary
+    if spine_chronicle_summary:
+        prompt += (
+            f"\n\n## 用户成长叙事\n"
+            f"{spine_chronicle_summary}\n"
+            f"- 参考这些叙事来校准鼓励的力度和方向\n"
+            f"- 不要逐条重复，而是内化后自然融入回复\n"
+        )
+
+    # Signal-to-Action Spine: inject fatigue/crisis context
+    if spine_fatigue_context:
+        level = spine_fatigue_context.get("fatigue_level", "")
+        if level in ("high", "critical"):
+            prompt += (
+                "\n\n## 用户疲劳状态\n"
+                "- 用户当前处于高疲劳状态，主动减轻负担\n"
+                "- 缩短回复，降低任务密度建议\n"
+                "- 优先关注健康节奏，而非学习效率\n"
+            )
+        crisis = spine_fatigue_context.get("crisis_mode")
+        if crisis:
+            prompt += (
+                "\n\n## 考前高压状态\n"
+                "- 用户处于考前高压，避免增加焦虑\n"
+                "- 聚焦「已经掌握的」和「最可能拿分的」\n"
+                "- 不建议大幅调整计划，微调为主\n"
+            )
 
     prompt += (
         "\n\n## 输出格式约束\n"
@@ -2615,7 +2680,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
         try:
             return UserInsightState(**candidate)
         except Exception:
-            pass
+            logger.debug("Failed to construct UserInsightState from candidate dict", exc_info=True)
 
     # 2. Attribute on profile_context object
     profile_ctx = context.get("profile_context")
@@ -2627,7 +2692,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
             try:
                 return UserInsightState(**attr)
             except Exception:
-                pass
+                logger.debug("Failed to construct UserInsightState from profile_ctx attr", exc_info=True)
 
     # 3. Dict form inside profile_context
     if isinstance(profile_ctx, dict):
@@ -2638,7 +2703,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
             try:
                 return UserInsightState(**inner)
             except Exception:
-                pass
+                logger.debug("Failed to construct UserInsightState from profile_ctx dict inner", exc_info=True)
 
     return None
 
@@ -2853,6 +2918,10 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         "social_signals_summary",
         "srl_phase",
         "working_memory_snapshot",
+        "engagement_state",
+        "learning_state",
+        "traits_prior",
+        "metacognition_profile",
     )
     field_status: dict[str, Any] = {}
     for key in tracked_fields:
@@ -3236,7 +3305,9 @@ def _render_user_context_content(
     if achievement_line:
         if "【近期进展】" not in lines:
             lines.append("【近期进展】")
-        lines.append(f"- {achievement_line}")
+        for part in achievement_line.split("；"):
+            if part.strip():
+                lines.append(f"- {part.strip()}")
         _mark_rendered("achievement_summary")
 
     next_actions = normalized.get("next_actions") or []
@@ -3362,6 +3433,13 @@ def _render_user_context_content(
             lines.append("【考试紧迫度】")
             urgency_label = "紧急" if urgency.get("urgent") else "一般"
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
+    elif calendar_mode == "shadow" and calendar_lines:
+        # DF-9: Telemetry for shadow mode suppression
+        try:
+            from app.core.business_metrics import AURORA_SHADOW_SUPPRESSION_TOTAL
+            AURORA_SHADOW_SUPPRESSION_TOTAL.labels(subsystem="calendar").inc()
+        except Exception:
+            pass
 
     # --- Inline snapshot from canonical insight state ---
     inline_snapshot = normalized.get("_inline_snapshot")
@@ -3492,7 +3570,7 @@ def _format_memory_recency_label(value: Any) -> str:
     if occurred_at is None:
         return ""
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     delta = now - occurred_at
     if delta.total_seconds() < 0:
         return "刚才"
@@ -3524,7 +3602,7 @@ def _parse_memory_datetime(value: Any) -> datetime | None:
         except ValueError:
             return None
     if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed
 
 
@@ -3580,6 +3658,48 @@ def _format_capsule_preference_section(user_context: dict[str, Any] | None) -> s
     if methods or method_summaries:
         lines.append("- 行为适配: 当用户要安排学习节奏、启动任务或复盘方法时，优先尝试这些方法偏好。")
     return "\n".join(lines)
+
+
+def _format_spine_model_claims_section(user_context: dict[str, Any] | None) -> str:
+    """R5-DF1: Render Spine model-write claims as prompt context for AI."""
+    if not isinstance(user_context, dict):
+        return ""
+    claims = user_context.get("spine_model_claims")
+    if not isinstance(claims, list) or not claims:
+        return ""
+    lines = [
+        "## 系统推断的用户特征 [Spine Signal]",
+        "以下特征由 Signal-to-Action Spine 从用户行为中推断得出。在响应中自然体现，但不要直接提及 '系统推断'。",
+    ]
+    for claim in claims[:5]:
+        if not isinstance(claim, dict):
+            continue
+        model = str(claim.get("target_model") or "").strip()
+        scope = str(claim.get("scope") or "").strip()
+        value = str(claim.get("value") or "").strip()
+        if model or scope:
+            lines.append(f"- {model}/{scope}: {value}" if scope else f"- {model}: {value}")
+    return "\n".join(lines) if len(lines) > 2 else ""
+
+
+def _format_spine_community_skill_section(user_context: dict[str, Any] | None) -> str:
+    """R5-DF2/DF3: Render Community + Skill directives as prompt context."""
+    if not isinstance(user_context, dict):
+        return ""
+    lines = []
+    comm = user_context.get("spine_community_directive")
+    if isinstance(comm, dict) and comm:
+        hint = str(comm.get("hint") or comm.get("summary") or "").strip()
+        if hint:
+            lines.append("## 社群信号指导 [Spine Community]")
+            lines.append(hint)
+    skill = user_context.get("spine_skill_directive")
+    if isinstance(skill, dict) and skill:
+        hint = str(skill.get("hint") or skill.get("summary") or "").strip()
+        if hint:
+            lines.append("## 技能建议 [Spine Skill]")
+            lines.append(hint)
+    return "\n\n".join(lines) if lines else ""
 
 
 def _extract_capsule_preferences(user_context: dict[str, Any] | None) -> dict[str, Any]:

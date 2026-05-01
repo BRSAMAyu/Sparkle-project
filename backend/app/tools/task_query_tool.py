@@ -7,6 +7,7 @@ Tools:
 - ModifyPlanTaskTool: Modify task properties (title, status, priority, guide_content)
 """
 from __future__ import annotations
+
 from typing import Any
 from uuid import UUID
 
@@ -15,7 +16,6 @@ from sqlalchemy import and_, select
 from app.models.plan import Plan
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
-from app.models.task import TaskType as ModelTaskType
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
 from app.schemas.task import TaskUpdate, coerce_task_type
 from app.services.task_service import TaskService

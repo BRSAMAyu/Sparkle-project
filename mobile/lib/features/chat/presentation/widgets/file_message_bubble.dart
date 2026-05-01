@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class FileMessageBubbleWithThumbnail extends ConsumerStatefulWidget {
   const FileMessageBubbleWithThumbnail({
@@ -79,10 +80,10 @@ class _FileMessageBubbleWithThumbnailState
           .read(fileRepositoryProvider)
           .copyGroupFileToMyLibrary(groupId, widget.data.fileId);
       if (!mounted) return;
-      AppFeedback.success(context, '已保存到我的资料库');
+      AppFeedback.success(context, context.l10n.chatFileSavedToLibrary);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '保存失败: $e');
+      AppFeedback.error(context, context.l10n.chatFileSaveFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() => _isSavingToLibrary = false);
@@ -137,7 +138,7 @@ class _FileMessageBubbleWithThumbnailState
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '学习资料',
+                  context.l10n.chatFileLearningMaterial,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: DS.fontWeightSemiBold,
@@ -233,7 +234,7 @@ class _FileMessageBubbleWithThumbnailState
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: _ActionPill(
-                    label: _isSavingToLibrary ? '保存中...' : '保存到我的资料库',
+                    label: _isSavingToLibrary ? context.l10n.chatFileSaving : context.l10n.chatFileSaveToLibrary,
                     icon: Icons.bookmark_add_outlined,
                     onTap: _isSavingToLibrary ? null : _saveToLibrary,
                     accentColor: accentColor,

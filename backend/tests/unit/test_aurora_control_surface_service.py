@@ -149,8 +149,8 @@ class _FakePersistenceStore:
 
 
 class _FakeControlSurfaceService:
-    def __init__(self, db, redis=None, enabled=True) -> None:
-        del db, redis, enabled
+    def __init__(self, db, redis=None, enabled=True, preference_service=None) -> None:
+        del db, redis, enabled, preference_service
 
     async def read_control_surface(self, user_id):
         del user_id
@@ -188,7 +188,7 @@ async def test_control_surface_builds_four_real_facets(monkeypatch):
         conversation_id="conv-123",
     )
 
-    assert snapshot["overall_status"] == "ready"
+    assert snapshot["overall_status"] == "calibration_available"
     assert snapshot["scene_alignment"] == "matched"
     assert snapshot["progress"] == {"ready_count": 4, "active_count": 4, "total": 4}
 
@@ -269,7 +269,7 @@ async def test_control_surface_marks_recalibration_and_conversation_fallback(mon
     )
 
     facets = {item["key"]: item for item in snapshot["facets"]}
-    assert snapshot["overall_status"] == "recalibrating"
+    assert snapshot["overall_status"] == "risk_found"
     assert snapshot["scene_alignment"] == "fallback"
     assert facets["self_model"]["status"] == "recalibrating"
     assert "最近任务完成率持续偏低" in facets["self_model"]["summary"]

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, inspect, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.profile_context import ProfileContext
 from app.core.cache import cache_service
+from app.core.profile_context import ProfileContext
 from app.db.session import AsyncSessionLocal
 from app.models.accountability import (
     AccountabilityPartnership,
@@ -26,12 +26,12 @@ from app.schemas.community import (
     RecommendationItemTypeEnum,
     UserBrief,
 )
-from app.services.profile_context_service import ProfileContextService
 from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_context_service import ProfileContextService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_tag(value: str | None) -> str:
@@ -230,7 +230,7 @@ class FriendMatchService:
         tuning = await cls._load_feedback_tuning(db, current_user.id)
 
         recommendations: list[FriendRecommendation] = []
-        for user, context in zip(candidates_by_id.values(), contexts):
+        for user, context in zip(candidates_by_id.values(), contexts, strict=False):
             relationship_status = relationship_map.get(str(user.id), "none")
             is_existing_friend = relationship_status == FriendshipStatus.ACCEPTED.value
             can_invite = (
@@ -512,7 +512,7 @@ class FriendMatchService:
         score_breakdown: dict[str, float],
         *,
         tuning: dict[str, dict[str, float]],
-        strategy: FriendMatchStrategyEnum,
+        _strategy: FriendMatchStrategyEnum,
     ) -> dict[str, float]:
         feature_weights = tuning.get("feature_weights") or {}
         adjusted: dict[str, float] = {}
@@ -731,7 +731,7 @@ class FriendMatchService:
         db: AsyncSession,
         current_user_id: UUID,
         *,
-        accepted_friend_ids: set[str],
+        accepted_friend_ids: set[str],  # noqa: ARG003
         pending_user_ids: set[str],
         blocked_user_ids: set[str],
     ) -> list[User]:

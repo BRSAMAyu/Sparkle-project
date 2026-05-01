@@ -7,7 +7,7 @@ Accountability Partnership Scheduled Tasks
 - 进度检查和成就评估
 - 里程碑庆祝
 """
-from datetime import timezone, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -28,7 +28,7 @@ from app.services.policy_scheduler_service import PolicySchedulerService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _user_display_name(user: User | None, default: str) -> str:
@@ -480,7 +480,7 @@ async def _calculate_streak(db: AsyncSession, partnership_id: UUID, user_id: UUI
     checkin_dates: set[date] = set()
     for (ts,) in result.all():
         if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
+            ts = ts.replace(tzinfo=UTC)
         checkin_dates.add(ts.date())
 
     # 计算连续天数

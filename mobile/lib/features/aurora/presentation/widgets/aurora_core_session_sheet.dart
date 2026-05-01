@@ -8,6 +8,7 @@ import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_core_session_service.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = '启动 Aurora 校准失败，请稍后重试。';
+          _error = context.l10n.auroraStartFailed;
           _loading = false;
         });
       }
@@ -301,7 +302,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
           IconButton(
             onPressed: _closeSession,
             icon: Icon(Icons.close, size: 20, color: DS.textSecondary),
-            tooltip: '退出校准',
+            tooltip: context.l10n.auroraExitCalibration,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
@@ -338,7 +339,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             children: [
               const CircularProgressIndicator(strokeWidth: 2),
               const SizedBox(height: DS.spacing12),
-              Text('Aurora 正在准备中…', style: TextStyle(color: DS.textSecondary)),
+              Text(context.l10n.auroraPreparing, style: TextStyle(color: DS.textSecondary)),
             ],
           ),
         ),
@@ -353,7 +354,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             const SizedBox(height: DS.spacing12),
             Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: DS.textSecondary)),
             const SizedBox(height: DS.spacing16),
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('关闭')),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.auroraClose)),
           ],
         ),
       );
@@ -449,7 +450,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('关闭'),
+              child: Text(context.l10n.auroraClose),
             ),
           ),
         ],
@@ -550,7 +551,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             minLines: 1,
             style: DS.bodyMedium.copyWith(color: DS.textPrimary),
             decoration: InputDecoration(
-              hintText: '你认为实际情况是…',
+              hintText: context.l10n.auroraWhatDoYouThink,
               hintStyle: TextStyle(color: DS.textSecondary),
               filled: true,
               fillColor: DS.surfaceSecondary,
@@ -578,7 +579,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
                   _showFreeformInput = false;
                   _freeformController.clear();
                 }),
-                child: const Text('取消'),
+                child: Text(context.l10n.toolsWbCancel),
               ),
               const SizedBox(width: DS.spacing8),
               FilledButton(
@@ -601,7 +602,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
                     borderRadius: BorderRadius.circular(DS.radius8),
                   ),
                 ),
-                child: const Text('发送'),
+                child: Text(context.l10n.auroraSend),
               ),
             ],
           ),

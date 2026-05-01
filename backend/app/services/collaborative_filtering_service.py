@@ -6,9 +6,10 @@ Collaborative Filtering Recommendation Service
 使用 Jaccard 相似度计算用户相似度
 """
 from __future__ import annotations
+
 import time
 from collections import defaultdict
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -35,7 +36,7 @@ from app.schemas.recommendation import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CollaborativeFilteringService:

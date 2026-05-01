@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from prometheus_client import Counter, Histogram
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,8 +26,6 @@ from app.services.policy_ir import (
     PolicyTrigger,
     PolicyTriggerType,
 )
-from prometheus_client import Counter, Histogram
-
 
 POLICY_COMPILED_TOTAL = get_or_create_metric(
     Counter,

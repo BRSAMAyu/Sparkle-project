@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 User Intent Profiler for Personalized Intent Recognition
 
@@ -14,13 +15,13 @@ This module provides:
 """
 
 import json
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 from loguru import logger
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UserIntentProfiler:

@@ -8,8 +8,6 @@ import logging
 from collections.abc import Callable
 from typing import TypeVar
 
-from typing_extensions import ParamSpec
-
 from sqlalchemy.exc import (
     DataError,
     DisconnectionError,
@@ -22,6 +20,7 @@ from sqlalchemy.exc import (
 from sqlalchemy.exc import (
     TimeoutError as SQLAlchemyTimeoutError,
 )
+from typing_extensions import ParamSpec
 
 from app.core.exceptions import (
     DatabaseConnectionError,

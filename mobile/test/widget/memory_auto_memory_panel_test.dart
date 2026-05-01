@@ -6,6 +6,7 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _AutoMemoryApiService implements MemoryApiService {
   String? lastRetractedId;
@@ -213,6 +214,8 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('memory panel exposes AI auto memory section and revoke action', (
     WidgetTester tester,
   ) async {
@@ -230,22 +233,25 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: MemoryPanelScreen()),
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
 
     expect(find.text('AI 自动记忆'), findsOneWidget);
-    expect(find.text('待跟进承诺'), findsOneWidget);
+    expect(find.text('待处理承诺'), findsOneWidget);
     expect(find.text('撤销此条'), findsOneWidget);
-    expect(find.text('已完成'), findsOneWidget);
+    expect(find.byIcon(Icons.check), findsOneWidget);
 
     await tester.tap(find.text('撤销此条'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('已完成'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(api.lastRetractedId, 'auto_1');
     expect(api.lastResolvedId, 'commit_1');

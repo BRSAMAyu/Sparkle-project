@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from datetime import timezone, date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -22,11 +22,11 @@ from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.evidence_health_service import EvidenceHealthService
-from app.services.policy_compiler_service import PolicyCompilerService
 from app.services.evidence_scoring import compute_score
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_evolution_service import MemoryEvolutionService
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
+from app.services.policy_compiler_service import PolicyCompilerService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 ALLOWED_EVIDENCE_TYPES = {
@@ -51,7 +51,7 @@ SESSION_MOOD_SESSION_KEY_TEMPLATE = "memory:session_mood:{user_id}:{session_id}"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _truncate_summary(value: str) -> str:
@@ -230,7 +230,7 @@ class MemoryService:
             raise ValueError("mood_score must be numeric") from exc
         score = max(0.0, min(1.0, score))
 
-        recorded_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        recorded_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         payload = {
             "user_id": str(user_id),
             "session_id": str(session_id),
@@ -390,7 +390,7 @@ class MemoryService:
                 MemoryGoal.user_id == user_id,
                 MemoryGoal.id == goal_id,
                 MemoryGoal.deleted_at.is_(None),
-            )
+            ).with_for_update()
         )
         record = result.scalar_one_or_none()
         if record is None:
@@ -426,7 +426,7 @@ class MemoryService:
 
         await self.db.commit()
         await self.db.refresh(record)
-        MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
+        MEMORY_WRITE_TOTAL.labels(type="goal", status="ok").inc()
 
         try:
             evolution = MemoryEvolutionService(self.db)

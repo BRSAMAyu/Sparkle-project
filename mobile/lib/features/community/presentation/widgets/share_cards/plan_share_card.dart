@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Widget for displaying a plan progress share card preview
 ///
@@ -169,7 +171,7 @@ class PlanShareCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '学习计划',
+                                context.l10n.communityShareLearningPlan,
                                 style: TextStyle(
                                   fontSize: DS.fontSizeXs,
                                   color: DS.textTertiary,
@@ -231,20 +233,20 @@ class PlanShareCard extends StatelessWidget {
                       children: [
                         if (completedTasks != null && totalTasks != null)
                           _buildStat(
-                            '任务',
+                            context.l10n.communityShareTask,
                             '$completedTasks/$totalTasks',
                             Icons.task_alt,
                           ),
                         if (milestones != null && milestones! > 0) ...[
                           _buildStat(
-                            '里程碑',
+                            context.l10n.communityShareMilestone,
                             '$milestones',
                             Icons.emoji_events,
                           ),
                         ],
                         if (deadline != null) ...[
                           _buildStat(
-                            '截止',
+                            context.l10n.communityShareDeadline,
                             _formatDeadline(deadline!),
                             Icons.calendar_today,
                           ),
@@ -259,8 +261,8 @@ class PlanShareCard extends StatelessWidget {
                           constraints: const BoxConstraints(maxWidth: 160),
                           child: TextButton.icon(
                             icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
-                            label: const Text(
-                              '采纳计划',
+                            label: Text(
+                              context.l10n.communityShareAdoptPlan,
                               overflow: TextOverflow.ellipsis,
                             ),
                             onPressed: onAdopt,
@@ -326,9 +328,9 @@ class PlanShareCard extends StatelessWidget {
     final diff = date.difference(now);
 
     if (diff.inDays < 0) {
-      return '已过期';
+      return S.communityShareExpired;
     } else if (diff.inDays == 0) {
-      return '今天';
+      return S.communityShareToday;
     } else if (diff.inDays < 7) {
       return '${diff.inDays}天后';
     } else {

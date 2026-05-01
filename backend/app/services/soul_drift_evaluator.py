@@ -294,7 +294,7 @@ class SoulDriftEvaluator:
     def _measurable_revision_ratio(revisions: list[dict[str, Any]]) -> float:
         if not revisions:
             return 0.0
-        measurable = sum(1 for item in revisions if bool(((item.get("evidence") or {}).get("measurable_effect"))))
+        measurable = sum(1 for item in revisions if bool((item.get("evidence") or {}).get("measurable_effect")))
         return measurable / len(revisions)
 
     def _collect_alarms(

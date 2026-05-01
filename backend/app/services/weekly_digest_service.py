@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -21,7 +21,7 @@ from app.services.planning_artifact_service import PlanningArtifactService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class WeeklyDigestService:

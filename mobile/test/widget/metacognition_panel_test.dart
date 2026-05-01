@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/presentation/widgets/metacognition_panel_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('metacognition panel renders registered dashboard copy',
       (tester) async {
     var hidden = false;
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: MetacognitionPanelCard(
             cards: const [
               {
@@ -24,8 +26,7 @@ void main() {
               hidden = true;
             },
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('自我认识'), findsOneWidget);

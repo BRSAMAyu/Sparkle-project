@@ -22,7 +22,7 @@ from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.task import Task, TaskStatus, TaskType
-from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
+from app.models.task_resources import TaskResourceLink, TaskResourceType
 from app.models.user import User
 from app.schemas.task import (
     SubTaskDetail,
@@ -54,9 +54,9 @@ from app.schemas.task_feedback import (
     TaskFeedbackSubmitResponse,
 )
 from app.services.feedback_service import feedback_service
+from app.services.focus_context_service import focus_context_service
 from app.services.intelligent_task_service import IntelligentTaskService
 from app.services.seed_library_service import SeedLibraryService
-from app.services.focus_context_service import focus_context_service
 from app.services.task_document_service import task_document_service
 from app.services.task_guide_service import task_guide_service
 from app.services.task_service import TaskService
@@ -1136,7 +1136,7 @@ async def submit_task_feedback(
             ),
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(
@@ -1173,7 +1173,7 @@ async def submit_task_reflection_answer(
             linked_knowledge_nodes=reflection_payload.get("linked_knowledge_nodes"),
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/{task_id}/feedback", response_model=dict[str, Any])
@@ -1272,4 +1272,4 @@ async def record_next_action_selection(
         )
         return {"success": True, "data": selection.to_dict()}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

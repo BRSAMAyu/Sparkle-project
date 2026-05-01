@@ -8,8 +8,9 @@ Login, Register, Refresh Token, Social Login
 """
 
 from __future__ import annotations
+
 import uuid
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -18,9 +19,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.config import settings
-from app.core.auth_audit_service import auth_audit_service
 from app.core.account_lockout import account_lockout_service
+from app.core.auth_audit_service import auth_audit_service
+from app.core.cache import cache_service
+from app.core.event_bus import UserRegisteredEvent
 from app.core.rate_limiting import limiter
 from app.core.security import (
     blacklist_token,
@@ -31,9 +35,6 @@ from app.core.security import (
     set_user_revoked_before,
     verify_password,
 )
-from app.core.cache import cache_service
-from app.core.event_bus import UserRegisteredEvent
-from app.core.email_service import email_service
 from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction
 from app.models.community import GroupRole
@@ -41,20 +42,18 @@ from app.models.user import User
 from app.schemas.user import (
     ForgotPasswordRequest,
     LogoutRequest,
-    SocialLoginRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
+    SocialLoginRequest,
     UpgradeGuestRequest,
     UpgradeGuestSocialRequest,
-    UserBase,
     UserLogin,
-    UserRegister,
     UserProfile,
+    UserRegister,
     VerifyEmailRequest,
 )
-from app.api.deps import get_current_user
-from app.services.permission_service import PermissionService
 from app.services.auth_session_service import auth_session_service
+from app.services.permission_service import PermissionService
 from app.services.stage33_journey_event_service import Stage33JourneyEventService
 
 router = APIRouter()
@@ -111,7 +110,7 @@ def _apply_terms_acceptance(
     privacy_version: str | None,
     agreed_locale: str | None,
 ) -> None:
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     user.agreed_to_tos_at = now
     user.agreed_to_privacy_at = now
     user.tos_version = tos_version or "v1"
@@ -302,7 +301,7 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
         raise
     except Exception as e:
         logger.error(f"Social login verification failed for {data.provider}: {e}")
-        raise HTTPException(status_code=401, detail="社交登录验证失败")
+        raise HTTPException(status_code=401, detail="社交登录验证失败") from e
 
     if not social_id:
         raise HTTPException(status_code=401, detail="无法验证登录令牌")
@@ -329,7 +328,7 @@ async def register(
     )
     if existing_user.scalars().first():
         # 统一返回通用消息，无法区分是用户名还是邮箱已存在
-        logger.warning(f"Registration failed: duplicate username or email")
+        logger.warning("Registration failed: duplicate username or email")
         raise HTTPException(
             status_code=400,
             detail="注册失败，请检查输入的用户名和邮箱"
@@ -603,7 +602,7 @@ async def refresh_token(
         )
     except Exception as e:
         logger.warning(f"Refresh token request failed: {e}")
-        raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录")
+        raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录") from e
 
 
 @router.post("/logout", response_model=Any)
@@ -715,7 +714,7 @@ async def reset_password(
 
     user.hashed_password = get_password_hash(data.new_password)
     user.password_login_enabled = True
-    user.token_revoked_before = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.token_revoked_before = datetime.now(UTC).replace(tzinfo=None)
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -844,7 +843,7 @@ async def guest_login(
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试")
+                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试") from None
             is_new_guest = False
 
         # 为新游客播种演示数据，确保完整体验
@@ -887,7 +886,7 @@ async def guest_login(
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试")
+                raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试") from e
 
     logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}, new={is_new_guest}")
 

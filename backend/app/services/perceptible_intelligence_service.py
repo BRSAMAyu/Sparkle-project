@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
 import time
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.business_metrics import (
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
-    PHASE4_OPERATION_DURATION_SECONDS,
     PERCEPTIBLE_INSIGHT_CANDIDATE_TOTAL,
     PERCEPTIBLE_INSIGHT_SENT_TOTAL,
     PERCEPTIBLE_INSIGHT_SKIPPED_TOTAL,
+    PHASE4_OPERATION_DURATION_SECONDS,
     PROGRESS_COMPARISON_GENERATED_TOTAL,
     PROGRESS_COMPARISON_SKIPPED_TOTAL,
     WEEKLY_LEARNING_REPORT_GENERATED_TOTAL,
@@ -34,7 +34,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass

@@ -7,6 +7,7 @@ import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeMemoryApiService implements MemoryApiService {
   @override
@@ -210,6 +211,8 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets(
       'Memory panel renders guided empty state when there is no memory data',
       (WidgetTester tester) async {
@@ -224,11 +227,8 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_EmptyMemoryApiService()),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: MemoryPanelScreen(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
         ),
       ),
     );
@@ -237,7 +237,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('记忆面板还没有内容'), findsOneWidget);
-    expect(find.text('去开始对话'), findsOneWidget);
+    expect(find.text('开始对话'), findsOneWidget);
   });
 
   testWidgets('Memory panel renders sections and opens detail',
@@ -254,11 +254,8 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: MemoryPanelScreen(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
         ),
       ),
     );

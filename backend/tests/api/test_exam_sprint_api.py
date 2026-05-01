@@ -136,7 +136,7 @@ def test_exam_sprint_intake_endpoint_rejects_past_exam_date(exam_sprint_client):
 
     payload = {
         "subject": "高数",
-        "exam_date": (date.today() - timedelta(days=1)).isoformat(),
+        "exam_date": (date.today() - timedelta(days=3)).isoformat(),
         "target_mode": "pass",
         "scope_context": {"text": ""},
         "baseline": {"current_level": 20, "weak_chapters": []},
@@ -387,6 +387,10 @@ async def test_learning_portfolio_endpoint_supports_current_user_query_param(exa
         "active_count": 0,
         "completed_count": 1,
         "planned_count": 0,
+        "total_entries": 1,
+        "current_page": 1,
+        "page_size": 20,
+        "has_more": False,
     }
 
     with patch(

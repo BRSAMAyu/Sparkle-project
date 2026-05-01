@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import inspect
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -20,7 +20,7 @@ COMPANION_GOVERNANCE_KEY = "companion_state_governance"
 
 
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class SelfRevisionService:

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class LearningSimulationState(str, Enum):
+class LearningSimulationState(StrEnum):
     CREATED = "CREATED"
     PREPARING = "PREPARING"
     RUNNING = "RUNNING"

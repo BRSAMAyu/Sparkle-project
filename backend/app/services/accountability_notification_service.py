@@ -9,8 +9,8 @@ Accountability Partnership Notification Service
 - 伙伴打卡通知
 - 连胜中断提醒
 """
-from datetime import timezone, datetime
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
@@ -24,7 +24,7 @@ from app.schemas.notification import NotificationCreate
 from app.services.notification_service import notification_service
 
 
-class AccountabilityNotificationType(str, Enum):
+class AccountabilityNotificationType(StrEnum):
     """责任伙伴通知类型"""
     PARTNER_REQUEST = "accountability_partner_request"
     PARTNER_ACCEPTED = "accountability_partner_accepted"
@@ -41,7 +41,7 @@ class AccountabilityNotificationType(str, Enum):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _user_display_name(user: User | None, default: str) -> str:

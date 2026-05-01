@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
@@ -70,7 +71,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                           const SizedBox(height: DS.spacing4),
                           Row(
                             children: [
-                              _buildTaskTypeChip(task.type),
+                              _buildTaskTypeChip(context, task.type),
                               const SizedBox(width: DS.spacing6),
                               Text(
                                 '${task.estimatedMinutes}m',
@@ -151,10 +152,10 @@ class InteractiveTaskCard extends ConsumerWidget {
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
               children: [
-                _buildTaskTypeChip(task.type),
-                _buildPriorityChip(task.priority),
+                _buildTaskTypeChip(context, task.type),
+                _buildPriorityChip(context, task.priority),
                 Text(
-                  '${task.estimatedMinutes} 分钟',
+                  context.l10n.taskEstimatedMinutes(task.estimatedMinutes),
                   style: context.sparkleTypography.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -193,7 +194,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.play_arrow_rounded,
-                    label: '开始',
+                    label: context.l10n.taskStartAction,
                     onTap: () {
                       // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                       ref.read(activeTaskProvider.notifier).state = task;
@@ -206,7 +207,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.edit_rounded,
-                    label: '编辑',
+                    label: context.l10n.taskEditAction,
                     onTap: () => context.push('/tasks/${task.id}'),
                     color: Color.lerp(DS.surfaceSecondary, DS.info, 0.82)!,
                   ),
@@ -215,7 +216,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.delete_outline_rounded,
-                    label: '放弃',
+                    label: context.l10n.taskAbandonAction,
                     onTap: () => _confirmAbandon(context, ref, task),
                     color: Color.lerp(DS.surfaceSecondary, DS.error, 0.86)!,
                   ),
@@ -246,15 +247,15 @@ class InteractiveTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaskTypeChip(TaskType type) {
+  Widget _buildTaskTypeChip(BuildContext context, TaskType type) {
     final (label, color) = switch (type) {
-      TaskType.learning => ('学习', DS.brandPrimary),
-      TaskType.training => ('训练', DS.success),
-      TaskType.errorFix => ('排错', DS.error),
-      TaskType.reflection => ('反思', DS.prismPurple),
-      TaskType.social => ('社交', DS.info),
-      TaskType.planning => ('规划', DS.warning),
-      TaskType.ocr => ('OCR', DS.textSecondary),
+      TaskType.learning => (context.l10n.taskTypeLearning, DS.brandPrimary),
+      TaskType.training => (context.l10n.taskTypeTraining, DS.success),
+      TaskType.errorFix => (context.l10n.taskTypeErrorFix, DS.error),
+      TaskType.reflection => (context.l10n.taskTypeReflection, DS.prismPurple),
+      TaskType.social => (context.l10n.taskTypeSocial, DS.info),
+      TaskType.planning => (context.l10n.taskTypePlanning, DS.warning),
+      TaskType.ocr => (context.l10n.taskTypeOcr, DS.textSecondary),
     };
 
     return Container(
@@ -274,11 +275,11 @@ class InteractiveTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildPriorityChip(int priority) {
+  Widget _buildPriorityChip(BuildContext context, int priority) {
     final (label, color) = switch (priority) {
-      >= 8 => ('高优先级', DS.error),
-      >= 5 => ('中优先级', DS.warning),
-      _ => ('低优先级', DS.success),
+      >= 8 => (context.l10n.taskPriorityHigh, DS.error),
+      >= 5 => (context.l10n.taskPriorityMedium, DS.warning),
+      _ => (context.l10n.taskPriorityLow, DS.success),
     };
 
     return Container(
@@ -306,15 +307,15 @@ class InteractiveTaskCard extends ConsumerWidget {
 
     String label;
     if (dueDay.isBefore(today)) {
-      label = '已逾期';
+      label = context.l10n.taskDueOverdue;
     } else if (dueDay == today) {
-      label = '今天';
+      label = context.l10n.taskDueToday;
     } else {
       final tomorrow = today.add(const Duration(days: 1));
       if (dueDay == tomorrow) {
-        label = '明天';
+        label = context.l10n.taskDueTomorrow;
       } else {
-        label = '${dueDate.month}月${dueDate.day}日';
+        label = context.l10n.taskDueDateLabel(dueDate.day, dueDate.month);
       }
     }
 
@@ -365,15 +366,15 @@ class InteractiveTaskCard extends ConsumerWidget {
       showSensoryDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('放弃任务'),
-          content: Text('确定要放弃「${task.title}」吗？'),
+          title: Text(context.l10n.taskAbandonTitle),
+          content: Text(context.l10n.taskConfirmAbandon(task.title)),
           actions: [
             SparkleButton.ghost(
-              label: '取消',
+              label: context.l10n.cancel,
               onPressed: () => Navigator.pop(context),
             ),
             SparkleButton.destructive(
-              label: '放弃',
+              label: context.l10n.taskAbandonAction,
               onPressed: () {
                 Navigator.pop(context);
                 unawaited(
@@ -395,7 +396,7 @@ class _QuickCompleteButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Tooltip(
-        message: '完成任务',
+        message: context.l10n.taskCompleteTask,
         child: SparkleIconButton(
           icon: const Icon(Icons.check_circle_outline_rounded),
           variant: ButtonVariant.ghost,

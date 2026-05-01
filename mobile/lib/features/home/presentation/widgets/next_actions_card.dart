@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
@@ -51,7 +52,7 @@ class NextActionsCard extends ConsumerWidget {
             children: [
               Flexible(
                 child: Text(
-                  '下一步',
+                  I18nService.instance.isChinese ? '下一步' : 'Next',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: DS.fontWeightSemibold,
@@ -101,7 +102,7 @@ class NextActionsCard extends ConsumerWidget {
             ),
             const SizedBox(height: DS.xs),
             Text(
-              '清空啦',
+              I18nService.instance.isChinese ? '清空啦' : 'All clear',
               style: TextStyle(fontSize: 10, color: DS.textSecondary),
             ),
           ],
@@ -166,7 +167,7 @@ class _CompactNextActions extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '下一步',
+                      I18nService.instance.isChinese ? '下一步' : 'Next',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.sparkleTypography.labelLarge.copyWith(
@@ -175,10 +176,10 @@ class _CompactNextActions extends StatelessWidget {
                     ),
                     Text(
                       visibleActions.isEmpty
-                          ? '当前没有待推进任务'
+                          ? (I18nService.instance.isChinese ? '当前没有待推进任务' : 'No pending actions')
                           : embedded
-                              ? '最关键的待办'
-                              : '优先处理最关键的 ${actions.length} 项行动',
+                              ? (I18nService.instance.isChinese ? '最关键的待办' : 'Most critical task')
+                              : (I18nService.instance.isChinese ? '优先处理最关键的 ${actions.length} 项行动' : 'Prioritize ${actions.length} critical actions'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.sparkleTypography.labelSmall.copyWith(
@@ -200,7 +201,7 @@ class _CompactNextActions extends StatelessWidget {
                     border: Border.all(color: DS.borderSubtle),
                   ),
                   child: Text(
-                    '${actions.length}项',
+                    I18nService.instance.isChinese ? '${actions.length}项' : '${actions.length}',
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
@@ -215,7 +216,7 @@ class _CompactNextActions extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: Text(
-                    '今天没有待推进的行动',
+                    I18nService.instance.isChinese ? '今天没有待推进的行动' : 'No pending actions for today',
                     maxLines: 2,
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
@@ -227,7 +228,7 @@ class _CompactNextActions extends StatelessWidget {
               )
             else
               Text(
-                '今天没有待推进的行动',
+                I18nService.instance.isChinese ? '今天没有待推进的行动' : 'No pending actions for today',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: context.sparkleTypography.labelLarge.copyWith(
@@ -313,7 +314,7 @@ class _EmbeddedActionBody extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: DS.spacing4),
               child: Text(
-                '其余 ${allActionCount - actions.length} 项见任务页',
+                I18nService.instance.isChinese ? '其余 ${allActionCount - actions.length} 项见任务页' : 'See ${allActionCount - actions.length} more in tasks',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.sparkleTypography.labelSmall.copyWith(
@@ -368,7 +369,9 @@ class _FlowActionBody extends StatelessWidget {
                     vertical: 2,
                   ),
                   child: Text(
-                    allActionCount > actions.length ? '查看全部 →' : '任务总览 →',
+                    allActionCount > actions.length
+                        ? (I18nService.instance.isChinese ? '查看全部 →' : 'View all →')
+                        : (I18nService.instance.isChinese ? '任务总览 →' : 'Task overview →'),
                     style: context.sparkleTypography.labelLarge.copyWith(
                       color: DS.brandPrimary,
                       fontWeight: DS.fontWeightBold,
@@ -430,7 +433,7 @@ class _CompactNextActionRow extends ConsumerWidget {
                       color: DS.brandPrimary,
                     )
                   : Text(
-                      '开始',
+                      I18nService.instance.isChinese ? '开始' : 'Start',
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.brandPrimary,
                         fontWeight: DS.fontWeightBold,
@@ -472,7 +475,9 @@ class _CompactNextActionRow extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${task.estimatedMinutes} 分钟 · ${_taskLabel(task.type)}',
+                        I18nService.instance.isChinese
+                            ? '${task.estimatedMinutes} 分钟 · ${_taskLabel(task.type)}'
+                            : '${task.estimatedMinutes} min · ${_taskLabel(task.type)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.sparkleTypography.labelSmall.copyWith(
@@ -625,21 +630,22 @@ IconData _getTypeIcon(String type) {
 }
 
 String _taskLabel(String type) {
+  final zh = I18nService.instance.isChinese;
   switch (type) {
     case 'learning':
-      return '学习';
+      return zh ? '学习' : 'Learning';
     case 'training':
-      return '训练';
+      return zh ? '训练' : 'Training';
     case 'error_fix':
-      return '错题';
+      return zh ? '错题' : 'Error Fix';
     case 'reflection':
-      return '复盘';
+      return zh ? '复盘' : 'Reflection';
     case 'social':
-      return '社群';
+      return zh ? '社群' : 'Community';
     case 'planning':
-      return '计划';
+      return zh ? '计划' : 'Planning';
     default:
-      return '任务';
+      return zh ? '任务' : 'Task';
   }
 }
 

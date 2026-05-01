@@ -34,8 +34,10 @@ type Client struct {
 	config *config.Config
 	connMu sync.RWMutex
 
-	reconnectMu sync.Mutex
-	dialOptions []grpc.DialOption
+	reconnectMu      sync.Mutex
+	lastReconnectAt  time.Time
+	minReconnectGap  time.Duration // R5-G07: minimum gap between reconnect attempts
+	dialOptions      []grpc.DialOption
 
 	// Health checker (optional)
 	healthChecker *AgentHealthChecker
@@ -129,7 +131,6 @@ func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 			Timeout:             10 * time.Second,
 			PermitWithoutStream: true,
 		}),
-		grpc.WithBlock(),
 	}, nil
 }
 
@@ -152,6 +153,16 @@ func (c *Client) reconnect(ctx context.Context) error {
 
 	c.reconnectMu.Lock()
 	defer c.reconnectMu.Unlock()
+
+	// R5-G07: Rate-limit reconnect attempts (minimum 2s between attempts)
+	minGap := c.minReconnectGap
+	if minGap == 0 {
+		minGap = 2 * time.Second
+	}
+	if elapsed := time.Since(c.lastReconnectAt); elapsed < minGap {
+		time.Sleep(minGap - elapsed)
+	}
+	c.lastReconnectAt = time.Now()
 
 	if conn := c.currentConn(); conn != nil {
 		state := conn.GetState()
@@ -276,22 +287,24 @@ func (c *Client) StreamChatWithFallback(ctx context.Context, req *agentv1.ChatRe
 	return stream, err
 }
 
-func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {
-	// Inject Metadata for business context
-	md := metadata.New(map[string]string{
-		"user-id":            req.UserId,
-		"x-internal-api-key": c.config.InternalAPIKey,
-	})
-	if traceID := traceIDFromContext(ctx); traceID != "" {
-		md.Set("x-trace-id", traceID)
-	} else if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
-		md.Set("x-trace-id", span.SpanContext().TraceID().String())
+// injectMetadata creates an outgoing context with user-id, internal API key, and trace ID.
+func (c *Client) injectMetadata(ctx context.Context, userID string) context.Context {
+	pairs := []string{
+		"x-internal-api-key", c.config.InternalAPIKey,
 	}
+	if userID != "" {
+		pairs = append(pairs, "user-id", userID)
+	}
+	if traceID := traceIDFromContext(ctx); traceID != "" {
+		pairs = append(pairs, "x-trace-id", traceID)
+	} else if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		pairs = append(pairs, "x-trace-id", span.SpanContext().TraceID().String())
+	}
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(pairs...))
+}
 
-	outCtx := metadata.NewOutgoingContext(ctx, md)
-
-	// StreamChat is server-side streaming: single request, stream of responses
-	// otelgrpc interceptor will handle the TraceContext propagation automatically
+func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
 	stream, err := c.currentAPI().StreamChat(outCtx, req)
 	if !shouldReconnect(err) {
 		return stream, err
@@ -303,16 +316,7 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 }
 
 func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.ResponseFeedbackRequest) (*agentv1.ResponseFeedbackResponse, error) {
-	md := metadata.New(map[string]string{
-		"user-id":            req.UserId,
-		"x-internal-api-key": c.config.InternalAPIKey,
-	})
-	if traceID := traceIDFromContext(ctx); traceID != "" {
-		md.Set("x-trace-id", traceID)
-	} else if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
-		md.Set("x-trace-id", span.SpanContext().TraceID().String())
-	}
-	outCtx := metadata.NewOutgoingContext(ctx, md)
+	outCtx := c.injectMetadata(ctx, req.UserId)
 	resp, err := c.currentAPI().SubmitResponseFeedback(outCtx, req)
 	if !shouldReconnect(err) {
 		return resp, err
@@ -324,16 +328,7 @@ func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.Respon
 }
 
 func (c *Client) SubmitPlanReview(ctx context.Context, req *agentv1.PlanReviewRequest) (*agentv1.PlanReviewResponse, error) {
-	md := metadata.New(map[string]string{
-		"user-id":            req.UserId,
-		"x-internal-api-key": c.config.InternalAPIKey,
-	})
-	if traceID := traceIDFromContext(ctx); traceID != "" {
-		md.Set("x-trace-id", traceID)
-	} else if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
-		md.Set("x-trace-id", span.SpanContext().TraceID().String())
-	}
-	outCtx := metadata.NewOutgoingContext(ctx, md)
+	outCtx := c.injectMetadata(ctx, req.UserId)
 	resp, err := c.currentAPI().SubmitPlanReview(outCtx, req)
 	if !shouldReconnect(err) {
 		return resp, err
@@ -342,4 +337,174 @@ func (c *Client) SubmitPlanReview(ctx context.Context, req *agentv1.PlanReviewRe
 		return nil, err
 	}
 	return c.currentAPI().SubmitPlanReview(outCtx, req)
+}
+
+// ── Missing RPC wrappers (P0-4) ──────────────────────────────────────
+
+func (c *Client) RetrieveMemory(ctx context.Context, req *agentv1.MemoryQuery) (*agentv1.MemoryResult, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().RetrieveMemory(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().RetrieveMemory(outCtx, req)
+}
+
+func (c *Client) GetUserProfile(ctx context.Context, req *agentv1.ProfileRequest) (*agentv1.UserProfile, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().GetUserProfile(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().GetUserProfile(outCtx, req)
+}
+
+func (c *Client) GetWeeklyReport(ctx context.Context, req *agentv1.WeeklyReportRequest) (*agentv1.WeeklyReport, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().GetWeeklyReport(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().GetWeeklyReport(outCtx, req)
+}
+
+func (c *Client) SubmitContentReviewFeedback(ctx context.Context, req *agentv1.ContentReviewFeedbackRequest) (*agentv1.ContentReviewFeedbackResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().SubmitContentReviewFeedback(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().SubmitContentReviewFeedback(outCtx, req)
+}
+
+func (c *Client) SubmitReviewOverride(ctx context.Context, req *agentv1.ReviewOverrideRequest) (*agentv1.ReviewOverrideResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().SubmitReviewOverride(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().SubmitReviewOverride(outCtx, req)
+}
+
+func (c *Client) SubmitReviewAppeal(ctx context.Context, req *agentv1.ReviewAppealRequest) (*agentv1.ReviewAppealResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().SubmitReviewAppeal(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().SubmitReviewAppeal(outCtx, req)
+}
+
+func (c *Client) GetAppealStatus(ctx context.Context, req *agentv1.AppealStatusRequest) (*agentv1.AppealStatusResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().GetAppealStatus(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().GetAppealStatus(outCtx, req)
+}
+
+func (c *Client) SubmitReviewFeedback(ctx context.Context, req *agentv1.ReviewFeedbackRequest) (*agentv1.ReviewFeedbackResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().SubmitReviewFeedback(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().SubmitReviewFeedback(outCtx, req)
+}
+
+func (c *Client) RequestRegeneration(ctx context.Context, req *agentv1.RegenerationRequest) (*agentv1.RegenerationResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().RequestRegeneration(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().RequestRegeneration(outCtx, req)
+}
+
+func (c *Client) GetFeedbackStatistics(ctx context.Context, req *agentv1.FeedbackStatisticsRequest) (*agentv1.FeedbackStatisticsResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.UserId)
+	resp, err := c.currentAPI().GetFeedbackStatistics(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().GetFeedbackStatistics(outCtx, req)
+}
+
+func (c *Client) GetArbitrationQueue(ctx context.Context, req *agentv1.GetArbitrationQueueRequest) (*agentv1.GetArbitrationQueueResponse, error) {
+	outCtx := c.injectMetadata(ctx, "")
+	resp, err := c.currentAPI().GetArbitrationQueue(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().GetArbitrationQueue(outCtx, req)
+}
+
+func (c *Client) AssignArbitrationCase(ctx context.Context, req *agentv1.AssignArbitrationCaseRequest) (*agentv1.AssignArbitrationCaseResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.ArbitratorId)
+	resp, err := c.currentAPI().AssignArbitrationCase(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().AssignArbitrationCase(outCtx, req)
+}
+
+func (c *Client) SubmitArbitrationDecision(ctx context.Context, req *agentv1.SubmitArbitrationDecisionRequest) (*agentv1.SubmitArbitrationDecisionResponse, error) {
+	outCtx := c.injectMetadata(ctx, req.ArbitratorId)
+	resp, err := c.currentAPI().SubmitArbitrationDecision(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().SubmitArbitrationDecision(outCtx, req)
+}
+
+func (c *Client) GetArbitrationQueueStats(ctx context.Context, req *agentv1.GetArbitrationQueueStatsRequest) (*agentv1.GetArbitrationQueueStatsResponse, error) {
+	outCtx := c.injectMetadata(ctx, "")
+	resp, err := c.currentAPI().GetArbitrationQueueStats(outCtx, req)
+	if !shouldReconnect(err) {
+		return resp, err
+	}
+	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		return nil, err
+	}
+	return c.currentAPI().GetArbitrationQueueStats(outCtx, req)
 }

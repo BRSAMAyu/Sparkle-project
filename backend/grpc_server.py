@@ -17,7 +17,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, "app", "gen", "agent", "v1"))
 sys.path.append(os.path.join(current_dir, "app", "gen", "galaxy", "v1"))
-sys.path.append(os.path.join(current_dir, "app", "gen", "proto", "error_book"))
+sys.path.append(os.path.join(current_dir, "app", "gen"))
 
 from loguru import logger
 import grpc
@@ -26,7 +26,7 @@ from opentelemetry.instrumentation.grpc import GrpcAioInstrumentorServer
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.gen.galaxy.v1 import galaxy_service_pb2, galaxy_service_pb2_grpc
-from app.gen.proto.error_book import error_book_pb2, error_book_pb2_grpc
+from app.gen import error_book_pb2, error_book_pb2_grpc
 from app.services.agent_grpc_service import AgentServiceImpl
 from app.services.galaxy_grpc_service import GalaxyGrpcServiceImpl
 from app.services.error_book_grpc_service import ErrorBookGrpcServiceImpl
@@ -80,6 +80,15 @@ async def serve():
     """
     启动 gRPC 服务器
     """
+    # Initialize Sentry crash reporting for gRPC server
+    if settings.SENTRY_DSN:
+        from app.core.sentry import init_sentry
+        init_sentry(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.SENTRY_ENVIRONMENT or settings.ENVIRONMENT,
+            traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        )
+
     # 创建服务器
     server = grpc.aio.server(
         futures.ThreadPoolExecutor(max_workers=10),

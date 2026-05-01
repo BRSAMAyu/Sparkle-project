@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -134,7 +135,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       if (mounted) {
         AppFeedback.success(
           context,
-          '已将「${task.title}」加入 ${_formatMonthDay(newDueDate)} 的日程。',
+          context.l10n.calTaskRescheduled(task.title, _formatMonthDay(newDueDate)),
         );
       }
     }
@@ -264,7 +265,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ButtonSegment(
             value: CalendarViewMode.insights,
             label: Text(
-              context.l10n.localeName.startsWith('zh') ? '热力' : 'Heat',
+              I18nService.instance.isChinese ? '热力' : 'Heat',
             ),
           ),
           ButtonSegment(
@@ -718,7 +719,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             child: events.isEmpty && tasks.isEmpty
                 ? Center(
                     child: Text(
-                      '这一天还没有安排任务或日程',
+                      I18nService.instance.isChinese ? '这一天还没有安排任务或日程' : 'No tasks or events scheduled for this day',
                       style: TextStyle(color: DS.textTertiary),
                     ),
                   )
@@ -833,7 +834,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     if (aggregate == null) {
       return Center(
         child: Text(
-          '暂无热力数据',
+          I18nService.instance.isChinese ? '暂无热力数据' : 'No heat data available',
           style: TextStyle(color: DS.textSecondary),
         ),
       );
@@ -862,31 +863,31 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             runSpacing: DS.spacing10,
             children: [
               _buildInsightMetric(
-                label: '连续天数',
+                label: context.l10n.calStreakDays,
                 value: '${streakStats.currentStreak}',
-                detail: '保持你的成就节奏',
+                detail: I18nService.instance.isChinese ? '保持你的成就节奏' : 'Keep your achievement rhythm',
                 icon: Icons.local_fire_department_rounded,
                 color: DS.warningAccent,
               ),
               _buildInsightMetric(
-                label: '活跃天数',
+                label: context.l10n.calActiveDays,
                 value: '${aggregate.activeDays}',
-                detail: '本月有行动的日期',
+                detail: I18nService.instance.isChinese ? '本月有行动的日期' : 'Active days this month',
                 icon: Icons.calendar_month_rounded,
                 color: DS.info,
               ),
               _buildInsightMetric(
-                label: '完成任务',
+                label: context.l10n.calCompletedTasks,
                 value: '${aggregate.totalCompletedTasks}',
-                detail: '本月完成的任务数',
+                detail: I18nService.instance.isChinese ? '本月完成的任务数' : 'Tasks completed this month',
                 icon: Icons.task_alt_rounded,
                 color: DS.success,
               ),
               _buildInsightMetric(
-                label: '专注时长',
+                label: context.l10n.calFocusDuration,
                 value:
                     '${(aggregate.totalFocusMinutes / 60).toStringAsFixed(1)}h',
-                detail: '本月累计专注',
+                detail: I18nService.instance.isChinese ? '本月累计专注' : 'Total focus time this month',
                 icon: Icons.bolt_rounded,
                 color: DS.prismPurple,
               ),
@@ -901,16 +902,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '学习热力',
+                  I18nService.instance.isChinese ? '学习热力' : 'Learning Heatmap',
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: DS.spacing6),
+                SizedBox(height: DS.spacing6),
                 Text(
-                  '用热力看连续性、完成度和学习投入，而不是重复浏览日程表。',
+                  I18nService.instance.isChinese ? '用热力看连续性、完成度和学习投入，而不是重复浏览日程表。' : 'View continuity, completion, and learning engagement through heatmaps, instead of repeatedly browsing the schedule.',
                   style: TextStyle(color: DS.textSecondary, fontSize: 12),
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -919,10 +920,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 Row(
                   children: [
                     Text(
-                      '低',
+                      I18nService.instance.isChinese ? '低' : 'Low',
                       style: TextStyle(fontSize: 11, color: DS.textSecondary),
                     ),
-                    const SizedBox(width: DS.spacing6),
+                    SizedBox(width: DS.spacing6),
                     ...List.generate(
                       5,
                       (index) => Container(
@@ -936,7 +937,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       ),
                     ),
                     Text(
-                      '高',
+                      I18nService.instance.isChinese ? '高' : 'High',
                       style: TextStyle(fontSize: 11, color: DS.textSecondary),
                     ),
                   ],
@@ -953,32 +954,32 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '月度亮点',
+                  I18nService.instance.isChinese ? '月度亮点' : 'Monthly Highlights',
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: DS.spacing10),
+                SizedBox(height: DS.spacing10),
                 _buildInsightLine(
                   icon: Icons.trending_up_rounded,
-                  title: '最热的一天',
+                  title: context.l10n.calHottestDay,
                   value: peakDay == null
-                      ? '暂无'
+                      ? (I18nService.instance.isChinese ? '暂无' : 'N/A')
                       : '${peakDay.date.month}/${peakDay.date.day} · ${peakDay.summaryText}',
                 ),
                 _buildInsightLine(
                   icon: Icons.flag_rounded,
-                  title: '当前主线',
-                  value: aggregate.activePlan?.name ?? '本月暂无活跃计划',
+                  title: context.l10n.calCurrentMainGoal,
+                  value: aggregate.activePlan?.name ?? (I18nService.instance.isChinese ? '本月暂无活跃计划' : 'No active plan this month'),
                 ),
                 _buildInsightLine(
                   icon: Icons.emoji_events_rounded,
-                  title: '成就势能',
+                  title: context.l10n.calAchievementMomentum,
                   value: streakStats.currentStreak >= 7
-                      ? '连续状态很好，适合冲刺里程碑'
-                      : '先把连续性拉起来，会更容易触发成就闭环',
+                      ? (I18nService.instance.isChinese ? '连续状态很好，适合冲刺里程碑' : 'Great streak! Time to sprint for milestones')
+                      : (I18nService.instance.isChinese ? '先把连续性拉起来，会更容易触发成就闭环' : 'Build your consistency first to trigger achievement loops'),
                 ),
               ],
             ),
@@ -1145,7 +1146,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
   Widget _buildTaskAgendaCard(TaskModel task) {
     final dueLabel = task.dueDate == null
-        ? '未安排时间'
+        ? (I18nService.instance.isChinese ? '未安排时间' : 'No time set')
         : Formatters.formatDateTime(task.dueDate!);
     final statusColor = switch (task.status) {
       TaskStatus.completed => DS.success,
@@ -1184,7 +1185,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ),
         ),
         subtitle: Text(
-          '${task.planId != null ? '任务' : '待办'} · $dueLabel',
+          context.l10n.calTaskWithDue(task.planId != null ? context.l10n.calTaskTypeTask : context.l10n.calTaskTypeTodo, dueLabel),
           style: TextStyle(color: DS.textSecondary),
         ),
         trailing: Icon(
@@ -1349,7 +1350,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                     Text(
                       widget.initialEvent == null
                           ? context.l10n.calendarCreateEvent
-                          : '编辑日程',
+                          : (I18nService.instance.isChinese ? '编辑日程' : 'Edit Event'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1654,7 +1655,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
 
     if (!_endTime.isAfter(_startTime)) {
       setState(() {
-        _saveError = '结束时间需要晚于开始时间';
+        _saveError = context.l10n.calEndAfterStart;
       });
       return;
     }
@@ -1689,24 +1690,24 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         await ref.read(calendarProvider.notifier).updateEvent(event);
         if (!mounted) return;
         context.pop();
-        AppFeedback.success(context, '日程已更新');
+        AppFeedback.success(context, I18nService.instance.isChinese ? '日程已更新' : 'Event updated');
         return;
       }
       final result = await ref.read(calendarProvider.notifier).addEvent(event);
       if (!mounted) return;
       context.pop();
       if (result.persistedRemotely) {
-        AppFeedback.success(context, '日程已创建');
+        AppFeedback.success(context, I18nService.instance.isChinese ? '日程已创建' : 'Event created');
       } else {
         AppFeedback.info(
           context,
-          result.message ?? '已保存到本地，稍后会自动同步到云端。',
+          result.message ?? (I18nService.instance.isChinese ? '已保存到本地，稍后会自动同步到云端。' : 'Saved locally, will sync to cloud automatically.'),
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _saveError = '创建日程失败：$e';
+        _saveError = context.l10n.calCreateEventFailed(e.toString());
       });
     } finally {
       if (mounted) {

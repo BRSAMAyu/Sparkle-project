@@ -46,7 +46,11 @@ async def test_create_user_hashes_password():
         user = await UserService.create(db, user_in)
     assert user.hashed_password == "hashed"
     db.add.assert_called_once()
-    db.commit.assert_called_once()
+    added_user = db.add.call_args[0][0]
+    assert added_user.username == "user1"
+    assert added_user.email == "u1@example.com"
+    assert added_user.hashed_password == "hashed"
+    db.commit.assert_called_once_with()
 
 
 @pytest.mark.asyncio

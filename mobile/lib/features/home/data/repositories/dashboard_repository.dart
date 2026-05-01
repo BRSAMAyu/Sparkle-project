@@ -3,6 +3,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
   (ref) => DashboardRepository(ref.read(apiClientProvider)),
@@ -55,13 +56,14 @@ class DashboardRepository {
 
   Future<Map<String, dynamic>> getExamSprintDashboard() async {
     if (DemoDataService.isDemoMode) {
+      final zh = I18nService.instance.isChinese;
       final today = DateTime.now();
       final tomorrow = today.add(const Duration(days: 1));
       return {
         'active': true,
         'plan_id': 'demo-exam-sprint-plan',
-        'plan_name': '计算机网络考前冲刺',
-        'subject': '计算机网络',
+        'plan_name': zh ? '计算机网络考前冲刺' : 'Computer Networks Exam Sprint',
+        'subject': zh ? '计算机网络' : 'Computer Networks',
         'days_left': 5,
         'target_mode': 'pass',
         'estimated_score_now': 71.0,
@@ -80,7 +82,7 @@ class DashboardRepository {
         'fixed_mistake_count': 17,
         'total_mistake_count': 25,
         'streak_days': 9,
-        'high_yield_low_mastery_topics': ['传输层可靠传输', 'TCP 拥塞控制'],
+        'high_yield_low_mastery_topics': [zh ? '传输层可靠传输' : 'Reliable Transport Layer', zh ? 'TCP 拥塞控制' : 'TCP Congestion Control'],
         'task_groups': [
           {
             'day_index': 1,
@@ -91,21 +93,21 @@ class DashboardRepository {
             'tasks': [
               {
                 'id': 'demo-sprint-task-1',
-                'title': '闭卷默写 TCP 三次握手与四次挥手',
+                'title': zh ? '闭卷默写 TCP 三次握手与四次挥手' : 'Closed-book: TCP 3-way handshake & 4-way teardown',
                 'status': 'COMPLETED',
                 'estimated_minutes': 25,
                 'is_completed': true,
               },
               {
                 'id': 'demo-sprint-task-2',
-                'title': '订正 3 道可靠传输错题',
+                'title': zh ? '订正 3 道可靠传输错题' : 'Correct 3 reliable transport mistakes',
                 'status': 'COMPLETED',
                 'estimated_minutes': 20,
                 'is_completed': true,
               },
               {
                 'id': 'demo-sprint-task-3',
-                'title': '口述拥塞控制四阶段并自测',
+                'title': zh ? '口述拥塞控制四阶段并自测' : 'Explain 4 congestion control phases & self-test',
                 'status': 'PENDING',
                 'estimated_minutes': 30,
                 'is_completed': false,
@@ -121,14 +123,14 @@ class DashboardRepository {
             'tasks': [
               {
                 'id': 'demo-sprint-task-4',
-                'title': '整理高频考点保底清单',
+                'title': zh ? '整理高频考点保底清单' : 'Compile high-frequency exam topic checklist',
                 'status': 'PENDING',
                 'estimated_minutes': 35,
                 'is_completed': false,
               },
               {
                 'id': 'demo-sprint-task-5',
-                'title': '做一组路由算法选择题',
+                'title': zh ? '做一组路由算法选择题' : 'Complete a set of routing algorithm MCQs',
                 'status': 'PENDING',
                 'estimated_minutes': 30,
                 'is_completed': false,
@@ -148,71 +150,72 @@ class DashboardRepository {
 
   Future<Map<String, dynamic>> getPredictiveDashboard() async {
     if (DemoDataService.isDemoMode) {
+      final zh = I18nService.instance.isChinese;
       return {
         'engagement_forecast': {
           'forecast_type': 'engagement',
           'trend': 'slightly_up',
           'confidence': 0.76,
-          'summary': '未来 24 小时内保持较高活跃度的概率较大，但晚间会有轻微回落。',
+          'summary': zh ? '未来 24 小时内保持较高活跃度的概率较大，但晚间会有轻微回落。' : 'High engagement likely in the next 24 hours, with a slight dip in the evening.',
           'signals': [
-            '最近三次专注会话都发生在下午',
-            '错题本和星图节点的回看频率在上升',
-            '周末动能略低于工作日',
+            zh ? '最近三次专注会话都发生在下午' : 'Last 3 focus sessions were all in the afternoon',
+            zh ? '错题本和星图节点的回看频率在上升' : 'Error book & galaxy node review frequency is rising',
+            zh ? '周末动能略低于工作日' : 'Weekend momentum is slightly lower than weekdays',
           ],
         },
         'dropout_risk': {
           'risk_level': 'low_to_medium',
           'confidence': 0.34,
-          'summary': '当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。',
+          'summary': zh ? '当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。' : 'No significant dropout risk now, but it will rise if you skip two consecutive days of focus.',
           'factors': [
-            '近期任务较多',
-            '存在少量未完成任务',
-            '晚间学习容易被打断',
+            zh ? '近期任务较多' : 'Many recent tasks',
+            zh ? '存在少量未完成任务' : 'Some incomplete tasks remain',
+            zh ? '晚间学习容易被打断' : 'Evening study sessions are easily interrupted',
           ],
         },
         'optimal_time': {
           'best_hours': [15, 16, 17, 20],
           'best_weekdays': ['monday', 'tuesday', 'wednesday', 'thursday'],
-          'summary': '下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。',
+          'summary': zh ? '下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。' : '3–5 PM is your most stable study window; evenings are best for wrap-ups and reviews.',
         },
         'next_intent_forecast': {
           'schema_version': 'prediction.v1',
           'prediction_id': 'demo-prediction-next-intent',
           'horizon': 'long_horizon',
-          'title': '系统预测你接下来会继续推进最关键任务',
-          'summary': '根据最近 24 小时的节奏，先推进当前重点任务最合适。',
+          'title': zh ? '系统预测你接下来会继续推进最关键任务' : 'Prediction: you\'ll continue pushing your most critical task',
+          'summary': zh ? '根据最近 24 小时的节奏，先推进当前重点任务最合适。' : 'Based on the last 24 hours, tackling your current priority task makes the most sense.',
           'confidence': 0.72,
           'predicted_action_type': 'resume_priority_task',
           'predicted_window': 'next_2h',
-          'reasons': ['最近24小时持续活跃', '当前仍有重点待办'],
-          'suggested_prompt': '帮我继续推进今天最关键的任务',
+          'reasons': [zh ? '最近24小时持续活跃' : 'Active in the last 24 hours', zh ? '当前仍有重点待办' : 'Priority tasks still pending'],
+          'suggested_prompt': zh ? '帮我继续推进今天最关键的任务' : 'Help me continue today\'s most critical task',
           'prediction_source': 'rules',
           'prediction_tier': 'rules',
           'fallback_used': true,
           'explanations': {
-            'recent_24h': ['最近24小时持续活跃'],
-            'recent_7d': ['过去7天保持稳定推进'],
-            'profile': ['你更容易承接已有重点任务'],
-            'plan': ['当前仍有重点待办'],
-            'focus': ['先推进一个25分钟小段更自然'],
+            'recent_24h': [zh ? '最近24小时持续活跃' : 'Active in the last 24 hours'],
+            'recent_7d': [zh ? '过去7天保持稳定推进' : 'Steady progress over the past 7 days'],
+            'profile': [zh ? '你更容易承接已有重点任务' : 'You tend to pick up existing priority tasks'],
+            'plan': [zh ? '当前仍有重点待办' : 'Priority tasks still pending'],
+            'focus': [zh ? '先推进一个25分钟小段更自然' : 'A 25-minute focused block feels natural first'],
           },
           'recommended_actions': [
             {
               'id': 'demo-prediction-next-intent:primary',
-              'label': '继续重点任务',
+              'label': zh ? '继续重点任务' : 'Continue Priority Task',
               'action_type': 'resume_priority_task',
               'target_route': '/chat',
-              'suggested_prompt': '帮我继续推进今天最关键的任务',
+              'suggested_prompt': zh ? '帮我继续推进今天最关键的任务' : 'Help me continue today\'s most critical task',
               'resource_type': 'chat',
               'resource_id': null,
               'surface': 'dashboard',
             },
             {
               'id': 'demo-prediction-next-intent:secondary',
-              'label': '先做 25 分钟',
+              'label': zh ? '先做 25 分钟' : 'Start a 25-min Focus',
               'action_type': 'start_pomodoro',
               'target_route': '/focus',
-              'suggested_prompt': '先帮我把今天最重要的任务拆成 25 分钟专注块',
+              'suggested_prompt': zh ? '先帮我把今天最重要的任务拆成 25 分钟专注块' : 'Break today\'s most important task into 25-minute focus blocks',
               'resource_type': 'focus',
               'resource_id': null,
               'surface': 'dashboard',

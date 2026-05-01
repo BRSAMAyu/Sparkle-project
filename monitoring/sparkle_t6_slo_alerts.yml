@@ -1,0 +1,113 @@
+# Phase 6 / T6.1: Performance SLO Alert Rules
+# SLO targets: chat first token <2s, task gen <5s, retrieval <1s, galaxy <3s, Aurora L3 <15s
+
+groups:
+  - name: sparkle_performance_slo
+    interval: 30s
+    rules:
+      # T6.1.1 — Chat first token P95 < 2s
+      - alert: SparkleSLOChatFirstTokenSlow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_ai_response_first_token_duration_seconds_bucket[10m])) by (le)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: ai
+          slo: "chat_first_token_p95_lt_2s"
+        annotations:
+          summary: "SLO 违规: AI 首包延迟 P95 > 2s"
+          description: "AI 首包 P95 超过 SLO 目标 2s，已持续 10 分钟。当前阈值: {{ $value | printf \"%.1f\" }}s"
+          runbook: "monitoring/runbooks/incident_response.md#slo-chat-first-token"
+
+      # T6.1.2 — Task generation P95 < 5s
+      - alert: SparkleSLOTaskGenerationSlow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_task_generation_e2e_seconds_bucket[10m])) by (le)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: planning
+          slo: "task_gen_p95_lt_5s"
+        annotations:
+          summary: "SLO 违规: 任务生成延迟 P95 > 5s"
+          description: "任务生成 P95 超过 SLO 目标 5s，已持续 10 分钟。当前阈值: {{ $value | printf \"%.1f\" }}s"
+          runbook: "monitoring/runbooks/incident_response.md#slo-task-generation"
+
+      # T6.1.2 fallback — also monitor LangGraph planning latency
+      - alert: SparkleSLOPlanningSlow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_langgraph_planning_latency_seconds_bucket[10m])) by (le)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: planning
+          slo: "planning_p95_lt_5s"
+        annotations:
+          summary: "SLO 违规: LangGraph 规划延迟 P95 > 5s"
+          description: "规划 P95 超过 SLO 目标 5s，已持续 10 分钟。当前阈值: {{ $value | printf \"%.1f\" }}s"
+
+      # T6.1.3 — RAG retrieval P95 < 1s
+      - alert: SparkleSLORetrievalSlow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_rag_retrieval_seconds_bucket[10m])) by (le)
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: retrieval
+          slo: "retrieval_p95_lt_1s"
+        annotations:
+          summary: "SLO 违规: RAG 检索延迟 P95 > 1s"
+          description: "RAG 检索 P95 超过 SLO 目标 1s，已持续 10 分钟。当前阈值: {{ $value | printf \"%.1f\" }}s"
+          runbook: "monitoring/runbooks/incident_response.md#slo-retrieval"
+
+      # T6.1.4 — Galaxy E2E P95 < 3s
+      - alert: SparkleSLOGalaxySlow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_galaxy_e2e_latency_seconds_bucket[10m])) by (le)
+          ) > 3
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: galaxy
+          slo: "galaxy_p95_lt_3s"
+        annotations:
+          summary: "SLO 违规: Galaxy 服务延迟 P95 > 3s"
+          description: "Galaxy E2E P95 超过 SLO 目标 3s，已持续 10 分钟。当前阈值: {{ $value | printf \"%.1f\" }}s"
+          runbook: "monitoring/runbooks/incident_response.md#slo-galaxy"
+
+      # T6.1.5 — Aurora L3 P95 < 15s
+      - alert: SparkleSLOAuroraL3Slow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_aurora_tier_latency_seconds_bucket{tier="L3"}[10m])) by (le)
+          ) > 15
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: aurora
+          slo: "aurora_l3_p95_lt_15s"
+        annotations:
+          summary: "SLO 违规: Aurora L3 延迟 P95 > 15s"
+          description: "Aurora L3 P95 超过 SLO 目标 15s，已持续 10 分钟。当前阈值: {{ $value | printf \"%.1f\" }}s"
+          runbook: "monitoring/runbooks/incident_response.md#slo-aurora-l3"

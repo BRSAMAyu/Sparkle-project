@@ -5,6 +5,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _V2MemoryApiService implements MemoryApiService {
   @override
@@ -201,6 +202,8 @@ class _V2MemoryApiService implements MemoryApiService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('Memory panel V2 shows filters and applies type filter',
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1440, 2200));
@@ -214,7 +217,7 @@ void main() {
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_V2MemoryApiService()),
         ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: MemoryPanelScreen()),
       ),
     );
 

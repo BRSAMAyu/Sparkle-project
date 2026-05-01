@@ -1,0 +1,490 @@
+# Sparkle（星火）AI 学习成长系统 — 项目架构全景报告
+
+## 一、项目概述
+
+**Sparkle（星火）** 是一个**AI 学习成长系统**，核心定位是"AI 学习教练"。短期形态是 AI 学习助手，长期愿景是成为"AI 成长操作系统"。其核心理念是：**先理解用户，再基于对用户的深度理解，生成更好的计划、更好的下一步决策和更长期的自适应支持**。
+
+### 核心产品概念
+- **北极星场景**："14 天准备热力学期末考试"
+- **四种用户模式**：`理解`（你是谁/缺什么）→ `计划`（最佳路径）→ `适应`（动态调整）→ `成长`（校准、反漂移、透明）
+
+### 当前阶段
+项目已完成**阶段 I 退出关口**签署（59/59 规则守卫通过，12/12 核心终止开关三态化），进入"治理闭环完成、准备 RL 精调与真实运行优化"的阶段。Aurora 系统（分阶段功能灰度发布）已推进到阶段 40。
+
+---
+
+## 二、系统架构总览（三层混合架构）
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Flutter 移动端 (Mobile)                    │
+│          Dart / Riverpod / GoRouter / Isar / gRPC            │
+└────────────────────────┬────────────────────────────────────┘
+                         │ WebSocket + REST + gRPC
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Go 网关 (Gateway)                           │
+│     Gin / gorilla/websocket / gRPC / CQRS / SQLC             │
+│     认证 / WebSocket 编排 / API 代理 / 限流 / 文件服务        │
+│     端口 8080 (dev) / nginx 反向代理 80 (prod)               │
+└───────────┬────────────────────────────┬─────────────────────┘
+            │ gRPC (:50051)              │ HTTP (:8000)
+            ▼                            ▼
+┌──────────────────────┐  ┌──────────────────────────────┐
+│   Python AI 引擎      │  │  Python FastAPI 服务          │
+│   gRPC Server         │  │  REST API /api/v1/* (87 路由) │
+│   AgentService        │  │  /api/v2/agent (LangGraph)    │
+│   Orchestrator        │  │  Celery Workers              │
+│   ~360 个服务模块     │  │  APScheduler 定时任务         │
+└──────┬────────┬───────┘  └──────────┬───────────────────┘
+       │        │                      │
+       ▼        ▼                      ▼
+┌──────────┐ ┌──────────┐ ┌──────────────────────┐
+│PostgreSQL│ │  Redis   │ │       MinIO/S3        │
+│pgvector  │ │ Cache    │ │  对象存储（文件）      │
+│Apache AGE│ │ 事件总线  │ │                      │
+│(图扩展)   │ │ 限流     │ │                      │
+└──────────┘ └──────────┘ └──────────────────────┘
+```
+
+### 各层职责
+
+| 层 | 技术栈 | 职责 |
+|---|---|---|
+| **Flutter 移动端** | Dart, Riverpod, GoRouter, Isar, gRPC | 用户界面、本地数据库、离线同步、推送通知、本地状态管理 |
+| **Go 网关** | Gin, gorilla/websocket, gRPC, SQLC, pgx | 认证网关、WebSocket 编排、API 反向代理、CQRS 读写分离、限流、文件服务 |
+| **Python AI 引擎** | FastAPI, gRPC, LangGraph, SQLAlchemy, Celery | AI 对话编排、知识图谱、错题本、记忆系统、干预系统、多智能体协作 |
+| **基础设施** | PostgreSQL + pgvector + AGE, Redis, MinIO/S3, Celery | 持久化存储、向量搜索、图数据库、缓存、消息队列、对象存储 |
+
+---
+
+## 三、基础设施与部署
+
+### Docker 服务栈（基础环境 6 服务 + 可观测性 7 服务）
+
+| 服务 | 用途 | 端口 |
+|---|---|---|
+| **sparkle_db** | PostgreSQL 16 + pgvector + Apache AGE | 5432 |
+| **redis** | Redis Stack（缓存/消息代理/会话） | 6379 |
+| **minio** | S3 兼容对象存储 | 9000/9001 |
+| **sparkle_api** | Python FastAPI HTTP | 8000 |
+| **sparkle_agent** | Python gRPC AI 引擎 | 50051 |
+| **celery_worker** | Celery 异步任务（队列: high/default/low） | - |
+| **sparkle_gateway** | Go 网关 | 8080 |
+| **tempo** | 分布式追踪（OTLP 接收器） | 4317 |
+| **prometheus** | 指标采集 | 9090 |
+| **alertmanager** | 告警路由 | 9093 |
+| **loki** | 日志聚合 | 3100 |
+| **grafana** | 可视化仪表盘 | 3000 |
+
+### 部署策略
+- **开发环境**：docker-compose.dev.yml（禁用可观测性栈以节省资源）
+- **生产环境**：docker-compose.prod.yml，使用 **蓝绿部署**（nginx + 两套 gateway），网络隔离（edge 网段 vs app 网段），gRPC 要求 TLS
+- **Kubernetes**：Kustomize 配置，同样支持蓝绿部署（staging + production 两个环境）
+- **生产部署脚本**：`scripts/deploy-prod.sh`（蓝绿 Docker 部署，含健康检查、冒烟测试、180s 观察期、自动回滚）
+
+---
+
+## 四、Go 网关（backend/gateway/）— WebSocket/HTTP 网关
+
+### 架构角色
+Go 网关作为 **Flutter 移动端与后端 AI 引擎之间的中间层**，承担 9 个关键职责：
+
+### 核心模块
+
+#### 1. 网关入口（cmd/server/）
+- `main.go` 初始化：日志（Zap）→ 配置（Viper）→ i18n → OpenTelemetry → 数据库连接（3 种方式：pgxpool、pgx.Conn、database/sql）→ Redis → 服务初始化 → gRPC 客户端 → 处理器 → CQRS 基础设施 → 反向代理 → Gin 路由注册 → 优雅关闭
+- `setup.go`（869 行）：完整的启动编排
+
+#### 2. HTTP/WebSocket 处理器（internal/handler/，52 个文件）
+
+| 处理器 | 功能 |
+|---|---|
+| **AuthHandler** | Apple ID 登录、JWT 签发与验证 |
+| **ChatOrchestrator**（10 个文件） | 核心 WebSocket 聊天编排：连接管理、消息协议、流式错误处理、反馈 |
+| **ChatHistoryHandler** | 聊天记录 REST 接口（最近会话、历史、设置） |
+| **FileHandler**（4 个文件） | 文件上传/下载/管理 |
+| **FileEventHandler** | 文件事件 WebSocket 处理器 |
+| **WSTicketHandler** | WebSocket 门票签发（一次性令牌认证） |
+| **WebSocketProxy** | 社区 WebSocket 代理到 Python 后端 |
+| **SignalPushHandler** | 服务器推送信号（WebSocket） |
+| **InterventionPushHandler** | AI 干预推送 |
+| **GroupChatHandler** | 群聊消息 REST 接口 |
+| **ErrorBookHandler** | 错题本 REST 接口 |
+| **GalaxyHandler** | 知识图谱 REST API（gRPC 代理到 Python） |
+| **STTHandler** | 语音转文本 WebSocket 处理器 |
+| **ProxyRoutesHandler**（883 行） | 显式 HTTP 代理路由（问责制、任务、计划、日记、焦点、社区等） |
+| **HealthHandler** | 健康检查（/health、/ready、/live） |
+| **ChaosHandler** | 混沌工程管理 |
+| **DataConsistencyHandler** | 数据一致性检查和修复 |
+
+#### 3. 中间件栈（internal/middleware/，17 个文件）
+
+| 中间件 | 用途 |
+|---|---|
+| **AuthMiddleware** | JWT 令牌验证 + Redis 黑名单 |
+| **WsAuthMiddleware** | WebSocket 认证（门票或 JWT） |
+| **CORSMiddleware** | CORS 跨域 |
+| **SecurityHeadersMiddleware** | 安全 HTTP 头 |
+| **RateLimitMiddleware** | 令牌桶限流 |
+| **DistributedRateLimiter** | Redis 分布式限流 |
+| **TimeoutMiddleware** | 请求超时控制 |
+| **I18nMiddleware** | 国际化（Accept-Language） |
+| **InternalAPIKeyMiddleware** | 内部 API 密钥验证 |
+| **InternalIPWhitelistMiddleware** | IP 白名单 |
+| **AdminAuthMiddleware** | 管理员认证 |
+| **ABTestMiddleware** | A/B 测试变体分配 |
+
+#### 4. 业务服务层（internal/service/，26 个文件）
+
+| 服务 | 功能 |
+|---|---|
+| **QuotaService** | Redis Lua 脚本实现的配额管理 |
+| **ChatHistoryService**（855 行） | 聊天历史缓存 + 持久化 + 熔断器 |
+| **SemanticCacheService** | AI 响应语义缓存 |
+| **CostCalculator** | AI 请求成本计算 |
+| **UserContextService** | 用户上下文管理 |
+| **FileMetadataService** | 文件元数据管理 |
+| **FileStorageService** | MinIO/S3 文件存储 |
+| **FileGCService** | 文件垃圾回收 |
+| **SignalHub** | WebSocket 信号分发 |
+| **AppleAuthService** | Apple ID 认证 |
+| **MessageDedup** | WebSocket 消息去重 |
+| **CommunityCommandService/QueryService** | 社区 CQRS |
+| **GalaxyCommandService** | 知识图谱命令处理 |
+| **UserPreferencesService** | 用户偏好管理 |
+
+#### 5. gRPC 客户端（internal/agent/、internal/galaxy/、internal/error_book/）
+- **Agent 客户端**：连接到 Python gRPC AI 引擎，支持 TLS/mTLS、重试策略（最多 4 次）、StreamChat 流式聊天、断路器模式（关闭→打开→半开，可配置阈值）
+- **Galaxy 客户端**：UpdateNodeMastery（CRDT 修订时钟同步）
+- **ErrorBook 客户端**：错题本 CRUD + 分析 + 复习
+
+#### 6. CQRS 基础架构（internal/cqrs/）
+- **事务性发件箱模式**（Outbox）：PostgreSQL 存储库 + 发布者 + 清理器
+- **投影处理器**：CommunityProjectionHandler、TaskProjectionHandler、GalaxyProjectionHandler
+- **死信队列**（DLQ）处理
+
+#### 7. 后台 Worker（internal/worker/）
+- **CommunitySyncWorker**：社区事件流式同步到 Redis 读模型
+- **TaskSyncWorker**：任务事件同步
+- **GalaxySyncWorker**：知识图谱事件同步
+- **OutboxRelay**：通过 RabbitMQ 将发件箱事件中继到外部系统
+
+---
+
+## 五、Python AI 引擎（backend/）— 核心智能层
+
+### 入口点
+| 入口 | 协议 | 端口 | 功能 |
+|---|---|---|---|
+| `app/main.py` | FastAPI HTTP | 8000 | REST API、中间件（CORS、安全头、幂等性、限流）、OpenTelemetry、Prometheus |
+| `grpc_server.py` | gRPC | 50051 | AgentService、ErrorBookService、GalaxyService 三个 gRPC 服务 |
+
+### 核心模块层级
+
+#### 1. 编排引擎（orchestration/，~90 个文件）
+这是整个 AI 系统的**中央协调器**（ChatOrchestrator，~3496 行），由 8 个 Mixin 组合而成：
+- **ContextBuilder**：上下文组装（用户画像、记忆、知识图谱、当前会话）
+- **ContextFocus** / **ContextPruner**：上下文聚焦与裁剪（控制 LLM 输入长度和质量）
+- **RoutingEngine**：双核路由决策（标准工作流 vs LangGraph 深度工作流）
+- **ValidationEngine**：请求与计划验证
+- **SessionState**：会话状态管理
+- **ExecutionEngine**：工具执行与多智能体工作流
+- **ResponseBuilder**：最终响应合成 + UX 信封（元数据包装）
+- **PersistenceLayer**：数据库持久化 + 反馈记录
+- **ObservabilityMixin**：链路追踪、日志、指标流式传输
+- **CircuitBreaker**：容错熔断器
+- **MultiAgentAdapter**：多智能体编排适配
+
+#### 2. 基础设施层（core/，65 个文件）
+
+| 模块 | 功能 |
+|---|---|
+| **llm_client.py** | 统一 LLM 客户端（DeepSeek、DashScope/Qwen、Xiaomi MIMO、Zhipu GLM、OpenAI 兼容，tenacity 重试） |
+| **llm_router.py** | 分级 LLM 路由（free/fast/standard/plus/pro/reasoning/max/top/specialist 共 9 级） |
+| **event_bus.py** | Redis Streams 事件总线（消费组、指数退避重试、死信队列、幂等去重） |
+| **event_types.py** | 所有事件类型常量（胶囊、画像、工具、执行、计划健康、场景、吸引子、JITAI 等） |
+| **cache.py** | Redis 缓存 + 分布式锁（Lua 原子释放）+ 本地回退缓存 |
+| **unified_intent_router.py** | 三层意图路由（显式匹配 / 规则 / LLM 辅助） |
+| **execution_router.py** | 双核执行路由（标准工作流 vs LangGraph 深度工作流） |
+| **security_monitor.py** / **llm_safe.py** | LLM 输入/输出安全（PII 脱敏、提示注入检测） |
+| **rate_limiting.py** | API 限流 |
+| **websocket.py** | WebSocket 连接管理器（Redis pub/sub） |
+| **metrics.py** / **business_metrics.py** | Prometheus 业务指标 |
+| **tracing.py** | OpenTelemetry 分布式追踪 |
+| **i18n.py** / **email_service.py** / **firebase_config.py** / **jpush_config.py** | 国际化、邮件、推送通知集成 |
+
+#### 3. 业务服务层（services/，~360 个文件，最大模块）
+
+**AI 核心服务：**
+
+| 服务 | 功能 |
+|---|---|
+| **agent_grpc_service.py**（1651 行） | gRPC AgentService 实现：流式聊天、记忆检索、意图分类、模式路由 |
+| **orchestrator.py** | ChatOrchestrator 中央协调器 |
+| **llm_service.py** | 高级 LLM 编排、提示构建、格式化 |
+| **cognitive_service.py** | 用户认知状态分析 |
+| **memory_service.py** | 长期记忆（CRUD、排序、衰减、演化、合并） |
+| **plan_service.py** | 学习计划生命周期 |
+| **task_service.py** | 任务生命周期 |
+| **intervention_service.py** | JITAI 干预系统（触发、投递、效果追踪） |
+| **galaxy_service.py** | 知识图谱（节点、掌握度、扩展、关系） |
+| **feedback_learning_service.py** | 从用户反馈中学习 |
+| **nudge_service.py** | 轻推生成与投递 |
+| **persona_service.py** | 用户画像管理 |
+| **metacognition_service.py** | 元认知过程支架与仪表盘 |
+| **srl_phase_tracker_service.py** | 自我调节学习阶段追踪（前思/执行/反思） |
+| **sufficiency_judge_service.py** | 上下文充分性判定 |
+
+**功能服务：**
+
+| 服务 | 功能 |
+|---|---|
+| **community_service.py** | 社交功能（群组、文件共享、协作） |
+| **push_service.py** / **notification_service.py** | 推送通知（JPush/FCM）+ 应用内通知中心 |
+| **shop_service.py** | 虚拟商店（成就、装备、皮肤、购买） |
+| **capsule_*.py** | 好奇心胶囊（内容生成、反馈、分享、收藏） |
+| **embedding_service.py** / **rerank_service.py** | 向量嵌入与重排序（RAG） |
+| **translation_service.py** | 翻译（Hunyuan-MT + SiliconFlow 回退） |
+| **analytics_service.py** | 业务分析与报表 |
+| **dashboard_service.py** | 用户仪表盘数据聚合 |
+| **billing_worker.py** | Token 用量计费 |
+| **focus_service.py** / **focus_signal_processor.py** | 专注会话管理与信号处理 |
+| **scene_consolidation_service.py** | 学习场景合并 |
+| **shadow_prediction_service.py** | 影子模式预测（A/B 测试） |
+| **outcome_learning_service.py** | 从过去结果中学习 |
+| **policy_compiler_service.py** | 推送策略编译 |
+| **accountability_*.py** | 问责伙伴功能（打卡、连续天数、鼓励） |
+| **growth_dashboard_service.py** | 成长指标与可视化 |
+
+**子模块：**
+- `galaxy/`：CRDT 持久化、协作图谱、本体生成、RAG 路由、流式检索
+- `report/`：学习报告生成
+- `personalization/`：偏好推理、衰减、运行时上下文、画像引擎
+- `analytics/`：BKT（贝叶斯知识追踪）、IRT（项目反应理论）、行为模式、周度综合
+- `cognitive/`：自动碎片收集
+- `simulation/`：模拟引擎、参与者生成、场景模板
+- `stt/`：语音转文本（Zhipu ASR、讯飞）
+- `llm/`：LLM 提供商抽象、并发、回退、解析器
+- `compliance/`：年龄门控、加密擦除、删除协议、法律保留
+- `theater/`：预测剧场服务
+
+#### 4. 多智能体系统（agents/，~19 个文件 + graph/ 子模块）
+- **StandardWorkflow**：标准聊天工作流（LangGraph）
+- **SpecialistAgents**：专业子智能体
+- **ReflectionAgent** / **ReviewerAgent**：反思与审查智能体
+- **SearchAgent**：网络搜索智能体
+- **CollaborationWorkflows**：多智能体协作
+- **graph/** 子模块：专家注册中心、LLM 工厂、状态管理、工作流编排
+  - 节点：collaboration、custom_expert、deep_analyst、error_analyst、exam_oracle、galaxy_guide、study_buddy、time_tutor、router、reviewer
+
+#### 5. 工具系统（tools/，29 个文件）
+注册中心 + 工具实现：knowledge_tools、plan_tools、task_tools、focus_tools、web_search_tool、translation_tool、simulation_tool、error_tools、intervention_tools、report_tool、theater_tool 等
+
+#### 6. 路由层（routing/，~11 个文件）
+- **SemanticRouter**：语义意图路由
+- **GraphRouter**：图路由
+- **ExplorationRouter**：探索（A/B 测试）路由
+- **ToolPreferenceRouter** / **Shadow**：工具偏好路由与影子模式
+
+#### 7. Aurora 系统（aurora/，26+ 个子目录/文件）
+**分阶段功能灰度发布系统**，当前推进到阶段 40。核心组件：
+- **engine.py**：核心引擎
+- **signal_aggregator.py** / **signal_processor.py**：信号聚合与处理
+- **llm_bridge.py**：LLM 集成桥接
+- **policy_loader.py**：策略加载
+- **profile_translator.py**：画像翻译
+- **privacy.py**：隐私模块
+- **policies/**、**schemas/**、**decision_fns/**、**bayesian/**、**observability/**、**runtime_v1/**：各能力子模块
+
+#### 8. 信号系统（signals/，~59 个文件）
+**信号到动作管线**（Signal-to-Action Spine）：因果控制管线
+- **types.py**：核心数据类型（ActionableSignal、StatePacket、CoreSession、Directive）
+- **spine_orchestrator.py**：脊柱编排器
+- **policy_engine.py** / **policy_analytics.py** / **policy_experiments.py**：信号策略管理
+- **signal_ranker.py**：信号排序与优先级
+- **skill_extraction.py** / **skill_lifecycle.py**：技能提取与生命周期
+- **marketplace.py** / **strategy_marketplace.py**：策略市场
+- **counterfactual_evaluation.py**：反事实评估
+
+#### 9. 数据库模型（models/，93 个 ORM 模型）
+
+| 类别 | 模型 |
+|---|---|
+| 用户系统 | user、user_preferences、user_settings、user_state、user_push_opt_in、user_memory_settings |
+| 认证安全 | auth_security、session_completion、token_revocation |
+| 学习 | plan、task、task_feedback、task_document、subject |
+| 知识 | galaxy（KnowledgeNode + 扩展队列）、document_chunks、semantic_memory |
+| 记忆 | memory、memory_evolution、memory_rank_policy、ltm_daily_snapshot |
+| 认知 | cognitive、focus、error_book、vocabulary |
+| 干预 | intervention、intervention_adaptive、intervention_outcome、intervention_strategy_outcome |
+| 卡片协议 | card_protocol、plan_execution_record、plan_state |
+| 社交 | community、group_files、accountability 系列 |
+| 事件 | event、event_bus_dlq、outbox、notification、notification_interaction |
+| 执行 | execution_intent、execution_record、execution_schedule、execution_audit_log |
+| 成就商店 | achievement、shop、capsule 系列 |
+| SRL | srl_phase_state |
+| 报告 | report_snapshot、nightly_review |
+
+#### 10. 数据迁移（alembic/，100 个迁移文件）
+完整覆盖 s17-s40 的 Aurora 阶段迁移、卡片协议（cp001-cp002）、执行意图（oc001-oc005）、事件总线 DLQ、模拟、报告快照、知识图谱等。
+
+#### 11. 其他重要模块
+- **consumers/**（9 个）：事件消费者（成就计划、图谱计划、计划任务生成、用户记忆种子、画像引导、欢迎引导）
+- **workers/**（5 个）：知识扩展、图谱同步（AGE）、清理后台任务
+- **tasks/**（6 个）：问责检查点、轻推、访客清理、策略、相似度更新等定时任务
+- **learning/**（20 个）：A/B 测试、贝叶斯学习、变化点检测、知识蒸馏、提示词老虎机、质量门控、检索
+- **scaffolding/**（5 个）：脚手架 FSM、意图生成器、能力追踪器
+- **scenario_packs/**（6 个）：预置场景包（如 14 天考试冲刺）
+- **sprint_packs/**（9 个）：冲刺包定义（计算机网络、数据结构、数学、操作系统等）
+
+---
+
+## 六、Flutter 移动端（mobile/）— 用户界面层
+
+### 架构概览
+- **状态管理**：Riverpod（flutter_riverpod + riverpod_annotation）
+- **导航**：GoRouter（5 标签底部导航：首页 + 星图 + 聊天 + 社群 + 个人）
+- **本地数据库**：Isar（主）+ Hive（缓存/设置）+ SharedPreferences
+- **网络**：Dio + Retrofit、gRPC、WebSocket
+- **架构模式**：按功能模块组织，每个功能内部遵循 Clean Architecture（data / domain / presentation）
+
+### 核心基础设施（core/，18 个子目录）
+
+#### 设计系统 2.0（core/design/，~50+ 文件）
+- **设计令牌**：颜色、间距、排版、动画、响应式断点
+- **动态主题管理**（ThemeManager）：明/暗模式
+- **原子化组件库**：按钮（SparkleButton）、卡片（SparkleCard）、药丸（SemanticPill/TaskPill）、骨架屏（SparkleSkeleton）
+- **丰富小部件**：玻璃卡片（GlassCard）、五彩纸屑（SparkleConfetti）、头像、加载指示器、空状态、错误页、确认对话框、感官模态框、通用分享底面板、粒子池
+- **响应式布局**：移动端底部导航 / 平板侧栏 / 桌面抽屉
+- **感官反馈**：触觉 + 音频交互反馈
+- **性能分层**：根据设备性能调整动画复杂度
+
+#### 离线同步引擎（core/offline/，~20 个文件）
+- **CRDT 冲突解决** + 幂等去重
+- 事务性发件箱模式
+- 网络状态监控
+- Isar 本地模型：vocab_word、offline_chat_message、translation_record、focus_session_record
+
+#### 服务层（core/services/，~50 个服务）
+
+| 类别 | 服务 |
+|---|---|
+| 网络通信 | WebSocketService、DeepLinkService、AppLinkRouterService |
+| 推送通知 | UnifiedPushService、FirebaseMessagingService、JPushService、PushTokenManager |
+| 认证社交 | SocialAuthService、GoogleSignInStub、GuestService、WeChatShareService |
+| 音频 | BGMService、SceneAudioPolicy |
+| 性能 | PerformanceService、PerformanceMonitor |
+| 可观测性 | ClientObservabilityService、AppEventStreamService |
+| IoT | OpenClawConnectionService、OpenClawAutomationService、OpenClawNodeInventoryService |
+| AI/记忆 | MemoryApiService、SkillApiService、EvidenceResolveService |
+| 预测 | PredictiveService、PredictionAttributionService |
+| 感官 | SensoryFeedbackService（触觉+音频） |
+| 分享 | ShareService、SharePosterService、UniversalShareService |
+| 工具 | ParticlePool、QuadTree、SmartCache、RetryStrategy、PassiveSignalService、DataConsistencyChecker |
+
+### 39 个功能模块
+
+| 功能 | 说明 |
+|---|---|
+| **首页（home）** | 仪表盘：天气、火焰（连续天数）、冲刺、下一步行动、认知数据、Bento Grid、Omnibar、任务看板（计划/优先级/日程/冲刺视图）、日历热力图、考试冲刺仪表盘、洞察中心、OpenClaw 集线器、通知列表 |
+| **聊天（chat）** | AI 对话：ChatScreen、群聊、私聊、WebSocket 服务、智能体会话存储、聊天缓存、消息通知 |
+| **星图（galaxy）** | 交互式知识图谱：力导向布局、节点展开、边动画、手势识别、LLM 集成、性能监控、无障碍 |
+| **社群（community）** | 社交：CommunityMainScreen、群组 CRUD、好友、帖子、群文件/任务、用户搜索、社群智能体 |
+| **个人（user / settings / profile）** | 用户设置：资料编辑、画像引导/建模、学习模式、日程偏好、主题、推送设置、安全日志、会话管理、社交账户、BGM 库、海报工作室、同步中心、管理员操作、导出/删除数据 |
+| **学习计划（plan）** | 学习计划 CRUD、冲刺执行、考试冲刺设置、成长组合、冲刺历史/完成/考后回顾、学习路径进度 |
+| **任务（task）** | 任务管理 CRUD、执行与审批、子任务列表、计时器、卡住帮助、反馈、庆祝、提醒、快捷操作、执行模板 |
+| **错题本（error_book）** | 错题记录增删改查、AI 语义摘要、SM-2 间隔重复复习、复习统计 |
+| **成就（achievement）** | 成就系统：列表、详情、地图、里程碑庆祝、连续天数、合同屏幕 |
+| **商店（shop）** | 应用内商店：皮肤、称号、消耗品、购买流程 |
+| **认知（cognitive）** | 认知工具：好奇心胶囊、模式列表、棱镜行为卡片 |
+| **专注（focus）** | 专注/正念：FocusMainScreen、MindfulnessModeScreen |
+| **洞察（insights）** | 学习洞察：每周成长叙事、学习路径预测、预测性洞察 |
+| **记忆（memory）** | AI 记忆系统：记忆面板、详情、设置、证据卡/抽屉、待处理承诺、未解决冲突 |
+| **报告（report）** | 学习报告：掌握雷达图、Markdown 报告 |
+| **日历（calendar）** | 日历统计、每日详情 |
+| **翻译（translation）** | 文本翻译：内嵌翻译块、弹出框、抽屉、历史、知识集成 |
+| **文档（documents）** | 文档库：列表、仓库、阅读器 |
+| **语音转文字（tools -> STT）** | 内置工具中的语音转文字 |
+| **模拟（simulation）** | 学习场景模拟：交互式聊天气泡 UI、场景回放 |
+| **剧场（theater）** | 知识剧场：假设场景可视化、路径比较、知识图谱剧场 |
+| **OpenClaw IoT** | IoT 设备管理：连接、配对（QR 扫码）、执行偏好 |
+| **光子（photon）** | 虚拟货币系统：余额卡、交易记录、转账 |
+| **种子库（seed_library）** | 知识种子库：列表、创建、详情、种子卡片 |
+| **可视化元素（visual_elements）** | 视觉元素外观：解锁/预览/应用皮肤、边框、特效、推荐 |
+| **词汇（vocabulary）** | 本地词汇：离线单词存储、间隔重复、词典服务 |
+| **引导（onboarding）** | 交互式引导（含架构动画） |
+| **通知中心（notification_center）** | 统一通知中心：列表、分析、筛选 |
+| **复习（reviews）** | 夜间复习 + 复习计划中心（整合错题本、计划、任务的统一复习界面） |
+| **工具（tools）** | 工具启动器、注册中心、库、宿主屏幕。内置：计算器、专注计时器、专注统计、笔记、语音转文字、翻译、词汇查询、词书、呼吸练习、闪卡 |
+| **Mirofish** | Mirofish 里程碑庆祝服务（首次模拟/剧场/报告） |
+| **Aurora** | 大气层可视化 |
+
+---
+
+## 七、gRPC 协议定义（proto/）
+
+### 6 个 gRPC 服务
+
+| 服务 | Proto 文件 | RPC 数量 | 功能 |
+|---|---|---|---|
+| **AgentService** | agent_service.proto | 17 | 流式聊天、记忆检索、用户画像、周报、反馈、计划审查、内容审查、仲裁 |
+| **GalaxyService** | galaxy_service.proto | 2 | 节点掌握度更新（CRDT）、协作图谱同步（Yjs） |
+| **CommunityService** | community_service.proto | 24 | 好友管理、群组管理、消息（群聊/私聊）、搜索、签到 |
+| **ErrorBookService** | error_book.proto | 10 | 错题 CRUD、AI 分析、SM-2 间隔复习、统计 |
+| **STTService** | stt_service.proto | 3 | 实时语音转文字、文件转录、转录增强 |
+| **InferenceService** | inference.proto | 1 | 统一 LLM 推理调用（9 种任务类型） |
+
+### 4 个纯数据协议
+| 协议 | 功能 |
+|---|---|
+| **websocket.proto** | WebSocket 消息信封（聊天消息、节点掌握度更新、干预推送、心跳） |
+| **evidence.proto** | RAG 证据节点与包 |
+| **signals.proto** | 端到端信号管线：ContextEnvelope → 特征提取 → 信号 → 候选动作 |
+| **user_state.proto** | 用户状态聚合（22 个字段，含承诺、策略、SRL 阶段、工作记忆等） |
+
+---
+
+## 八、核心功能流程
+
+### AI 对话流程
+```
+用户消息 → Flutter WebSocket → Go Gateway (ChatOrchestrator)
+  → gRPC StreamChat → Python AgentService
+  → UnifiedIntentRouter (三层意图识别)
+  → ChatOrchestrator (上下文组装 → 路由 → 验证 → 执行 → 响应构建)
+  → LLM 调用 (分级路由: free/fast/standard/plus/pro/...)
+  → 工具调用 (知识图谱/计划/任务/搜索/翻译/...)
+  → 流式响应 → Go Gateway → Flutter UI
+```
+
+### 事件驱动架构
+```
+服务 A → EventBus (Redis Streams) → 消费者组 → 服务 B
+         ├── 死信队列 (DLQ)
+         ├── 幂等去重
+         └── 指数退避重试
+```
+
+### CQRS 读写分离
+```
+写入: Flutter → Go Gateway → PostgreSQL (写模型)
+                         ↓ 事务性发件箱
+                         ↓ 投影处理器
+读取: Flutter → Go Gateway → Redis (读模型)
+```
+
+---
+
+## 九、关键架构特征
+
+1. **三层隔离**：Flutter（UI）→ Go Gateway（网关/编排）→ Python（AI 引擎），职责清晰
+2. **双核路由**：标准工作流 + LangGraph 深度工作流并行，根据意图复杂度路由
+3. **分级 LLM**：9 级模型路由（free→specialist），成本与能力匹配
+4. **事件驱动**：Redis Streams 事件总线 + 死信队列 + 幂等去重
+5. **CQRS 模式**：PostgreSQL 写 + Redis 读，事务性发件箱确保最终一致性
+6. **CRDT 同步**：知识图谱节点掌握度使用修订时钟实现无冲突同步
+7. **Aurora 灰度系统**：30+ 三态开关（off/shadow/live），控制 40 个阶段的渐进式功能发布
+8. **离线优先**：Flutter 端 Isar 本地数据库 + CRDT 冲突解决 + 发件箱同步
+9. **全面可观测性**：Prometheus（指标）+ Loki（日志）+ Tempo（追踪）+ Grafana（仪表盘）
+10. **混沌工程**：Toxiproxy 网络故障注入 + 内置混沌管理器 + 运行手册

@@ -443,6 +443,7 @@ class TestCeleryTaskExecution:
 
         result = health_check_task.apply_async()
         assert result is not None
+        assert result.id is not None
 
 
 if __name__ == "__main__":

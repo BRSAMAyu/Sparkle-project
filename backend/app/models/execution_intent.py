@@ -19,7 +19,7 @@ def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
     return [member.value for member in enum_cls]
 
 
-class ExecutionMode(str, enum.Enum):
+class ExecutionMode(enum.StrEnum):
     """任务执行模式。"""
 
     HUMAN = "human"
@@ -27,14 +27,14 @@ class ExecutionMode(str, enum.Enum):
     HYBRID = "hybrid"
 
 
-class ExecutorType(str, enum.Enum):
+class ExecutorType(enum.StrEnum):
     """执行器类型。"""
 
     MANUAL = "manual"
     OPENCLAW = "openclaw"
 
 
-class ExecutionTargetEnv(str, enum.Enum):
+class ExecutionTargetEnv(enum.StrEnum):
     """执行目标环境。"""
 
     BROWSER = "browser"
@@ -44,7 +44,7 @@ class ExecutionTargetEnv(str, enum.Enum):
     HUMAN = "human"
 
 
-class ExecutionIntentStatus(str, enum.Enum):
+class ExecutionIntentStatus(enum.StrEnum):
     """执行意图生命周期状态。"""
 
     DRAFT = "draft"
@@ -61,7 +61,7 @@ class ExecutionIntentStatus(str, enum.Enum):
     HANDED_BACK = "handed_back"
 
 
-class TrustLevel(str, enum.Enum):
+class TrustLevel(enum.StrEnum):
     """执行结果信任等级。"""
 
     RAW = "raw"

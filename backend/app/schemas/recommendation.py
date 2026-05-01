@@ -5,15 +5,16 @@ Collaborative Filtering Recommendation Schemas
 基于用户行为相似度的个性化推荐
 """
 from __future__ import annotations
+
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class RecommendationItemType(str, Enum):
+class RecommendationItemType(StrEnum):
     """推荐物品类型"""
     KNOWLEDGE_NODE = "knowledge_node"    # 知识点
     TASK = "task"                         # 任务

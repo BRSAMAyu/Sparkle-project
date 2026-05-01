@@ -21,6 +21,7 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _NoopApiClient implements ApiClient {
   @override
@@ -167,7 +168,11 @@ const _sprint = ExamSprintDashboardData(
 );
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('daily startup 500 shows retry banner', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     await ViewStorageService.ensureInitialized();
@@ -189,10 +194,7 @@ void main() {
             (ref) => _StartupChatNotifier(_FakeChatRepository(), ref),
           ),
         ],
-        child: const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
+        child: testMaterialApp(
           home: ChatScreen(),
         ),
       ),
@@ -213,6 +215,8 @@ void main() {
 
   testWidgets('slow dashboard falls back to active plan for daily startup',
       (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     await ViewStorageService.ensureInitialized();
@@ -237,10 +241,7 @@ void main() {
             (ref) => _StartupChatNotifier(_FakeChatRepository(), ref),
           ),
         ],
-        child: const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
+        child: testMaterialApp(
           home: ChatScreen(),
         ),
       ),

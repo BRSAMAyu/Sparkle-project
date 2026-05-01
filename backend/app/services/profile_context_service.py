@@ -25,16 +25,16 @@ from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.subject import Subject
 from app.schemas.error_book import ErrorQueryParams
-from app.services.error_book_service import ErrorBookService
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
+from app.services.error_book_service import ErrorBookService
 from app.services.idiographic_association_service import IdiographicAssociationService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_name
 from app.services.metacognition_service import MetacognitionService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.report.report_tools import LearningReportTools
+from app.services.user_insight_compiler import UserInsightCompiler
 from app.state_aggregator.schema import UserStateFieldName
 from app.state_aggregator.service import StateAggregatorService
-from app.services.user_insight_compiler import UserInsightCompiler
 
 
 def _utcnow() -> datetime:

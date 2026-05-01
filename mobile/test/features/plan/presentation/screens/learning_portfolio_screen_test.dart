@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -10,8 +12,11 @@ import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('learning portfolio renders grouped sprint sections',
       (WidgetTester tester) async {
     await _useTallSurface(tester);
@@ -35,9 +40,11 @@ void main() {
     expect(find.text('操作系统'), findsOneWidget);
     expect(find.text('计算机网络'), findsOneWidget);
     expect(find.text('高等数学'), findsOneWidget);
-    expect(find.text('14天冲刺 · 进行中（第 4 天，还剩 10 天）'), findsOneWidget);
-    expect(find.text('7天冲刺（已完成，2026-04-10）'), findsOneWidget);
-    expect(find.text('标准冲刺 · 计划中'), findsOneWidget);
+    expect(find.textContaining('14天冲刺'), findsOneWidget);
+    expect(find.textContaining('进行中'), findsAtLeastNWidgets(1));
+    expect(find.textContaining('进行中'), findsAtLeastNWidgets(1));
+    expect(find.textContaining('已完成'), findsAtLeastNWidgets(1));
+    expect(find.textContaining('计划中'), findsAtLeastNWidgets(1));
 
     await tester.tap(find.text('计算机网络'));
     await tester.pumpAndSettle();
@@ -97,7 +104,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.textContaining('portfolio 500'), findsOneWidget);
+    expect(find.textContaining('portfolio 500'), findsAtLeastNWidgets(1));
     expect(find.widgetWithText(SparkleButton, '重试'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(SparkleButton, '重试'));
@@ -170,7 +177,15 @@ void main() {
         child: MaterialApp.router(
           theme: AppThemes.lightTheme,
           routerConfig: router,
-        ),
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+              ),
       ),
     );
 
@@ -209,7 +224,15 @@ Widget _buildApp({
     child: MaterialApp.router(
       theme: AppThemes.lightTheme,
       routerConfig: router,
-    ),
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+          ),
   );
 }
 

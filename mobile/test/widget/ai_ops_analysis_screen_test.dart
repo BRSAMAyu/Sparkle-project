@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('ai ops analysis screen renders utilization chips from export payload', (
     tester,
   ) async {
@@ -59,7 +62,7 @@ void main() {
             },
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: AiOpsAnalysisScreen(),
         ),
       ),

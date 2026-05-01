@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -53,7 +54,7 @@ async def get_event_bus_health(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Event bus health check failed: {e}",
-        )
+        ) from e
 
 
 @router.get("/dlq", response_model=dict[str, Any])

@@ -9,16 +9,16 @@ Phase 3 of the Card Protocol.
 """
 from __future__ import annotations
 
-from copy import deepcopy
 import uuid
+from copy import deepcopy
 from datetime import datetime
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import ArtifactType
 from app.services.planning_artifact_service import PlanningArtifactService
-from app.core.event_bus import EventBus
 
 
 class RiskRegisterService:

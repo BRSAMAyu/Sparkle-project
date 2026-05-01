@@ -1,4 +1,3 @@
-import asyncio
 from uuid import UUID
 
 from loguru import logger
@@ -7,6 +6,7 @@ from redis.asyncio import Redis
 from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.services.cognitive_service import CognitiveService
+
 
 class CognitiveEventConsumer:
     """Consumer for cognitive events, like fragment creation."""

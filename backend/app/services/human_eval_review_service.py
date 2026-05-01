@@ -5,7 +5,6 @@ from typing import Any
 
 from app.core.business_metrics import HUMAN_EVAL_REPEATED_FAILURE_TAGS_TOTAL
 
-
 ALLOWED_HUMAN_EVAL_ISSUE_TAGS = (
     "diagnosis_wrong",
     "timing_wrong",

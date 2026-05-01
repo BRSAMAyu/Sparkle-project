@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from statistics import NormalDist
-from typing import Iterable, Sequence
-
 
 _NORMAL = NormalDist()
 

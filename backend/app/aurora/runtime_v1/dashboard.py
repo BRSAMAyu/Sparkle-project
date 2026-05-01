@@ -211,6 +211,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "informational_tensions",
             "social_signals",
             "wake_policy",
+            "spine_signals",
         }
     ),
     "wait": frozenset({"user_message", "covered_domains", "missing_domains", "wake_policy"}),
@@ -236,6 +237,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "informational_tensions",
             "social_signals",
             "wake_policy",
+            "spine_signals",
         }
     ),
     "soft_return_topic": frozenset(
@@ -331,6 +333,8 @@ class DashboardReadout:
     # Synthesised convenience flag: True when sprint_mode == "last_24h_cram" or exam_sprint_policy.last_24h_mode.
     # Exposed to the decision loop even for surfaces where exam_sprint_policy is excluded from the LLM payload.
     last_24h_mode: bool = False
+    # Spine signals — active directives, risk flags, outcome history from Signal-to-Action Spine
+    spine_signals: dict[str, Any] = field(default_factory=dict)
 
     def to_llm_payload(self, *, action: str | None = None, context_budget: str | None = None) -> dict[str, Any]:
         payload = {
@@ -360,6 +364,7 @@ class DashboardReadout:
             "social_signals": self.social_signals,
             "wake_policy": self.wake_policy,
             "last_24h_mode": self.last_24h_mode,
+            "spine_signals": self.spine_signals,
         }
         allowed_keys = self._context_mask_keys(action=action, context_budget=context_budget)
         return {key: value for key, value in payload.items() if key in allowed_keys}
@@ -510,6 +515,7 @@ class DashboardReadoutBuilder:
             social_signals=social_signals,
             wake_policy=dict(wake_policy or {}),
             last_24h_mode=last_24h_mode,
+            spine_signals=dict(request_extra_context.get("spine_signals") or {}),
         )
 
     def _extract_cold_start_context(

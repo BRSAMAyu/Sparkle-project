@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import json
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import json
 from typing import Any
 from uuid import UUID
 
@@ -49,7 +49,7 @@ class SimulationSeed:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "SimulationSeed":
+    def from_dict(cls, payload: dict[str, Any]) -> SimulationSeed:
         return cls(
             topic=str(payload.get("topic") or ""),
             context=str(payload.get("context") or ""),
@@ -719,8 +719,8 @@ class SeedExtractor:
                 SimulationSeed(
                     topic="先确定最适合你的学习启动方式",
                     context=(
-                        f"画像里已经记录了你的学习节奏偏好，适合先做一轮冷启动仿真，"
-                        f"确认应该从提问式、辩论式还是小组式开始。"
+                        "画像里已经记录了你的学习节奏偏好，适合先做一轮冷启动仿真，"
+                        "确认应该从提问式、辩论式还是小组式开始。"
                     ),
                     tension_point="先把启动方式选对，比一开始就追求高强度更重要。",
                     source_type="onboarding_profile",

@@ -26,20 +26,19 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
     Card,
     CardType,
+    DeliveryChannel,
+    DeliveryStrategy,
+    InterventionOutcomeStatus,
     InterventionRecord,
     InterventionTriggerType,
-    DeliveryStrategy,
-    DeliveryChannel,
-    InterventionOutcomeStatus,
 )
-from app.services.intervention_record_service import InterventionRecordService
 from app.services.card_service import CardService
+from app.services.intervention_record_service import InterventionRecordService
 from app.services.intervention_strategy_learner import InterventionStrategyLearner
-from app.core.event_bus import EventBus
-
 
 # Map behavior pattern types to intervention trigger types
 _PATTERN_TRIGGER_MAP = {
@@ -94,7 +93,7 @@ class BehaviorInterventionBridge:
         solution_text: str | None = None,
         frequency: int = 1,
         evidence_ids: list[str] | None = None,
-    ) -> "InterventionRecord | None":
+    ) -> InterventionRecord | None:
         """Create an InterventionRecord from a behavior pattern detection.
 
         Only creates a record if:
@@ -104,7 +103,6 @@ class BehaviorInterventionBridge:
 
         Returns the created record, or None if conditions not met.
         """
-        from app.models.card_protocol import InterventionRecord, InterventionAcceptanceStatus
 
         # 1. Check confidence threshold
         if confidence < _MIN_CONFIDENCE:

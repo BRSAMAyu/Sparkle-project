@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/background_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/effect_layer.dart';
@@ -308,20 +309,20 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                               ),
                             ),
                             _InfoRow(
-                              label: '影响场景',
+                              label: context.l10n.visualAffectedScenes,
                               value: widget.element.affectedSurfaceLabels
                                   .join(' · '),
                             ),
                             if (widget.element.isBundle &&
                                 widget.element.bundlePieceIds.isNotEmpty)
                               _InfoRow(
-                                label: '收藏进度',
+                                label: context.l10n.visualCollectionProgress,
                                 value: _bundleCompletionText(),
                               ),
                             if (widget.element.isBundle &&
                                 widget.element.bundlePieceIds.isNotEmpty)
                               _InfoRow(
-                                label: '套装部件',
+                                label: context.l10n.visualSetParts,
                                 value: _bundlePieceLabels().join(' · '),
                               ),
 
@@ -444,7 +445,9 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
         ),
       );
 
-  Widget _buildEquipButton(AppLocalizations l10n) => SizedBox(
+  Widget _buildEquipButton(AppLocalizations l10n) {
+    final zh = I18nService.instance.isChinese;
+    return SizedBox(
         width: double.infinity,
         height: 48,
         child: ElevatedButton.icon(
@@ -455,7 +458,9 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                 : Icons.check_circle_outline,
           ),
           label: Text(
-            widget.element.isBundle ? '一键装备套装' : l10n.visualElementEquip,
+            widget.element.isBundle
+                ? (zh ? '一键装备套装' : 'Equip Bundle')
+                : l10n.visualElementEquip,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -468,15 +473,20 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           ),
         ),
       );
+  }
 
-  Widget _buildUnequipButton(AppLocalizations l10n) => SizedBox(
+  Widget _buildUnequipButton(AppLocalizations l10n) {
+    final zh = I18nService.instance.isChinese;
+    return SizedBox(
         width: double.infinity,
         height: 48,
         child: OutlinedButton.icon(
           onPressed: widget.onUnequip,
           icon: const Icon(Icons.remove_circle_outline),
           label: Text(
-            widget.element.isBundle ? '卸下整套' : l10n.visualElementUnequip,
+            widget.element.isBundle
+                ? (zh ? '卸下整套' : 'Unequip Bundle')
+                : l10n.visualElementUnequip,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -489,6 +499,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           ),
         ),
       );
+  }
 
   Widget _buildLockedButton(AppLocalizations l10n) => SizedBox(
         width: double.infinity,
@@ -645,12 +656,15 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
   }
 
   String _bundleCompletionText() {
-    if (!widget.element.isBundle) return '0 / 0 已集齐';
+    final zh = I18nService.instance.isChinese;
+    if (!widget.element.isBundle) {
+      return '0 / 0 ${zh ? '已集齐' : 'Collected'}';
+    }
     final total = widget.element.bundlePieceIds.length;
     final owned = widget.element.bundlePieceIds
         .where((id) => widget.unlockedElementIds.contains(id))
         .length;
-    return '$owned / $total 已集齐';
+    return '$owned / $total ${zh ? '已集齐' : 'Collected'}';
   }
 }
 
@@ -751,6 +765,7 @@ class _PreviewSurfaceMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compactStage = MediaQuery.sizeOf(context).width < 380;
+    final zh = I18nService.instance.isChinese;
     return Positioned.fill(
       child: IgnorePointer(
         child: Padding(
@@ -854,23 +869,25 @@ class _PreviewSurfaceMock extends StatelessWidget {
                               spacing: DS.spacing8,
                               runSpacing: DS.spacing8,
                               children: [
-                                _surfacePill(Icons.home_rounded, '主页', colors),
+                                _surfacePill(Icons.home_rounded, zh ? '主页' : 'Home', colors),
                                 _surfacePill(
                                   Icons.account_tree_rounded,
-                                  '星图',
+                                  zh ? '星图' : 'Galaxy',
                                   colors,
                                 ),
                                 if (!compact && !compactStage)
                                   _surfacePill(
                                     Icons.emoji_events_rounded,
-                                    '成就',
+                                    zh ? '成就' : 'Achievements',
                                     colors,
                                   ),
                                 _surfacePill(
                                   isPreviewing
                                       ? Icons.flash_on_rounded
                                       : Icons.pause_circle_outline_rounded,
-                                  isPreviewing ? '即时预览' : '当前配置',
+                                  isPreviewing
+                                      ? (zh ? '即时预览' : 'Live Preview')
+                                      : (zh ? '当前配置' : 'Current'),
                                   colors,
                                 ),
                               ],
@@ -1209,7 +1226,7 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                   icon: widget.isPreviewing
                       ? Icons.auto_awesome_rounded
                       : Icons.dashboard_customize_outlined,
-                  label: widget.isPreviewing ? '正在体验' : '当前外观',
+                  label: widget.isPreviewing ? context.l10n.visualPreviewing : context.l10n.visualCurrentLook,
                   color: widget.isPreviewing
                       ? widget.colors.border
                       : _InkStagePalette.textSecondary,
@@ -1217,7 +1234,7 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                 const Spacer(),
                 _StageChip(
                   icon: Icons.touch_app_rounded,
-                  label: '点按切换',
+                  label: context.l10n.visualTapToggle,
                   color: _InkStagePalette.gold,
                 ),
               ],
@@ -1255,7 +1272,9 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                       ),
                       const SizedBox(width: DS.spacing6),
                       Text(
-                        widget.isPreviewing ? '查看当前' : '体验此装扮',
+                        I18nService.instance.isChinese
+                            ? (widget.isPreviewing ? '查看当前' : '体验此装扮')
+                            : (widget.isPreviewing ? 'View Current' : 'Try This Look'),
                         style: const TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: _InkStagePalette.textPrimary,

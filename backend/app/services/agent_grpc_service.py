@@ -9,28 +9,26 @@ AgentService gRPC Implementation
 
 from __future__ import annotations
 
-
 import asyncio
 import json
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import grpc
 from google.protobuf.json_format import MessageToDict
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
 from app.core.metrics import (
+    FEEDBACK_TO_EFFECT_SECONDS,
     PROTO_ERROR_CODE_FALLBACK_TOTAL,
     PROTO_FIELD_READ_TOTAL,
 )
 from app.core.safe_error_messages import build_safe_chat_error
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
-from app.orchestration.run_ledger import RunLedgerStore
 from app.orchestration.chat_modes import (
     CHAT_MODE_DEEP_ANALYSIS,
     CHAT_MODE_ERROR_DIAGNOSIS,
@@ -43,12 +41,13 @@ from app.orchestration.chat_modes import (
 )
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
-from app.services.response_feedback_service import ResponseFeedbackService
+from app.orchestration.run_ledger import RunLedgerStore
 from app.services.progress_narrative_service import ProgressNarrativeService
+from app.services.response_feedback_service import ResponseFeedbackService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _grpc_status_for_chat_error(error_code: int) -> grpc.StatusCode:
@@ -96,7 +95,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         service = "agent_grpc_service"
 
         if not response.HasField("event_time"):
-            response.event_time.FromDatetime(datetime.now(timezone.utc))
+            response.event_time.FromDatetime(datetime.now(UTC))
             PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="defaulted").inc()
         else:
             PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="new").inc()
@@ -248,10 +247,26 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     full_text="（系统提示）当前未生成有效回复，请稍后重试。",
                     finish_reason=agent_service_pb2.STOP,
                 )
-                fallback.event_time.FromDatetime(datetime.now(timezone.utc))
+                fallback.event_time.FromDatetime(datetime.now(UTC))
                 yield fallback
 
             logger.info(f"StreamChat completed for trace={trace_id}")
+
+            # Fire-and-forget: check recall opportunities at session end
+            if user_id:
+                try:
+                    from app.services.push_scheduler import PushScheduler
+                    async with self.db_session_factory() as recall_db:
+                        push_scheduler = PushScheduler(recall_db)
+                        await push_scheduler.enqueue_session_end_recall(
+                            user_id=user_id,
+                            session_context={
+                                "uploaded_files_count": len(request_extra_context.get("file_ids") or []),
+                                "diagnosed_files_count": 0,
+                            },
+                        )
+                except Exception as recall_err:
+                    logger.debug(f"Session-end recall check failed (non-fatal): {recall_err}")
 
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
@@ -273,7 +288,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 ),
                 finish_reason=agent_service_pb2.ERROR,
             )
-            response.event_time.FromDatetime(datetime.now(timezone.utc))
+            response.event_time.FromDatetime(datetime.now(UTC))
             yield response
 
     async def SubmitResponseFeedback(

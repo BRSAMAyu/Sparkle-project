@@ -30,6 +30,7 @@ class PolicyStage(str, Enum):
     RULE = "rule"                # Stage 1: deterministic rules
     BANDIT = "bandit"            # Stage 2: Thompson Sampling
     CONTEXTUAL = "contextual"    # Stage 3: LinUCB
+    DPO = "dpo"                  # Stage 4: DPO-informed response strategy
 
 
 class GuardrailId(str, Enum):
@@ -217,6 +218,23 @@ class Action:
     def parameter_count(self) -> int:
         return len(self.changes)
 
+
+@dataclass
+class StrategyRecommendation:
+    """Output of DPO policy: recommended response strategy for current context."""
+    recommended_behavior: str              # AIBehaviorClass value
+    confidence: float = 0.5                # [0, 1]
+    strategy_scores: dict[str, float] = field(default_factory=dict)
+    context_vector: list[float] = field(default_factory=list)
+    source: str = "dpo"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "recommended_behavior": self.recommended_behavior,
+            "confidence": self.confidence,
+            "strategy_scores": self.strategy_scores,
+            "source": self.source,
+        }
 
 # ── Reward ─────────────────────────────────────────────────
 

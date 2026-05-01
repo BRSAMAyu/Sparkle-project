@@ -2,8 +2,9 @@
 任务推荐服务 - 基于用户偏好和知识图谱
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import nullsfirst, select
@@ -25,7 +26,7 @@ class TaskRecommendation:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskRecommendationService:

@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class DecisionMechanism(str, Enum):
+class DecisionMechanism(StrEnum):
     DETERMINISTIC = "deterministic"
     BAYESIAN = "bayesian"
     LLM = "llm"
     HYBRID = "hybrid"
 
 
-class DecisionBasis(str, Enum):
+class DecisionBasis(StrEnum):
     USER_REPORT = "user_report"
     BEHAVIORAL_SIGNAL = "behavioral_signal"
     COMMITMENT_CONFLICT = "commitment_conflict"
@@ -23,21 +23,21 @@ class DecisionBasis(str, Enum):
     MIXED = "mixed"
 
 
-class ImpactClass(str, Enum):
+class ImpactClass(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
 
 
-class InitiationType(str, Enum):
+class InitiationType(StrEnum):
     REACTIVE = "reactive"
     SCHEDULED = "scheduled"
     ON_DEMAND = "on_demand"
     PROACTIVE = "proactive"
 
 
-class ClaimSource(str, Enum):
+class ClaimSource(StrEnum):
     AURORA_INFERENCE = "aurora_inference"
     USER_REPORT = "user_report"
     USER_CORRECTION = "user_correction"
@@ -46,7 +46,7 @@ class ClaimSource(str, Enum):
     PARTNER_REPORT = "partner_report"
 
 
-class ClaimLifecycle(str, Enum):
+class ClaimLifecycle(StrEnum):
     OPEN = "open"
     PROBED = "probed"
     CONFIRMED = "confirmed"
@@ -55,12 +55,12 @@ class ClaimLifecycle(str, Enum):
     CONTEXTUALIZED = "contextualized"
 
 
-class WindowMode(str, Enum):
+class WindowMode(StrEnum):
     COMMITMENT = "commitment"
     ITERATION = "iteration"
 
 
-class CommitmentStatus(str, Enum):
+class CommitmentStatus(StrEnum):
     PENDING = "pending"
     ACTIVE = "active"
     FULFILLED = "fulfilled"
@@ -68,34 +68,34 @@ class CommitmentStatus(str, Enum):
     RENEGOTIATED = "renegotiated"
 
 
-class ProjectionPolicy(str, Enum):
+class ProjectionPolicy(StrEnum):
     OPEN_EDITABLE = "open_editable"
     OPEN_DISCUSSABLE = "open_discussable"
     SENSITIVE_MEDIATED = "sensitive_mediated"
     INTERNAL = "internal"
 
 
-class WritePath(str, Enum):
+class WritePath(StrEnum):
     UI_ONLY = "ui_only"
     DIALOGUE_MEDIATED = "dialogue_mediated"
     POLICY_ONLY = "policy_only"
     SYSTEM_INTERNAL = "system_internal"
 
 
-class Shareability(str, Enum):
+class Shareability(StrEnum):
     PRIVATE_ONLY = "private_only"
     USER_APPROVED_ABSTRACTABLE = "user_approved_abstractable"
     SYSTEM_ABSTRACTABLE = "system_abstractable"
     PUBLIC_SEED_CANDIDATE = "public_seed_candidate"
 
 
-class ParameterWriteAuthLevel(str, Enum):
+class ParameterWriteAuthLevel(StrEnum):
     AUTO_WRITE = "auto_write"
     SUGGEST_CONFIRM = "suggest_confirm"
     EXPLICIT_CONFIRM_ONLY = "explicit_confirm_only"
 
 
-class DistilledStrategyLifecycle(str, Enum):
+class DistilledStrategyLifecycle(StrEnum):
     DISTILLED = "distilled"
     USER_REVIEWED = "user_reviewed"
     USER_PRIVATE = "user_private"
@@ -103,26 +103,26 @@ class DistilledStrategyLifecycle(str, Enum):
     RETIRED = "retired"
 
 
-class SignalTier(str, Enum):
+class SignalTier(StrEnum):
     CORE = "core"
     ENHANCED = "enhanced"
     OPTIONAL = "optional"
 
 
-class RetentionTier(str, Enum):
+class RetentionTier(StrEnum):
     HOT = "hot"
     COLD_ARCHIVE = "cold_archive"
     RECONSTRUCTABLE = "reconstructable"
 
 
-class InteractionModelVariant(str, Enum):
+class InteractionModelVariant(StrEnum):
     DEFAULT_CONVERSATION = "default_conversation"
     TASK_EXECUTION = "task_execution"
     META_REFLECTION = "meta_reflection"
     HOLDING_MODE = "holding_mode"
 
 
-class UXIntent(str, Enum):
+class UXIntent(StrEnum):
     ROUTINE = "routine"
     ACTIVE_ADJUSTMENT = "active_adjustment"
     META_SURFACE = "meta_surface"
@@ -131,7 +131,7 @@ class UXIntent(str, Enum):
     HOLDING = "holding"
 
 
-class AuroraPresenceLevel(str, Enum):
+class AuroraPresenceLevel(StrEnum):
     AMBIENT = "ambient"
     ACTIVE = "active"
     META_SURFACE = "meta_surface"

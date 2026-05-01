@@ -12,7 +12,7 @@ from app.models.base import GUID, BaseModel
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
-class BackgroundTaskType(str, enum.Enum):
+class BackgroundTaskType(enum.StrEnum):
     """Background task types"""
     AI_GENERATION = "AI_GENERATION"
     DATA_SYNC = "DATA_SYNC"
@@ -21,7 +21,7 @@ class BackgroundTaskType(str, enum.Enum):
     TASK_BATCH = "TASK_BATCH"
 
 
-class BackgroundTaskStatus(str, enum.Enum):
+class BackgroundTaskStatus(enum.StrEnum):
     """Background task status"""
     PENDING = "PENDING"
     RUNNING = "RUNNING"

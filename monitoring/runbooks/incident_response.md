@@ -40,6 +40,13 @@
 2. Check Redis CPU/memory and pending list growth.
 3. Restart lagging consumers; validate lag drops under threshold.
 
+## P2: Spine Degradation
+
+1. Check backend logs for `Spine signal check degraded` and group by exception reason.
+2. Verify Redis health first, then inspect recent changes to `spine_orchestrator.py` and directive stores.
+3. Confirm chat responses include `spine_degraded=true` metadata so UX can degrade visibly.
+4. If degradation persists, keep chat fallback live and roll back the latest Spine change.
+
 ## P2: AI First Token Latency High
 
 1. Check AI ops dashboard by `chat_mode` and `reasoning_mode`.

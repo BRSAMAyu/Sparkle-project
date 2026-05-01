@@ -17,6 +17,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _NoopApiClient implements ApiClient {
   @override
@@ -172,6 +173,8 @@ class _FakeSubtaskRepository extends SubtaskRepository {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('J1 frontend closure', () {
     testWidgets('chat bubble renders malformed markdown stably',
         (tester) async {
@@ -200,6 +203,7 @@ print(x);
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -244,6 +248,7 @@ print(x);
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -285,6 +290,7 @@ print(x);
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -349,6 +355,7 @@ print(x);
           child: MaterialApp.router(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
@@ -413,6 +420,7 @@ print(nums)
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const TaskDetailScreen(taskId: 't-guide'),
@@ -486,6 +494,7 @@ print(nums)
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const TaskDetailScreen(taskId: taskId),

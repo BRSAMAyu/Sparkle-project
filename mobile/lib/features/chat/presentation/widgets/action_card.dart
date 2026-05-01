@@ -261,7 +261,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 children: [
                   Expanded(
                     child: SparkleButton.ghost(
-                      label: '查看任务',
+                      label: context.l10n.chatActionViewTask,
                       icon: const Icon(Icons.open_in_new_rounded),
                       onPressed: () => unawaited(
                         context.push(detailRoute ?? '/tasks/${task.id}'),
@@ -271,7 +271,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: SparkleButton(
-                      label: '分享卡片',
+                      label: context.l10n.chatActionShareCard,
                       variant: ButtonVariant.ghost,
                       icon: const Icon(Icons.share_outlined),
                       onPressed: canShareTask
@@ -302,7 +302,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   right: DS.spacing8,
                 ),
                 child: SparkleButton(
-                  label: _confirmingTasks ? '确认中...' : '确认任务',
+                  label: _confirmingTasks ? context.l10n.chatActionConfirming : context.l10n.chatActionConfirmTask,
                   onPressed: _confirmingTasks
                       ? null
                       : () => unawaited(_handleConfirmTasks(toolResultId)),
@@ -780,7 +780,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'execution_summary':
         return l10n.chatActionTitleExecutionSummary;
       case 'execution_suggestion':
-        return 'AI 执行建议';
+        return context.l10n.chatActionAiExecutionSuggestion;
       case 'evolution_card':
         return l10n.chatActionTitleEvolution;
       case 'progress_card':
@@ -792,9 +792,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'next_actions':
         return l10n.chatActionTitleNextActions;
       case 'adaptation_summary':
-        return '这轮调整';
+        return context.l10n.chatActionCurrentRoundAdjust;
       case 'profile_front_door':
-        return '当前画像前门';
+        return context.l10n.chatActionCurrentProfileFrontDoor;
       case 'continuity_banner':
         return l10n.chatActionTitleContinuity;
       case 'mode_explanation':
@@ -802,13 +802,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'blocked_input_request':
         return l10n.chatActionTitleBlockedInput;
       case 'planning_bottleneck_card':
-        return '瓶颈分析';
+        return context.l10n.chatActionBottleneckAnalysis;
       case 'planning_strategy_card':
-        return '策略方案';
+        return context.l10n.chatActionStrategyPlan;
       case 'planning_progress_strip':
-        return '规划流程';
+        return context.l10n.chatActionPlanningProcess;
       case 'aurora_nudge_entry':
-        return 'Aurora 提醒';
+        return context.l10n.chatActionAuroraReminder;
       default:
         return l10n.chatActionTitleDefault;
     }
@@ -1212,15 +1212,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return action.data['summary']?.toString() ??
             action.data['title']?.toString() ??
             (action.type == 'execution_suggestion'
-                ? 'AI 执行建议'
+                ? context.l10n.chatActionAiExecutionSuggestion
                 : l10n.chatActionTitleExecutionSummary);
       case 'create_task':
         return '任务';
       case 'create_plan':
       case 'plan_card':
-        return '学习计划';
+        return context.l10n.chatActionStudyPlan;
       case 'task_list':
-        return '任务列表';
+        return context.l10n.chatActionTaskList;
       default:
         final summary = _extractGenericNarrative(action);
         if (summary != null) {
@@ -1503,7 +1503,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               if (ragQuality != null)
                 _buildMetaChip(
                   icon: Icons.psychology_alt_outlined,
-                  label: '规划质量: $ragQuality',
+                  label: context.l10n.chatActionPlanQuality(ragQuality),
                 ),
             ],
           ),
@@ -1536,7 +1536,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               children: [
                 Expanded(
                   child: SparkleButton(
-                    label: '查看计划',
+                    label: context.l10n.chatActionViewPlan,
                     variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.map_outlined),
                     onPressed: canOpenPlan
@@ -1548,7 +1548,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: SparkleButton(
-                    label: '分享计划',
+                    label: context.l10n.chatActionSharePlan,
                     variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.share_outlined),
                     onPressed: canSharePlan
@@ -1558,9 +1558,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                     entity.share?.resourceType ?? 'plan',
                                 resourceId: entity.share?.resourceId ?? planId,
                                 title: entity.share?.title ??
-                                    (planTitle ?? '学习计划'),
+                                    (planTitle ?? context.l10n.chatActionStudyPlan),
                                 subtitle:
-                                    entity.share?.subtitle ?? '由 AI 生成的任务计划',
+                                    entity.share?.subtitle ?? context.l10n.chatActionAiGeneratedPlan,
                               ),
                             )
                         : () {},
@@ -1574,7 +1574,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing12),
             child: SparkleButton(
-              label: _confirmingTasks ? '确认中...' : '确认全部任务',
+              label: _confirmingTasks ? context.l10n.chatActionConfirming : context.l10n.chatActionConfirmAllTasks,
               icon: const Icon(Icons.check_circle_outline),
               onPressed: _confirmingTasks
                   ? null
@@ -1634,7 +1634,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                           title: entity.share?.title ??
                               action.data['title']?.toString() ??
                               action.data['name']?.toString() ??
-                              '学习计划',
+                              context.l10n.chatActionStudyPlan,
                           subtitle: entity.share?.subtitle ??
                               action.data['description']?.toString(),
                         ),
@@ -1816,9 +1816,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final retryAction =
         _executionSummaryPreviewData(action.data['retry_action']);
     final comparisonHeadline = comparisonSummary is Map<String, dynamic>
-        ? comparisonSummary['headline']?.toString() ?? '结果对比'
+        ? comparisonSummary['headline']?.toString() ?? context.l10n.chatActionResultComparison
         : comparisonSummary != null
-            ? '结果对比'
+            ? context.l10n.chatActionResultComparison
             : null;
     final comparisonBody = comparisonSummary is Map<String, dynamic>
         ? comparisonSummary['summary']?.toString() ??
@@ -1830,8 +1830,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         OpenClawIdentityStrip(
-          label: 'OpenClaw 执行结果',
-          description: '先看摘要，再按需展开回放、对比和自验证细节',
+          label: context.l10n.chatActionOpenclawResult,
+          description: context.l10n.chatActionOpenclawResultDesc,
           tone: status == 'failed'
               ? OpenClawVisualTone.offline
               : status == 'partial'
@@ -1852,7 +1852,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             status == 'failed'
                 ? l10n.chatExecutionFailed
                 : status == 'degraded'
-                    ? '已切到手动协作'
+                    ? context.l10n.chatActionSwitchedToManual
                     : status == 'partial'
                         ? l10n.chatExecutionPartial
                         : l10n.chatExecutionCompleted,
@@ -2000,19 +2000,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               if (validationTotal > 0)
                 _buildMetaChip(
                   icon: Icons.rule_rounded,
-                  label: '步骤 $validationPassed/$validationTotal',
+                  label: context.l10n.chatActionValidationSteps(validationPassed, validationTotal),
                 ),
               if (qualityScore > 0)
                 _buildMetaChip(
                   icon: Icons.fact_check_rounded,
-                  label: '质量 ${(qualityScore * 100).round()}%',
+                  label: context.l10n.chatActionQualityScore((qualityScore * 100).round().toString()),
                 ),
               if (selfVerification != null &&
                   (selfVerification['score'] as num?) != null)
                 _buildMetaChip(
                   icon: Icons.verified_user_rounded,
                   label:
-                      '自检 ${(((selfVerification['score'] as num?) ?? 0) * 100).round()}%',
+                      context.l10n.chatActionSelfCheck((((selfVerification['score'] as num?) ?? 0) * 100).round().toString()),
                 ),
             ],
           ),
@@ -2104,7 +2104,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         const SizedBox(width: DS.spacing8),
                         Expanded(
                           child: Text(
-                            '${item['label'] ?? '检查项'}：${item['detail'] ?? ''}',
+                            '${item['label'] ?? context.l10n.chatActionCheckItems}：${item['detail'] ?? ''}',
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: DS.neutral700,
@@ -2123,7 +2123,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             retryAction != null) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            '恢复建议',
+            context.l10n.chatActionRecoverySuggestion,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                   color: DS.neutral900,
@@ -2164,7 +2164,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        step['title']?.toString() ?? '手动步骤',
+                        step['title']?.toString() ?? context.l10n.chatActionManualSteps,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: DS.fontWeightSemibold,
                               color: DS.neutral900,
@@ -2272,7 +2272,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  step['label']?.toString() ?? '执行步骤',
+                  step['label']?.toString() ?? context.l10n.chatActionExecutionSteps,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color: DS.neutral900,
@@ -2315,8 +2315,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         OpenClawIdentityStrip(
-          label: 'OpenClaw 委派建议',
-          description: '把适合自动执行的工作交给 OpenClaw，必要时再回到任务页审核',
+          label: context.l10n.chatActionOpenclawDelegation,
+          description: context.l10n.chatActionOpenclawDelegationDesc,
           tone: executionMode == 'hybrid'
               ? OpenClawVisualTone.attention
               : OpenClawVisualTone.active,
@@ -2332,7 +2332,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             borderRadius: DS.borderRadius8,
           ),
           child: Text(
-            executionMode == 'hybrid' ? '需要你审核后完成' : '可直接委派执行',
+            executionMode == 'hybrid' ? context.l10n.chatActionNeedsReview : context.l10n.chatActionCanDelegate,
             style: TextStyle(
               color: DS.primaryBase,
               fontWeight: DS.fontWeightSemibold,
@@ -2356,17 +2356,17 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           children: [
             _buildMetaChip(
               icon: Icons.memory_rounded,
-              label: executionMode == 'hybrid' ? '混合执行' : '自动执行',
+              label: executionMode == 'hybrid' ? context.l10n.chatActionHybridExecution : context.l10n.chatActionAutoExecution,
             ),
             _buildMetaChip(
               icon: Icons.hub_outlined,
-              label: '环境 ${targetEnv.toUpperCase()}',
+              label: context.l10n.chatActionEnvironment(targetEnv.toUpperCase()),
             ),
             if (delegatePreference != null)
               _buildMetaChip(
                 icon: Icons.favorite_border_rounded,
                 label:
-                    '信任 ${(double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)}',
+                    context.l10n.chatActionTrust((double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)),
               ),
           ],
         ),
@@ -2375,7 +2375,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           children: [
             Expanded(
               child: CustomButton.primary(
-                text: '交给 AI 执行',
+                text: context.l10n.chatActionDelegateToAi,
                 onPressed: () => unawaited(
                   widget.onWidgetAction?.call(
                     'handoff_task',
@@ -2393,7 +2393,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: CustomButton.secondary(
-                text: '查看执行页',
+                text: context.l10n.chatActionViewExecutionPage,
                 onPressed: () => unawaited(
                   widget.onWidgetAction?.call(
                     'open_task_execution',
@@ -3277,12 +3277,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     switch (key) {
       case 'effective_method':
-        return '哪个方法让你觉得有进展？';
+        return context.l10n.chatActionWhichMethodProgress;
       case 'adjustment_intention':
-        return '下次会换什么做法？';
+        return context.l10n.chatActionWhatWouldYouChange;
       case 'stuck_point':
       default:
-        return '这个任务中你卡在哪里了？';
+        return context.l10n.chatActionWhereStuck;
     }
   }
 
@@ -3300,17 +3300,17 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     switch (key) {
       case 'effective_method':
-        return '例如：先画图，再列式';
+        return context.l10n.chatActionExampleDrawThenFormula;
       case 'adjustment_intention':
-        return '例如：先做 1 道代表题';
+        return context.l10n.chatActionExampleDoOneProblem;
       case 'stuck_point':
       default:
-        return '例如：公式会背，但不知道什么时候套用';
+        return context.l10n.chatActionExampleFormulaMemorize;
     }
   }
 
   Widget _buildAdaptationSummary(BuildContext context, WidgetPayload action) {
-    final title = action.data['title']?.toString() ?? '我刚做了一个调整';
+    final title = action.data['title']?.toString() ?? context.l10n.chatActionMadeAdjustment;
     final summary = action.data['summary']?.toString() ?? '';
     final reversibility = action.data['reversibility_note']?.toString() ?? '';
     final evidence = action.data['evidence_summary']?.toString() ?? '';

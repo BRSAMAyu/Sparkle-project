@@ -28,7 +28,13 @@ func (s *QuotaService) DecrQuota(ctx context.Context, uid string) (int64, error)
 		[]string{fmt.Sprintf("user:quota:%s", uid)},
 	).Int64()
 
-	return val, err
+	if err != nil {
+		return 0, err
+	}
+	if val < 0 {
+		return 0, ErrQuotaInsufficient
+	}
+	return val, nil
 }
 
 func (s *QuotaService) ReserveRequest(ctx context.Context, uid, requestID string, ttl time.Duration) (int64, error) {

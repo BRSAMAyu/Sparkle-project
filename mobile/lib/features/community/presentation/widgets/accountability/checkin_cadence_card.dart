@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AccountabilityCheckInCadenceCard extends StatelessWidget {
   const AccountabilityCheckInCadenceCard({
@@ -25,7 +26,7 @@ class AccountabilityCheckInCadenceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '伙伴打卡节奏',
+              context.l10n.communityPartnerCheckinCadence,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),

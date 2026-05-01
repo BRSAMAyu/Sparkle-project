@@ -5,7 +5,7 @@ User Similarity Update Tasks
 每日定时任务，计算用户相似度并缓存
 """
 from collections import defaultdict
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -24,7 +24,7 @@ SIMILARITY_BATCH_FLUSH_SIZE = 100
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @shared_task(name="tasks.update_all_user_similarities")

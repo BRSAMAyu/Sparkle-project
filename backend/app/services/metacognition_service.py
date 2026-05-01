@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -31,7 +31,6 @@ from app.services.metacognition_guard import record_metric, scan_many
 from app.services.metacognition_registry import (
     CONFIDENCE_PROXY_REGISTRY,
     ensure_registered_proxies,
-    get_confidence_proxy,
     list_templates,
     render_template,
 )

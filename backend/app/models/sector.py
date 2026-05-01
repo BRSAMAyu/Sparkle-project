@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class SectorCode(str, Enum):
+class SectorCode(StrEnum):
     COSMOS = "COSMOS"
     TECH = "TECH"
     ART = "ART"

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import base64
 import io
 import os
@@ -447,7 +448,7 @@ class IngestionService:
         Markdown headings are preserved as section titles so later chunking,
         node extraction, and retrieval have lightweight structure to work with.
         """
-        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
+        with open(path, encoding="utf-8", errors="ignore") as handle:
             raw_text = handle.read()
 
         if not raw_text.strip():

@@ -23,6 +23,7 @@ from uuid import UUID
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
     ArtifactType,
     Card,
@@ -41,7 +42,6 @@ from app.services.card_protocol.risk_register_service import RiskRegisterService
 from app.services.card_service import CardService
 from app.services.plan_state_service import PlanStateService
 from app.services.planning_artifact_service import PlanningArtifactService
-from app.core.event_bus import EventBus
 
 
 class MainChainArtifactService:

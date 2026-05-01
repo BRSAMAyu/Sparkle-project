@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 import re
+from typing import Any
 
 
 def _as_dict(value: Any) -> dict[str, Any]:

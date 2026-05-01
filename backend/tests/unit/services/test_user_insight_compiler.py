@@ -60,7 +60,7 @@ async def test_profile_context_service_compiles_canonical_user_insight_state_wit
         )
     )
 
-    base_day = datetime(2026, 4, 6, 18, 0)
+    base_day = datetime(2026, 4, 13, 18, 0)
     db_session.add_all(
         [
             CalendarEvent(

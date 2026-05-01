@@ -9,7 +9,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 from google.protobuf import struct_pb2
 from loguru import logger
@@ -20,27 +20,20 @@ from app.config import settings
 from app.core.agent_persona import build_agent_persona
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import (
-    COLLABORATION_LATENCY,
-    COLLABORATION_SUCCESS,
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
-    HITL_REQUESTED,
 )
 from app.core.metrics import (
-    ACTIVE_SESSIONS,
-    REQUEST_COUNT,
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
     TOKEN_USAGE,
 )
-from app.core.pending_actions import pending_actions_store
 from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.execution_intent import ExecutionIntentStatus
 from app.models.galaxy import KnowledgeNode
-from app.orchestration.agent_memory import AgentMemoryService
-from app.orchestration.agent_scoring import AgentScoringService
 from app.orchestration.agent_activity import emit_agent_activity, emit_agent_turn
-from app.orchestration.chat_modes import CHAT_MODE_STANDARD, is_expert_chat_mode
+from app.orchestration.agent_memory import AgentMemoryService
+from app.orchestration.chat_modes import CHAT_MODE_STANDARD
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
 from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow
@@ -57,9 +50,9 @@ from app.orchestration.statechart_engine import WorkflowState
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator
 from app.orchestration.ux_envelope import ux_envelope_builder
 from app.services.execution_service import ExecutionService
+from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
-from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 
 _LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
 _OPENCLAW_CHAT_CONTROL_EXPLICIT_HINTS = (
@@ -1265,12 +1258,11 @@ class ExecutionEngineMixin:
         active_tools: list[str],
         stream_callback,
         tracer,
-    ) -> tuple[TransparencyDataGenerator, "typing.Callable"]:
+    ) -> tuple[TransparencyDataGenerator, Callable]:
         """Prepare transparency tracking, tools schema, and initial status.
 
         Returns (transparency_generator, emit_transparency_event).
         """
-        import typing
 
         transparency_enabled = bool(settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT)
         transparency_generator = TransparencyDataGenerator(
@@ -1550,6 +1542,12 @@ class ExecutionEngineMixin:
             "session_adaptation": session_adaptation_context,
             "context_focus": (user_context_payload or {}).get("context_focus"),
             "context_briefing_note": (user_context_payload or {}).get("context_briefing_note"),
+            # C-03-FIX: Pass Spine directives to multi-agent adapter
+            "spine_response_directive": state.context_data.get("spine_response_directive"),
+            "spine_chronicle_summary": state.context_data.get("spine_chronicle_summary"),
+            "spine_fatigue_context": state.context_data.get("spine_fatigue_context"),
+            # Dual-core routing prompt instruction (structured adjustments text)
+            "dual_core_prompt_instruction": state.context_data.get("dual_core_prompt_instruction"),
         }
         full_text_parts: list[str] = []
         full_text_override = ""

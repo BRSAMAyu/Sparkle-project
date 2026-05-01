@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class MetacognitionPanelCard extends StatelessWidget {
@@ -65,7 +66,7 @@ class MetacognitionPanelCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '自我认识',
+                          context.l10n.userMetacognition,
                           style: DS.titleMedium.copyWith(
                             color: DS.textPrimary,
                             fontWeight: DS.fontWeightBold,
@@ -73,7 +74,7 @@ class MetacognitionPanelCard extends StatelessWidget {
                         ),
                         const SizedBox(height: DS.spacing2),
                         Text(
-                          '这里只展示过去样本里的判断偏差，不给你贴标签。',
+                          context.l10n.userMetacognitionHint,
                           style: DS.bodySmall.copyWith(color: DS.textSecondary),
                         ),
                         if ((profileDimensionCount ?? 0) > 0) ...[
@@ -91,7 +92,7 @@ class MetacognitionPanelCard extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: '隐藏此面板',
+                    tooltip: context.l10n.userHidePanel,
                     onPressed: onHide,
                     icon: const Icon(Icons.visibility_off_outlined),
                   ),

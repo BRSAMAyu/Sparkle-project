@@ -5,8 +5,9 @@ Content Quality Evaluator
 Automatically evaluates response quality to determine if it should be added to the seed library.
 """
 from __future__ import annotations
-from datetime import timezone, datetime, timedelta
+
 import inspect
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +20,7 @@ from app.models.seed_content import SeedItem, SeedLibrary
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ContentQualityEvaluator:

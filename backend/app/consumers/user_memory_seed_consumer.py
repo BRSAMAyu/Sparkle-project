@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.memory_service import MemoryService
-
-from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 
 
 class UserMemorySeedConsumer(JourneyEventConsumerBase):

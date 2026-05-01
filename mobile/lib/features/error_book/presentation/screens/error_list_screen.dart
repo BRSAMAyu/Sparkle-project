@@ -562,9 +562,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               children: [
                 TextField(
                   controller: chapterController,
-                  decoration: const InputDecoration(
-                    labelText: '章节',
-                    hintText: '例如：函数、力学、电磁学',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.ebChapter,
+                    hintText: context.l10n.ebChapterFilterHint,
                     prefixIcon: Icon(Icons.folder_outlined),
                     border: OutlineInputBorder(),
                   ),
@@ -573,8 +573,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 SwitchListTile.adaptive(
                   value: needReviewOnly,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('仅显示待复习'),
-                  subtitle: const Text('和顶部“待复习”标签页配合使用'),
+                  title: Text(context.l10n.ebShowDueOnly),
+                  subtitle: Text(context.l10n.ebShowDueDesc),
                   onChanged: (value) {
                     setDialogState(() {
                       needReviewOnly = value;
@@ -594,7 +594,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                   runSpacing: DS.spacing8,
                   children: [
                     FilterChip(
-                      label: const Text('全部'),
+                      label: Text(context.l10n.ebAll),
                       selected: cognitiveDimension == null,
                       onSelected: (_) {
                         setDialogState(() {

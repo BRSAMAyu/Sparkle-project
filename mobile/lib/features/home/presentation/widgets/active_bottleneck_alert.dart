@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 
 class ActiveBottleneckAlert extends StatelessWidget {
@@ -69,7 +70,7 @@ class ActiveBottleneckAlert extends StatelessWidget {
                 const SizedBox(width: DS.spacing12),
                 Expanded(
                   child: Text(
-                    '我注意到你在${activeBottleneck.topic}上有点卡，不是你的问题，可能是路径需要调整',
+                    I18nService.instance.isChinese ? '我注意到你在${activeBottleneck.topic}上有点卡，不是你的问题，可能是路径需要调整' : 'I noticed you\'re stuck on ${activeBottleneck.topic}. Not your fault—may need path adjustment.',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: context.sparkleTypography.bodyMedium.copyWith(
@@ -85,7 +86,7 @@ class ActiveBottleneckAlert extends StatelessWidget {
                       ? null
                       : () => onOpenChat!(activeBottleneck),
                   child: Text(
-                    '看看?',
+                    I18nService.instance.isChinese ? '看看?' : 'Take a look?',
                     style: context.sparkleTypography.labelLarge.copyWith(
                       color: DS.warning,
                       fontWeight: DS.fontWeightBold,

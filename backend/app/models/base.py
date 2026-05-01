@@ -4,9 +4,8 @@ Base Model Classes
 """
 from __future__ import annotations
 
-
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TypeVar
 
 from sqlalchemy import Column, DateTime, select
@@ -18,7 +17,7 @@ from app.db.session import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GUID(TypeDecorator):
@@ -171,7 +170,7 @@ class BaseModel(SoftDeleteMixin, Base):
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def save(self, db: AsyncSession) -> "BaseModel":
+    async def save(self, db: AsyncSession) -> BaseModel:
         """保存当前记录到数据库"""
         db.add(self)
         await db.flush()
@@ -230,7 +229,7 @@ class HardDeleteBaseModel(Base):
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
-    async def save(self, db: AsyncSession) -> "HardDeleteBaseModel":
+    async def save(self, db: AsyncSession) -> HardDeleteBaseModel:
         """保存当前记录到数据库"""
         db.add(self)
         await db.flush()

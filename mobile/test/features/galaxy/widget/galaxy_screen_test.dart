@@ -11,8 +11,11 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('Galaxy Widget Tests', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});

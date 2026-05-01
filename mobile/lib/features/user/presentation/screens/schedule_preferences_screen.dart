@@ -9,6 +9,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/calendar/data/services/smart_schedule_service.dart';
 import 'package:sparkle/features/user/user_routes.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class SchedulePreferencesScreen extends ConsumerStatefulWidget {
   const SchedulePreferencesScreen({super.key});
@@ -209,7 +210,7 @@ class _SchedulePreferencesScreenState
                           ),
                           const SizedBox(width: DS.spacing10),
                           Text(
-                            '专注时段偏好',
+                            I18nService.instance.isChinese ? '专注时段偏好' : 'Focus Period Preference',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -220,7 +221,7 @@ class _SchedulePreferencesScreenState
                       ),
                       const SizedBox(height: DS.spacing8),
                       Text(
-                        '选择您精力最充沛的时段，系统会优先在这些时间安排高难度任务',
+                        I18nService.instance.isChinese ? '选择您精力最充沛的时段，系统会优先在这些时间安排高难度任务' : 'Select your peak energy hours for challenging tasks',
                         style: TextStyle(
                           fontSize: 13,
                           color: DS.textSecondary,
@@ -250,7 +251,7 @@ class _SchedulePreferencesScreenState
                           ),
                           const SizedBox(width: DS.spacing10),
                           Text(
-                            '任务时长偏好',
+                            I18nService.instance.isChinese ? '任务时长偏好' : 'Task Duration Preference',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -261,7 +262,7 @@ class _SchedulePreferencesScreenState
                       ),
                       const SizedBox(height: DS.spacing8),
                       Text(
-                        '设置您偏好的单次专注时长和休息间隔',
+                        I18nService.instance.isChinese ? '设置您偏好的单次专注时长和休息间隔' : 'Set your preferred focus duration and break intervals',
                         style: TextStyle(
                           fontSize: 13,
                           color: DS.textSecondary,
@@ -269,11 +270,11 @@ class _SchedulePreferencesScreenState
                       ),
                       const SizedBox(height: DS.spacing16),
                       _buildDurationSlider(
-                        label: '专注时长',
+                        label: I18nService.instance.isChinese ? '专注时长' : 'Focus Duration',
                         value: _preferredTaskDuration,
                         min: 15,
                         max: 120,
-                        unit: '分钟',
+                        unit: I18nService.instance.isChinese ? '分钟' : 'min',
                         onChanged: (value) {
                           setState(() {
                             _preferredTaskDuration = value.round();
@@ -282,11 +283,11 @@ class _SchedulePreferencesScreenState
                       ),
                       const SizedBox(height: DS.spacing16),
                       _buildDurationSlider(
-                        label: '休息间隔',
+                        label: I18nService.instance.isChinese ? '休息间隔' : 'Break Interval',
                         value: _preferredBreakDuration,
                         min: 5,
                         max: 30,
-                        unit: '分钟',
+                        unit: I18nService.instance.isChinese ? '分钟' : 'min',
                         onChanged: (value) {
                           setState(() {
                             _preferredBreakDuration = value.round();
@@ -338,7 +339,7 @@ class _SchedulePreferencesScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '日历智能排程',
+                    I18nService.instance.isChinese ? '日历智能排程' : 'Smart Calendar Scheduling',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: DS.fontWeightSemibold,
@@ -347,7 +348,7 @@ class _SchedulePreferencesScreenState
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    '设置偏好后，日历将为您智能推荐最佳任务时间',
+                    I18nService.instance.isChinese ? '设置偏好后，日历将为您智能推荐最佳任务时间' : 'After setting preferences, calendar will intelligently recommend optimal task times',
                     style: TextStyle(
                       fontSize: 12,
                       color: DS.brandPrimary.withValues(alpha: 0.8),
@@ -422,13 +423,14 @@ class _SchedulePreferencesScreenState
   }
 
   String _getFocusPeriodLabel(FocusPeriod period) {
+    final zh = I18nService.instance.isChinese;
     switch (period) {
       case FocusPeriod.morning:
-        return '上午';
+        return zh ? '上午' : 'Morning';
       case FocusPeriod.afternoon:
-        return '下午';
+        return zh ? '下午' : 'Afternoon';
       case FocusPeriod.evening:
-        return '晚上';
+        return zh ? '晚上' : 'Evening';
     }
   }
 

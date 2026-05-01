@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 FuzzyMatch MVP Service (模糊匹配服务)
 

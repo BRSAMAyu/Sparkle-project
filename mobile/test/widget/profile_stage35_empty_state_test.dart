@@ -5,15 +5,17 @@ import 'package:sparkle/features/user/presentation/widgets/active_skills_card.da
 import 'package:sparkle/features/user/presentation/widgets/engagement_state_badge.dart';
 import 'package:sparkle/features/user/presentation/widgets/foresight_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/working_memory_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('Stage35 cards render empty-state copy instead of blank content',
       (
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: SingleChildScrollView(
             child: Column(
               children: [
@@ -25,8 +27,7 @@ void main() {
               ],
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('最近没有需要继续挂在前台的工作记忆，先按当前节奏推进就好。'), findsOneWidget);

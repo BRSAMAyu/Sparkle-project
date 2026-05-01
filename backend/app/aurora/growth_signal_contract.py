@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +17,7 @@ MAX_EVIDENCE_TEXT_LENGTH = 128
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _strip(value: Any) -> str:
@@ -136,7 +136,7 @@ class GrowthSignalContract(AuroraSchemaBase):
         user_id: UUID,
         sampled_at: datetime | None = None,
         fallback_reason: str = "no_achievement_data",
-    ) -> "GrowthSignalContract":
+    ) -> GrowthSignalContract:
         sampled_at = sampled_at or _utcnow()
         evidence = [
             GrowthSignalEvidence(
@@ -164,7 +164,7 @@ class GrowthSignalContract(AuroraSchemaBase):
         user_achievements: Any | None,
         sampled_at: datetime | None = None,
         fallback_reason: str | None = None,
-    ) -> "GrowthSignalContract":
+    ) -> GrowthSignalContract:
         sampled_at = sampled_at or _utcnow()
         streak_payload = _as_dict(streak_stats)
         achievements = _as_list(user_achievements)

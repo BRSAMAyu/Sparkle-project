@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
+import '../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('NodeDetailSheet renders mastery, study count, and errors', (
     tester,
   ) async {
@@ -28,7 +33,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: NodeDetailSheet(
               nodeId: 'cn.tcp_flow',
@@ -40,6 +45,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('TCP流量控制'), findsOneWidget);
     expect(find.text('65%'), findsOneWidget);
@@ -47,6 +53,10 @@ void main() {
     expect(find.text('相关错题 1 道'), findsOneWidget);
     expect(find.text('rwnd 和 cwnd 的区别是什么？'), findsOneWidget);
 
+    // Scroll the button into view before tapping (the sheet content may be
+    // taller than the 800x600 test viewport).
+    await tester.ensureVisible(find.text('开始复习'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('开始复习'));
     await tester.pump();
 
@@ -79,8 +89,8 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        child: testMaterialApp(
           home: Scaffold(
             body: NodeDetailSheet(
               nodeId: 'cn.empty',
@@ -91,6 +101,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('尚未学习'), findsWidgets);
     expect(find.text('0%'), findsNothing);
@@ -152,7 +163,17 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -160,6 +181,10 @@ void main() {
     await tester.tap(find.text('OPEN_SHEET'));
     await tester.pumpAndSettle();
 
+    // Scroll the button into view before tapping (the bottom-sheet content
+    // may exceed the 800x600 test viewport).
+    await tester.ensureVisible(find.text('开始复习'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('开始复习'));
     await tester.pumpAndSettle();
 

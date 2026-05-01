@@ -311,7 +311,7 @@ class ProfileScreen extends ConsumerWidget {
     final coldstartCompletedAt =
         userInsightState['traits_coldstart_completed_at']?.toString();
     final traits = TraitsPriorCard.fromProfileContext(profileContext);
-    final srlPhase = SrlPhaseBadgeCard.fromProfileContext(profileContext);
+    final srlPhase = SrlPhaseBadgeCard.fromProfileContext(context, profileContext);
 
     return Column(
       children: [
@@ -787,7 +787,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.download_rounded,
                   title: l10n.profileExportData,
-                  subtitle: '下载账号、学习与记忆相关数据',
+                  subtitle: context.l10n.userDownloadDataSubtitle,
                   accentColor: const Color(0xFF5A7FA0),
                   onTap: () => context.push(UserRoutes.exportData),
                 ),

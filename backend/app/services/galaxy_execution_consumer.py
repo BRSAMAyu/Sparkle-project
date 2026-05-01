@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -22,7 +22,7 @@ from app.services.galaxy.graph_structure_service import GraphStructureEvolutionS
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyExecutionConsumer:

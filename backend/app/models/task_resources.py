@@ -25,7 +25,7 @@ from app.models.base import GUID, BaseModel
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
-class TaskResourceType(str, enum.Enum):
+class TaskResourceType(enum.StrEnum):
     SEED_LIBRARY = "seed_library"
     SEED_ITEM = "seed_item"
     KNOWLEDGE_NODE = "knowledge_node"

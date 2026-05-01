@@ -25,8 +25,11 @@ import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart'
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory hiveDir;
 
@@ -60,6 +63,7 @@ void main() {
     testWidgets('dashboard shows first-goal empty state for new users', (
       tester,
     ) async {
+      DemoDataService.isDemoMode = false;
       await _pumpPage(
         tester,
         const DashboardScreen(),
@@ -126,7 +130,8 @@ void main() {
           (widget) =>
               widget is Text &&
               (widget.data == 'Continue as Guest' ||
-                  widget.data == '继续作为访客'),
+                  widget.data == '继续作为访客' ||
+                  widget.data == '以访客身份继续'),
         ),
         findsOneWidget,
       );
@@ -195,14 +200,7 @@ Future<void> _pumpPage(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
+      child: testMaterialApp(
         home: page,
       ),
     ),

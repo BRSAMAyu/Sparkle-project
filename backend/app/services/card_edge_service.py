@@ -9,16 +9,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
+    BindingMode,
     Card,
     CardEdge,
     EdgeType,
-    BindingMode,
 )
-from app.core.event_bus import EventBus
 
 
 class CardEdgeService:

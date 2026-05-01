@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class SrlPhaseBadgeCard extends StatelessWidget {
@@ -12,6 +13,7 @@ class SrlPhaseBadgeCard extends StatelessWidget {
   final String helperText;
 
   static Map<String, String>? fromProfileContext(
+    BuildContext context,
     Map<String, dynamic> profileContext,
   ) {
     final userInsightState =
@@ -23,33 +25,33 @@ class SrlPhaseBadgeCard extends StatelessWidget {
     }
     return {
       'phase': currentPhase,
-      'helperText': _helperFor(currentPhase),
+      'helperText': _helperFor(context, currentPhase),
     };
   }
 
-  static String _helperFor(String phase) {
+  static String _helperFor(BuildContext context, String phase) {
     switch (phase.toUpperCase()) {
       case 'FORETHOUGHT':
-        return '当前更适合把目标、步骤和节奏先说清楚。';
+        return context.l10n.userSRLPlanHint;
       case 'PERFORMANCE':
-        return '当前更适合维持执行节奏，减少额外切换。';
+        return context.l10n.userSRLEnforceHint;
       case 'SELF_REFLECTION':
-        return '当前更适合回看阻力、复盘并准备下一轮。';
+        return context.l10n.userSRLReflectHint;
       default:
-        return '当前阶段信息不足，先保持默认支持方式。';
+        return context.l10n.userSRLUnknownHint;
     }
   }
 
-  String get _label {
+  String _label(BuildContext context) {
     switch (phase.toUpperCase()) {
       case 'FORETHOUGHT':
-        return 'SRL · 规划中';
+        return context.l10n.userSRLPlanning;
       case 'PERFORMANCE':
-        return 'SRL · 执行中';
+        return context.l10n.userSRLEnforcing;
       case 'SELF_REFLECTION':
-        return 'SRL · 复盘中';
+        return context.l10n.userSRLReflecting;
       default:
-        return 'SRL · 未知';
+        return context.l10n.userSRLUnknown;
     }
   }
 
@@ -83,7 +85,7 @@ class SrlPhaseBadgeCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                _label,
+                _label(context),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: color,
                       fontWeight: DS.fontWeightBold,

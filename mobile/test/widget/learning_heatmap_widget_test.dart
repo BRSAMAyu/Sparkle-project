@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('LearningHeatmapWidget', () {
@@ -124,10 +127,7 @@ Widget _buildHarness({
   required int days,
 }) {
   return ProviderScope(
-    child: MaterialApp(
-      locale: const Locale('zh'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    child: testMaterialApp(
       home: Scaffold(
         body: Center(
           child: SizedBox(

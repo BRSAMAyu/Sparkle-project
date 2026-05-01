@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class EvidenceDrawer extends StatelessWidget {
   const EvidenceDrawer({
@@ -39,7 +40,7 @@ class EvidenceDrawer extends StatelessWidget {
               padding: const EdgeInsets.all(DS.md),
               child: Row(
                 children: [
-                  Text('证据记录', style: DS.titleMedium),
+                  Text(context.l10n.memEvidenceRecord, style: DS.titleMedium),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),

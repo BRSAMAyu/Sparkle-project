@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Reviewer Agent - AI内容质量审查系统
 
@@ -16,7 +17,7 @@ import asyncio
 import json
 import uuid
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from loguru import logger
@@ -27,9 +28,9 @@ from app.agents.workflow_experience import (
     build_reviewer_system_prompt,
     get_review_profile,
 )
+from app.config.settings import settings
 from app.core.agent_profiles import TaskType
 from app.core.llm_router import ModelProvider
-from app.config.settings import settings
 from app.services.llm_service import get_llm_service_for_task
 
 # ============================================
@@ -54,14 +55,14 @@ class ReviewMetric(Enum):
     TONE_APPROPRIATENESS = "tone"   # 语气适当性：语气是否得体
 
 
-class ReviewSeverity(str, Enum):
+class ReviewSeverity(StrEnum):
     """问题严重程度"""
     CRITICAL = "critical"  # 严重问题，必须修复
     WARNING = "warning"    # 警告问题，建议修复
     INFO = "info"          # 信息提示，可选修复
 
 
-class ReviewDecision(str, Enum):
+class ReviewDecision(StrEnum):
     """审查决策"""
     PASSED = "passed"           # 通过审查
     FAILED = "failed"           # 未通过审查
@@ -199,7 +200,7 @@ class ReviewResult:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ReviewResult":
+    def from_dict(cls, data: dict[str, Any]) -> ReviewResult:
         """从字典恢复"""
         metrics = [
             QuantifiedMetric(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from hashlib import sha256
 from typing import Any
 from uuid import UUID, uuid5
@@ -16,7 +16,7 @@ SEED_BRIDGE_NAMESPACE = UUID("9eb4b11b-f9f8-4a5f-9c2f-3b4cb6c03db7")
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _coerce_library_payload(library: dict[str, Any] | SeedLibrary) -> dict[str, Any]:

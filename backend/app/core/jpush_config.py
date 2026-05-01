@@ -8,6 +8,7 @@ are not available.
 JPush REST API v3: https://docs.jiguang.cn/jpush/server/push/rest_api_v3_push
 """
 from __future__ import annotations
+
 from functools import lru_cache
 from typing import Literal
 

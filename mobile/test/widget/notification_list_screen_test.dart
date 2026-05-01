@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -7,8 +9,11 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/data/repositories/notification_repository.dart';
 import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets(
       'notification list opens destination routes through resilient navigation',
       (tester) async {
@@ -56,7 +61,15 @@ void main() {
         child: MaterialApp.router(
           theme: AppThemes.lightTheme,
           routerConfig: router,
-        ),
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+              ),
       ),
     );
     await tester.pumpAndSettle();

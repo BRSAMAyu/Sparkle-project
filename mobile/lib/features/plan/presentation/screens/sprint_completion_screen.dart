@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,9 +57,9 @@ class _SprintCompletionScreenState
   SprintCompletionSummary? get _summary =>
       widget.initialSummary ?? _loadedSummary;
 
-  String get _subjectLabel {
+  String _subjectLabelL10n(AppLocalizations l10n) {
     final subject = widget.subjectName.trim();
-    return subject.isEmpty ? '7 天备考成果' : '$subject 7 天备考成果';
+    return subject.isEmpty ? l10n.planSprintSevenDayResults : l10n.planSprintSevenDayResultsFor(subject);
   }
 
   @override
@@ -81,7 +83,7 @@ class _SprintCompletionScreenState
         _isLoading = false;
       });
       if (!result.completed || result.summary == null) {
-        AppFeedback.warning(context, '冲刺成果还在汇总中');
+        AppFeedback.warning(context, context.l10n.planSprintStillSummarizing);
       }
     } catch (e) {
       if (!mounted) return;
@@ -110,7 +112,7 @@ class _SprintCompletionScreenState
             .shareToSystem(imageFile: imageFile, text: shareText);
         if (!mounted) return;
         if (result.isSuccess) {
-          AppFeedback.success(context, '分享已打开');
+          AppFeedback.success(context, context.l10n.planSprintShareOpened);
         } else if (result.error != null) {
           AppFeedback.error(context, result.error!);
         }
@@ -142,9 +144,12 @@ class _SprintCompletionScreenState
   }
 
   String _buildShareText(SprintCompletionSummary summary) =>
-      '我的 7 天备考冲刺完成：掌握 ${summary.masteredNodesCount} 个知识节点，'
-      '修复 ${summary.repairedErrorsCount} 个错误模式，完成 ${summary.completedTasksCount} 个任务。'
-      '最强项：${summary.strongestArea}。#Sparkle备考';
+      context.l10n.planSprintShareText(
+        summary.masteredNodesCount,
+        summary.repairedErrorsCount,
+        summary.completedTasksCount,
+        summary.strongestArea,
+      );
 
   void _invalidateLinkedViews() {
     ref.invalidate(learningPortfolioProvider);
@@ -221,7 +226,7 @@ class _SprintCompletionScreenState
                     top: DS.spacing8,
                     left: DS.spacing8,
                     child: Tooltip(
-                      message: '返回',
+                      message: context.l10n.planSprintBack,
                       child: SparkleIconButton(
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.close_rounded),
@@ -235,7 +240,7 @@ class _SprintCompletionScreenState
                     _CompletionUnavailable(onRetry: _loadSummary)
                   else
                     _CompletionContent(
-                      subjectLabel: _subjectLabel,
+                      subjectLabel: _subjectLabelL10n(context.l10n),
                       summary: summary,
                       shareBoundaryKey: _shareBoundaryKey,
                       isSharing: _isSharing,
@@ -308,25 +313,25 @@ class _CompletionContent extends StatelessWidget {
                       children: [
                         SparkleButton(
                           key: const ValueKey('sprint-completion-share'),
-                          label: '分享',
+                          label: context.l10n.planSprintShareAction,
                           icon: const Icon(Icons.ios_share_rounded),
                           loading: isSharing,
                           onPressed: isSharing ? null : onShare,
                         ),
                         SparkleButton.secondary(
-                          label: '记录考试结果',
+                          label: context.l10n.planSprintRecordResult,
                           icon: const Icon(Icons.fact_check_outlined),
                           onPressed: onPostExamReview,
                         ),
                         SparkleButton.secondary(
-                          label: '返回首页',
+                          label: context.l10n.planSprintBackHome,
                           icon: const Icon(Icons.home_outlined),
                           onPressed: onReturnHome,
                         ),
                         TextButton.icon(
                           onPressed: onViewPortfolio,
                           icon: const Icon(Icons.collections_bookmark_outlined),
-                          label: const Text('查看学习档案'),
+                          label: Text(context.l10n.planSprintViewArchive),
                         ),
                       ],
                     ),
@@ -391,7 +396,7 @@ class _ShareableCompletionCard extends StatelessWidget {
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        '你的 7 天备考成果',
+                        context.l10n.planSprintYourResult,
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.w900,
@@ -405,7 +410,7 @@ class _ShareableCompletionCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing20),
             Text(
-              '掌握了 ${summary.masteredNodesCount} 个知识节点，修复了 ${summary.repairedErrorsCount} 个错误模式，完成了 ${summary.completedTasksCount} 个任务。',
+              context.l10n.planSprintResultSummary(summary.masteredNodesCount, summary.repairedErrorsCount, summary.completedTasksCount),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     height: 1.45,
                     fontWeight: FontWeight.w800,
@@ -417,14 +422,14 @@ class _ShareableCompletionCard extends StatelessWidget {
             const SizedBox(height: DS.spacing20),
             _AreaInsightRow(
               icon: Icons.trending_up_rounded,
-              label: '最强项',
+              label: context.l10n.planSprintStrongest,
               value: summary.strongestArea,
               color: DS.success,
             ),
             const SizedBox(height: DS.spacing10),
             _AreaInsightRow(
               icon: Icons.auto_fix_high_rounded,
-              label: '还有提升空间',
+              label: context.l10n.planSprintRoomToGrow,
               value: summary.growthArea,
               color: DS.info,
             ),
@@ -432,7 +437,7 @@ class _ShareableCompletionCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                '#Sparkle备考',
+                context.l10n.planSprintHashtag,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: DS.brandPrimary,
                       fontWeight: FontWeight.w900,
@@ -453,19 +458,19 @@ class _CompletionMetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final metrics = [
       _MetricSpec(
-        label: '知识节点',
+        label: context.l10n.planSprintKnowledgeNodes,
         value: summary.masteredNodesCount,
         icon: Icons.hub_outlined,
         color: DS.success,
       ),
       _MetricSpec(
-        label: '错误模式',
+        label: context.l10n.planSprintErrorPatterns,
         value: summary.repairedErrorsCount,
         icon: Icons.healing_rounded,
         color: DS.warning,
       ),
       _MetricSpec(
-        label: '完成任务',
+        label: context.l10n.planSprintCompletedTasksLabel,
         value: summary.completedTasksCount,
         icon: Icons.task_alt_rounded,
         color: DS.info,
@@ -621,14 +626,14 @@ class _CompletionUnavailable extends StatelessWidget {
               Icon(Icons.hourglass_bottom_rounded, color: DS.info, size: 42),
               const SizedBox(height: DS.spacing12),
               Text(
-                '冲刺成果还在汇总中',
+                context.l10n.planSprintStillSummarizingTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                '等 Day 7 的任务全部同步完成后，就能生成成果页。',
+                context.l10n.planSprintWaitForSync,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
@@ -636,7 +641,7 @@ class _CompletionUnavailable extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing16),
               SparkleButton.secondary(
-                label: '重新检查',
+                label: context.l10n.planSprintRecheck,
                 icon: const Icon(Icons.refresh_rounded),
                 onPressed: onRetry,
               ),

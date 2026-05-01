@@ -14,8 +14,6 @@ from typing import Any
 import redis.asyncio as redis
 from loguru import logger
 
-from app.services.llm_service import llm_service
-
 
 class SummarizationWorker:
     """

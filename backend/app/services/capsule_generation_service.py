@@ -10,9 +10,9 @@ Capsule Generation Service
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 import random
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -20,16 +20,16 @@ from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import I18n
 from app.models.capsule_generation_job import CapsuleGenerationJob, JobStatus
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.core.i18n import I18n
 from app.services.llm_service import get_llm_service_for_specific_model
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)

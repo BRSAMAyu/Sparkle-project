@@ -80,7 +80,11 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
 
   @override
   void dispose() {
-    ref.read(auroraStatusProvider.notifier).stopPeriodicRefresh();
+    try {
+      ref.read(auroraStatusProvider.notifier).stopPeriodicRefresh();
+    } catch (_) {
+      // Widget already disposed — ref is no longer accessible
+    }
     _controller.dispose();
     super.dispose();
   }
@@ -372,7 +376,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         }
         // Fallback: light calibration panel
         actions.add(_ActionChip(
-          label: '快速校准',
+          label: context.l10n.chatStatusQuickCalibrate,
           onTap: () => _triggerCalibration(snapshot),
         ));
       case 'cooling_down':
@@ -433,7 +437,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       observation: primaryFacet?.summary ?? snapshot.summary,
       judgment: snapshot.summary,
       confirmQuestion: context.l10n.auroraCalibrationConfirm,
-      confirmOptions: const ['30 分钟', '45 分钟', '60 分钟'],
+      confirmOptions: [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
       onConfirm: (option) {
         unawaited(ref.read(auroraStatusProvider.notifier).refresh(
               conversationId: widget.conversationId,

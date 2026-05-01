@@ -11,7 +11,6 @@ from typing import Any
 
 from loguru import logger
 
-
 TOPIC_STOPWORDS = {
     "这个",
     "那个",

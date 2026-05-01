@@ -9,8 +9,9 @@ This module extends the existing Redis-based framework with:
 - Statistical analysis integration
 """
 from __future__ import annotations
+
 import hashlib
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 from loguru import logger
 from sqlalchemy import and_, func, select
@@ -27,7 +28,7 @@ from app.models.experiment import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ABTestFrameworkEnhanced:

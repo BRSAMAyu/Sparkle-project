@@ -3,23 +3,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   Widget buildTestWidget({
     required List<WidgetPayload> actions,
     required bool isLatestMessage,
-  }) => MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-      home: Scaffold(
+  }) => testMaterialApp(home: Scaffold(
         body: AssistantMessageMetadataTray(
           actions: actions,
           isLatestMessage: isLatestMessage,
           status: 'IDLE',
         ),
-      ),
-    );
+      ),);
 
   testWidgets('next actions only renders for latest assistant message',
       (tester) async {

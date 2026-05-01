@@ -64,7 +64,6 @@ class FriendRequestsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
@@ -89,7 +88,6 @@ class FriendsDiscoverScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
@@ -432,7 +430,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(top: DS.lg, bottom: DS.md),
                   child: Text(
-                    '责任伙伴邀请',
+                  context.l10n.friendPartnerInviteTitle,
                     style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
                   ),
                 );
@@ -447,10 +445,10 @@ class _PendingRequestsTab extends ConsumerWidget {
                         ? NetworkImage(partner!.avatarUrl!)
                         : null,
                     child: partner?.avatarUrl == null
-                        ? Text((partner?.displayName ?? '伙')[0])
+                        ? Text((partner?.displayName ?? context.l10n.communityPartnerFallback)[0])
                         : null,
                   ),
-                  title: Text(partner?.displayName ?? '责任伙伴邀请'),
+                  title: Text(partner?.displayName ?? context.l10n.friendPartnerInviteTitle),
                   subtitle: Text(partnership.initiatorGoal),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -477,7 +475,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                                   .invalidate(accountabilityOverviewProvider),
                             );
                             if (!context.mounted) return;
-                            AppFeedback.success(context, '已接受责任伙伴邀请！');
+                            AppFeedback.success(context, context.l10n.friendPartnerAccepted);
                             context.go(resolution.route);
                           } catch (e) {
                             if (context.mounted) {
@@ -492,7 +490,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                                 );
                                 AppFeedback.info(
                                   context,
-                                  '你当前已经有核心责任伙伴，先进入现有工作台继续协作。',
+                                  context.l10n.friendPartnerConflict,
                                 );
                                 if (route != null) {
                                   context.go(route);
@@ -524,7 +522,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                                   .invalidate(accountabilityOverviewProvider),
                             );
                             if (context.mounted) {
-                              AppFeedback.info(context, '已拒绝邀请');
+                              AppFeedback.info(context, context.l10n.friendInviteDeclined);
                             }
                           } catch (e) {
                             if (context.mounted) {
@@ -580,12 +578,12 @@ class _RecommendationsTab extends ConsumerWidget {
           padding: const EdgeInsets.all(DS.lg),
           children: [
             Text(
-              '责任伙伴匹配',
+              context.l10n.friendMatchingTitle,
               style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: DS.xs),
             Text(
-              '系统会结合公开画像、学习主题、社群重合度与责任伙伴状态，优先推荐适合作为核心责任伙伴的人。',
+              context.l10n.friendMatchingDescription,
               style: DS.bodyMedium.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.md),
@@ -595,7 +593,7 @@ class _RecommendationsTab extends ConsumerWidget {
               children: FriendMatchStrategy.values.map((item) {
                 final selected = strategy == item;
                 return FilterChip(
-                  label: Text(_strategyLabel(item)),
+                  label: Text(_strategyLabel(item, context.l10n)),
                   selected: selected,
                   onSelected: (_) {
                     ref
@@ -627,7 +625,7 @@ class _RecommendationsTab extends ConsumerWidget {
                   const SizedBox(width: DS.sm),
                   Expanded(
                     child: Text(
-                      '仅展示允许公开发现的用户，推荐理由来自可解释的画像摘要，不会暴露私密原始数据。',
+                      context.l10n.friendPrivacyNotice,
                       style: DS.bodySmall.copyWith(color: DS.textSecondary),
                     ),
                   ),
@@ -637,12 +635,12 @@ class _RecommendationsTab extends ConsumerWidget {
             if (friendPrompts.isNotEmpty) ...[
               const SizedBox(height: DS.md),
               Text(
-                '待你校准',
+                context.l10n.friendCalibrationTitle,
                 style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: DS.xs),
               Text(
-                '分阶段反馈会直接调整你后续的好友与责任伙伴匹配。',
+                context.l10n.friendCalibrationDescription,
                 style: DS.bodySmall.copyWith(color: DS.textSecondary),
               ),
               const SizedBox(height: DS.sm),
@@ -669,10 +667,10 @@ class _RecommendationsTab extends ConsumerWidget {
               ),
             const SizedBox(height: DS.md),
             if (recommendations.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.people_outline,
-                title: '暂时没有合适候选人',
-                description: '换个匹配策略或稍后刷新，我们会持续根据最新画像和社群活跃度更新推荐。',
+                title: context.l10n.friendEmptyTitle,
+                description: context.l10n.friendEmptyDescription,
               )
             else
               ...recommendations.map(
@@ -795,11 +793,11 @@ class _RecommendationsTab extends ConsumerWidget {
       ref.invalidate(recommendationFeedbackInsightsProvider);
       ref.invalidate(friendRecommendationsProvider);
       if (context.mounted) {
-        AppFeedback.success(context, '反馈已提交，后续推荐会更贴近你的偏好');
+        AppFeedback.success(context, context.l10n.friendFeedbackSubmitted);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '提交失败: $e');
+        AppFeedback.error(context, context.l10n.friendSubmitFailed(e.toString()));
       }
     }
   }
@@ -814,11 +812,11 @@ class _RecommendationsTab extends ConsumerWidget {
           .read(friendRecommendationsProvider.notifier)
           .dismiss(recommendation);
       if (context.mounted) {
-        AppFeedback.info(context, '已隐藏这条推荐');
+        AppFeedback.info(context, context.l10n.friendRecommendationHidden);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '操作失败: $e');
+        AppFeedback.error(context, context.l10n.friendActionFailed(e.toString()));
       }
     }
   }
@@ -847,7 +845,7 @@ class _RecommendationsTab extends ConsumerWidget {
             .read(friendRecommendationsProvider.notifier)
             .sendRequest(recommendation);
         if (context.mounted) {
-          AppFeedback.success(context, '好友请求已发送');
+          AppFeedback.success(context, context.l10n.friendRequestSent);
         }
         return;
       }
@@ -862,7 +860,7 @@ class _RecommendationsTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '操作失败: $e');
+        AppFeedback.error(context, context.l10n.friendActionFailed(e.toString()));
       }
     }
   }
@@ -879,28 +877,28 @@ class _RecommendationsTab extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: const Text('发起责任伙伴邀请'),
+          title: Text(context.l10n.friendInviteDialogTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '邀请 ${user.displayName} 成为你的责任伙伴',
+                context.l10n.friendInviteDialogContent(user.displayName),
                 style: TextStyle(color: DS.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: DS.spacing16),
               TextField(
                 controller: goalController,
-                decoration: const InputDecoration(
-                  labelText: '我的目标',
-                  hintText: '例如：每天学习英语 30 分钟',
+                decoration: InputDecoration(
+                  labelText: context.l10n.friendGoalLabel,
+                  hintText: context.l10n.communityFriendGoalHint,
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,
               ),
               const SizedBox(height: DS.spacing16),
-              const Text(
-                '打卡频率:',
+              Text(
+                context.l10n.friendCheckInFrequency,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: DS.xs),
@@ -909,7 +907,7 @@ class _RecommendationsTab extends ConsumerWidget {
                 children: [1, 2, 3, 7].map((d) {
                   final selected = checkInDays == d;
                   return FilterChip(
-                    label: Text(d == 1 ? '每天' : '每 $d 天'),
+                    label: Text(d == 1 ? context.l10n.friendCheckInEveryDay : context.l10n.friendCheckInEveryDays(d)),
                     selected: selected,
                     onSelected: (_) => setState(() => checkInDays = d),
                   );
@@ -920,11 +918,11 @@ class _RecommendationsTab extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
+              child: Text(context.l10n.friendCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('发送邀请'),
+              child: Text(context.l10n.friendSendInvite),
             ),
           ],
         ),
@@ -934,7 +932,7 @@ class _RecommendationsTab extends ConsumerWidget {
     if (confirmed != true) return false;
     final goal = goalController.text.trim();
     if (goal.isEmpty) {
-      if (context.mounted) AppFeedback.info(context, '请填写目标');
+      if (context.mounted) AppFeedback.info(context, context.l10n.friendGoalRequired);
       return false;
     }
 
@@ -945,17 +943,17 @@ class _RecommendationsTab extends ConsumerWidget {
         );
     ref.invalidate(accountabilityOverviewProvider);
     if (context.mounted) {
-      AppFeedback.success(context, '责任伙伴邀请已发送！');
+      AppFeedback.success(context, context.l10n.friendInviteSent);
     }
     return true;
   }
 
-  String _strategyLabel(FriendMatchStrategy strategy) {
+  String _strategyLabel(FriendMatchStrategy strategy, AppLocalizations l10n) {
     switch (strategy) {
       case FriendMatchStrategy.compatibility:
-        return '契合度';
+        return l10n.friendStrategyCompatibility;
       case FriendMatchStrategy.complementary:
-        return '互补型';
+        return l10n.friendStrategyComplementary;
     }
   }
 
@@ -1085,7 +1083,7 @@ class _RecommendationCard extends StatelessWidget {
               IconButton(
                 onPressed: onDismiss,
                 icon: const Icon(Icons.close),
-                tooltip: '隐藏',
+                tooltip: context.l10n.friendHide,
               ),
             ],
           ),
@@ -1096,16 +1094,16 @@ class _RecommendationCard extends StatelessWidget {
             children: [
               _RecommendationBadge(
                 label: recommendation.canInviteAccountability
-                    ? '可直接邀请伙伴'
+                    ? context.l10n.friendCanInviteDirectly
                     : recommendation.isExistingFriend
-                        ? '已是好友'
-                        : '先加好友',
+                        ? context.l10n.friendAlreadyFriend
+                        : context.l10n.friendAddFriendFirst,
                 color: accentColor,
               ),
               _RecommendationBadge(
                 label: recommendation.strategy == 'complementary'
-                    ? '互补推荐'
-                    : '契合推荐',
+                    ? context.l10n.friendComplementaryRecommendation
+                    : context.l10n.friendCompatibilityRecommendation,
                 color: DS.info,
               ),
             ],
@@ -1139,13 +1137,13 @@ class _RecommendationCard extends StatelessWidget {
               Expanded(
                 child: FilledButton(
                   onPressed: onPrimaryAction,
-                  child: Text(_primaryActionLabel(recommendation)),
+                  child: Text(_primaryActionLabel(recommendation, context.l10n)),
                 ),
               ),
               const SizedBox(width: DS.sm),
               OutlinedButton(
                 onPressed: onFeedback,
-                child: const Text('评价推荐'),
+                child: Text(context.l10n.friendRateRecommendation),
               ),
             ],
           ),
@@ -1154,14 +1152,14 @@ class _RecommendationCard extends StatelessWidget {
     );
   }
 
-  String _primaryActionLabel(FriendRecommendation recommendation) {
+  String _primaryActionLabel(FriendRecommendation recommendation, AppLocalizations l10n) {
     if (recommendation.canInviteAccountability) {
-      return '发起责任伙伴';
+      return l10n.friendStartPartnership;
     }
     if (!recommendation.isExistingFriend) {
-      return '先加好友';
+      return l10n.friendAddFriendFirst;
     }
-    return '查看详情';
+    return l10n.friendViewProfile;
   }
 }
 
@@ -1208,7 +1206,7 @@ class _AccountabilityPartnersCard extends StatelessWidget {
           padding:
               const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
           child: Text(
-            '互督伙伴加载失败',
+            context.l10n.friendPartnersLoadFailed,
             style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
           ),
         ),
@@ -1246,14 +1244,14 @@ class _AccountabilityPartnersCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '我的责任伙伴',
+                        context.l10n.friendMyPartnersTitle,
                         style: DS.titleLarge.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: DS.xs),
                       Text(
-                        _buildSubtitle(activeCount, pendingCount),
+                        _buildSubtitle(context, activeCount, pendingCount),
                         style: DS.bodySmall.copyWith(color: DS.textSecondary),
                       ),
                     ],
@@ -1267,13 +1265,14 @@ class _AccountabilityPartnersCard extends StatelessWidget {
         },
       );
 
-  String _buildSubtitle(int active, int pending) {
+  String _buildSubtitle(BuildContext context, int active, int pending) {
+    final l10n = context.l10n;
     if (active == 0 && pending == 0) {
-      return '点击添加责任伙伴，互相监督成长';
+      return l10n.friendAddPartnerPrompt;
     }
     final parts = <String>[];
-    if (active > 0) parts.add('$active 位进行中');
-    if (pending > 0) parts.add('$pending 位待确认');
+    if (active > 0) parts.add(l10n.friendActiveCount(active));
+    if (pending > 0) parts.add(l10n.friendPendingCount(pending));
     return parts.join(' · ');
   }
 

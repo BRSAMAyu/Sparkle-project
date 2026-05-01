@@ -1,8 +1,6 @@
 """Aggregate anonymous community error patterns and annotate knowledge nodes."""
 from __future__ import annotations
 
-import json
-from collections import Counter
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -10,8 +8,8 @@ from loguru import logger
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.galaxy import KnowledgeNode
 from app.models.error_book import ErrorRecord
+from app.models.galaxy import KnowledgeNode
 
 
 class CommunityErrorAggregationService:

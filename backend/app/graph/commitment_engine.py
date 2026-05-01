@@ -8,7 +8,6 @@ from uuid import UUID, uuid4
 
 from app.aurora.schemas import Commitment, CommitmentStatus, WindowMode, WindowState
 
-
 _MISSING = object()
 
 

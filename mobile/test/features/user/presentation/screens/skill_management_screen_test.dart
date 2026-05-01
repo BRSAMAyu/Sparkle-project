@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/skill_models.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
 import 'package:sparkle/features/user/presentation/screens/skill_management_screen.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 class _FakeSkillApiService implements SkillApiService {
   _FakeSkillApiService();
@@ -204,11 +205,13 @@ class _FakeSkillApiService implements SkillApiService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   Widget _buildApp(_FakeSkillApiService api) => ProviderScope(
         overrides: [
           skillApiServiceProvider.overrideWithValue(api),
         ],
-        child: const MaterialApp(home: SkillManagementScreen()),
+        child: testMaterialApp(home: SkillManagementScreen()),
       );
 
   testWidgets('skill screen renders personal and shared tabs', (tester) async {

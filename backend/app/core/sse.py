@@ -4,6 +4,7 @@ Server-Sent Events (SSE) Manager
 支持断点续传和事件重放
 """
 from __future__ import annotations
+
 import asyncio
 import json
 import time

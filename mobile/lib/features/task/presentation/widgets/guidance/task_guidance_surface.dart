@@ -23,7 +23,7 @@ class TaskGuidanceSurface extends ConsumerStatefulWidget {
 }
 
 class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
-  static const _loadingText = '正在整理这张任务的闭环执行指南...';
+  // _loadingText moved to l10n: context.l10n.taskGuidanceLoading
   TaskGuidanceAudience _selectedAudience = TaskGuidanceAudience.human;
   bool _humanPrimed = false;
 
@@ -100,8 +100,8 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
     if (!_canRequestGuidance) return;
     final notifier = ref.read(taskListProvider.notifier);
     final label = _selectedAudience == TaskGuidanceAudience.human
-        ? '用户版任务指南'
-        : 'AI 版本任务指南';
+        ? context.l10n.taskGuidanceUserLabel
+        : context.l10n.taskGuidanceAiLabel;
     try {
       await notifier.createOrRefreshTaskGuidance(
         widget.task.id,
@@ -115,7 +115,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
       );
     } catch (error) {
       if (!mounted) return;
-      AppFeedback.error(context, '$label生成失败：$error');
+      AppFeedback.error(context, context.l10n.taskGuidanceFailed(label, error.toString()));
     }
   }
 
@@ -157,7 +157,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                     ),
                     const SizedBox(height: DS.spacing4),
                     Text(
-                      '用户版默认生成，AI 版按需补全，始终围绕当前任务上下文。',
+                      context.l10n.taskGuidanceSubtitle,
                       style: DS.bodySmall.copyWith(color: DS.textSecondary),
                     ),
                   ],
@@ -173,15 +173,15 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
           ),
           const SizedBox(height: DS.spacing16),
           SegmentedButton<TaskGuidanceAudience>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: TaskGuidanceAudience.human,
-                label: Text('给自己看'),
+                label: Text(context.l10n.taskGuidanceForSelf),
                 icon: Icon(Icons.person_outline_rounded),
               ),
               ButtonSegment(
                 value: TaskGuidanceAudience.ai,
-                label: Text('给 AI 用'),
+                label: Text(context.l10n.taskGuidanceForAi),
                 icon: Icon(Icons.auto_awesome_rounded),
               ),
             ],
@@ -201,14 +201,14 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                     ? Icons.visibility_outlined
                     : Icons.smart_toy_outlined,
                 label: _selectedAudience == TaskGuidanceAudience.human
-                    ? '默认闭环交付'
-                    : '按需生成',
+                    ? context.l10n.taskGuidanceDefaultDelivery
+                    : context.l10n.taskGuidanceOnDemand,
               ),
               if (guidance != null)
                 _MetaPill(
                   icon: Icons.update_rounded,
                   label:
-                      '更新于 ${DateFormat('MM-dd HH:mm').format(guidance.updatedAt.toLocal())}',
+                      context.l10n.taskGuidanceUpdatedAt(DateFormat('MM-dd HH:mm').format(guidance.updatedAt.toLocal())),
                 ),
               if (guidance != null)
                 _MetaPill(
@@ -216,9 +216,9 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                   label: guidance.policyVersion,
                 ),
               if (stale)
-                const _MetaPill(
+                _MetaPill(
                   icon: Icons.warning_amber_rounded,
-                  label: '任务已变更，建议刷新',
+                  label: context.l10n.taskGuidanceStaleRefresh,
                   tone: _MetaTone.warning,
                 ),
             ],
@@ -232,7 +232,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
             )
           else
             _GuidanceContent(
-              content: hasContent ? content : _loadingText,
+              content: hasContent ? content : context.l10n.taskGuidanceLoading,
               isMarkdown:
                   (guidance?.contentFormat ?? 'markdown').toLowerCase() ==
                           'markdown' &&
@@ -255,8 +255,8 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                           : Icons.auto_awesome_rounded,
                     ),
                     label: _selectedAudience == TaskGuidanceAudience.human
-                        ? (hasContent ? '刷新用户版' : '生成用户版')
-                        : (hasContent ? '刷新 AI 版' : '生成 AI 版'),
+                        ? (hasContent ? context.l10n.taskGuidanceRefreshUser : context.l10n.taskGuidanceGenerateUser)
+                        : (hasContent ? context.l10n.taskGuidanceRefreshAi : context.l10n.taskGuidanceGenerateAi),
                   ),
                 ),
               ],
@@ -345,7 +345,7 @@ class _GuidanceEmptyState extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isHuman ? '还没有用户版任务指南' : 'AI 版本尚未生成',
+            isHuman ? context.l10n.taskGuidanceNoUserYet : context.l10n.taskGuidanceNoAiYet,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -353,8 +353,8 @@ class _GuidanceEmptyState extends StatelessWidget {
           const SizedBox(height: DS.spacing8),
           Text(
             isHuman
-                ? 'Sparkle 会默认给这张任务准备用户版指南，帮助你直接执行，不需要跳去别的 AI 工具。'
-                : '只有你明确需要时，才会生成给 AI 使用的版本，保留当前任务上下文和约束。',
+                ? context.l10n.taskGuidanceUserEmpty
+                : context.l10n.taskGuidanceAiEmpty,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.5,
@@ -369,7 +369,7 @@ class _GuidanceEmptyState extends StatelessWidget {
               icon: Icon(
                 isHuman ? Icons.auto_awesome_rounded : Icons.smart_toy_outlined,
               ),
-              label: isHuman ? '立即生成用户版' : '按需生成 AI 版',
+              label: isHuman ? context.l10n.taskGuidanceGenerateNow : context.l10n.taskGuidanceGenerateAiOnDemand,
             ),
           ],
         ],

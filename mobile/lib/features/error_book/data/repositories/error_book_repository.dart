@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
-
 /// 错题档案 Repository
 ///
 /// 职责：封装所有错题相关的 API 调用
@@ -51,7 +51,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '创建错题失败');
+      throw _handleError(e, zh: '创建错题失败', en: 'Failed to create error record');
     }
   }
 
@@ -98,7 +98,7 @@ class ErrorBookRepository {
 
       return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '获取错题列表失败');
+      throw _handleError(e, zh: '获取错题列表失败', en: 'Failed to get error list');
     }
   }
 
@@ -112,7 +112,7 @@ class ErrorBookRepository {
           await _dio.get<Map<String, dynamic>>('$_basePath/$errorId');
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '获取错题详情失败');
+      throw _handleError(e, zh: '获取错题详情失败', en: 'Failed to get error details');
     }
   }
 
@@ -146,7 +146,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '更新错题失败');
+      throw _handleError(e, zh: '更新错题失败', en: 'Failed to update error record');
     }
   }
 
@@ -158,7 +158,7 @@ class ErrorBookRepository {
     try {
       await _dio.delete<void>('$_basePath/$errorId');
     } on DioException catch (e) {
-      throw _handleError(e, '删除错题失败');
+      throw _handleError(e, zh: '删除错题失败', en: 'Failed to delete error record');
     }
   }
 
@@ -170,7 +170,7 @@ class ErrorBookRepository {
     try {
       await _dio.post<void>('$_basePath/$errorId/analyze');
     } on DioException catch (e) {
-      throw _handleError(e, '重新分析失败');
+      throw _handleError(e, zh: '重新分析错题失败', en: 'Failed to re-analyze error');
     }
   }
 
@@ -202,7 +202,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '提交复习记录失败');
+      throw _handleError(e, zh: '提交复习记录失败', en: 'Failed to submit review record');
     }
   }
 
@@ -225,7 +225,7 @@ class ErrorBookRepository {
 
       return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, '获取今日复习列表失败');
+      throw _handleError(e, zh: '获取今日待复习列表失败', en: 'Failed to get today\'s review list');
     }
   }
 
@@ -243,7 +243,7 @@ class ErrorBookRepository {
       final response = await _dio.get<Map<String, dynamic>>('$_basePath/stats');
       return ReviewStats.fromJson(response.data ?? <String, dynamic>{});
     } on DioException catch (e) {
-      throw _handleError(e, '获取统计数据失败');
+      throw _handleError(e, zh: '获取统计数据失败', en: 'Failed to get statistics');
     }
   }
 
@@ -258,29 +258,30 @@ class ErrorBookRepository {
         response.data ?? <String, dynamic>{},
       );
     } on DioException catch (e) {
-      throw _handleError(e, '获取语义摘要失败');
+      throw _handleError(e, zh: '获取语义摘要失败', en: 'Failed to get semantic summary');
     }
   }
 
   /// 统一错误处理
   ///
   /// 将 HTTP 异常转换为用户友好的错误消息
-  Exception _handleError(DioException e, String defaultMessage) {
+  Exception _handleError(DioException e, {required String zh, required String en}) {
+    final isZh = I18nService.instance.isChinese;
+    final defaultMessage = isZh ? zh : en;
     if (e.response?.statusCode == 404) {
-      return Exception('错题不存在或已删除');
+      return Exception(isZh ? '错题不存在或已删除' : 'Error not found or deleted');
     } else if (e.response?.statusCode == 401) {
-      return Exception('未登录或登录已过期');
+      return Exception(isZh ? '未登录或登录已过期' : 'Not logged in or session expired');
     } else if (e.response?.statusCode == 400) {
-      // 尝试从响应中提取详细错误信息
       final data = e.response?.data;
       final errorDetail =
           data is Map<String, dynamic> ? data['detail'] as String? : null;
-      return Exception(errorDetail ?? '请求参数错误');
+      return Exception(errorDetail ?? (isZh ? '请求参数错误' : 'Invalid request parameters'));
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
-      return Exception('网络超时，请检查网络连接');
+      return Exception(isZh ? '网络超时，请检查网络连接' : 'Network timeout, please check your connection');
     } else if (e.type == DioExceptionType.unknown) {
-      return Exception('网络错误，请检查网络连接');
+      return Exception(isZh ? '网络错误，请检查网络连接' : 'Network error, please check your connection');
     }
 
     return Exception(defaultMessage);

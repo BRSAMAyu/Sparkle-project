@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 from collections import Counter, OrderedDict
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-import json
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
@@ -17,11 +17,11 @@ from app.core.cache import cache_service
 from app.core.event_bus import event_bus_reliable
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.services.simulation.simulation_run_store import SimulationRunStore
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.predictive_service import PredictiveService
 from app.services.simulation.participant_generator import generate_participants
 from app.services.simulation.scenario_templates import SCENARIOS
+from app.services.simulation.simulation_run_store import SimulationRunStore
 from app.services.simulation.simulation_state import LearningSimulationState
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
@@ -40,7 +40,7 @@ class AgentParticipant:
     memory: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
-    def from_public_dict(cls, payload: dict[str, Any]) -> "AgentParticipant":
+    def from_public_dict(cls, payload: dict[str, Any]) -> AgentParticipant:
         return cls(
             name=str(payload.get("name") or "学习伙伴"),
             role_hint=str(payload.get("role_hint") or ""),
@@ -95,7 +95,7 @@ class UserInteractionPoint:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "UserInteractionPoint":
+    def from_dict(cls, payload: dict[str, Any]) -> UserInteractionPoint:
         return cls(
             id=str(payload.get("id") or uuid4()),
             interaction_type=str(payload.get("interaction_type") or "choice"),
@@ -459,13 +459,13 @@ class SimulationEngine:
             if topic_lower not in haystack:
                 continue
             anchors.append(
-                (
+
                     f"错题锚点 {error_id}："
                     f"题目={str(question_text or chapter or '').strip()}；"
                     f"你的答案={str(user_answer or '未记录').strip()}；"
                     f"正确答案={str(correct_answer or '未记录').strip()}；"
                     f"分析={str((latest_analysis or {}).get('root_cause') if isinstance(latest_analysis, dict) else latest_analysis or '').strip() or '未记录'}"
-                )
+
             )
             if len(anchors) >= limit:
                 break
@@ -1129,7 +1129,7 @@ class SimulationEngine:
             "suggested_replies": [
                 f"我会先把“{topic}”拆成两步，再判断哪一步最值得先补。",
                 f"我更想追问 {reply_target or chosen.name} 刚才那条判断为什么成立。",
-                f"我会先给自己定一个 20 分钟的小练习验证当前结论。",
+                "我会先给自己定一个 20 分钟的小练习验证当前结论。",
             ],
         }
 
@@ -1305,8 +1305,8 @@ class SimulationEngine:
             self._string_list(payload.get("suggested_replies"))
             or moderator_decision.suggested_replies
             or [
-                f"我会先说明这个结论在什么条件下成立。",
-                f"我会用一个新例子测试这条解释能不能迁移。",
+                "我会先说明这个结论在什么条件下成立。",
+                "我会用一个新例子测试这条解释能不能迁移。",
             ]
         )
         return UserInteractionPoint(

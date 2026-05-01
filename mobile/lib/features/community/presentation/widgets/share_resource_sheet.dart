@@ -66,7 +66,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
   String _shareErrorMessage(Object error) {
     final raw = error.toString().replaceFirst('Exception: ', '').trim();
     if (raw.isEmpty || raw.toLowerCase() == 'null') {
-      return '分享失败，请稍后再试';
+      return context.l10n.communityShareFailedRetry;
     }
     return raw;
   }
@@ -248,7 +248,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                     title: Text(friend.displayName),
                     subtitle: isCorePartner
                         ? Text(
-                            '核心责任伙伴',
+                            context.l10n.communityCorePartner,
                             style: TextStyle(
                               color: DS.brandPrimary,
                               fontSize: 12,
@@ -257,7 +257,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                           )
                         : friendship.accountability?.isPending == true
                             ? Text(
-                                '责任伙伴邀请待确认',
+                                context.l10n.communityCorePartnerInvitePending,
                                 style: TextStyle(
                                   color: DS.warning,
                                   fontSize: 12,

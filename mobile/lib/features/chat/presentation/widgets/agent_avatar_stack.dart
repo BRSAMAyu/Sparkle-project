@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 多智能体头像堆叠组件
 ///
@@ -151,26 +152,26 @@ class AgentInfo {
     required this.color,
   });
 
-  factory AgentInfo.fromType(String type) {
+  static AgentInfo fromType(BuildContext context, String type) {
     switch (type.toLowerCase()) {
       case 'math':
         return AgentInfo(
           type: 'math',
-          name: '数学专家',
+          name: context.l10n.chatExpertMath,
           icon: Icons.functions,
           color: DS.brandPrimary.shade600,
         );
       case 'code':
         return AgentInfo(
           type: 'code',
-          name: '编程专家',
+          name: context.l10n.chatExpertCoding,
           icon: Icons.code,
           color: DS.success.shade600,
         );
       case 'writing':
         return AgentInfo(
           type: 'writing',
-          name: '写作专家',
+          name: context.l10n.chatExpertWriting,
           icon: Icons.edit,
           color: DS.brandPrimary.shade600,
         );
@@ -178,49 +179,49 @@ class AgentInfo {
       case 'science_agent':
         return AgentInfo(
           type: 'science',
-          name: '科学专家',
+          name: context.l10n.chatExpertScience,
           icon: Icons.science,
           color: DS.prismPurple,
         );
       case 'galaxy_guide':
         return AgentInfo(
           type: 'galaxy_guide',
-          name: '星图向导',
+          name: context.l10n.chatExpertGalaxyGuide,
           icon: Icons.auto_awesome,
           color: DS.info,
         );
       case 'exam_oracle':
         return AgentInfo(
           type: 'exam_oracle',
-          name: '考试预言家',
+          name: context.l10n.chatExpertExamPredictor,
           icon: Icons.quiz,
           color: DS.warning,
         );
       case 'time_tutor':
         return AgentInfo(
           type: 'time_tutor',
-          name: '时间导师',
+          name: context.l10n.chatExpertTimeCoach,
           icon: Icons.schedule,
           color: DS.success,
         );
       case 'deep_analyst':
         return AgentInfo(
           type: 'deep_analyst',
-          name: '深度分析师',
+          name: context.l10n.chatExpertDeepAnalyst,
           icon: Icons.psychology_alt,
           color: DS.brandSecondary,
         );
       case 'error_analyst':
         return AgentInfo(
           type: 'error_analyst',
-          name: '错题分析师',
+          name: context.l10n.chatExpertErrorAnalyst,
           icon: Icons.rule_folder,
           color: DS.errorAccent,
         );
       case 'study_buddy':
         return AgentInfo(
           type: 'study_buddy',
-          name: '学习伙伴',
+          name: context.l10n.chatExpertStudyBuddy,
           icon: Icons.favorite_border,
           color: DS.capsuleAccent,
         );
@@ -228,7 +229,7 @@ class AgentInfo {
       case 'search_agent':
         return AgentInfo(
           type: 'search_agent',
-          name: '搜索专家',
+          name: context.l10n.chatExpertSearch,
           icon: Icons.search,
           color: DS.infoLight,
         );
@@ -236,7 +237,7 @@ class AgentInfo {
       default:
         return AgentInfo(
           type: 'orchestrator',
-          name: '调度中枢',
+          name: context.l10n.chatExpertDispatcher,
           icon: Icons.hub,
           color: DS.brandPrimary.shade700,
         );

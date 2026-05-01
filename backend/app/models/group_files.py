@@ -2,16 +2,16 @@
 Group file sharing models
 群组文件共享模型
 """
-from enum import Enum as PyEnum
+from enum import StrEnum
 
-from sqlalchemy import Boolean, Float, Integer, JSON, Column, Enum, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, Enum, Float, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
 from app.models.community import GroupRole
 
 
-class GroupFileTrustLevel(str, PyEnum):
+class GroupFileTrustLevel(StrEnum):
     """Trust tier applied to group documents."""
 
     OFFICIAL = "official"

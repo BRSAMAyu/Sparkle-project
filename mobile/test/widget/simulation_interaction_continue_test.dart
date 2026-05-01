@@ -6,6 +6,7 @@ import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/simulation/presentation/screens/simulation_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
   @override
@@ -410,6 +411,8 @@ class _FailingContinueNotifier extends SimulationNotifier {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
@@ -491,16 +494,15 @@ void main() {
           suggestedReplies: <String>[
             '我会先画依赖图，再做一道题验证。',
           ],
-          interactionType: 'choice',
-          interactionOptions: <String>['优等生', '提问者'],
+          interactionType: 'prompt',
           pendingInteraction: SimulationInteractionModel(
             id: 'i-1',
-            interactionType: 'choice',
+            interactionType: 'prompt',
             prompt: '你会怎么接这一步？',
             suggestedReplies: <String>[
               '我会先画依赖图，再做一道题验证。',
             ],
-            options: <String>['优等生', '提问者'],
+            options: <String>[],
             targetRound: 1,
           ),
         ),
@@ -514,7 +516,7 @@ void main() {
         overrides: <Override>[
           simulationProvider.overrideWith((ref) => notifier),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),
@@ -525,7 +527,7 @@ void main() {
     expect(find.text('推荐场景'), findsNothing);
     expect(find.text('模拟设置'), findsOneWidget);
     expect(find.text('提交我的判断'), findsOneWidget);
-    final chipFinder = find.byType(ActionChip).first;
+    final chipFinder = find.text('我会先画依赖图，再做一道题验证。');
     await tester.ensureVisible(chipFinder);
     await tester.pumpAndSettle();
     await tester.tap(chipFinder, warnIfMissed: false);
@@ -548,7 +550,7 @@ void main() {
         overrides: <Override>[
           simulationProvider.overrideWith((ref) => notifier),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),
@@ -633,7 +635,7 @@ void main() {
         overrides: <Override>[
           simulationProvider.overrideWith((ref) => notifier),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: SimulationScreen(),
         ),
       ),

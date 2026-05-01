@@ -5,6 +5,7 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _ForesightMemoryApiService implements MemoryApiService {
   _ForesightMemoryApiService({this.foresightHint});
@@ -170,10 +171,12 @@ Widget _buildApp(MemoryApiService service) => ProviderScope(
       overrides: [
         memoryApiServiceProvider.overrideWithValue(service),
       ],
-      child: const MaterialApp(home: MemoryPanelScreen()),
+      child: testMaterialApp(home: MemoryPanelScreen()),
     );
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
     AppFeatureFlags.enableMemoryPanelV2 = false;
   });
@@ -233,7 +236,9 @@ void main() {
       _buildApp(_ForesightMemoryApiService()),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('前瞻提示'), findsNothing);
   });

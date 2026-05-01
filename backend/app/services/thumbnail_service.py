@@ -3,6 +3,7 @@ Thumbnail generation service
 缩略图生成服务
 """
 from __future__ import annotations
+
 import os
 import tempfile
 from uuid import UUID

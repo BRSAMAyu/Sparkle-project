@@ -73,7 +73,7 @@ class UserProjectionContract(BaseModel):
         *,
         state: UserInsightState,
         merged_preferences: dict[str, Any] | None = None,
-    ) -> "UserProjectionContract":
+    ) -> UserProjectionContract:
         from app.services.user_insight_transparency_service import UserInsightTransparencyService
 
         merged_preferences = merged_preferences or {}

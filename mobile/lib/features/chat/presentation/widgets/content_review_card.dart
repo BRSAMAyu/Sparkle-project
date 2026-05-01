@@ -177,7 +177,7 @@ class ContentReviewResult {
   final bool requiresReflection;
   final String?
       reflectionStatus; // "pending", "in_progress", "completed", "failed"
-  final String? scoreLabel; // "优秀", "良好", "及格", "需改进"
+  final String? scoreLabel; // "优秀", "良好", "及格", context.l10n.chatReviewNeedsImprove
 
   static ContentReviewResult fromJson(Map<String, dynamic> json) =>
       ContentReviewResult(

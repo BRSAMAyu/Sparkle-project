@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class AchievementShareCardFactory {
   static Widget fromPayload(
@@ -79,11 +80,11 @@ class AchievementShareCardFactory {
               spacing: DS.spacing6,
               runSpacing: DS.spacing6,
               children: [
-                _chip('稀有度', metadata['rarity']?.toString() ?? '荣耀'),
+                _chip(S.communityShareRarity, metadata['rarity']?.toString() ?? '荣耀'),
                 if (metadata['unlocked_count'] != null)
-                  _chip('已解锁', '${metadata['unlocked_count']}'),
+                  _chip(S.communityShareUnlocked, '${metadata['unlocked_count']}'),
                 if (metadata['flame_level'] != null)
-                  _chip('等级', 'Lv.${metadata['flame_level']}'),
+                  _chip(S.communityShareLevel, 'Lv.${metadata['flame_level']}'),
               ],
             ),
           ],

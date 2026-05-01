@@ -1,3 +1,4 @@
+# DEPRECATED: no active importers — candidate for removal in next cleanup
 from prometheus_client import Gauge
 
 from app.core.metrics import get_or_create_metric

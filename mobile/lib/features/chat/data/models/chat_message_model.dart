@@ -42,6 +42,7 @@ class ChatMessageModel {
     this.agentCollaboration,
     this.uxEnvelope,
     this.rawMetadata,
+    this.structuredCognitiveAdjustments = const [],
     this.orchestrationTrace,
     this.modeSuggestion,
     this.collaborationNarrative,
@@ -130,6 +131,9 @@ class ChatMessageModel {
   final Map<String, dynamic>? rawMetadata;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
+  final List<Map<String, dynamic>> structuredCognitiveAdjustments;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
   final Map<String, dynamic>? orchestrationTrace;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -175,6 +179,7 @@ class ChatMessageModel {
     Map<String, dynamic>? agentCollaboration,
     Map<String, dynamic>? uxEnvelope,
     Map<String, dynamic>? rawMetadata,
+    List<Map<String, dynamic>>? structuredCognitiveAdjustments,
     Map<String, dynamic>? orchestrationTrace,
     Map<String, dynamic>? modeSuggestion,
     String? collaborationNarrative,
@@ -208,6 +213,8 @@ class ChatMessageModel {
         agentCollaboration: agentCollaboration ?? this.agentCollaboration,
         uxEnvelope: uxEnvelope ?? this.uxEnvelope,
         rawMetadata: rawMetadata ?? this.rawMetadata,
+        structuredCognitiveAdjustments: structuredCognitiveAdjustments ??
+            this.structuredCognitiveAdjustments,
         orchestrationTrace: orchestrationTrace ?? this.orchestrationTrace,
         modeSuggestion: modeSuggestion ?? this.modeSuggestion,
         collaborationNarrative:

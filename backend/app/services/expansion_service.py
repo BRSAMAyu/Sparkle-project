@@ -3,11 +3,12 @@
 使用 LLM 自动拓展知识星图
 """
 from __future__ import annotations
+
 import asyncio
-from dataclasses import dataclass, field
 import json
 import re
-from datetime import timezone, datetime, timedelta
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -35,7 +36,7 @@ from app.services.node_sector_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _INVALID_NODE_NAME_PREFIXES = (
@@ -522,7 +523,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
             json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group(1))
-            raise ValueError("Failed to parse LLM response as JSON")
+            raise ValueError("Failed to parse LLM response as JSON") from None
 
     async def _create_expanded_nodes(
         self,

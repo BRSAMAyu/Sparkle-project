@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Review History Service - Phase 2c
 
@@ -15,8 +16,8 @@ Review History Service - Phase 2c
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import timezone, datetime, timedelta
-from enum import Enum
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
@@ -42,9 +43,9 @@ from app.models.review_system import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
-class FeedbackType(str, Enum):
+class FeedbackType(StrEnum):
     """用户反馈类型"""
     SATISFIED = "satisfied"           # 用户满意（接受内容）
     UNSATISFIED = "unsatisfied"       # 用户不满意（拒绝内容）
@@ -111,14 +112,14 @@ class FeedbackEntry:
     was_reflected: bool = False
 
 
-class OverrideDecision(str, Enum):
+class OverrideDecision(StrEnum):
     """用户覆盖决策类型"""
     ACCEPT_DESPITE_FAILURE = "accept_despite_failure"  # 接受尽管审查失败
     REJECT_DESPITE_PASS = "reject_despite_pass"        # 拒绝尽管审查通过
     MODIFY_DECISION = "modify_decision"                # 修改决策
 
 
-class AppealStatus(str, Enum):
+class AppealStatus(StrEnum):
     """申诉状态"""
     PENDING = "pending"                # 待处理
     IN_REVIEW = "in_review"            # 二次审查中

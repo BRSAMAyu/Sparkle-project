@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -58,7 +59,7 @@ class FriendsHubView extends ConsumerWidget {
           ],
           const SizedBox(height: 18),
           Text(
-            '好友',
+            context.l10n.communityFriends,
             style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
@@ -112,13 +113,13 @@ class _InAppHintBanner extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             SparkleButton.ghost(
-              label: '收到',
+              label: context.l10n.communityGotIt,
               onPressed: () async {
                 await ref
                     .read(accountabilityActionsProvider)
                     .dismissInAppHint(ref, hint.id);
                 if (context.mounted) {
-                  AppFeedback.success(context, '已收起');
+                  AppFeedback.success(context, context.l10n.communityCollapsed);
                 }
               },
             ),
@@ -162,7 +163,7 @@ class _PartnerHero extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '核心责任伙伴',
+                        context.l10n.communityCorePartner,
                         style: DS.titleLarge.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -170,8 +171,8 @@ class _PartnerHero extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         pendingCount > 0
-                            ? '你有 $pendingCount 条伙伴邀请待处理'
-                            : '把最重要的学习伙伴放到最前面，打卡、监督和成长都围绕 TA 展开。',
+                            ? context.l10n.communityPendingInvitesCount(pendingCount)
+                            : context.l10n.communityPartnerDescription,
                         style: DS.bodySmall.copyWith(color: DS.textSecondary),
                       ),
                     ],
@@ -181,7 +182,7 @@ class _PartnerHero extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             SparkleButton(
-              label: pendingCount > 0 ? '查看伙伴邀请' : '去挑选责任伙伴',
+              label: pendingCount > 0 ? context.l10n.communityViewPartnerInvites : context.l10n.communityChoosePartner,
               expand: true,
               onPressed: () {
                 if (pendingCount > 0) {
@@ -199,7 +200,7 @@ class _PartnerHero extends ConsumerWidget {
     final partnerDisplay = relationshipSummary?['partner_name']?.toString() ??
         active.partner?.displayName ??
         active.initiator?.displayName ??
-        '责任伙伴';
+        context.l10n.communityPartnerFallback;
 
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(18),
@@ -230,7 +231,7 @@ class _PartnerHero extends ConsumerWidget {
                     backgroundColor: DS.brandPrimary.withValues(alpha: 0.14),
                     child: Text(
                       partnerDisplay.isEmpty
-                          ? '伙'
+                          ? context.l10n.communityPartnerFallback
                           : partnerDisplay.characters.first,
                       style: TextStyle(
                         color: DS.brandPrimary,
@@ -260,7 +261,7 @@ class _PartnerHero extends ConsumerWidget {
                               ),
                             ),
                             _Pill(
-                              label: '核心伙伴',
+                              label: context.l10n.communityCorePartnerLabel,
                               color: DS.brandPrimary,
                             ),
                           ],
@@ -268,8 +269,8 @@ class _PartnerHero extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           relationshipSummary == null
-                              ? '伙伴工作台已准备好'
-                              : '一起坚持了 ${relationshipSummary['days_together'] ?? 0} 天',
+                              ? context.l10n.communityWorkspaceReady
+                              : context.l10n.communityTogetherDays((relationshipSummary['days_together'] as num?)?.toInt() ?? 0),
                           style: DS.bodySmall.copyWith(color: DS.textSecondary),
                         ),
                       ],
@@ -283,17 +284,17 @@ class _PartnerHero extends ConsumerWidget {
                 runSpacing: 8,
                 children: [
                   _MetricChip(
-                    label: '我',
-                    value: '${relationshipSummary?['my_streak_days'] ?? 0} 天连胜',
+                    label: context.l10n.communityMe,
+                    value: context.l10n.communityMyStreakDays((relationshipSummary?['my_streak_days'] as num?)?.toInt() ?? 0),
                   ),
                   _MetricChip(
                     label: 'TA',
                     value:
-                        '${relationshipSummary?['partner_streak_days'] ?? 0} 天连胜',
+                        context.l10n.communityPartnerStreakDays((relationshipSummary?['partner_streak_days'] as num?)?.toInt() ?? 0),
                   ),
                   _MetricChip(
-                    label: '总打卡',
-                    value: '${relationshipSummary?['total_checkins'] ?? 0} 次',
+                    label: '合计',
+                    value: context.l10n.communityTotalCheckins((relationshipSummary?['total_checkins'] as num?)?.toInt() ?? 0),
                   ),
                 ],
               ),
@@ -302,7 +303,7 @@ class _PartnerHero extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: SparkleButton.ghost(
-                      label: '聊天',
+                      label: context.l10n.communityChat,
                       onPressed: () => context.push(
                         '/chat/private/${relationshipSummary?['partner_id'] ?? active.partnerId}?name=${Uri.encodeComponent(partnerDisplay)}',
                       ),
@@ -311,7 +312,7 @@ class _PartnerHero extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: SparkleButton.ghost(
-                      label: '提醒',
+                      label: context.l10n.communityRemind,
                       onPressed: () async {
                         try {
                           final result = await ref
@@ -319,7 +320,7 @@ class _PartnerHero extends ConsumerWidget {
                               .nudgePartner(ref, active.id);
                           final deliverySummary =
                               (result['delivery_summary'] as String?) ??
-                                  '已通过站内提醒发送，对方在线时会实时看到';
+                                  context.l10n.communityNudgeDelivered;
                           if (context.mounted) {
                             AppFeedback.success(
                               context,
@@ -333,10 +334,10 @@ class _PartnerHero extends ConsumerWidget {
                                 message.contains('cooldown')) {
                               AppFeedback.info(
                                 context,
-                                '刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。',
+                                context.l10n.communityNudgeCooldown,
                               );
                             } else {
-                              AppFeedback.error(context, '提醒失败: $e');
+                              AppFeedback.error(context, context.l10n.communityNudgeFailed(e.toString()));
                             }
                           }
                         }
@@ -346,7 +347,7 @@ class _PartnerHero extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: SparkleButton(
-                      label: '工作台',
+                      label: context.l10n.communityWorkshop,
                       onPressed: () => context.push(
                         CommunityRoutes.accountabilityDetail
                             .replaceFirst(':id', active.id),
@@ -376,12 +377,12 @@ class _PendingInviteBanner extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '$count 条责任伙伴/好友请求待处理',
+                context.l10n.communityPartnerRequestCount(count),
                 style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
               ),
             ),
             SparkleButton.ghost(
-              label: '查看',
+              label: context.l10n.communityViewRequests,
               onPressed: () => context.pushNamed('friendRequests'),
             ),
           ],
@@ -465,10 +466,10 @@ class _FriendCard extends StatelessWidget {
                       ),
                       if (isCorePartner) ...[
                         const SizedBox(width: 8),
-                        _Pill(label: '责任伙伴', color: DS.brandPrimary),
+                        _Pill(label: context.l10n.communityAccountabilityPartner, color: DS.brandPrimary),
                       ] else if (accountability?.isPending == true) ...[
                         const SizedBox(width: 8),
-                        _Pill(label: '待确认', color: DS.warning),
+                        _Pill(label: context.l10n.communityPendingConfirm, color: DS.warning),
                       ],
                     ],
                   ),
@@ -488,11 +489,11 @@ class _FriendCard extends StatelessWidget {
                       Text(
                         isDemoMode
                             ? (friend.status == UserStatus.online
-                                ? '演示在线'
-                                : '演示离线')
+                                ? context.l10n.communityDemoOnline
+                                : context.l10n.communityDemoOffline)
                             : (friend.status == UserStatus.online
-                                ? '在线'
-                                : '离线'),
+                                ? context.l10n.communityOnline
+                                : context.l10n.communityOffline),
                         style: DS.bodySmall.copyWith(color: DS.textSecondary),
                       ),
                       const SizedBox(width: 10),
@@ -507,7 +508,7 @@ class _FriendCard extends StatelessWidget {
                     Text(
                       accountability.goalPreview?.isNotEmpty == true
                           ? accountability.goalPreview!
-                          : '已建立责任伙伴关系',
+                          : context.l10n.communityPartnerEstablished,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: DS.bodySmall.copyWith(
@@ -521,17 +522,17 @@ class _FriendCard extends StatelessWidget {
                       children: [
                         if (accountability.myStreakDays != null)
                           _TinyMetric(
-                            label: '我 ${accountability.myStreakDays} 天',
+                            label: context.l10n.communityMyDays(accountability.myStreakDays ?? 0),
                           ),
                         if (accountability.partnerStreakDays != null)
                           _TinyMetric(
-                            label: 'TA ${accountability.partnerStreakDays} 天',
+                            label: context.l10n.communityPartnerDays(accountability.partnerStreakDays ?? 0),
                           ),
                         if (accountability.partnerCheckedInToday != null)
                           _TinyMetric(
                             label: accountability.partnerCheckedInToday!
-                                ? 'TA 今天已打卡'
-                                : 'TA 今天未打卡',
+                                ? context.l10n.communityPartnerCheckedIn
+                                : context.l10n.communityPartnerNotCheckedIn,
                           ),
                       ],
                     ),
@@ -689,17 +690,17 @@ class _EmptyFriendsCard extends StatelessWidget {
           Icon(Icons.people_outline, size: 42, color: DS.neutral400),
           const SizedBox(height: 12),
           Text(
-            hasPending ? '先处理伙伴邀请，再扩展你的好友网络' : '还没有好友',
+            hasPending ? context.l10n.communityPendingFirst : context.l10n.communityNoFriendsYet,
             style: DS.bodyLarge.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
-            '从好友里挑出最重要的一位，建立你的核心责任伙伴关系。',
+            context.l10n.communityChooseCorePartner,
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: 14),
           SparkleButton(
-            label: '去发现好友',
+            label: context.l10n.communityDiscoverFriends,
             onPressed: () => context.pushNamed('friendsDiscover'),
           ),
         ],

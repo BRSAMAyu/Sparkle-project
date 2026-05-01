@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 # ============================================
 
 
-class SubjectEnum(str, Enum):
+class SubjectEnum(StrEnum):
     """科目枚举"""
 
     MATH = "math"
@@ -31,7 +31,7 @@ class SubjectEnum(str, Enum):
     OTHER = "other"
 
 
-class ErrorTypeEnum(str, Enum):
+class ErrorTypeEnum(StrEnum):
     """错因分类枚举"""
 
     CONCEPT_CONFUSION = "concept_confusion"
@@ -45,7 +45,7 @@ class ErrorTypeEnum(str, Enum):
     OTHER = "other"
 
 
-class ReviewPerformanceEnum(str, Enum):
+class ReviewPerformanceEnum(StrEnum):
     """复习表现枚举"""
 
     REMEMBERED = "remembered"

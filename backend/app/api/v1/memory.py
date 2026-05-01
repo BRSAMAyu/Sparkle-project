@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import timezone, datetime
+
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,8 +16,8 @@ from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.accountability_mvp_service import AccountabilityMvpService
 from app.services.conflict_resolver_service import ConflictResolverService
-from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.memory_service import MemoryService
+from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
 from app.state_aggregator.service import StateAggregatorService
 from app.working_memory.service import WorkingMemoryService
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _ensure_memory_panel_enabled() -> None:

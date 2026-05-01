@@ -1223,7 +1223,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
       context,
       _hasExecutionPermissionIssue(connection)
           ? context.l10n.taskExecutionPermissionInsufficientQueued
-          : ExecutionCopy.engineOfflineQueuedMessage,
+          : ExecutionCopy.engineOfflineQueuedMessage(),
     );
   }
 

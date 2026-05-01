@@ -4,6 +4,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
@@ -17,7 +18,7 @@ class BlockedUsersScreen extends ConsumerWidget {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: const Text('黑名单管理'),
+        title: Text('Blocked Users'),
         backgroundColor: DS.surfacePrimary,
       ),
       child: blockedState.when(
@@ -28,9 +29,9 @@ class BlockedUsersScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.block_outlined, size: 64, color: DS.neutral300),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
-                    '暂无拉黑用户',
+                    I18nService.instance.isChinese ? '暂无拉黑用户' : 'No blocked users',
                     style: TextStyle(
                         color: DS.neutral500, fontSize: DS.fontSizeBase,),
                   ),
@@ -55,12 +56,12 @@ class BlockedUsersScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('加载失败: $e', style: TextStyle(color: DS.error)),
-              const SizedBox(height: 16),
+              Text(I18nService.instance.isChinese ? '加载失败: $e' : 'Load failed: $e', style: TextStyle(color: DS.error)),
+              SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () =>
                     ref.read(blockedUsersProvider.notifier).refresh(),
-                child: const Text('重试'),
+                child: Text('Retry'),
               ),
             ],
           ),
@@ -95,7 +96,7 @@ class _BlockedUserTile extends ConsumerWidget {
         ),
         subtitle: blockInfo.reason != null
             ? Text(
-                '原因: ${blockInfo.reason}',
+                I18nService.instance.isChinese ? '原因: ${blockInfo.reason}' : 'Reason: ${blockInfo.reason}',
                 style: TextStyle(
                   color: DS.textSecondary,
                   fontSize: DS.fontSizeSm,
@@ -107,7 +108,7 @@ class _BlockedUserTile extends ConsumerWidget {
           style: TextButton.styleFrom(
             foregroundColor: DS.primaryBase,
           ),
-          child: const Text('解除拉黑'),
+          child: Text('Unblock'),
         ),
       ),
     );
@@ -119,17 +120,19 @@ class _BlockedUserTile extends ConsumerWidget {
     final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('解除拉黑'),
-        content: Text('确定要解除对 $displayName 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。'),
+        title: Text('Unblock'),
+        content: Text(I18nService.instance.isChinese
+            ? '确定要解除对 $displayName 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。'
+            : 'Unblock $displayName?\n\nThey will be able to send friend requests and messages again.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(I18nService.instance.isChinese ? '取消' : 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: DS.primaryBase),
-            child: const Text('确定'),
+            child: Text(I18nService.instance.isChinese ? '确定' : 'Confirm'),
           ),
         ],
       ),
@@ -142,13 +145,15 @@ class _BlockedUserTile extends ConsumerWidget {
             .unblockUser(blockInfo.blockedUser.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.success('已解除对 $displayName 的拉黑'),
+            SparkleSnackBar.success(I18nService.instance.isChinese
+                ? '已解除对 $displayName 的拉黑'
+                : '$displayName unblocked'),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.error('操作失败: $e'),
+            SparkleSnackBar.error(I18nService.instance.isChinese ? '操作失败: $e' : 'Operation failed: $e'),
           );
         }
       }

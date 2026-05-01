@@ -5,10 +5,11 @@ Sufficiency Checker
 检查LLM是否有足够信息执行用户请求，避免在没有必要信息时直接执行。
 """
 from __future__ import annotations
+
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from enum import Enum
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import Any, Literal
 
 from loguru import logger
@@ -16,7 +17,7 @@ from loguru import logger
 from app.services.llm_fallback_utils import sufficiency_llm
 
 
-class SufficiencyStatus(str, Enum):
+class SufficiencyStatus(StrEnum):
     """信息充分性状态"""
     SUFFICIENT = "sufficient"           # 信息充足，可以直接执行
     NEED_CLARIFICATION = "need_clarification"  # 需要澄清信息
@@ -202,7 +203,7 @@ class SufficiencyChecker:
 
     @staticmethod
     def _now() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     def _cleanup_history(self, now: datetime) -> None:
         expired_before = now - self.CLARIFICATION_TRACK_TTL

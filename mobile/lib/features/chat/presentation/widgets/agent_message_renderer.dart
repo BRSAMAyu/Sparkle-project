@@ -46,53 +46,53 @@ class AgentMessageRenderer extends ConsumerWidget {
   final void Function(String actionId, bool confirmed)? onConfirmation;
 
   /// Map of widget type strings to their collapsible chip config.
-  static const _widgetConfigs = <String, _WidgetTypeConfig>{
-    'task_card': _WidgetTypeConfig(
+  Map<String, _WidgetTypeConfig> _widgetConfigs(BuildContext context) => <String, _WidgetTypeConfig>{
+    'task_card': const _WidgetTypeConfig(
       label: '任务',
       icon: Icons.check_circle_outline,
     ),
     'knowledge_card': _WidgetTypeConfig(
-      label: '知识卡',
+      label: context.l10n.chatWidgetKnowledge,
       icon: Icons.auto_stories,
     ),
     'task_list': _WidgetTypeConfig(
-      label: '任务列表',
+      label: context.l10n.chatActionTaskList,
       icon: Icons.list_alt,
     ),
-    'plan_card': _WidgetTypeConfig(
+    'plan_card': const _WidgetTypeConfig(
       label: '计划',
       icon: Icons.map_outlined,
     ),
     'plan_context_summary': _WidgetTypeConfig(
-      label: '计划摘要',
+      label: context.l10n.chatWidgetPlanSummary,
       icon: Icons.summarize_outlined,
     ),
     'plan_state': _WidgetTypeConfig(
-      label: '计划状态',
+      label: context.l10n.chatWidgetPlanStatus,
       icon: Icons.flag_outlined,
     ),
     'prism_card': _WidgetTypeConfig(
-      label: '认知分析',
+      label: context.l10n.chatWidgetCognitiveAnalysis,
       icon: Icons.psychology_outlined,
     ),
-    'achievement_card': _WidgetTypeConfig(
+    'achievement_card': const _WidgetTypeConfig(
       label: '成就',
       icon: Icons.emoji_events_outlined,
       accentColor: Colors.amber,
     ),
-    'error_card': _WidgetTypeConfig(
+    'error_card': const _WidgetTypeConfig(
       label: '错题',
       icon: Icons.menu_book_outlined,
     ),
   };
 
-  static const _collaborationConfig = _WidgetTypeConfig(
-    label: '协作过程',
+  _WidgetTypeConfig _collaborationConfig(BuildContext context) => _WidgetTypeConfig(
+    label: context.l10n.chatWidgetCollaborationProcess,
     icon: Icons.hub_outlined,
   );
 
-  static const _errorInfoConfig = _WidgetTypeConfig(
-    label: '错误提示',
+  _WidgetTypeConfig _errorInfoConfig(BuildContext context) => _WidgetTypeConfig(
+    label: context.l10n.chatWidgetErrorHint,
     icon: Icons.warning_amber,
     accentColor: Colors.redAccent,
   );
@@ -150,7 +150,7 @@ class AgentMessageRenderer extends ConsumerWidget {
       );
 
   Widget _buildWidget(BuildContext context, WidgetPayload widget) {
-    final config = _widgetConfigs[widget.type];
+    final config = _widgetConfigs(context)[widget.type];
     final inner = _buildInnerWidget(context, widget);
 
     // If no config found, render raw with a generic wrapper.
@@ -258,7 +258,7 @@ class AgentMessageRenderer extends ConsumerWidget {
       );
 
   Widget _buildAchievementCard(BuildContext context, Map<String, dynamic> data) {
-    final name = (data['name'] ?? data['title'] ?? '成就解锁').toString();
+    final name = (data['name'] ?? data['title'] ?? context.l10n.chatWidgetAchievementUnlock).toString();
     final desc = (data['description'] ?? '').toString();
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -311,11 +311,12 @@ class AgentMessageRenderer extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorCard(BuildContext context, List<ErrorInfo> errors) =>
-      _wrap(
-        label: _errorInfoConfig.label,
-        icon: _errorInfoConfig.icon,
-        accentColor: _errorInfoConfig.accentColor,
+  Widget _buildErrorCard(BuildContext context, List<ErrorInfo> errors) {
+    final errorConfig = _errorInfoConfig(context);
+    return _wrap(
+        label: errorConfig.label,
+        icon: errorConfig.icon,
+        accentColor: errorConfig.accentColor,
         child: Card(
           color: Theme.of(context).colorScheme.errorContainer,
           margin: const EdgeInsets.symmetric(vertical: 8),
@@ -387,6 +388,7 @@ class AgentMessageRenderer extends ConsumerWidget {
           ),
         ),
       );
+  }
 
   Widget _buildConfirmationCard(
     BuildContext context,
@@ -465,6 +467,8 @@ class AgentMessageRenderer extends ConsumerWidget {
           executionTimeRaw is num ? executionTimeRaw.toInt() : 0;
       final executionTime = executionTimeMs / 1000.0;
 
+      final collabConfig = _collaborationConfig(context);
+
       // Extract steps
       final stepsList = (collaborationData['steps'] as List<dynamic>?) ??
           (collaborationData['timeline'] as List<dynamic>?);
@@ -510,8 +514,8 @@ class AgentMessageRenderer extends ConsumerWidget {
         }
 
         return _wrap(
-          label: _collaborationConfig.label,
-          icon: _collaborationConfig.icon,
+          label: collabConfig.label,
+          icon: collabConfig.icon,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
             child: AgentCollaborationTimeline(
@@ -525,8 +529,8 @@ class AgentMessageRenderer extends ConsumerWidget {
       }
 
       return _wrap(
-        label: _collaborationConfig.label,
-        icon: _collaborationConfig.icon,
+        label: collabConfig.label,
+        icon: collabConfig.icon,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
           child: AgentCollaborationTimeline(

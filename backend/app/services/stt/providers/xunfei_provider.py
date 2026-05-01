@@ -4,6 +4,7 @@
 实现 iFlytek 语音听写 WebSocket v2 协议。
 """
 from __future__ import annotations
+
 import asyncio
 import base64
 import hashlib
@@ -145,7 +146,7 @@ class XunFeiProvider(STTProvider):
         while True:
             try:
                 response = await asyncio.wait_for(websocket.recv(), timeout=next_timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
 
             response_data = json.loads(response)
@@ -223,7 +224,7 @@ class XunFeiProvider(STTProvider):
                             yield text
                         if terminal:
                             return
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         continue
                     except Exception as exc:
                         logger.warning(f"接收识别结果失败: {exc}")
@@ -250,7 +251,7 @@ class XunFeiProvider(STTProvider):
                             yield text
                         if terminal:
                             break
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         continue
                     except Exception as exc:
                         logger.warning(f"接收最终识别结果失败: {exc}")
@@ -307,7 +308,7 @@ class XunFeiProvider(STTProvider):
                 timeout=self._FILE_TRANSCRIBE_TIMEOUT_SECONDS,
             )
             return results[-1] if results else ""
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("文件语音识别失败: 科大讯飞转写超时")
             return "文件语音识别失败: 科大讯飞转写超时"
         except Exception as exc:

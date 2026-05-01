@@ -7,6 +7,7 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/memory/memory.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class MemoryRoutes {
   static const String panel = '/memory';
@@ -63,8 +64,8 @@ class MemoryRoutes {
               return buildSparkleTransitionPage(
                 state: state,
                 motionToken: SparkleMotionToken.scene,
-                child: const Scaffold(
-                  body: Center(child: Text('记忆详情参数缺失')),
+                child: Scaffold(
+                  body: Center(child: Text(context.l10n.memDetailMissing)),
                 ),
               );
             }

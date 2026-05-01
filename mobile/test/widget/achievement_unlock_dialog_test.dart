@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 AchievementUnlockEvent _buildEvent() => AchievementUnlockEvent(
       achievementId: 'mirofish_first_simulation',
@@ -16,15 +17,14 @@ AchievementUnlockEvent _buildEvent() => AchievementUnlockEvent(
     );
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('achievement unlock dialog closes before share callback',
       (tester) async {
     var shared = 0;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
+      testMaterialApp(home: Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: FilledButton(
@@ -41,8 +41,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('open'));
@@ -60,10 +59,7 @@ void main() {
   testWidgets('achievement unlock dialog closes from close action',
       (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
+      testMaterialApp(home: Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: FilledButton(
@@ -77,8 +73,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('open'));
@@ -101,10 +96,7 @@ void main() {
     var viewed = 0;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
+      testMaterialApp(home: Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: FilledButton(
@@ -121,8 +113,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('open'));

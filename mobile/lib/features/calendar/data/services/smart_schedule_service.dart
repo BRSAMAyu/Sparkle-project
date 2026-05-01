@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
@@ -288,7 +289,7 @@ class SmartScheduleService {
 
     return SuggestedTime(
       timeSlot: timeSlot,
-      reason: json['reason'] as String? ?? '推荐时段',
+      reason: json['reason'] as String? ?? (I18nService.instance.isChinese ? '推荐时段' : 'Recommended slot'),
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.7,
     );
   }
@@ -485,12 +486,13 @@ class SmartScheduleService {
   }) {
     var confidence = 0.5;
     final reasons = <String>[];
+    final zh = I18nService.instance.isChinese;
 
     // Skip blocked slots
     if (slot.quality == TimeSlotQuality.blocked) {
       return SuggestedTime(
         timeSlot: slot,
-        reason: '该时段不可用',
+        reason: zh ? '该时段不可用' : 'Slot unavailable',
         confidence: 0.0,
       );
     }
@@ -499,7 +501,7 @@ class SmartScheduleService {
     if (energyCost >= 3) {
       if (slot.quality == TimeSlotQuality.peak) {
         confidence += 0.25;
-        reasons.add('高能量任务适合高效能时段');
+        reasons.add(zh ? '高能量任务适合高效能时段' : 'High-energy tasks suit peak hours');
       } else if (slot.quality == TimeSlotQuality.low) {
         confidence -= 0.2;
       }
@@ -509,14 +511,14 @@ class SmartScheduleService {
     if (difficulty >= 3) {
       if (slot.quality == TimeSlotQuality.peak) {
         confidence += 0.2;
-        reasons.add('高难度任务适合高效能时段');
+        reasons.add(zh ? '高难度任务适合高效能时段' : 'Hard tasks suit peak hours');
       }
     }
 
     // Low energy tasks can be scheduled in low periods
     if (energyCost <= 1 && slot.quality == TimeSlotQuality.low) {
       confidence += 0.1;
-      reasons.add('轻量任务适合低能量时段');
+      reasons.add(zh ? '轻量任务适合低能量时段' : 'Light tasks suit low-energy periods');
     }
 
     // Consider cognitive state
@@ -527,7 +529,7 @@ class SmartScheduleService {
 
     // Match focus period preference
     if (slot.quality == TimeSlotQuality.peak) {
-      reasons.add('符合您的专注时段偏好');
+      reasons.add(zh ? '符合您的专注时段偏好' : 'Matches your focus period preference');
     }
 
     // Clamp confidence to 0.0 - 1.0
@@ -535,7 +537,7 @@ class SmartScheduleService {
 
     return SuggestedTime(
       timeSlot: slot,
-      reason: reasons.isNotEmpty ? reasons.first : '推荐时段',
+      reason: reasons.isNotEmpty ? reasons.first : (zh ? '推荐时段' : 'Recommended slot'),
       confidence: confidence,
     );
   }

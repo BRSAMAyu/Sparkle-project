@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('drawer expands and renders working memory item', (tester) async {
     final payload = WorkingMemorySessionModel(
       sessionId: 'session-1',
@@ -28,7 +31,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: 'session-1',
@@ -57,8 +60,8 @@ void main() {
 
   testWidgets('drawer stays hidden without session id', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: null,
@@ -76,7 +79,7 @@ void main() {
   testWidgets('drawer renders empty state when no items', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: 'session-empty',
@@ -120,7 +123,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: 'session-1',

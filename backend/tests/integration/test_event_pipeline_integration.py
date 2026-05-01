@@ -8,6 +8,8 @@ def _utcnow() -> datetime:
 
 
 import pytest
+
+pytestmark = pytest.mark.asyncio(loop_scope="module")
 import redis.asyncio as redis
 from sqlalchemy import delete
 
@@ -31,7 +33,6 @@ def _integration_enabled() -> bool:
     return os.getenv("SPARKLE_INTEGRATION", "").lower() in {"1", "true", "yes"}
 
 
-@pytest.mark.asyncio
 async def test_ingest_stream_worker_state_summary():
     if not _integration_enabled():
         pytest.skip("SPARKLE_INTEGRATION not enabled")
@@ -48,7 +49,19 @@ async def test_ingest_stream_worker_state_summary():
         await db.commit()
 
         event_id = uuid4().hex
-        service = EventService(db, EventBus())
+
+        # Create consumer group BEFORE publishing so xreadgroup with ">" can
+        # see the event — Redis consumer groups only track messages arriving
+        # after group creation.
+        resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+        redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True, password=resolved_password)
+        stream = "stream:tracking_events"
+        group = f"test_group_{uuid4().hex[:6]}"
+        consumer = f"consumer_{uuid4().hex[:6]}"
+        await redis_client.xgroup_create(stream, group, id="0", mkstream=True)
+
+        event_bus = EventBus()
+        service = EventService(db, event_bus)
         result = await service.ingest_events(
             user_id,
             [
@@ -81,13 +94,6 @@ async def test_ingest_stream_worker_state_summary():
             ],
         )
         assert result_dupe["deduped"] == 1
-
-        resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
-        redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True, password=resolved_password)
-        stream = "stream:tracking_events"
-        group = f"test_group_{uuid4().hex[:6]}"
-        consumer = f"consumer_{uuid4().hex[:6]}"
-        await redis_client.xgroup_create(stream, group, id="0", mkstream=True)
         parsed = None
         message_id = None
         for _ in range(5):
@@ -117,7 +123,6 @@ async def test_ingest_stream_worker_state_summary():
         worker = CognitiveStreamWorker(db, redis_client)
         await worker.handle_event(parsed)
         await redis_client.xack(stream, group, message_id)
-        await redis_client.close()
 
         estimator = StateEstimatorService(db)
         snapshot = await estimator.get_latest_snapshot(user_id)
@@ -136,8 +141,11 @@ async def test_ingest_stream_worker_state_summary():
         await db.execute(delete(User).where(User.id == user_id))
         await db.commit()
 
+        if event_bus.redis:
+            await event_bus.redis.aclose()
+        await redis_client.aclose()
 
-@pytest.mark.asyncio
+
 async def test_delete_then_resolve_redacted():
     if not _integration_enabled():
         pytest.skip("SPARKLE_INTEGRATION not enabled")
@@ -168,7 +176,9 @@ async def test_delete_then_resolve_redacted():
         db.add(event)
         await db.commit()
 
+        # EventBus default constructor creates loop conflicts; soft_delete_event doesn't need it
         service = EventService(db)
+        service.event_bus = None  # type: ignore[assignment]
         deleted = await service.soft_delete_event(user_id, event_id)
         assert deleted is True
 

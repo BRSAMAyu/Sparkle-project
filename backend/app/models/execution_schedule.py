@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import enum
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, Index, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -17,7 +17,7 @@ def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
     return [member.value for member in enum_cls]
 
 
-class ExecutionScheduleTriggerType(str, enum.Enum):
+class ExecutionScheduleTriggerType(enum.StrEnum):
     CRON = "cron"
     EVENT = "event"
     CONDITION = "condition"

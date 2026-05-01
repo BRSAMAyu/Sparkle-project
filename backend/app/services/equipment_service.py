@@ -3,7 +3,8 @@ Equipment Service
 统一处理用户装备真源与派生字段同步
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -17,7 +18,7 @@ from app.models.user import User
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class EquipmentSource:
@@ -146,7 +147,6 @@ class EquipmentService:
     async def _get_locked_user(self, user_id: str) -> User:
         # Use options(noload()) to prevent eager loading of relationships that cause
         # "FOR UPDATE cannot be applied to the nullable side of an outer join" error
-        from sqlalchemy.orm import noload
         result = await self.db.execute(
             select(User)
             .where(User.id == user_id)

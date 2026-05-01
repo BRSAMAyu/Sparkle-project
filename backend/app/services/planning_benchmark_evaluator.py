@@ -14,11 +14,9 @@ from app.orchestration.plan_quality_contract import (
     build_plan_quality_contract,
 )
 from app.services.planning_benchmark_service import (
-    PLANNING_BENCHMARK_DIMENSIONS,
     PlanningBenchmarkRun,
     PlanningBenchmarkScenario,
 )
-
 
 STOPWORDS = {
     "a",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.config import settings
@@ -20,7 +20,7 @@ from app.orchestration.mode_workflow_config import get_workflow_config
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 WARM_TONE_KEYWORDS = {"warm", "gentle", "encouraging", "supportive", "温和", "鼓励", "陪伴", "柔和"}
@@ -313,6 +313,9 @@ class UXEnvelopeBuilder:
             "dual_core_mode": self._dual_core_mode(final_state),
             "mode_reason": self._dual_core_reason(final_state),
         }
+        visible_adjustments = self._visible_structured_adjustments(final_state)
+        if visible_adjustments:
+            ux_turn["structured_cognitive_adjustments"] = visible_adjustments
         if settings.ENABLE_ADAPTIVE_PRESENTATION or settings.ENABLE_UX_PRESENTATION_METADATA:
             ux_turn["presentation_style"] = style_decision.style_variant
             ux_turn["tone_variant"] = style_decision.tone_variant
@@ -1822,6 +1825,15 @@ class UXEnvelopeBuilder:
     def _message_has_negative_signal(self, user_message: str) -> bool:
         compact = str(user_message or "").strip().lower()
         return any(token in compact for token in NEGATIVE_USER_SIGNAL_KEYWORDS)
+
+    @staticmethod
+    def _visible_structured_adjustments(final_state: Any) -> list[dict[str, Any]]:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        decision = context_data.get("dual_core_decision")
+        if not isinstance(decision, dict):
+            return []
+        raw = decision.get("structured_adjustments") or []
+        return [adj for adj in raw if isinstance(adj, dict) and adj.get("user_visible")]
 
 
 ux_envelope_builder = UXEnvelopeBuilder()

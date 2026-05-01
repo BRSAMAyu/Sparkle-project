@@ -3,13 +3,13 @@ from __future__ import annotations
 import inspect
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 from app.core.business_metrics import OUTCOME_RECORDS_TOTAL
-from app.services.plan_state_service import PlanStateService
 from app.services.personalization.preference_service import PreferenceService
+from app.services.plan_state_service import PlanStateService
 
 SESSION_PLAN_OUTCOMES_KEY_PREFIX = "session:plan_outcomes:"
 SESSION_PLAN_OUTCOMES_TTL_SECONDS = 14 * 24 * 60 * 60
@@ -24,7 +24,7 @@ EVIDENCE_LEVEL_HUMAN_TRUTH = "Human Truth"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _utcnow_iso() -> str:

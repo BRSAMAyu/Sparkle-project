@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import timezone, datetime
-from typing import Any
 import re
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 
-from app.orchestration.learning_state_fragment import build_learning_state_fragment
-from app.orchestration.planning_intent import detect_planning_like_turn
-from app.orchestration.plan_quality_contract import build_plan_quality_contract
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.capability_requirement_compiler import CapabilityRequirementCompiler
 from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 from app.orchestration.decision_policy import DecisionPolicyCompiler
+from app.orchestration.learning_state_fragment import build_learning_state_fragment
+from app.orchestration.plan_quality_contract import build_plan_quality_contract
+from app.orchestration.planning_intent import detect_planning_like_turn
 from app.orchestration.planning_strategy_compiler import PlanningStrategyCompiler
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.semantic.state_primitives import StudyDomainSemanticAdapter
@@ -19,7 +19,7 @@ from app.services.capability_registry_service import CapabilityRegistryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -193,7 +193,7 @@ def _parse_dt(value: Any) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed
 
 
@@ -378,7 +378,7 @@ class SituationBriefBuilder:
 
             # 3. Evaluate Readiness
             readiness = gate.evaluate(insight_state=compiled_state, gaps=gaps)
-            
+
             # 4. Generate Strategic Questions
             questions = detector.generate_questions(gaps)
 

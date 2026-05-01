@@ -1,17 +1,21 @@
 from __future__ import annotations
+
+import logging
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import and_, asc, desc, select
 
-from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task import TaskType as ModelTaskType
+from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate, coerce_task_type
 from app.services.focus_service import focus_service
 from app.services.task_service import TaskService
+
+logger = logging.getLogger(__name__)
 
 from .base import BaseTool, ToolCategory, ToolResult
 from .entity_cards import (
@@ -144,6 +148,9 @@ class UpdateTaskStatusTool(BaseTool):
                 raise ValueError("Task not found")
 
             new_status = params.status
+            _VALID_STATUSES = {"in_progress", "completed", "abandoned", "pending"}
+            if new_status not in _VALID_STATUSES:
+                raise ValueError(f"不支持的状态: {new_status}。可选: {', '.join(sorted(_VALID_STATUSES))}")
 
             if new_status == "in_progress":
                 task = await TaskService.start(db_session, task)
@@ -153,7 +160,6 @@ class UpdateTaskStatusTool(BaseTool):
             elif new_status == "abandoned":
                 task = await TaskService.abandon(db_session, task, reason="User requested via chat")
             elif new_status == "pending":
-                # Reset to pending? TaskService doesn't have reset, so manual update
                 task_update = TaskUpdate(status=TaskStatus.PENDING)
                 task = await TaskService.update(db_session, task, task_update)
 
@@ -218,53 +224,67 @@ class BatchCreateTasksTool(BaseTool):
         try:
             user_uuid = UUID(user_id)
             created_tasks = []
+            failed_tasks = []
 
             # Reuse logic from CreateTaskTool implicitly or just call service loop
             for task_params in params.tasks:
-                task_create = TaskCreate(
-                    title=task_params.title,
-                    type=coerce_task_type(task_params.task_type.value, default=ModelTaskType.LEARNING),
-                    estimated_minutes=task_params.estimated_minutes or 30,
-                    guide_content=task_params.description,
-                    priority=task_params.priority,
-                    due_date=task_params.due_date.date() if task_params.due_date else None,
-                    tags=[],
-                    tool_result_id=tool_call_id
-                )
+                try:
+                    task_create = TaskCreate(
+                        title=task_params.title,
+                        type=coerce_task_type(task_params.task_type.value, default=ModelTaskType.LEARNING),
+                        estimated_minutes=task_params.estimated_minutes or 30,
+                        guide_content=task_params.description,
+                        priority=task_params.priority,
+                        due_date=task_params.due_date.date() if task_params.due_date else None,
+                        tags=[],
+                        tool_result_id=tool_call_id
+                    )
 
-                task = await TaskService.create(
-                    db=db_session,
-                    obj_in=task_create,
-                    user_id=user_uuid
-                )
+                    task = await TaskService.create(
+                        db=db_session,
+                        obj_in=task_create,
+                        user_id=user_uuid
+                    )
 
-                created_tasks.append({
-                    "id": str(task.id),
-                    "title": task.title,
-                    "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
-                    "type": task.type.value,
-                    "status": task.status.value,
-                    "plan_id": str(task.plan_id) if task.plan_id else None,
-                    "estimated_minutes": task.estimated_minutes,
-                    "priority": task.priority,
-                    "created_at": task.created_at.isoformat(),
-                    # 🔧 补充前端需要的其他字段
-                    "user_id": str(user_uuid),
-                    "tags": [],
-                    "difficulty": 1,
-                    "energy_cost": 1,
-                })
+                    created_tasks.append({
+                        "id": str(task.id),
+                        "title": task.title,
+                        "guide_content": task.guide_content,
+                        "type": task.type.value,
+                        "status": task.status.value,
+                        "plan_id": str(task.plan_id) if task.plan_id else None,
+                        "estimated_minutes": task.estimated_minutes,
+                        "priority": task.priority,
+                        "created_at": task.created_at.isoformat(),
+                        "user_id": str(user_uuid),
+                        "tags": [],
+                        "difficulty": 1,
+                        "energy_cost": 1,
+                    })
+                except Exception as e:
+                    logger.warning(f"BatchCreateTasksTool: failed to create task '{task_params.title}': {e}")
+                    failed_tasks.append({"title": task_params.title, "error": str(e)})
+                    continue
+
+            if not created_tasks and failed_tasks:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message=f"所有任务创建失败: {'; '.join(f['error'] for f in failed_tasks)}",
+                    suggestion="请检查参数或减少任务数量后重试"
+                )
 
             task_list_payload = {
                 "tasks": created_tasks,
                 "tool_result_id": tool_call_id,
                 "task_count": len(created_tasks),
+                "failed_count": len(failed_tasks),
             }
             return ToolResult(
                 success=True,
                 tool_name=self.name,
-                data={"task_count": len(created_tasks)},
-                widget_type="task_list",  # 任务列表组件
+                data={"task_count": len(created_tasks), "failed_count": len(failed_tasks)},
+                widget_type="task_list",
                 widget_data=wrap_widget_payload(
                     widget_type="task_list",
                     widget_data=task_list_payload,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -199,7 +200,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
           (plan) => QuickShareItem(
             id: plan.id,
             title: plan.name,
-            subtitle: '进度: ${(plan.progress * 100).toStringAsFixed(0)}%',
+            subtitle: context.l10n.communityProgressPercent((plan.progress * 100).toStringAsFixed(0)),
             contentType: ShareableContentType.planProgress,
             icon: Icons.flag,
             iconColor: DS.info,
@@ -236,7 +237,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
             id: task.id,
             title: task.title,
             subtitle:
-                '${_taskStatusLabel(task.status)} · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
+                context.l10n.communityTaskStatusMinutes(_taskStatusLabel(task.status), task.actualMinutes ?? task.estimatedMinutes),
             contentType: ShareableContentType.taskCompletion,
             icon: Icons.task_alt,
             iconColor: DS.success,
@@ -264,7 +265,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
       return QuickShareItem(
         id: node.id,
         title: node.name,
-        subtitle: '掌握度: ${node.masteryScore}%',
+        subtitle: context.l10n.communityMasteryScore(node.masteryScore),
         contentType: ShareableContentType.knowledgeNode,
         icon: Icons.school,
         iconColor: sectorStyle.primaryColor,
@@ -277,11 +278,11 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
   }
 
   String _taskStatusLabel(TaskStatus status) => switch (status) {
-        TaskStatus.completed => '已完成',
-        TaskStatus.inProgress => '进行中',
-        TaskStatus.stuck => '卡住了',
-        TaskStatus.pending => '待开始',
-        TaskStatus.abandoned => '已放弃',
+        TaskStatus.completed => context.l10n.communityTaskCompleted,
+        TaskStatus.inProgress => context.l10n.communityTaskInProgress,
+        TaskStatus.stuck => context.l10n.communityTaskStuck,
+        TaskStatus.pending => context.l10n.communityTaskPending,
+        TaskStatus.abandoned => context.l10n.communityTaskAbandoned,
       };
 
   void _onItemTap(QuickShareItem item) {
@@ -317,7 +318,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
               Padding(
                 padding: const EdgeInsets.all(DS.lg),
                 child: Text(
-                  '快捷分享',
+                  context.l10n.communityQuickShare,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
@@ -327,11 +328,11 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
                 controller: _tabController,
                 labelColor: DS.brandPrimary,
                 indicatorColor: DS.brandPrimary,
-                tabs: const [
-                  Tab(icon: Icon(Icons.emoji_events), text: '成就'),
-                  Tab(icon: Icon(Icons.flag), text: '计划'),
-                  Tab(icon: Icon(Icons.task_alt), text: '任务'),
-                  Tab(icon: Icon(Icons.school), text: '知识'),
+                tabs: [
+                  Tab(icon: Icon(Icons.emoji_events), text: context.l10n.communityTabAchievements),
+                  Tab(icon: Icon(Icons.flag), text: context.l10n.communityTabPlans),
+                  Tab(icon: Icon(Icons.task_alt), text: context.l10n.communityTabTasks),
+                  Tab(icon: Icon(Icons.school), text: context.l10n.communityTabKnowledge),
                 ],
               ),
 
@@ -405,10 +406,10 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
       };
 
   String _getEmptyMessage() => switch (_selectedCategory) {
-        QuickShareCategory.achievements => '还没有解锁成就',
-        QuickShareCategory.plans => '还没有学习计划',
-        QuickShareCategory.recentTasks => '还没有完成的任务',
-        QuickShareCategory.knowledgeNodes => '还没有学习知识节点',
+        QuickShareCategory.achievements => context.l10n.communityNoAchievementsYet,
+        QuickShareCategory.plans => context.l10n.communityNoPlansYet,
+        QuickShareCategory.recentTasks => context.l10n.communityNoTasksYet,
+        QuickShareCategory.knowledgeNodes => context.l10n.communityNoKnowledgeYet,
       };
 
   Widget _buildItemTile(QuickShareItem item) => ListTile(

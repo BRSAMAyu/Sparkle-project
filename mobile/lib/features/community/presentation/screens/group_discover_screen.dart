@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -67,7 +68,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('社群广场'),
+        title: Text(context.l10n.gdTitle),
         centerTitle: true,
         actions: [
           SparkleIconButton(
@@ -116,12 +117,12 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                 if (groupPrompts.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   Text(
-                    '待你校准',
+                    context.l10n.gdCalibrate,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '告诉我们这些推荐社群是否真的对口，系统会继续优化发现结果。',
+                    context.l10n.gdCalibrateDesc,
                     style: TextStyle(color: DS.textSecondary),
                   ),
                   const SizedBox(height: 12),
@@ -164,12 +165,12 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                 Row(
                   children: [
                     Text(
-                      '公开社群目录',
+                      context.l10n.gdPublicDir,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const Spacer(),
                     Text(
-                      '${directory.totalCount} 个结果',
+                      context.l10n.gdResultCount(directory.totalCount),
                       style: TextStyle(color: DS.textSecondary),
                     ),
                   ],
@@ -177,9 +178,9 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                 const SizedBox(height: 12),
                 if (directory.groups.isEmpty)
                   CompactEmptyState(
-                    message: '暂时没有符合条件的社群，换个标签、排序或直接创建一个吧。',
+                    message: context.l10n.gdEmpty,
                     icon: Icons.travel_explore_outlined,
-                    actionText: '清空筛选',
+                    actionText: context.l10n.gdClearFilters,
                     onAction: () async {
                       _searchController.clear();
                       await notifier.clearFilters();
@@ -342,11 +343,11 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
       ref.invalidate(groupDiscoverProvider);
       ref.invalidate(groupRecommendationsProvider);
       if (context.mounted) {
-        AppFeedback.success(context, '反馈已提交，社群推荐会继续变聪明');
+        AppFeedback.success(context, context.l10n.gdFeedbackSuccess);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '提交失败: $e');
+        AppFeedback.error(context, context.l10n.gdFeedbackFailed(e.toString()));
       }
     }
   }
@@ -385,8 +386,8 @@ class _SearchBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                hintText: '搜索感兴趣的社群、课程或主题',
+              decoration: InputDecoration(
+                hintText: context.l10n.gdSearchHint,
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -429,16 +430,16 @@ class _CompactFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const sortOptions = <(GroupDirectorySort, String, IconData)>[
-      (GroupDirectorySort.hot, '热度', Icons.local_fire_department_outlined),
-      (GroupDirectorySort.latest, '最新', Icons.schedule_outlined),
-      (GroupDirectorySort.random, '随机', Icons.shuffle_outlined),
+    final sortOptions = <(GroupDirectorySort, String, IconData)>[
+      (GroupDirectorySort.hot, context.l10n.gdSortHot, Icons.local_fire_department_outlined),
+      (GroupDirectorySort.latest, context.l10n.gdSortLatest, Icons.schedule_outlined),
+      (GroupDirectorySort.random, context.l10n.gdSortRandom, Icons.shuffle_outlined),
     ];
 
-    const typeOptions = <(GroupType?, String)>[
-      (null, '全部'),
-      (GroupType.squad, '学习'),
-      (GroupType.sprint, '冲刺'),
+    final typeOptions = <(GroupType?, String)>[
+      (null, context.l10n.gdTypeAll),
+      (GroupType.squad, context.l10n.gdTypeSquad),
+      (GroupType.sprint, context.l10n.gdTypeSprint),
     ];
 
     return SingleChildScrollView(
@@ -524,7 +525,7 @@ class _RecommendationsPanel extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('为你推荐', style: Theme.of(context).textTheme.titleMedium),
+        Text(context.l10n.communityRecommendedForYou, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         SizedBox(
           height: 218,
@@ -570,10 +571,10 @@ class _DirectoryGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = group.isSprint ? DS.warning : DS.brandPrimary;
     final actionLabel = group.isJoined
-        ? '进入聊天'
+        ? context.l10n.gdEnterChat
         : group.joinRequiresApproval
-            ? '申请加入'
-            : '加入';
+            ? context.l10n.gdApplyJoin
+            : context.l10n.gdJoin;
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -609,14 +610,14 @@ class _DirectoryGroupCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${group.memberCount} 人 · 今日 ${group.todayCheckinCount} 打卡 · 火苗 ${group.totalFlamePower.toStringAsFixed(0)}',
+                      context.l10n.gdGroupStats(group.memberCount, group.todayCheckinCount, group.totalFlamePower.toStringAsFixed(0)),
                       style: TextStyle(color: DS.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               SemanticPill(
-                label: group.isSprint ? '冲刺' : '学习',
+                label: group.isSprint ? context.l10n.gdTypeSprint : context.l10n.gdTypeSquad,
                 dense: true,
                 tone: group.isSprint ? PillTone.warning : PillTone.brand,
               ),
@@ -652,8 +653,8 @@ class _DirectoryGroupCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   group.activityScore == null
-                      ? '公开社群'
-                      : '热度分 ${group.activityScore!.toStringAsFixed(1)}',
+                      ? context.l10n.gdPublicGroup
+                      : context.l10n.gdActivityScore(group.activityScore!.toStringAsFixed(1)),
                   style: TextStyle(color: DS.textSecondary, fontSize: 12),
                 ),
               ),

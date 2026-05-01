@@ -51,30 +51,70 @@ def _build_service(fake_completions: _FakeCompletions) -> LLMService:
 @pytest.mark.asyncio
 async def test_stage37_kill_switch_defaults_follow_settings(monkeypatch) -> None:
     monkeypatch.setattr(cache_service, "redis", None)
-    settings.AURORA_STAGE37_LLM_SAFETY_ENABLED = True
+    settings.AURORA_STAGE37_LLM_SAFETY_MODE = "live"
     aurora_stage37_llm_safety_kill_switch_service.reset_local_cache()
 
+    mode = await aurora_stage37_llm_safety_kill_switch_service.get_mode()
     enabled = await aurora_stage37_llm_safety_kill_switch_service.get_enabled()
 
+    assert mode == "live"
+    assert enabled is True
+
+
+@pytest.mark.asyncio
+async def test_stage37_kill_switch_respects_off_mode(monkeypatch) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    settings.AURORA_STAGE37_LLM_SAFETY_MODE = "off"
+    aurora_stage37_llm_safety_kill_switch_service.reset_local_cache()
+
+    mode = await aurora_stage37_llm_safety_kill_switch_service.get_mode()
+    enabled = await aurora_stage37_llm_safety_kill_switch_service.get_enabled()
+
+    assert mode == "off"
+    assert enabled is False
+
+
+@pytest.mark.asyncio
+async def test_stage37_kill_switch_shadow_mode_is_enabled(monkeypatch) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    settings.AURORA_STAGE37_LLM_SAFETY_MODE = "shadow"
+    aurora_stage37_llm_safety_kill_switch_service.reset_local_cache()
+
+    mode = await aurora_stage37_llm_safety_kill_switch_service.get_mode()
+    enabled = await aurora_stage37_llm_safety_kill_switch_service.get_enabled()
+
+    assert mode == "shadow"
     assert enabled is True
 
 
 @pytest.mark.asyncio
 async def test_stage37_kill_switch_reads_redis_override(monkeypatch) -> None:
     fake_redis = AsyncMock()
-    fake_redis.get.return_value = "false"
+    fake_redis.get.return_value = "off"
     monkeypatch.setattr(cache_service, "redis", fake_redis)
     aurora_stage37_llm_safety_kill_switch_service.reset_local_cache()
 
+    mode = await aurora_stage37_llm_safety_kill_switch_service.get_mode()
     enabled = await aurora_stage37_llm_safety_kill_switch_service.get_enabled()
 
+    assert mode == "off"
     assert enabled is False
+
+
+@pytest.mark.asyncio
+async def test_stage37_kill_switch_set_mode_via_binding(monkeypatch) -> None:
+    fake_redis = AsyncMock()
+    monkeypatch.setattr(cache_service, "redis", fake_redis)
+    aurora_stage37_llm_safety_kill_switch_service.reset_local_cache()
+
+    await aurora_stage37_llm_safety_kill_switch_service.set_mode("shadow")
+    fake_redis.set.assert_awaited_once_with("sparkle:aurora:stage37:llm_safety", "shadow")
 
 
 @pytest.mark.asyncio
 async def test_llm_secure_io_becomes_passthrough_when_switch_disabled(monkeypatch) -> None:
     monkeypatch.setattr(cache_service, "redis", None)
-    settings.AURORA_STAGE37_LLM_SAFETY_ENABLED = True
+    settings.AURORA_STAGE37_LLM_SAFETY_MODE = "live"
     aurora_stage37_llm_safety_kill_switch_service.reset_local_cache()
     await aurora_stage37_llm_safety_kill_switch_service.set_enabled(False)
     await refresh_llm_safety_mode()

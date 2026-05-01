@@ -1,4 +1,4 @@
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -39,7 +39,7 @@ def _coerce_uuid(value: str | UUID) -> UUID:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PushService:
@@ -223,11 +223,16 @@ class PushService:
     async def _is_in_control_surface_dnd(self, user_id: UUID) -> bool:
         try:
             from app.aurora.runtime_v1.control_surface import ControlSurfaceService
+            from app.services.personalization.preference_service import PreferenceService
 
-            reading = await ControlSurfaceService(self.db, self.redis).read_control_surface(user_id)
+            reading = await ControlSurfaceService(
+                self.db,
+                self.redis,
+                preference_service=PreferenceService(self.db, self.redis),
+            ).read_control_surface(user_id)
             hard_bounds = reading.hard_bounds
             return hard_bounds.is_action_disabled("proactive_follow_up") or hard_bounds.is_within_dnd(
-                datetime.now(timezone.utc)
+                datetime.now(UTC)
             )
         except Exception as exc:
             logger.warning("Failed to read Aurora control surface for struggle nudge: {}", exc)
@@ -297,13 +302,13 @@ class PushService:
         if not prefs:
             return False
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Cooldown check (e.g., at least 2 hours between pushes)
         if prefs and prefs.last_push_time:
             last_time = prefs.last_push_time
             if last_time.tzinfo is None:
-                last_time = last_time.replace(tzinfo=timezone.utc)
+                last_time = last_time.replace(tzinfo=UTC)
 
             min_interval = timedelta(minutes=policy.min_interval_minutes)
             if (now - last_time) < min_interval:
@@ -320,7 +325,7 @@ class PushService:
 
         # Start of local day in UTC
         local_start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        utc_start_of_day = local_start_of_day.astimezone(timezone.utc)
+        utc_start_of_day = local_start_of_day.astimezone(UTC)
 
         query = (
             select(func.count())
@@ -396,7 +401,7 @@ class PushService:
         self.db.add(history)
 
         # 3. Update User Preferences (Last push time)
-        user.push_preference.last_push_time = datetime.now(timezone.utc)
+        user.push_preference.last_push_time = datetime.now(UTC)
 
         await self.db.commit()
         logger.info(f"Push sent to user {user.id} [{trigger_type}]: {title} - {body}")

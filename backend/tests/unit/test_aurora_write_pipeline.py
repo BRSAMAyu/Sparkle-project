@@ -167,7 +167,8 @@ async def test_exam_sprint_claim_uses_exam_deadline_ttl(db_session, monkeypatch)
 @pytest.mark.asyncio
 async def test_long_term_candidate_moves_to_trial_then_auto_confirms(db_session, monkeypatch) -> None:
     user_id = await _create_user(db_session)
-    pipeline = InferenceWritePipeline(db_session, redis=None)
+    pref_svc = PreferenceService(db_session)
+    pipeline = InferenceWritePipeline(db_session, redis=None, pref_service=pref_svc)
     service = AuroraCalibrationCardService(db_session, redis=None)
 
     observed_at = datetime(2026, 4, 25, 12, 0, 0)
@@ -225,7 +226,8 @@ async def test_long_term_candidate_moves_to_trial_then_auto_confirms(db_session,
 @pytest.mark.asyncio
 async def test_revoked_claim_is_not_proposed_again(db_session, monkeypatch) -> None:
     user_id = await _create_user(db_session)
-    pipeline = InferenceWritePipeline(db_session, redis=None)
+    pref_svc = PreferenceService(db_session)
+    pipeline = InferenceWritePipeline(db_session, redis=None, pref_service=pref_svc)
     service = AuroraCalibrationCardService(db_session, redis=None)
 
     first_seen_at = datetime(2026, 4, 25, 15, 0, 0)

@@ -7,11 +7,12 @@ User Schemas - Registration, login, profile, etc.
 """
 
 from __future__ import annotations
+
 import enum
 
 
 # Python 3.9 compatible StrEnum
-class StrEnum(str, enum.Enum):
+class StrEnum(enum.StrEnum):
     """String enum for Python 3.9 compatibility"""
     def __new__(cls, value):
         obj = str.__new__(cls, value)
@@ -20,7 +21,7 @@ class StrEnum(str, enum.Enum):
 
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
@@ -194,7 +195,7 @@ class UserProfile(UserBase):
     equipped_skin_source: str | None = Field(default=None, description="Equipped skin source")
     equipped_title: str | None = Field(default=None, description="Equipped title ID")
     equipped_title_source: str | None = Field(default=None, description="Equipped title source")
-    push_preferences: Optional["PushPreferenceResponse"] = Field(default=None, description="Push notification preferences")
+    push_preferences: PushPreferenceResponse | None = Field(default=None, description="Push notification preferences")
     registration_source: str | None = Field(default=None, description="Registration source")
     linked_providers: list[str] = Field(default_factory=list, description="Linked social providers")
     tos_version: str | None = Field(default=None, description="Accepted terms version")

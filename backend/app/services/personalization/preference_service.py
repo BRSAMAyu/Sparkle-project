@@ -4,7 +4,7 @@
 
 import asyncio
 import json
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -16,7 +16,7 @@ from app.models.user_preferences import UserPreferencesCenter
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ConcurrentModificationError(RuntimeError):
@@ -225,10 +225,10 @@ class PreferenceService:
         """持久化偏好快照并递增版本。"""
         stored = await self._get_or_create(user_id)
 
-        explicit = dict((prefs_center.explicit or {}))
-        inferred = dict((prefs_center.inferred or {}))
-        traits_prior = dict((prefs_center.traits_prior or {}))
-        trait_observation_state = dict((prefs_center.trait_observation_state or {}))
+        explicit = dict(prefs_center.explicit or {})
+        inferred = dict(prefs_center.inferred or {})
+        traits_prior = dict(prefs_center.traits_prior or {})
+        trait_observation_state = dict(prefs_center.trait_observation_state or {})
 
         explicit_changed = explicit != (stored.explicit or {})
         inferred_changed = inferred != (stored.inferred or {})

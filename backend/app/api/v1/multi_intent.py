@@ -59,7 +59,7 @@ async def parse_intents(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Intent parsing failed"
-        )
+        ) from e
 
 
 @router.post("/preview", response_model=dict[str, Any])
@@ -97,7 +97,7 @@ async def create_intent_preview(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Intent preview failed"
-        )
+        ) from e
 
 
 @router.post("/execute", response_model=dict[str, Any])
@@ -145,7 +145,7 @@ async def execute_intents(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Intent execution failed"
-        )
+        ) from e
 
 
 @router.post("/analyze-and-execute", response_model=dict[str, Any])
@@ -215,7 +215,7 @@ async def analyze_and_execute(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Operation failed"
-        )
+        ) from e
 
 
 @router.get("/intent-types", response_model=dict[str, Any])

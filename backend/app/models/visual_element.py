@@ -5,13 +5,13 @@ Visual Element System Models
 """
 from __future__ import annotations
 
-
 import enum
 
 from sqlalchemy import JSON
 
+
 # Python 3.9 compatible StrEnum
-class StrEnum(str, enum.Enum):
+class StrEnum(enum.StrEnum):
     """String enum for Python 3.9 compatibility"""
 
     def __new__(cls, value):
@@ -22,11 +22,10 @@ class StrEnum(str, enum.Enum):
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship, declared_attr
+from sqlalchemy.orm import relationship
 
 from app.db.session import Base
 from app.models.base import GUID, BaseModel
-
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

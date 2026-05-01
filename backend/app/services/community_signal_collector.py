@@ -4,7 +4,7 @@ Community signal collector - infer social learning preferences from community ac
 from __future__ import annotations
 
 import json
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +17,7 @@ from app.services.signal_adaptation import classify_band_with_hysteresis, recenc
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CommunitySignalCollector:

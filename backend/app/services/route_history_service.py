@@ -51,7 +51,7 @@ class RouteHistoryDecisionView:
     outcome_signal_id: str | None
 
     @classmethod
-    def from_record(cls, record: RoutingDecisionLog) -> "RouteHistoryDecisionView":
+    def from_record(cls, record: RoutingDecisionLog) -> RouteHistoryDecisionView:
         return cls(
             decision_id=str(record.decision_id),
             user_id=str(record.user_id),

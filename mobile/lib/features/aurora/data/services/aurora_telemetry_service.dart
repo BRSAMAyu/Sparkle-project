@@ -41,4 +41,31 @@ class AuroraTelemetryService {
       // Telemetry failures must never propagate to the user.
     }
   }
+
+  Future<void> recordStatusBandCorrection({
+    required String label,
+    required String semanticValue,
+    required bool isDisconfirming,
+    required String bandStatus,
+    bool isFreeform = false,
+    String telemetryId = '',
+    String? groupId,
+  }) async {
+    try {
+      await _apiClient.post<void>(
+        ApiEndpoints.auroraChipTelemetry,
+        data: {
+          'chip_id': 'status_band_correction',
+          'telemetry_id': telemetryId,
+          'semantic_value': semanticValue,
+          'is_freeform': isFreeform,
+          'is_disconfirming': isDisconfirming,
+          'context_source': 'home_status_band',
+          'band_status': bandStatus,
+          'source': 'dashboard_correction_chip',
+          if (groupId != null) 'group_id': groupId,
+        },
+      );
+    } catch (_) {}
+  }
 }

@@ -8,27 +8,43 @@ Community API - 好友、群组、消息、打卡、任务相关接口
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
-from copy import deepcopy
 import json
-from datetime import timezone, datetime
+from copy import deepcopy
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from loguru import logger
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.api.v1.accountability import (
+    _build_leaderboard_summary,
+    _build_partnership_achievements_payload,
+    _build_partnership_out,
+    _build_partnership_stats_payload,
+    _build_recent_shares_payload,
+    _build_relationship_summary,
+    _get_last_checkin_at,
+    _slot_type_value,
+)
 from app.config import settings
 from app.core.cache import cache_service
 from app.core.rate_limiting import limiter
 from app.core.security import decode_token
 from app.core.websocket import manager
 from app.db.session import AsyncSessionLocal, get_db
-from app.models.cognitive import BehaviorPattern, CognitiveFragment
+from app.models.accountability import (
+    AccountabilityPartnership,
+    AccountabilitySlotType,
+    AccountabilityStatus,
+)
 from app.models.card_protocol import ImportMode, SharePermission, ShareScope
+from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import (
     Friendship,
     FriendshipStatus,
@@ -36,29 +52,25 @@ from app.models.community import (
     GroupMessage,
     GroupRole,
     GroupType,
+    Post,
+    PostLike,
     PrivateMessage,
     SharedResource,
     SharedResourceType,
 )
-from app.models.accountability import (
-    AccountabilityPartnership,
-    AccountabilitySlotType,
-    AccountabilityStatus,
-)
 from app.models.curiosity_capsule import CuriosityCapsule
-from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.seed_content import SeedItem, SeedLibrary
 from app.models.task import Task
 from app.models.user import User, UserStatus
-from app.schemas.plan import PlanCreate
-from app.schemas.task import TaskCreate
 from app.schemas.community import (
+    AccountabilityFriendSummary,
+    BlockUserInfo,
     # 拉黑相关
     BlockUserRequest,
-    BlockUserInfo,
     # 广播相关
     BroadcastMessageCreate,
     BroadcastMessageInfo,
@@ -67,21 +79,20 @@ from app.schemas.community import (
     CheckinResponse,
     EncryptionKeyCreate,
     EncryptionKeyInfo,
+    # 群文件
+    FileCopyResponse,
     FlameStatus,
+    FriendMatchStrategyEnum,
     FriendRecommendation,
     FriendRecommendationFeedbackRequest,
-    FriendMatchStrategyEnum,
     FriendRecommendationTargetEnum,
-    AccountabilityFriendSummary,
-    RecommendationFeedbackInsight,
-    RecommendationFeedbackPrompt,
-    RecommendationItemTypeEnum,
     # 好友
     FriendRequest,
     FriendResponse,
     FriendshipInfo,
     # 群管理相关
     GroupAnnouncementUpdate,
+    GroupCollaborativeGalaxyResponse,
     # 群组
     GroupCreate,
     GroupDirectoryResponse,
@@ -91,21 +102,18 @@ from app.schemas.community import (
     GroupFileInfo,
     GroupFilePermissions,
     GroupFilePermissionUpdate,
-    GroupFileSortEnum,
-    GroupKnowledgeBaseDocumentCreate,
-    GroupKnowledgeBaseResponse,
-    GroupCollaborativeGalaxyResponse,
-    GroupMemberInfo,
-    # 群文件
-    FileCopyResponse,
     GroupFileShareRequest,
+    GroupFileSortEnum,
     # 火堆
     GroupFlameStatus,
     GroupInfo,
+    GroupKnowledgeBaseDocumentCreate,
+    GroupKnowledgeBaseResponse,
     GroupListItem,
-    GroupModerationSettings,
+    GroupMemberInfo,
     GroupMessageReadRequest,
     GroupMessageReadResponse,
+    GroupModerationSettings,
     GroupRecommendationFeedbackRequest,
     GroupRecommendationItem,
     GroupTaskCreate,
@@ -138,30 +146,24 @@ from app.schemas.community import (
     PrivateMessageInfo,
     PrivateMessageSend,
     ReactionActionEnum,
+    RecommendationFeedbackInsight,
+    RecommendationFeedbackPrompt,
+    RecommendationItemTypeEnum,
+    # 隐私设置
+    SearchVisibilityEnum,
     SharedResourceCreate,
     SharedResourceInfo,
     SharedResourceTypeEnum,
-    UserFileShareRequest,
     UserBrief,
-    # 隐私设置
-    SearchVisibilityEnum,
+    UserFileShareRequest,
     UserPrivacySettings,
     # 状态
     UserStatusUpdate,
 )
+from app.schemas.plan import PlanCreate
+from app.schemas.task import TaskCreate
+from app.services.card_protocol.share_service import ShareService
 from app.services.collaboration_service import collaboration_service
-from app.services.seed_library_service import SeedLibraryService
-from app.services.community_signal_bridge import CommunitySignalBridge
-from app.api.v1.accountability import (
-    _build_leaderboard_summary,
-    _build_partnership_out,
-    _build_partnership_achievements_payload,
-    _build_partnership_stats_payload,
-    _build_recent_shares_payload,
-    _build_relationship_summary,
-    _get_last_checkin_at,
-    _slot_type_value,
-)
 from app.services.community_advanced_service import (
     BroadcastService,
     EncryptionService,
@@ -175,23 +177,23 @@ from app.services.community_advanced_service import (
 from app.services.community_service import (
     CheckinService,
     FriendshipService,
-    GroupMessageService,
     GroupKnowledgeService,
+    GroupMessageService,
     GroupService,
     GroupTaskService,
     PrivateMessageService,
     UserBlockService,
     UserSearchService,
 )
-from app.services.card_protocol.share_service import ShareService
-from app.services.plan_service import PlanService
-from app.services.streak_signal_processor import StreakSignalProcessor
-from app.services.task_service import TaskService
+from app.services.community_signal_bridge import CommunitySignalBridge
+from app.services.friend_match_service import FriendMatchService
 from app.services.group_file_service import GroupFileService
 from app.services.group_recommendation_service import GroupRecommendationService
-from app.services.friend_match_service import FriendMatchService
+from app.services.plan_service import PlanService
 from app.services.recommendation_feedback_service import RecommendationFeedbackService
-from app.models.community import Post, PostLike
+from app.services.seed_library_service import SeedLibraryService
+from app.services.streak_signal_processor import StreakSignalProcessor
+from app.services.task_service import TaskService
 from app.tools.entity_cards import (
     build_entity_action,
     build_entity_card,
@@ -204,7 +206,7 @@ from app.tools.entity_cards import (
 router = APIRouter()
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _post_to_response(post: Post) -> dict:
@@ -230,20 +232,46 @@ def _post_to_response(post: Post) -> dict:
 async def get_feed(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=50),
+    scope: str | None = Query(default=None, description="筛选范围: squad, goal_mates, following"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取社区动态列表，按创建时间倒序"""
+    """获取社区动态列表，按创建时间倒序。支持 scope 筛选。"""
     from sqlalchemy.orm import selectinload
 
     offset = (page - 1) * limit
-    stmt = (
-        select(Post)
-        .options(selectinload(Post.user))
-        .order_by(Post.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    stmt = select(Post).options(selectinload(Post.user))
+
+    if scope == "squad":
+        squad_member_subq = (
+            select(GroupMember.group_id)
+            .where(GroupMember.user_id == current_user.id)
+            .correlate(None)
+        )
+        squad_user_subq = (
+            select(GroupMember.user_id)
+            .where(GroupMember.group_id.in_(squad_member_subq))
+            .correlate(None)
+        )
+        stmt = stmt.where(Post.user_id.in_(squad_user_subq))
+    elif scope in ("following", "goal_mates"):
+        friend_ids = (
+            select(Friendship.friend_id)
+            .where(Friendship.user_id == current_user.id, Friendship.status == FriendshipStatus.ACCEPTED)
+            .correlate(None)
+        )
+        friend_ids_alt = (
+            select(Friendship.user_id)
+            .where(Friendship.friend_id == current_user.id, Friendship.status == FriendshipStatus.ACCEPTED)
+            .correlate(None)
+        )
+        stmt = stmt.where(Post.user_id.in_(friend_ids) | Post.user_id.in_(friend_ids_alt))
+    elif scope is not None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail=f"Unknown scope: {scope}")
+
+    stmt = stmt.order_by(Post.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     posts = result.scalars().all()
     return [_post_to_response(p) for p in posts]
@@ -316,7 +344,7 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         )
 
     read_receipts = sorted(
-        list(getattr(msg, "read_receipts", []) or []),
+        getattr(msg, "read_receipts", []) or [],
         key=lambda receipt: receipt.read_at,
     )
     read_by = [receipt.user_id for receipt in read_receipts]
@@ -873,7 +901,7 @@ async def send_friend_request(
 
         return {"success": True, "friendship_id": str(friendship.id)}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/friends/respond", summary="响应好友请求")
@@ -890,7 +918,7 @@ async def respond_to_friend_request(
         await db.commit()
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.delete("/friends/{friendship_id}", summary="删除好友")
@@ -910,7 +938,7 @@ async def delete_friend(
         await db.commit()
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/friends", response_model=list[FriendshipInfo], summary="获取好友列表")
@@ -1144,7 +1172,7 @@ async def block_user(
     - 拉黑后自动解除好友关系
     - 拉黑后对方无法发送消息或好友请求
     """
-    block = await UserBlockService.block_user(
+    await UserBlockService.block_user(
         db=db,
         blocker_id=current_user.id,
         blocked_id=data.target_user_id,
@@ -1620,12 +1648,12 @@ async def join_group(
             "type": "member_joined",
             "group_id": str(group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/leave", summary="退出群组")
@@ -1644,12 +1672,12 @@ async def leave_group(
             "type": "member_left",
             "group_id": str(group_id),
             "user_id": str(current_user.id),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.delete("/groups/{group_id}", summary="解散群组")
@@ -1664,7 +1692,7 @@ async def dissolve_group(
         await db.commit()
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/transfer", summary="转让群主")
@@ -1685,12 +1713,12 @@ async def transfer_group_owner(
             "group_id": str(group_id),
             "old_owner_id": str(current_user.id),
             "new_owner_id": str(new_owner_id),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/members", response_model=list[GroupMemberInfo], summary="获取群成员列表")
@@ -1703,7 +1731,7 @@ async def get_group_members(
     try:
         members = await GroupService.get_group_members(db, group_id, current_user.id)
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     return [_build_group_member_info(member) for member in members]
 
 
@@ -1724,13 +1752,13 @@ async def kick_group_member(
                 "group_id": str(group_id),
                 "user_id": str(user_id),
                 "operator_id": str(current_user.id),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             str(group_id),
         )
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/members/{user_id}/promote", summary="提升成员为管理员")
@@ -1751,13 +1779,13 @@ async def promote_group_member(
                 "user_id": str(user_id),
                 "role": member.role.value,
                 "operator_id": str(current_user.id),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             str(group_id),
         )
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/members/{user_id}/demote", summary="降级管理员为普通成员")
@@ -1778,13 +1806,13 @@ async def demote_group_member(
                 "user_id": str(user_id),
                 "role": member.role.value,
                 "operator_id": str(current_user.id),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             str(group_id),
         )
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/members/{user_id}/transfer-ownership", summary="转让群主")
@@ -1854,7 +1882,7 @@ async def send_message(
 
         return message_info
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/messages", response_model=list[MessageInfo], summary="获取群消息")
@@ -1869,7 +1897,7 @@ async def get_messages(
     try:
         messages = await GroupMessageService.get_messages(db, group_id, current_user.id, before_id, limit)
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
     result = []
     for msg in messages:
@@ -1915,7 +1943,7 @@ async def mark_group_messages_read(
         )
     except ValueError as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ============ 群文件 ============
@@ -1970,10 +1998,10 @@ async def create_group_file_share(
         return _build_group_file_info(detailed_group_file, member.role, is_in_my_library=True)
     except PermissionError as e:
         await db.rollback()
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except ValueError as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/files/{file_id}/share", response_model=GroupFileInfo, summary="分享文件到群组")
@@ -2026,10 +2054,10 @@ async def share_group_file(
         return _build_group_file_info(detailed_group_file, member.role, is_in_my_library=True)
     except PermissionError as e:
         await db.rollback()
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except ValueError as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/files", response_model=list[GroupFileInfo], summary="获取群文件列表")
@@ -2059,7 +2087,7 @@ async def list_group_files(
             for item in group_files
         ]
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post(
@@ -2112,10 +2140,10 @@ async def copy_group_file_to_library(
         )
     except PermissionError as e:
         await db.rollback()
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except ValueError as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(
@@ -2180,10 +2208,10 @@ async def share_file_to_user(
         raise
     except PermissionError as e:
         await db.rollback()
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except ValueError as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(
@@ -2213,7 +2241,7 @@ async def add_group_knowledge_base_document(
         await db.rollback()
         detail = str(e)
         status_code = 403 if "权限" in detail or "成员" in detail else 400
-        raise HTTPException(status_code=status_code, detail=detail)
+        raise HTTPException(status_code=status_code, detail=detail) from e
 
 
 @router.get(
@@ -2236,7 +2264,7 @@ async def get_group_knowledge_base(
             stats=stats,
         )
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.get(
@@ -2252,7 +2280,7 @@ async def get_group_collaborative_galaxy(
     try:
         return await GroupKnowledgeService.get_group_galaxy(db, group_id, current_user.id)
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.put("/groups/{group_id}/files/{file_id}/permissions", response_model=GroupFileInfo, summary="更新群文件权限")
@@ -2266,14 +2294,14 @@ async def update_group_file_permissions(
     try:
         member = await GroupFileService._require_member(db, group_id, current_user.id)
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
     if member.role not in (GroupRole.ADMIN, GroupRole.OWNER):
         raise HTTPException(status_code=403, detail="无权限修改群文件权限")
 
     try:
         permissions = data.permissions
-        group_file = await GroupFileService.update_permissions(
+        await GroupFileService.update_permissions(
             db,
             group_id=group_id,
             user_id=current_user.id,
@@ -2287,10 +2315,10 @@ async def update_group_file_permissions(
         return _build_group_file_info(detailed_group_file, member.role)
     except PermissionError as e:
         await db.rollback()
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except ValueError as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/files/categories", response_model=list[GroupFileCategoryStat], summary="获取群文件分类统计")
@@ -2303,7 +2331,7 @@ async def get_group_file_categories(
         rows = await GroupFileService.category_stats(db, group_id, current_user.id)
         return [GroupFileCategoryStat(category=category, count=count) for category, count in rows]
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 @router.patch("/groups/{group_id}/messages/{message_id}", response_model=MessageInfo, summary="编辑群消息")
 async def edit_group_message(
@@ -2325,7 +2353,7 @@ async def edit_group_message(
             }, str(group_id))
         return message_info
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/messages/{message_id}/revoke", response_model=MessageInfo, summary="撤回群消息")
@@ -2351,7 +2379,7 @@ async def revoke_group_message(
             }, str(group_id))
         return message_info
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/messages/{message_id}/reactions", response_model=MessageInfo, summary="更新群消息表情")
@@ -2381,7 +2409,7 @@ async def update_group_message_reaction(
             }, str(group_id))
         return _build_message_info(message)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/threads/{thread_root_id}", response_model=list[MessageInfo], summary="获取群消息线程")
@@ -2396,7 +2424,7 @@ async def get_group_thread_messages(
     try:
         messages = await GroupMessageService.get_thread_messages(db, group_id, current_user.id, thread_root_id, limit)
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     return [_build_message_info(msg) for msg in messages]
 
 
@@ -2412,7 +2440,7 @@ async def search_group_messages(
     try:
         messages = await GroupMessageService.search_messages(db, group_id, current_user.id, keyword, limit)
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     return [_build_message_info(msg) for msg in messages]
 
 
@@ -2460,7 +2488,7 @@ async def send_private_message(
 
         return msg_info
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/friends/{friend_id}/messages", response_model=list[PrivateMessageInfo], summary="获取私信记录")
@@ -2507,7 +2535,7 @@ async def edit_private_message(
             }, str(message.receiver_id))
         return msg_info
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/messages/{message_id}/revoke", response_model=PrivateMessageInfo, summary="撤回私信")
@@ -2535,7 +2563,7 @@ async def revoke_private_message(
             }, str(message.receiver_id))
         return _build_private_message_info(message)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/messages/{message_id}/reactions", response_model=PrivateMessageInfo, summary="更新私信表情")
@@ -2568,7 +2596,7 @@ async def update_private_message_reaction(
             }, str(message.receiver_id))
         return _build_private_message_info(message)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/friends/{friend_id}/messages/search", response_model=list[PrivateMessageInfo], summary="搜索私信")
@@ -2707,12 +2735,12 @@ async def checkin(
             "group_id": str(data.group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
             "duration": data.today_duration_minutes,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(data.group_id))
 
         return result
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 async def _refresh_streak_signals(user_id: UUID) -> None:
@@ -2748,7 +2776,7 @@ async def create_group_task(
                 "description": task.description,
                 "creator": UserBrief.model_validate(current_user).model_dump(mode='json')
             },
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return GroupTaskInfo(
@@ -2776,7 +2804,7 @@ async def create_group_task(
             my_completion_status=None
         )
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/tasks", response_model=list[GroupTaskInfo], summary="获取群任务列表")
@@ -2832,7 +2860,7 @@ async def claim_group_task(
         await db.commit()
         return {"success": True, "claim_id": str(claim.id)}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ============ 火堆状态 ============
@@ -3065,7 +3093,7 @@ async def share_resource(
             ),
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/resources", response_model=list[SharedResourceInfo], summary="获取群组共享资源")
@@ -3761,7 +3789,7 @@ async def update_group_announcement(
 
         return {"success": True, "announcement": group.announcement}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.put("/groups/{group_id}/moderation", summary="更新群管理设置")
@@ -3781,7 +3809,7 @@ async def update_group_moderation_settings(
             "type": "group_settings_updated",
             "group_id": str(group_id),
             "settings": data.model_dump(mode='json'),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {
@@ -3791,7 +3819,7 @@ async def update_group_moderation_settings(
             "keyword_filters_count": len(group.keyword_filters or [])
         }
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/members/{user_id}/mute", summary="禁言成员")
@@ -3819,7 +3847,7 @@ async def mute_group_member(
 
         return {"success": True, "mute_until": member.mute_until}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.delete("/groups/{group_id}/members/{user_id}/mute", summary="解除禁言")
@@ -3842,7 +3870,7 @@ async def unmute_group_member(
 
         return {"success": True}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.post("/groups/{group_id}/members/{user_id}/warn", summary="警告成员")
@@ -3869,7 +3897,7 @@ async def warn_group_member(
 
         return {"success": True, "warn_count": member.warn_count}
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 # ============ 消息举报 ============
@@ -3900,7 +3928,7 @@ async def report_message(
             action_taken=None
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/reports", response_model=list[MessageReportInfo], summary="获取群组待处理举报")
@@ -3965,7 +3993,7 @@ async def review_message_report(
             action_taken=report.action_taken
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ============ 消息收藏 ============
@@ -4007,7 +4035,7 @@ async def add_message_favorite(
             private_message=_build_private_message_info(private_msg) if private_msg else None,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/favorites", response_model=list[MessageFavoriteInfo], summary="获取收藏列表")
@@ -4083,7 +4111,7 @@ async def forward_message(
 
         return {"success": True, "message_id": str(forwarded.id)}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ============ 跨群广播 ============
@@ -4120,7 +4148,7 @@ async def create_broadcast_message(
             delivered_count=broadcast.delivered_count
         )
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 # ============ 高级搜索 ============
@@ -4155,7 +4183,7 @@ async def advanced_search_group_messages(
             has_more=result["has_more"]
         )
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
 
 
 @router.get("/groups/{group_id}/topics", summary="获取群组话题列表")

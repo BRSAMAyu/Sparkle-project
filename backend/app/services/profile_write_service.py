@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -9,9 +9,9 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import ProfilePreferenceDeleted, ProfilePreferenceUpdated, event_bus
 from app.models.user import PushPreference, User
 from app.models.user_preferences import UserPreferencesCenter
-from app.core.event_bus import ProfilePreferenceDeleted, ProfilePreferenceUpdated, event_bus
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.memory_service import MemoryService
 from app.services.personalization.preference_service import PreferenceService

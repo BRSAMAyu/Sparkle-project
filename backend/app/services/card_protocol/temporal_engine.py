@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.card_protocol import (
@@ -20,8 +20,8 @@ from app.models.card_protocol import (
     OccurrenceStatus,
     TaskOccurrence,
 )
-from app.services.card_service import CardService
 from app.services.card_edge_service import CardEdgeService
+from app.services.card_service import CardService
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.task_occurrence_service import TaskOccurrenceService
 
@@ -293,7 +293,6 @@ class TemporalEngine:
 
         results: list[date] = []
         current = from_date
-        generated = 0
         limit = int(rule.end_value) if rule.end_condition == "count" and rule.end_value is not None else None
         hard_end = self._coerce_date(rule.end_value) if rule.end_condition == "date" else None
         phase_end = self._coerce_date((phase_card.metadata_ or {}).get("estimated_end"))

@@ -17,3 +17,18 @@
 - `backend/app/services/traits_guardrails.py`
 - `backend/app/services/traits_nlp_observer_service.py`
 - `backend/app/services/understanding_benchmark_evaluator.py`
+- `backend/app/services/card_protocol/consistency_validator.py`
+- `backend/app/services/jpush_sender_service.py`
+
+- Dead modules (no runtime importers, candidates for removal):
+- `backend/app/services/budget_optimization_service.py`
+- `backend/app/services/feedback_adjustment_service.py`
+- `backend/app/services/galaxy/event_listener.py`
+
+- Merged/deprecated modules (logic moved to another file, kept for reference):
+- `backend/app/services/compliance/deletion_protocol.py` — merged into age_gate.py during Rule K refactoring
+
+- Guard false positives (have importers via absolute/relative imports, guard AST resolution misses them):
+- `backend/app/services/feedback_service.py`
+- `backend/app/services/personalization/runtime_context_service.py`
+- `backend/app/services/session_service.py`

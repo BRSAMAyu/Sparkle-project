@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -58,47 +59,52 @@ enum _SimulationBottomTrayMode { hidden, peek, expanded }
 
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   static const double _immersiveAutoScrollFollowThreshold = 160;
-  static const Map<String, String> _scenarioLabels = {
-    'study_group': '学习小组',
-    'knowledge_debate': '知识辩论',
-    'historical_roleplay': '历史角色扮演',
-    'socratic_dialogue': '苏格拉底对话',
-    'case_analysis': '案例分析',
-    'what_if_path': '如果路径',
-    'concept_map_build': '概念图构建',
-    'error_diagnosis': '错误诊断',
+
+  Map<String, String> _scenarioLabels(AppLocalizations l10n) => {
+    'study_group': l10n.simStudyGroup,
+    'knowledge_debate': l10n.simKnowledgeDebate,
+    'historical_roleplay': l10n.simHistoricalRoleplay,
+    'socratic_dialogue': l10n.simSocratic,
+    'case_analysis': l10n.simCaseAnalysis,
+    'what_if_path': l10n.simWhatIfPath,
+    'concept_map_build': l10n.simConceptMapBuild,
+    'error_diagnosis': l10n.simErrorDiag,
   };
-  static const Map<String, List<String>> _scenarioParticipantOptions = {
-    'study_group': ['优等生', '中等生', '提问者', '总结者', '练习教练'],
-    'knowledge_debate': ['正方专家', '反方专家', '主持人', '证据审查员', '追问者'],
-    'historical_roleplay': ['历史导师', '关键人物', '时代观察者', '策略顾问', '记录官'],
-    'socratic_dialogue': ['苏格拉底', '怀疑者', '拆解者', '应用者'],
-    'case_analysis': ['案例导师', '诊断官', '实践派', '反例提出者', '决策记录官'],
-    'what_if_path': ['当前路线', '激进路线', '风险观察者', '资源调度者', '验证者'],
-    'concept_map_build': ['结构师', '连接者', '提问者', '反例检查员', '桥梁构建者'],
-    'error_diagnosis': ['错因分析师', '纠偏教练', '验证者', '题面解构者', '迁移教练'],
+
+  Map<String, List<String>> _scenarioParticipantOptions(AppLocalizations l10n) => {
+    'study_group': [l10n.simTopStudent, l10n.simMidStudent, l10n.simQuestioner, l10n.simSummarizer, l10n.simPracticeCoach],
+    'knowledge_debate': [l10n.simProExpert, l10n.simConExpert, l10n.simModerator, l10n.simEvidenceReviewer, l10n.simChallenger],
+    'historical_roleplay': [l10n.simHistoryTutor, l10n.simKeyFigure, l10n.simEraObserver, l10n.simStrategyAdvisor, l10n.simRecorder],
+    'socratic_dialogue': [l10n.simSocraticShort, l10n.simSkeptic, l10n.simBreakdown, l10n.simApplicator],
+    'case_analysis': [l10n.simCaseTutor, l10n.simDiagnostician, l10n.simPractitioner, l10n.simCounterExampler, l10n.simDecisionRecorder],
+    'what_if_path': [l10n.simCurrentPath, l10n.simAggressivePath, l10n.simRiskObserver, l10n.simResourceDispatcher, l10n.simValidator],
+    'concept_map_build': [l10n.simStructurer, l10n.simConnector, l10n.simQuestioner, l10n.simCounterChecker, l10n.simBridgeBuilder],
+    'error_diagnosis': [l10n.simErrorAnalyst, l10n.simCorrectCoach, l10n.simValidator, l10n.simDeconstructor, l10n.simTransferCoach],
   };
-  static const Map<String, String> _scenarioDescriptions = {
-    'study_group': '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。',
-    'knowledge_debate': '让不同立场直接碰撞，适合验证观点、证据和边界条件。',
-    'historical_roleplay': '带入人物与时代约束，让讨论像真实历史现场一样推进。',
-    'socratic_dialogue': '通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。',
-    'case_analysis': '围绕具体案例做拆解、诊断和决策，适合实务型主题。',
-    'what_if_path': '比较不同学习或行动路线，适合规划、取舍与资源分配。',
-    'concept_map_build': '把知识点织成结构图，适合建立全局框架与连接关系。',
-    'error_diagnosis': '专注识别错因、纠偏路径与验证方式，适合查漏补缺。',
+
+  Map<String, String> _scenarioDescriptions(AppLocalizations l10n) => {
+    'study_group': l10n.simStudyGroupDesc,
+    'knowledge_debate': l10n.simKnowledgeDebateDesc,
+    'historical_roleplay': l10n.simHistoricalRoleplayDesc,
+    'socratic_dialogue': l10n.simSocraticDesc,
+    'case_analysis': l10n.simCaseAnalysisDesc,
+    'what_if_path': l10n.simWhatIfPathDesc,
+    'concept_map_build': l10n.simConceptMapBuildDesc,
+    'error_diagnosis': l10n.simErrorDiagDesc,
   };
-  static const Map<String, String> _facilitationLabels = {
-    'balanced': '平衡推进',
-    'debate': '分歧碰撞',
-    'guided': '引导拆解',
-    'practical': '应用落地',
+
+  Map<String, String> _facilitationLabels(AppLocalizations l10n) => {
+    'balanced': l10n.simBalanced,
+    'debate': l10n.simDebateStyle,
+    'guided': l10n.simGuided,
+    'practical': l10n.simPractical,
   };
-  static const Map<String, String> _facilitationDescriptions = {
-    'balanced': '适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。',
-    'debate': '主动放大争议和证据冲突，更适合需要碰撞观点的主题。',
-    'guided': '更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。',
-    'practical': '优先讨论行动、验证和现实约束，适合技能与方案推演。',
+
+  Map<String, String> _facilitationDescriptions(AppLocalizations l10n) => {
+    'balanced': l10n.simBalancedDesc,
+    'debate': l10n.simDebateStyleDesc,
+    'guided': l10n.simGuidedDesc,
+    'practical': l10n.simPracticalDesc,
   };
 
   String _buildTheaterRoute({
@@ -134,6 +140,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   String _facilitationStyle = 'balanced';
   List<String> _selectedParticipantNames = const [];
   bool _showScrollToBottomFab = false;
+  bool _isInitialized = false;
   List<SimulationParticipantModel>? _pausedParticipants;
   List<SimulationRoundModel>? _pausedRounds;
   String? _pausedInsightSummary;
@@ -144,7 +151,6 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   void initState() {
     super.initState();
     _selectedScenarioKey = widget.initialScenarioKey ?? 'study_group';
-    _applyScenarioDefaults(_selectedScenarioKey, resetParticipants: true);
     _immersiveScrollController.addListener(_handleImmersiveScroll);
     _simulationSubscription = ref.listenManual<SimulationState>(
       simulationProvider,
@@ -220,6 +226,15 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         );
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _applyScenarioDefaults(_selectedScenarioKey, resetParticipants: true);
+    }
   }
 
   @override
@@ -465,8 +480,11 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     }
   }
 
-  List<String> _participantOptionsForScenario(String scenarioKey) =>
-      _scenarioParticipantOptions[scenarioKey] ?? const ['学习伙伴', '提问者', '总结者'];
+  List<String> _participantOptionsForScenario(String scenarioKey) {
+    final l10n = context.l10n;
+    return _scenarioParticipantOptions(l10n)[scenarioKey] ??
+        [l10n.simStudyBuddy, l10n.simQuestioner, l10n.simSummarizer];
+  }
 
   List<String> _defaultParticipantNamesForScenario(String scenarioKey) =>
       _participantOptionsForScenario(scenarioKey)
@@ -618,7 +636,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               _SimulationComposer(
                 topicController: _topicController,
                 selectedScenarioKey: _selectedScenarioKey,
-                scenarioLabels: _scenarioLabels,
+                scenarioLabels: _scenarioLabels(context.l10n),
                 state: state,
                 onScenarioSelected: _handleScenarioSelected,
                 onRun: () => unawaited(_runSimulation()),
@@ -628,12 +646,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 topicController: _topicController,
                 customParticipantController: _customParticipantController,
                 selectedScenarioKey: _selectedScenarioKey,
-                scenarioLabels: _scenarioLabels,
-                scenarioDescriptions: _scenarioDescriptions,
+                scenarioLabels: _scenarioLabels(context.l10n),
+                scenarioDescriptions: _scenarioDescriptions(context.l10n),
                 isLoading: state.isLoading,
                 facilitationStyle: _facilitationStyle,
-                facilitationLabels: _facilitationLabels,
-                facilitationDescriptions: _facilitationDescriptions,
+                facilitationLabels: _facilitationLabels(context.l10n),
+                facilitationDescriptions: _facilitationDescriptions(context.l10n),
                 plannedRoundCount: _configuredRoundCount,
                 maxRoundCount: _maxRoundsForScenario(_selectedScenarioKey),
                 selectedParticipantNames: _selectedParticipantNames,
@@ -664,7 +682,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               _RecommendedSeedStrip(
                 seeds: state.recommendedSeeds,
                 isLoading: state.isLoadingRecommendations,
-                scenarioLabels: _scenarioLabels,
+                scenarioLabels: _scenarioLabels(context.l10n),
                 topicController: _topicController,
                 onRefresh: () => unawaited(
                   ref.read(simulationProvider.notifier).loadRecommendedSeeds(
@@ -788,7 +806,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         ? session?.topic ?? context.l10n.simulationCurrentSimulation
         : _topicController.text.trim();
     final scenarioLabel =
-        _scenarioLabels[session?.scenarioKey ?? _selectedScenarioKey] ??
+        _scenarioLabels(context.l10n)[session?.scenarioKey ?? _selectedScenarioKey] ??
             localizeSimulationScenario(
               session?.scenarioKey ?? _selectedScenarioKey,
             );
@@ -808,12 +826,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       topicController: _topicController,
       customParticipantController: _customParticipantController,
       selectedScenarioKey: _selectedScenarioKey,
-      scenarioLabels: _scenarioLabels,
-      scenarioDescriptions: _scenarioDescriptions,
+      scenarioLabels: _scenarioLabels(context.l10n),
+      scenarioDescriptions: _scenarioDescriptions(context.l10n),
       isLoading: state.isLoading,
       facilitationStyle: runtimeFacilitationStyle,
-      facilitationLabels: _facilitationLabels,
-      facilitationDescriptions: _facilitationDescriptions,
+      facilitationLabels: _facilitationLabels(context.l10n),
+      facilitationDescriptions: _facilitationDescriptions(context.l10n),
       plannedRoundCount: _configuredRoundCount,
       maxRoundCount: _maxRoundsForScenario(_selectedScenarioKey),
       selectedParticipantNames: _selectedParticipantNames,
@@ -864,7 +882,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                       activeSpeaker: activeSpeaker,
                       participantCount: participants.length,
                       facilitationLabel:
-                          _facilitationLabels[runtimeFacilitationStyle] ??
+                          _facilitationLabels(context.l10n)[runtimeFacilitationStyle] ??
                               context.l10n.simulationBalancedPush,
                       isPaused: _isPlaybackPaused,
                       isReview: viewMode == _SimulationViewMode.review,
@@ -1300,7 +1318,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     await share_plus.SharePlus.instance.share(
       share_plus.ShareParams(
         text:
-            context.l10n.simulationShareRawText(session.topic, _scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey), localizeSimulationText(session.insightSummary)),
+            context.l10n.simulationShareRawText(session.topic, _scenarioLabels(context.l10n)[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey), localizeSimulationText(session.insightSummary)),
       ),
     );
   }
@@ -1312,7 +1330,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         contentType: ShareableContentType.learningReport,
         resourceId: 'simulation-${session.id}',
         title: context.l10n.simulationShareTitle(session.topic),
-        subtitle: _scenarioLabels[session.scenarioKey] ??
+        subtitle: _scenarioLabels(context.l10n)[session.scenarioKey] ??
             localizeSimulationScenario(session.scenarioKey),
         description: localizeSimulationText(session.insightSummary),
         metadata: <String, dynamic>{
@@ -1322,7 +1340,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               session.participants.map((item) => item.name).take(3).join('、'),
         },
         shareMessage:
-            context.l10n.simulationShareCreated(session.topic, _scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey), localizeSimulationText(session.insightSummary)),
+            context.l10n.simulationShareCreated(session.topic, _scenarioLabels(context.l10n)[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey), localizeSimulationText(session.insightSummary)),
       ),
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
@@ -1352,7 +1370,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     final session = state.session;
     final topic = (session?.topic ?? _topicController.text.trim()).trim();
     final scenarioLabel =
-        _scenarioLabels[session?.scenarioKey ?? _selectedScenarioKey] ??
+        _scenarioLabels(context.l10n)[session?.scenarioKey ?? _selectedScenarioKey] ??
             localizeSimulationScenario(
               session?.scenarioKey ?? _selectedScenarioKey,
             );
@@ -1556,7 +1574,7 @@ class _RecommendedSeedStrip extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '推荐场景',
+                      context.l10n.simRecommended,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -1565,7 +1583,7 @@ class _RecommendedSeedStrip extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onRefresh,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: Text(seeds.isEmpty ? '生成' : '刷新'),
+                    label: Text(seeds.isEmpty ? context.l10n.simGenerate : context.l10n.simRefresh),
                   ),
                 ],
               ),
@@ -3165,7 +3183,7 @@ class _SimulationEmptyState extends StatelessWidget {
             if (isLoading) const CircularProgressIndicator(),
             const SizedBox(height: 16),
             Text(
-              isLoading ? '模拟正在生成中...' : '开始一次学习场景模拟，让角色逐轮讨论这个主题。',
+              isLoading ? context.l10n.simGenerating : context.l10n.simStartHint,
               textAlign: TextAlign.center,
             ),
           ],
@@ -3191,7 +3209,7 @@ class _RoundDivider extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text(
-                '第 $round 轮',
+                context.l10n.simRound(round),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: DS.textSecondary,
                     ),

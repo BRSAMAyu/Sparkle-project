@@ -3,6 +3,7 @@
 User Device Service - 管理用户设备和推送令牌
 """
 from __future__ import annotations
+
 from datetime import datetime
 
 import redis.asyncio as redis

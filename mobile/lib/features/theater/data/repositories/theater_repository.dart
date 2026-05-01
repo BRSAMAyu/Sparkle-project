@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 
 final theaterRepositoryProvider = Provider<TheaterRepository>(
@@ -63,6 +64,9 @@ class TheaterRepository {
 
   final ApiClient _apiClient;
 
+  static String _err(String zh, String en) =>
+      I18nService.instance.isChinese ? zh : en;
+
   Future<TheaterPrediction> generatePrediction({
     required String topic,
     String? targetNodeId,
@@ -85,11 +89,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '这次推演没有成功生成，你可以稍后再试。',
+        fallbackMessage: _err('这次推演没有成功生成，你可以稍后再试。', 'Prediction generation failed. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '这次推演没有成功生成，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('这次推演没有成功生成，你可以稍后再试。', 'Prediction generation failed. Please try again later.'),
       );
     }
   }
@@ -113,11 +117,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '这次假设推演没有成功生成，你可以稍后再试。',
+        fallbackMessage: _err('这次假设推演没有成功生成，你可以稍后再试。', 'What-if simulation failed. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '这次假设推演没有成功生成，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('这次假设推演没有成功生成，你可以稍后再试。', 'What-if simulation failed. Please try again later.'),
       );
     }
   }
@@ -140,11 +144,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '保存推演快照失败，你可以稍后再试。',
+        fallbackMessage: _err('保存推演快照失败，你可以稍后再试。', 'Failed to save snapshot. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '保存推演快照失败，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('保存推演快照失败，你可以稍后再试。', 'Failed to save snapshot. Please try again later.'),
       );
     }
   }
@@ -168,11 +172,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '采纳这条推演路径失败了，你可以稍后再试。',
+        fallbackMessage: _err('采纳这条推演路径失败了，你可以稍后再试。', 'Failed to adopt this route. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '采纳这条推演路径失败了，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('采纳这条推演路径失败了，你可以稍后再试。', 'Failed to adopt this route. Please try again later.'),
       );
     }
   }
@@ -186,11 +190,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '读取这次推演失败了，你可以稍后再试。',
+        fallbackMessage: _err('读取这次推演失败了，你可以稍后再试。', 'Failed to load prediction. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '读取这次推演失败了，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('读取这次推演失败了，你可以稍后再试。', 'Failed to load prediction. Please try again later.'),
       );
     }
   }
@@ -213,11 +217,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '记录推演结果失败，你可以稍后再试。',
+        fallbackMessage: _err('记录推演结果失败，你可以稍后再试。', 'Failed to record results. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '记录推演结果失败，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('记录推演结果失败，你可以稍后再试。', 'Failed to record results. Please try again later.'),
       );
     }
   }
@@ -235,11 +239,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '读取推演准确度失败，你可以稍后再试。',
+        fallbackMessage: _err('读取推演准确度失败，你可以稍后再试。', 'Failed to load accuracy. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '读取推演准确度失败，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('读取推演准确度失败，你可以稍后再试。', 'Failed to load accuracy. Please try again later.'),
       );
     }
   }
@@ -267,11 +271,11 @@ class TheaterRepository {
       }
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '读取推演校准概览失败，你可以稍后再试。',
+        fallbackMessage: _err('读取推演校准概览失败，你可以稍后再试。', 'Failed to load calibration overview. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '读取推演校准概览失败，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('读取推演校准概览失败，你可以稍后再试。', 'Failed to load calibration overview. Please try again later.'),
       );
     }
   }
@@ -291,11 +295,11 @@ class TheaterRepository {
     } on DioException catch (e) {
       throw TheaterRepositoryException.fromDio(
         e,
-        fallbackMessage: '将节点同步到知识星图失败，你可以稍后再试。',
+        fallbackMessage: _err('将节点同步到知识星图失败，你可以稍后再试。', 'Failed to sync node to Galaxy. Please try again later.'),
       );
     } catch (_) {
-      throw const TheaterRepositoryException(
-        message: '将节点同步到知识星图失败，你可以稍后再试。',
+      throw TheaterRepositoryException(
+        message: _err('将节点同步到知识星图失败，你可以稍后再试。', 'Failed to sync node to Galaxy. Please try again later.'),
       );
     }
   }

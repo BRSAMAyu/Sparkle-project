@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('RecommendationFeedbackPromptCard renders friend prompt',
       (tester) async {
     final prompt = RecommendationFeedbackPrompt(
@@ -25,15 +28,13 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppThemes.lightTheme,
+      testMaterialApp(theme: AppThemes.lightTheme,
         home: Scaffold(
           body: RecommendationFeedbackPromptCard(
             prompt: prompt,
             onRespond: () {},
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('看看这位责任伙伴候选人是否合拍'), findsOneWidget);
@@ -60,12 +61,10 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppThemes.lightTheme,
+      testMaterialApp(theme: AppThemes.lightTheme,
         home: Scaffold(
           body: RecommendationFeedbackInsightCard(insight: insight),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('你的社群推荐偏好'), findsOneWidget);

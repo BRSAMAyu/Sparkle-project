@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -25,7 +25,7 @@ from app.state_aggregator.schema import MetacognitionProfileSummaryValue
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ScaffoldingFSM:

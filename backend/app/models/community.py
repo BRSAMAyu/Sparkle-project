@@ -37,28 +37,28 @@ from app.models.base import GUID, BaseModel
 
 # ============ 枚举类型定义 ============
 
-class FriendshipStatus(str, enum.Enum):
+class FriendshipStatus(enum.StrEnum):
     """好友关系状态"""
     PENDING = "pending"      # 待确认
     ACCEPTED = "accepted"    # 已接受
     BLOCKED = "blocked"      # 已拉黑
 
 
-class GroupType(str, enum.Enum):
+class GroupType(enum.StrEnum):
     """群组类型"""
     SQUAD = "squad"          # 学习小队（长期）
     SPRINT = "sprint"        # 冲刺群（短期）
     OFFICIAL = "official"    # 官方课程/考试群
 
 
-class GroupRole(str, enum.Enum):
+class GroupRole(enum.StrEnum):
     """群组角色"""
     OWNER = "owner"          # 群主
     ADMIN = "admin"          # 管理员
     MEMBER = "member"        # 普通成员
 
 
-class MessageType(str, enum.Enum):
+class MessageType(enum.StrEnum):
     """消息类型"""
     TEXT = "text"                    # 普通文本
     TASK_SHARE = "task_share"        # 分享任务卡
@@ -74,7 +74,7 @@ class MessageType(str, enum.Enum):
     BROADCAST = "broadcast"          # 跨群广播
 
 
-class SharedResourceType(str, enum.Enum):
+class SharedResourceType(enum.StrEnum):
     """共享资源类型"""
     PLAN = "plan"
     TASK = "task"
@@ -86,7 +86,7 @@ class SharedResourceType(str, enum.Enum):
     COGNITIVE_PRISM_PATTERN = "cognitive_prism_pattern"
 
 
-class ReportReason(str, enum.Enum):
+class ReportReason(enum.StrEnum):
     """举报原因"""
     SPAM = "spam"                    # 垃圾信息
     HARASSMENT = "harassment"        # 骚扰
@@ -96,7 +96,7 @@ class ReportReason(str, enum.Enum):
     OTHER = "other"                  # 其他
 
 
-class ReportStatus(str, enum.Enum):
+class ReportStatus(enum.StrEnum):
     """举报状态"""
     PENDING = "pending"              # 待处理
     REVIEWED = "reviewed"            # 已审核
@@ -104,7 +104,7 @@ class ReportStatus(str, enum.Enum):
     ACTIONED = "actioned"            # 已处理
 
 
-class ModerationAction(str, enum.Enum):
+class ModerationAction(enum.StrEnum):
     """风控处置动作"""
     WARN = "warn"                    # 警告
     MUTE = "mute"                    # 禁言
@@ -112,7 +112,7 @@ class ModerationAction(str, enum.Enum):
     BAN = "ban"                      # 封禁
 
 
-class OfflineMessageStatus(str, enum.Enum):
+class OfflineMessageStatus(enum.StrEnum):
     """离线消息状态"""
     PENDING = "pending"              # 待发送
     SENT = "sent"                    # 已发送

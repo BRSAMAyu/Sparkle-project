@@ -29,10 +29,6 @@ class DashboardCardSection extends ConsumerWidget {
     final config = ref.watch(dashboardCardConfigProvider);
     final isGridMode = config.layoutMode == DashboardCardLayoutMode.grid;
     final visibleCardIds = config.visibleOrderedCards;
-    final isChinese = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
     final cards = visibleCardIds
         .map((cardId) => _buildCard(context, cardId, isGridMode: isGridMode))
         .toList(growable: false);
@@ -57,8 +53,8 @@ class DashboardCardSection extends ConsumerWidget {
                     DashboardSectionHeader(
                       icon: Icons.widgets_outlined,
                       accentColor: DS.brandPrimary,
-                      title: isChinese ? '工作模块' : 'Workspace Modules',
-                      summary: isChinese
+                      title: AppLocalizations.of(context)!.workspaceModules,
+                      summary: Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh')
                           ? '保留可定制区，把功能模块放在下半屏。'
                           : 'Keep customization in the lower workspace without disturbing the top story.',
                       trailing: TextButton.icon(

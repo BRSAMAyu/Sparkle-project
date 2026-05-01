@@ -16,10 +16,13 @@ import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 const _runSyncCenterWidget = bool.fromEnvironment('RUN_SYNC_CENTER_WIDGET');
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   if (!_runSyncCenterWidget) {
@@ -88,10 +91,7 @@ void main() {
             (ref, query) => itemsController.stream,
           ),
         ],
-        child: const MaterialApp(
-          locale: Locale('zh'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
+        child: testMaterialApp(
           home: SyncCenterScreen(),
         ),
       ),

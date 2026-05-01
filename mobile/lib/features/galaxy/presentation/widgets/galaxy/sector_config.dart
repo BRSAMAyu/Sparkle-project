@@ -137,7 +137,7 @@ class SectorConfig {
 
   static final Map<SectorEnum, SectorStyle> styles = {
     SectorEnum.cosmos: SectorStyle(
-      name: '理性星域',
+      name: 'Rational',
       darkPrimaryColor: const Color(0xFF7EAEE0),
       lightPrimaryColor: const Color(0xFF3D6EA2),
       baseAngle: 0.0,
@@ -145,7 +145,7 @@ class SectorConfig {
       keywords: const ['数学', '物理', '化学', '天文', '逻辑学'],
     ),
     SectorEnum.tech: SectorStyle(
-      name: '造物星域',
+      name: 'Creation',
       darkPrimaryColor: const Color(0xFF48C1C9),
       lightPrimaryColor: const Color(0xFF2D7C86),
       baseAngle: _sectorSweep,
@@ -153,7 +153,7 @@ class SectorConfig {
       keywords: const ['计算机', '工程', 'AI', '建筑', '制造'],
     ),
     SectorEnum.art: SectorStyle(
-      name: '灵感星域',
+      name: 'Inspiration',
       darkPrimaryColor: const Color(0xFFD97B9E),
       lightPrimaryColor: const Color(0xFFA74E72),
       baseAngle: _sectorSweep * 2,
@@ -161,7 +161,7 @@ class SectorConfig {
       keywords: const ['设计', '音乐', '绘画', '文学', 'ACG'],
     ),
     SectorEnum.civilization: SectorStyle(
-      name: '文明星域',
+      name: 'Civilization',
       darkPrimaryColor: const Color(0xFFD6A45A),
       lightPrimaryColor: const Color(0xFFA86A23),
       baseAngle: _sectorSweep * 3,
@@ -169,7 +169,7 @@ class SectorConfig {
       keywords: const ['历史', '经济', '政治', '社会学', '法律'],
     ),
     SectorEnum.life: SectorStyle(
-      name: '生活星域',
+      name: 'Life',
       darkPrimaryColor: const Color(0xFF58B37D),
       lightPrimaryColor: const Color(0xFF328458),
       baseAngle: _sectorSweep * 4,
@@ -177,7 +177,7 @@ class SectorConfig {
       keywords: const ['健身', '烹饪', '医学', '心理', '理财'],
     ),
     SectorEnum.wisdom: SectorStyle(
-      name: '智慧星域',
+      name: 'Wisdom',
       darkPrimaryColor: const Color(0xFFAD86D7),
       lightPrimaryColor: const Color(0xFF6D469A),
       baseAngle: _sectorSweep * 5,
@@ -185,7 +185,7 @@ class SectorConfig {
       keywords: const ['哲学', '宗教', '方法论', '元认知'],
     ),
     SectorEnum.voidSector: SectorStyle(
-      name: '暗物质区',
+      name: 'Dark Matter',
       darkPrimaryColor: const Color(0xFF7B8399),
       lightPrimaryColor: const Color(0xFF9199AD),
       baseAngle: _sectorSweep * 6,

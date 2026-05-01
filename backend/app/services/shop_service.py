@@ -4,9 +4,10 @@ Shop Service - 商城核心业务逻辑
 """
 
 from __future__ import annotations
+
 import hashlib
 import json
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -25,7 +26,7 @@ from app.services.photon_service import PhotonService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class IdempotencyConflictError(ValueError):
@@ -62,7 +63,7 @@ class ShopService:
             return None
         if value.tzinfo is None:
             return value
-        return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value.astimezone(UTC).replace(tzinfo=None)
 
     @staticmethod
     def _build_request_fingerprint(item_id: str) -> str:

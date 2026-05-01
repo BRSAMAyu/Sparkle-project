@@ -3,14 +3,16 @@ I18n - Internationalization utility for Sparkle AI.
 Loads translations from JSON files and provides localized strings based on locale.
 """
 from __future__ import annotations
+
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+
 from loguru import logger
 
+
 class I18n:
-    _translations: Dict[str, Dict[str, Any]] = {}
+    _translations: dict[str, dict[str, Any]] = {}
     _default_locale = "en"
     _locales_dir = Path(__file__).resolve().parent.parent / "data" / "i18n"
 
@@ -25,7 +27,7 @@ class I18n:
         for file_path in cls._locales_dir.glob("*.json"):
             locale = file_path.stem
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     cls._translations[locale] = json.load(f)
             except Exception as e:
                 logger.error(f"Failed to load translation file {file_path}: {e}")
@@ -57,7 +59,7 @@ class I18n:
                 "start_task_with": "在开始目标任务前，先安排一个针对「{topic}」"
             }
         }
-        
+
         with open(cls._locales_dir / "en.json", "w", encoding="utf-8") as f:
             json.dump(en_default, f, ensure_ascii=False, indent=2)
         with open(cls._locales_dir / "zh.json", "w", encoding="utf-8") as f:
@@ -79,7 +81,7 @@ class I18n:
             cls.load_translations()
 
         data = cls._translations.get(locale, cls._translations.get(cls._default_locale, {}))
-        
+
         parts = key.split(".")
         value = data
         for part in parts:
@@ -88,14 +90,14 @@ class I18n:
             else:
                 logger.warning(f"Translation key not found: {key} for locale: {locale}")
                 return key
-        
+
         if isinstance(value, str):
             try:
                 return value.format(**kwargs)
             except KeyError as e:
                 logger.warning(f"Missing format argument for key {key}: {e}")
                 return value
-        
+
         return str(value)
 
 # Initialize

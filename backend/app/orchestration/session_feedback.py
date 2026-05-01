@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
-from datetime import timezone, datetime, timedelta
 from typing import Any
-from app.core.i18n import I18n
 
+from app.core.i18n import I18n
 
 SESSION_FEEDBACK_TTL_SECONDS = 6 * 60 * 60
 
@@ -111,7 +111,7 @@ _CONTEXT_MARKERS = (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize(text: str | None) -> str:

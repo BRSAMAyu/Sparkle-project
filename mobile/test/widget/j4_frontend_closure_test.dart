@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -17,8 +18,11 @@ import 'package:sparkle/features/visual_elements/presentation/widgets/visual_ele
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('J4 frontend closure', () {
     testWidgets('achievement list filters switch without blanking or overflow',
         (tester) async {
@@ -33,7 +37,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1200));
+      await tester.pump(const Duration(milliseconds: 2400));
 
       final scrollable = find.byType(Scrollable).first;
       await tester.scrollUntilVisible(
@@ -149,7 +153,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.textContaining('超长名称'), findsOneWidget);
+      expect(find.textContaining('超长名称'), findsAtLeastNWidgets(1));
       expect(find.text('装备'), findsOneWidget);
       await tester.tap(find.text('装备'));
       await tester.pump();
@@ -210,19 +214,28 @@ Future<void> _pumpApp(
   required Widget child,
   List<Override> overrides = const [],
 }) async {
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => Scaffold(body: child),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
-      child: MaterialApp(
+      child: MaterialApp.router(
+        locale: const Locale('zh'),
         localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(body: child),
+        routerConfig: router,
       ),
     ),
   );

@@ -7,6 +7,7 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -55,7 +56,7 @@ class MetricsRow extends ConsumerWidget {
                       value: _formatFocusTime(
                         dashboardState.flame.todayFocusMinutes,
                       ),
-                      label: isChinese ? '今日专注' : 'Today Focus',
+                      label: context.l10n.metricsTodayFocus,
                       icon: Icons.center_focus_strong_rounded,
                       color: DS.brandPrimary,
                       compact: compactMode,
@@ -71,7 +72,7 @@ class MetricsRow extends ConsumerWidget {
                     slideOffset: const Offset(0, 0.05),
                     child: _MetricCell(
                       value: taskMetric.primary,
-                      label: isChinese ? '今日任务' : 'Today Tasks',
+                      label: context.l10n.metricsTodayTasks,
                       icon: Icons.task_alt_rounded,
                       color: DS.success,
                       compact: compactMode,

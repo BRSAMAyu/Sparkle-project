@@ -3,6 +3,7 @@
 Vocabulary & Dictionary API
 """
 from __future__ import annotations
+
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
@@ -14,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.config.settings import settings
-from app.services.dictionary_package_service import dictionary_package_service
 from app.db.session import get_db
 from app.models.user import User
+from app.services.dictionary_package_service import dictionary_package_service
 from app.services.mdx_dictionary_service import MDX_AVAILABLE, create_mdx_service
 from app.services.vocabulary_service import vocabulary_service
 from app.utils.helpers import read_upload_file
@@ -224,9 +225,9 @@ async def download_dictionary_package(package_id: str):
     try:
         package_path = dictionary_package_service.ensure_package(package_id)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Dictionary package unavailable: {exc}")
+        raise HTTPException(status_code=503, detail=f"Dictionary package unavailable: {exc}") from exc
 
     return FileResponse(
         path=package_path,
@@ -495,7 +496,7 @@ async def import_dictionary(
     try:
         text_content = content.decode("utf-8")
     except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid file encoding")
+        raise HTTPException(status_code=400, detail="Invalid file encoding") from None
     count = await vocabulary_service.import_dictionary(
         db, text_content, format=format, source=source
     )

@@ -56,10 +56,10 @@ class StuckHelpSheet extends StatelessWidget {
               const SizedBox(height: DS.spacing20),
               _SheetSection(
                 title: microTeaching != null
-                    ? 'Aurora 两步帮扶'
+                    ? context.l10n.taskAuroraHelp
                     : fallbackLevels.isNotEmpty
-                        ? '卡住时按这个顺序救火'
-                        : '具体该怎么做',
+                        ? context.l10n.taskStuckFireOrder
+                        : context.l10n.taskStuckHowTo,
                 child: microTeaching != null
                     ? _MicroTeachingSteps(data: microTeaching)
                     : fallbackLevels.isNotEmpty
@@ -88,7 +88,7 @@ class StuckHelpSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '可以把当前任务和卡点一起带过去，让 Sparkle 先帮你拆成更小的问题。',
+                      context.l10n.taskStuckChatHint,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -280,7 +280,7 @@ class _MicroTeachingStepCard extends StatelessWidget {
                 const SizedBox(width: DS.spacing10),
                 Expanded(
                   child: Text(
-                    '第 $number 步 · $title',
+                    context.l10n.taskStepLabel(number, title),
                     style: DS.bodyMedium.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,

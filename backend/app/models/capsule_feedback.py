@@ -3,7 +3,6 @@ Capsule Feedback Model
 """
 from __future__ import annotations
 
-
 import enum
 
 from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text

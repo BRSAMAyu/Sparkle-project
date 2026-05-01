@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.orchestration.ai_strategy_renderer import build_semantic_control, evaluate_semantic_control_compliance
 from app.orchestration.plan_quality_contract import (
     PLAN_MODE_FULL,
     PLAN_MODE_NEXT_STEP_ONLY,
@@ -11,7 +12,6 @@ from app.orchestration.plan_quality_contract import (
     build_contract_payload,
     build_plan_quality_contract,
 )
-from app.orchestration.ai_strategy_renderer import build_semantic_control, evaluate_semantic_control_compliance
 from app.orchestration.rendered_plan_artifact import parse_rendered_plan_artifact
 
 

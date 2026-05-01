@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/push_navigation_service.dart';
+import '../../shared/i18n_test_helper.dart';
+
+Widget _testRouterApp({required GoRouter routerConfig}) => MaterialApp.router(
+  locale: const Locale('zh'),
+  localizationsDelegates: const [
+    AppLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  supportedLocales: AppLocalizations.supportedLocales,
+  routerConfig: routerConfig,
+);
 
 class _FakeInterventionActionService extends InterventionActionService {
   _FakeInterventionActionService() : super(_NoopRef());
@@ -70,6 +85,20 @@ GoRouter _buildRouter() => GoRouter(
           ),
         ),
         GoRoute(
+          path: '/tasks/:id/execute',
+          builder: (context, state) => Scaffold(
+            body: Text('task-execute-${state.pathParameters['id']}'),
+          ),
+        ),
+        GoRoute(
+          path: '/notification-center',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              'notification-${state.uri.queryParameters['highlight'] ?? ''}',
+            ),
+          ),
+        ),
+        GoRoute(
           path: '/achievements/milestone/:milestoneId',
           builder: (context, state) => Scaffold(
             body: Text('milestone-${state.pathParameters['milestoneId']}'),
@@ -95,6 +124,8 @@ GoRouter _buildRouter() => GoRouter(
     );
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('push navigation service reports seen and navigates to route',
       (tester) async {
     final fakeInterventionService = _FakeInterventionActionService();
@@ -107,7 +138,7 @@ void main() {
           interventionActionServiceProvider
               .overrideWithValue(fakeInterventionService),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: _testRouterApp(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -127,7 +158,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('focus-screen'), findsOneWidget);
-    await tester.binding.handlePopRoute();
+    // Navigate back to home — handleOpenedPayload uses go() which replaces,
+    // so there is no pop stack. Explicitly return to verify round-trip.
+    router.go('/home');
     await tester.pumpAndSettle();
     expect(find.text('home-screen'), findsOneWidget);
 
@@ -163,7 +196,7 @@ void main() {
             interventionActionServiceProvider
                 .overrideWithValue(fakeInterventionService),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: _testRouterApp(routerConfig: router),
         ),
       );
       await tester.pumpAndSettle();
@@ -228,6 +261,96 @@ void main() {
     expect(payload['intervention_id'], 'abc123');
   });
 
+  test('push navigation service resolves JPush behavior context payloads', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final service = container.read(pushNavigationServiceProvider);
+
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'goal_context':
+            '{"goal_id":"goal-42","task_id":"task-42","deadline_pressure":"medium"}',
+        'suggested_action':
+            '{"type":"open_task","task_id":"task-42","estimated_minutes":5}',
+      }),
+      '/tasks/task-42/execute',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'goal_context': '{"goal_id":"plan-42"}',
+      }),
+      '/plans/plan-42',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'type': 'recall',
+        'recall_type': 'task_not_started',
+      }),
+      '/chat?entry=recall&recall_type=task_not_started',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'notification_id': 'notif-42',
+      }),
+      '/notification-center?highlight=notif-42',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'deep_link': 'sparkle://task/task-7',
+      }),
+      '/tasks/task-7/execute',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'deep_link': 'sparkle://chat/session-7',
+      }),
+      '/chat?session_id=session-7',
+    );
+    expect(
+      service.resolveRouteForPayload(<String, dynamic>{
+        'deep_link': 'sparkle://plan/plan-7/review',
+      }),
+      '/exam-sprint/review?plan_id=plan-7',
+    );
+  });
+
+  testWidgets('push navigation service opens task from JPush extras',
+      (tester) async {
+    final fakeInterventionService = _FakeInterventionActionService();
+    final router = _buildRouter();
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          interventionActionServiceProvider
+              .overrideWithValue(fakeInterventionService),
+        ],
+        child: _testRouterApp(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.text('home-screen')),
+      listen: false,
+    );
+
+    await container.read(pushNavigationServiceProvider).handleOpenedPayload(
+      payload: <String, dynamic>{
+        'goal_context': '{"task_id":"task-42"}',
+        'suggested_action': '{"type":"open_task","task_id":"task-42"}',
+      },
+      source: 'jpush',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('task-execute-task-42'), findsOneWidget);
+    expect(fakeInterventionService.lastAction, 'seen');
+    expect(fakeInterventionService.lastPayload?['source'], 'jpush');
+  });
+
   testWidgets(
       'push navigation service opens review chat route with node context',
       (tester) async {
@@ -259,7 +382,7 @@ void main() {
           interventionActionServiceProvider
               .overrideWithValue(fakeInterventionService),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: _testRouterApp(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();

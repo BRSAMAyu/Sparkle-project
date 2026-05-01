@@ -5,7 +5,7 @@ Endpoints for collecting user feedback on candidate actions.
 Enables learning loop for signal threshold calibration.
 """
 import uuid
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/signals", tags=["signals"])
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackRequest(BaseModel):
@@ -137,7 +137,7 @@ async def record_feedback(
                 message="Feedback accepted in degraded mode",
             )
         logger.exception("Failed to record feedback")
-        raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}") from e
 
 
 @router.get("/feedback/stats", summary="获取反馈统计")
@@ -201,8 +201,8 @@ async def get_feedback_stats(
         # CTR calculation
         impressions = feedback_type_breakdown.get('impression', 0)
         accepts = feedback_type_breakdown.get('accept', 0)
-        ignores = feedback_type_breakdown.get('ignore', 0)
-        dismisses = feedback_type_breakdown.get('dismiss', 0)
+        feedback_type_breakdown.get('ignore', 0)
+        feedback_type_breakdown.get('dismiss', 0)
         ctr = (accepts / impressions * 100) if impressions > 0 else 0
 
         # Completion rate calculation
@@ -241,4 +241,97 @@ async def get_feedback_stats(
                 "completion_rate_percent": 0,
             }
         logger.exception("Failed to get feedback stats")
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}") from e
+
+
+# ── Spine Experience Envelope & Receipt Actions ────────────────────────
+
+
+# route-tier: authed
+@router.get("/envelope", summary="获取当前体验信封")
+async def get_experience_envelope(
+    current_user: User = Depends(get_current_user),
+):
+    """Return the unified ExperienceEnvelope for the current user turn."""
+    try:
+        from app.core.cache import cache_service
+        from app.signals.spine_orchestrator import SpineOrchestrator
+
+        spine = SpineOrchestrator(cache_service.redis)
+        envelope = await spine.build_experience_envelope(
+            user_id=str(current_user.id),
+        )
+        return {"ok": True, **envelope}
+    except Exception as e:
+        logger.warning("Failed to build experience envelope: {}", e)
+        return {"ok": True, "turn_id": "", "primary_message": {}, "cards": [], "receipts": []}
+
+
+class ReceiptActionRequest(BaseModel):
+    receipt_id: str = Field(..., description="Receipt ID")
+    action: str = Field(..., description="confirm | correct | dismiss")
+
+
+# route-tier: authed
+@router.post("/receipt-action", summary="用户对 Receipt 的反馈")
+async def handle_receipt_action(
+    request: ReceiptActionRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Handle user feedback on a Spine receipt (confirm/correct/dismiss)."""
+    if request.action not in ("confirm", "correct", "dismiss"):
+        raise HTTPException(status_code=400, detail="action must be confirm, correct, or dismiss")
+    try:
+        from app.core.cache import cache_service
+        from app.signals.spine_orchestrator import SpineOrchestrator
+
+        spine = SpineOrchestrator(cache_service.redis)
+        await spine.handle_user_receipt_action(
+            user_id=str(current_user.id),
+            receipt_id=request.receipt_id,
+            action=request.action,
+        )
+        return {"ok": True, "action": request.action}
+    except Exception as e:
+        logger.warning("Failed to handle receipt action: {}", e)
+        raise HTTPException(status_code=500, detail=f"Failed: {e}") from e
+
+
+# route-tier: authed
+@router.get("/context-receipt", summary="获取当前上下文决策收据")
+async def get_context_receipt(
+    current_user: User = Depends(get_current_user),
+):
+    """Return the latest context receipt showing why sources were used/excluded."""
+    try:
+        from app.core.cache import cache_service
+
+        raw = await cache_service.redis.get(
+            f"spine:card:context_receipt:{current_user.id}:latest"
+        )
+        if not raw:
+            return {"ok": True, "receipt": None}
+        import json
+        receipt = json.loads(raw if isinstance(raw, str) else raw.decode())
+        return {"ok": True, "receipt": receipt}
+    except Exception as e:
+        logger.warning("Failed to get context receipt: {}", e)
+        return {"ok": True, "receipt": None}
+
+
+# route-tier: authed
+@router.get("/metrics", summary="获取滚动指标")
+async def get_rolling_metrics(
+    current_user: User = Depends(get_current_user),
+):
+    """Return rolling-window Spine metrics for the current user."""
+    try:
+        from app.core.cache import cache_service
+        from app.signals.spine_orchestrator import SpineOrchestrator
+
+        spine = SpineOrchestrator(cache_service.redis)
+        metrics = await spine.get_rolling_metrics(str(current_user.id))
+        return {"ok": True, **metrics}
+    except Exception as e:
+        logger.warning("Failed to get rolling metrics: {}", e)
+        return {"ok": True, "signals_processed": 0, "directives_applied": 0}

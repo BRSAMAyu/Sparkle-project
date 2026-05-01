@@ -76,6 +76,8 @@ async def test_translate_cache_hit(mock_cache_service, mock_llm_service):
 
     # LLM should not be called
     mock_cache_service.get.assert_called_once()
+    cache_key = mock_cache_service.get.call_args[0][0]
+    assert cache_key.startswith("translation:")
 
 
 @pytest.mark.asyncio
@@ -112,9 +114,10 @@ async def test_translate_cache_miss(mock_cache_service, mock_llm_service):
     mock_client.chat.assert_awaited_once()
 
     # Result should be cached
-    mock_cache_service.set.assert_called_once()
     args, kwargs = mock_cache_service.set.call_args
+    assert args is not None  # set was called
     assert kwargs['ttl'] == 86400  # 24 hours
+    assert args[0].startswith("translation:")  # correct cache key prefix
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 BERT-based Intent Classifier for Semantic Understanding
 

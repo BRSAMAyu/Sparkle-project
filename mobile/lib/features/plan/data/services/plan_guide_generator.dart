@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
@@ -79,7 +80,7 @@ class PlanGuideGenerator {
 
     final content = buffer.toString().trim();
     if (content.isEmpty) {
-      throw Exception('AI 未返回计划指南');
+      throw Exception('AI did not return a plan guide');
     }
     return content;
   }
@@ -88,18 +89,22 @@ class PlanGuideGenerator {
     PlanDraft draft, {
     required PlanGuideAudience audience,
   }) {
-    final typeLabel = draft.type == PlanType.growth ? '成长计划' : '冲刺计划';
+    final zh = I18nService.instance.isChinese;
+    final typeLabel = zh
+        ? (draft.type == PlanType.growth ? '成长计划' : '冲刺计划')
+        : (draft.type == PlanType.growth ? 'Growth Plan' : 'Sprint Plan');
     final tasks = draft.taskDrafts.isEmpty
-        ? '当前还没有预置任务，请输出适合后续拆解任务的执行主线。'
+        ? (zh ? '当前还没有预置任务，请输出适合后续拆解任务的执行主线。' : 'No preset tasks yet. Please output an execution backbone suitable for future task breakdown.')
         : draft.taskDrafts
             .map(
               (task) =>
-                  '- ${task.title} (${task.estimatedMinutes} 分钟, 难度 ${task.difficulty})',
+                  '- ${task.title} (${task.estimatedMinutes} ${zh ? '分钟' : 'min'}, ${zh ? '难度' : 'difficulty'} ${task.difficulty})',
             )
             .join('\n');
 
     if (audience == PlanGuideAudience.ai) {
-      return '''
+      if (zh) {
+        return '''
 你是 Sparkle 内部的任务承接助手。请基于下面这张$typeLabel输出一份**给 AI 使用**的执行版本，供 Sparkle 内部任务助手读取，不是写给普通用户看的长文。
 
 输出要求：
@@ -125,9 +130,37 @@ class PlanGuideGenerator {
 预置任务：
 $tasks
 ''';
+      }
+      return '''
+You are Sparkle's internal task承接 assistant. Based on the $typeLabel below, produce an **AI-facing** execution version for Sparkle's internal task assistant — not a long document for end users.
+
+Requirements:
+1. Use basic Markdown only.
+2. Fixed structure:
+## objective
+## constraints
+## execution_plan
+## first_reply_style
+3. 2-4 items per section. Keep it concise — no lyrical prose.
+4. Make clear this content is for Sparkle internal closed-loop use only. Never redirect users to external AI products.
+5. If information is insufficient, prefer a robust, low-risk,追问-friendly execution skeleton.
+
+Plan name: ${draft.name}
+Goal: ${draft.goal}
+Subject: ${draft.subject}
+Daily commitment: ${draft.dailyMinutes} minutes
+Total estimate: ${draft.totalEstimatedHours.toStringAsFixed(1)} hours
+Daily reminder: ${draft.reminderTimeLabel}
+Schedule preference: ${draft.scheduleLabel}
+Scope notes: ${draft.scopeNotes}
+
+Preset tasks:
+$tasks
+''';
     }
 
-    return '''
+    if (zh) {
+      return '''
 你是一名学习规划助手。请为下面这个$typeLabel生成一份**给用户自己看的**简洁执行指南。
 
 输出要求：
@@ -151,6 +184,33 @@ $tasks
 范围说明：${draft.scopeNotes}
 
 预置任务：
+$tasks
+''';
+    }
+    return '''
+You are a study planning assistant. Generate a **user-facing** concise execution guide for the $typeLabel below.
+
+Requirements:
+1. Use basic Markdown only.
+2. Fixed structure:
+## Progress Track
+## Daily Rhythm
+## Risk Alerts
+## Today's First Action
+3. 2-4 items per section. No filler.
+4. Emphasize long-term consistency, scheduling and execution boundaries — not a generic task card.
+5. Tone should help the user start immediately, not explain how clever the system is.
+
+Plan name: ${draft.name}
+Goal: ${draft.goal}
+Subject: ${draft.subject}
+Daily commitment: ${draft.dailyMinutes} minutes
+Total estimate: ${draft.totalEstimatedHours.toStringAsFixed(1)} hours
+Daily reminder: ${draft.reminderTimeLabel}
+Schedule preference: ${draft.scheduleLabel}
+Scope notes: ${draft.scopeNotes}
+
+Preset tasks:
 $tasks
 ''';
   }

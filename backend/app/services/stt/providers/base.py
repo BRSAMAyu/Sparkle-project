@@ -3,6 +3,7 @@ STT Provider抽象接口
 定义语音转文字服务的统一接口，支持多Provider切换
 """
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 

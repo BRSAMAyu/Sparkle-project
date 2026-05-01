@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class WeeklyGrowthNarrativeCard extends ConsumerStatefulWidget {
   const WeeklyGrowthNarrativeCard({
@@ -59,7 +61,7 @@ class _NarrativeSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final metrics = _metrics(narrative);
+    final metrics = _metrics(context, narrative);
     final accent = narrative.hasData ? DS.success : DS.info;
     final highlights = narrative.highlights.isNotEmpty
         ? narrative.highlights
@@ -112,7 +114,7 @@ class _NarrativeSurface extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: expanded ? '收起' : '展开',
+                tooltip: expanded ? context.l10n.insCollapse : context.l10n.insExpand,
                 onPressed: onToggleExpanded,
                 icon: Icon(
                   expanded
@@ -176,9 +178,8 @@ class _NarrativeSurface extends StatelessWidget {
                 ),
               ),
               child: Text(
-                '最大进步：${narrative.biggestImprovementNode} '
-                '${narrative.biggestImprovementBefore.toStringAsFixed(0)}% → '
-                '${narrative.biggestImprovementAfter.toStringAsFixed(0)}%',
+                context.l10n.wgnBiggestImprovement(narrative.biggestImprovementNode) +
+                ' ${narrative.biggestImprovementBefore.toStringAsFixed(0)}% → ${narrative.biggestImprovementAfter.toStringAsFixed(0)}%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
@@ -189,7 +190,7 @@ class _NarrativeSurface extends StatelessWidget {
           if (expanded && narrative.nextWeekSuggestion.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              '下周目标：${narrative.nextWeekSuggestion}',
+              context.l10n.wgnNextWeekGoal(narrative.nextWeekSuggestion),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
@@ -216,13 +217,13 @@ class _NarrativeSurface extends StatelessWidget {
     );
   }
 
-  List<Widget> _metrics(WeeklyGrowthNarrative narrative) {
+  List<Widget> _metrics(BuildContext context, WeeklyGrowthNarrative narrative) {
     final items = <Widget>[];
     if (narrative.studyDays > 0) {
       items.add(
         _MetricPill(
           icon: Icons.calendar_today_rounded,
-          label: '${narrative.studyDays} 天学习',
+          label: context.l10n.insStudyDays(narrative.studyDays),
         ),
       );
     }
@@ -230,7 +231,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.task_alt_rounded,
-          label: '${narrative.tasksCompleted} 个任务',
+          label: context.l10n.insTasksDone(narrative.tasksCompleted),
         ),
       );
     }
@@ -238,7 +239,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.psychology_alt_rounded,
-          label: '修复 ${narrative.errorsFixed} 个错误',
+          label: context.l10n.insErrorsFixed(narrative.errorsFixed),
         ),
       );
     }
@@ -246,7 +247,7 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.rate_review_rounded,
-          label: '${narrative.reflectionRecords} 次复盘',
+          label: context.l10n.insReflections(narrative.reflectionRecords),
         ),
       );
     }
@@ -254,15 +255,15 @@ class _NarrativeSurface extends StatelessWidget {
       items.add(
         _MetricPill(
           icon: Icons.trending_up_rounded,
-          label: '掌握 +${narrative.masteryDelta.toStringAsFixed(1)}',
+          label: context.l10n.insMasteryGain(narrative.masteryDelta.toInt()),
         ),
       );
     }
     if (items.isEmpty) {
       items.add(
-        const _MetricPill(
+        _MetricPill(
           icon: Icons.flag_rounded,
-          label: '第一周',
+          label: context.l10n.insFirstWeek,
         ),
       );
     }
@@ -327,7 +328,7 @@ class _NarrativeLoadingSurface extends StatelessWidget {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                '正在整理这周的成长线索...',
+                I18nService.instance.isChinese ? '正在整理这周的成长线索...' : 'Organizing this week\'s growth threads...',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -355,7 +356,7 @@ class _NarrativeErrorSurface extends StatelessWidget {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                '这周故事暂时没有同步成功，先继续学习，稍后再看。',
+                I18nService.instance.isChinese ? '这周故事暂时没有同步成功，先继续学习，稍后再看。' : 'This week\'s story didn\'t sync. Keep learning and check back later.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -363,7 +364,7 @@ class _NarrativeErrorSurface extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: '重试',
+              tooltip: context.l10n.insRetry,
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
             ),

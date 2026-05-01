@@ -3,6 +3,7 @@
 Focus API - 番茄钟、统计、LLM辅助
 """
 from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID
 

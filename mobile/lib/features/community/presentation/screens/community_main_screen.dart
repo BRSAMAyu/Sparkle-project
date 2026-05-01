@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
@@ -155,7 +156,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             children: [
               Icon(Icons.bookmark_outline, size: 18),
               SizedBox(width: DS.spacing10),
-              Expanded(child: Text('我的收藏')),
+              Expanded(child: Text(I18nService.instance.isChinese ? '收藏' : 'Favorites')),
             ],
           ),
         ),
@@ -266,7 +267,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             ),
           ),
           Tooltip(
-            message: '更多',
+            message: I18nService.instance.isChinese ? '更多' : 'More',
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(

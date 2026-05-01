@@ -1,3 +1,4 @@
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -337,6 +338,11 @@ async def test_profile_insights_returns_claims_predictions_and_unknowns(
         ProfileContextService, "get_profile_context", _fake_profile_context
     )
 
+    monkeypatch.setattr(
+        "app.api.v1.profile_transparency._get_transparency_level",
+        AsyncMock(return_value=3),
+    )
+
     response = client.get("/profile/insights")
 
     assert response.status_code == 200
@@ -394,6 +400,11 @@ async def test_profile_context_embeds_transparency_payload_for_ui_consumers(
 
     monkeypatch.setattr(
         ProfileContextService, "get_profile_context", _fake_profile_context
+    )
+
+    monkeypatch.setattr(
+        "app.api.v1.profile_transparency._get_transparency_level",
+        AsyncMock(return_value=3),
     )
 
     response = client.get("/profile/context")

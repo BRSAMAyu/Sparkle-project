@@ -421,7 +421,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 	authMiddleware := middleware.AuthMiddleware(cfg, rdb)
 	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
-	apiRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 30, 60)
+	apiRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 15, 30)
 	adminRateLimit := middleware.AdminRateLimitMiddleware(rdb)
 	internalRateLimit := middleware.InternalRateLimitMiddleware(rdb)
 
@@ -758,6 +758,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			if c.IsAborted() {
 				return
 			}
+			// R5-G01: Privileged paths (logout, upgrade-guest) require auth
+			if isPrivilegedNoRoutePath(path) {
+				authMiddleware(c)
+				if c.IsAborted() {
+					return
+				}
+			}
 			proxy.proxy.ServeHTTP(c.Writer, c.Request)
 
 			// 记录代理结果
@@ -790,6 +797,21 @@ func shouldProxyNoRoutePath(path string) bool {
 		"/api/v1/auth/upgrade-guest",
 	}
 	for _, prefix := range publicAuthPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPrivilegedNoRoutePath returns true for paths that require authentication
+// even though they are proxied through NoRoute.
+func isPrivilegedNoRoutePath(path string) bool {
+	privileged := []string{
+		"/api/v1/auth/logout",
+		"/api/v1/auth/upgrade-guest",
+	}
+	for _, prefix := range privileged {
 		if strings.HasPrefix(path, prefix) {
 			return true
 		}

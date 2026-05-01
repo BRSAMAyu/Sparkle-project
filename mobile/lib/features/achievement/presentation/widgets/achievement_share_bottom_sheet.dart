@@ -452,7 +452,7 @@ class _AchievementShareBottomSheetState
               ),
               const SizedBox(height: DS.sm),
               Text(
-                '加载中...',
+                context.l10n.achievementShareLoading,
                 style: TextStyle(
                   color: DS.textTertiary,
                   fontSize: 12,

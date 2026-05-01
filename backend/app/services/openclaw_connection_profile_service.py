@@ -79,7 +79,7 @@ class OpenClawConnectionProfile:
         payload: dict[str, Any] | None,
         *,
         default_transport: str = "responses_http",
-    ) -> "OpenClawConnectionProfile":
+    ) -> OpenClawConnectionProfile:
         payload = payload or {}
         gateway_url = _coerce_http_url(
             str(payload.get("gateway_url") or ""),

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/document/controllers/document_controller.dart';
 import 'package:sparkle/features/document/models/document_cleaning_model.dart';
@@ -75,7 +76,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
 
   Future<void> _startCleaning() async {
     if (_selectedFile == null) {
-      AppFeedback.info(context, '请先选择一个文件');
+      AppFeedback.info(context, context.l10n.docCleanerSelectFileFirst);
       return;
     }
 
@@ -103,7 +104,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
     unawaited(
       SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
     );
-    AppFeedback.success(context, '清洗结果已复制');
+    AppFeedback.success(context, context.l10n.docCleanerResultCopied);
   }
 
   @override
@@ -119,8 +120,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.auto_awesome_motion_rounded,
-      title: '文档清洗',
-      subtitle: '把扫描件、讲义和课件整理成可读文本。支持真实 GLM OCR 链路，适合笔记沉淀和资料预处理。',
+      title: context.l10n.docCleanerTitle,
+      subtitle: context.l10n.docCleanerSubtitle,
       accentColor: accent,
       compactHeader: true,
       fillHeight: true,
@@ -133,13 +134,13 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
           : null,
       heroChips: [
         ToolHeroChip(
-          label: _enableOcr ? 'OCR 已开启' : '纯文本清洗',
+          label: _enableOcr ? context.l10n.docCleanerOcrOn : context.l10n.docCleanerPlainText,
           accentColor: accent,
           icon: _enableOcr ? Icons.visibility_rounded : Icons.notes_rounded,
         ),
         ToolHeroChip(
           label:
-              fileName == null ? '支持 PDF / DOCX / PPTX / 图片' : extension ?? '文件已选',
+              fileName == null ? context.l10n.docCleanerSupportFormats : extension ?? context.l10n.docCleanerFileSelected,
           accentColor: accent,
           icon: Icons.insert_drive_file_rounded,
         ),
@@ -154,20 +155,20 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                 runSpacing: DS.spacing12,
                 children: [
                   ToolMetricCard(
-                    label: '引擎',
+                    label: context.l10n.docCleanerEngine,
                     value: _enableOcr
-                        ? (_ocrEngine == 'zhipu' ? 'GLM OCR' : '本地 OCR')
-                        : '跳过 OCR',
+                        ? (_ocrEngine == 'zhipu' ? 'GLM OCR' : context.l10n.docCleanerLocalFast)
+                        : context.l10n.docCleanerSkipOcr,
                     accentColor: accent,
                     icon: Icons.tune_rounded,
-                    caption: '扫描件建议启用 GLM OCR',
+                    caption: context.l10n.docCleanerScanOcrHint,
                   ),
                   ToolMetricCard(
-                    label: '文件体积',
+                    label: context.l10n.docCleanerFileSize,
                     value: fileSize ?? '--',
                     accentColor: accent,
                     icon: Icons.sd_storage_rounded,
-                    caption: fileName == null ? '未选择文件' : '当前待处理文件',
+                    caption: fileName == null ? context.l10n.docCleanerNoFile : context.l10n.docCleanerCurrentFile,
                   ),
                 ],
               ),
@@ -208,8 +209,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '文件选择',
-            subtitle: '先选文件，再决定是否启用 OCR。识别结果会自动回流到文档清洗任务。',
+            title: context.l10n.docCleanerFileSelectTitle,
+            subtitle: context.l10n.docCleanerFileSelectSubtitle,
             child: InkWell(
               onTap: _pickFile,
               borderRadius: BorderRadius.circular(24),
@@ -230,7 +231,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                           ),
                           const SizedBox(height: DS.spacing12),
                           Text(
-                            '点击选择文件',
+                            context.l10n.docCleanerClickSelect,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -241,7 +242,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                           ),
                           const SizedBox(height: DS.spacing6),
                           Text(
-                            '支持 PDF、DOCX、PPTX、JPG、PNG、WebP；扫描件推荐开启 OCR。',
+                            context.l10n.docCleanerSupportedTypes,
                             textAlign: TextAlign.center,
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -272,7 +273,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                                   ),
                                   const SizedBox(height: DS.spacing4),
                                   Text(
-                                    extension ?? '文档文件',
+                                    extension ?? context.l10n.docCleanerDocFile,
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
@@ -301,7 +302,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                                 buildFileInfo(),
                                 const SizedBox(height: DS.spacing12),
                                 SparkleButton(
-                                  label: '更换文件',
+                                  label: context.l10n.docCleanerChangeFile,
                                   variant: ButtonVariant.ghost,
                                   onPressed: _pickFile,
                                   expand: true,
@@ -328,7 +329,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                               Expanded(child: buildFileInfo()),
                               const SizedBox(width: DS.spacing12),
                               SparkleButton(
-                                label: '更换',
+                                label: context.l10n.docCleanerChange,
                                 variant: ButtonVariant.ghost,
                                 onPressed: _pickFile,
                               ),
@@ -342,15 +343,15 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '处理策略',
-            subtitle: '扫描件建议开启 OCR；源文件已有文字层时可关闭 OCR 提升速度。',
+            title: context.l10n.docCleanerStrategyTitle,
+            subtitle: context.l10n.docCleanerStrategySubtitle,
             child: Column(
               children: [
                 Row(
                   children: [
                     Expanded(
                       child: Text(
-                        '启用 OCR 识别',
+                        context.l10n.docCleanerEnableOcr,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               color: DS.textPrimary,
                               fontWeight: DS.fontWeightSemiBold,
@@ -372,7 +373,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                       runSpacing: DS.spacing10,
                       children: [
                         ToolChoiceChip(
-                          label: '本地快速',
+                          label: context.l10n.docCleanerLocalFast,
                           selected: _ocrEngine == 'local',
                           onTap: () => setState(() => _ocrEngine = 'local'),
                           accentColor: accent,
@@ -395,7 +396,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
           const SizedBox(height: DS.spacing20),
           SparkleButton(
             expand: true,
-            label: '开始 AI 清洗',
+            label: context.l10n.docCleanerStartClean,
             onPressed: _selectedFile == null ? null : _startCleaning,
             icon: const Icon(Icons.auto_fix_high_rounded),
           ),
@@ -405,8 +406,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
   Widget _buildProgress(CleaningTaskStatus status, Color accent) =>
       ToolSectionCard(
         accentColor: accent,
-        title: '处理中',
-        subtitle: '正在上传、解析和清洗文档，进度会实时更新。',
+        title: context.l10n.docCleanerProcessingTitle,
+        subtitle: context.l10n.docCleanerProcessingSubtitle,
         child: Column(
           children: [
             Stack(
@@ -448,8 +449,8 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
         children: [
           ToolSectionCard(
             accentColor: accent,
-            title: '清洗成功',
-            subtitle: '结果已经整理完毕，你可以复制、发送或继续做下一轮处理。',
+            title: context.l10n.docCleanerSuccessTitle,
+            subtitle: context.l10n.docCleanerSuccessSubtitle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -458,14 +459,14 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                   runSpacing: DS.spacing12,
                   children: [
                     ToolMetricCard(
-                      label: '字符数',
+                      label: context.l10n.docCleanerCharCount,
                       value: '${result.charCount ?? 0}',
                       accentColor: accent,
                       icon: Icons.text_fields_rounded,
                     ),
                     ToolMetricCard(
-                      label: '模式',
-                      value: result.mode == 'map_reduce' ? '深度摘要' : '全量清洗',
+                      label: context.l10n.docCleanerMode,
+                      value: result.mode == 'map_reduce' ? context.l10n.docCleanerDeepSummary : context.l10n.docCleanerFullClean,
                       accentColor: accent,
                       icon: Icons.layers_rounded,
                     ),
@@ -490,7 +491,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                 if ((result.fullTextPreview ?? '').isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
                   Text(
-                    '全文预览',
+                    context.l10n.docCleanerFullPreview,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: DS.textPrimary,
                           fontWeight: DS.fontWeightBold,
@@ -515,7 +516,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 520;
               final primary = SparkleButton(
-                label: _isSheet ? '发送到对话' : '使用结果',
+                label: _isSheet ? context.l10n.docCleanerSendChat : context.l10n.docCleanerUseResult,
                 onPressed: () {
                   widget.onResult?.call(result.summary);
                   if (_isSheet) {
@@ -528,7 +529,7 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
                 expand: true,
               );
               final secondary = SparkleButton(
-                label: '复制摘要',
+                label: context.l10n.docCleanerCopySummary,
                 variant: ButtonVariant.ghost,
                 onPressed: () => _copyResult(result.summary),
                 icon: const Icon(Icons.copy_rounded),
@@ -560,19 +561,19 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
 
   Widget _buildError(String message, Color accent) => ToolSectionCard(
         accentColor: DS.error,
-        title: '清洗失败',
-        subtitle: '链路已经返回错误信息，可以直接重试或更换文件。',
+        title: context.l10n.docCleanerFailedTitle,
+        subtitle: context.l10n.docCleanerFailedSubtitle,
         child: Column(
           children: [
             ToolEmptyState(
               icon: Icons.error_outline_rounded,
-              title: '当前任务未完成',
+              title: context.l10n.docCleanerIncompleteTitle,
               description: message,
               accentColor: DS.error,
             ),
             const SizedBox(height: DS.spacing16),
             SparkleButton(
-              label: '重新尝试',
+              label: context.l10n.docCleanerRetry,
               variant: ButtonVariant.ghost,
               onPressed: () =>
                   ref.read(documentControllerProvider.notifier).reset(),

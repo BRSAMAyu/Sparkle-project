@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from app.config import settings
 from app.core.event_bus import TraitsColdstartCompleted, event_bus
 from app.core.user_insight_state import BigFiveDimension, BigFiveTraits
 from app.services.aurora_stage28_traits_kill_switch_service import AuroraStage28TraitsKillSwitchService
@@ -79,7 +78,7 @@ class TraitsColdStartService:
             return BigFiveTraits()
 
         aggregates: dict[str, list[float]] = {dim: [] for dim in BigFiveTraits.DIMENSIONS}
-        evidence_count: dict[str, int] = {dim: 0 for dim in BigFiveTraits.DIMENSIONS}
+        evidence_count: dict[str, int] = dict.fromkeys(BigFiveTraits.DIMENSIONS, 0)
         for question in COLDSTART_QUESTIONS:
             selected_option = str(answers.get(question["id"]) or "").strip().lower()
             if not selected_option or selected_option == "skip":

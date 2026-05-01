@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 """
 LLM Router - 统一的LLM客户端获取入口
 
@@ -23,18 +24,18 @@ LLM Router - 统一的LLM客户端获取入口
 import threading
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
 
 from app.config import settings
-from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core import complexity_analyzer as _cx
+from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_SELECTION_TOTAL
 
 
-class ModelProvider(str, Enum):
+class ModelProvider(StrEnum):
     """支持的LLM提供商"""
     XIAOMI = "xiaomi"      # XiaoMi MIMO (快速响应)
     DEEPSEEK = "deepseek"  # DeepSeek (核心模型)

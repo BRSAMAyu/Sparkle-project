@@ -3,6 +3,7 @@ Cognitive Prism Schemas
 认知棱镜相关 Schema
 """
 from __future__ import annotations
+
 import re
 from datetime import datetime
 from uuid import UUID

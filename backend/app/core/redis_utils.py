@@ -2,6 +2,7 @@
 Redis connection helpers.
 """
 from __future__ import annotations
+
 from urllib.parse import urlparse
 
 PLACEHOLDER_PASSWORDS = {

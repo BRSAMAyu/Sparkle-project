@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -244,7 +245,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
     if (deepLink.isNotEmpty) {
       if (!DeepLinkService.handleDeepLink(context, deepLink)) {
         unawaited(UniversalShareService().copyDeepLink(deepLink));
-        AppFeedback.info(context, '链接已复制');
+        AppFeedback.info(context, context.l10n.communityLinkCopied);
       }
     }
   }
@@ -261,7 +262,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
       if (!context.mounted) {
         return;
       }
-      AppFeedback.success(context, '已采纳，跳转中...');
+      AppFeedback.success(context, context.l10n.communityAdoptedRedirecting);
       final resourceType =
           result['resource_type']?.toString() ?? fallbackResourceType;
       final entityCard = result['entity_card'] is Map<String, dynamic>

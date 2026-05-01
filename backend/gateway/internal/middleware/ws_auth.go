@@ -60,7 +60,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		// Support JWT token via query param (for clients that can't send custom headers, like Flutter)
 		if cfg.AllowWsQueryToken {
 			if queryToken := c.Query("token"); queryToken != "" {
-				log.Printf("[WsAuth] Attempting JWT query validation, AllowWsQueryToken=%v", cfg.AllowWsQueryToken)
+				log.Printf("[WsAuth] Attempting JWT query validation, AllowWsQueryToken=%v (token omitted from log)", cfg.AllowWsQueryToken)
 				userID, isAdmin, err := validateJWT(cfg, rdb, queryToken)
 				if err != nil {
 					log.Printf("[WsAuth] JWT query validation failed: %v", err)

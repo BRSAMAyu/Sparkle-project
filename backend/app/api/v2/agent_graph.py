@@ -7,8 +7,8 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
-from app.api.deps import get_current_user
 from app.agents.graph.workflow import sparkle_graph
+from app.api.deps import get_current_user
 from app.models.user import User
 
 router = APIRouter()

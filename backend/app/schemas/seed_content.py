@@ -3,8 +3,9 @@ Seed Content Schemas
 种子内容库的 Pydantic Schema 定义
 """
 from __future__ import annotations
+
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -12,20 +13,20 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 # 枚举类型定义 (与模型保持一致)
-class LibraryCategoryEnum(str, Enum):
+class LibraryCategoryEnum(StrEnum):
     FEW_SHOT = "few_shot"
     TEACHING_CONTENT = "teaching_content"
     REPLY_TEMPLATE = "reply_template"
     CUSTOM = "custom"
 
 
-class LibraryVisibilityEnum(str, Enum):
+class LibraryVisibilityEnum(StrEnum):
     PRIVATE = "private"
     PUBLIC = "public"
     OFFICIAL = "official"
 
 
-class ItemTypeEnum(str, Enum):
+class ItemTypeEnum(StrEnum):
     EXAMPLE = "example"
     EXERCISE = "exercise"
     KNOWLEDGE = "knowledge"
@@ -33,7 +34,7 @@ class ItemTypeEnum(str, Enum):
     FLASHCARD = "flashcard"
 
 
-class DifficultyLevelEnum(str, Enum):
+class DifficultyLevelEnum(StrEnum):
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 A/B Test Experiment Management API
 A/B测试实验管理API
@@ -260,7 +261,7 @@ async def list_experiments(
         try:
             status_enum = ExperimentStatus(status)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid status filter")
+            raise HTTPException(status_code=400, detail="Invalid status filter") from None
 
     experiments = await framework.list_experiments(
         status=status_enum,
@@ -305,7 +306,7 @@ async def start_experiment(
         await db.refresh(experiment, ["variants"])
         return experiment
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{experiment_id}/pause", response_model=ExperimentResponse)
@@ -325,7 +326,7 @@ async def pause_experiment(
         await db.refresh(experiment, ["variants"])
         return experiment
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{experiment_id}/resume", response_model=ExperimentResponse)
@@ -345,7 +346,7 @@ async def resume_experiment(
         await db.refresh(experiment, ["variants"])
         return experiment
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{experiment_id}/complete", response_model=ExperimentResponse)
@@ -370,7 +371,7 @@ async def complete_experiment(
         await db.refresh(experiment, ["variants"])
         return experiment
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/{experiment_id}/stats", response_model=ExperimentStatsResponse)
@@ -434,7 +435,7 @@ async def assign_variant(
             "is_new_assignment": is_new,
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{experiment_id}/metrics")

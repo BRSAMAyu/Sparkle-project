@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 科目定义
 class Subject {
@@ -14,54 +15,54 @@ class Subject {
   final IconData icon;
   final Color color;
 
-  static final List<Subject> all = [
+  static List<Subject> all(BuildContext context) => [
     Subject(
       code: 'math',
-      label: '数学',
+      label: context.l10n.ebMath,
       icon: Icons.calculate,
       color: DS.info,
     ),
     Subject(
       code: 'physics',
-      label: '物理',
+      label: context.l10n.ebPhysics,
       icon: Icons.science,
       color: DS.brandSecondary,
     ),
     Subject(
       code: 'chemistry',
-      label: '化学',
+      label: context.l10n.ebChemistry,
       icon: Icons.science_outlined,
       color: DS.warningLight,
     ),
     Subject(
       code: 'biology',
-      label: '生物',
+      label: context.l10n.ebBiology,
       icon: Icons.park,
       color: DS.success,
     ),
     Subject(
       code: 'english',
-      label: '英语',
+      label: context.l10n.ebEnglish,
       icon: Icons.language,
       color: DS.error,
     ),
     Subject(
       code: 'chinese',
-      label: '语文',
+      label: context.l10n.ebChinese,
       icon: Icons.menu_book,
       color: DS.warning,
     ),
     Subject(
       code: 'other',
-      label: '其他',
+      label: context.l10n.ebOther,
       icon: Icons.more_horiz,
       color: DS.textSecondary,
     ),
   ];
 
-  static Subject? findByCode(String code) {
+  static Subject? findByCode(BuildContext context, String code) {
     try {
-      return all.firstWhere((s) => s.code == code);
+      return all(context).firstWhere((s) => s.code == code);
     } catch (_) {
       return null;
     }
@@ -90,13 +91,13 @@ class SubjectFilterChips extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: DS.spacing8),
               child: FilterChip(
-                label: const Text('全部'),
+                label: Text(context.l10n.ebAll),
                 selected: selectedSubject == null,
                 onSelected: (_) => onSelected(null),
               ),
             ),
             // 各科目
-            ...Subject.all.map(
+            ...Subject.all(context).map(
               (subject) => Padding(
                 padding: const EdgeInsets.only(right: DS.spacing8),
                 child: FilterChip(
@@ -126,7 +127,7 @@ class SubjectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subject = Subject.findByCode(subjectCode);
+    final subject = Subject.findByCode(context, subjectCode);
     if (subject == null) {
       return const SizedBox.shrink();
     }

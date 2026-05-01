@@ -16,8 +16,11 @@ import 'package:sparkle/features/community/presentation/widgets/group_chat_bubbl
 import 'package:sparkle/features/community/presentation/widgets/private_chat_bubble.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('J3 frontend closure', () {
     testWidgets('private task share adopt lands in task detail route',
         (tester) async {

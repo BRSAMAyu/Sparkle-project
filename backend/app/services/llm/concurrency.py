@@ -14,7 +14,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -23,7 +23,7 @@ from app.config import settings
 from app.core.cache import cache_service
 
 
-class ProviderType(str, Enum):
+class ProviderType(StrEnum):
     """LLM 提供商类型"""
 
     ZHIPU = "zhipu"
@@ -352,10 +352,7 @@ class LLMConcurrencyManager:
                 state.last_adjustment_at = now
                 state.consecutive_successes = 0
                 logger.info(
-                    "[GLMBatchConcurrency] Increased adaptive limit to {} for bucket={}".format(
-                        state.current_limit,
-                        bucket,
-                    )
+                    f"[GLMBatchConcurrency] Increased adaptive limit to {state.current_limit} for bucket={bucket}"
                 )
                 await self._persist_learned_limit(bucket, state.current_limit)
                 state.condition.notify_all()
@@ -381,10 +378,7 @@ class LLMConcurrencyManager:
             state.cooldown_until = max(state.cooldown_until, now + cooldown_seconds)
             state.last_adjustment_at = now
             logger.warning(
-                "[GLMBatchConcurrency] Rate limited, reduced adaptive limit to {} until {:.0f}".format(
-                    state.current_limit,
-                    state.cooldown_until,
-                )
+                f"[GLMBatchConcurrency] Rate limited, reduced adaptive limit to {state.current_limit} until {state.cooldown_until:.0f}"
             )
             await self._persist_learned_limit(bucket, state.current_limit)
             state.condition.notify_all()

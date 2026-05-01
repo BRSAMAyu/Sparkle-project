@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 生词本与词典服务
 Vocabulary & Dictionary Service
@@ -15,7 +16,7 @@ import csv
 import io
 import json
 import re
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -23,11 +24,10 @@ from sqlalchemy import Float, and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vocabulary import DictionaryEntry, WordBook
-from app.services.llm_service import llm_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class VocabularyService:

@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from sqlalchemy import func, select
 
+from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 from app.db.session import AsyncSessionLocal
 from app.models.galaxy import UserNodeStatus
 from app.models.plan import Plan
 from app.services.galaxy_bootstrap_service import GalaxyBootstrapService
-
-from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 
 
 class GalaxyPlanConsumer(JourneyEventConsumerBase):

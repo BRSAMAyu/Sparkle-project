@@ -4,7 +4,7 @@ Closes event-bus paths for achievement progression without blocking request hand
 """
 
 import asyncio
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 from uuid import UUID
 
@@ -14,8 +14,7 @@ from sqlalchemy import and_, func, select
 from app.core.event_bus import EventBus
 from app.core.event_types import EXECUTION_RESULT_INGESTED
 from app.db.session import AsyncSessionLocal
-from app.models.achievement import Achievement, AchievementRarity, UserAchievement
-from app.models.achievement import UserStreakStats
+from app.models.achievement import Achievement, AchievementRarity, UserAchievement, UserStreakStats
 from app.models.error_book import ErrorRecord
 from app.models.execution_intent import ExecutionIntent
 from app.models.execution_record import ExecutionRecord
@@ -29,7 +28,7 @@ from app.services.notification_service import NotificationService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AchievementEventConsumer:
@@ -50,7 +49,7 @@ class AchievementEventConsumer:
         if isinstance(value, str) and value.strip():
             try:
                 parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                return parsed.astimezone(timezone.utc).replace(tzinfo=None) if parsed.tzinfo else parsed
+                return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
             except ValueError:
                 return None
         return None
@@ -264,6 +263,25 @@ class AchievementEventConsumer:
                     event=event,
                 )
                 await self._refresh_achievement_profile_signals(db, user_uuid)
+
+                # P3: Signal-to-Action Spine — achievement reinforcement
+                try:
+                    from app.signals.spine_orchestrator import SpineOrchestrator
+                    spine = SpineOrchestrator(cache_service.redis)
+                    await spine.on_achievement_event(
+                        user_id=str(user_id),
+                        achievement_type=event.get("achievement_type", "generic"),
+                        achievement_id=str(achievement_id),
+                    )
+                    # Divine moment 1: 看见坚持 — chronicle + timeline card
+                    await spine.on_achievement_unlocked(
+                        user_id=str(user_id),
+                        achievement_type=event.get("achievement_type", "generic"),
+                        streak_count=int(event.get("streak_count", 0)),
+                        metadata=event,
+                    )
+                except Exception as spine_err:
+                    logger.debug(f"Spine on_achievement_event skipped: {spine_err}")
         except Exception as e:
             logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
 

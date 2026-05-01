@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -8,17 +9,21 @@ import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('chain A opens chat with review node context', (tester) async {
+    await _useTallSurface(tester);
     Map<String, String>? chatQuery;
     Map<String, dynamic>? chatExtra;
 
@@ -73,7 +78,17 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -119,6 +134,7 @@ void main() {
         child: MaterialApp.router(
           theme: AppThemes.lightTheme,
           darkTheme: AppThemes.darkTheme,
+          locale: const Locale('zh'),
           routerConfig: router,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -143,8 +159,7 @@ void main() {
     addTearDown(mastery.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: Column(
             children: [
               ValueListenableBuilder<int>(
@@ -164,8 +179,7 @@ void main() {
               ),
             ],
           ),
-        ),
-      ),
+        ),),
     );
 
     final initialNode = tester.widget<ColoredBox>(

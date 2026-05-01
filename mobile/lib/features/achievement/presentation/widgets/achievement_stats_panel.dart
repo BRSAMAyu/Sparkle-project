@@ -48,7 +48,7 @@ class AchievementStatsPanel extends StatelessWidget {
                 l10n.achievementTotalLabel,
                 _hasStarted
                     ? '${stats.unlockedCount}/${stats.totalAchievements}'
-                    : '尚未开始',
+                    : l10n.achievementStatsNotStarted,
                 Icons.emoji_events_outlined,
                 DS.brandPrimary,
               ),
@@ -56,13 +56,13 @@ class AchievementStatsPanel extends StatelessWidget {
                 l10n.achievementCompletionRate,
                 _hasStarted
                     ? '${stats.unlockedPercentage.toStringAsFixed(0)}%'
-                    : '等待点亮',
+                    : l10n.achievementStatsWaitingToLight,
                 Icons.bar_chart,
                 DS.semanticSuccess,
               ),
               _buildStatCard(
                 l10n.achievementPhotons,
-                _hasStarted ? '${stats.totalPhotons}' : '待累积',
+                _hasStarted ? '${stats.totalPhotons}' : l10n.achievementStatsToAccumulate,
                 Icons.stars,
                 DS.warning,
               ),
@@ -126,17 +126,17 @@ class AchievementStatsPanel extends StatelessWidget {
             _buildCompactStatItem(
               _hasStarted
                   ? '${stats.unlockedCount}/${stats.totalAchievements}'
-                  : '尚未开始',
+                  : l10n.achievementStatsNotStarted,
               l10n.achievementTitle,
             ),
             _buildCompactStatItem(
               _hasStarted
                   ? '${stats.unlockedPercentage.toStringAsFixed(0)}%'
-                  : '等待点亮',
+                  : l10n.achievementStatsWaitingToLight,
               l10n.achievementCompletionRate,
             ),
             _buildCompactStatItem(
-              _hasStarted ? '${stats.currentStreak}' : '待累积',
+              _hasStarted ? '${stats.currentStreak}' : l10n.achievementStatsToAccumulate,
               l10n.winStreak,
             ),
           ],
@@ -227,7 +227,7 @@ class AchievementStatsPanel extends StatelessWidget {
               Text(
                 _hasStarted
                     ? '${stats.unlockedCount} / ${stats.totalAchievements}'
-                    : '尚未开始解锁',
+                    : l10n.achievementStatsNotStartedUnlock,
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   color: DS.textTertiary,
@@ -249,7 +249,7 @@ class AchievementStatsPanel extends StatelessWidget {
               Text(
                 _hasStarted
                     ? '${stats.unlockedCount} / ${stats.totalAchievements}'
-                    : '尚未开始解锁',
+                    : l10n.achievementStatsNotStartedUnlock,
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   color: DS.textTertiary,

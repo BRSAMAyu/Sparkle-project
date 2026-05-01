@@ -4,7 +4,8 @@ GalaxyFeedbackService - 知识星图反馈收集服务
 负责收集用户学习行为的隐式反馈，实时更新知识节点掌握度
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +18,7 @@ from app.models.galaxy import ExpansionFeedback, UserNodeStatus
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackType:

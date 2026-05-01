@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 
 import '../features/home/dashboard_test_harness.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Dashboard screen structure', () {
@@ -15,8 +18,13 @@ void main() {
 
       expect(find.text('Active Plan'), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('dashboard-briefing-toggle')));
-      await _pumpDashboard(tester);
+      final briefingToggle = find.byKey(const ValueKey('dashboard-briefing-toggle'));
+      await tester.ensureVisible(briefingToggle);
+      await tester.pump();
+      await tester.tap(briefingToggle);
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       expect(find.text('Active Plan'), findsOneWidget);
     });

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 排行榜服务
 Leaderboard Service
@@ -12,7 +13,7 @@ Leaderboard Service
 - STREAK: 连胜排行榜
 - GROUP_FLAME: 群组火苗榜
 """
-from datetime import timezone, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -37,7 +38,7 @@ from app.schemas.leaderboard import (
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LeaderboardService:
@@ -243,11 +244,9 @@ class LeaderboardService:
 
         # Also fetch current user's score if not in top results
         user_score = None
-        user_row_data = None
-        for i, row in enumerate(rows):
+        for _i, row in enumerate(rows):
             if row.id == current_user_id:
                 user_score = row.composite_score
-                user_row_data = row
                 break
 
         if user_score is None:

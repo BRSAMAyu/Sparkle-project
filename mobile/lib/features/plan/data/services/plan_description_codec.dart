@@ -1,6 +1,7 @@
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_draft.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class ParsedPlanDescription {
   const ParsedPlanDescription({
@@ -50,7 +51,7 @@ class PlanDescriptionCodec {
 
     buffer
       ..writeln(_overviewHeading)
-      ..writeln('- 计划类型：${draft.type == PlanType.growth ? '成长计划' : '冲刺计划'}')
+      ..writeln('- 计划类型：${draft.type == PlanType.growth ? S.planExamReviewNoSubject : '冲刺计划'}')
       ..writeln('- 每日投入：${draft.dailyMinutes} 分钟')
       ..writeln(
         '- 总预估：${draft.totalEstimatedHours.toStringAsFixed(draft.totalEstimatedHours.truncateToDouble() == draft.totalEstimatedHours ? 0 : 1)} 小时',

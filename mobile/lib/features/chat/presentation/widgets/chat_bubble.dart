@@ -21,14 +21,14 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
-import 'package:sparkle/features/chat/presentation/widgets/aurora_message_group.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_citation_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_message_group.dart';
 import 'package:sparkle/features/chat/presentation/widgets/capability_ceiling_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/context_receipt_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/collapsible_widget_wrapper.dart';
+import 'package:sparkle/features/chat/presentation/widgets/context_receipt_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
@@ -1133,6 +1133,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                   rawMetadata:
                                       (widget.message as ChatMessageModel)
                                           .rawMetadata,
+                                  onActionSelected: _continueInlinePrompt,
                                 ),
                               ),
                             if (showAiSystemAccessories &&
@@ -1565,7 +1566,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final hints = <String>{};
     final tagSignals = <String, List<String>>{
       '考试': ['考试', '考点', '测验', '刷题'],
-      '面试': ['面试', '答辩', '自我介绍'],
+      '面试': ['面试', '答辩', context.l10n.chatBubbleSelfIntro],
       '复盘': ['复盘', '总结', '回顾', '反思'],
       '计划': ['计划', '安排', '排期', '日程', '路线'],
       '错题': ['错题', '报错', '错误', '卡点', '诊断'],

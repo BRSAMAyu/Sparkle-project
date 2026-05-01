@@ -4,8 +4,11 @@ import 'package:sparkle/features/community/data/models/accountability_model.dart
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   test('accountability overview parses in-app hints', () {
     final overview = AccountabilityOverviewInfo.fromJson({
       'slot_type': 'core',
@@ -53,19 +56,14 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: UnifiedNotificationCard(
             notification: notification,
             onRead: () {},
             onDelete: () {},
             onAccountabilityEncourage: () => encourageTapped = true,
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(notification.isAccountabilityStruggleAlert, isTrue);
@@ -98,18 +96,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: UnifiedNotificationCard(
             notification: notification,
             onRead: () {},
             onDelete: () {},
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(notification.canSendAccountabilityEncouragement, isFalse);

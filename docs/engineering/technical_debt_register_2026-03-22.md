@@ -54,3 +54,14 @@
 - 范围：`sparkle_theme_extension.dart`, `achievement_card_generator.dart`, `local_vocabulary_repository.dart`
 - 内容：统一圆角/动效 token、实际卡片图片生成、局部仓储实现收口
 - 退出条件：设计 token 与生成逻辑全部切到正式实现
+
+## TD-011 DPO/SGW v2 Research Module Disconnected
+- 范围：`scripts/sgw_v2/` (42 files), `backend/app/signals/policy_engine.py`
+- 内容：DPO policy (`DPOPolicy.select_strategy()`) 是完整的 RL/DPO 实现但零生产接线。`orchestrator.py` 和 `policy_engine.py` 不导入任何 `sgw_v2` 模块。DPO 目前是自洽研究子系统，不参与用户实时对话。
+- 影响：无法将 RL 学习到的策略应用到实时对话路由。策略选择完全基于规则表。
+- 退出条件：
+  1. `policy_engine.py` 导入并调用 `DPOPolicy.select_strategy()` 作为策略候选之一
+  2. 通过 kill switch (`aurora:stageN:dpo_mode`) 控制 off→shadow→live
+  3. DPO 策略推荐写入 `routing_decision_log` 以供审计
+  4. 至少一个端到端测试验证 DPO 策略路径
+- 优先级：P2（非上线阻碍，但应在 Era 2 Intelligence Phase 接入）

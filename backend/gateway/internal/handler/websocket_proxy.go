@@ -9,11 +9,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/metrics"
 	"go.uber.org/zap"
 )
 
+// Max client message size: 256KB. Messages larger than this are dropped.
+const maxClientMessageSize = 256 * 1024
+
 // WebSocketProxy 专门处理 WebSocket 连接代理
 // 因为 httputil.ReverseProxy 在某些情况下无法正确处理 WebSocket 升级
+//
+// Known limitation (G-03): Connection tracking (activeByUser) is local to this
+// process. When multiple gateway instances sit behind a load balancer, per-user
+// limits are enforced per-instance, not globally. For single-instance
+// deployments this is sufficient. A Redis-backed atomic counter would be needed
+// for multi-instance enforcement — tracked as future work.
 type WebSocketProxy struct {
 	pythonBackendURL string
 	upgrader         *websocket.Upgrader
@@ -102,6 +112,14 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 	}
 
 	backendURL := p.personalBackendURL()
+
+	// P0-1: Forward session_id for reconnect context restoration
+	if sessionID := c.Query("session_id"); sessionID != "" {
+		backendURL = backendURL + "?session_id=" + url.QueryEscape(sessionID)
+		p.logger.Info("WS reconnect with session_id",
+			zap.String("user_id", userID),
+			zap.String("session_id", sessionID))
+	}
 
 	p.proxyWebSocket(c.Writer, c.Request, backendURL, token, userID, "personal", "")
 }
@@ -215,6 +233,18 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				errChan <- err
 				return
 			}
+			// Reject oversized messages
+			if len(data) > maxClientMessageSize {
+				p.logger.Warn("Dropping oversized client message",
+					zap.String("user_id", userID),
+					zap.Int("size", len(data)),
+					zap.Int("max", maxClientMessageSize))
+				continue
+			}
+			// Only allow text and binary message types
+			if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
+				continue
+			}
 			if err := writeMessage(&backendWriteMu, backendConn, messageType, data); err != nil {
 				p.logger.Warn("Backend write error",
 					zap.String("user_id", userID),
@@ -238,6 +268,14 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				}
 				errChan <- err
 				return
+			}
+			// G-04: Validate backend message size before forwarding to client
+			if len(data) > int(readLimit) {
+				p.logger.Warn("Backend message exceeds limit, dropping",
+					zap.String("user_id", userID),
+					zap.Int("size", len(data)),
+					zap.Int64("limit", readLimit))
+				continue
 			}
 			if err := writeMessage(&clientWriteMu, clientConn, messageType, data); err != nil {
 				p.logger.Warn("Client write error",
@@ -289,6 +327,8 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 }
 
 func (p *WebSocketProxy) registerConnection(userID string) bool {
+	metrics.WSConnectionsActive.Inc()
+
 	maxConns := p.config.WSMaxConnections
 	if maxConns <= 0 {
 		return true
@@ -297,6 +337,7 @@ func (p *WebSocketProxy) registerConnection(userID string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.activeByUser[userID] >= maxConns {
+		metrics.WSConnectionsActive.Dec()
 		return false
 	}
 	p.activeByUser[userID]++
@@ -304,6 +345,8 @@ func (p *WebSocketProxy) registerConnection(userID string) bool {
 }
 
 func (p *WebSocketProxy) unregisterConnection(userID string) {
+	metrics.WSConnectionsActive.Dec()
+
 	maxConns := p.config.WSMaxConnections
 	if maxConns <= 0 {
 		return

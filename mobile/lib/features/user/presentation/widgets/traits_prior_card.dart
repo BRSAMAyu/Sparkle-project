@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class TraitsPriorCard extends StatelessWidget {
   const TraitsPriorCard({
     super.key,
     required this.traits,
-    this.helperText = '基于历史观察，可随时调整',
+    this.helperText = '',
   });
 
   final List<Map<String, dynamic>> traits;
@@ -44,7 +45,7 @@ class TraitsPriorCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '长期倾向',
+              context.l10n.userTraitsLongTerm,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -59,10 +60,10 @@ class TraitsPriorCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(_labelFor(item['dim']?.toString() ?? '')),
+                      child: Text(_labelFor(context, item['dim']?.toString() ?? '')),
                     ),
                     Text(
-                      _summaryForValue((item['value'] as num?)?.toDouble() ?? 0.0),
+                      _summaryForValue(context, (item['value'] as num?)?.toDouble() ?? 0.0),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -78,26 +79,26 @@ class TraitsPriorCard extends StatelessWidget {
     );
   }
 
-  static String _labelFor(String dim) {
+  static String _labelFor(BuildContext context, String dim) {
     switch (dim) {
       case 'openness':
-        return '开放性';
+        return context.l10n.userTraitOpenness;
       case 'conscientiousness':
-        return '尽责性';
+        return context.l10n.userTraitConscientiousness;
       case 'extraversion':
-        return '外向倾向';
+        return context.l10n.userTraitExtraversion;
       case 'agreeableness':
-        return '宜人性';
+        return context.l10n.userTraitAgreeableness;
       case 'neuroticism':
-        return '情绪波动敏感度';
+        return context.l10n.userTraitNeuroticism;
       default:
         return dim;
     }
   }
 
-  static String _summaryForValue(double value) {
-    if (value >= 0.35) return '偏高';
-    if (value <= -0.35) return '偏低';
-    return '中性';
+  static String _summaryForValue(BuildContext context, double value) {
+    if (value >= 0.35) return context.l10n.userTraitLevelHigh;
+    if (value <= -0.35) return context.l10n.userTraitLevelLow;
+    return context.l10n.userTraitLevelNeutral;
   }
 }

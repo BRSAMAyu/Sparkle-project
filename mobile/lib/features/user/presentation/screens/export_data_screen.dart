@@ -131,7 +131,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                       const SizedBox(width: DS.spacing12),
                       Expanded(
                         child: Text(
-                          '准备你的 Sparkle 数据归档',
+                          context.l10n.userPrepareDataArchive,
                           style: DS.titleMedium.copyWith(
                             color: DS.textPrimary,
                             fontWeight: DS.fontWeightBold,
@@ -142,7 +142,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
                   ),
                   const SizedBox(height: DS.spacing12),
                   Text(
-                    '导出包会包含账号资料、学习记录、设置偏好以及可导出的记忆数据。生成后会打开系统分享面板，你可以保存到本机或发送到其他应用。',
+                    context.l10n.userExportDescription,
                     style: DS.bodyMedium.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -156,20 +156,20 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _InfoRow(
+                  _InfoRow(
                     icon: Icons.lock_outline_rounded,
-                    title: '隐私提醒',
-                    body: '导出的 zip 文件可能包含个人学习和使用记录，请只分享给你信任的位置。',
+                    title: context.l10n.userPrivacyReminder,
+                    body: context.l10n.userPrivacyReminderBody,
                   ),
                   const Divider(height: DS.xl),
                   _InfoRow(
                     icon: Icons.cloud_download_outlined,
-                    title: '当前状态',
+                    title: context.l10n.userCurrentStatus,
                     body: _exporting
                         ? l10n.profileExportPreparing
                         : _lastFilePath == null
-                            ? '尚未生成导出文件'
-                            : '已生成导出文件，可再次点击重新分享',
+                            ? context.l10n.userNotGeneratedYet
+                            : context.l10n.userAlreadyGenerated,
                   ),
                   if (_lastFilePath != null) ...[
                     const SizedBox(height: DS.spacing8),

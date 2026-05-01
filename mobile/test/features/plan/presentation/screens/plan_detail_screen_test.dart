@@ -13,8 +13,11 @@ import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   group('PlanDetailScreen common mistakes', () {
     testWidgets('renders three common mistake cards from guide json',
         (tester) async {
@@ -160,6 +163,7 @@ Future<void> _pumpPlanDetail(
         theme: AppThemes.lightTheme,
         darkTheme: AppThemes.darkTheme,
         routerConfig: router,
+        locale: const Locale('zh'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),

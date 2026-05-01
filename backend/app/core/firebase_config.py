@@ -5,6 +5,7 @@ Initializes Firebase Admin SDK for Cloud Messaging (FCM) push notifications.
 Supports both FCM (Android/Web) and APNs (iOS) through Firebase.
 """
 from __future__ import annotations
+
 from functools import lru_cache
 from typing import Any
 
@@ -53,7 +54,7 @@ class FirebaseSettings(BaseSettings):
             import json
 
             try:
-                with open(self.FIREBASE_CREDENTIALS_PATH, "r") as f:
+                with open(self.FIREBASE_CREDENTIALS_PATH) as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Failed to load Firebase credentials from file: {e}")

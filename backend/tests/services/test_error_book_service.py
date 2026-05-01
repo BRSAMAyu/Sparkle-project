@@ -57,7 +57,10 @@ async def test_create_error_with_cognitive_tags():
     assert result.cognitive_tags == ["analysis", "memory"]
     assert result.ai_analysis_summary == "This is a test analysis summary"
     db_mock.add.assert_called_once()
-    db_mock.commit.assert_called_once()
+    added_record = db_mock.add.call_args[0][0]
+    assert added_record.question_text == "Test Question"
+    assert added_record.cognitive_tags == ["analysis", "memory"]
+    db_mock.commit.assert_called_once_with()
 
 @pytest.mark.asyncio
 async def test_list_errors_filtering_by_cognitive_dimension():
@@ -128,7 +131,7 @@ async def test_update_error_cognitive_tags():
     assert result is not None
     assert result.cognitive_tags == ["analysis"]
     assert result.ai_analysis_summary == "Updated summary"
-    db_mock.commit.assert_called_once()
+    db_mock.commit.assert_called_once_with()
 
 
 @pytest.mark.asyncio

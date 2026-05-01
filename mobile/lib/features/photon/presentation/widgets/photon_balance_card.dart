@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 import 'package:sparkle/features/photon/presentation/widgets/transaction_history_list.dart';
@@ -73,7 +74,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '光子积分',
+                      I18nService.instance.isChinese ? '光子积分' : 'Photon Balance',
                       style: TextStyle(
                         color: DS.neutral0.withValues(alpha: 0.9),
                         fontSize: 14,
@@ -92,7 +93,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                       )
                     else if (balanceState.error != null)
                       Text(
-                        '加载失败',
+                        I18nService.instance.isChinese ? '加载失败' : 'Load Failed',
                         style: TextStyle(
                           color: DS.neutral0.withValues(alpha: 0.7),
                           fontSize: 20,
@@ -140,7 +141,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
         appBar: AppBar(
-          title: const Text('交易历史'),
+          title: Text(I18nService.instance.isChinese ? '交易历史' : 'Transaction History'),
         ),
         body: const ContentConstraint(
           child: TransactionHistoryList(),

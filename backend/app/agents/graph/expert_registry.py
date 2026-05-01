@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
 
+from app.agents.graph.nodes.custom_expert import custom_expert_node
 from app.agents.graph.nodes.deep_analyst import deep_analyst_node
 from app.agents.graph.nodes.error_analyst import error_analyst_node
 from app.agents.graph.nodes.exam_oracle import exam_oracle_node
-from app.agents.graph.nodes.custom_expert import custom_expert_node
 from app.agents.graph.nodes.expert_node_factory import create_specialist_node
 from app.agents.graph.nodes.galaxy_guide import galaxy_guide_node
 from app.agents.graph.nodes.registry_tools import create_task, query_knowledge

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Inline translation block for sentences/paragraphs
 ///
@@ -121,7 +123,9 @@ class _InlineTranslationBlockState
                     ),
                     const SizedBox(width: DS.spacing4),
                     Text(
-                      _isExpanded ? '隐藏译文' : '显示译文',
+                      _isExpanded
+                          ? (I18nService.instance.isChinese ? '隐藏译文' : 'Hide Translation')
+                          : (I18nService.instance.isChinese ? '显示译文' : 'Show Translation'),
                       style: TextStyle(
                         fontSize: 13,
                         color: DS.brandPrimaryConst,
@@ -170,7 +174,7 @@ class _InlineTranslationBlockState
           color: DS.neutral100,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Row(
+        child: Row(
           children: [
             SizedBox(
               width: 16,
@@ -178,7 +182,7 @@ class _InlineTranslationBlockState
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             SizedBox(width: DS.sm),
-            Text('翻译中...', style: TextStyle(fontSize: 14)),
+            Text(context.l10n.transTranslating, style: TextStyle(fontSize: 14)),
           ],
         ),
       );
@@ -195,7 +199,7 @@ class _InlineTranslationBlockState
             const SizedBox(width: DS.sm),
             Expanded(
               child: Text(
-                '翻译失败，请重试',
+                I18nService.instance.isChinese ? '翻译失败，请重试' : 'Translation failed, please retry',
                 style: TextStyle(fontSize: 14, color: DS.error),
               ),
             ),
@@ -267,7 +271,7 @@ class _InlineTranslationBlockState
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: const Text('保存到生词卡', style: TextStyle(fontSize: 13)),
+                label: Text(context.l10n.transSaveToWordCard, style: TextStyle(fontSize: 13)),
                 onPressed: widget.onSaveToKnowledge,
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(

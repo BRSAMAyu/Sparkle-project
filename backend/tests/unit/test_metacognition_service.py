@@ -96,4 +96,4 @@ async def test_dashboard_payload_uses_registered_templates_only(
 
     assert payload["available"] is True
     assert payload["cards"][0]["template_id"] == "mc_dashboard_time_more_support"
-    assert "你过去 24 次对完成时间估得偏乐观 2.3 小时。" == payload["cards"][0]["body"]
+    assert "你过去 {sample_size} 次对完成时间估得偏乐观 {display_value} 小时。" == payload["cards"][0]["body"]

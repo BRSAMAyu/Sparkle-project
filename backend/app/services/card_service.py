@@ -7,19 +7,26 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import select, update, and_
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
+    BindingMode,
     Card,
     CardCreatedBy,
+    CardEdge,
     CardLifecycleStatus,
+    CardSourceType,
     CardType,
     CardVisibility,
-    CardSourceType,
+    EdgeType,
 )
-from app.core.event_bus import EventBus
+
+if TYPE_CHECKING:
+    from app.models.card_protocol import CardSnapshot
 
 
 class CardService:
@@ -165,6 +172,172 @@ class CardService:
                 },
             )
         return card
+
+    # ------------------------------------------------------------------
+    # Delete / restore
+    # ------------------------------------------------------------------
+
+    async def delete_card(
+        self,
+        card_id: uuid.UUID,
+        *,
+        soft: bool = True,
+        deactivate_edges: bool = True,
+    ) -> bool:
+        """Delete a card and optionally deactivate its active graph edges."""
+        card = await self.get_card(card_id)
+        if not card:
+            return False
+
+        deactivated_edge_ids: list[str] = []
+        if deactivate_edges:
+            edge_stmt = select(CardEdge).where(
+                or_(
+                    CardEdge.from_card_id == card_id,
+                    CardEdge.to_card_id == card_id,
+                ),
+                CardEdge.active.is_(True),
+            )
+            result = await self.db.execute(edge_stmt)
+            now = datetime.utcnow()
+            for edge in result.scalars().all():
+                edge.active = False
+                edge.removed_at = now
+                deactivated_edge_ids.append(str(edge.id))
+
+        if soft:
+            card.soft_delete()
+        else:
+            await self.db.delete(card)
+        await self.db.flush()
+
+        if self.event_bus:
+            await self.event_bus.publish(
+                "card.deleted",
+                {
+                    "card_id": str(card_id),
+                    "soft": soft,
+                    "deactivated_edge_ids": deactivated_edge_ids,
+                },
+            )
+        return True
+
+    async def restore_card(self, card_id: uuid.UUID) -> Card | None:
+        stmt = select(Card).where(Card.id == card_id)
+        result = await self.db.execute(stmt)
+        card = result.scalar_one_or_none()
+        if not card or not card.is_deleted:
+            return card
+        card.restore()
+        card.version += 1
+        await self.db.flush()
+        if self.event_bus:
+            await self.event_bus.publish("card.restored", {"card_id": str(card.id)})
+        return card
+
+    # ------------------------------------------------------------------
+    # Relationship facade
+    # ------------------------------------------------------------------
+
+    async def create_edge(
+        self,
+        *,
+        from_card_id: uuid.UUID,
+        to_card_id: uuid.UUID,
+        edge_type: EdgeType,
+        binding_mode: BindingMode = BindingMode.OWNED,
+        order_index: int | None = None,
+        weight: float | None = None,
+        temporal_window: dict | None = None,
+        metadata: dict | None = None,
+    ) -> CardEdge:
+        from app.services.card_edge_service import CardEdgeService
+
+        return await CardEdgeService(self.db, self.event_bus).create_edge(
+            from_card_id=from_card_id,
+            to_card_id=to_card_id,
+            edge_type=edge_type,
+            binding_mode=binding_mode,
+            order_index=order_index,
+            weight=weight,
+            temporal_window=temporal_window,
+            metadata=metadata,
+        )
+
+    async def get_children(
+        self,
+        card_id: uuid.UUID,
+        *,
+        edge_type: EdgeType | None = None,
+        active_only: bool = True,
+    ) -> list[tuple[CardEdge, Card]]:
+        from app.services.card_edge_service import CardEdgeService
+
+        return await CardEdgeService(self.db, self.event_bus).get_children(
+            card_id,
+            edge_type=edge_type,
+            active_only=active_only,
+        )
+
+    async def get_parents(
+        self,
+        card_id: uuid.UUID,
+        *,
+        edge_type: EdgeType | None = None,
+        active_only: bool = True,
+    ) -> list[tuple[CardEdge, Card]]:
+        from app.services.card_edge_service import CardEdgeService
+
+        return await CardEdgeService(self.db, self.event_bus).get_parents(
+            card_id,
+            edge_type=edge_type,
+            active_only=active_only,
+        )
+
+    # ------------------------------------------------------------------
+    # Snapshot facade
+    # ------------------------------------------------------------------
+
+    async def create_snapshot(
+        self,
+        *,
+        card_id: uuid.UUID,
+        include_children: bool = True,
+        max_depth: int = 3,
+    ) -> CardSnapshot:
+        from app.services.card_protocol.card_snapshot_service import CardSnapshotService
+
+        return await CardSnapshotService(self.db, self.event_bus).create_snapshot(
+            card_id=card_id,
+            include_children=include_children,
+            max_depth=max_depth,
+        )
+
+    async def get_snapshots(
+        self,
+        card_id: uuid.UUID,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[CardSnapshot]:
+        from app.models.card_protocol import CardSnapshot
+
+        stmt = (
+            select(CardSnapshot)
+            .where(
+                CardSnapshot.root_card_id == card_id,
+                CardSnapshot.not_deleted_filter(),
+            )
+            .order_by(CardSnapshot.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_latest_snapshot(self, card_id: uuid.UUID) -> CardSnapshot | None:
+        snapshots = await self.get_snapshots(card_id, limit=1)
+        return snapshots[0] if snapshots else None
 
     # ------------------------------------------------------------------
     # Lifecycle transitions

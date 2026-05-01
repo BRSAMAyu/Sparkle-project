@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -162,12 +163,15 @@ class FocusStatistics extends _$FocusStatistics {
   FocusStatisticsRepository? _localRepo;
   FocusRepository? _apiRepo;
   bool _isDisposed = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   @override
   FocusStatisticsState build() {
     _isDisposed = false;
+    _connectivitySub?.cancel();
     ref.onDispose(() {
       _isDisposed = true;
+      _connectivitySub?.cancel();
     });
 
     // Initialize repositories
@@ -177,6 +181,14 @@ class FocusStatistics extends _$FocusStatistics {
 
     // Get the persisted period
     final persistedPeriod = ref.watch(statsViewPeriodProvider);
+
+    // Sync unsynced sessions on startup + when connectivity restored
+    unawaited(sync());
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((result) {
+      if (!result.contains(ConnectivityResult.none)) {
+        unawaited(sync());
+      }
+    });
 
     unawaited(
       Future.microtask(() {

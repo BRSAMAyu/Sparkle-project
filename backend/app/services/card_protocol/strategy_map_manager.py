@@ -8,17 +8,16 @@ Phase 3 of the Card Protocol.
 """
 from __future__ import annotations
 
-from copy import deepcopy
 import uuid
+from copy import deepcopy
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.card_protocol import ArtifactType, Card, CardCreatedBy, CardType
-from app.services.planning_artifact_service import PlanningArtifactService
 from app.core.event_bus import EventBus
-
+from app.models.card_protocol import ArtifactType, Card, CardCreatedBy, CardType, PlanningArtifact
+from app.services.planning_artifact_service import PlanningArtifactService
 
 # Default adaptation rules (sensible defaults for university students)
 _DEFAULT_STRATEGY = {
@@ -88,7 +87,7 @@ class StrategyMapManager:
         plan_card_id: uuid.UUID,
         user_id: uuid.UUID,
         plan_structure: dict | None = None,
-    ) -> "PlanningArtifact":
+    ) -> PlanningArtifact:
         """Create initial STRATEGY_MAP from plan structure.
 
         Auto-approves since this is a system-generated initial artifact.
@@ -136,7 +135,7 @@ class StrategyMapManager:
         plan_card_id: uuid.UUID,
         user_id: uuid.UUID,
         plan_structure: dict | None = None,
-    ) -> "PlanningArtifact":
+    ) -> PlanningArtifact:
         """Get existing APPROVED strategy map or initialize a new one."""
         existing = await self.artifact_service.get_approved(
             plan_card_id, ArtifactType.STRATEGY_MAP
@@ -154,7 +153,7 @@ class StrategyMapManager:
         plan_card_id: uuid.UUID,
         updates: dict,
         evidence: dict | None = None,
-    ) -> "PlanningArtifact | None":
+    ) -> PlanningArtifact | None:
         """Propose a strategy map update. Creates a new version."""
         current = await self.artifact_service.get_approved(
             plan_card_id, ArtifactType.STRATEGY_MAP

@@ -9,8 +9,9 @@ Unified Intent Router - 统一意图路由系统
 替代原 IntentRouter (17行简单版本)，提供智能路由能力。
 """
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -20,7 +21,7 @@ from app.services.llm_fallback_utils import router_llm
 from app.services.llm_service import LLMService
 
 
-class UnifiedIntentType(str, Enum):
+class UnifiedIntentType(StrEnum):
     """统一意图类型枚举"""
     CHAT = "chat"
     TASK = "task"

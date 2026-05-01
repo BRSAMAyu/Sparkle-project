@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -18,7 +18,7 @@ from app.services.signal_adaptation import recency_weight, weighted_average
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ChatSignalCollector:

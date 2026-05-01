@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +17,7 @@ from app.models.task import Task, TaskStatus
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _coerce_uuid(value: str | UUID) -> UUID | str:
@@ -368,7 +368,7 @@ class StruggleSignalAggregator:
             }
 
         if reference_at.tzinfo is not None:
-            reference_at = reference_at.astimezone(timezone.utc).replace(tzinfo=None)
+            reference_at = reference_at.astimezone(UTC).replace(tzinfo=None)
         no_completion_days = max(0, int((now - reference_at).total_seconds() // 86400))
         completion_gap_weight = 1.0 if recent_completion_count == 0 and no_completion_days >= 2 else 0.0
 

@@ -7,7 +7,7 @@ while enforcing guardrails to prevent over-intervention.
 """
 import random
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -43,7 +43,7 @@ class CandidateAction:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CandidateGenerationService:

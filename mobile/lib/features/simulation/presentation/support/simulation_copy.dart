@@ -89,35 +89,37 @@ String localizeSimulationSource(String source, [AppLocalizations? l10n]) {
 
 String localizeSimulationText(String text, [AppLocalizations? l10n]) => _localizeFreeText(text, l10n);
 
-String _localizeExact(String text) {
+String _localizeExact(String text, [AppLocalizations? l10n]) {
   final normalized = text.trim();
   if (normalized.isEmpty) {
     return '';
   }
-  switch (normalized.toLowerCase()) {
-    case 'study_group': return '虚拟学习小组';
-    case 'knowledge_debate': return '知识辩论';
-    case 'historical_roleplay': return '历史角色扮演';
-    case 'socratic_dialogue': return '苏格拉底式对话';
-    case 'case_analysis': return '案例拆解';
-    case 'what_if_path': return '假设分支推演';
-    case 'concept_map_build': return '概念图共建';
-    case 'error_diagnosis': return '错因诊断';
-    case 'analyst': return '分析者';
-    case 'expert': return '专家';
-    case 'coach': return '教练';
-    case 'navigator': return '导航者';
-    case 'challenger': return '质疑者';
-    case 'supporter': return '支持者';
-    case 'moderator': return '主持协调';
-    case 'questioner': return '追问者';
-    case 'observer': return '观察者';
-    case 'mentor': return '导师';
-    case 'builder': return '搭建者';
-    case 'connector': return '连接者';
-    case 'practitioner': return '实践派';
-    default: return normalized;
+  if (l10n != null) {
+    switch (normalized.toLowerCase()) {
+      case 'study_group': return l10n.simulationSceneStudyGroup;
+      case 'knowledge_debate': return l10n.simulationSceneKnowledgeDebate;
+      case 'historical_roleplay': return l10n.simulationSceneHistoricalRoleplay;
+      case 'socratic_dialogue': return l10n.simulationSceneSocraticDialogue;
+      case 'case_analysis': return l10n.simulationSceneCaseAnalysis;
+      case 'what_if_path': return l10n.simulationSceneWhatIfPath;
+      case 'concept_map_build': return l10n.simulationSceneConceptMapBuild;
+      case 'error_diagnosis': return l10n.simulationSceneErrorDiagnosis;
+      case 'analyst': return l10n.simulationRoleAnalyst;
+      case 'expert': return l10n.simulationRoleExpert;
+      case 'coach': return l10n.simulationRoleCoach;
+      case 'navigator': return l10n.simulationRoleNavigator;
+      case 'challenger': return l10n.simulationRoleChallenger;
+      case 'supporter': return l10n.simulationRoleSupporter;
+      case 'moderator': return l10n.simulationRoleModerator;
+      case 'questioner': return l10n.simulationRoleQuestioner;
+      case 'observer': return l10n.simulationRoleObserver;
+      case 'mentor': return l10n.simulationRoleMentor;
+      case 'builder': return l10n.simulationRoleBuilder;
+      case 'connector': return l10n.simulationRoleConnector;
+      case 'practitioner': return l10n.simulationRolePractitioner;
+    }
   }
+  return normalized;
 }
 
 String _localizeFreeText(String text, [AppLocalizations? l10n]) {
@@ -128,7 +130,7 @@ String _localizeFreeText(String text, [AppLocalizations? l10n]) {
   if (_containsChinese(normalized)) {
     return normalized;
   }
-  return _localizeExact(normalized);
+  return _localizeExact(normalized, l10n);
 }
 
 bool _containsChinese(String text) =>

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 责任伙伴成就徽章组件
 class AchievementBadge extends StatelessWidget {
@@ -131,7 +133,9 @@ class AchievementBadge extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              '解锁于 ${_formatDate(unlockedAt!)}',
+              I18nService.instance.isChinese
+                  ? '在 ${_formatDate(unlockedAt!)} 解锁'
+                  : 'Unlocked on ${_formatDate(unlockedAt!)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -191,15 +195,17 @@ class AchievementBadge extends StatelessWidget {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return '今天';
+      return S.communityShareTodayDate;
     } else if (difference.inDays == 1) {
-      return '昨天';
+      return S.communityShareYesterday;
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
+      return S.communityDaysAgo(difference.inDays);
     } else if (difference.inDays < 30) {
-      return '${(difference.inDays / 7).floor()}周前';
+      final weeks = (difference.inDays / 7).floor();
+      return I18nService.instance.isChinese ? '$weeks 周前' : '$weeks weeks ago';
     } else if (difference.inDays < 365) {
-      return '${(difference.inDays / 30).floor()}个月前';
+      final months = (difference.inDays / 30).floor();
+      return I18nService.instance.isChinese ? '$months 个月前' : '$months months ago';
     } else {
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
@@ -271,14 +277,14 @@ class AchievementGrid extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无成就',
+              context.l10n.communityShareNoAchievements,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 8),
             Text(
-              '开始打卡解锁成就吧！',
+              context.l10n.communityShareStartCheckin,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -462,7 +468,7 @@ class AchievementDetailDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('关闭'),
+          child: Text(context.l10n.communityShareClose),
         ),
       ],
     );

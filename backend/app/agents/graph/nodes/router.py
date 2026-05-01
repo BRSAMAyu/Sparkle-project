@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 from pydantic import BaseModel, Field

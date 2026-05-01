@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Push Router Service
 
@@ -17,8 +18,7 @@ Features:
 - Unified interface for push notifications
 """
 from dataclasses import dataclass
-from datetime import timezone, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -40,7 +40,7 @@ from app.services.push_sender_service import (
 )
 
 
-class PushChannel(str, Enum):
+class PushChannel(StrEnum):
     """Available push channels"""
     FCM = "fcm"
     JPUSH = "jpush"
@@ -486,7 +486,7 @@ class PushRouterService:
         try:
             query = select(UserDevice).where(
                 UserDevice.user_id == user_id,
-                UserDevice.is_active == True,
+                UserDevice.is_active,
             )
             result = await self.db.execute(query)
             devices = result.scalars().all()

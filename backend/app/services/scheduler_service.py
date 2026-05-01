@@ -4,7 +4,7 @@ Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
 Stage: <首次引入 Stage 号>
 """
 
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
@@ -15,19 +15,19 @@ from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.notification import NotificationCreate
 from app.services.cognitive_service import CognitiveService
+from app.services.community_advanced_service import OfflineQueueService
 from app.services.decay_service import DecayService
 from app.services.event_retention_service import EventRetentionService
+from app.services.execution_schedule_service import ExecutionScheduleService
 from app.services.memory_jobs import MemoryJobsService
 from app.services.nightly_review_service import NightlyReviewService
 from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.push_service import PushService
-from app.services.community_advanced_service import OfflineQueueService
-from app.services.execution_schedule_service import ExecutionScheduleService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SchedulerService:
@@ -75,18 +75,30 @@ class SchedulerService:
         # OpenClaw 定时/条件执行轮询（每分钟）
         self.scheduler.add_job(self.run_execution_schedule_tick, 'interval', minutes=1)
 
+        # C-01-FIX: Outcome verification (每6小时检查过期待验证结果)
+        self.scheduler.add_job(self.run_outcome_verification, 'interval', hours=6)
+
         self.scheduler.start()
         logger.info("Scheduler started with smart push cycle, daily decay, capsule generation, and weekly preference inference decay jobs")
 
     async def run_smart_push_cycle(self):
         """
         执行智能推送周期
-        触发 PushService.process_all_users()
+        触发 PushService.process_all_users() + PushScheduler 回收队列处理
         """
         logger.info("Starting smart push cycle...")
         async with AsyncSessionLocal() as db:
             push_service = PushService(db)
             await push_service.process_all_users()
+        try:
+            async with AsyncSessionLocal() as db:
+                from app.services.push_scheduler import PushScheduler
+                scheduler = PushScheduler(db)
+                recall_stats = await scheduler.process_recall_queue()
+                if recall_stats["processed"] > 0:
+                    logger.info(f"Recall queue: {recall_stats}")
+        except Exception as e:
+            logger.warning(f"Recall queue processing failed (non-fatal): {e}")
 
     # async def check_fragmented_time(self):
     #     """
@@ -373,6 +385,7 @@ class SchedulerService:
                             continue
 
                         # 通过 Celery 异步生成
+                        from app.core.celery_app import celery_app
                         celery_app.send_task(
                             "generate_capsules_batch",
                             args=(
@@ -443,6 +456,7 @@ class SchedulerService:
                             continue
 
                         # 通过 Celery 异步生成深度胶囊
+                        from app.core.celery_app import celery_app
                         celery_app.send_task(
                             "generate_capsules_batch",
                             args=(
@@ -471,6 +485,34 @@ class SchedulerService:
 
         except Exception as e:
             logger.error(f"Error in weekly deep capsule generation: {e}", exc_info=True)
+
+    # ========== Outcome 验证任务 ==========
+
+    async def run_outcome_verification(self):
+        """C-01-FIX: 定期验证待处理结果，将过期的标记为 inconclusive。"""
+        logger.info("Starting outcome verification job...")
+        try:
+            from app.core.cache import cache_service
+            from app.signals.outcome_tracker import OutcomeTracker
+
+            redis = cache_service.redis
+            tracker = OutcomeTracker(redis)
+            total_resolved = 0
+
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(User).where(User.is_active))
+                users = result.scalars().all()
+
+                for user in users:
+                    try:
+                        resolved = await tracker.verify_pending(str(user.id))
+                        total_resolved += len(resolved)
+                    except Exception:
+                        logger.warning("Outcome verification failed for user {}", user.id, exc_info=True)
+
+            logger.info(f"Outcome verification completed: resolved={total_resolved} across {len(users)} users")
+        except Exception as e:
+            logger.error(f"Error in outcome verification job: {e}", exc_info=True)
 
 
 scheduler_service = SchedulerService()

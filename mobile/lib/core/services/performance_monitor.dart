@@ -48,18 +48,37 @@ class PerformanceMonitor {
   /// 初始化性能监控
   Future<void> initialize({
     required String sentryDsn,
-    bool enablePerformanceMonitoring = true,
-    bool enableCrashReporting = true,
+    required String environment,
+    required double tracesSampleRate,
+    required bool enablePerformanceMonitoring,
+    required bool enableCrashReporting,
+    String? release,
     bool enableNetworkMonitoring = true,
   }) async {
     if (_isMonitoring) return;
+
+    final normalizedDsn = sentryDsn.trim();
+    if (normalizedDsn.isEmpty || !enableCrashReporting) {
+      _startMonitoring();
+      _isMonitoring = true;
+      developer.log(
+        'Sentry DSN not configured; local performance monitoring only',
+        name: 'PerformanceMonitor',
+      );
+      return;
+    }
 
     try {
       // 初始化Sentry
       await SentryFlutter.init(
         (options) {
-          options.dsn = sentryDsn;
-          options.tracesSampleRate = enablePerformanceMonitoring ? 1.0 : 0.0;
+          options.dsn = normalizedDsn;
+          options.environment = environment;
+          if (release != null && release.trim().isNotEmpty) {
+            options.release = release.trim();
+          }
+          options.tracesSampleRate =
+              enablePerformanceMonitoring ? tracesSampleRate : 0.0;
           options.enableAppLifecycleBreadcrumbs = true;
           options.attachScreenshot = true;
           options.sendDefaultPii = false; // 保护用户隐私

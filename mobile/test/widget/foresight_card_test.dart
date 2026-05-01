@@ -3,14 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/features/user/presentation/widgets/foresight_card.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('ForesightCard renders hint and confidence chips', (
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: ForesightCard(
             hint: UserStateFieldEnvelope(
               value: ForesightHintSummaryItem(
@@ -30,8 +32,7 @@ void main() {
               ),
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('前瞻提示'), findsOneWidget);

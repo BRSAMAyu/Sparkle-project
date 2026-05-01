@@ -8,8 +8,8 @@ Author: Claude Code (Opus 4.5)
 Created: 2026-01-15
 """
 from __future__ import annotations
-import uuid
-from datetime import timezone, datetime, timedelta
+
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -22,7 +22,7 @@ from app.services.expansion_service import ExpansionService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class KnowledgeIntegrationService:

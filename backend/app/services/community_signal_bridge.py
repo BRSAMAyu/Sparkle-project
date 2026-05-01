@@ -3,8 +3,7 @@ CommunitySignalBridge - bridge high-value community signals back into personal s
 """
 from __future__ import annotations
 
-
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -22,7 +21,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CommunitySignalBridge:

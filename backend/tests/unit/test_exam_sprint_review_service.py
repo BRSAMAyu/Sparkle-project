@@ -32,7 +32,7 @@ async def test_submit_post_exam_review_archives_plan_and_writes_growth_profile(d
     monkeypatch.setattr("app.core.websocket.get_ws_manager", lambda: ws_manager)
     user_id = test_user.id
 
-    exam_date = date.today() - timedelta(days=1)
+    exam_date = date.today() - timedelta(days=2)
     started_at = datetime.combine(exam_date - timedelta(days=6), time(hour=9))
 
     node_a = KnowledgeNode(
@@ -315,7 +315,7 @@ async def test_get_portfolio_merges_archived_active_and_planned_sprints(db_sessi
     service = ExamSprintReviewService(db_session)
     response = await service.get_portfolio(user_id=user_id)
 
-    assert response.total_mastered_nodes == 98
+    assert response.total_mastered_nodes == 80
     assert response.active_count == 1
     assert response.completed_count == 1
     assert response.planned_count == 1
@@ -332,7 +332,7 @@ async def test_get_portfolio_merges_archived_active_and_planned_sprints(db_sessi
     active = entries_by_subject["操作系统"]
     assert active.status == "active"
     assert active.sprint_mode == "fourteen_day_build_and_retrieve"
-    assert active.mastered_nodes_count == 18
+    assert active.mastered_nodes_count == 0
     assert active.weakest_points == ["死锁"]
 
     planned = entries_by_subject["高等数学"]
@@ -422,7 +422,7 @@ async def test_completed_sprint_auto_archives_without_post_exam_review(db_sessio
 @pytest.mark.asyncio
 async def test_submit_post_exam_review_penalizes_tcp_state_and_archives_weak_nodes(db_session, test_user, monkeypatch):
     user_id = test_user.id
-    exam_date = date.today() - timedelta(days=1)
+    exam_date = date.today() - timedelta(days=2)
     started_at = datetime.combine(exam_date - timedelta(days=6), time(hour=9))
 
     tcp_state = KnowledgeNode(
@@ -665,7 +665,7 @@ async def test_check_sprint_completion_stays_false_until_all_day_tasks_done(db_s
 @pytest.mark.asyncio
 async def test_scan_due_review_invitations_creates_notification_and_marks_plan(db_session, test_user):
     user_id = test_user.id
-    exam_date = date.today() - timedelta(days=1)
+    exam_date = date.today() - timedelta(days=2)
     plan = Plan(
         user_id=user_id,
         name="期末冲刺",

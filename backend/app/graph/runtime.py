@@ -9,8 +9,8 @@ from uuid import UUID
 from app.aurora.schemas import (
     Commitment,
     FocusContract,
-    SignalSnapshot,
     ScenarioPackManifest,
+    SignalSnapshot,
     TransitionDecisionRecord,
     WindowState,
 )

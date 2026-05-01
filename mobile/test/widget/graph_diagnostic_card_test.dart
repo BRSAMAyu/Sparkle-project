@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('graph diagnostic card renders weak nodes and forwards actions', (
     tester,
   ) async {
@@ -12,11 +15,7 @@ void main() {
     String? prompted;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: SingleChildScrollView(
             child: ActionCard(
               action: WidgetPayload(
@@ -54,8 +53,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('最弱点'), findsOneWidget);

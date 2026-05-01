@@ -11,7 +11,6 @@ Phase 3: Deepened with parameter compiler tracking, decision log verification,
 """
 from __future__ import annotations
 
-import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -19,17 +18,17 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
-    InterventionRecord,
-    InterventionOutcomeStatus,
     InterventionAcceptanceStatus,
+    InterventionOutcomeStatus,
+    InterventionRecord,
     InterventionTriggerType,
 )
-from app.services.intervention_record_service import InterventionRecordService
 from app.services.card_service import CardService
+from app.services.intervention_record_service import InterventionRecordService
 from app.services.intervention_strategy_learner import InterventionStrategyLearner
 from app.services.task_reflection_service import TaskReflectionService
-from app.core.event_bus import EventBus
 
 
 class InterventionOutcomeVerifier:
@@ -411,7 +410,7 @@ class InterventionOutcomeVerifier:
             from app.services.card_protocol.planning_memory_service import PlanningMemoryService
 
             planning_memory = PlanningMemoryService(self.db, self.event_bus)
-            
+
             # Check for 2+ consecutive phases with low alignment score
             context = await planning_memory.load_planning_context(
                 plan_card_id=record.plan_card_id, user_id=record.user_id
@@ -428,9 +427,9 @@ class InterventionOutcomeVerifier:
                 else:
                     if alignment is not None:
                         break
-            
+
             is_consecutive_low_alignment = low_alignment_count >= 2
-            
+
             drift = await planning_memory.compute_drift_score(plan_card_id=record.plan_card_id)
             if drift.drift_score <= 0.5 and not is_consecutive_low_alignment:
                 return

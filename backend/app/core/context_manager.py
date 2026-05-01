@@ -1,16 +1,17 @@
 from __future__ import annotations
+
 import asyncio
 import contextlib
 import inspect
 import json
 from collections import defaultdict
-from datetime import date, timedelta, timezone, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import Integer, cast, func, select
 from pydantic import BaseModel, Field
+from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.metrics import CALENDAR_FALLBACK_TOTAL
@@ -33,7 +34,7 @@ from app.services.user_service import UserService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CognitiveContext(BaseModel):
@@ -79,6 +80,10 @@ class CognitiveContext(BaseModel):
     capsule_preferences: dict[str, Any] = Field(
         default_factory=dict,
         description="Favorite capsule-derived content depth and subject preferences",
+    )
+    spine_model_claims: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="R5-DF1: Active Spine model-write claims about user behavior",
     )
 
     # Preference Version (for cache invalidation)
@@ -170,7 +175,7 @@ class ContextOrchestrator:
                 elif isinstance(parsed, dict):
                     existing = [parsed]
         except Exception as exc:
-            logger.warning(f"Failed to read achievement progress context cache: {exc}")
+            logger.warning("Failed to read achievement progress context cache: {}", exc)
 
         merged = [payload]
         for item in existing:
@@ -190,7 +195,7 @@ class ContextOrchestrator:
             )
             await cls._maybe_await(redis_client.delete(f"user:context:snapshot:{user_id}"))
         except Exception as exc:
-            logger.warning(f"Failed to write achievement progress context cache: {exc}")
+            logger.warning("Failed to write achievement progress context cache: {}", exc)
 
     def _get_error_book_service(self, db_session: AsyncSession | None = None) -> ErrorBookService:
         db = db_session or self.db
@@ -279,6 +284,7 @@ class ContextOrchestrator:
             achievement_data = dict(achievement_data or {})
             achievement_data["recent_progress_events"] = achievement_progress_events
         past_session_memory = await self._get_past_session_memory(uid)
+        spine_model_claims = await self._get_spine_model_claims(user_id)
 
         knowledge_summary = {}
         preference_version = 0
@@ -316,6 +322,7 @@ class ContextOrchestrator:
             calendar_context=calendar_data or {},
             past_session_memory=past_session_memory,
             capsule_preferences=capsule_preferences or {},
+            spine_model_claims=spine_model_claims,
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
         )
@@ -332,6 +339,19 @@ class ContextOrchestrator:
         return await self.get_user_context(user_id, force_refresh=force_refresh)
 
     def _sanitize_context(self, context: CognitiveContext) -> CognitiveContext:
+        from app.core.data_minimization import DataMinimizationAuditor
+
+        _auditor = DataMinimizationAuditor()
+
+        # Audit collected fields (logs but does not block)
+        all_fields: list[str] = []
+        for attr in ("preferences", "engagement_metrics", "achievement_summary", "calendar_context", "capsule_preferences"):
+            data = getattr(context, attr, {})
+            if isinstance(data, dict):
+                all_fields.extend(data.keys())
+        if all_fields:
+            _auditor.audit_data_collection("context_manager", all_fields)
+
         sensitive_keys = {"email", "phone", "device_id", "ip_address", "raw_content", "sensitive_tags"}
 
         def _clean(data: dict[str, Any]) -> dict[str, Any]:
@@ -354,7 +374,7 @@ class ContextOrchestrator:
             service = MemoryService(db_session or self.db)
             rows = await service.get_recent_episodic(user_id, limit=limit)
         except Exception as exc:
-            logger.warning(f"Failed to load past session memory: {exc}")
+            logger.warning("Failed to load past session memory: {}", exc)
             return []
 
         memories: list[dict[str, Any]] = []
@@ -376,6 +396,35 @@ class ContextOrchestrator:
             )
         return memories
 
+    async def _get_spine_model_claims(self, user_id: str) -> list[dict[str, Any]]:
+        """R5-DF1: Read Spine model-write claims so AI can see inferred user traits."""
+        if not self.redis:
+            return []
+        try:
+
+            pattern = f"spine:model_claim:{user_id}:*"
+            keys = []
+            try:
+                keys = await self.redis.keys(pattern)
+            except Exception as exc:
+                logger.warning("Failed to query spine model claim keys: {}", exc)
+                return []
+            if not keys:
+                return []
+            claims: list[dict[str, Any]] = []
+            for key in keys[:10]:
+                try:
+                    raw = await self.redis.get(key)
+                    if raw:
+                        claims.append(json.loads(raw))
+                except Exception as exc:
+                    logger.debug("Failed to parse spine model claim key={}: {}", key, exc)
+                    continue
+            return claims
+        except Exception as exc:
+            logger.warning("Spine model claims read skipped: {}", exc)
+            return []
+
     async def _get_capsule_preferences(
         self,
         user_id: UUID,
@@ -385,12 +434,12 @@ class ContextOrchestrator:
         try:
             favorite_preferences = await CapsuleFavoriteService().get_preferences(user_id, db)
         except Exception as exc:
-            logger.warning(f"Failed to load capsule preferences: {exc}")
+            logger.warning("Failed to load capsule preferences: {}", exc)
             favorite_preferences = {}
         try:
             stored_preferences = await self._get_profile_capsule_preferences(user_id, db)
         except Exception as exc:
-            logger.warning(f"Failed to load stored capsule preferences: {exc}")
+            logger.warning("Failed to load stored capsule preferences: {}", exc)
             stored_preferences = {}
         return self._merge_capsule_preferences(stored_preferences, favorite_preferences)
 
@@ -451,7 +500,7 @@ class ContextOrchestrator:
 
     def _handle_result(self, result, name: str, default: Any) -> Any:
         if isinstance(result, Exception):
-            logger.error(f"Failed to gather {name} context: {result}")
+            logger.error("Failed to gather {} context: {}", name, result)
             return default
         return result
 
@@ -465,7 +514,7 @@ class ContextOrchestrator:
                 json_data = json.loads(data)
                 return CognitiveContext(**json_data)
         except Exception as e:
-            logger.warning(f"Cache get failed for user context: {e}")
+            logger.warning("Cache get failed for user context: {}", e)
         return None
 
     async def _get_recent_achievement_progress_events(self, user_id: str) -> list[dict[str, Any]]:
@@ -497,7 +546,7 @@ class ContextOrchestrator:
                 )
             return events
         except Exception as exc:
-            logger.warning(f"Failed to load achievement progress context events: {exc}")
+            logger.warning("Failed to load achievement progress context events: {}", exc)
             return []
 
     async def _cache_context(self, user_id: str, context: CognitiveContext):
@@ -508,7 +557,7 @@ class ContextOrchestrator:
             data = context.model_dump_json()
             await self.redis.setex(key, self.CACHE_TTL_SECONDS, data)
         except Exception as e:
-            logger.warning(f"Cache set failed for user context: {e}")
+            logger.warning("Cache set failed for user context: {}", e)
 
     # --- Sub-fetchers ---
 
@@ -797,7 +846,7 @@ class ContextOrchestrator:
             prefs = await self._get_preference_service().get_preferences(UUID(user_id))
             return prefs.version or 0
         except Exception as e:
-            logger.warning(f"Failed to get preference version for {user_id}: {e}")
+            logger.warning("Failed to get preference version for {}: {}", user_id, e)
             return 0
 
     async def _get_community_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:

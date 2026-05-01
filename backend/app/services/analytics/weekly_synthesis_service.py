@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 import json
 import os
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 try:
@@ -34,7 +35,7 @@ from app.services.llm_service import LLMService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class WeeklySynthesisService:

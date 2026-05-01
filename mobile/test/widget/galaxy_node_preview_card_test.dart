@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('preview card exposes launch prediction action', (tester) async {
     var launched = false;
 
@@ -20,16 +23,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('zh'),
-        localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: Center(
             child: GalaxyNodePreviewCard(
               node: node,
@@ -40,8 +34,7 @@ void main() {
               onLaunchPrediction: () => launched = true,
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('推演此节点'), findsOneWidget);
@@ -71,16 +64,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('zh'),
-        localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: Center(
             child: GalaxyNodePreviewCard(
               node: node,
@@ -91,8 +75,7 @@ void main() {
               onLaunchPrediction: () {},
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     expect(find.text('推荐复习'), findsOneWidget);

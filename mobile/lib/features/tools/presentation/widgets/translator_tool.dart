@@ -8,12 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 import 'package:sparkle/features/translation/translation_routes.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class Language {
   const Language({
@@ -31,8 +33,8 @@ class Language {
 }
 
 const supportedLanguages = [
-  Language(code: 'auto', name: '自动检测', flag: '🔍'),
-  Language(code: 'zh', name: '中文', flag: '🇨🇳'),
+  Language(code: 'auto', name: 'Auto Detect', flag: '🔍'),
+  Language(code: 'zh', name: 'Chinese', flag: '🇨🇳'),
   Language(code: 'en', name: 'English', flag: '🇺🇸'),
   Language(code: 'ja', name: '日本語', flag: '🇯🇵'),
   Language(code: 'ko', name: '한국어', flag: '🇰🇷'),
@@ -75,7 +77,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
   Future<void> _translate() async {
     if (_inputController.text.trim().isEmpty) {
-      AppFeedback.info(context, '请输入要翻译的文本');
+      AppFeedback.info(
+        context,
+        I18nService.instance.isChinese ? '请输入要翻译的文本' : 'Please enter text to translate',
+      );
       return;
     }
 
@@ -103,13 +108,13 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         await _saveTranslation(translatedText);
       } else {
         setState(() {
-          _errorMessage = result.meta['error'] as String? ?? '翻译失败';
+          _errorMessage = result.meta['error'] as String? ?? context.l10n.toolsTransFailed;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = '翻译出错: $e';
+        _errorMessage = context.l10n.toolsTransError(e.toString());
       });
     } finally {
       if (mounted) {
@@ -204,7 +209,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
   void _copyToClipboard() {
     unawaited(Clipboard.setData(ClipboardData(text: _output)));
-    AppFeedback.info(context, '已复制到剪贴板');
+    AppFeedback.info(
+      context,
+      I18nService.instance.isChinese ? '已复制到剪贴板' : 'Copied to clipboard',
+    );
   }
 
   bool get _canAddToWordbook {
@@ -248,11 +256,14 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         partOfSpeech: partOfSpeech,
       );
       if (mounted) {
-        AppFeedback.success(context, '已加入单词本');
+        AppFeedback.success(
+          context,
+          I18nService.instance.isChinese ? '已加入单词本' : 'Added to wordbook',
+        );
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '加入单词本失败: $e');
+        AppFeedback.error(context, context.l10n.toolsTransAddWordFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -272,8 +283,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     return ToolShell(
       surface: widget.surface,
       icon: Icons.translate_rounded,
-      title: '翻译',
-      subtitle: '面向学习和任务场景的双栏翻译器，支持自动存档、评分和收藏，便于后续回看。',
+      title: context.l10n.toolsTransTitle,
+      subtitle: context.l10n.toolsTransSubtitle,
       accentColor: accent,
       compactHeader: true,
       headerAction: SparkleIconButton(
@@ -282,7 +293,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             unawaited(context.push(TranslationRoutes.history));
           }
         },
-        icon: const Icon(Icons.history_rounded),
+        icon: Icon(Icons.history_rounded),
         variant: ButtonVariant.ghost,
       ),
       heroChips: [
@@ -292,7 +303,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
           icon: Icons.swap_horiz_rounded,
         ),
         ToolHeroChip(
-          label: _isFavorited ? '已收藏' : '自动保存历史',
+          label: _isFavorited ? context.l10n.toolsTransFavorited : context.l10n.toolsTransAutoSave,
           accentColor: accent,
           icon: _isFavorited ? Icons.favorite_rounded : Icons.archive_rounded,
         ),
@@ -302,31 +313,35 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
           ToolMetricRow(
             children: [
               ToolMetricCard(
-                label: '输入长度',
+                label: context.l10n.toolsTransInputLen,
                 value: '$inputLength',
                 accentColor: accent,
                 icon: Icons.edit_note_rounded,
-                caption: '建议控制在可读段落内',
+                caption: I18nService.instance.isChinese
+                    ? '建议控制在可读段落内'
+                    : 'Keep within readable paragraphs',
               ),
               ToolMetricCard(
-                label: '输出长度',
+                label: context.l10n.toolsTransOutputLen,
                 value: '$outputLength',
                 accentColor: accent,
                 icon: Icons.auto_fix_high_rounded,
-                caption: _isLoading ? '翻译生成中' : '翻译完成后可复制',
+                caption: _isLoading
+                    ? (I18nService.instance.isChinese ? '翻译生成中' : 'Translating')
+                    : (I18nService.instance.isChinese ? '翻译完成后可复制' : 'Copy after translation'),
               ),
             ],
           ),
           const SizedBox(height: DS.spacing16),
           ToolSectionCard(
             accentColor: accent,
-            title: '语言方向',
-            subtitle: '自动检测用于快速起步，也可以切成手动源语言。',
+            title: context.l10n.toolsTransDirection,
+            subtitle: context.l10n.toolsTransDirectionDesc,
             trailing: SparkleButton(
-              label: '交换',
+              label: context.l10n.toolsTransSwap,
               variant: ButtonVariant.ghost,
               onPressed: _swapLanguages,
-              icon: const Icon(Icons.swap_horiz_rounded),
+              icon: Icon(Icons.swap_horiz_rounded),
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -371,8 +386,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
               final compact = constraints.maxWidth < 720;
               final inputCard = ToolSectionCard(
                 accentColor: accent,
-                title: '原文',
-                subtitle: '支持多行粘贴，适合段落翻译。',
+                title: context.l10n.toolsTransSource,
+                subtitle: context.l10n.toolsTransSourceDesc,
                 trailing: IconButton(
                   onPressed: () {
                     setState(() {
@@ -380,7 +395,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                       _output = '';
                     });
                   },
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(Icons.close_rounded),
                 ),
                 child: SizedBox(
                   height: (MediaQuery.sizeOf(context).height * 0.2).clamp(140.0, 250.0),
@@ -389,8 +404,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    decoration: const InputDecoration(
-                      hintText: '输入要翻译的文本...',
+                    decoration: InputDecoration(
+                      hintText: context.l10n.toolsTransInputHint,
                       border: InputBorder.none,
                     ),
                   ),
@@ -398,8 +413,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
               );
               final outputCard = ToolSectionCard(
                 accentColor: accent,
-                title: '译文',
-                subtitle: '翻译完成后可复制、收藏和打分。',
+                title: context.l10n.toolsTransTarget,
+                subtitle: context.l10n.toolsTransTargetDesc,
                 trailing: _output.isEmpty
                     ? null
                     : IconButton(
@@ -418,15 +433,15 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                     : _errorMessage != null
                         ? ToolEmptyState(
                             icon: Icons.error_outline_rounded,
-                            title: '翻译未完成',
+                            title: context.l10n.toolsTransIncomplete,
                             description: _errorMessage!,
                             accentColor: DS.error,
                           )
                         : _output.isEmpty
                             ? ToolEmptyState(
                                 icon: Icons.translate_rounded,
-                                title: '等待翻译结果',
-                                description: '点击下方翻译按钮后，结果会显示在这里。',
+                                title: context.l10n.toolsTransWaiting,
+                                description: context.l10n.toolsTransWaitingDesc,
                                 accentColor: accent,
                               )
                             : Column(
@@ -454,7 +469,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                                     children: List.generate(
                                       5,
                                       (index) => ToolChoiceChip(
-                                        label: '${index + 1} 星',
+                                        label: context.l10n.toolsTransStarCount(index + 1),
                                         selected: _currentRating == index + 1,
                                         onTap: () => _updateRating(index + 1),
                                         accentColor: accent,
@@ -505,14 +520,14 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             const SizedBox(height: DS.spacing16),
             ToolSectionCard(
               accentColor: accent,
-              title: '单词本联动',
-              subtitle: '单词翻译结果可以直接加入单词本，并进入后续复习链路。',
+              title: context.l10n.toolsTransWordbookLink,
+              subtitle: context.l10n.toolsTransWordbookDesc,
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: SparkleButton(
-                  label: '加入单词本',
+                  label: context.l10n.toolsTransAddWordbook,
                   onPressed: _isAddingToWordbook ? null : _addToWordbook,
-                  icon: const Icon(Icons.bookmark_add_rounded),
+                  icon: Icon(Icons.bookmark_add_rounded),
                   loading: _isAddingToWordbook,
                 ),
               ),
@@ -524,16 +539,16 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
           final copyButton = SparkleButton(
-            label: '复制译文',
+            label: context.l10n.toolsTransCopyResult,
             variant: ButtonVariant.ghost,
             onPressed: _output.isEmpty ? null : _copyToClipboard,
-            icon: const Icon(Icons.copy_rounded),
+            icon: Icon(Icons.copy_rounded),
             expand: true,
           );
           final translateButton = SparkleButton(
-            label: _isLoading ? '翻译中...' : '开始翻译',
+            label: _isLoading ? context.l10n.toolsTransTranslating : context.l10n.toolsTransStart,
             onPressed: _isLoading ? null : _translate,
-            icon: const Icon(Icons.auto_fix_high_rounded),
+            icon: Icon(Icons.auto_fix_high_rounded),
             loading: _isLoading,
             expand: true,
           );

@@ -10,6 +10,7 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/achievement/presentation/screens/achievement_list_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 GoRouter _buildRouter() {
   final router = GoRouter(
@@ -26,6 +27,8 @@ GoRouter _buildRouter() {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('achievement list shows onboarding empty state', (
     WidgetTester tester,
   ) async {

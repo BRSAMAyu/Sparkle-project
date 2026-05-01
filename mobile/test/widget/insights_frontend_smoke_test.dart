@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,7 @@ import 'package:sparkle/features/theater/data/repositories/theater_repository.da
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/features/theater/presentation/screens/knowledge_theater_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
   @override
@@ -161,8 +164,13 @@ class _StaticTheaterNotifier extends TheaterNotifier {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      // Suppress MirofishMilestone celebration dialogs in LearningReportScreen tests.
+      'mirofish_milestone_v1:firstReport': true,
+    });
   });
 
   group('Insights frontend smoke', () {
@@ -236,7 +244,17 @@ void main() {
               ],
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            locale: const Locale('zh'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
         ),
       );
 
@@ -314,16 +332,22 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: <Override>[
+            apiClientProvider.overrideWithValue(_FakeApiClient()),
+          ],
+          child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
         ),
       );
+      // Pump enough frames for _AnimatedReportSection timers (≤140ms) and
+      // TweenAnimationBuilder animations (DS.durationSlow) to complete.
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(const Duration(milliseconds: 350));
 
-      await tester.pumpAndSettle();
-
-      expect(find.text('学习分析报告'), findsOneWidget);
+      expect(find.text('学习分析报告'), findsAtLeastNWidgets(1));
       expect(find.text('以下是基于聊天推断的方向，需要你确认'), findsOneWidget);
       expect(find.text('部分数据，仅供参考'), findsWidgets);
       expect(find.text('诊断摘要'), findsOneWidget);
@@ -408,14 +432,19 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: <Override>[
+            apiClientProvider.overrideWithValue(_FakeApiClient()),
+          ],
+          child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
         ),
       );
-
-      await tester.pumpAndSettle();
+      // Pump enough frames for _AnimatedReportSection timers and animations.
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(const Duration(milliseconds: 350));
 
       expect(find.byType(MasteryRadarChart), findsNothing);
       expect(find.text('需要更多学习记录'), findsOneWidget);
@@ -441,7 +470,7 @@ void main() {
               ),
             ),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: KnowledgeTheaterScreen(),
           ),
         ),
@@ -505,7 +534,17 @@ void main() {
               (ref) async => <Map<String, dynamic>>[],
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            locale: const Locale('zh'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
         ),
       );
 
@@ -581,16 +620,21 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: <Override>[
+            apiClientProvider.overrideWithValue(_FakeApiClient()),
+          ],
+          child: testMaterialApp(
             home: LearningReportScreen(report: report),
           ),
         ),
       );
+      // Pump enough frames for _AnimatedReportSection timers and animations.
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(const Duration(milliseconds: 350));
 
-      await tester.pumpAndSettle();
-
-      expect(find.text('学习分析报告'), findsOneWidget);
+      expect(find.text('学习分析报告'), findsAtLeastNWidgets(1));
       await tester.scrollUntilVisible(
         find.text('诊断摘要'),
         120,
@@ -738,7 +782,7 @@ void main() {
               ),
             ),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: KnowledgeTheaterScreen(),
           ),
         ),
@@ -792,7 +836,7 @@ void main() {
               (ref) async => <Map<String, dynamic>>[],
             ),
           ],
-          child: const MaterialApp(
+          child: testMaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 320,

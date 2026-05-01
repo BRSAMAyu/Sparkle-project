@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -40,9 +42,9 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
   bool _isSubmitting = false;
   bool _showConfetti = false;
 
-  String get _title {
+  String _titleL10n(AppLocalizations l10n) {
     final subject = widget.subjectName.trim();
-    return subject.isEmpty ? '考试复盘' : '考试复盘 · $subject';
+    return subject.isEmpty ? l10n.planExamReviewNoSubject : l10n.planExamReviewSubject(subject);
   }
 
   @override
@@ -63,7 +65,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: Text(_title),
+          title: Text(_titleL10n(context.l10n)),
         ),
         child: Stack(
           children: [
@@ -77,7 +79,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                     const SizedBox(height: DS.spacing16),
                     _buildSection(
                       context,
-                      title: '考试结果',
+                      title: context.l10n.planExamResult,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -89,9 +91,9 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                             ),
                             controller: _resultDescriptionController,
                             textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: '大概考了多少分？',
-                              hintText: '例如：选择题还可以，估计 78 分左右',
+                            decoration: InputDecoration(
+                              labelText: context.l10n.planExamScoreLabel,
+                              hintText: context.l10n.planExamScoreHint,
                               prefixIcon: Icon(Icons.query_stats_outlined),
                             ),
                           ),
@@ -101,50 +103,50 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                     const SizedBox(height: DS.spacing12),
                     _buildSection(
                       context,
-                      title: '最大挑战',
+                      title: context.l10n.planExamBiggestChallenge,
                       child: TextFormField(
                         key: const ValueKey('post-exam-review-challenge'),
                         controller: _biggestChallengeController,
                         maxLines: 5,
                         minLines: 3,
                         textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
-                          labelText: '考试中遇到的最大困难是什么？',
+                        decoration: InputDecoration(
+                          labelText: context.l10n.planExamChallengeLabel,
                           alignLabelWithHint: true,
                         ),
-                        validator: _requiredField('写下这次最卡住你的地方'),
+                        validator: _requiredField(context.l10n.planExamChallengeRequired),
                       ),
                     ),
                     const SizedBox(height: DS.spacing12),
                     _buildSection(
                       context,
-                      title: '策略感受',
+                      title: context.l10n.planExamStrategyFeel,
                       child: TextFormField(
                         key: const ValueKey('post-exam-review-strategy'),
                         controller: _strategyFeedbackController,
                         maxLines: 5,
                         minLines: 3,
                         textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
-                          labelText: '回头看，复习策略有什么需要改进的？',
+                        decoration: InputDecoration(
+                          labelText: context.l10n.planExamStrategyLabel,
                           alignLabelWithHint: true,
                         ),
-                        validator: _requiredField('把策略反馈留给下一轮备考'),
+                        validator: _requiredField(context.l10n.planExamStrategyRequired),
                       ),
                     ),
                     const SizedBox(height: DS.spacing12),
                     _buildSection(
                       context,
-                      title: '给未来自己的建议',
+                      title: context.l10n.planExamFutureAdvice,
                       child: TextFormField(
                         key: const ValueKey('post-exam-review-self-advice'),
                         controller: _selfAdviceController,
                         maxLines: 4,
                         minLines: 2,
                         textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
-                          labelText: '给未来自己的建议',
-                          hintText: '可选：下次备考时，先从哪里做得更好？',
+                        decoration: InputDecoration(
+                          labelText: context.l10n.planExamFutureLabel,
+                          hintText: context.l10n.planExamFutureHint,
                           alignLabelWithHint: true,
                         ),
                       ),
@@ -152,7 +154,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                     const SizedBox(height: DS.spacing20),
                     SparkleButton(
                       key: const ValueKey('post-exam-review-submit'),
-                      label: '提交复盘',
+                      label: context.l10n.planExamSubmitReview,
                       icon: const Icon(Icons.auto_awesome_rounded),
                       loading: _isSubmitting,
                       expand: true,
@@ -188,12 +190,12 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _title,
+                    _titleL10n(context.l10n),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    '把结果、困难和策略反馈记录下来，Sparkle 会用它校准下一次备考节奏。',
+                    context.l10n.planExamReviewFeedback,
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
@@ -227,7 +229,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '星级评分',
+            context.l10n.planExamStarRating,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: DS.spacing8),
@@ -237,7 +239,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
               final selected = rating <= _resultRating;
               return IconButton(
                 key: ValueKey('post-exam-review-rating-star-$rating'),
-                tooltip: '$rating 星',
+                tooltip: context.l10n.planExamStarTooltip(rating),
                 onPressed: () => setState(() => _resultRating = rating),
                 icon: Icon(
                   selected ? Icons.star_rounded : Icons.star_border_rounded,
@@ -259,11 +261,11 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
 
   Future<void> _submit() async {
     if (widget.planId.trim().isEmpty) {
-      AppFeedback.error(context, '缺少计划 ID，暂时不能提交复盘');
+      AppFeedback.error(context, context.l10n.planExamMissingPlanId);
       return;
     }
     if (_resultRating == 0) {
-      AppFeedback.warning(context, '先给这次考试选一个星级');
+      AppFeedback.warning(context, context.l10n.planExamSelectStarFirst);
       return;
     }
     if (!_formKey.currentState!.validate()) {
@@ -292,7 +294,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
         _isSubmitting = false;
         _showConfetti = true;
       });
-      AppFeedback.success(context, '复盘已保存，下一次会更准。');
+      AppFeedback.success(context, context.l10n.planExamReviewSaved);
       await Future<void>.delayed(widget.successDelay);
       if (!mounted) {
         return;
@@ -375,12 +377,12 @@ class _SparkleConfettiOverlay extends StatelessWidget {
                             ),
                             const SizedBox(height: DS.spacing8),
                             Text(
-                              '复盘完成',
+                              context.l10n.planExamReviewComplete,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: DS.spacing4),
                             Text(
-                              '这份反馈会进入下一次备考策略。',
+                              context.l10n.planExamReviewEnterNext,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall

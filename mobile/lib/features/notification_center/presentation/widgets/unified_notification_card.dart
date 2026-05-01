@@ -200,13 +200,13 @@ class UnifiedNotificationCard extends StatelessWidget {
                           if (pushDismissAction != null)
                             SparkleButton.ghost(
                               onPressed: pushDismissAction,
-                              label: '这次不用了',
+                              label: context.l10n.notificationDismissPush,
                             ),
                           if (notification.canDisablePushCategory &&
                               pushDisableCategoryAction != null)
                             SparkleButton.outline(
                               onPressed: pushDisableCategoryAction,
-                              label: '不再提醒这类',
+                              label: context.l10n.notificationDisablePushCategory,
                             ),
                         ],
                       ),
@@ -221,7 +221,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                         )
                       else
                         Text(
-                          '已鼓励',
+                          context.l10n.notificationEncouraged,
                           style: DS.bodySmall.copyWith(color: DS.success),
                         ),
                     ],
@@ -261,7 +261,7 @@ class UnifiedNotificationCard extends StatelessWidget {
         badgeLabel = context.l10n.notificationSourceIntervention;
       case 'push':
         badgeColor = DS.success;
-        badgeLabel = '主动提醒';
+        badgeLabel = context.l10n.notificationPushReminder;
       default:
     }
 
@@ -367,16 +367,16 @@ class UnifiedNotificationCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildDetailRow(
                   context,
-                  '当前状态',
-                  _labelForInteractionState(interactionState),
+                  context.l10n.notificationCurrentState,
+                  _labelForInteractionState(context, interactionState),
                 ),
               ],
               if (notification.isIntervention && outcomeStatus != null) ...[
                 const SizedBox(height: 8),
                 _buildDetailRow(
                   context,
-                  '验证结果',
-                  _labelForOutcomeStatus(outcomeStatus),
+                  context.l10n.notificationVerificationResult,
+                  _labelForOutcomeStatus(context, outcomeStatus),
                 ),
               ],
               if (notification.isIntervention &&
@@ -384,7 +384,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                   notification.suggestedStep!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
-                  '建议动作：${notification.suggestedStep!}',
+                  context.l10n.notificationSuggestedAction(notification.suggestedStep!),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                       ),
@@ -395,36 +395,36 @@ class UnifiedNotificationCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildDetailRow(
                   context,
-                  '参数调整',
-                  _buildParameterCompilationSummary(parameterCompilation),
+                  context.l10n.notificationParameterAdjustment,
+                  _buildParameterCompilationSummary(context, parameterCompilation),
                 ),
               ],
               if (notification.isIntervention && evidence.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _buildDetailRow(
                   context,
-                  '验证证据',
-                  _buildEvidenceSummary(evidence),
+                  context.l10n.notificationVerificationEvidence,
+                  _buildEvidenceSummary(context, evidence),
                 ),
               ],
               if (notification.isPush) ...[
                 const SizedBox(height: 12),
                 _buildDetailRow(
                   context,
-                  '触发证据',
-                  notification.evidenceToken ?? '未提供',
+                  context.l10n.notificationTriggerEvidence,
+                  notification.evidenceToken ?? context.l10n.notificationNotProvided,
                 ),
                 const SizedBox(height: 8),
                 _buildDetailRow(
                   context,
-                  '提醒类别',
-                  _labelForPushCategory(notification.pushCategory),
+                  context.l10n.notificationReminderCategory,
+                  _labelForPushCategory(context, notification.pushCategory),
                 ),
                 if (notification.retractableUntil != null) ...[
                   const SizedBox(height: 8),
                   _buildDetailRow(
                     context,
-                    '可撤回至',
+                    context.l10n.notificationRetractableTo,
                     notification.retractableUntil!,
                   ),
                 ],
@@ -465,53 +465,53 @@ class UnifiedNotificationCard extends StatelessWidget {
         ],
       );
 
-  String _labelForInteractionState(String state) {
+  String _labelForInteractionState(BuildContext context, String state) {
     switch (state) {
       case 'seen':
-        return '已看到';
+        return context.l10n.notificationInteractionSeen;
       case 'accepted':
-        return '已接受建议';
+        return context.l10n.notificationInteractionAccepted;
       case 'acted':
-        return '已开始执行';
+        return context.l10n.notificationInteractionActed;
       case 'dismissed':
-        return '已忽略';
+        return context.l10n.notificationInteractionDismissed;
       case 'snoozed':
-        return '稍后再看';
+        return context.l10n.notificationInteractionSnoozed;
       case 'approved':
-        return '已确认';
+        return context.l10n.notificationInteractionApproved;
       default:
         return state;
     }
   }
 
-  String _labelForOutcomeStatus(String status) {
+  String _labelForOutcomeStatus(BuildContext context, String status) {
     switch (status) {
       case 'EFFECTIVE':
       case 'effective':
-        return '已验证有效';
+        return context.l10n.notificationOutcomeEffective;
       case 'INEFFECTIVE':
       case 'ineffective':
-        return '暂未见效';
+        return context.l10n.notificationOutcomeIneffective;
       case 'UNKNOWN':
       case 'unknown':
-        return '仍在观察';
+        return context.l10n.notificationOutcomeUnknown;
       case 'PENDING':
       case 'pending':
-        return '等待验证';
+        return context.l10n.notificationOutcomePending;
       default:
         return status;
     }
   }
 
-  String _buildParameterCompilationSummary(Map<String, dynamic> compilation) {
+  String _buildParameterCompilationSummary(BuildContext context, Map<String, dynamic> compilation) {
     final result = compilation['result'] as String? ?? 'unknown';
     final affected = compilation['affected_task_count'] as int? ?? 0;
     final inserted = compilation['inserted_task_count'] as int? ?? 0;
     final hidden = compilation['hidden_task_count'] as int? ?? 0;
-    return '结果：$result，影响任务 $affected 个，新增 $inserted 个，收起 $hidden 个';
+    return context.l10n.notificationCompilationSummary(result, affected, inserted, hidden);
   }
 
-  String _buildEvidenceSummary(Map<String, dynamic> evidence) {
+  String _buildEvidenceSummary(BuildContext context, Map<String, dynamic> evidence) {
     final improvement = evidence['improvement'];
     if (improvement is Map) {
       final map = Map<String, dynamic>.from(improvement);
@@ -522,23 +522,23 @@ class UnifiedNotificationCard extends StatelessWidget {
       final feedbackCount =
           map['post_intervention_feedback_count'] as int? ?? 0;
       return [
-        if (recovered) '计划健康已恢复',
-        if (masteryImproved) '掌握度已提升',
-        if (feedbackCount > 0) '后续反馈 $feedbackCount 条',
-        if (negativeFeedback > 0) '其中负反馈 $negativeFeedback 条',
+        if (recovered) context.l10n.notificationEvidencePlanHealthRecovered,
+        if (masteryImproved) context.l10n.notificationEvidenceMasteryImproved,
+        if (feedbackCount > 0) context.l10n.notificationEvidenceFeedbackCount(feedbackCount),
+        if (negativeFeedback > 0) context.l10n.notificationEvidenceNegativeFeedback(negativeFeedback),
       ].where((item) => item.isNotEmpty).join('，');
     }
-    return '系统已记录本次干预的后续证据';
+    return context.l10n.notificationEvidenceRecorded;
   }
 
-  String _labelForPushCategory(String? category) {
+  String _labelForPushCategory(BuildContext context, String? category) {
     switch (category) {
       case 'commitment_follow_up':
-        return '承诺跟进';
+        return context.l10n.notificationPushCategoryCommitmentFollowUp;
       case 'engagement_recovery':
-        return '活跃恢复';
+        return context.l10n.notificationPushCategoryEngagementRecovery;
       default:
-        return category ?? '未知';
+        return category ?? context.l10n.notificationPushCategoryUnknown;
     }
   }
 }

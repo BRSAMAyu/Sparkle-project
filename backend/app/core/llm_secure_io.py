@@ -4,9 +4,9 @@ import json
 import re
 from typing import Any
 
-from app.core.metrics import LLM_SAFETY_BYPASS_TOTAL
 from app.core.llm_output_validator import LLMOutputValidator
 from app.core.llm_safety import LLMSafetyService
+from app.core.metrics import LLM_SAFETY_BYPASS_TOTAL
 from app.services.aurora_stage37_llm_safety_kill_switch_service import (
     aurora_stage37_llm_safety_kill_switch_service,
 )

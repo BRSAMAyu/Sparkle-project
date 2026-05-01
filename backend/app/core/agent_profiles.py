@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 """
 Agent Profile Configuration - 统一的Agent配置管理
 
@@ -19,13 +20,13 @@ Agent Profile Configuration - 统一的Agent配置管理
 
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from loguru import logger
 
 
-class AgentRole(str, Enum):
+class AgentRole(StrEnum):
     """Agent角色定义"""
     # 主系统角色
     ORCHESTRATOR = "orchestrator"
@@ -56,7 +57,7 @@ class AgentRole(str, Enum):
     REVIEWER = "reviewer"                  # 内容审查专家（使用独立模型）
 
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     """任务类型（用于动态模型选择）"""
     # 简单任务 - 使用快速/廉价模型
     SIMPLE_CHAT = "simple_chat"           # 闲聊
@@ -78,7 +79,7 @@ class TaskType(str, Enum):
     REVIEW = "review"                        # 内容审查（需要不同模型）
 
 
-class ModelTier(str, Enum):
+class ModelTier(StrEnum):
     """模型层级（按成本/能力分类）"""
     FREE = "free"           # 后台免费层，不直出主聊天
     FREE_FAST = "free_fast" # 免费试探/低成本层
@@ -137,7 +138,7 @@ class AgentProfile:
     model_tier: ModelTier = ModelTier.STANDARD
     specific_model: str | None = None  # 强制指定具体模型（覆盖 tier）
     model_policy: AgentModelPolicy | None = None
-    diversity_hint: "ModelDiversityHint | None" = None
+    diversity_hint: ModelDiversityHint | None = None
     temperature: float = 0.7
     max_tokens: int | None = None
 

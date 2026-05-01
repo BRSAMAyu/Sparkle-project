@@ -4,12 +4,14 @@ Seed Library Service
 """
 
 from __future__ import annotations
+
 import uuid
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import String, and_, asc, cast, desc, func, insert, or_, select, text, update as sa_update
+from sqlalchemy import String, and_, asc, cast, desc, func, insert, or_, select, text
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer, selectinload
 
@@ -38,7 +40,7 @@ from app.services.embedding_service import embedding_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _SEED_VECTOR_RUNTIME_ENABLED = True
@@ -1830,7 +1832,7 @@ class SeedLibraryService:
         item_types: list[str] | None = None,
         limit: int = 10,
         threshold: float = 0.3,
-    ) -> list[tuple["SeedItem", float]]:
+    ) -> list[tuple[SeedItem, float]]:
         """
         语义搜索种子内容项
 

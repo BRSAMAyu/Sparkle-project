@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 
 Future<void> showFocusSessionSummaryDialog(
@@ -63,7 +64,7 @@ class _FocusSessionSummaryDialog extends StatelessWidget {
                     const SizedBox(width: DS.spacing12),
                     Expanded(
                       child: Text(
-                        '专注完成',
+                        context.l10n.focusSessionComplete,
                         style: DS.titleLarge.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
@@ -89,7 +90,7 @@ class _FocusSessionSummaryDialog extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: SparkleButton(
-                    label: '知道了',
+                    label: context.l10n.focusSessionGotIt,
                     icon: const Icon(Icons.check_rounded),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -116,14 +117,14 @@ class _SessionMetricRow extends StatelessWidget {
           Expanded(
             child: _MetricPill(
               icon: Icons.timer_outlined,
-              label: '$durationMinutes 分钟',
+              label: context.l10n.focusSessionMinutes(durationMinutes),
             ),
           ),
           const SizedBox(width: DS.spacing8),
           Expanded(
             child: _MetricPill(
               icon: Icons.local_fire_department_outlined,
-              label: '+$flameEarned 火苗',
+              label: context.l10n.focusSessionFlameEarned(flameEarned),
             ),
           ),
         ],
@@ -195,8 +196,11 @@ class _MasteryUpdateLine extends StatelessWidget {
             const SizedBox(width: DS.spacing10),
             Expanded(
               child: Text(
-                '今天的专注让你的 ${update.nodeName} 掌握度从 '
-                '${update.oldMastery} 提升到了 ${update.newMastery} 分',
+                context.l10n.focusSessionMasteryUpdate(
+                  update.newMastery,
+                  update.nodeName,
+                  update.oldMastery,
+                ),
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,
                   height: 1.45,

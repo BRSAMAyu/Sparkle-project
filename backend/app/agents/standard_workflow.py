@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
 import inspect
@@ -26,15 +27,6 @@ from app.agents.collaboration_workflows import (
     _build_timeline_step,
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
-from app.agents.workflow_experience import (
-    build_collaboration_user_query,
-    build_handoff_packet,
-    format_handoff_packets,
-    inject_examples_into_user_context,
-    resolve_few_shot_examples,
-    should_inject_few_shot,
-)
-from app.config import settings
 
 # Phase 1: Review System
 from app.agents.graph.nodes.review_nodes import (
@@ -45,15 +37,24 @@ from app.agents.graph.nodes.review_nodes import (
 
 # P1 & P2: Tool Fallback and Enhanced Features
 from app.agents.tool_fallback import ToolExecutionFallback
+from app.agents.workflow_experience import (
+    build_collaboration_user_query,
+    build_handoff_packet,
+    format_handoff_packets,
+    inject_examples_into_user_context,
+    resolve_few_shot_examples,
+    should_inject_few_shot,
+)
+from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 from app.core.context_pack import ContextBudgetManager, estimate_tokens, format_document_chunks_for_prompt
 from app.core.metrics import DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL, DOCUMENT_CONTEXT_TOKENS_USED
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
-from app.orchestration.executor import ToolExecutor
 from app.orchestration.chat_modes import CHAT_MODE_TEAM_PREFIX, parse_team_spec
 from app.orchestration.context_focus import infer_route_intent_from_chat_mode
+from app.orchestration.executor import ToolExecutor
 from app.orchestration.graph_rag import (
     GraphRAGRetriever,
     filter_graph_rag_result,
@@ -469,7 +470,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
                 ),
                 timeout=_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "Explicit expert collaboration timed out for expert=%s after %.1fs",
                 expert_id,
@@ -593,7 +594,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             ),
             timeout=_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning(
             "Explicit expert collaboration synthesis timed out for target=%s after %.1fs",
             synthesis_target,
@@ -1142,12 +1143,24 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
             and document_context_mode != "off"
         ):
             mode = str(decision.get("retrieval_mode") or "selective")
+            # v2.9: Spine RetrievalDirective may override retrieval depth
+            _spine_ret_dir = state.context_data.get("spine_retrieval_directive")
+            _rag_depth = 2 if mode == "aggressive" else 1
+            if isinstance(_spine_ret_dir, dict):
+                _spine_retrieval_mode = _spine_ret_dir.get("retrieval_mode")
+                if _spine_retrieval_mode == "task_bound_graph_rag":
+                    _rag_depth = 2
+                elif _spine_retrieval_mode == "off":
+                    mode = "off"
+                _spine_budget = _spine_ret_dir.get("token_budget")
+                if isinstance(_spine_budget, int) and _spine_budget > 0:
+                    state.context_data["spine_rag_token_budget"] = _spine_budget
             retriever = GraphRAGRetriever(ks)
             rag_result = await asyncio.wait_for(
                 retriever.retrieve(
                     query,
                     str(user_uuid),
-                    depth=2 if mode == "aggressive" else 1,
+                    depth=_rag_depth,
                     route_intent=str(route_intent) if route_intent else None,
                     include_group_documents=include_group_documents,
                     group_ids=group_ids,
@@ -1283,8 +1296,11 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                         "shown_results",
                         len(filtered_docs.chunks),
                     )
-                    document_context = document_context_candidate
-                    injected_document_chunks = int(document_budget_metadata.get("shown_results") or 0)
+                    if document_context_mode == "live":
+                        document_context = document_context_candidate
+                        injected_document_chunks = int(document_budget_metadata.get("shown_results") or 0)
+                    else:
+                        state.context_data["document_context_shadow_only"] = True
             except Exception as e:
                 logger.warning(f"Document retrieval failed: {e}")
 
@@ -1547,6 +1563,15 @@ Ask about their available time and current tasks if needed.
             "light" if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context) else "full"
         ),
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
+        spine_response_directive=state.context_data.get("spine_response_directive"),
+        spine_chronicle_summary=(
+            str(state.context_data.get("spine_chronicle_summary") or "")
+            if not use_slim_standard_context else None
+        ),
+        spine_fatigue_context=(
+            state.context_data.get("spine_fatigue_context")
+            if not use_slim_standard_context else None
+        ),
     )
     if explicit_runtime and explicit_runtime.get("system_prompt"):
         system_prompt += f"\n\n## 自定义专家指令\n{explicit_runtime['system_prompt']}"

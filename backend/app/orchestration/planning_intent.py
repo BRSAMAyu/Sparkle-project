@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 _MESSAGE_PLAN_PATTERN = re.compile(
     r"\b(plan|study plan|schedule|sprint plan)\b|计划|规划|冲刺计划|复习计划|时间安排",
     re.IGNORECASE,

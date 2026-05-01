@@ -4,11 +4,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from prometheus_client import Counter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache import cache_service
 from app.config import settings
+from app.core.cache import cache_service
 from app.core.event_bus import event_bus
 from app.core.metrics import get_or_create_metric
 from app.models.accountability_policy import AccountabilityPolicy
@@ -17,8 +18,6 @@ from app.services.accountability_notification_service import accountability_noti
 from app.services.aurora_stage24_policy_kill_switch_service import AuroraStage24PolicyKillSwitchService
 from app.services.policy_compiler_service import PolicyCompilerService
 from app.services.policy_ir import PolicyActionType, PolicyRule, PolicyTriggerType
-from prometheus_client import Counter
-
 
 POLICY_SCHEDULED_TOTAL = get_or_create_metric(
     Counter,

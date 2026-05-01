@@ -242,7 +242,7 @@ class _PatternCard extends StatelessWidget {
                     const SizedBox(width: DS.spacing8),
                     _buildMetaBadge(
                       icon: Icons.repeat_rounded,
-                      label: '出现 ${pattern.frequency} 次',
+                      label: context.l10n.cogPatternFreq(pattern.frequency),
                       color: DS.prismGreen,
                     ),
                     if (pattern.isArchived)

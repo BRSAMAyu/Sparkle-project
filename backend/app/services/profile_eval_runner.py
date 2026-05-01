@@ -3,9 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from app.services.profile_eval_llm_judge import (
     JUDGE_CONTRACT_VERSION,
@@ -82,7 +83,7 @@ class ProfileEvalRunner:
         timeout_ms: int | None = None,
         budget_tokens: int | None = None,
         prompt_version: str | None = None,
-    ) -> "ProfileEvalRunner":
+    ) -> ProfileEvalRunner:
         config = build_profile_eval_judge_config(
             enabled=enable_llm_judge,
             judge_weight=judge_weight,

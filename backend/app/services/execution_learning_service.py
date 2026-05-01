@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from statistics import median
 from uuid import UUID
 
@@ -25,7 +25,7 @@ from app.services.signal_adaptation import recency_weight
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ExecutionLearningService:

@@ -4,6 +4,7 @@ Prism/Cognitive Prism Tools - 认知棱镜工具
 Provides tools for behavior analysis and cognitive prism features.
 """
 from __future__ import annotations
+
 from typing import Any
 from uuid import UUID
 

@@ -1,15 +1,23 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable, Iterable
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
-from app.aurora.schemas import ClaimLifecycle, ClaimSource, IdentityEvidence, InsightClaim, ProjectionPolicy, SparkleRelationshipState
+from app.aurora.schemas import (
+    ClaimLifecycle,
+    ClaimSource,
+    IdentityEvidence,
+    InsightClaim,
+    ProjectionPolicy,
+    SparkleRelationshipState,
+)
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _coerce_projection_policy(value: ProjectionPolicy | str | None) -> ProjectionPolicy:

@@ -4,7 +4,6 @@ from prometheus_client import Counter, Histogram
 
 from app.core.metrics import get_or_create_metric
 
-
 TRAITS_COLDSTART_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_traits_coldstart_total",

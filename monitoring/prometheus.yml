@@ -10,6 +10,8 @@ rule_files:
   - "celery_alerts.yml"
   - "sparkle_slo_alerts.yml"
   - "sparkle_production_baseline_alerts.yml"
+  - "sparkle_t6_slo_alerts.yml"
+  - "sparkle_recording_rules.yml"
   - "sqam_alerts.yml"
 
 scrape_configs:

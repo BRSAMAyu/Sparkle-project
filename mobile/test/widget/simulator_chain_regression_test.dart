@@ -12,6 +12,7 @@ import 'package:sparkle/features/visual_elements/data/repositories/visual_elemen
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeApiClient extends Fake implements ApiClient {}
 
@@ -173,6 +174,8 @@ class _LearningPathDialogRepository extends LearningPathRepository {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('visual elements fallback keeps defaults available when secondary calls fail',
@@ -209,7 +212,7 @@ void main() {
             _LearningPathDialogRepository(),
           ),
         ],
-        child: const MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: Center(
               child: LearningPathDialog(

@@ -5,7 +5,7 @@ Stores short-lived sessions in Redis for authentication flows.
 from __future__ import annotations
 
 import json
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import redis.asyncio as redis
@@ -43,7 +43,7 @@ async def create_session(
     payload = {
         "user_id": user_id,
         "metadata": metadata or {},
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     client, should_close = await _get_redis_client()

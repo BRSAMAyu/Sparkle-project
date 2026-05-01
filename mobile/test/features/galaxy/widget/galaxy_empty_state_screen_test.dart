@@ -11,8 +11,11 @@ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_reposi
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+import '../../../shared/i18n_test_helper.dart';
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
@@ -30,11 +33,8 @@ void main() {
             _FakeEnhancedGalaxyRepository(),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const GalaxyScreen(),
         ),
       ),
@@ -72,11 +72,8 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp(
+        child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
           home: const GalaxyScreen(),
         ),
       ),

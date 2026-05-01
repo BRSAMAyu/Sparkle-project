@@ -5,7 +5,7 @@ Budget Optimization Service
 Intelligent budget allocation for context packs using multi-armed bandit algorithms.
 """
 import math
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import and_, select
@@ -16,7 +16,7 @@ from app.services.budget_tuning_service import BudgetTuningService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BudgetOptimizationService:
@@ -129,12 +129,12 @@ class BudgetOptimizationService:
             successful_runs = 0
 
             for run in runs:
-                def _read(field: str, default):
-                    if isinstance(run, dict):
-                        return run.get(field, default)
-                    value = getattr(run, field, None)
-                    if value is None and hasattr(run, "metadata_payload"):
-                        metadata = getattr(run, "metadata_payload", {}) or {}
+                def _read(field: str, default, _run=run):
+                    if isinstance(_run, dict):
+                        return _run.get(field, default)
+                    value = getattr(_run, field, None)
+                    if value is None and hasattr(_run, "metadata_payload"):
+                        metadata = getattr(_run, "metadata_payload", {}) or {}
                         return metadata.get(field, default)
                     return value if value is not None else default
 

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -373,11 +374,13 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
             }
           }
         } else {
-          resultMessage = '专注记录已离线保存，稍后会自动重试同步。';
+          final zh = I18nService.instance.isChinese;
+          resultMessage = zh ? '专注记录已离线保存，稍后会自动重试同步' : 'Focus record saved offline, will auto-sync later';
         }
       } catch (e) {
         state = state.copyWith(loggingError: e.toString());
-        resultMessage = '专注记录保存失败：$e';
+        final zh = I18nService.instance.isChinese;
+        resultMessage = zh ? '专注记录保存失败：$e' : 'Focus record save failed: $e';
       }
 
       try {

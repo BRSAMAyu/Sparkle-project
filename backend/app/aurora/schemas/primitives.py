@@ -24,7 +24,6 @@ from app.aurora.schemas.enums import (
     ProjectionPolicy,
     RetentionTier,
     Shareability,
-    SignalTier,
     UXIntent,
     WindowMode,
     WritePath,

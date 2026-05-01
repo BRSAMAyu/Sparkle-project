@@ -27,7 +27,7 @@ class OpenClawConfig:
     max_concurrent_runs: int = 3
 
     @classmethod
-    def from_settings(cls) -> "OpenClawConfig":
+    def from_settings(cls) -> OpenClawConfig:
         return cls(
             enabled=settings.OPENCLAW_ENABLED,
             gateway_url=settings.OPENCLAW_GATEWAY_URL.rstrip("/"),

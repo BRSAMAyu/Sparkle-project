@@ -3,8 +3,8 @@ Visual Elements API Endpoints
 视觉元素系统 API 端点
 """
 from __future__ import annotations
+
 import secrets
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import and_, select
@@ -17,13 +17,11 @@ from app.models.achievement import UserAchievement
 from app.models.user import User
 from app.models.visual_element import VisualElementRarity, VisualElementType
 from app.schemas.visual_element import (
-    EquipElementRequest,
     EquipElementResponse,
     UnlockElementRequest,
     UnlockElementResponse,
     UserVisualConfigResponse,
     VisualElementListResponse,
-    VisualElementResponse,
 )
 from app.services.visual_element_service import VisualElementService
 

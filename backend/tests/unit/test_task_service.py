@@ -76,6 +76,8 @@ class TestTaskServiceGetById:
 
         assert result is mock_task
         mock_db.execute.assert_called_once()
+        # Verify execute was called with a select statement (not None)
+        assert mock_db.execute.call_args[0][0] is not None
 
     @pytest.mark.asyncio
     async def test_get_task_not_found(self):
@@ -144,6 +146,10 @@ class TestTaskServiceCreate:
             assert task.difficulty == 2
             assert task.status == TaskStatus.PENDING
             mock_db.add.assert_called_once()
+            # Verify the added task object has correct fields
+            added_task = mock_db.add.call_args[0][0]
+            assert added_task.title == "Test Task"
+            assert added_task.user_id == user_id
             mock_db.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -177,6 +183,10 @@ class TestTaskServiceCreate:
             assert task.estimated_minutes == 45
             assert task.difficulty == 3
             mock_db.add.assert_called_once()
+            # Verify the added task object inherited personalization defaults
+            added_task = mock_db.add.call_args[0][0]
+            assert added_task.user_id == user_id
+            assert added_task.estimated_minutes == 45
 
     @pytest.mark.asyncio
     async def test_create_task_personalization_fails(self):

@@ -90,7 +90,7 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
           ),
           error: (err, stack) => CustomErrorWidget.page(
             context: context,
-            title: '生成任务加载失败',
+            title: context.l10n.cogJobsLoadFailed,
             message: l10n.capsuleLoadFailed('$err'),
             onRetry: () => ref.read(generationJobsProvider.notifier).fetchJobs(),
           ),

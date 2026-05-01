@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 预测洞察卡片 - 显示AI预测的学习建议
 ///
@@ -42,7 +44,7 @@ class PredictiveInsightsCard extends StatelessWidget {
       case 'risk':
         return _buildRiskCard(context);
       default:
-        return const Text('Unknown type');
+        return Text(I18nService.instance.isChinese ? '未知类型' : 'Unknown type');
     }
   }
 
@@ -74,15 +76,15 @@ class PredictiveInsightsCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '活跃度预测',
-                    style: TextStyle(
+                  Text(
+                    I18nService.instance.isChinese ? '活跃度预测' : 'Engagement Forecast',
+                    style: const TextStyle(
                       fontSize: DS.fontSizeBase,
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
-                    'AI 基于学习习惯的预测',
+                    I18nService.instance.isChinese ? 'AI 基于学习习惯的预测' : 'AI prediction based on learning habits',
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       color: DS.neutral500,
@@ -112,9 +114,9 @@ class PredictiveInsightsCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('预测下次学习时间', style: TextStyle(fontSize: 12)),
+                    Text(context.l10n.insPredictNext, style: const TextStyle(fontSize: 12)),
                     Text(
-                      _formatDateTime(nextActiveTime),
+                      _formatDateTime(context, nextActiveTime),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -130,7 +132,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         ],
 
         // Dropout Risk
-        _buildRiskIndicator(dropoutRisk),
+        _buildRiskIndicator(context, dropoutRisk),
       ],
     );
   }
@@ -166,15 +168,15 @@ class PredictiveInsightsCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '难度预测',
-                    style: TextStyle(
+                  Text(
+                    I18nService.instance.isChinese ? '难度预测' : 'Difficulty Forecast',
+                    style: const TextStyle(
                       fontSize: DS.fontSizeBase,
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
-                    'AI 基于前置知识的评估',
+                    I18nService.instance.isChinese ? 'AI 基于前置知识的评估' : 'AI assessment based on prerequisites',
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       color: DS.neutral500,
@@ -195,9 +197,9 @@ class PredictiveInsightsCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '预测难度',
-                  style: TextStyle(fontSize: DS.fontSizeXs),
+                Text(
+                  I18nService.instance.isChinese ? '预测难度' : 'Predicted Difficulty',
+                  style: const TextStyle(fontSize: DS.fontSizeXs),
                 ),
                 Text(
                   _getDifficultyLabel(difficultyScore),
@@ -234,7 +236,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             ),
             const SizedBox(width: DS.spacing8),
             Text(
-              '预计学习时长: ${estimatedHours.toStringAsFixed(1)} 小时',
+              context.l10n.picEstimatedHours(estimatedHours.toStringAsFixed(1)),
               style: const TextStyle(fontSize: DS.fontSizeSm),
             ),
           ],
@@ -258,7 +260,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: DS.spacing8),
                 Text(
-                  '建议先学习 $missingCount 个前置知识',
+                  I18nService.instance.isChinese ? '建议先学习 $missingCount 个前置知识' : 'Complete $missingCount prerequisite(s) first',
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     color: DS.textPrimary,
@@ -300,15 +302,15 @@ class PredictiveInsightsCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '学习风险评估',
-                    style: TextStyle(
+                  Text(
+                    I18nService.instance.isChinese ? '学习风险评估' : 'Learning Risk Assessment',
+                    style: const TextStyle(
                       fontSize: DS.fontSizeBase,
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
-                    'AI 持续关注您的学习状态',
+                    I18nService.instance.isChinese ? 'AI 持续关注您的学习状态' : 'AI monitors your learning status',
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       color: DS.neutral500,
@@ -324,7 +326,7 @@ class PredictiveInsightsCard extends StatelessWidget {
 
         // Risk Score
         Text(
-          '风险指数: ${riskScore.toInt()}/100',
+          context.l10n.picRiskScore(riskScore.toInt().toString()),
           style: TextStyle(
             fontSize: DS.fontSizeSm,
             color: _getRiskColor(riskLevel),
@@ -345,9 +347,9 @@ class PredictiveInsightsCard extends StatelessWidget {
 
         // Suggestions
         if (suggestions.isNotEmpty) ...[
-          const Text(
-            'AI 建议:',
-            style: TextStyle(
+          Text(
+            I18nService.instance.isChinese ? 'AI 建议:' : 'AI Suggestions:',
+            style: const TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightBold,
             ),
@@ -447,7 +449,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         ),
       );
 
-  Widget _buildRiskIndicator(String risk) => Container(
+  Widget _buildRiskIndicator(BuildContext context, String risk) => Container(
         padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           color: _getRiskColor(risk).withValues(alpha: 0.1),
@@ -458,7 +460,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             Icon(_getRiskIcon(risk), color: _getRiskColor(risk), size: 16),
             const SizedBox(width: DS.sm),
             Text(
-              '流失风险: ${_getRiskLevelText(risk)}',
+              context.l10n.picChurnRisk(_getRiskLevelText(risk)),
               style: TextStyle(fontSize: 12, color: _getRiskColor(risk)),
             ),
           ],
@@ -466,16 +468,16 @@ class PredictiveInsightsCard extends StatelessWidget {
       );
 
   // Helper Methods
-  String _formatDateTime(DateTime dt) {
+  String _formatDateTime(BuildContext context, DateTime dt) {
     final now = DateTime.now();
     final diff = dt.difference(now);
 
     if (diff.inHours < 1) {
-      return '约 ${diff.inMinutes} 分钟后';
+      return context.l10n.picMinutesLater(diff.inMinutes);
     } else if (diff.inHours < 24) {
-      return '今天 ${DateFormat('HH:mm').format(dt)}';
+      return context.l10n.picTodayTime(DateFormat('HH:mm').format(dt));
     } else if (diff.inDays == 1) {
-      return '明天 ${DateFormat('HH:mm').format(dt)}';
+      return context.l10n.picTomorrowTime(DateFormat('HH:mm').format(dt));
     } else {
       return DateFormat('MM-dd HH:mm').format(dt);
     }
@@ -488,9 +490,10 @@ class PredictiveInsightsCard extends StatelessWidget {
   }
 
   String _getDifficultyLabel(double score) {
-    if (score < 0.3) return '简单';
-    if (score < 0.6) return '中等';
-    return '困难';
+    final zh = I18nService.instance.isChinese;
+    if (score < 0.3) return zh ? '简单' : 'Easy';
+    if (score < 0.6) return zh ? '中等' : 'Medium';
+    return zh ? '困难' : 'Hard';
   }
 
   Color _getRiskColor(String level) {
@@ -507,15 +510,16 @@ class PredictiveInsightsCard extends StatelessWidget {
   }
 
   String _getRiskLevelText(String level) {
+    final zh = I18nService.instance.isChinese;
     switch (level) {
       case 'low':
-        return '低风险';
+        return zh ? '低风险' : 'Low Risk';
       case 'medium':
-        return '中等风险';
+        return zh ? '中等风险' : 'Medium Risk';
       case 'high':
-        return '高风险';
+        return zh ? '高风险' : 'High Risk';
       default:
-        return '未知';
+        return zh ? '未知' : 'Unknown';
     }
   }
 

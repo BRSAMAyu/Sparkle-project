@@ -6,6 +6,7 @@ import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import '../shared/i18n_test_helper.dart';
 
 class _FakeEvidenceResolveService implements EvidenceResolveService {
   @override
@@ -29,6 +30,8 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
 }
 
 void main() {
+
+  setUp(setUpI18nForTesting);
   testWidgets('profile front door card renders claims and evidence classes', (
     tester,
   ) async {
@@ -39,10 +42,7 @@ void main() {
             _FakeEvidenceResolveService(),
           ),
         ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
+        child: testMaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(
               child: ActionCard(
@@ -118,11 +118,7 @@ void main() {
     String? capturedPrompt;
 
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
+      testMaterialApp(home: Scaffold(
           body: SingleChildScrollView(
             child: ActionCard(
               action: WidgetPayload(
@@ -159,8 +155,7 @@ void main() {
               },
             ),
           ),
-        ),
-      ),
+        ),),
     );
 
     await tester.tap(find.text('展开'));
@@ -183,10 +178,7 @@ void main() {
             _FakeEvidenceResolveService(),
           ),
         ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
+        child: testMaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(
               child: ActionCard(
@@ -225,7 +217,7 @@ void main() {
     await tester.tap(find.textContaining('查看依据').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('证据链'), findsOneWidget);
-    expect(find.textContaining('热力学第二定律'), findsOneWidget);
+    expect(find.text('证据记录'), findsOneWidget);
+    expect(find.textContaining('concept: node-1'), findsOneWidget);
   });
 }

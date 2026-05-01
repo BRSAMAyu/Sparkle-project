@@ -240,6 +240,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	// Sanitize Input (Security Hygiene) - reuse global sanitizer
 	input.Message = sanitizer.Sanitize(input.Message)
 
+	// Canonicalize the authenticated identity before any session history write/read.
+	// WS auth may provide an email or legacy subject, while chat history ownership
+	// and downstream AI context should consistently use the resolved UUID.
+	userUUID, resolvedUserID, resolvedUser, _ := h.resolveUserIdentity(ctx, userID)
+	if resolvedUserID != "" {
+		userID = resolvedUserID
+	}
+
 	// Persist user message to Redis history for context pruning
 	if input.SessionID != "" {
 		sessionID := input.SessionID
@@ -252,12 +260,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	traceID := ""
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
 		traceID = span.SpanContext().TraceID().String()
-	}
-
-	// Resolve user identity to UUID (token sub may be email)
-	userUUID, resolvedUserID, resolvedUser, _ := h.resolveUserIdentity(ctx, userID)
-	if resolvedUserID != "" {
-		userID = resolvedUserID
 	}
 
 	var profileSnapshot *service.ChatUserProfileSnapshot
@@ -371,6 +373,26 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		extraContext["selected_document_ids"] = documentFilter
 	}
 
+	// Load conversation history from Redis for session context restoration.
+	// This is critical for WS reconnects: without it, Python receives empty
+	// history and treats the request as a new conversation.
+	var historyMessages []*agentv1.ChatMessage
+	sessionHasHistory := false
+	if input.SessionID != "" && h.chatHistory != nil {
+		msgs, histErr := h.chatHistory.GetMessages(ctx, userID, input.SessionID, 20, 0)
+		if histErr == nil {
+			for _, m := range msgs {
+				historyMessages = append(historyMessages, &agentv1.ChatMessage{
+					Role:    m.Role,
+					Content: m.Content,
+				})
+			}
+			sessionHasHistory = len(historyMessages) > 0
+		} else {
+			log.Printf("[chatflow] history load failed for session=%s user=%s: %v", input.SessionID, userID, histErr)
+		}
+	}
+
 	cacheScope := semanticCacheScope(
 		userID,
 		normalizedChatMode,
@@ -383,7 +405,11 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	// Skip cache when request carries orchestration-bearing fields
 	// (active_tools, tool results, or extra_context) — these must hit
 	// the Python orchestrator to preserve graph/tool/HITL behavior.
-	shouldSkipCache := len(input.ActiveTools) > 0 || input.IsToolResult || len(input.ExtraContext) > 0
+	// Also skip when session has existing history: in a multi-turn
+	// conversation, the same words mean different things depending on
+	// what was said before, so cached responses from earlier turns are
+	// stale and incorrect.
+	shouldSkipCache := len(input.ActiveTools) > 0 || input.IsToolResult || len(input.ExtraContext) > 0 || sessionHasHistory
 	if h.semantic != nil && !shouldSkipCache {
 		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
 		cachedResp, err := h.semantic.SearchExact(cacheCtx, cacheScope, input.Message)
@@ -454,6 +480,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		RequestId:         reqID,
 		UserId:            userID,
 		SessionId:         input.SessionID,
+		History:           historyMessages,
 		FileIds:           input.FileIds,
 		DocumentFilter:    documentFilter,
 		IncludeReferences: input.IncludeReferences,

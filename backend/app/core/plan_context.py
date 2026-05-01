@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 PlanContextBuilder - 计划级上下文构建器
 
@@ -15,7 +16,7 @@ Usage:
     enriched_context = await builder.build_enriched(user_id, plan_id)
 """
 
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -32,7 +33,7 @@ PLAN_CONTEXT_DEFAULT_BUDGET = 500
 
 def _utcnow() -> datetime:
     """Return a naive UTC datetime for compatibility with current DB column types."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanContextBuilder:

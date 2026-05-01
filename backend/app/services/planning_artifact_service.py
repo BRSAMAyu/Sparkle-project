@@ -16,12 +16,12 @@ from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.card_protocol import (
-    PlanningArtifact,
-    ArtifactType,
-    ArtifactStatus,
-)
 from app.core.event_bus import EventBus
+from app.models.card_protocol import (
+    ArtifactStatus,
+    ArtifactType,
+    PlanningArtifact,
+)
 
 
 class PlanningArtifactService:

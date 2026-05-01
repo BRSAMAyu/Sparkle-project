@@ -175,8 +175,8 @@ async def chat_with_task_context(
         # Build prior_outputs from Aurora user state
         prior_outputs: dict[str, Any] = {}
         try:
-            from app.state_aggregator.service import StateAggregator
             from app.state_aggregator.schema import UserStateFieldName
+            from app.state_aggregator.service import StateAggregator
 
             aggregator = StateAggregator(db)
             state = await aggregator.get_user_state(
@@ -817,7 +817,7 @@ async def confirm_action(
     except Exception:
         # 删除失败的待确认操作
         await pending_actions_store.delete(action_id, str(current_user.id))
-        raise HTTPException(status_code=500, detail="Action execution failed")
+        raise HTTPException(status_code=500, detail="Action execution failed") from None
 
 
 # ============辅助函数 ============

@@ -426,6 +426,10 @@ class TestBackfillEmbeddingsCommit:
         assert result["processed"] == 3
         assert result["failed"] == 0
 
+        # Verify embeddings were actually set on items before commit
+        for item in mock_items:
+            assert item.embedding == [0.1] * 1024
+
         # 关键验证：commit 只调用一次
         mock_db.commit.assert_called_once()
         mock_db.flush.assert_called_once()
@@ -489,6 +493,10 @@ class TestBackfillEmbeddingsCommit:
         assert result["processed"] == 2
         assert result["failed"] == 1
 
+        # Verify that successful items got embeddings set
+        assert mock_items[0].embedding == [0.1] * 1024  # first item succeeded
+        assert mock_items[2].embedding == [0.1] * 1024  # third item succeeded
+
         # 关键验证：即使有失败，commit 仍然只调用一次
         mock_db.commit.assert_called_once()
 
@@ -519,6 +527,11 @@ class TestBackfillEmbeddingsCommit:
 
         assert result["processed"] == 2
         assert result["skipped"] == 1
+
+        # Verify valid items got embeddings, skipped item was left unchanged
+        assert mock_items[0].embedding == [0.1] * 1024  # "Valid" item
+        assert mock_items[2].embedding == [0.1] * 1024  # "Also Valid" item
+
         mock_db.commit.assert_called_once()
 
 

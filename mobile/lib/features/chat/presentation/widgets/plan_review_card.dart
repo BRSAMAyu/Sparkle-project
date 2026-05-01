@@ -1018,7 +1018,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '批准后自动交给 Agent 执行',
+                    context.l10n.chatPlanReviewAutoAgent,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: DS.fontWeightSemibold,
                           color: DS.neutral900,
@@ -1026,7 +1026,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    'Sparkle 会只挑适合委派给 OpenClaw 的任务自动下发，其余任务仍保留为手动执行。',
+                    context.l10n.chatPlanReviewSelectiveDelegate,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.neutral700,
                           height: 1.4,

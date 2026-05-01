@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
@@ -33,7 +34,7 @@ class LearningPathProgressBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '学习路径进度',
+                context.l10n.planLearningPathProgress,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: DS.fontWeightSemibold,
@@ -74,9 +75,9 @@ class LearningPathProgressBar extends StatelessWidget {
           spacing: DS.md,
           runSpacing: DS.xs,
           children: [
-            _buildLegendItem('已掌握', DS.semanticSuccess),
-            _buildLegendItem('学习中', DS.brandPrimary),
-            _buildLegendItem('待解锁', DS.brandPrimary20),
+            _buildLegendItem(context.l10n.planLegendMastered, DS.semanticSuccess),
+            _buildLegendItem(context.l10n.planLegendLearning, DS.brandPrimary),
+            _buildLegendItem(context.l10n.planLegendLocked, DS.brandPrimary20),
           ],
         ),
       ],

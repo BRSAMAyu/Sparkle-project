@@ -53,13 +53,13 @@ func TestClientNewClient(t *testing.T) {
 			desc:      "Should return client object (connection happens in background)",
 		},
 		{
-			name: "invalid_address",
+			name: "invalid_address_nonblocking_dial",
 			cfg: &config.Config{
 				AgentAddress:    "invalid:invalid",
 				AgentTLSEnabled: false,
 			},
-			expectErr: true,
-			desc:      "Should fail with invalid address",
+			expectErr: false, // grpc.DialContext is non-blocking, always returns nil error
+			desc:      "Dial is non-blocking; connection fails later on actual RPC",
 		},
 	}
 

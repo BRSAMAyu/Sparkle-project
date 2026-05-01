@@ -4,10 +4,10 @@ import hashlib
 import math
 import re
 from collections import Counter
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from statistics import fmean
-from typing import Iterable, Sequence
 from uuid import UUID
 
 from loguru import logger
@@ -105,7 +105,7 @@ class SceneConsolidationResult:
 def build_scene_id(*, user_id: UUID, member_memory_ids: Sequence[str], version: str) -> str:
     normalized_members = sorted({str(member_id) for member_id in member_memory_ids if str(member_id).strip()})
     digest = hashlib.sha256(
-        f"{user_id}|{version}|{'|'.join(normalized_members)}".encode("utf-8")
+        f"{user_id}|{version}|{'|'.join(normalized_members)}".encode()
     ).hexdigest()
     return f"scene_{digest}"
 

@@ -5,11 +5,11 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import inspect
 import json
-import threading
-from datetime import timezone, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -25,18 +25,18 @@ from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragm
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
 from app.services.embedding_service import embedding_service
-from app.services.llm_service import llm_service
-from app.services.llm_service import get_llm_service_for_specific_model
+from app.services.llm_service import get_llm_service_for_specific_model, llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _VECTOR_RUNTIME_ENABLED = True
-_VECTOR_RUNTIME_DISABLED_USERS: set[str] = set()
-_VECTOR_RUNTIME_STATE_LOCK = threading.Lock()
+_VECTOR_RUNTIME_DISABLED_USERS: dict[str, datetime] = {}  # user_key → disabled_at timestamp
+_VECTOR_RUNTIME_DISABLED_TTL = timedelta(hours=1)  # Auto-re-enable after 1h
+_VECTOR_RUNTIME_STATE_LOCK = asyncio.Lock()
 
 
 class CognitiveService:
@@ -68,19 +68,30 @@ class CognitiveService:
         return str(user_id or "")
 
     @staticmethod
-    def _is_vector_runtime_enabled_for_user(user_id: UUID | str | None) -> bool:
-        with _VECTOR_RUNTIME_STATE_LOCK:
+    async def _is_vector_runtime_enabled_for_user(user_id: UUID | str | None) -> bool:
+        async with _VECTOR_RUNTIME_STATE_LOCK:
             if not _VECTOR_RUNTIME_ENABLED:
                 return False
-            return CognitiveService._normalize_vector_runtime_user_key(user_id) not in _VECTOR_RUNTIME_DISABLED_USERS
+            user_key = CognitiveService._normalize_vector_runtime_user_key(user_id)
+            if user_key not in _VECTOR_RUNTIME_DISABLED_USERS:
+                return True
+            # Check TTL expiry — re-enable if old enough
+            disabled_at = _VECTOR_RUNTIME_DISABLED_USERS[user_key]
+            if _utcnow() - disabled_at > _VECTOR_RUNTIME_DISABLED_TTL:
+                del _VECTOR_RUNTIME_DISABLED_USERS[user_key]
+                return True
+            return False
 
     @staticmethod
-    def _disable_vector_runtime_for_user(user_id: UUID | str | None, reason: str) -> None:
+    async def _disable_vector_runtime_for_user(user_id: UUID | str | None, reason: str) -> None:
         user_key = CognitiveService._normalize_vector_runtime_user_key(user_id)
-        with _VECTOR_RUNTIME_STATE_LOCK:
-            if user_key in _VECTOR_RUNTIME_DISABLED_USERS:
-                return
-            _VECTOR_RUNTIME_DISABLED_USERS.add(user_key)
+        async with _VECTOR_RUNTIME_STATE_LOCK:
+            _VECTOR_RUNTIME_DISABLED_USERS[user_key] = _utcnow()
+            # Evict oldest entries if set grows too large
+            if len(_VECTOR_RUNTIME_DISABLED_USERS) > 10000:
+                sorted_keys = sorted(_VECTOR_RUNTIME_DISABLED_USERS, key=_VECTOR_RUNTIME_DISABLED_USERS.get)  # type: ignore[arg-type]
+                for old_key in sorted_keys[: len(sorted_keys) - 5000]:
+                    del _VECTOR_RUNTIME_DISABLED_USERS[old_key]
         logger.warning("Disabling cognitive vector runtime fallback for user {}: {}", user_key, reason)
 
     def _sanitize_content(self, content: str) -> str:
@@ -188,7 +199,7 @@ class CognitiveService:
         logger.info(f"Creating fragment {fragment.id} for user {user_id}: {self._sanitize_content(content)}")
 
         # 2. Generate Embedding
-        vector_runtime_enabled = self._is_vector_runtime_enabled_for_user(user_id)
+        vector_runtime_enabled = await self._is_vector_runtime_enabled_for_user(user_id)
         if vector_runtime_enabled:
             try:
                 embedding = await embedding_service.get_embedding(content)
@@ -206,7 +217,7 @@ class CognitiveService:
             if not self._is_vector_runtime_error(exc):
                 raise
 
-            self._disable_vector_runtime_for_user(user_id, str(exc))
+            await self._disable_vector_runtime_for_user(user_id, str(exc))
             fragment.embedding = None
             fragment = await self._insert_fragment_without_embedding(fragment)
 
@@ -336,7 +347,7 @@ class CognitiveService:
                 # 2. RAG: Retrieve Similar Fragments (Raw + HyDE)
                 similar_fragments: list[CognitiveFragment] = []
                 fragment_embedding = None
-                vector_runtime_enabled = self._is_vector_runtime_enabled_for_user(user_id)
+                vector_runtime_enabled = await self._is_vector_runtime_enabled_for_user(user_id)
                 if vector_runtime_enabled:
                     fragment_embedding = fragment.__dict__.get("embedding")
                     if fragment_embedding is None:
@@ -347,7 +358,7 @@ class CognitiveService:
                             fragment_embedding = embedding_result.scalar_one_or_none()
                         except Exception as exc:
                             if self._is_vector_runtime_error(exc):
-                                self._disable_vector_runtime_for_user(user_id, str(exc))
+                                await self._disable_vector_runtime_for_user(user_id, str(exc))
                                 vector_runtime_enabled = False
                                 fragment_embedding = None
                             else:
@@ -367,7 +378,7 @@ class CognitiveService:
                         similar_fragments = rag_result.scalars().all()
                     except Exception as exc:
                         if self._is_vector_runtime_error(exc):
-                            self._disable_vector_runtime_for_user(user_id, str(exc))
+                            await self._disable_vector_runtime_for_user(user_id, str(exc))
                             vector_runtime_enabled = False
                             similar_fragments = []
                         else:
@@ -403,12 +414,12 @@ class CognitiveService:
                                 hyde_fragments = hyde_result.scalars().all()
                             except Exception as exc:
                                 if self._is_vector_runtime_error(exc):
-                                    self._disable_vector_runtime_for_user(user_id, str(exc))
+                                    await self._disable_vector_runtime_for_user(user_id, str(exc))
                                     vector_runtime_enabled = False
                                     hyde_fragments = []
                                 else:
                                     raise
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         hyde_cancelled = True
                     except Exception as e:
                         logger.warning(f"HyDE retrieval failed: {e}")

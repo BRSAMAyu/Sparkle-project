@@ -3,8 +3,9 @@ Security and Authentication Utilities
 JWT token generation, password hashing, etc.
 """
 from __future__ import annotations
+
 import asyncio
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from jose import JWTError, jwt
@@ -38,7 +39,7 @@ def get_password_hash(password: str) -> str:
         return pwd_context.hash(password)
     except Exception:
         # Remove dangerous fallback - raise exception for hashing failures
-        raise ValueError("Failed to hash password")
+        raise ValueError("Failed to hash password") from None
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
@@ -46,7 +47,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     创建 JWT access token
     """
     to_encode = data.copy()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + expires_delta if expires_delta else now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update(
         {
@@ -69,7 +70,7 @@ def create_refresh_token(data: dict) -> str:
     创建 JWT refresh token
     """
     to_encode = data.copy()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update(
         {
@@ -253,7 +254,7 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
     except Exception:
         return
 
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
     ttl = exp_ts - now_ts
     if ttl <= 0:
         return True  # Already expired, no need to blacklist

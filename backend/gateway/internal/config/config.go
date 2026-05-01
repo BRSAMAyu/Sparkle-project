@@ -488,8 +488,8 @@ func Load() *Config {
 	// File storage defaults
 	viper.SetDefault("MINIO_ENDPOINT", "localhost:9000")
 	viper.SetDefault("MINIO_PUBLIC_ENDPOINT", "")
-	viper.SetDefault("MINIO_ACCESS_KEY", "minioadmin")
-	viper.SetDefault("MINIO_SECRET_KEY", "minioadmin")
+	viper.SetDefault("MINIO_ACCESS_KEY", "")
+	viper.SetDefault("MINIO_SECRET_KEY", "")
 	viper.SetDefault("MINIO_BUCKET", "sparkle-files")
 	viper.SetDefault("MINIO_REGION", "")
 	viper.SetDefault("MINIO_USE_SSL", false)

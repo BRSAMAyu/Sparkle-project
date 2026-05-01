@@ -2,8 +2,8 @@
 Seed Content Models
 种子内容库模型 - 支持 few-shot 示例、预设教学内容、通用回复模板
 """
-from datetime import timezone, datetime
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
@@ -17,10 +17,10 @@ VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-class LibraryCategory(str, Enum):
+class LibraryCategory(StrEnum):
     """库分类枚举"""
     FEW_SHOT = "few_shot"  # Few-shot 学习示例
     TEACHING_CONTENT = "teaching_content"  # 预设教学内容
@@ -28,14 +28,14 @@ class LibraryCategory(str, Enum):
     CUSTOM = "custom"  # 自定义分类
 
 
-class LibraryVisibility(str, Enum):
+class LibraryVisibility(StrEnum):
     """库可见性枚举"""
     PRIVATE = "private"  # 私有库，仅创建者可见
     PUBLIC = "public"  # 公开库，所有用户可浏览和订阅
     OFFICIAL = "official"  # 官方库，系统推荐
 
 
-class ItemType(str, Enum):
+class ItemType(StrEnum):
     """内容项类型枚举"""
     EXAMPLE = "example"  # 学习示例
     EXERCISE = "exercise"  # 练习题
@@ -44,7 +44,7 @@ class ItemType(str, Enum):
     FLASHCARD = "flashcard"  # 抽认卡
 
 
-class DifficultyLevel(str, Enum):
+class DifficultyLevel(StrEnum):
     """难度等级枚举"""
     BEGINNER = "beginner"  # 初级
     INTERMEDIATE = "intermediate"  # 中级
@@ -313,7 +313,6 @@ class UserLibrarySubscription(BaseModel):
 
     def mark_used(self) -> None:
         """标记为已使用"""
-        from datetime import timezone, datetime
         self.last_used_at = _utcnow()
 
 

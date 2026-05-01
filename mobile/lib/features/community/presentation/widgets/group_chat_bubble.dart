@@ -151,7 +151,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                 if (widget.onFavorite != null)
                   ListTile(
                     leading: const Icon(Icons.bookmark_add_outlined),
-                    title: const Text('收藏'),
+                    title: Text(context.l10n.communityFavorite),
                     onTap: () {
                       Navigator.pop(context);
                       widget.onFavorite!(widget.message);
@@ -160,7 +160,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                 if (widget.onForward != null)
                   ListTile(
                     leading: const Icon(Icons.forward_rounded),
-                    title: const Text('转发'),
+                    title: Text(context.l10n.communityForward),
                     onTap: () {
                       Navigator.pop(context);
                       widget.onForward!(widget.message);
@@ -192,7 +192,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   ListTile(
                     leading: Icon(Icons.flag_outlined, color: DS.error),
                     title: Text(
-                      '举报',
+                      context.l10n.communityReport, // TODO: i18n - this is inside a Text widget already using style
                       style: TextStyle(color: DS.error),
                     ),
                     onTap: () {
@@ -765,7 +765,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       contentType: ShareableContentType.taskCompletion,
       resourceId: data['resource_id'] as String? ?? '',
       title:
-          data['resource_title'] as String? ?? widget.message.content ?? '任务',
+          data['resource_title'] as String? ?? widget.message.content ?? context.l10n.communityTaskFallback,
       subtitle: data['resource_summary'] as String?,
       metadata: {
         'duration': meta['estimated_minutes'],
@@ -796,7 +796,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       contentType: ShareableContentType.planProgress,
       resourceId: data['resource_id'] as String? ?? '',
       title:
-          data['resource_title'] as String? ?? widget.message.content ?? '计划',
+          data['resource_title'] as String? ?? widget.message.content ?? context.l10n.communityPlanFallback,
       subtitle: progress != null
           ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
           : null,
@@ -889,7 +889,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final resourceType = data['resource_type'] as String? ?? 'seed_item';
     final title = data['resource_title'] as String? ??
         widget.message.content ??
-        (resourceType == 'seed_library' ? '种子库' : '种子内容');
+        (resourceType == 'seed_library' ? context.l10n.communitySeedLibrary : context.l10n.communitySeedContent);
     final summary = data['resource_summary'] as String?;
 
     return Container(
@@ -929,7 +929,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       ),
                     ),
                     Text(
-                      resourceType == 'seed_library' ? '种子库分享' : '种子内容分享',
+                      resourceType == 'seed_library' ? context.l10n.communitySeedLibraryShare : context.l10n.communitySeedContentShare,
                       style: TextStyle(
                         fontSize: 12,
                         color: isMe
@@ -987,7 +987,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           .read(communityShareRepositoryProvider)
           .adoptResource(sharedResourceId: sharedResourceId);
       if (!context.mounted) return;
-      AppFeedback.success(context, '已采纳，跳转中...');
+      AppFeedback.success(context, context.l10n.communityAdoptedRedirecting);
       final resourceType =
           result['resource_type']?.toString() ?? fallbackResourceType;
       final entityCard = result['entity_card'] is Map<String, dynamic>
@@ -1091,7 +1091,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '认知棱镜',
+                        context.l10n.communityCognitivePrism,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: isMe
@@ -1100,7 +1100,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         ),
                       ),
                       Text(
-                        data['title'] as String? ?? '学习模式分析',
+                        data['title'] as String? ?? context.l10n.communityLearningModeAnalysis,
                         style: TextStyle(
                           fontWeight: DS.fontWeightBold,
                           color: isMe ? Colors.white : DS.textPrimary,
@@ -1176,7 +1176,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '成就解锁',
+                        context.l10n.communityAchievementUnlocked,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: isMe
@@ -1185,7 +1185,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         ),
                       ),
                       Text(
-                        data['name'] as String? ?? '新成就',
+                        data['name'] as String? ?? context.l10n.communityNewAchievement,
                         style: TextStyle(
                           fontWeight: DS.fontWeightBold,
                           color: isMe ? Colors.white : DS.textPrimary,
@@ -1236,7 +1236,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       if (!DeepLinkService.handleDeepLink(context, deepLink)) {
         // 导航失败时回退到复制链接
         unawaited(UniversalShareService().copyDeepLink(deepLink));
-        AppFeedback.info(context, '链接已复制');
+        AppFeedback.info(context, context.l10n.communityLinkCopied);
       }
     }
   }

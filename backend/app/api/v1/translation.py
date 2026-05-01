@@ -5,6 +5,7 @@ Translation API - 使用统一翻译工具进行多语言翻译
 支持分片翻译、领域术语、缓存和信号评估
 """
 from __future__ import annotations
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -185,7 +186,7 @@ async def translate_text(
         raise HTTPException(
             status_code=500,
             detail=f"Translation service unavailable: {type(e).__name__}",
-        )
+        ) from e
 
 
 @router.get("/languages", summary="支持的语言列表")

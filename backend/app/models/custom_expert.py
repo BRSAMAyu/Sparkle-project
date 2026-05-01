@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class CustomExpertSource(str, enum.Enum):
+class CustomExpertSource(enum.StrEnum):
     OFFICIAL_DERIVED = "official_derived"
     USER_DEFINED = "user_defined"
 

@@ -42,7 +42,7 @@ class TestMIMOPRoTierRouting:
 
         assert mimo_pro_config is not None, "mimo_pro 配置应该存在"
         assert mimo_pro_config.provider == ModelProvider.XIAOMI
-        assert mimo_pro_config.model_name == "mimo-v2-pro"
+        assert mimo_pro_config.model_name == "MiMo-V2.5"
         assert mimo_pro_config.base_url == "https://token-plan-cn.xiaomimimo.com/v1"
         assert mimo_pro_config.tier == ModelTier.MAX
 
@@ -67,7 +67,7 @@ class TestMIMOPRoTierRouting:
             reasoning_mode='balanced',
         )
 
-        assert selection.model_key in {"xiaomi_standard_thinking", "dashscope_standard_thinking"}
+        assert selection.model_key in {"xiaomi_standard_thinking", "dashscope_standard_thinking", "deepseek_chat"}
 
     def test_select_model_returns_pro_tier_model_for_reasoning_task(self):
         """验证深任务默认走 pro 层而不是 max"""

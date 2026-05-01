@@ -7,10 +7,13 @@ import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
   // Initialize Flutter test bindings
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(setUpI18nForTesting);
 
   group('TaskProvider Tests', () {
     group('Initial State', () {

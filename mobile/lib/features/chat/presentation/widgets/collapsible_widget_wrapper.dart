@@ -16,7 +16,7 @@ class CollapsibleWidgetWrapper extends StatefulWidget {
     this.defaultExpanded = false,
   });
 
-  /// Short label shown on the collapsed chip, e.g. "任务", "计划", "认知分析".
+  /// Short label shown on the collapsed chip, e.g. "任务", "计划", context.l10n.chatWidgetCognitiveAnalysis.
   final String label;
 
   /// Icon shown on the collapsed chip.
