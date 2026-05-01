@@ -39,7 +39,7 @@ def get_password_hash(password: str) -> str:
         return pwd_context.hash(password)
     except Exception:
         # Remove dangerous fallback - raise exception for hashing failures
-        raise ValueError("Failed to hash password")
+        raise ValueError("Failed to hash password") from None
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:

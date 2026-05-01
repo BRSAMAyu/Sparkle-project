@@ -137,7 +137,7 @@ async def record_feedback(
                 message="Feedback accepted in degraded mode",
             )
         logger.exception("Failed to record feedback")
-        raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}") from e
 
 
 @router.get("/feedback/stats", summary="获取反馈统计")
@@ -241,7 +241,7 @@ async def get_feedback_stats(
                 "completion_rate_percent": 0,
             }
         logger.exception("Failed to get feedback stats")
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}") from e
 
 
 # ── Spine Experience Envelope & Receipt Actions ────────────────────────
@@ -294,7 +294,7 @@ async def handle_receipt_action(
         return {"ok": True, "action": request.action}
     except Exception as e:
         logger.warning("Failed to handle receipt action: {}", e)
-        raise HTTPException(status_code=500, detail=f"Failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed: {e}") from e
 
 
 # route-tier: authed

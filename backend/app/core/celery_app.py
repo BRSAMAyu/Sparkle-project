@@ -210,7 +210,7 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
         return _run_async(_generate())
     except Exception as exc:
         logger.error(f"Task failed, attempt {self.request.retries + 1}: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="batch_error_analysis")
@@ -258,7 +258,7 @@ def batch_error_analysis(self, error_ids: list[str], user_id: str):
         return _run_async(_analyze())
     except Exception as exc:
         logger.error(f"Batch analysis failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="cleanup_old_data")
@@ -298,7 +298,7 @@ def cleanup_old_data(self, days_to_keep: int = 30):
         return _run_async(_cleanup())
     except Exception as exc:
         logger.error(f"Cleanup failed: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="notify_user")
@@ -333,7 +333,7 @@ def notify_user(self, user_id: str, message: str, notification_type: str = "syst
     try:
         return _run_async(_notify())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=10)
+        raise self.retry(exc=exc, countdown=10) from exc
 
 
 @celery_app.task(bind=True, name="daily_report")
@@ -364,7 +364,7 @@ def daily_report(self):
     try:
         return _run_async(_generate())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="generate_capsules_batch")
@@ -465,7 +465,7 @@ def generate_capsules_batch(
         logger.error(f"Capsule generation task failed: {exc}")
         # 指数退避重试
         countdown = 60 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="analyze_cognitive_fragment_batch")
@@ -495,7 +495,7 @@ def analyze_cognitive_fragment_batch(
     except Exception as exc:
         logger.error(f"Cognitive batch analysis task failed: {exc}")
         countdown = 60 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="classify_node_sector_batch")
@@ -525,7 +525,7 @@ def classify_node_sector_batch(
     except Exception as exc:
         logger.error(f"Node sector batch classification failed: {exc}")
         countdown = 60 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="update_knowledge_galaxy")
@@ -729,7 +729,7 @@ def update_knowledge_galaxy(
     except Exception as exc:
         logger.error(f"Galaxy update task failed: {exc}")
         countdown = 30 * (2**self.request.retries)
-        raise self.retry(exc=exc, countdown=countdown)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="sync_plan_progress_to_galaxy")
@@ -798,7 +798,7 @@ def sync_plan_progress_to_galaxy(self, user_id: str):
     try:
         return _run_async(_sync())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="generate_daily_capsules_for_all")
@@ -871,7 +871,7 @@ def generate_daily_capsules_for_all(self):
     try:
         return _run_async(_generate())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="verify_intervention_outcomes_engaged")
@@ -890,7 +890,7 @@ def verify_intervention_outcomes_engaged(self):
         return _run_async(_verify())
     except Exception as exc:
         logger.error(f"Engaged intervention outcome verification failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="verify_intervention_outcomes_full")
@@ -909,7 +909,7 @@ def verify_intervention_outcomes_full(self):
         return _run_async(_verify())
     except Exception as exc:
         logger.error(f"Full intervention outcome verification failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="sweep_profile_outcome_learning")
@@ -932,7 +932,7 @@ def sweep_profile_outcome_learning(self):
         return _run_async(_sweep())
     except Exception as exc:
         logger.error(f"Profile outcome learning sweep failed: {exc}")
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 # =============================================================================

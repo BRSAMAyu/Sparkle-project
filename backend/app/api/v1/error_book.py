@@ -194,7 +194,7 @@ async def submit_review(
         error = await service.submit_review(UUID(user_id), error_id, data)
         return error
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/{error_id}/semantic", response_model=ErrorSemanticSummary)

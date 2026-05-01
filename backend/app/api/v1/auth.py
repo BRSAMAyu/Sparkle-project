@@ -301,7 +301,7 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
         raise
     except Exception as e:
         logger.error(f"Social login verification failed for {data.provider}: {e}")
-        raise HTTPException(status_code=401, detail="社交登录验证失败")
+        raise HTTPException(status_code=401, detail="社交登录验证失败") from e
 
     if not social_id:
         raise HTTPException(status_code=401, detail="无法验证登录令牌")
@@ -602,7 +602,7 @@ async def refresh_token(
         )
     except Exception as e:
         logger.warning(f"Refresh token request failed: {e}")
-        raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录")
+        raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录") from e
 
 
 @router.post("/logout", response_model=Any)
@@ -843,7 +843,7 @@ async def guest_login(
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试")
+                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试") from None
             is_new_guest = False
 
         # 为新游客播种演示数据，确保完整体验
@@ -886,7 +886,7 @@ async def guest_login(
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试")
+                raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试") from e
 
     logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}, new={is_new_guest}")
 

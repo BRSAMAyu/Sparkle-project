@@ -1136,7 +1136,7 @@ async def submit_task_feedback(
             ),
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(
@@ -1173,7 +1173,7 @@ async def submit_task_reflection_answer(
             linked_knowledge_nodes=reflection_payload.get("linked_knowledge_nodes"),
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/{task_id}/feedback", response_model=dict[str, Any])
@@ -1272,4 +1272,4 @@ async def record_next_action_selection(
         )
         return {"success": True, "data": selection.to_dict()}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

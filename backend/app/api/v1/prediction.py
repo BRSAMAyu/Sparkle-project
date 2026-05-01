@@ -74,7 +74,7 @@ async def predict_intent(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Intent prediction failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/intent/types", response_model=dict[str, Any])
@@ -130,4 +130,4 @@ async def get_shadow_prediction_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Shadow stats failed: {str(e)}"
-        )
+        ) from e

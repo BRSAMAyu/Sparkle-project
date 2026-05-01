@@ -94,7 +94,7 @@ class OpenAICompatibleProvider(LLMProvider):
                 return response.choices[0].message.content or ""
         except TimeoutError:
             logger.error(f"[LLMConcurrency] Timeout acquiring semaphore for {provider}")
-            raise HTTPException(status_code=503, detail="LLM service is busy, please try again")
+            raise HTTPException(status_code=503, detail="LLM service is busy, please try again") from None
         except APIError as e:
             if self._is_rate_limited_error(e):
                 await llm_concurrency.report_rate_limit(provider)

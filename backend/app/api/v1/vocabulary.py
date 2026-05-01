@@ -225,9 +225,9 @@ async def download_dictionary_package(package_id: str):
     try:
         package_path = dictionary_package_service.ensure_package(package_id)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Dictionary package unavailable: {exc}")
+        raise HTTPException(status_code=503, detail=f"Dictionary package unavailable: {exc}") from exc
 
     return FileResponse(
         path=package_path,
@@ -496,7 +496,7 @@ async def import_dictionary(
     try:
         text_content = content.decode("utf-8")
     except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid file encoding")
+        raise HTTPException(status_code=400, detail="Invalid file encoding") from None
     count = await vocabulary_service.import_dictionary(
         db, text_content, format=format, source=source
     )

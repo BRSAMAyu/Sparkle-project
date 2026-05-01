@@ -981,7 +981,7 @@ async def create_vocabulary_node(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create vocabulary node: {str(e)}"
-        )
+        ) from e
 
 
 @router.delete("/node/{node_id}/draft")
@@ -1000,11 +1000,11 @@ async def delete_draft_node(
         await knowledge_service.delete_draft_node(node_id, UUID(user_id))
         return {"success": True, "node_id": str(node_id), "message": "Draft node deleted"}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete draft node: {str(e)}"
-        )
+        ) from e
 
 
 class UpdateNodeContentRequest(BaseModel):
@@ -1039,11 +1039,11 @@ async def update_node_content(
 
         return {"success": True, "node_id": str(node.id), "name": node.name, "message": "Node content updated"}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update node content: {str(e)}"
-        )
+        ) from e
 
 
 # ==========================================

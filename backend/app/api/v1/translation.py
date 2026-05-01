@@ -186,7 +186,7 @@ async def translate_text(
         raise HTTPException(
             status_code=500,
             detail=f"Translation service unavailable: {type(e).__name__}",
-        )
+        ) from e
 
 
 @router.get("/languages", summary="支持的语言列表")

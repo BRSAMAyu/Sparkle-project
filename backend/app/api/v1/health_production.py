@@ -182,7 +182,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"status": "not_ready", "error": str(e)}
-        )
+        ) from e
 
 
 @router.get("/live")

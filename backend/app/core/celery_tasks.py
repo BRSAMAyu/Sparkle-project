@@ -130,7 +130,7 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
     try:
         return asyncio.run(_process())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="analyze_error_batch")
@@ -167,7 +167,7 @@ def analyze_error_batch(self, error_ids: list, user_id: str):
     try:
         return asyncio.run(_analyze())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="process_stored_file")
@@ -205,7 +205,7 @@ def process_stored_file(
     try:
         return asyncio.run(_process())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=6, name="process_group_shared_file")
@@ -240,7 +240,7 @@ def process_group_shared_file(
         logger.warning(f"Skipping group file processing for group={group_id} file={file_id}: {exc}")
         return {"status": "skipped", "group_id": group_id, "file_id": file_id, "error": str(exc)}
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=min(300, 2 ** max(1, self.request.retries)))
+        raise self.retry(exc=exc, countdown=min(300, 2 ** max(1, self.request.retries))) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="delete_group_file_index")
@@ -269,7 +269,7 @@ def delete_group_file_index(
     try:
         return asyncio.run(_process())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="record_token_usage")
@@ -310,7 +310,7 @@ def record_token_usage(
     try:
         return asyncio.run(_record())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=10)
+        raise self.retry(exc=exc, countdown=10) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="save_learning_state")
@@ -336,7 +336,7 @@ def save_learning_state(self, user_id: str, state_data: dict):
     try:
         return asyncio.run(_save())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="persist_bayesian_data")
@@ -373,7 +373,7 @@ def persist_bayesian_data(self, user_id: str, data: dict):
     try:
         return asyncio.run(_persist())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(
@@ -402,7 +402,7 @@ def recompute_idiographic_associations(self, user_id: str | None = None):
     try:
         return asyncio.run(_recompute())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="invalidate_cache")
@@ -426,7 +426,7 @@ def invalidate_cache(self, cache_key: str):
     try:
         return asyncio.run(_invalidate())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=5)
+        raise self.retry(exc=exc, countdown=5) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="cleanup_pending_actions")
@@ -459,7 +459,7 @@ def cleanup_pending_actions(self):
     try:
         return asyncio.run(_cleanup())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="rerank_documents")
@@ -483,7 +483,7 @@ def rerank_documents(self, query: str, doc_ids: list, user_id: str):
     try:
         return asyncio.run(_rerank())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=3, name="expansion_worker_task")
@@ -518,7 +518,7 @@ def expansion_worker_task(self, node_id: str, operation: str):
     try:
         return asyncio.run(_expand())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="visualize_graph")
@@ -540,7 +540,7 @@ def visualize_graph(self, user_id: str, graph_data: dict):
     try:
         return asyncio.run(_visualize())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_learning_reports")
@@ -565,7 +565,7 @@ def generate_weekly_learning_reports(self, limit: int = 200):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to generate weekly learning reports: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_push_policy_scheduler")
@@ -589,7 +589,7 @@ def run_push_policy_scheduler(self):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to run push policy scheduler: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_growth_digests")
@@ -611,7 +611,7 @@ def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to generate weekly growth digests: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.deliver_weekly_growth_digests")
@@ -633,7 +633,7 @@ def deliver_weekly_growth_digests(self, limit: int = 200):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to deliver weekly growth digests: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_post_exam_review_invitations")
@@ -654,7 +654,7 @@ def scan_post_exam_review_invitations(self, limit: int = 200):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to scan post-exam review invitations: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.pack_quality_analysis_task")
@@ -689,7 +689,7 @@ def pack_quality_analysis_task(self, pack_id: str):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to analyze pack quality for {pack_id}: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.check_prediction_accuracy")
@@ -742,7 +742,7 @@ def check_prediction_accuracy(self):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to auto-check theater prediction accuracy: {exc}")
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.cleanup_stale_simulation_sessions")
@@ -756,7 +756,7 @@ def cleanup_stale_simulation_sessions(self, max_age_hours: int = 6):
         return {"cleaned": result}
     except Exception as exc:
         logger.error(f"❌ Failed to cleanup stale simulation sessions: {exc}")
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.persist_simulation_run")
@@ -776,7 +776,7 @@ def persist_simulation_run(self, user_id: str, payload: dict):
         return _run_async(_run())
     except Exception as exc:
         logger.error(f"❌ Failed to persist simulation run: {exc}")
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.persist_report_snapshot")
@@ -800,7 +800,7 @@ def persist_report_snapshot(self, user_id: str, cache_version: str, payload: dic
         return _run_async(_run())
     except Exception as exc:
         logger.error(f"❌ Failed to persist report snapshot: {exc}")
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.capture_ai_metric_baseline")
@@ -821,7 +821,7 @@ def capture_ai_metric_baseline(self):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to capture AI metric baseline: {exc}")
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.promote_perceptible_cohort")
@@ -842,7 +842,7 @@ def promote_perceptible_cohort(self):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to promote perceptible cohort: {exc}")
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.refresh_metacognition_snapshots")
@@ -881,7 +881,7 @@ def refresh_metacognition_snapshots(self, limit: int = 500):
         return result
     except Exception as exc:
         logger.error(f"❌ Failed to refresh metacognition snapshots: {exc}")
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="generate_long_horizon_prediction")
@@ -904,7 +904,7 @@ def generate_long_horizon_prediction(self, user_id: str):
         return result
     except Exception as exc:
         logger.error(f"❌ Long horizon prediction failed for user {user_id}: {exc}")
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(
@@ -937,7 +937,7 @@ def send_verification_email_task(self, to_email: str, verify_token: str, usernam
         return asyncio.run(_send())
     except Exception as exc:
         logger.error(f"Email send failed to {to_email}, retrying: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -966,7 +966,7 @@ def send_password_reset_email_task(self, to_email: str, reset_token: str, userna
         return asyncio.run(_send())
     except Exception as exc:
         logger.error(f"Password reset email failed to {to_email}, retrying: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="send_task_reminders")
@@ -1164,7 +1164,7 @@ def retry_achievement_photon_reward(
         )
         if attempt > max_retries:
             raise
-        raise self.retry(exc=exc, countdown=30 * (2 ** int(self.request.retries or 0)))
+        raise self.retry(exc=exc, countdown=30 * (2 ** int(self.request.retries or 0))) from exc
 
 
 SPACED_REPETITION_INTERVAL_DAYS = (1, 3, 7, 14, 30)
@@ -1327,7 +1327,7 @@ def spaced_repetition_reminder_task(self, user_id: str, now_iso: str | None = No
         return result
     except Exception as exc:
         logger.error("❌ spaced_repetition_reminder_task failed for user %s: %s", user_id, exc)
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(
@@ -1382,7 +1382,7 @@ def scan_spaced_repetition_reminders(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("❌ scan_spaced_repetition_reminders failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(
@@ -1515,7 +1515,7 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
         return _run_async(_run())
     except Exception as exc:
         logger.error("❌ daily_sprint_reminder_task failed for user %s: %s", user_id, exc)
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(
@@ -1562,7 +1562,7 @@ def scan_daily_sprint_reminders(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("❌ scan_daily_sprint_reminders failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.comeback_nudge_task")
@@ -1652,7 +1652,7 @@ def comeback_nudge_task(self, user_id: str):
         return _run_async(_run())
     except Exception as exc:
         logger.error("❌ comeback_nudge_task failed for user %s: %s", user_id, exc)
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_comeback_nudges")
@@ -1718,7 +1718,7 @@ def scan_comeback_nudges(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("❌ scan_comeback_nudges failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recompute_persdyn_attractors")
@@ -1740,7 +1740,7 @@ def recompute_persdyn_attractors(self):
         return asyncio.run(_recompute())
     except Exception as exc:
         logger.error("❌ Failed to recompute PersDyn attractors: {}", exc)
-        raise self.retry(exc=exc, countdown=60 * (2 ** int(self.request.retries or 0)))
+        raise self.retry(exc=exc, countdown=60 * (2 ** int(self.request.retries or 0))) from exc
 
 
 # =============================================================================
@@ -1853,7 +1853,7 @@ def weekly_growth_narrative_task(self, user_id: str):
         return _run_async(_run())
     except Exception as exc:
         logger.error("❌ weekly_growth_narrative_task failed for user %s: %s", user_id, exc)
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(
@@ -1932,7 +1932,7 @@ def scan_weekly_growth_narratives(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("❌ scan_weekly_growth_narratives failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.purge_deleted_account")
@@ -2001,7 +2001,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
         return _run_async(_purge())
     except Exception as exc:
         logger.error(f"❌ purge_deleted_account failed for {user_id}: {exc}")
-        raise self.retry(exc=exc, countdown=3600)
+        raise self.retry(exc=exc, countdown=3600) from exc
 
 
 # ── Aurora Scheduled Wake Executor ────────────────────────────────────────────
@@ -2078,7 +2078,7 @@ def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
         return _run_async(_run())
     except Exception as exc:
         logger.error("aurora_wake_deliver_task failed for wake %s: %s", wake_id, exc)
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_aurora_scheduled_wakes")
@@ -2107,7 +2107,7 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
         return _run_async(_run())
     except Exception as exc:
         logger.error("scan_aurora_scheduled_wakes failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recall_notification_task")
@@ -2188,7 +2188,7 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
         return _run_async(_run())
     except Exception as exc:
         logger.error("recall_notification_task failed for user %s: %s", user_id, exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_recall_notifications")
@@ -2264,7 +2264,7 @@ def scan_recall_notifications(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("scan_recall_notifications failed: %s", exc)
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="aggregate_community_error_patterns")
@@ -2285,7 +2285,7 @@ def aggregate_community_error_patterns(self):
         return _run_async(_run())
     except Exception as exc:
         logger.error(f"aggregate_community_error_patterns failed: {exc}")
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_snapshot_task")
@@ -2313,7 +2313,7 @@ def spine_snapshot_task(self, user_id: str):
         return _run_async(_run())
     except Exception as exc:
         logger.error("spine_snapshot_task failed for user %s: %s", user_id, exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_spine_snapshots")
@@ -2375,7 +2375,7 @@ def scan_spine_snapshots(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("scan_spine_snapshots failed: %s", exc)
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.compact_user_traces")
@@ -2401,7 +2401,7 @@ def compact_user_traces(self, user_id: str):
         return _run_async(_run())
     except Exception as exc:
         logger.error("compact_user_traces failed for user %s: %s", user_id, exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_trace_compaction")
@@ -2444,7 +2444,7 @@ def scan_trace_compaction(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("scan_trace_compaction failed: %s", exc)
-        raise self.retry(exc=exc, countdown=300)
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 # =============================================================================
@@ -2490,7 +2490,7 @@ def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
         return _run_async(_run())
     except Exception as exc:
         logger.error("community_cohort_signal_task failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_community_cohort_signals")
@@ -2536,7 +2536,7 @@ def scan_community_cohort_signals(self, limit: int = 200):
         return _run_async(_run())
     except Exception as exc:
         logger.error("scan_community_cohort_signals failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 # =============================================================================
@@ -2567,7 +2567,7 @@ def spine_expire_stale_states(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("spine_expire_stale_states failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.spine_auto_deprecate_skills")
@@ -2593,4 +2593,4 @@ def spine_auto_deprecate_skills(self, limit: int = 500):
         return _run_async(_run())
     except Exception as exc:
         logger.error("spine_auto_deprecate_skills failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from exc

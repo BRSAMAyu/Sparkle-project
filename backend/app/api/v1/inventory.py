@@ -96,7 +96,7 @@ async def equip_item(
         raise HTTPException(status_code=400, detail="Invalid request") from e
     except Exception as e:
         logger.error(f"Unexpected equip error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to equip item")
+        raise HTTPException(status_code=500, detail="Failed to equip item") from e
 
 
 @router.get("/owned", response_model=dict[str, Any])
@@ -158,4 +158,4 @@ async def use_consumable(
         raise HTTPException(status_code=400, detail="Invalid request") from e
     except Exception as e:
         logger.error(f"Unexpected use consumable error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to use consumable")
+        raise HTTPException(status_code=500, detail="Failed to use consumable") from e

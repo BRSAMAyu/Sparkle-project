@@ -135,7 +135,7 @@ async def clean_document(
         raise
     except Exception as e:
         logger.error(f"Failed to initiate document cleaning: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to process upload")
+        raise HTTPException(status_code=500, detail="Failed to process upload") from e
 
 @router.get("/clean/{task_id}", summary="Check Cleaning Task Status")
 async def check_task_status(task_id: str, current_user: User = Depends(get_current_user)):

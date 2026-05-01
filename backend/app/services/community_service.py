@@ -258,8 +258,8 @@ class FriendshipService:
                     await db.refresh(existing_rel)
                     return existing_rel
                 if existing_rel.status == FriendshipStatus.BLOCKED:
-                    raise ValueError("由于对方的隐私设置，无法发送请求")
-                raise ValueError("已存在好友关系或待处理请求")
+                    raise ValueError("由于对方的隐私设置，无法发送请求") from None
+                raise ValueError("已存在好友关系或待处理请求") from None
             raise
 
         await db.refresh(friendship)
@@ -811,7 +811,7 @@ class GroupService:
                 db.add(member)
                 await db.flush()
         except IntegrityError:
-            raise ValueError("已是群组成员")
+            raise ValueError("已是群组成员") from None
         await db.refresh(member)
         _record_community_signal(
             user_id=user_id,
@@ -2205,7 +2205,7 @@ class GroupTaskService:
                 group_task.total_claims += 1
                 await db.flush()
         except IntegrityError:
-            raise ValueError("已认领此任务")
+            raise ValueError("已认领此任务") from None
 
         await db.refresh(claim)
         return claim
@@ -2934,7 +2934,7 @@ class UserSearchService:
         try:
             user.searchable_by = SearchVisibility(searchable_by)
         except ValueError:
-            raise ValueError(f"无效的搜索可见性设置: {searchable_by}")
+            raise ValueError(f"无效的搜索可见性设置: {searchable_by}") from None
 
         await db.flush()
         return True

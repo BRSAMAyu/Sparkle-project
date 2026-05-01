@@ -87,7 +87,7 @@ async def register_device(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to register device: {str(e)}",
-        )
+        ) from e
 
 
 @router.delete("/unregister", response_model=DeviceRegistrationResponse)
@@ -129,7 +129,7 @@ async def unregister_device(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to unregister device: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/list")
@@ -167,4 +167,4 @@ async def list_devices(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list devices: {str(e)}",
-        )
+        ) from e

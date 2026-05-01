@@ -606,7 +606,7 @@ class LLMService:
 
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
             except Exception as e:
                 await circuit_breaker_service.record_failure("primary_llm")
                 logger.error(f"LLM Chat Error: {e}")
@@ -824,7 +824,7 @@ class LLMService:
                 )
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
             except Exception as e:
                 await circuit_breaker_service.record_failure("primary_llm")
                 logger.error(f"LLM Reason Error (Circuit Breaker recording): {e}")
@@ -986,7 +986,7 @@ class LLMService:
 
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
             except Exception as e:
                 await circuit_breaker_service.record_failure("primary_llm")
                 logger.error(f"LLM Stream Chat Error: {e}")

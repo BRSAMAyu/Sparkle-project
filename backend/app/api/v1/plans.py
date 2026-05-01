@@ -594,7 +594,7 @@ async def create_plan(
                 "max_quota": e.max_quota,
                 "error_code": "QUOTA_EXCEEDED",
             },
-        )
+        ) from e
 
     # Get task counts
     task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
@@ -1443,7 +1443,7 @@ async def restore_plan_state(
                 "max_quota": e.max_quota,
                 "error_code": "QUOTA_EXCEEDED",
             },
-        )
+        ) from e
 
     if not plan:
         raise HTTPException(

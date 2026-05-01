@@ -59,7 +59,7 @@ async def get_user_stats_overview(
                 },
             }
         logger.error(f"Failed to get user stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
+        raise HTTPException(status_code=500, detail="Failed to retrieve statistics") from e
 
 
 @router.get("/overview")
@@ -113,7 +113,7 @@ async def get_top_agents(
                 },
             }
         logger.error(f"Failed to get top agents: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve top agents")
+        raise HTTPException(status_code=500, detail="Failed to retrieve top agents") from e
 
 
 @router.get("/performance")
@@ -160,7 +160,7 @@ async def get_performance_metrics(
                 },
             }
         logger.error(f"Failed to get performance metrics: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve performance metrics")
+        raise HTTPException(status_code=500, detail="Failed to retrieve performance metrics") from e
 
 
 @router.get("/agent-types")
@@ -279,4 +279,4 @@ async def refresh_stats_summary(
         }
     except Exception as e:
         logger.error(f"Failed to refresh stats summary: {e}")
-        raise HTTPException(status_code=500, detail="Failed to refresh stats summary")
+        raise HTTPException(status_code=500, detail="Failed to refresh stats summary") from e

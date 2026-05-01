@@ -369,7 +369,7 @@ async def create_contract(
             ).model_dump(),
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.delete("/contracts", response_model=dict[str, Any])
@@ -494,7 +494,7 @@ async def equip_galaxy_skin(
         result = await service.equip_achievement_skin(str(current_user.id), skin_id)
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/titles", response_model=dict[str, Any])
@@ -548,7 +548,7 @@ async def equip_title(
         result = await service.equip_achievement_title(str(current_user.id), title_id)
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 # ========== Internal Event Endpoint ==========

@@ -41,7 +41,7 @@ async def get_current_user_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="登录信息已过期，请重新登录~",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
 
 async def get_current_user(
     request: Request,

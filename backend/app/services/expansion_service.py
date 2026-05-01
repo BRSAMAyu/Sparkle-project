@@ -523,7 +523,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
             json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group(1))
-            raise ValueError("Failed to parse LLM response as JSON")
+            raise ValueError("Failed to parse LLM response as JSON") from None
 
     async def _create_expanded_nodes(
         self,

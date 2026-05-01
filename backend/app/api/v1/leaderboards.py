@@ -89,7 +89,7 @@ async def get_leaderboard(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get leaderboard"
-        )
+        ) from e
 
 
 @router.get("/summary", response_model=dict[str, Any])
@@ -123,7 +123,7 @@ async def get_leaderboard_summary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get summary"
-        )
+        ) from e
 
 
 @router.get("/my-rank", response_model=dict[str, Any])
@@ -165,7 +165,7 @@ async def get_my_rank(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get my rank"
-        )
+        ) from e
 
 
 @router.get("/types", response_model=dict[str, Any])
@@ -268,7 +268,7 @@ async def get_top_three(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get top three: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/refresh-cache", response_model=dict[str, Any])
@@ -308,4 +308,4 @@ async def refresh_leaderboard_cache(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to refresh cache: {str(e)}"
-        )
+        ) from e

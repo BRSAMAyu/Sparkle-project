@@ -76,7 +76,7 @@ async def get_collaborative_recommendations(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Recommendation failed"
-        )
+        ) from e
 
 
 @router.get("/similar-users", response_model=dict[str, Any])
@@ -120,7 +120,7 @@ async def get_similar_users(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get similar users"
-        )
+        ) from e
 
 
 @router.get("/similar-items", response_model=dict[str, Any])
@@ -166,7 +166,7 @@ async def get_similar_items(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get similar items"
-        )
+        ) from e
 
 
 @router.get("/my-interactions", response_model=dict[str, Any])
@@ -200,7 +200,7 @@ async def get_my_interaction_summary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get interaction summary"
-        )
+        ) from e
 
 
 @router.post("/record-interaction", response_model=dict[str, Any])
@@ -257,7 +257,7 @@ async def record_interaction(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to record interaction"
-        )
+        ) from e
 
 
 @router.get("/stats", response_model=dict[str, Any])
@@ -327,4 +327,4 @@ async def get_recommendation_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get recommendation stats"
-        )
+        ) from e

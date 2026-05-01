@@ -104,7 +104,7 @@ async def create_asset(
             try:
                 source_file_uuid = UUID(request.source_file_id)
             except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid source_file_id format")
+                raise HTTPException(status_code=400, detail="Invalid source_file_id format") from None
 
         # Parse asset_kind
         try:
@@ -113,7 +113,7 @@ async def create_asset(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid asset_kind. Must be one of: {[k.value for k in AssetKind]}"
-            )
+            ) from None
 
         # Determine initial status
         initial_status = AssetStatus.ACTIVE if request.activate_immediately else AssetStatus.INBOX
@@ -147,7 +147,7 @@ async def create_asset(
         raise
     except Exception as e:
         logger.error(f"Failed to create asset: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to create asset")
+        raise HTTPException(status_code=500, detail="Failed to create asset") from e
 
 
 @router.post("/{asset_id}/activate", response_model=AssetResponse, summary="激活资产")
@@ -164,7 +164,7 @@ async def activate_asset(
     try:
         asset_uuid = UUID(asset_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid asset_id format")
+        raise HTTPException(status_code=400, detail="Invalid asset_id format") from None
 
     asset = await learning_asset_service.get_asset_by_id(db, asset_uuid, current_user.id)
     if not asset:
@@ -199,7 +199,7 @@ async def archive_asset(
     try:
         asset_uuid = UUID(asset_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid asset_id format")
+        raise HTTPException(status_code=400, detail="Invalid asset_id format") from None
 
     asset = await learning_asset_service.get_asset_by_id(db, asset_uuid, current_user.id)
     if not asset:
@@ -237,7 +237,7 @@ async def list_assets(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid status. Must be one of: {[s.value for s in AssetStatus]}"
-            )
+            ) from None
 
     assets = await learning_asset_service.get_user_assets(
         db=db,
@@ -267,7 +267,7 @@ async def get_asset(
     try:
         asset_uuid = UUID(asset_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid asset_id format")
+        raise HTTPException(status_code=400, detail="Invalid asset_id format") from None
 
     asset = await learning_asset_service.get_asset_by_id(db, asset_uuid, current_user.id)
     if not asset:
@@ -288,7 +288,7 @@ async def delete_asset(
     try:
         asset_uuid = UUID(asset_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid asset_id format")
+        raise HTTPException(status_code=400, detail="Invalid asset_id format") from None
 
     asset = await learning_asset_service.get_asset_by_id(db, asset_uuid, current_user.id)
     if not asset:
@@ -317,7 +317,7 @@ async def record_suggestion_feedback(
     try:
         suggestion_log_uuid = UUID(request.suggestion_log_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid suggestion_log_id format")
+        raise HTTPException(status_code=400, detail="Invalid suggestion_log_id format") from None
 
     try:
         response = UserSuggestionResponse(request.response.upper())
@@ -325,14 +325,14 @@ async def record_suggestion_feedback(
         raise HTTPException(
             status_code=400,
             detail=f"Invalid response. Must be one of: {[r.value for r in UserSuggestionResponse]}"
-        )
+        ) from None
 
     asset_uuid = None
     if request.asset_id:
         try:
             asset_uuid = UUID(request.asset_id)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid asset_id format")
+            raise HTTPException(status_code=400, detail="Invalid asset_id format") from None
 
     try:
         await learning_asset_service.record_suggestion_feedback(
@@ -348,10 +348,10 @@ async def record_suggestion_feedback(
         return {"success": True, "message": f"Feedback recorded: {response.value}"}
 
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Failed to record feedback: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to record feedback")
+        raise HTTPException(status_code=500, detail="Failed to record feedback") from e
 
 
 # ============ Helpers ============

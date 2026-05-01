@@ -267,7 +267,7 @@ async def graph_statistics(
         raise HTTPException(
             status_code=500,
             detail={"error": str(e), "message": "Failed to retrieve statistics"}
-        )
+        ) from e
 
 
 @router.post("/sync/trigger", response_model=dict[str, Any])
@@ -326,7 +326,7 @@ async def trigger_sync(
         raise HTTPException(
             status_code=500,
             detail={"error": str(e), "message": "Failed to trigger sync"}
-        )
+        ) from e
 
 
 @router.get("/sync/status", response_model=dict[str, Any])
@@ -445,7 +445,7 @@ async def test_query(
                 "duration_ms": round(duration * 1000, 2),
                 "message": "Test query failed"
             }
-        )
+        ) from e
 
 
 @router.get("/prometheus/metrics")

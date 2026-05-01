@@ -157,10 +157,10 @@ async def transfer_photons(
 
     except ValueError as e:
         logger.error(f"Transfer error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Unexpected transfer error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to complete transfer")
+        raise HTTPException(status_code=500, detail="Failed to complete transfer") from e
 
 
 @router.post("/adjust", response_model=dict[str, Any])
@@ -222,7 +222,7 @@ async def adjust_photons(
 
     except ValueError as e:
         logger.error(f"Adjustment error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Unexpected adjustment error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to complete adjustment")
+        raise HTTPException(status_code=500, detail="Failed to complete adjustment") from e

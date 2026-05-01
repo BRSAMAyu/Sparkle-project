@@ -127,7 +127,7 @@ async def websocket_stats(current_user: User = Depends(get_current_active_superu
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}") from e
 
 
 @router.get("/health")
@@ -176,7 +176,7 @@ async def check_user_online(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to check online status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to check online status: {str(e)}") from e
 
 
 @router.post("/ws/ack/{message_id}")
@@ -193,7 +193,7 @@ async def record_message_ack(
         await manager.record_ack(str(current_user.id), message_id)
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to record ACK: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to record ACK: {str(e)}") from e
 
 
 @router.get("/metrics")
@@ -219,7 +219,7 @@ async def websocket_metrics(current_user: User = Depends(get_current_active_supe
             "timestamp": manager.redis is not None  # Simple health indicator
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}") from e
 
 
 # ========== Device Token Management ==========
@@ -303,7 +303,7 @@ async def register_device(
             )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to register device: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to register device: {str(e)}") from e
 
 
 @router.get("/devices", response_model=DeviceListResponse)
@@ -350,7 +350,7 @@ async def list_my_devices(
             )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list devices: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list devices: {str(e)}") from e
 
 
 @router.delete("/devices/{device_id}")
@@ -394,4 +394,4 @@ async def unregister_device(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to unregister device: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to unregister device: {str(e)}") from e
