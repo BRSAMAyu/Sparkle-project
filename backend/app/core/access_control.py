@@ -1,3 +1,4 @@
+# DEPRECATED: no active importers — candidate for removal in next cleanup
 """
 Access Control Middleware
 Ensures that only authorized users can access certain endpoints

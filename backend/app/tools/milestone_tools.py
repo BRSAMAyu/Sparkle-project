@@ -1,3 +1,4 @@
+# DEPRECATED: no active importers — candidate for removal in next cleanup
 """
 Milestone interaction tools for LLM.
 

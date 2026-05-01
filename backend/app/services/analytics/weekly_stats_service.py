@@ -1,3 +1,4 @@
+# DEPRECATED: no active importers — candidate for removal in next cleanup
 from datetime import datetime, timedelta
 from typing import Any
 
