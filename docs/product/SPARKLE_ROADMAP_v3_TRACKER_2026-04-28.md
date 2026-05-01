@@ -725,3 +725,54 @@
 更准确的阶段判断是：
 
 > **Phase 0-6 大部分功能已实现，R7 关键尾差 (R7-1/2/3) 已回收；剩余 R7-4/5/6 为 P2 待校准项 (Go Gateway 一致性、蓝绿脚本校准、愿景清单路径)。**
+
+---
+
+## R8 最终验收总账补充 (2026-05-01)
+
+> **来源**: Codex 全面系统复核
+> **审查文档**: `docs/product/SPARKLE_FINAL_ACCEPTANCE_LEDGER_2026-05-01.md`
+> **方法**: 对 Aurora、画像/资料/知识星图、任务卡/分享/社群、UIUX、Gateway/Backend、CI/部署证据做抽样复验，并核实 R7 已修项是否在当前工作区仍成立。
+
+### R8.1 已复验通过
+
+| ID | 模块 | 结论 |
+|----|------|------|
+| R8-P1 | Aurora | 首页状态带 telemetry 契约、结构化纠偏上下文、Aurora 成本记账已复验通过 |
+| R8-P2 | 画像/资料/知识星图 | `profile_transparency / profile_context / galaxy_node_sources / source_state_*` 抽样通过 |
+| R8-P3 | 卡片/分享/群任务 | `card/share/community_group_tasks/capsule_share` 抽样通过 |
+| R8-P4 | Gateway | `go test ./internal/middleware/... ./internal/agent/...` 通过 |
+| R8-P5 | CI/部署口径 | `load-test.yml`、`blue_green_switch.sh`、`docs/product/愿景验收清单` 路径修复已复验通过 |
+
+### R8.2 新发现问题
+
+| ID | 严重度 | 问题 | 文件/证据 | 状态 |
+|----|--------|------|-----------|------|
+| R8-1 | P1 | 社区首页 4 个 filter 只有视觉切换，没有真实数据筛选语义 | `community_screen.dart:94-129`, `community_providers.dart:15-19`, `community_repository.dart:24-42` | 🔴 Reopen |
+| R8-2 | P1 | community feed 请求异常被静默降级为空列表，容易掩盖真实后端故障 | `community_repository.dart:39-41`; 后端 `community.py:229-249` 实际已有 `/feed` | 🔴 Reopen |
+| R8-3 | P2 | 社区首页多处核心 copy 仍为英文硬编码 | `community_screen.dart:94`, `111`, `151-166` | 🟡 Reopen |
+| R8-4 | P2 | 任务执行页离线/未连接提示绕过 l10n，仍是静态英文 | `execution_copy.dart:14-18` | 🟡 Reopen |
+
+### R8.3 本轮抽样测试
+
+| 命令 | 结果 |
+|------|------|
+| `pytest tests/api/test_aurora_telemetry_api.py tests/unit/test_h02_aurora_spine_feedback.py tests/unit/test_aurora_spine_policy_feedback.py tests/unit/test_aurora_write_pipeline.py -q` | ✅ `13 passed` |
+| `pytest tests/unit/test_card_operations_service.py tests/unit/test_share_card_service.py tests/unit/test_community_service_group_tasks.py tests/unit/test_memory_settings_api.py tests/unit/test_profile_write_service.py tests/unit/test_memory_working_memory_api.py -q` | ✅ `17 passed, 1 warning` |
+| `pytest tests/services/test_galaxy_node_sources.py tests/services/test_profile_context_service.py tests/unit/test_source_state_encoder.py tests/unit/test_source_state_backfill.py tests/unit/test_error_book_mastery_sync_service.py -q` | ✅ `52 passed` |
+| `pytest tests/api/test_profile_transparency_api.py tests/api/test_community_group_file_sharing_api.py tests/unit/test_share_card_service.py tests/unit/services/test_capsule_share_service.py -q` | ✅ `19 passed` |
+| `pytest tests/integration/test_memory_evolution_workflow.py tests/integration/test_community_integration.py tests/test_community_e2e.py -q` | ✅ `17 passed, 9 skipped` |
+| `flutter test test/app/main_pages_load_smoke_test.dart test/widget/plan_review_card_test.dart test/widget/profile_front_door_action_card_test.dart test/features/user/profile_transparent_screen_test.dart` | ✅ 全部通过 |
+| `flutter test test/widget/action_card_ux_test.dart test/widget/action_card_task_list_test.dart test/widget/chat_action_card_navigation_test.dart test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+
+### R8.4 口径修正
+
+当前可以说：
+
+> **Aurora、画像、卡片/分享、Gateway、CI/部署口径的关键历史 reopen 项基本已回收。**
+
+但当前还不能说：
+
+> **“整个项目已经只剩人工上线动作”。**
+
+因为社区首页 feed 的真实行为与视觉承诺仍不一致，且 UI 文案体系还有关键收尾项未完成。

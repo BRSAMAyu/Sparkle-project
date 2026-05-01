@@ -217,3 +217,93 @@
 **报告生成**: 2026-05-01
 **审查方法**: 8 并行 agent (CI/CD, Go, Flutter, Signal Spine, R5 Tracker, Architecture, Aurora Governance, Python Backend) + 主 agent 交叉验证
 **总测试**: 5222 (Python) + 623 (Go) + 1156 (Flutter) = **7001 tests passed, 0 real failures**
+
+---
+
+## 12. Codex 复核补充 (2026-05-01)
+
+> **方法**: 基于当前工作区重新抽样验证 Aurora / 画像 / 资料 / 卡片 / 社群 / UIUX / Gateway / CI 关键链路，并对 2026-04-30 以来的已修项做复验。
+
+### 12.1 本轮确认已修复的问题
+
+| ID | 结论 | 证据 |
+|----|------|------|
+| C-R1 | Aurora 状态带 telemetry camelCase 契约问题已修复 | `dashboard_screen.dart:483-518` 现使用 `bandStatus.protocolValue`; `spine_status_band_provider.dart:15-23` 提供 snake_case protocolValue |
+| C-R2 | 首页状态带纠偏已补结构化上下文 | `dashboard_screen.dart:490-527` 现传 `aurora_correction`，区分 `freeform / chip / cooldown_override` |
+| C-R3 | `record_aurora_cost()` 已进入生产调用链 | `spine_orchestrator.py:3313-3315`, `l4_async.py:205-207` |
+| C-R4 | k6 workflow 已不再是“只跑脚本不启动服务” | `.github/workflows/load-test.yml:103-164` 已补 `postgres/redis` services + backend startup + `BASE_URL=http://localhost:8000` |
+| C-R5 | `blue_green_switch.sh` 的口径误导已被显式标注 | 文件头已注明 `DEPRECATED`，并提示生产部署应使用 `deploy-prod.sh / deploy_k8s.sh` |
+| C-R6 | 顶层 `docs/product/愿景验收清单` 路径漂移已修复 | 当前为指向 `critical_files/愿景验收清单` 的符号链接 |
+
+### 12.2 本轮新增测试证据
+
+| 范围 | 结果 |
+|------|------|
+| Aurora feedback / telemetry / write pipeline | `13 passed` |
+| Card / share / group tasks / memory settings / profile write | `17 passed, 1 warning` |
+| Galaxy node sources / profile context / source state / error-book sync | `52 passed` |
+| Profile transparency / community file sharing / share card / capsule share | `19 passed` |
+| Memory evolution + community integration + community e2e | `17 passed, 9 skipped` |
+| Go Gateway (`middleware` + `agent`) | `pass` |
+| Flutter smoke / plan review / profile transparency / action card / community closure | 全部通过 |
+
+### 12.3 新发现的问题
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| C-N1 | P1 | 社区 / UX | 社区首页 4 个 filter 仅有视觉切换，没有真实数据筛选语义 | REOPEN |
+| C-N2 | P1 | 社区 / 质量门 | feed 请求异常被静默降级为空列表，容易掩盖真实后端故障 | REOPEN |
+| C-N3 | P2 | UIUX / i18n | 社区首页多处核心 copy 仍为英文硬编码 | REOPEN |
+| C-N4 | P2 | UIUX / i18n | 任务执行链路离线/未连接提示仍是静态英文，绕过 l10n | REOPEN |
+
+#### C-N1 说明: 社区首页 feed filter 是“假筛选”
+
+- `community_screen.dart:94` 定义 4 个筛选项：`Global Feed / My Squad / Goal Mates / Following`
+- `community_screen.dart:126-129` 点击后只会：
+  1. 更新本地 `selectedIndex`
+  2. 调用 `feedProvider.refresh()`
+- `community_providers.dart:15-19` 的 `refresh()` 始终只调用 `_repository.getFeed()`
+- `community_repository.dart:24-42` 的 `getFeed()` 只有 `page` / `limit`，没有任何 filter / scope / audience 参数
+
+**结论**: 当前社区首页给了用户“信息流筛选已生效”的交互暗示，但实际上所有筛选项都会拿回同一份 feed 数据。
+
+#### C-N2 说明: feed 错误会被伪装成“没有内容”
+
+- `community_repository.dart:39-41` 里 `catch` 后直接 `return []`
+- 由于后端 `community.py:229-249` 实际上已经有 `/feed` 路由，这个逻辑不再是“临时过渡”，而是在掩盖真实故障
+
+**结论**: 当前实现会把后端故障、鉴权问题、解析失败等多类异常都表现成“社区暂时没有内容”，这会损害用户感知，也会削弱线上问题发现能力。
+
+#### C-N3 说明: 社区首页核心 copy 仍未进入统一文案体系
+
+硬编码示例：
+
+- `community_screen.dart:94` `Global Feed / My Squad / Goal Mates / Following`
+- `community_screen.dart:111` `Discover what others are learning`
+- `community_screen.dart:151-166` `No community spark yet / Share a post / Refresh feed`
+
+**结论**: 这些不是边角文本，而是首页标题区与空状态主文案，已经属于上线前必须统一的产品语言层。
+
+#### C-N4 说明: 任务执行链路仍有静态英文提示
+
+- `execution_copy.dart:14-18`
+  - `AI execution engine is currently offline...`
+  - `AI execution engine is not connected...`
+
+**结论**: 这是任务执行失败/离线场景下的第一反馈，不应绕过本地化与统一文案系统。
+
+### 12.4 补充判断
+
+1. **Aurora 主链路**: 当前更接近 `PASS-WIP`。  
+   结构化纠偏、成本记账、状态带契约这些技术缺口已经补上，但“显著提升用户效果”的论断仍需要更真实的体验级证明。
+
+2. **画像 / 记忆 / 资料 / 知识星图**: 当前更接近 `PASS-WIP`。  
+   接口、服务、抽样测试都不错，但仍建议补做“用户纠正画像后，前台透明层和后台推理层同步变化”的活体验收。
+
+3. **任务卡 / 计划 / 分享 / 群任务**: 主链路可以算 `PASS`，但**社区首页 feed** 还不能通过最终验收。
+
+4. **UIUX**: 当前不能直接给 `PASS`。  
+   页面结构已经明显成熟，但首页级文案、状态文案、本地化一致性还没到上线签字标准。
+
+5. **质量门 / 部署证据**: 已比前几轮诚实很多，当前更接近 `PASS-WIP`。  
+   代码和 workflow 基本修到位了，但还缺一轮“更像真实上线前彩排”的证据包。
