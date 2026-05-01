@@ -30,7 +30,8 @@ class AuroraMessageGroup extends StatelessWidget {
     final count = int.tryParse(countRaw.toString());
     if (count == null || count <= 1) return null;
 
-    final parts = content.split('\n\n').where((s) => s.trim().isNotEmpty).toList();
+    final parts =
+        content.split('\n\n').where((s) => s.trim().isNotEmpty).toList();
     if (parts.length <= 1) return null;
     return parts;
   }

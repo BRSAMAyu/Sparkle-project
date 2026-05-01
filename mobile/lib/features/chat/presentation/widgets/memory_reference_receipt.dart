@@ -31,53 +31,57 @@ class MemoryReferenceReceipt extends ConsumerWidget {
         zh: 'Aurora 引用了 ${memories.length} 条相关记忆',
         en: 'Aurora used ${memories.length} related memories',
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
-          unawaited(
-            showModalBottomSheet<void>(
-              context: context,
-              backgroundColor: Colors.transparent,
-              isScrollControlled: true,
-              builder: (_) => _MemoryReceiptSheet(
-                receipt: receipt,
-                memories: memories,
-                onActionSelected: onActionSelected,
-              ),
-            ),
-          );
-        },
-        child: Container(
-          margin: const EdgeInsets.only(top: 6, bottom: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: DS.surfaceHigh.withValues(alpha: 0.58),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: DS.borderSubtle),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.psychology_alt_outlined,
-                size: 13,
-                color: DS.brandPrimary,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  _copy(
-                    zh: '引用了 ${memories.length} 条相关记忆',
-                    en: 'Used ${memories.length} related memories',
-                  ),
-                  style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                  overflow: TextOverflow.ellipsis,
+      child: Semantics(
+        button: true,
+        label: 'Chat memory reference receipt control 1',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+            unawaited(
+              showModalBottomSheet<void>(
+                context: context,
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (_) => _MemoryReceiptSheet(
+                  receipt: receipt,
+                  memories: memories,
+                  onActionSelected: onActionSelected,
                 ),
               ),
-              _CountBadge(count: memories.length),
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right, size: 13, color: DS.textTertiary),
-            ],
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(top: 6, bottom: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: DS.surfaceHigh.withValues(alpha: 0.58),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: DS.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.psychology_alt_outlined,
+                  size: 13,
+                  color: DS.brandPrimary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _copy(
+                      zh: '引用了 ${memories.length} 条相关记忆',
+                      en: 'Used ${memories.length} related memories',
+                    ),
+                    style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _CountBadge(count: memories.length),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, size: 13, color: DS.textTertiary),
+              ],
+            ),
           ),
         ),
       ),

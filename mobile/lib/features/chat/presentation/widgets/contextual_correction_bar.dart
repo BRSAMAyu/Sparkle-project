@@ -272,35 +272,39 @@ class SourceBadge extends StatelessWidget {
         runSpacing: DS.spacing4,
         children: sources
             .map(
-              (source) => GestureDetector(
-                onTap: () => onTapSource?.call(source),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing8,
-                    vertical: DS.spacing4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: DS.surfaceSecondary.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 12,
-                        color: DS.textSecondary.withValues(alpha: 0.8),
-                      ),
-                      const SizedBox(width: DS.spacing4),
-                      Text(
-                        l10n.auroraSourceBadge(source),
-                        style: TextStyle(
-                          color: DS.textSecondary,
-                          fontSize: 11,
-                          height: 1.2,
+              (source) => Semantics(
+                button: true,
+                label: 'Chat contextual correction bar control 1',
+                child: GestureDetector(
+                  onTap: () => onTapSource?.call(source),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing8,
+                      vertical: DS.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceSecondary.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 12,
+                          color: DS.textSecondary.withValues(alpha: 0.8),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: DS.spacing4),
+                        Text(
+                          l10n.auroraSourceBadge(source),
+                          style: TextStyle(
+                            color: DS.textSecondary,
+                            fontSize: 11,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -330,69 +334,73 @@ class AuroraJudgmentTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(
-          left: DS.spacing40,
-          top: DS.spacing4,
-          bottom: DS.spacing4,
-        ),
-        padding: const EdgeInsets.all(DS.spacing10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              DS.brandPrimary.withValues(alpha: 0.06),
-              DS.brandPrimary.withValues(alpha: 0.02),
-            ],
+    return Semantics(
+      button: true,
+      label: 'Chat contextual correction bar control 2',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(
+            left: DS.spacing40,
+            top: DS.spacing4,
+            bottom: DS.spacing4,
           ),
-          borderRadius: BorderRadius.circular(DS.radius12),
-          border: Border.all(
-            color: DS.brandPrimary.withValues(alpha: 0.15),
+          padding: const EdgeInsets.all(DS.spacing10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                DS.brandPrimary.withValues(alpha: 0.06),
+                DS.brandPrimary.withValues(alpha: 0.02),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(DS.radius12),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.15),
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 14,
-                  color: DS.brandPrimary,
-                ),
-                const SizedBox(width: DS.spacing6),
-                Text(
-                  l10n.auroraJudgmentTag,
-                  style: TextStyle(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 14,
                     color: DS.brandPrimary,
+                  ),
+                  const SizedBox(width: DS.spacing6),
+                  Text(
+                    l10n.auroraJudgmentTag,
+                    style: TextStyle(
+                      color: DS.brandPrimary,
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing6),
+              Text(
+                judgment,
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: DS.fontSizeSm,
+                  height: 1.4,
+                ),
+              ),
+              if (reason != null && reason!.trim().isNotEmpty) ...[
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  reason!,
+                  style: TextStyle(
+                    color: DS.textSecondary,
                     fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightSemibold,
+                    height: 1.3,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: DS.spacing6),
-            Text(
-              judgment,
-              style: TextStyle(
-                color: DS.textPrimary,
-                fontSize: DS.fontSizeSm,
-                height: 1.4,
-              ),
-            ),
-            if (reason != null && reason!.trim().isNotEmpty) ...[
-              const SizedBox(height: DS.spacing4),
-              Text(
-                reason!,
-                style: TextStyle(
-                  color: DS.textSecondary,
-                  fontSize: DS.fontSizeXs,
-                  height: 1.3,
-                ),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -574,64 +582,68 @@ class _CorrectionChip extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           borderRadius: radius,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: radius,
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing12,
-                vertical: 7,
-              ),
-              decoration: BoxDecoration(
-                color: isAccent
-                    ? DS.brandPrimary.withValues(alpha: 0.08)
-                    : DS.surfaceSecondary.withValues(alpha: 0.5),
-                borderRadius: radius,
-                border: isAccent
-                    ? Border.all(
-                        color: DS.brandPrimary.withValues(alpha: 0.2),
-                      )
-                    : Border.all(color: Colors.transparent),
-              ),
-              child: ExcludeSemantics(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(presentation.icon, size: 14, color: color),
-                    const SizedBox(width: DS.spacing6),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 190),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            presentation.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: color,
-                              fontSize: 11,
-                              fontWeight: isAccent
-                                  ? DS.fontWeightMedium
-                                  : DS.fontWeightRegular,
+          child: Semantics(
+            button: true,
+            label: 'Chat contextual correction bar control 3',
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: isAccent
+                      ? DS.brandPrimary.withValues(alpha: 0.08)
+                      : DS.surfaceSecondary.withValues(alpha: 0.5),
+                  borderRadius: radius,
+                  border: isAccent
+                      ? Border.all(
+                          color: DS.brandPrimary.withValues(alpha: 0.2),
+                        )
+                      : Border.all(color: Colors.transparent),
+                ),
+                child: ExcludeSemantics(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(presentation.icon, size: 14, color: color),
+                      const SizedBox(width: DS.spacing6),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 190),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              presentation.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 11,
+                                fontWeight: isAccent
+                                    ? DS.fontWeightMedium
+                                    : DS.fontWeightRegular,
+                              ),
                             ),
-                          ),
-                          Text(
-                            presentation.subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: color.withValues(alpha: 0.72),
-                              fontSize: 10,
-                              height: 1.1,
+                            Text(
+                              presentation.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: color.withValues(alpha: 0.72),
+                                fontSize: 10,
+                                height: 1.1,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

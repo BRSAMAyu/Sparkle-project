@@ -675,9 +675,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ),
-                        IconButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          icon: const Icon(Icons.close_rounded),
+                        Semantics(
+                          button: true,
+                          label: 'Close exploration panel',
+                          child: IconButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            icon: const Icon(Icons.close_rounded),
+                          ),
                         ),
                       ],
                     ),
@@ -918,506 +922,521 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
               if (!isUser && !widget.showAvatar)
                 const SizedBox(width: DS.touchTargetMinSize - DS.spacing4),
               Flexible(
-                child: GestureDetector(
-                  onTap: () => _handleTap(context),
-                  onDoubleTap: _handleDoubleTap,
-                  onLongPress: () => _showContextMenu(context),
-                  onTapDown: (_) {
-                    if (mounted) setState(() => _isPressed = true);
-                  },
-                  onTapUp: (_) {
-                    if (mounted) setState(() => _isPressed = false);
-                  },
-                  onTapCancel: () {
-                    if (mounted) setState(() => _isPressed = false);
-                  },
-                  child: AnimatedScale(
-                    scale: _isPressed ? 0.98 : 1.0,
-                    duration: reduceMotion
-                        ? Duration.zero
-                        : const Duration(milliseconds: 100),
-                    curve: Curves.easeInOut,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Column(
-                          crossAxisAlignment: isUser
-                              ? CrossAxisAlignment.end
-                              : CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 8.0),
-                              constraints: BoxConstraints(
-                                maxWidth: _bubbleMaxWidth(context),
-                              ),
-                              child: MaterialStyler(
-                                material: isUser
-                                    ? _getUserMessageMaterial()
-                                    : _getAIMessageMaterial(context),
-                                shapeBorder: ContinuousRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
+                child: Semantics(
+                  button: true,
+                  label: 'Open message actions',
+                  child: GestureDetector(
+                    onTap: () => _handleTap(context),
+                    onDoubleTap: _handleDoubleTap,
+                    onLongPress: () => _showContextMenu(context),
+                    onTapDown: (_) {
+                      if (mounted) setState(() => _isPressed = true);
+                    },
+                    onTapUp: (_) {
+                      if (mounted) setState(() => _isPressed = false);
+                    },
+                    onTapCancel: () {
+                      if (mounted) setState(() => _isPressed = false);
+                    },
+                    child: AnimatedScale(
+                      scale: _isPressed ? 0.98 : 1.0,
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 100),
+                      curve: Curves.easeInOut,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Column(
+                            crossAxisAlignment: isUser
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                constraints: BoxConstraints(
+                                  maxWidth: _bubbleMaxWidth(context),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                  horizontal: 14,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (showAgentSwitching &&
-                                        !isUser &&
-                                        primaryAgentId != null &&
-                                        primaryAgentId.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: DS.spacing8,
-                                        ),
-                                        child: AssistantAgentBadge(
-                                          agentId: primaryAgentId,
-                                          displayName:
-                                              primarySnapshot?['display_name']
-                                                  ?.toString(),
-                                          colorHex: primarySnapshot?['color']
-                                              ?.toString(),
-                                          iconName: primarySnapshot?['icon']
-                                              ?.toString(),
-                                        ),
-                                      ),
-                                    if (widget.message is PrivateMessageInfo &&
-                                        (widget.message as PrivateMessageInfo)
-                                                .quotedMessage !=
-                                            null)
-                                      _buildQuoteArea(
-                                        context,
-                                        isUser,
-                                        (widget.message as PrivateMessageInfo)
-                                            .quotedMessage!,
-                                      ),
-                                    if (showReasoningSteps &&
-                                        widget.message is ChatMessageModel &&
-                                        (widget.message as ChatMessageModel)
-                                                .reasoningSteps !=
-                                            null)
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 8.0),
-                                        child: AgentReasoningBubble(
-                                          steps: (widget.message
-                                                  as ChatMessageModel)
-                                              .reasoningSteps!,
-                                          totalDurationMs:
-                                              _calculateReasoningDuration(
-                                            widget.message as ChatMessageModel,
+                                child: MaterialStyler(
+                                  material: isUser
+                                      ? _getUserMessageMaterial()
+                                      : _getAIMessageMaterial(context),
+                                  shapeBorder: ContinuousRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                    horizontal: 14,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (showAgentSwitching &&
+                                          !isUser &&
+                                          primaryAgentId != null &&
+                                          primaryAgentId.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: DS.spacing8,
+                                          ),
+                                          child: AssistantAgentBadge(
+                                            agentId: primaryAgentId,
+                                            displayName:
+                                                primarySnapshot?['display_name']
+                                                    ?.toString(),
+                                            colorHex: primarySnapshot?['color']
+                                                ?.toString(),
+                                            iconName: primarySnapshot?['icon']
+                                                ?.toString(),
                                           ),
                                         ),
-                                      ),
-                                    // Share card for private messages
-                                    if (_isShareMessage())
-                                      _buildPrivateShareCard() ??
-                                          const SizedBox.shrink()
-                                    else if (_isAuroraMultiMessage())
-                                      _buildAuroraMultiMessage()
-                                    else
-                                      // Use constrained height for long messages
-                                      LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          // Calculate max height based on screen size
-                                          final maxHeight =
-                                              MediaQuery.of(context)
-                                                      .size
-                                                      .height *
-                                                  0.5;
-                                          final contentWidget = SparkleMarkdown(
-                                            content: _content,
-                                            textColor: isUser
-                                                ? DS.chatBubbleUserText
-                                                : DS.chatBubbleOtherText,
-                                            codeBackgroundColor: isUser
-                                                ? DS.chatBubbleUserText
-                                                    .withValues(alpha: 0.12)
-                                                : DS.surfaceTertiary,
-                                            linkColor: isUser
-                                                ? DS.chatBubbleUserText
-                                                : DS.brandPrimary,
-                                            isStreaming:
-                                                _isStreamingAssistantBubble,
-                                            contentRole:
-                                                SparkleMarkdownRole.chatBubble,
-                                          );
-
-                                          // Try to estimate content height and decide if scrolling is needed
-                                          // For long content (heuristic: >500 chars), use constrained scrollable
-                                          final shouldConstrain =
-                                              _content.length > 500;
-
-                                          final animatedContent = AnimatedSize(
-                                            duration: context.reduceMotion
-                                                ? Duration.zero
-                                                : DS.motionDuration(
-                                                    SparkleMotionToken.micro,
-                                                  ),
-                                            curve: Curves.easeOutCubic,
-                                            alignment: Alignment.topLeft,
-                                            child: shouldConstrain
-                                                ? SizedBox(
-                                                    height: maxHeight,
-                                                    child:
-                                                        SingleChildScrollView(
-                                                      physics:
-                                                          const ClampingScrollPhysics(),
-                                                      child: contentWidget,
-                                                    ),
-                                                  )
-                                                : contentWidget,
-                                          );
-
-                                          if (!shouldConstrain) {
-                                            return animatedContent;
-                                          }
-
-                                          return animatedContent;
-                                        },
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (!chatPureMode &&
-                                widget.message is ChatMessageModel &&
-                                !_isUser &&
-                                (widget.message as ChatMessageModel)
-                                    .citations
-                                    .isNotEmpty)
-                              AssistantCitationStrip(
-                                message: widget.message as ChatMessageModel,
-                                onCitationFeedback: widget.onCitationFeedback ==
-                                        null
-                                    ? null
-                                    : (citation, helpful) =>
-                                        widget.onCitationFeedback!(
-                                          widget.message as ChatMessageModel,
-                                          citation,
-                                          helpful,
+                                      if (widget.message
+                                              is PrivateMessageInfo &&
+                                          (widget.message as PrivateMessageInfo)
+                                                  .quotedMessage !=
+                                              null)
+                                        _buildQuoteArea(
+                                          context,
+                                          isUser,
+                                          (widget.message as PrivateMessageInfo)
+                                              .quotedMessage!,
                                         ),
-                              ),
-                            if (showAiSystemAccessories &&
-                                !_isUser &&
-                                widget.message is ChatMessageModel)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                ),
-                                child: Column(
-                                  children: [
-                                    ContextReceiptBar(
-                                      rawMetadata:
+                                      if (showReasoningSteps &&
+                                          widget.message is ChatMessageModel &&
                                           (widget.message as ChatMessageModel)
-                                              .rawMetadata,
-                                      enabledReceiptTypes:
-                                          transparencyPreferences
-                                              .enabledReceiptTypes,
-                                      onActionSelected: _continueInlinePrompt,
-                                    ),
-                                  ],
+                                                  .reasoningSteps !=
+                                              null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              bottom: 8.0),
+                                          child: AgentReasoningBubble(
+                                            steps: (widget.message
+                                                    as ChatMessageModel)
+                                                .reasoningSteps!,
+                                            totalDurationMs:
+                                                _calculateReasoningDuration(
+                                              widget.message
+                                                  as ChatMessageModel,
+                                            ),
+                                          ),
+                                        ),
+                                      // Share card for private messages
+                                      if (_isShareMessage())
+                                        _buildPrivateShareCard() ??
+                                            const SizedBox.shrink()
+                                      else if (_isAuroraMultiMessage())
+                                        _buildAuroraMultiMessage()
+                                      else
+                                        // Use constrained height for long messages
+                                        LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            // Calculate max height based on screen size
+                                            final maxHeight =
+                                                MediaQuery.of(context)
+                                                        .size
+                                                        .height *
+                                                    0.5;
+                                            final contentWidget =
+                                                SparkleMarkdown(
+                                              content: _content,
+                                              textColor: isUser
+                                                  ? DS.chatBubbleUserText
+                                                  : DS.chatBubbleOtherText,
+                                              codeBackgroundColor: isUser
+                                                  ? DS.chatBubbleUserText
+                                                      .withValues(alpha: 0.12)
+                                                  : DS.surfaceTertiary,
+                                              linkColor: isUser
+                                                  ? DS.chatBubbleUserText
+                                                  : DS.brandPrimary,
+                                              isStreaming:
+                                                  _isStreamingAssistantBubble,
+                                              contentRole: SparkleMarkdownRole
+                                                  .chatBubble,
+                                            );
+
+                                            // Try to estimate content height and decide if scrolling is needed
+                                            // For long content (heuristic: >500 chars), use constrained scrollable
+                                            final shouldConstrain =
+                                                _content.length > 500;
+
+                                            final animatedContent =
+                                                AnimatedSize(
+                                              duration: context.reduceMotion
+                                                  ? Duration.zero
+                                                  : DS.motionDuration(
+                                                      SparkleMotionToken.micro,
+                                                    ),
+                                              curve: Curves.easeOutCubic,
+                                              alignment: Alignment.topLeft,
+                                              child: shouldConstrain
+                                                  ? SizedBox(
+                                                      height: maxHeight,
+                                                      child:
+                                                          SingleChildScrollView(
+                                                        physics:
+                                                            const ClampingScrollPhysics(),
+                                                        child: contentWidget,
+                                                      ),
+                                                    )
+                                                  : contentWidget,
+                                            );
+
+                                            if (!shouldConstrain) {
+                                              return animatedContent;
+                                            }
+
+                                            return animatedContent;
+                                          },
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            if (showAiSystemAccessories &&
-                                (_metadataWidgets.isNotEmpty ||
-                                    (widget.message is ChatMessageModel &&
-                                        ((widget.message as ChatMessageModel)
-                                                    .aiStatus !=
-                                                null ||
+                              if (!chatPureMode &&
+                                  widget.message is ChatMessageModel &&
+                                  !_isUser &&
+                                  (widget.message as ChatMessageModel)
+                                      .citations
+                                      .isNotEmpty)
+                                AssistantCitationStrip(
+                                  message: widget.message as ChatMessageModel,
+                                  onCitationFeedback:
+                                      widget.onCitationFeedback == null
+                                          ? null
+                                          : (citation, helpful) =>
+                                              widget.onCitationFeedback!(
+                                                widget.message
+                                                    as ChatMessageModel,
+                                                citation,
+                                                helpful,
+                                              ),
+                                ),
+                              if (showAiSystemAccessories &&
+                                  !_isUser &&
+                                  widget.message is ChatMessageModel)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      ContextReceiptBar(
+                                        rawMetadata:
                                             (widget.message as ChatMessageModel)
-                                                    .meta !=
-                                                null))))
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: AssistantMessageMetadataTray(
-                                  actions: _metadataWidgets,
-                                  isLatestMessage:
-                                      widget.isLatestAssistantMessage,
-                                  status: widget.message is ChatMessageModel
-                                      ? (widget.message as ChatMessageModel)
-                                          .aiStatus
-                                      : null,
-                                  messageMeta:
-                                      widget.message is ChatMessageModel
-                                          ? (widget.message as ChatMessageModel)
-                                              .meta
-                                          : null,
-                                  onWidgetAction: widget.onWidgetAction,
-                                ),
-                              ),
-                            if (showAiSystemAccessories &&
-                                !isUser &&
-                                modeSuggestion != null &&
-                                modeSuggestion['capability_ceiling'] == true)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'capability_ceiling',
-                                  label: context.l10n.chatModeSuggestionTitle,
-                                  icon: Icons.vertical_align_top_rounded,
-                                  child: CapabilityCeilingCard(
-                                    ceilingData: modeSuggestion,
+                                                .rawMetadata,
+                                        enabledReceiptTypes:
+                                            transparencyPreferences
+                                                .enabledReceiptTypes,
+                                        onActionSelected: _continueInlinePrompt,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              )
-                            else if (showAiSystemAccessories &&
-                                !isUser &&
-                                modeSuggestion != null)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'mode_suggestion',
-                                  label: context.l10n.chatModeSuggestionTitle,
-                                  icon: Icons.auto_awesome_rounded,
-                                  child: ModeSuggestionCard(
-                                    suggestion: modeSuggestion,
+                              if (showAiSystemAccessories &&
+                                  (_metadataWidgets.isNotEmpty ||
+                                      (widget.message is ChatMessageModel &&
+                                          ((widget.message as ChatMessageModel)
+                                                      .aiStatus !=
+                                                  null ||
+                                              (widget.message
+                                                          as ChatMessageModel)
+                                                      .meta !=
+                                                  null))))
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: AssistantMessageMetadataTray(
+                                    actions: _metadataWidgets,
+                                    isLatestMessage:
+                                        widget.isLatestAssistantMessage,
+                                    status: widget.message is ChatMessageModel
+                                        ? (widget.message as ChatMessageModel)
+                                            .aiStatus
+                                        : null,
+                                    messageMeta: widget.message
+                                            is ChatMessageModel
+                                        ? (widget.message as ChatMessageModel)
+                                            .meta
+                                        : null,
+                                    onWidgetAction: widget.onWidgetAction,
                                   ),
                                 ),
-                              ),
-                            if (showAgentSwitching &&
-                                !isUser &&
-                                orchestrationTrace != null)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'orchestration_trace',
-                                  label:
-                                      context.l10n.chatOrchestrationTraceTitle,
-                                  icon: Icons.route_rounded,
-                                  child: OrchestrationTracePanel(
-                                    traceData: orchestrationTrace,
-                                    initiallyExpanded: true,
-                                  ),
-                                ),
-                              ),
-                            if (showAgentSwitching &&
-                                !isUser &&
-                                (routingPreview != null ||
-                                    roundtableTurns.isNotEmpty))
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: ExpertRoundtableWidget(
-                                  routingPreview: routingPreview,
-                                  turns: roundtableTurns,
-                                  compact: true,
-                                  autoCollapse: false,
-                                  initiallyCollapsed: true,
-                                  collapseId: chatMessage?.id,
-                                ),
-                              ),
-                            if (!chatPureMode &&
-                                !isUser &&
-                                predictionPreview != null &&
-                                predictionPreview.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'prediction_preview',
-                                  label: context.l10n.chatViewTheaterDetails,
-                                  icon: Icons.auto_graph_rounded,
-                                  child: _buildTheaterPreviewCard(
-                                    context,
-                                    preview: predictionPreview,
-                                    deepLink: theaterDeepLink,
-                                    sourceChatSessionId: sourceChatSessionId,
-                                  ),
-                                ),
-                              ),
-                            if (!chatPureMode &&
-                                !isUser &&
-                                simulationPreview != null &&
-                                simulationPreview.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'simulation_preview',
-                                  label: context.l10n.chatViewSimulationDetails,
-                                  icon: Icons.groups_rounded,
-                                  child: _buildSimulationPreviewCard(
-                                    context,
-                                    preview: simulationPreview,
-                                    deepLink: simulationDeepLink,
-                                    sourceChatSessionId: sourceChatSessionId,
-                                  ),
-                                ),
-                              ),
-                            if (!chatPureMode &&
-                                !isUser &&
-                                reportPreview != null &&
-                                reportPreview.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'report_preview',
-                                  label: context.l10n.chatViewLearningReport,
-                                  icon: Icons.article_outlined,
-                                  child: _buildReportPreviewCard(
-                                    context,
-                                    preview: reportPreview,
-                                    deepLink: reportDeepLink,
-                                    sourceChatSessionId: sourceChatSessionId,
-                                  ),
-                                ),
-                              ),
-                            if (showAgentSwitching &&
-                                !isUser &&
-                                agentActivities.isEmpty &&
-                                ((collaborationNarrative != null &&
-                                        collaborationNarrative.isNotEmpty) ||
-                                    agentsInvolved.isNotEmpty))
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'collaboration_signature',
-                                  label: context.l10n.chatCollaborationProcess,
-                                  icon: Icons.hub_rounded,
-                                  child: _CollaborationSignatureCard(
-                                    narrative: collaborationNarrative,
-                                    collaborationMode: collaborationMode,
-                                    agentIds: agentsInvolved,
-                                    activitySnapshots: agentActivities,
-                                  ),
-                                ),
-                              ),
-                            if (showAgentSwitching &&
-                                !isUser &&
-                                agentActivities.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 8.0,
-                                  right: 8.0,
-                                  left: 8.0,
-                                ),
-                                child: _buildAccessoryDisclosure(
-                                  id: 'agent_workflow',
-                                  label: context.l10n.chatCollaborationProcess,
-                                  icon: Icons.hub_rounded,
-                                  child: AgentWorkflowPanel(
-                                    snapshotActivities: agentActivities,
-                                    narrative: collaborationNarrative,
-                                  ),
-                                ),
-                              ),
-                            if (showAiSystemAccessories)
-                              ..._informationalWidgets.map(
-                                (w) => Padding(
+                              if (showAiSystemAccessories &&
+                                  !isUser &&
+                                  modeSuggestion != null &&
+                                  modeSuggestion['capability_ceiling'] == true)
+                                Padding(
                                   padding: const EdgeInsets.only(
                                     top: 8.0,
                                     right: 8.0,
                                     left: 8.0,
                                   ),
                                   child: _buildAccessoryDisclosure(
-                                    id: 'info_${w.type}',
-                                    label: _informationalWidgetLabel(
-                                      context,
-                                      w,
+                                    id: 'capability_ceiling',
+                                    label: context.l10n.chatModeSuggestionTitle,
+                                    icon: Icons.vertical_align_top_rounded,
+                                    child: CapabilityCeilingCard(
+                                      ceilingData: modeSuggestion,
                                     ),
-                                    icon: _informationalWidgetIcon(w),
-                                    child: _buildInformationalWidget(w),
+                                  ),
+                                )
+                              else if (showAiSystemAccessories &&
+                                  !isUser &&
+                                  modeSuggestion != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: _buildAccessoryDisclosure(
+                                    id: 'mode_suggestion',
+                                    label: context.l10n.chatModeSuggestionTitle,
+                                    icon: Icons.auto_awesome_rounded,
+                                    child: ModeSuggestionCard(
+                                      suggestion: modeSuggestion,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            if (!chatPureMode)
-                              ..._actionableWidgets.map(
-                                (w) {
-                                  final actionable = (w.data['id'] ??
-                                          w.data['tool_result_id'] ??
-                                          w.data['intervention_id'] ??
-                                          w.data['request_id']) !=
-                                      null;
-                                  return Padding(
+                              if (showAgentSwitching &&
+                                  !isUser &&
+                                  orchestrationTrace != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: _buildAccessoryDisclosure(
+                                    id: 'orchestration_trace',
+                                    label: context
+                                        .l10n.chatOrchestrationTraceTitle,
+                                    icon: Icons.route_rounded,
+                                    child: OrchestrationTracePanel(
+                                      traceData: orchestrationTrace,
+                                      initiallyExpanded: true,
+                                    ),
+                                  ),
+                                ),
+                              if (showAgentSwitching &&
+                                  !isUser &&
+                                  (routingPreview != null ||
+                                      roundtableTurns.isNotEmpty))
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: ExpertRoundtableWidget(
+                                    routingPreview: routingPreview,
+                                    turns: roundtableTurns,
+                                    compact: true,
+                                    autoCollapse: false,
+                                    initiallyCollapsed: true,
+                                    collapseId: chatMessage?.id,
+                                  ),
+                                ),
+                              if (!chatPureMode &&
+                                  !isUser &&
+                                  predictionPreview != null &&
+                                  predictionPreview.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: _buildAccessoryDisclosure(
+                                    id: 'prediction_preview',
+                                    label: context.l10n.chatViewTheaterDetails,
+                                    icon: Icons.auto_graph_rounded,
+                                    child: _buildTheaterPreviewCard(
+                                      context,
+                                      preview: predictionPreview,
+                                      deepLink: theaterDeepLink,
+                                      sourceChatSessionId: sourceChatSessionId,
+                                    ),
+                                  ),
+                                ),
+                              if (!chatPureMode &&
+                                  !isUser &&
+                                  simulationPreview != null &&
+                                  simulationPreview.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: _buildAccessoryDisclosure(
+                                    id: 'simulation_preview',
+                                    label:
+                                        context.l10n.chatViewSimulationDetails,
+                                    icon: Icons.groups_rounded,
+                                    child: _buildSimulationPreviewCard(
+                                      context,
+                                      preview: simulationPreview,
+                                      deepLink: simulationDeepLink,
+                                      sourceChatSessionId: sourceChatSessionId,
+                                    ),
+                                  ),
+                                ),
+                              if (!chatPureMode &&
+                                  !isUser &&
+                                  reportPreview != null &&
+                                  reportPreview.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: _buildAccessoryDisclosure(
+                                    id: 'report_preview',
+                                    label: context.l10n.chatViewLearningReport,
+                                    icon: Icons.article_outlined,
+                                    child: _buildReportPreviewCard(
+                                      context,
+                                      preview: reportPreview,
+                                      deepLink: reportDeepLink,
+                                      sourceChatSessionId: sourceChatSessionId,
+                                    ),
+                                  ),
+                                ),
+                              if (showAgentSwitching &&
+                                  !isUser &&
+                                  agentActivities.isEmpty &&
+                                  ((collaborationNarrative != null &&
+                                          collaborationNarrative.isNotEmpty) ||
+                                      agentsInvolved.isNotEmpty))
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: _buildAccessoryDisclosure(
+                                    id: 'collaboration_signature',
+                                    label:
+                                        context.l10n.chatCollaborationProcess,
+                                    icon: Icons.hub_rounded,
+                                    child: _CollaborationSignatureCard(
+                                      narrative: collaborationNarrative,
+                                      collaborationMode: collaborationMode,
+                                      agentIds: agentsInvolved,
+                                      activitySnapshots: agentActivities,
+                                    ),
+                                  ),
+                                ),
+                              if (showAgentSwitching &&
+                                  !isUser &&
+                                  agentActivities.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8.0,
+                                    right: 8.0,
+                                    left: 8.0,
+                                  ),
+                                  child: _buildAccessoryDisclosure(
+                                    id: 'agent_workflow',
+                                    label:
+                                        context.l10n.chatCollaborationProcess,
+                                    icon: Icons.hub_rounded,
+                                    child: AgentWorkflowPanel(
+                                      snapshotActivities: agentActivities,
+                                      narrative: collaborationNarrative,
+                                    ),
+                                  ),
+                                ),
+                              if (showAiSystemAccessories)
+                                ..._informationalWidgets.map(
+                                  (w) => Padding(
                                     padding: const EdgeInsets.only(
                                       top: 8.0,
                                       right: 8.0,
                                       left: 8.0,
                                     ),
-                                    child: ActionCard(
-                                      action: w,
-                                      onConfirm: actionable &&
-                                              widget.onActionConfirm != null
-                                          ? () => widget.onActionConfirm!(w)
-                                          : null,
-                                      onDismiss: actionable &&
-                                              widget.onActionDismiss != null
-                                          ? () => widget.onActionDismiss!(w)
-                                          : null,
-                                      onConfirmTasks: (toolResultId) async {
-                                        final planId =
-                                            w.data['plan_id']?.toString() ??
-                                                w.data['planId']?.toString();
-                                        await _confirmGeneratedTasks(
-                                          toolResultId: toolResultId,
-                                          planId: planId,
-                                        );
-                                      },
-                                      onConfirmAllTasks: (toolResultId) async {
-                                        final planId =
-                                            w.data['plan_id']?.toString() ??
-                                                w.data['planId']?.toString();
-                                        await _confirmGeneratedTasks(
-                                          toolResultId: toolResultId,
-                                          planId: planId,
-                                        );
-                                      },
-                                      onPlanNavigation: (planId) {
-                                        unawaited(
-                                          ref
-                                              .read(planListProvider.notifier)
-                                              .refresh(),
-                                        );
-                                      },
-                                      onWidgetAction: widget.onWidgetAction,
+                                    child: _buildAccessoryDisclosure(
+                                      id: 'info_${w.type}',
+                                      label: _informationalWidgetLabel(
+                                        context,
+                                        w,
+                                      ),
+                                      icon: _informationalWidgetIcon(w),
+                                      child: _buildInformationalWidget(w),
                                     ),
-                                  );
-                                },
-                              ),
-                            if (!chatPureMode && !isUser)
-                              _buildResponseFeedbackRow(context),
-                          ],
-                        ),
-                        if (_showHeart) _buildHeartAnimation(context),
-                      ],
+                                  ),
+                                ),
+                              if (!chatPureMode)
+                                ..._actionableWidgets.map(
+                                  (w) {
+                                    final actionable = (w.data['id'] ??
+                                            w.data['tool_result_id'] ??
+                                            w.data['intervention_id'] ??
+                                            w.data['request_id']) !=
+                                        null;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 8.0,
+                                        right: 8.0,
+                                        left: 8.0,
+                                      ),
+                                      child: ActionCard(
+                                        action: w,
+                                        onConfirm: actionable &&
+                                                widget.onActionConfirm != null
+                                            ? () => widget.onActionConfirm!(w)
+                                            : null,
+                                        onDismiss: actionable &&
+                                                widget.onActionDismiss != null
+                                            ? () => widget.onActionDismiss!(w)
+                                            : null,
+                                        onConfirmTasks: (toolResultId) async {
+                                          final planId =
+                                              w.data['plan_id']?.toString() ??
+                                                  w.data['planId']?.toString();
+                                          await _confirmGeneratedTasks(
+                                            toolResultId: toolResultId,
+                                            planId: planId,
+                                          );
+                                        },
+                                        onConfirmAllTasks:
+                                            (toolResultId) async {
+                                          final planId =
+                                              w.data['plan_id']?.toString() ??
+                                                  w.data['planId']?.toString();
+                                          await _confirmGeneratedTasks(
+                                            toolResultId: toolResultId,
+                                            planId: planId,
+                                          );
+                                        },
+                                        onPlanNavigation: (planId) {
+                                          unawaited(
+                                            ref
+                                                .read(planListProvider.notifier)
+                                                .refresh(),
+                                          );
+                                        },
+                                        onWidgetAction: widget.onWidgetAction,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              if (!chatPureMode && !isUser)
+                                _buildResponseFeedbackRow(context),
+                            ],
+                          ),
+                          if (_showHeart) _buildHeartAnimation(context),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -2853,21 +2872,25 @@ class _DeliveryBadge extends StatelessWidget {
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(width: 6),
-              InkWell(
-                onTap: onAction,
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  child: Text(
-                    actionLabel!,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                      decoration: TextDecoration.underline,
+              Semantics(
+                button: true,
+                label: actionLabel,
+                child: InkWell(
+                  onTap: onAction,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      actionLabel!,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ),
@@ -2941,180 +2964,185 @@ class _InsightLinkCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: DS.surfaceSecondary,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: DS.brandPrimary.withValues(alpha: 0.14),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Open insight link',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: DS.surfaceSecondary,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: DS.brandPrimary.withValues(alpha: 0.14),
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 18, color: DS.brandPrimary),
-                  const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: DS.fontWeightBold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, size: 16),
-                ],
-              ),
-              if (caption != null && caption!.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: DS.info.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    caption!,
-                    style: TextStyle(
-                      color: DS.info,
-                      fontSize: 11.5,
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                ),
-              ],
-              if (badgeLabel != null && badgeLabel!.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: DS.brandPrimary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    badgeLabel!,
-                    style: TextStyle(
-                      color: DS.brandPrimary,
-                      fontSize: 11.5,
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: DS.spacing4),
-              Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: DS.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-              if (bullets.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing6),
-                ...bullets.take(2).map(
-                      (line) => Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          '• $line',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11.5),
-                        ),
-                      ),
-                    ),
-              ],
-              if (actionButtons.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing8),
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: actionButtons
-                      .map(
-                        (item) => FilledButton.tonalIcon(
-                          onPressed: item.onTap,
-                          icon:
-                              const Icon(Icons.arrow_outward_rounded, size: 16),
-                          label: Text(item.label),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
-              if (promptActions.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  context.l10n.chatContinueInChat,
-                  style: TextStyle(
-                    color: DS.textSecondary,
-                    fontSize: 11.5,
-                    fontWeight: DS.fontWeightBold,
-                  ),
-                ),
-                const SizedBox(height: DS.spacing6),
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: promptActions
-                      .map(
-                        (item) => Tooltip(
-                          message: item.prompt,
-                          child: GestureDetector(
-                            onLongPress: () =>
-                                _showPromptPreview(context, item),
-                            child: ActionChip(
-                              avatar: const Icon(
-                                Icons.chat_bubble_outline_rounded,
-                                size: 16,
-                              ),
-                              label: Text(item.label),
-                              onPressed: item.onTap ??
-                                  () => _showPromptPreview(context, item),
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
-              if ((primaryLabel ?? '').isNotEmpty ||
-                  (secondaryLabel ?? '').isNotEmpty) ...[
-                const SizedBox(height: DS.spacing8),
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    if ((primaryLabel ?? '').isNotEmpty && onPrimaryTap != null)
-                      FilledButton.icon(
-                        onPressed: onPrimaryTap,
-                        icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                        label: Text(primaryLabel!),
+                    Icon(icon, size: 18, color: DS.brandPrimary),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: DS.fontWeightBold,
+                          fontSize: 13,
+                        ),
                       ),
-                    if ((secondaryLabel ?? '').isNotEmpty &&
-                        onSecondaryTap != null)
-                      OutlinedButton.icon(
-                        onPressed: onSecondaryTap,
-                        icon: const Icon(Icons.forum_rounded, size: 16),
-                        label: Text(secondaryLabel!),
-                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, size: 16),
                   ],
                 ),
+                if (caption != null && caption!.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.info.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      caption!,
+                      style: TextStyle(
+                        color: DS.info,
+                        fontSize: 11.5,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ),
+                ],
+                if (badgeLabel != null && badgeLabel!.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.brandPrimary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      badgeLabel!,
+                      style: TextStyle(
+                        color: DS.brandPrimary,
+                        fontSize: 11.5,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                if (bullets.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing6),
+                  ...bullets.take(2).map(
+                        (line) => Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '• $line',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                        ),
+                      ),
+                ],
+                if (actionButtons.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing8),
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: actionButtons
+                        .map(
+                          (item) => FilledButton.tonalIcon(
+                            onPressed: item.onTap,
+                            icon: const Icon(Icons.arrow_outward_rounded,
+                                size: 16),
+                            label: Text(item.label),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                if (promptActions.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    context.l10n.chatContinueInChat,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: 11.5,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing6),
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: promptActions
+                        .map(
+                          (item) => Tooltip(
+                            message: item.prompt,
+                            child: GestureDetector(
+                              onLongPress: () =>
+                                  _showPromptPreview(context, item),
+                              child: ActionChip(
+                                avatar: const Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 16,
+                                ),
+                                label: Text(item.label),
+                                onPressed: item.onTap ??
+                                    () => _showPromptPreview(context, item),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                if ((primaryLabel ?? '').isNotEmpty ||
+                    (secondaryLabel ?? '').isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing8),
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: [
+                      if ((primaryLabel ?? '').isNotEmpty &&
+                          onPrimaryTap != null)
+                        FilledButton.icon(
+                          onPressed: onPrimaryTap,
+                          icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                          label: Text(primaryLabel!),
+                        ),
+                      if ((secondaryLabel ?? '').isNotEmpty &&
+                          onSecondaryTap != null)
+                        OutlinedButton.icon(
+                          onPressed: onSecondaryTap,
+                          icon: const Icon(Icons.forum_rounded, size: 16),
+                          label: Text(secondaryLabel!),
+                        ),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );

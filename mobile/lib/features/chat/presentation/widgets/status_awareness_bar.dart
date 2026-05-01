@@ -182,18 +182,11 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Layer 1: Collapsed
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (_expansion == _AuroraExpansion.collapsed) {
-                _setExpansion(_AuroraExpansion.light);
-              } else {
-                _setExpansion(_AuroraExpansion.collapsed);
-              }
-            },
-            child: Semantics(
-              button: true,
-              label: collapsedLabel,
+          Semantics(
+            button: true,
+            label: 'Chat status awareness bar control 1',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 if (_expansion == _AuroraExpansion.collapsed) {
                   _setExpansion(_AuroraExpansion.light);
@@ -201,48 +194,59 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                   _setExpansion(_AuroraExpansion.collapsed);
                 }
               },
-              child: SparkleStaggerItem(
-                key: ValueKey('aurora-status-${snapshot.overallStatus}'),
-                index: 0,
-                offset: 0.018,
-                beginScale: 0.992,
-                motionToken: SparkleMotionToken.micro,
-                child: Row(
-                  children: [
-                    _StatusPill(label: 'Aurora', color: tone),
-                    const SizedBox(width: DS.spacing8),
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: _animDuration,
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        child: Text(
-                          collapsedLabel,
-                          key: ValueKey<String>(collapsedLabel),
-                          style: TextStyle(
-                            color: DS.textPrimary,
-                            fontSize: DS.fontSizeXs,
-                            fontWeight: DS.fontWeightMedium,
+              child: Semantics(
+                button: true,
+                label: collapsedLabel,
+                onTap: () {
+                  if (_expansion == _AuroraExpansion.collapsed) {
+                    _setExpansion(_AuroraExpansion.light);
+                  } else {
+                    _setExpansion(_AuroraExpansion.collapsed);
+                  }
+                },
+                child: SparkleStaggerItem(
+                  key: ValueKey('aurora-status-${snapshot.overallStatus}'),
+                  index: 0,
+                  offset: 0.018,
+                  beginScale: 0.992,
+                  motionToken: SparkleMotionToken.micro,
+                  child: Row(
+                    children: [
+                      _StatusPill(label: 'Aurora', color: tone),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: _animDuration,
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          child: Text(
+                            collapsedLabel,
+                            key: ValueKey<String>(collapsedLabel),
+                            style: TextStyle(
+                              color: DS.textPrimary,
+                              fontSize: DS.fontSizeXs,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: DS.spacing6),
-                    Text(
-                      '${snapshot.readyCount}/${snapshot.totalCount}',
-                      style: TextStyle(color: DS.textSecondary, fontSize: 11),
-                    ),
-                    const SizedBox(width: DS.spacing4),
-                    Icon(
-                      _expansion != _AuroraExpansion.collapsed
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      size: 16,
-                      color: DS.textSecondary,
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing6),
+                      Text(
+                        '${snapshot.readyCount}/${snapshot.totalCount}',
+                        style: TextStyle(color: DS.textSecondary, fontSize: 11),
+                      ),
+                      const SizedBox(width: DS.spacing4),
+                      Icon(
+                        _expansion != _AuroraExpansion.collapsed
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 16,
+                        color: DS.textSecondary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

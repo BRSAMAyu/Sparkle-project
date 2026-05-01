@@ -290,14 +290,16 @@ class _TimingContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = <MapEntry<String, String>>[
       if ((meta.firstTokenMs ?? 0) > 0)
-        MapEntry(context.l10n.chatMetaFirstTokenLatency, _formatDuration(meta.firstTokenMs!)),
+        MapEntry(context.l10n.chatMetaFirstTokenLatency,
+            _formatDuration(meta.firstTokenMs!)),
       if ((meta.totalDurationMs ?? meta.latencyMs ?? 0) > 0)
         MapEntry(
           context.l10n.chatMetaTotalDuration,
           _formatDuration(meta.totalDurationMs ?? meta.latencyMs!),
         ),
       if ((meta.streamDurationMs ?? 0) > 0)
-        MapEntry(context.l10n.chatMetaStreamingPhase, _formatDuration(meta.streamDurationMs!)),
+        MapEntry(context.l10n.chatMetaStreamingPhase,
+            _formatDuration(meta.streamDurationMs!)),
       if ((meta.responseEventCount ?? 0) > 0)
         MapEntry(context.l10n.chatMetaEventCount, '${meta.responseEventCount}'),
       if (meta.modelTier?.isNotEmpty ?? false)
@@ -305,7 +307,8 @@ class _TimingContent extends StatelessWidget {
       if (meta.reasoningMode?.isNotEmpty ?? false)
         MapEntry('档位', meta.reasoningMode!),
       if (meta.isCacheHit != null)
-        MapEntry('缓存', meta.isCacheHit! ? '命中' : context.l10n.chatMetaCacheMiss),
+        MapEntry(
+            '缓存', meta.isCacheHit! ? '命中' : context.l10n.chatMetaCacheMiss),
     ];
 
     return Column(

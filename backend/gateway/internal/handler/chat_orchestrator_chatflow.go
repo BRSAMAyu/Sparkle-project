@@ -109,6 +109,36 @@ func writeLegacyJSON(writer *wsSafeWriter, payload interface{}) error {
 	return writer.WriteJSON(payload)
 }
 
+func logWebSocketWriteError(operation string, err error) {
+	if err != nil {
+		log.Printf("Failed to write WebSocket %s: %v", operation, err)
+	}
+}
+
+func writeLegacyJSONLogged(writer *wsSafeWriter, operation string, payload interface{}) bool {
+	if err := writeLegacyJSON(writer, payload); err != nil {
+		logWebSocketWriteError(operation, err)
+		return false
+	}
+	return true
+}
+
+func writeWSJSONLogged(writer *wsSafeWriter, operation string, payload interface{}) bool {
+	if err := writer.WriteJSON(payload); err != nil {
+		logWebSocketWriteError(operation, err)
+		return false
+	}
+	return true
+}
+
+func writeWSMessageLogged(writer *wsSafeWriter, operation string, messageType int, data []byte) bool {
+	if err := writer.WriteMessage(messageType, data); err != nil {
+		logWebSocketWriteError(operation, err)
+		return false
+	}
+	return true
+}
+
 func workflowIDForChatMode(mode string) string {
 	normalized := normalizeChatMode(mode)
 	switch normalized {
@@ -249,7 +279,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("resource_exhausted", "Server busy, please retry", true)
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, legacyStreamErrorPayload("resource_exhausted", "Server busy, please retry", true))
+			writeLegacyJSONLogged(r, "resource exhausted error", legacyStreamErrorPayload("resource_exhausted", "Server busy, please retry", true))
 		}
 		return false
 	}
@@ -453,26 +483,42 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			// Send response
 			switch r := responder.(type) {
 			case *envelopeResponder:
-				_ = r.SendChatResponse(resp)
-				_ = r.SendMeta(map[string]interface{}{
+				if err := r.SendChatResponse(resp); err != nil {
+					logWebSocketWriteError("cached envelope chat response", err)
+					return true
+				}
+				if err := r.SendMeta(map[string]interface{}{
 					"latency_ms":   time.Since(startTime).Milliseconds(),
 					"is_cache_hit": true,
-				})
+				}); err != nil {
+					logWebSocketWriteError("cached envelope metadata", err)
+					return true
+				}
 			case *protobufResponder:
-				_ = r.SendChatResponse(resp)
-				_ = r.SendMeta(map[string]interface{}{
+				if err := r.SendChatResponse(resp); err != nil {
+					logWebSocketWriteError("cached protobuf chat response", err)
+					return true
+				}
+				if err := r.SendMeta(map[string]interface{}{
 					"latency_ms":   time.Since(startTime).Milliseconds(),
 					"is_cache_hit": true,
-				})
+				}); err != nil {
+					logWebSocketWriteError("cached protobuf metadata", err)
+					return true
+				}
 			case *wsSafeWriter:
-				_ = writeLegacyJSON(r, convertResponseToJSON(ctx, resp))
-				_ = writeLegacyJSON(r, gin.H{
+				if !writeLegacyJSONLogged(r, "cached legacy chat response", convertResponseToJSON(ctx, resp)) {
+					return true
+				}
+				if !writeLegacyJSONLogged(r, "cached legacy metadata", gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
 						"latency_ms":   time.Since(startTime).Milliseconds(),
 						"is_cache_hit": true,
 					},
-				})
+				}) {
+					return true
+				}
 			}
 
 			return false
@@ -542,7 +588,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "AI Service Unavailable"})
+			writeLegacyJSONLogged(r, "agent unavailable error", gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -560,7 +606,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "AI Service Unavailable"})
+			writeLegacyJSONLogged(r, "agent call unavailable error", gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -643,7 +689,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					case *protobufResponder:
 						r.SendError("resource_exhausted", "Daily quota exceeded", false)
 					case *wsSafeWriter:
-						_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "Daily quota exceeded"})
+						writeLegacyJSONLogged(r, "daily quota error", gin.H{"type": "error", "message": "Daily quota exceeded"})
 					}
 					return false
 				}
@@ -752,15 +798,23 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	switch r := responder.(type) {
 	case *envelopeResponder:
-		_ = r.SendMeta(meta)
+		if err := r.SendMeta(meta); err != nil {
+			logWebSocketWriteError("envelope metadata", err)
+			return true
+		}
 	case *protobufResponder:
-		_ = r.SendMeta(meta)
+		if err := r.SendMeta(meta); err != nil {
+			logWebSocketWriteError("protobuf metadata", err)
+			return true
+		}
 	case *wsSafeWriter:
 		// Send final metadata
-		_ = writeLegacyJSON(r, gin.H{
+		if !writeLegacyJSONLogged(r, "legacy metadata", gin.H{
 			"type": "meta",
 			"meta": meta,
-		})
+		}) {
+			return true
+		}
 	}
 
 	doneResp := &agentv1.ChatResponse{
@@ -778,11 +832,19 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if shouldEmitSyntheticDone(sawAuroraRuntime, sawUpstreamFinishReason) {
 		switch r := responder.(type) {
 		case *envelopeResponder:
-			_ = r.SendChatResponse(doneResp)
+			if err := r.SendChatResponse(doneResp); err != nil {
+				logWebSocketWriteError("envelope synthetic done", err)
+				return true
+			}
 		case *protobufResponder:
-			_ = r.SendChatResponse(doneResp)
+			if err := r.SendChatResponse(doneResp); err != nil {
+				logWebSocketWriteError("protobuf synthetic done", err)
+				return true
+			}
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, convertResponseToJSON(ctx, doneResp))
+			if !writeLegacyJSONLogged(r, "legacy synthetic done", convertResponseToJSON(ctx, doneResp)) {
+				return true
+			}
 		}
 	}
 
@@ -826,7 +888,7 @@ func respondStreamRecvError(responder interface{}, err error) {
 	case *protobufResponder:
 		r.SendError(code, message, retryable)
 	case *wsSafeWriter:
-		_ = writeLegacyJSON(r, legacyStreamErrorPayload(code, message, retryable))
+		writeLegacyJSONLogged(r, "stream error", legacyStreamErrorPayload(code, message, retryable))
 	}
 }
 

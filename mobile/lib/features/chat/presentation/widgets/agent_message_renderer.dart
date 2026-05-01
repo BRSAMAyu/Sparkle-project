@@ -217,11 +217,15 @@ class AgentMessageRenderer extends ConsumerWidget {
         final planId = entity.entityId ??
             widget.data['id']?.toString() ??
             widget.data['plan_id']?.toString();
-        return GestureDetector(
-          onTap: planId != null
-              ? () => context.push(entity.detailRoute ?? '/plans/$planId')
-              : null,
-          child: PlanCard(data: widget.data),
+        return Semantics(
+          button: true,
+          label: 'Chat agent message renderer control 1',
+          child: GestureDetector(
+            onTap: planId != null
+                ? () => context.push(entity.detailRoute ?? '/plans/$planId')
+                : null,
+            child: PlanCard(data: widget.data),
+          ),
         );
 
       case 'plan_context_summary':

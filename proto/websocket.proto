@@ -9,7 +9,10 @@ import "google/protobuf/timestamp.proto";
 
 // WebSocketMessage represents the envelope for all WebSocket communications
 message WebSocketMessage {
-  string version = 1; // Protocol version, e.g., "2.0"
+  // Version negotiation: client sends preferred version, server responds with
+  // the highest mutually supported version. Currently only "1.0" is supported.
+  // Breaking changes require a new version number and dual-version support period.
+  string version = 1; // Protocol version, e.g., "1.0"
   string type = 2; // Message type: "chat", "tool_result", "status", etc.
   bytes payload = 3; // Protobuf binary payload (marshaled specific message)
   string trace_id = 4; // OpenTelemetry Trace ID
@@ -25,6 +28,8 @@ message ChatMessage {
   string user_id = 2;
   string message = 3;
   repeated agent.v1.ToolCall tool_calls = 4;
+  // Intentionally proto3 optional: unset means "use the session default", while
+  // false explicitly disables document grounding for this message.
   optional bool use_document_context = 5;
   repeated string document_filter = 6;
 }

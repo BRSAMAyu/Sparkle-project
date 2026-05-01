@@ -17,9 +17,9 @@ env:
   PYTHON_VERSION: '3.11'
   FLUTTER_VERSION: '3.24.0'
   COVERAGE_RULES_FILE: 'quality/coverage_thresholds.json'
-  COVERAGE_THRESHOLD_GO: '10'
-  COVERAGE_THRESHOLD_PYTHON: '35'
-  COVERAGE_THRESHOLD_FLUTTER: '15'
+  COVERAGE_THRESHOLD_GO: '30'
+  COVERAGE_THRESHOLD_PYTHON: '50'
+  COVERAGE_THRESHOLD_FLUTTER: '25'
 
 jobs:
   # ==================== JOB 1: LINT ====================
@@ -34,6 +34,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+
+      - name: Go Vet
+        working-directory: backend/gateway
+        run: go vet ./...
 
       - name: Go Lint (golangci-lint)
         uses: golangci/golangci-lint-action@v6

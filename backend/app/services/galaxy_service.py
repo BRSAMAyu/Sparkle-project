@@ -26,7 +26,7 @@ from sqlalchemy.orm import aliased, undefer
 
 from app.config import settings
 from app.core.cache import cache_service, cached
-from app.core.event_bus import KnowledgeNodeUpdated, MasteryUpdatedFromError, event_bus
+from app.core.event_bus import event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
@@ -161,44 +161,11 @@ class GalaxyService:
         [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
         Calling this will cause double mastery deductions.
         """
-        try:
-            user_id = UUID(event_data["user_id"])
-            linked_node_ids = [UUID(nid) for nid in event_data.get("linked_node_ids", [])]
-
-            if not linked_node_ids:
-                return
-
-            logger.info(f"Processing error event for user {user_id}, linked nodes: {linked_node_ids}")
-
-            for node_id in linked_node_ids:
-                # 1. Get current status
-                query = text("SELECT mastery_score FROM user_node_status WHERE user_id = :uid AND node_id = :nid")
-                res = await self.db.execute(query, {"uid": user_id, "nid": node_id})
-                current = res.scalar_one_or_none()
-
-                current_score = current if current is not None else 0
-
-                # 2. Penalty Logic (Simple: -10%)
-                # Ensure it doesn't go below 0
-                new_score = max(0, int(current_score * 0.9))
-
-                if new_score != current_score:
-                    # 3. Update Mastery using existing method (handles Outbox + Audit)
-                    await self.update_node_mastery(
-                        user_id=user_id, node_id=node_id, new_mastery=new_score, reason="error_penalty"
-                    )
-
-                    # 4. Publish galaxy.node.updated (Specific for frontend realtime update)
-                    # update_node_mastery already publishes galaxy.node.mastery_updated via Outbox
-                    # We can also publish a realtime event via Redis directly if needed for immediate websocket
-                    realtime_event = KnowledgeNodeUpdated(
-                        user_id=str(user_id), node_id=str(node_id), new_mastery=new_score
-                    )
-                    await event_bus.publish("galaxy.node.updated", realtime_event.to_dict())
-                    logger.info(f"Reduced mastery for node {node_id} to {new_score}")
-
-        except Exception as e:
-            logger.error(f"Failed to handle error_created event: {e}")
+        logger.warning(
+            "Blocked deprecated GalaxyService.handle_error_created call; "
+            "mastery updates are owned by ErrorBookMasterySyncService"
+        )
+        return None
 
     async def update_mastery_from_error(
         self,
@@ -214,70 +181,11 @@ class GalaxyService:
         [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
         Calling this will cause double mastery deductions.
         """
-        active_db = db or self.db
-        coerced_user_id = self._coerce_uuid(user_id)
-        coerced_node_id = self._coerce_uuid(knowledge_node_id)
-        node_name = str(knowledge_node_name or "").strip()
-
-        row = None
-        if coerced_node_id is not None:
-            result = await active_db.execute(
-                select(KnowledgeNode, UserNodeStatus)
-                .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
-                .where(UserNodeStatus.user_id == coerced_user_id)
-                .where(KnowledgeNode.id == coerced_node_id)
-                .limit(1)
-            )
-            row = result.first()
-
-        if row is None and node_name:
-            result = await active_db.execute(
-                select(KnowledgeNode, UserNodeStatus)
-                .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
-                .where(UserNodeStatus.user_id == coerced_user_id)
-                .where(func.lower(KnowledgeNode.name).like(f"%{node_name.lower()}%"))
-                .order_by(KnowledgeNode.name)
-                .limit(1)
-            )
-            row = result.first()
-
-        if row is None:
-            return None
-
-        node, status = row
-        old_mastery = float(status.mastery_score or 0.0)
-        requested_delta = self._error_mastery_delta(error_type=error_type, error_count=error_count)
-        new_mastery = max(10.0, old_mastery + requested_delta)
-        actual_delta = new_mastery - old_mastery
-        update_time = _utcnow()
-
-        status.mastery_score = new_mastery
-        status.bkt_mastery_prob = max(0.0, min(new_mastery / 100.0, 1.0))
-        status.bkt_last_updated_at = update_time
-        status.updated_at = update_time
-        status.last_interacted_at = update_time
-        status.is_unlocked = True
-        await active_db.flush()
-
-        event = MasteryUpdatedFromError(
-            user_id=str(user_id),
-            node_id=str(node.id),
-            node_name=str(node.name or ""),
-            old_mastery=old_mastery,
-            new_mastery=new_mastery,
-            delta=actual_delta,
-            error_type=str(error_type or "").strip().lower(),
-            triggered_at=update_time.isoformat(),
+        logger.warning(
+            "Blocked deprecated GalaxyService.update_mastery_from_error call; "
+            "mastery updates are owned by ErrorBookMasterySyncService"
         )
-        await event_bus.publish(event.event_type, event.to_dict())
-
-        return {
-            "node_id": str(node.id),
-            "node_name": str(node.name or ""),
-            "old_mastery": old_mastery,
-            "new_mastery": new_mastery,
-            "delta": actual_delta,
-        }
+        return None
 
     @staticmethod
     def _coerce_uuid(value: object) -> object:

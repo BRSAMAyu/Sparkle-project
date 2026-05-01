@@ -375,18 +375,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         duration: DS.durationFast,
                         curve: Curves.easeOutBack,
                         scale: _isAttachmentBursting ? 1.08 : 1,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.add_circle_outline_rounded,
-                            color: DS.textSecondary,
-                          ),
-                          iconSize: attachmentIconSize,
-                          onPressed:
-                              widget.enabled ? _showAttachmentSheet : null,
-                          padding: EdgeInsets.all(attachmentPadding),
-                          constraints: BoxConstraints.tightFor(
-                            width: attachmentVisualSize,
-                            height: attachmentVisualSize,
+                        child: Semantics(
+                          button: true,
+                          label: 'Open attachment options',
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: DS.textSecondary,
+                            ),
+                            iconSize: attachmentIconSize,
+                            onPressed:
+                                widget.enabled ? _showAttachmentSheet : null,
+                            padding: EdgeInsets.all(attachmentPadding),
+                            constraints: BoxConstraints.tightFor(
+                              width: attachmentVisualSize,
+                              height: attachmentVisualSize,
+                            ),
                           ),
                         ),
                       ),
@@ -506,29 +510,34 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 child: Material(
                   color: Colors.transparent,
                   shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: canSend ? _handleSend : null,
-                    onHighlightChanged: (pressed) {
-                      if (!mounted) return;
-                      setState(() => _isButtonPressed = pressed);
-                    },
-                    child: Center(
-                      child: _isSending
-                          ? SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: DS.textOnPrimary,
+                  child: Semantics(
+                    button: true,
+                    label: 'Send message',
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: canSend ? _handleSend : null,
+                      onHighlightChanged: (pressed) {
+                        if (!mounted) return;
+                        setState(() => _isButtonPressed = pressed);
+                      },
+                      child: Center(
+                        child: _isSending
+                            ? SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: DS.textOnPrimary,
+                                ),
+                              )
+                            : Icon(
+                                Icons.arrow_upward_rounded,
+                                color: canSend
+                                    ? DS.textOnPrimary
+                                    : DS.textSecondary,
+                                size: DS.iconSizeBase,
                               ),
-                            )
-                          : Icon(
-                              Icons.arrow_upward_rounded,
-                              color:
-                                  canSend ? DS.textOnPrimary : DS.textSecondary,
-                              size: DS.iconSizeBase,
-                            ),
+                      ),
                     ),
                   ),
                 ),
@@ -582,14 +591,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: DS.iconSizeSm,
-                  color: DS.textSecondary,
+              child: Semantics(
+                button: true,
+                label: 'Cancel quoted message',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: DS.iconSizeSm,
+                    color: DS.textSecondary,
+                  ),
+                  onPressed: widget.onCancelQuote,
+                  padding: const EdgeInsets.all(12),
                 ),
-                onPressed: widget.onCancelQuote,
-                padding: const EdgeInsets.all(12),
               ),
             ),
           ],

@@ -567,14 +567,18 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             ),
           ),
           // Expand/collapse button
-          InkWell(
-            onTap: () => setState(() => _isExpanded = !_isExpanded),
-            child: Icon(
-              _isExpanded
-                  ? Icons.expand_less_rounded
-                  : Icons.expand_more_rounded,
-              size: 20,
-              color: DS.neutral400,
+          Semantics(
+            button: true,
+            label: 'Chat content review card control 1',
+            child: InkWell(
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              child: Icon(
+                _isExpanded
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 20,
+                color: DS.neutral400,
+              ),
             ),
           ),
         ],
@@ -1264,40 +1268,45 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   runSpacing: DS.spacing8,
                   children: issueOptions.map((issue) {
                     final isSelected = selectedIssues.contains(issue);
-                    return GestureDetector(
-                      onTap: () {
-                        setDialogState(() {
-                          if (isSelected) {
-                            selectedIssues.remove(issue);
-                          } else {
-                            selectedIssues.add(issue);
-                          }
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing10,
-                          vertical: DS.spacing6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? DS.warning.withValues(alpha: 0.15)
-                              : DS.neutral100,
-                          borderRadius: DS.borderRadius20,
-                          border: Border.all(
-                            color: isSelected
-                                ? DS.warning.withValues(alpha: 0.5)
-                                : DS.neutral300,
+                    return Semantics(
+                      button: true,
+                      label: 'Chat content review card control 2',
+                      child: GestureDetector(
+                        onTap: () {
+                          setDialogState(() {
+                            if (isSelected) {
+                              selectedIssues.remove(issue);
+                            } else {
+                              selectedIssues.add(issue);
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing10,
+                            vertical: DS.spacing6,
                           ),
-                        ),
-                        child: Text(
-                          issue,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: isSelected ? DS.warning : DS.neutral700,
-                              ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? DS.warning.withValues(alpha: 0.15)
+                                : DS.neutral100,
+                            borderRadius: DS.borderRadius20,
+                            border: Border.all(
+                              color: isSelected
+                                  ? DS.warning.withValues(alpha: 0.5)
+                                  : DS.neutral300,
+                            ),
+                          ),
+                          child: Text(
+                            issue,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color:
+                                      isSelected ? DS.warning : DS.neutral700,
+                                ),
+                          ),
                         ),
                       ),
                     );

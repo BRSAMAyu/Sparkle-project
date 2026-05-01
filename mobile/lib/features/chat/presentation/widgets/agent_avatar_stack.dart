@@ -243,6 +243,7 @@ class AgentInfo {
         );
     }
   }
+
   final String type;
   final String name;
   final IconData icon;

@@ -166,52 +166,56 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               final title =
                   (cite['title'] as String?) ?? context.l10n.chatSourceUnknown;
               final content = (cite['content'] as String?) ?? '';
-              return GestureDetector(
-                onTap: () => _showCitationDetails(context, cite),
-                child: Container(
-                  width: 160,
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(DS.sm),
-                  decoration: BoxDecoration(
-                    color: DS.brandPrimaryConst,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: widget.agentColor.withValues(alpha: 0.2),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: DS.brandPrimary.withValues(alpha: 0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+              return Semantics(
+                button: true,
+                label: 'Chat agent reasoning bubble control 1',
+                child: GestureDetector(
+                  onTap: () => _showCitationDetails(context, cite),
+                  child: Container(
+                    width: 160,
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.all(DS.sm),
+                    decoration: BoxDecoration(
+                      color: DS.brandPrimaryConst,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: widget.agentColor.withValues(alpha: 0.2),
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: widget.agentColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: DS.brandPrimary.withValues(alpha: 0.03),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      const SizedBox(height: DS.xs),
-                      Expanded(
-                        child: Text(
-                          content,
-                          maxLines: 3,
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 10,
-                            color: DS.brandPrimary.shade700,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: widget.agentColor,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: DS.xs),
+                        Expanded(
+                          child: Text(
+                            content,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: DS.brandPrimary.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -241,65 +245,69 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 头部：智能体信息
-          InkWell(
-            onTap: _toggleExpand,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(DS.md),
-              child: Row(
-                children: [
-                  // 智能体头像
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: widget.agentColor,
+          Semantics(
+            button: true,
+            label: 'Chat agent reasoning bubble control 2',
+            child: InkWell(
+              onTap: _toggleExpand,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(DS.md),
+                child: Row(
+                  children: [
+                    // 智能体头像
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: widget.agentColor,
+                      ),
+                      child: Icon(
+                        _getAgentIcon(),
+                        color: DS.brandPrimaryConst,
+                        size: 18,
+                      ),
                     ),
-                    child: Icon(
-                      _getAgentIcon(),
-                      color: DS.brandPrimaryConst,
-                      size: 18,
-                    ),
-                  ),
 
-                  const SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
 
-                  // 智能体名称和类型
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.agentName,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: widget.agentColor,
-                          ),
-                        ),
-                        if (widget.confidence != null)
+                    // 智能体名称和类型
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            context.l10n.chatConfidenceLabel(
-                              (widget.confidence! * 100).toStringAsFixed(0),
-                            ),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                            widget.agentName,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: widget.agentColor,
                             ),
                           ),
-                      ],
+                          if (widget.confidence != null)
+                            Text(
+                              context.l10n.chatConfidenceLabel(
+                                (widget.confidence! * 100).toStringAsFixed(0),
+                              ),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // 展开/收起图标
-                  AnimatedRotation(
-                    turns: _isExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 300),
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      color: widget.agentColor,
+                    // 展开/收起图标
+                    AnimatedRotation(
+                      turns: _isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: widget.agentColor,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

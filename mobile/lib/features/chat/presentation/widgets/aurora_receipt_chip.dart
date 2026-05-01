@@ -66,8 +66,8 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
     final onActionSelected = widget.onActionSelected;
     final receiptType = normalizeAuroraReceiptType(receipt);
 
-    final isSocialSource =
-        receiptType == kSourceContextReceiptType && receipt['source_kind'] == 'social';
+    final isSocialSource = receiptType == kSourceContextReceiptType &&
+        receipt['source_kind'] == 'social';
     final isMemory = receiptType == kMemoryReferenceReceiptType;
     final isSource = receiptType == kSourceContextReceiptType;
     final isNextAction = receiptType == kNextActionReceiptType;
@@ -81,16 +81,22 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
         (receipt['tool_count'] as int? ?? usedTools.length);
 
     if (isMemory && memories.isEmpty) return const SizedBox.shrink();
-    if (isSource && usedCount == 0 && !_hasDetailContent(receipt, memories, usedNames, excludedNames, usedTools, whatChanged)) {
+    if (isSource &&
+        usedCount == 0 &&
+        !_hasDetailContent(receipt, memories, usedNames, excludedNames,
+            usedTools, whatChanged)) {
       return const SizedBox.shrink();
     }
 
-    final summary = _summary(context, receipt, isMemory, isSocialSource, isSource, isNextAction, memories, usedCount, excludedNames);
+    final summary = _summary(context, receipt, isMemory, isSocialSource,
+        isSource, isNextAction, memories, usedCount, excludedNames);
     if (summary.isEmpty) return const SizedBox.shrink();
 
-    final hasDetail = _hasDetailContent(receipt, memories, usedNames, excludedNames, usedTools, whatChanged);
+    final hasDetail = _hasDetailContent(
+        receipt, memories, usedNames, excludedNames, usedTools, whatChanged);
     final icon = _iconFor(isMemory, isSocialSource, isSource, isNextAction);
-    final title = _title(context, receipt, isMemory, isSocialSource, isSource, isNextAction);
+    final title = _title(
+        context, receipt, isMemory, isSocialSource, isSource, isNextAction);
 
     return Semantics(
       button: hasDetail,
@@ -98,77 +104,83 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
       label: summary,
       child: Container(
         margin: const EdgeInsets.only(top: 6, bottom: 2),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: hasDetail
-              ? () {
-                  unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
-                  );
-                  unawaited(
-                    showModalBottomSheet<void>(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: true,
-                      builder: (_) => _AuroraReceiptDetailSheet(
-                        receipt: receipt,
-                        receiptType: receiptType,
-                        title: title,
-                        summary: summary,
-                        icon: icon,
-                        memories: memories,
-                        usedNames: usedNames,
-                        excludedNames: excludedNames,
-                        usedTools: usedTools,
-                        whatChanged: whatChanged,
-                        isSocialSource: isSocialSource,
-                        onActionSelected: onActionSelected,
+        child: Semantics(
+          button: true,
+          label: 'Chat aurora receipt chip control 1',
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: hasDetail
+                ? () {
+                    unawaited(
+                      SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+                    );
+                    unawaited(
+                      showModalBottomSheet<void>(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (_) => _AuroraReceiptDetailSheet(
+                          receipt: receipt,
+                          receiptType: receiptType,
+                          title: title,
+                          summary: summary,
+                          icon: icon,
+                          memories: memories,
+                          usedNames: usedNames,
+                          excludedNames: excludedNames,
+                          usedTools: usedTools,
+                          whatChanged: whatChanged,
+                          isSocialSource: isSocialSource,
+                          onActionSelected: onActionSelected,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: DS.surfaceHigh.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, size: 13, color: DS.brandPrimary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      summary,
+                      style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isMemory && memories.isNotEmpty)
+                    _CountBadge(count: memories.length),
+                  if (isSource && usedCount > 0) _CountBadge(count: usedCount),
+                  if (hasDetail) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 13, color: DS.textTertiary),
+                  ],
+                  Semantics(
+                    button: true,
+                    label: _copy(zh: '关闭收据', en: 'Dismiss receipt'),
+                    child: GestureDetector(
+                      onTap: () {
+                        unawaited(SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection));
+                        setState(() => _dismissed = true);
+                        unawaited(_persistDismiss());
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(Icons.close_rounded,
+                            size: 13, color: DS.textTertiary),
                       ),
                     ),
-                  );
-                }
-              : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: DS.surfaceHigh.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: DS.borderSubtle),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, size: 13, color: DS.brandPrimary),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    summary,
-                    style: DS.labelSmall.copyWith(color: DS.textSecondary),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                if (isMemory && memories.isNotEmpty)
-                  _CountBadge(count: memories.length),
-                if (isSource && usedCount > 0) _CountBadge(count: usedCount),
-                if (hasDetail) ...[
-                  const SizedBox(width: 4),
-                  Icon(Icons.chevron_right, size: 13, color: DS.textTertiary),
                 ],
-                Semantics(
-                  button: true,
-                  label: _copy(zh: '关闭收据', en: 'Dismiss receipt'),
-                  child: GestureDetector(
-                    onTap: () {
-                      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-                      setState(() => _dismissed = true);
-                      unawaited(_persistDismiss());
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Icon(Icons.close_rounded, size: 13, color: DS.textTertiary),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -316,7 +328,8 @@ String _title(
   return _copy(zh: 'Aurora 体验调整', en: 'Aurora experience change');
 }
 
-IconData _iconFor(bool isMemory, bool isSocialSource, bool isSource, bool isNextAction) {
+IconData _iconFor(
+    bool isMemory, bool isSocialSource, bool isSource, bool isNextAction) {
   if (isMemory) return Icons.psychology_alt_outlined;
   if (isSocialSource) return Icons.groups_2_outlined;
   if (isSource) return Icons.auto_awesome;
@@ -805,35 +818,39 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
 
 class _DecisionChainLink extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: () {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
-          Navigator.of(context).pop();
-          unawaited(
-            showModalBottomSheet<void>(
-              context: context,
-              backgroundColor: Colors.transparent,
-              isScrollControlled: true,
-              builder: (_) => DraggableScrollableSheet(
-                expand: false,
-                initialChildSize: 0.7,
-                minChildSize: 0.4,
-                maxChildSize: 0.92,
-                builder: (_, controller) => const CausalTimelinePanel(),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat aurora receipt chip control 2',
+        child: GestureDetector(
+          onTap: () {
+            unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+            Navigator.of(context).pop();
+            unawaited(
+              showModalBottomSheet<void>(
+                context: context,
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (_) => DraggableScrollableSheet(
+                  expand: false,
+                  initialChildSize: 0.7,
+                  minChildSize: 0.4,
+                  maxChildSize: 0.92,
+                  builder: (_, controller) => const CausalTimelinePanel(),
+                ),
               ),
-            ),
-          );
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.timeline, size: 13, color: DS.brandPrimary),
-            const SizedBox(width: 4),
-            Text(
-              context.l10n.chatContextViewDecisionChain,
-              style: DS.labelSmall.copyWith(color: DS.brandPrimary),
-            ),
-          ],
+            );
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.timeline, size: 13, color: DS.brandPrimary),
+              const SizedBox(width: 4),
+              Text(
+                context.l10n.chatContextViewDecisionChain,
+                style: DS.labelSmall.copyWith(color: DS.brandPrimary),
+              ),
+            ],
+          ),
         ),
       );
 }

@@ -264,16 +264,20 @@ class DailyStartupRetryBanner extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: DS.spacing4),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                tooltip: context.l10n.chatRetryDailyOverview,
-                onPressed: isRetrying ? null : onRetry,
-                icon: Icon(
-                  Icons.refresh_rounded,
-                  size: DS.iconSizeSm,
-                  color: isRetrying
-                      ? DS.textSecondary.withValues(alpha: 0.45)
-                      : DS.warning,
+              Semantics(
+                button: true,
+                label: 'Chat chat design language widgets control 1',
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: context.l10n.chatRetryDailyOverview,
+                  onPressed: isRetrying ? null : onRetry,
+                  icon: Icon(
+                    Icons.refresh_rounded,
+                    size: DS.iconSizeSm,
+                    color: isRetrying
+                        ? DS.textSecondary.withValues(alpha: 0.45)
+                        : DS.warning,
+                  ),
                 ),
               ),
             ],

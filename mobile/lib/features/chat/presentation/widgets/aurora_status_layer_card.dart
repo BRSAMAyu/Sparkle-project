@@ -66,46 +66,51 @@ class _AuroraStatusLayerCardState extends State<AuroraStatusLayerCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(DS.radius8),
-                onTap: () => setState(() => _expanded = !_expanded),
-                child: Row(
-                  children: [
-                    Icon(widget.icon, size: 15, color: widget.accentColor),
-                    const SizedBox(width: DS.spacing6),
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: TextStyle(
-                          color: DS.textPrimary,
-                          fontSize: DS.fontSizeSm,
-                          fontWeight: DS.fontWeightSemibold,
+              Semantics(
+                button: true,
+                label: 'Chat aurora status layer card control 1',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(DS.radius8),
+                  onTap: () => setState(() => _expanded = !_expanded),
+                  child: Row(
+                    children: [
+                      Icon(widget.icon, size: 15, color: widget.accentColor),
+                      const SizedBox(width: DS.spacing6),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: TextStyle(
+                            color: DS.textPrimary,
+                            fontSize: DS.fontSizeSm,
+                            fontWeight: DS.fontWeightSemibold,
+                          ),
                         ),
                       ),
-                    ),
-                    if (widget.confidenceLabel != null) ...[
-                      Text(
-                        widget.confidenceLabel!,
-                        style: TextStyle(
-                          color: widget.accentColor,
-                          fontSize: 11,
-                          fontWeight: DS.fontWeightMedium,
+                      if (widget.confidenceLabel != null) ...[
+                        Text(
+                          widget.confidenceLabel!,
+                          style: TextStyle(
+                            color: widget.accentColor,
+                            fontSize: 11,
+                            fontWeight: DS.fontWeightMedium,
+                          ),
+                        ),
+                        const SizedBox(width: DS.spacing4),
+                      ],
+                      Tooltip(
+                        message: _expanded
+                            ? widget.collapseLabel
+                            : widget.expandLabel,
+                        child: Icon(
+                          _expanded
+                              ? Icons.expand_less_rounded
+                              : Icons.expand_more_rounded,
+                          size: 18,
+                          color: DS.textSecondary,
                         ),
                       ),
-                      const SizedBox(width: DS.spacing4),
                     ],
-                    Tooltip(
-                      message:
-                          _expanded ? widget.collapseLabel : widget.expandLabel,
-                      child: Icon(
-                        _expanded
-                            ? Icons.expand_less_rounded
-                            : Icons.expand_more_rounded,
-                        size: 18,
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               AnimatedCrossFade(

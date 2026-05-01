@@ -5384,6 +5384,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRead => 'Read';
 
   @override
+  String chatOfflineQueuePending(int count) {
+    return '$count messages waiting to send';
+  }
+
+  @override
+  String chatOfflineQueueSending(int count) {
+    return 'Sending $count queued messages...';
+  }
+
+  @override
+  String get chatOfflineQueueComplete => 'All sent';
+
+  @override
+  String chatOfflineQueuePendingSemantic(int count) {
+    return 'Offline queue has $count messages waiting to send';
+  }
+
+  @override
+  String chatOfflineQueueSendingSemantic(int count) {
+    return 'Connection restored, sending $count queued messages';
+  }
+
+  @override
+  String get chatOfflineQueueCompleteSemantic =>
+      'All queued messages have been sent';
+
+  @override
+  String get chatMessageQueued => 'Queued';
+
+  @override
+  String get chatMessageSending => 'Sending';
+
+  @override
+  String get chatMessageSendFailed => 'Send failed';
+
+  @override
+  String get chatMessageRetrySend => 'Retry';
+
+  @override
   String get chatAgentNavigator => 'Galaxy Navigator';
 
   @override
@@ -5643,6 +5682,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookNoReviewHint => 'Great job! Keep it up';
 
   @override
+  String get errorBookNoReviewDescription =>
+      'Great job! Keep it up. Record a recent missed question first, then Sparkle can schedule future reviews.';
+
+  @override
+  String get errorBookRecordFirstError => 'Record first error';
+
+  @override
   String get errorBookDeleteSuccess => 'Deleted';
 
   @override
@@ -5754,6 +5800,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String errorBookCognitiveFilter(Object dimension) {
     return 'Reviewing specifically for \"$dimension\" dimension';
   }
+
+  @override
+  String errorBookKnowledgePointFilter(String node) {
+    return 'Knowledge point: $node';
+  }
+
+  @override
+  String get errorBookCognitiveDimension => 'Cognitive Dimension';
+
+  @override
+  String get errorBookKnowledgeNodeFallback => 'Knowledge node';
 
   @override
   String errorBookReviewCount(Object count) {
@@ -7158,6 +7215,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get photonTransactionAdminAdjustment => 'Admin adjustment';
+
+  @override
+  String get photonTransactionsEmpty => 'No transaction records';
+
+  @override
+  String get photonTransactionsEnd => 'No more records';
+
+  @override
+  String photonTransactionDaysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String get photonTransactionNoNote => 'No note';
 
   @override
   String get shopItemTypeSkin => 'Skin';
@@ -23931,6 +24002,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simGenFailed => 'Simulation generation failed';
 
   @override
+  String get simRealtimeConnectionRecovered =>
+      'The live connection was interrupted. Restored to your most recently saved simulation progress.';
+
+  @override
+  String get simInteractionStreamRecovered =>
+      'The interaction stream was interrupted, but I restored the latest round state for you.';
+
+  @override
+  String simRoundProgressSummary(int round) {
+    return 'Discussion has reached round $round. Summarizing key disagreements and consensus now.';
+  }
+
+  @override
+  String get simDraftInsightSummary =>
+      'Simulation in progress. Summarizing the current discussion insights...';
+
+  @override
   String get simStudyGroup => 'Study Group';
 
   @override
@@ -24743,6 +24831,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebRememberedHint => 'Extend review interval';
 
   @override
+  String get ebReviewMasteryPrompt => 'How well do you know this question?';
+
+  @override
+  String get ebReviewMasterySheetTitle => 'Rate your mastery';
+
+  @override
+  String get ebReviewMasterySheetDesc =>
+      'Sparkle will adjust the next review time from your rating';
+
+  @override
   String get ebPerfectRecall => 'Perfect Recall ✓';
 
   @override
@@ -25100,6 +25198,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transWordCard => 'Word Card';
+
+  @override
+  String get transAddedToFlashcardsReviewLater =>
+      'Added to flashcards, review in 24h';
+
+  @override
+  String get transTranslationFailed => 'Translation failed';
 
   @override
   String get auroraObserving => 'Aurora · Observing';

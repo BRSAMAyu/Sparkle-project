@@ -141,3 +141,39 @@ groups:
           summary: "gRPC circuit breaker is open"
           description: "The gRPC agent client circuit breaker has been open for more than 2 minutes. All agent requests are being rejected without attempt."
           runbook: "monitoring/runbooks/incident_response.md#p2-circuit-breaker-open"
+
+      - alert: SparkleWebSocketConnectionsGrowing
+        expr: deriv(sparkle_ws_active_connections[30m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: gateway
+        annotations:
+          summary: "WebSocket connections growing steadily"
+          description: "Active WebSocket connections have been growing at more than 0.5 connections per second over a 30 minute window."
+          runbook: "monitoring/runbooks/incident_response.md#p2-websocket-connections-growing"
+
+      - alert: SparkleSessionLockContentionHigh
+        expr: increase(sparkle_session_lock_acquire_failures_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Session lock contention is high"
+          description: "More than 5 session lock acquire attempts failed due to contention in the last 5 minutes."
+          runbook: "monitoring/runbooks/incident_response.md#p2-session-lock-contention"
+
+      - alert: SparkleGrpcStreamSemaphoreUsageHigh
+        expr: sparkle_grpc_stream_semaphore_usage > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: gateway
+        annotations:
+          summary: "gRPC stream semaphore usage high"
+          description: "Gateway gRPC StreamChat semaphore usage has exceeded 80% for 5 minutes."
+          runbook: "monitoring/runbooks/incident_response.md#p2-grpc-stream-semaphore-usage"

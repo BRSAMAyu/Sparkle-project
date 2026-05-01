@@ -14,6 +14,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -52,6 +53,14 @@ SESSION_MOOD_SESSION_KEY_TEMPLATE = "memory:session_mood:{user_id}:{session_id}"
 RECENT_CALIBRATION_RECEIPTS_KEY_TEMPLATE = "aurora:recent_corrections:{user_id}"
 LAST_CALIBRATION_RECEIPT_KEY_TEMPLATE = "aurora:last_calibration_receipt:{user_id}"
 RECENT_CALIBRATION_RECEIPTS_TTL_SECONDS = 7 * 24 * 60 * 60
+NON_CRITICAL_SERVICE_ERRORS = (
+    AttributeError,
+    ImportError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+    SQLAlchemyError,
+)
 
 
 def _utcnow() -> datetime:
@@ -179,7 +188,7 @@ class MemoryService:
                 change_reason=change_reason,
                 workflow_id=source_type,
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning(f"Failed to track preference evolution: {exc}")
 
         adaptation_record = self._build_preference_adaptation_record(
@@ -274,7 +283,7 @@ class MemoryService:
             from app.core.cache import cache_service
 
             return cache_service.redis
-        except Exception as exc:
+        except (AttributeError, ImportError, RuntimeError) as exc:
             logger.debug("Unable to resolve Redis for session mood memory: {}", exc)
             return None
 
@@ -285,7 +294,7 @@ class MemoryService:
             from app.core.cache import cache_service
 
             return cache_service.redis
-        except Exception as exc:
+        except (AttributeError, ImportError, RuntimeError) as exc:
             logger.debug("Unable to resolve Redis for calibration receipt memory: {}", exc)
             return None
 
@@ -516,7 +525,7 @@ class MemoryService:
                 change_reason="user_edit",
                 workflow_id="update_goal",
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning(f"Failed to track goal evolution: {exc}")
         return record
 
@@ -783,7 +792,7 @@ class MemoryService:
         try:
             await self.db.commit()
             await self.db.refresh(record)
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             await self.db.rollback()
             if not self._is_vector_runtime_error(exc):
                 raise
@@ -819,7 +828,7 @@ class MemoryService:
                 try:
                     await self.db.commit()
                     await self.db.refresh(record)
-                except Exception as retry_exc:
+                except SQLAlchemyError as retry_exc:
                     await self.db.rollback()
                     if not self._is_vector_runtime_error(retry_exc):
                         raise
@@ -849,7 +858,7 @@ class MemoryService:
         if record.subject_type == "commitment" and record.due_at is not None:
             try:
                 await PolicyCompilerService(self.db).compile_for_commitment(record, persist=True)
-            except Exception as exc:
+            except NON_CRITICAL_SERVICE_ERRORS as exc:
                 logger.warning(f"Failed to compile accountability policies for commitment {record.id}: {exc}")
         MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
         return record
@@ -955,7 +964,7 @@ class MemoryService:
                 commitment_id=record.id,
                 user_id=user_id,
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning(f"Failed to revoke accountability policies for commitment {record.id}: {exc}")
         return record
 
@@ -1112,7 +1121,7 @@ class MemoryService:
                 reason=reason or action,
                 source="memory_correction",
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning("Failed to update Aurora self model for memory correction {}: {}", record.id, exc)
         await SystemUpdateService().enqueue(
             user_id,

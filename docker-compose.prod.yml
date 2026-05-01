@@ -1,3 +1,65 @@
+x-resources:
+  nginx: &resources_nginx
+    limits:
+      memory: 128M
+    reservations:
+      memory: 64M
+  gateway: &resources_gateway
+    limits:
+      memory: 512M
+    reservations:
+      memory: 256M
+  backend: &resources_backend
+    limits:
+      memory: 1G
+    reservations:
+      memory: 512M
+  agent: &resources_agent
+    limits:
+      memory: 2G
+    reservations:
+      memory: 1G
+  worker: &resources_worker
+    limits:
+      memory: 1G
+    reservations:
+      memory: 512M
+  beat: &resources_beat
+    limits:
+      memory: 512M
+    reservations:
+      memory: 128M
+  db: &resources_db
+    limits:
+      memory: 2G
+    reservations:
+      memory: 512M
+  redis: &resources_redis
+    limits:
+      memory: 4G
+    reservations:
+      memory: 512M
+  minio: &resources_minio
+    limits:
+      memory: 1G
+    reservations:
+      memory: 256M
+  observability_small: &resources_observability_small
+    limits:
+      memory: 256M
+    reservations:
+      memory: 64M
+  observability_medium: &resources_observability_medium
+    limits:
+      memory: 512M
+    reservations:
+      memory: 128M
+  observability_large: &resources_observability_large
+    limits:
+      memory: 1G
+    reservations:
+      memory: 256M
+
 services:
   nginx:
     image: nginx:1.27-alpine
@@ -15,9 +77,17 @@ services:
       - gateway_green
     networks:
       - edge
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /var/run/nginx.pid && kill -0 $$(cat /var/run/nginx.pid)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources: *resources_nginx
 
   gateway_blue:
-    image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:-latest}
+    image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: sparkle_gateway_blue
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -57,9 +127,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+    deploy:
+      resources: *resources_gateway
 
   gateway_green:
-    image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:-latest}
+    image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: sparkle_gateway_green
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -99,9 +171,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+    deploy:
+      resources: *resources_gateway
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: sparkle_backend
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -166,9 +240,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    deploy:
+      resources: *resources_backend
 
   agent:
-    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: sparkle_agent
     restart: unless-stopped
     command: python grpc_server.py
@@ -229,9 +305,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources: *resources_agent
 
   celery_worker:
-    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: sparkle_celery_worker
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -257,14 +335,10 @@ services:
       retries: 3
       start_period: 45s
     deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
+      resources: *resources_worker
 
   celery_beat:
-    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
     container_name: sparkle_celery_beat
     restart: unless-stopped
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -289,11 +363,29 @@ services:
       timeout: 15s
       retries: 3
       start_period: 30s
+    deploy:
+      resources: *resources_beat
 
   db:
     image: pgvector/pgvector:pg16
     container_name: sparkle_db
     restart: unless-stopped
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=${POSTGRES_MAX_CONNECTIONS:-200}"
+      - "-c"
+      - "shared_buffers=${POSTGRES_SHARED_BUFFERS:-256MB}"
+      - "-c"
+      - "effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-768MB}"
+      - "-c"
+      - "work_mem=${POSTGRES_WORK_MEM:-16MB}"
+      - "-c"
+      - "maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-128MB}"
+      - "-c"
+      - "wal_compression=on"
+      - "-c"
+      - "max_wal_size=${POSTGRES_MAX_WAL_SIZE:-2GB}"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -302,6 +394,14 @@ services:
       - ./postgres_data:/var/lib/postgresql/data
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources: *resources_db
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
@@ -309,11 +409,20 @@ services:
     restart: unless-stopped
     environment:
       - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - ./redis_data:/data
       - ./redis.conf:/redis-stack.conf
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources: *resources_redis
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
@@ -327,6 +436,14 @@ services:
       - ./minio_data:/data
     networks:
       - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources: *resources_minio
 
   tempo:
     image: grafana/tempo:2.4.1
@@ -342,9 +459,17 @@ services:
       - "127.0.0.1:4317:4317"
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3200/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources: *resources_observability_medium
 
   prometheus:
-    image: prom/prometheus:latest
+    image: quay.io/prometheus/prometheus:v2.53.4
     container_name: sparkle_prometheus
     restart: unless-stopped
     command:
@@ -368,6 +493,14 @@ services:
       - alertmanager
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources: *resources_observability_large
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
@@ -392,6 +525,14 @@ services:
       - "127.0.0.1:9093:9093"
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9093/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources: *resources_observability_small
 
   loki:
     image: grafana/loki:2.9.8
@@ -406,6 +547,14 @@ services:
       - "127.0.0.1:3100:3100"
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources: *resources_observability_large
 
   promtail:
     image: grafana/promtail:2.9.8
@@ -420,9 +569,17 @@ services:
       - loki
     networks:
       - app
+    healthcheck:
+      test: ["CMD", "/usr/bin/promtail", "-config.file=/etc/promtail/config.yml", "-check-syntax"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources: *resources_observability_small
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana-oss:11.1.4
     container_name: sparkle_grafana
     restart: unless-stopped
     environment:
@@ -442,6 +599,14 @@ services:
       - tempo
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources: *resources_observability_medium
 
 networks:
   edge:

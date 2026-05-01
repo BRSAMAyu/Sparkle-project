@@ -10,7 +10,13 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import desc, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+try:
+    from redis.exceptions import RedisError
+except ImportError:  # pragma: no cover - redis is optional in unit tests
+    RedisError = ConnectionError  # type: ignore[assignment]
 
 from app.core.event_bus import EventBus
 from app.models.curiosity_capsule import CuriosityCapsule
@@ -41,6 +47,15 @@ CONTEXT_AWARE_TOOL_NAMES = {
     "notes",
     "flash_capsule",
 }
+NON_CRITICAL_SIGNAL_ERRORS = (
+    AttributeError,
+    ImportError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+    SQLAlchemyError,
+)
+REDIS_SIGNAL_ERRORS = (ConnectionError, OSError, TimeoutError, RedisError)
 
 
 def _utcnow() -> datetime:
@@ -239,9 +254,9 @@ class BehaviorSignalCollector:
                                     dict(getattr(record, "diagnosis_payload", {}) or {}),
                                 )
                             )
-                    except Exception as delivery_exc:
+                    except NON_CRITICAL_SIGNAL_ERRORS as delivery_exc:
                         logger.warning("Failed to check delivery channel for intervention: {}", delivery_exc)
-            except Exception as bridge_exc:
+            except NON_CRITICAL_SIGNAL_ERRORS as bridge_exc:
                 logger.warning("Behavior→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)
 
         if processed_active_state:
@@ -256,7 +271,7 @@ class BehaviorSignalCollector:
                         intervention_id=intervention_id,
                         payload=payload,
                     )
-                except Exception as delivery_exc:
+                except NON_CRITICAL_SIGNAL_ERRORS as delivery_exc:
                     logger.warning(
                         "Behavior→push scheduling failed (non-fatal) for {}: {}",
                         intervention_id,
@@ -787,8 +802,8 @@ class BehaviorSignalCollector:
                 raw = await self.redis.get(key)
                 if raw:
                     return True
-            except Exception:
-                logger.warning(f"Redis cooldown check failed for {key}, falling back to local")
+            except REDIS_SIGNAL_ERRORS as exc:
+                logger.warning("Redis cooldown check failed for {}, falling back to local: {}", key, exc)
         expires_at = self._local_cooldowns.get(key)
         if not expires_at:
             return False
@@ -807,8 +822,8 @@ class BehaviorSignalCollector:
                     int(self.SIGNAL_COOLDOWN.total_seconds()),
                     json.dumps({"emitted_at": _utcnow().isoformat()}),
                 )
-            except Exception:
-                logger.warning(f"Redis cooldown mark failed for {key}")
+            except REDIS_SIGNAL_ERRORS as exc:
+                logger.warning("Redis cooldown mark failed for {}: {}", key, exc)
 
     @staticmethod
     def _cooldown_key(user_id: UUID, signal_key: str) -> str:
@@ -822,8 +837,8 @@ class BehaviorSignalCollector:
                 await self.redis.expire(counter_key, int(timedelta(days=self.INFERRED_WINDOW_DAYS).total_seconds()))
                 if count % self.INFERRED_AGGREGATION_STEP != 0:
                     return
-            except Exception as exc:
-                logger.warning("Task inferred counter failed for %s: %s", user_id, exc)
+            except (TypeError, ValueError, RedisError, ConnectionError, OSError, TimeoutError) as exc:
+                logger.warning("Task inferred counter failed for {}: {}", user_id, exc)
                 return
 
         updates = await self._build_task_inferred_updates(user_id)
@@ -835,8 +850,8 @@ class BehaviorSignalCollector:
                 updates=updates,
                 source="ai_inferred",
             )
-        except Exception as exc:
-            logger.warning("Failed to update task inferred preferences for %s: %s", user_id, exc)
+        except NON_CRITICAL_SIGNAL_ERRORS as exc:
+            logger.warning("Failed to update task inferred preferences for {}: {}", user_id, exc)
 
     async def _build_task_inferred_updates(self, user_id: UUID) -> dict[str, object]:
         cutoff = _utcnow() - timedelta(days=self.INFERRED_WINDOW_DAYS)
@@ -897,7 +912,8 @@ class BehaviorSignalCollector:
         try:
             prefs = await self.profile_write_service.pref_service.get_preferences(user_id)
             inferred = prefs.inferred or {}
-        except Exception:
+        except NON_CRITICAL_SIGNAL_ERRORS as exc:
+            logger.warning("Failed to read inferred task preferences for {}: {}", user_id, exc)
             inferred = {}
 
         reflection_depth = classify_band_with_hysteresis(

@@ -333,191 +333,196 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       });
     }
 
-    return GestureDetector(
-      onTapDown: isPressable ? (_) => _pressController.forward() : null,
-      onTapUp: isPressable ? (_) => _pressController.reverse() : null,
-      onTapCancel: isPressable ? () => _pressController.reverse() : null,
-      onTap: supportsTapToggle
-          ? () {
-              unawaited(
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-              );
-              toggleDetails();
-            }
-          : hasAction
-              ? () => unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-                  )
-              : null,
-      child: SparkleMotion.pressScale(
-        animation: _pressController,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.colors.surfaceCard,
-            borderRadius: DS.borderRadius16,
-            boxShadow: DS.shadowMd,
-          ),
-          child: ClipRRect(
-            borderRadius: DS.borderRadius16,
-            child: Stack(
-              children: [
-                // Gradient Stripe
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 4,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: _getActionGradientFor(widget.action),
+    return Semantics(
+      button: true,
+      label: 'Chat action card control 1',
+      child: GestureDetector(
+        onTapDown: isPressable ? (_) => _pressController.forward() : null,
+        onTapUp: isPressable ? (_) => _pressController.reverse() : null,
+        onTapCancel: isPressable ? () => _pressController.reverse() : null,
+        onTap: supportsTapToggle
+            ? () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                );
+                toggleDetails();
+              }
+            : hasAction
+                ? () => unawaited(
+                      SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection),
+                    )
+                : null,
+        child: SparkleMotion.pressScale(
+          animation: _pressController,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.colors.surfaceCard,
+              borderRadius: DS.borderRadius16,
+              boxShadow: DS.shadowMd,
+            ),
+            child: ClipRRect(
+              borderRadius: DS.borderRadius16,
+              child: Stack(
+                children: [
+                  // Gradient Stripe
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: _getActionGradientFor(widget.action),
+                      ),
                     ),
                   ),
-                ),
 
-                // Shimmer overlay for unconfirmed actions
-                if (hasAction)
-                  Positioned.fill(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: -2.0, end: 2.0),
-                      duration: const Duration(seconds: 3),
-                      builder: (context, value, child) => Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              DS.surfacePrimary.withValues(alpha: 0),
-                              DS.brandPrimary.withValues(alpha: 0.1),
-                              DS.surfacePrimary.withValues(alpha: 0),
-                            ],
-                            stops: [
-                              (value - 0.3).clamp(0.0, 1.0),
-                              value.clamp(0.0, 1.0),
-                              (value + 0.3).clamp(0.0, 1.0),
-                            ],
+                  // Shimmer overlay for unconfirmed actions
+                  if (hasAction)
+                    Positioned.fill(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: -2.0, end: 2.0),
+                        duration: const Duration(seconds: 3),
+                        builder: (context, value, child) => Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                DS.surfacePrimary.withValues(alpha: 0),
+                                DS.brandPrimary.withValues(alpha: 0.1),
+                                DS.surfacePrimary.withValues(alpha: 0),
+                              ],
+                              stops: [
+                                (value - 0.3).clamp(0.0, 1.0),
+                                value.clamp(0.0, 1.0),
+                                (value + 0.3).clamp(0.0, 1.0),
+                              ],
+                            ),
                           ),
                         ),
+                        onEnd: () {
+                          // Restart animation
+                          if (mounted) setState(() {});
+                        },
                       ),
-                      onEnd: () {
-                        // Restart animation
-                        if (mounted) setState(() {});
-                      },
                     ),
-                  ),
 
-                Padding(
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          AnimatedBuilder(
-                            animation: _iconScaleAnimation,
-                            builder: (context, child) => Transform.scale(
-                              scale:
-                                  hasAction ? _iconScaleAnimation.value : 1.0,
-                              child: Container(
-                                padding: const EdgeInsets.all(DS.spacing8),
-                                decoration: BoxDecoration(
-                                  gradient:
-                                      _getActionGradientFor(widget.action),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _getActionColorFor(widget.action)
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  _getActionIconFor(widget.action),
-                                  color: DS.brandPrimaryConst,
-                                  size: DS.iconSizeSm,
+                  Padding(
+                    padding: const EdgeInsets.all(DS.spacing16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            AnimatedBuilder(
+                              animation: _iconScaleAnimation,
+                              builder: (context, child) => Transform.scale(
+                                scale:
+                                    hasAction ? _iconScaleAnimation.value : 1.0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(DS.spacing8),
+                                  decoration: BoxDecoration(
+                                    gradient:
+                                        _getActionGradientFor(widget.action),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _getActionColorFor(widget.action)
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    _getActionIconFor(widget.action),
+                                    color: DS.brandPrimaryConst,
+                                    size: DS.iconSizeSm,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: DS.spacing12),
-                          Expanded(
-                            child: Text(
-                              _getTitleForAction(widget.action.type),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: DS.fontWeightBold,
-                                    color: DS.neutral900,
-                                  ),
+                            const SizedBox(width: DS.spacing12),
+                            Expanded(
+                              child: Text(
+                                _getTitleForAction(widget.action.type),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: DS.fontWeightBold,
+                                      color: DS.neutral900,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: DS.spacing16),
+                        if (isCollapsible && !_detailsExpanded)
+                          _buildCollapsedPreview(context, widget.action)
+                        else
+                          _buildContentForAction(context, widget.action),
+                        if (isCollapsible) ...[
+                          const SizedBox(height: DS.spacing12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _detailsExpanded = !_detailsExpanded;
+                                });
+                              },
+                              icon: Icon(
+                                _detailsExpanded
+                                    ? Icons.unfold_less_rounded
+                                    : Icons.unfold_more_rounded,
+                                size: DS.iconSizeSm,
+                              ),
+                              label: Text(
+                                _detailsExpanded
+                                    ? context.l10n.commonCollapse
+                                    : context.l10n.commonExpand,
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: DS.spacing16),
-                      if (isCollapsible && !_detailsExpanded)
-                        _buildCollapsedPreview(context, widget.action)
-                      else
-                        _buildContentForAction(context, widget.action),
-                      if (isCollapsible) ...[
-                        const SizedBox(height: DS.spacing12),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _detailsExpanded = !_detailsExpanded;
-                              });
-                            },
-                            icon: Icon(
-                              _detailsExpanded
-                                  ? Icons.unfold_less_rounded
-                                  : Icons.unfold_more_rounded,
-                              size: DS.iconSizeSm,
-                            ),
-                            label: Text(
-                              _detailsExpanded
-                                  ? context.l10n.commonCollapse
-                                  : context.l10n.commonExpand,
-                            ),
+                        if (hasAction) ...[
+                          const SizedBox(height: DS.spacing16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (widget.onDismiss != null)
+                                CustomButton.text(
+                                  text: dismissLabel,
+                                  onPressed: () => unawaited(
+                                    _handleGenericDismiss(widget.action),
+                                  ),
+                                  size: CustomButtonSize.small,
+                                ),
+                              const SizedBox(width: DS.spacing8),
+                              if (widget.onConfirm != null)
+                                CustomButton.primary(
+                                  text: confirmLabel,
+                                  icon: Icons.check_rounded,
+                                  onPressed: () => unawaited(
+                                    _handleGenericConfirm(widget.action),
+                                  ),
+                                  size: CustomButtonSize.small,
+                                  customGradient:
+                                      _getActionGradientFor(widget.action),
+                                ),
+                            ],
                           ),
-                        ),
+                        ],
                       ],
-                      if (hasAction) ...[
-                        const SizedBox(height: DS.spacing16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (widget.onDismiss != null)
-                              CustomButton.text(
-                                text: dismissLabel,
-                                onPressed: () => unawaited(
-                                  _handleGenericDismiss(widget.action),
-                                ),
-                                size: CustomButtonSize.small,
-                              ),
-                            const SizedBox(width: DS.spacing8),
-                            if (widget.onConfirm != null)
-                              CustomButton.primary(
-                                text: confirmLabel,
-                                icon: Icons.check_rounded,
-                                onPressed: () => unawaited(
-                                  _handleGenericConfirm(widget.action),
-                                ),
-                                size: CustomButtonSize.small,
-                                customGradient:
-                                    _getActionGradientFor(widget.action),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -2313,30 +2318,34 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               (retryAction['label']?.toString() ?? '').isNotEmpty &&
               widget.onWidgetAction != null) ...[
             const SizedBox(height: DS.spacing4),
-            InkWell(
-              onTap: () => unawaited(
-                widget.onWidgetAction!.call(
-                  retryAction['type']?.toString() ?? 'prompt',
-                  retryAction,
+            Semantics(
+              button: true,
+              label: 'Chat action card control 2',
+              child: InkWell(
+                onTap: () => unawaited(
+                  widget.onWidgetAction!.call(
+                    retryAction['type']?.toString() ?? 'prompt',
+                    retryAction,
+                  ),
                 ),
-              ),
-              borderRadius: DS.borderRadius20,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing12,
-                  vertical: DS.spacing8,
-                ),
-                decoration: BoxDecoration(
-                  color: DS.primaryBase.withValues(alpha: 0.1),
-                  borderRadius: DS.borderRadius20,
-                  border:
-                      Border.all(color: DS.primaryBase.withValues(alpha: 0.18)),
-                ),
-                child: Text(
-                  retryAction['label'].toString(),
-                  style: TextStyle(
-                    color: DS.primaryBase,
-                    fontWeight: DS.fontWeightSemibold,
+                borderRadius: DS.borderRadius20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    borderRadius: DS.borderRadius20,
+                    border: Border.all(
+                        color: DS.primaryBase.withValues(alpha: 0.18)),
+                  ),
+                  child: Text(
+                    retryAction['label'].toString(),
+                    style: TextStyle(
+                      color: DS.primaryBase,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
                   ),
                 ),
               ),
@@ -2697,31 +2706,35 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ? DS.primaryBase.withValues(alpha: 0.2)
           : (isGhost ? DS.neutral300 : DS.neutral200);
       final textColor = isPrimary ? DS.primaryBase : DS.neutral700;
-      return InkWell(
-        onTap: label.isEmpty
-            ? null
-            : () => unawaited(
-                  widget.onWidgetAction?.call(
-                    item['type']?.toString() ?? 'prompt',
-                    item,
+      return Semantics(
+        button: true,
+        label: 'Chat action card control 3',
+        child: InkWell(
+          onTap: label.isEmpty
+              ? null
+              : () => unawaited(
+                    widget.onWidgetAction?.call(
+                      item['type']?.toString() ?? 'prompt',
+                      item,
+                    ),
                   ),
-                ),
-        borderRadius: DS.borderRadius20,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: DS.borderRadius20,
-            border: Border.all(color: borderColor),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: textColor,
-              fontWeight: DS.fontWeightSemibold,
+          borderRadius: DS.borderRadius20,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: DS.borderRadius20,
+              border: Border.all(color: borderColor),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: DS.fontWeightSemibold,
+              ),
             ),
           ),
         ),
@@ -3641,29 +3654,33 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                       }
                     : item;
 
-                return InkWell(
-                  onTap: () => unawaited(
-                    widget.onWidgetAction?.call(
-                      item['type']?.toString() ?? 'prompt',
-                      actionPayload,
+                return Semantics(
+                  button: true,
+                  label: 'Chat action card control 4',
+                  child: InkWell(
+                    onTap: () => unawaited(
+                      widget.onWidgetAction?.call(
+                        item['type']?.toString() ?? 'prompt',
+                        actionPayload,
+                      ),
                     ),
-                  ),
-                  borderRadius: DS.borderRadius20,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing12,
-                      vertical: DS.spacing8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceTertiary,
-                      borderRadius: DS.borderRadius20,
-                      border: Border.all(color: DS.neutral200),
-                    ),
-                    child: Text(
-                      item['label']?.toString() ?? '',
-                      style: TextStyle(
-                        color: DS.neutral700,
-                        fontWeight: DS.fontWeightSemibold,
+                    borderRadius: DS.borderRadius20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing12,
+                        vertical: DS.spacing8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceTertiary,
+                        borderRadius: DS.borderRadius20,
+                        border: Border.all(color: DS.neutral200),
+                      ),
+                      child: Text(
+                        item['label']?.toString() ?? '',
+                        style: TextStyle(
+                          color: DS.neutral700,
+                          fontWeight: DS.fontWeightSemibold,
+                        ),
                       ),
                     ),
                   ),

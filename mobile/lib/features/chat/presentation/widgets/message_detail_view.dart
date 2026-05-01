@@ -31,61 +31,65 @@ class MessageDetailView extends StatelessWidget {
         key: Key('message_detail_${message.id}'),
         direction: DismissDirection.vertical,
         onDismissed: (_) => Navigator.of(context).pop(),
-        child: GestureDetector(
-          // 点击背景关闭
-          onTap: () => Navigator.of(context).pop(),
-          child: ColoredBox(
-            color: DS.textPrimary.withValues(alpha: 0.5),
-            child: GestureDetector(
-              // 阻止点击内容区域时关闭
-              onTap: () {},
-              child: SafeArea(
-                child: Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: DS.md,
-                      vertical: DS.lg,
-                    ),
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.92,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: DS.textPrimary.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // 顶部工具栏
-                        _buildHeader(context, isUserMessage),
+        child: Semantics(
+          button: true,
+          label: 'Chat message detail view control 1',
+          child: GestureDetector(
+            // 点击背景关闭
+            onTap: () => Navigator.of(context).pop(),
+            child: ColoredBox(
+              color: DS.textPrimary.withValues(alpha: 0.5),
+              child: GestureDetector(
+                // 阻止点击内容区域时关闭
+                onTap: () {},
+                child: SafeArea(
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: DS.md,
+                        vertical: DS.lg,
+                      ),
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.92,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: DS.textPrimary.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 顶部工具栏
+                          _buildHeader(context, isUserMessage),
 
-                        // 内容区域（可滚动）
-                        Flexible(
-                          child: Hero(
-                            tag: heroTag,
-                            child: Material(
-                              color: DS.overlay30.withValues(alpha: 0),
-                              child: SingleChildScrollView(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: DS.lg,
-                                  vertical: DS.md,
+                          // 内容区域（可滚动）
+                          Flexible(
+                            child: Hero(
+                              tag: heroTag,
+                              child: Material(
+                                color: DS.overlay30.withValues(alpha: 0),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: DS.lg,
+                                    vertical: DS.md,
+                                  ),
+                                  child: _buildContent(context, isUserMessage),
                                 ),
-                                child: _buildContent(context, isUserMessage),
                               ),
                             ),
                           ),
-                        ),
 
-                        // 底部操作栏
-                        _buildActions(context),
-                      ],
+                          // 底部操作栏
+                          _buildActions(context),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -182,11 +186,15 @@ class MessageDetailView extends StatelessWidget {
           const Spacer(),
 
           // 关闭按钮
-          SparkleIconButton(
-            icon: const Icon(Icons.close, size: DS.iconSizeSm),
-            onPressed: () => Navigator.of(context).pop(),
-            semanticLabel: context.l10n.close,
-            variant: ButtonVariant.ghost,
+          Semantics(
+            button: true,
+            label: 'Chat message detail view control 2',
+            child: SparkleIconButton(
+              icon: const Icon(Icons.close, size: DS.iconSizeSm),
+              onPressed: () => Navigator.of(context).pop(),
+              semanticLabel: context.l10n.close,
+              variant: ButtonVariant.ghost,
+            ),
           ),
         ],
       ),
@@ -305,31 +313,35 @@ class _ActionButton extends StatelessWidget {
   final Future<void> Function() onPressed;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: () => unawaited(onPressed()),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.lg,
-            vertical: DS.sm,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: DS.textSecondary,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat message detail view control 3',
+        child: InkWell(
+          onTap: () => unawaited(onPressed()),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.lg,
+              vertical: DS.sm,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 24,
                   color: DS.textSecondary,
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: DS.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

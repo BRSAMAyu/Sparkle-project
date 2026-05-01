@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 
 from loguru import logger
 from sqlalchemy import desc, insert, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -37,6 +38,14 @@ _VECTOR_RUNTIME_ENABLED = True
 _VECTOR_RUNTIME_DISABLED_USERS: dict[str, datetime] = {}  # user_key → disabled_at timestamp
 _VECTOR_RUNTIME_DISABLED_TTL = timedelta(hours=1)  # Auto-re-enable after 1h
 _VECTOR_RUNTIME_STATE_LOCK = asyncio.Lock()
+RECOVERABLE_LLM_ERRORS = (
+    ConnectionError,
+    OSError,
+    RuntimeError,
+    TimeoutError,
+    TypeError,
+    ValueError,
+)
 
 
 class CognitiveService:
@@ -205,7 +214,7 @@ class CognitiveService:
             try:
                 embedding = await embedding_service.get_embedding(content)
                 fragment.embedding = embedding
-            except Exception as e:
+            except RECOVERABLE_LLM_ERRORS as e:
                 logger.error(f"Failed to generate embedding for fragment: {e}")
                 # We continue without embedding, but RAG won't work for this item until updated
 
@@ -213,7 +222,7 @@ class CognitiveService:
             self.db.add(fragment)
             await self.db.commit()
             await self.db.refresh(fragment)
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             await self.db.rollback()
             if not self._is_vector_runtime_error(exc):
                 raise
@@ -265,7 +274,8 @@ class CognitiveService:
             response = llm_service.chat(messages, temperature=0.7)
             result = await response if inspect.isawaitable(response) else response
             return result if result else None
-        except Exception:
+        except RECOVERABLE_LLM_ERRORS as exc:
+            logger.warning("Primary HyDE generation failed, using fallback: {}", exc)
             from app.services.llm_fallback_utils import cognitive_llm
 
             result = await cognitive_llm.call(messages, fallback="", temperature=0.7)
@@ -357,7 +367,7 @@ class CognitiveService:
                                 select(CognitiveFragment.embedding).where(CognitiveFragment.id == fragment_id)
                             )
                             fragment_embedding = embedding_result.scalar_one_or_none()
-                        except Exception as exc:
+                        except SQLAlchemyError as exc:
                             if self._is_vector_runtime_error(exc):
                                 await self._disable_vector_runtime_for_user(user_id, str(exc))
                                 vector_runtime_enabled = False
@@ -377,7 +387,7 @@ class CognitiveService:
                         )
                         rag_result = await self.db.execute(rag_query)
                         similar_fragments = rag_result.scalars().all()
-                    except Exception as exc:
+                    except SQLAlchemyError as exc:
                         if self._is_vector_runtime_error(exc):
                             await self._disable_vector_runtime_for_user(user_id, str(exc))
                             vector_runtime_enabled = False
@@ -413,7 +423,7 @@ class CognitiveService:
                                 )
                                 hyde_result = await self.db.execute(hyde_query)
                                 hyde_fragments = hyde_result.scalars().all()
-                            except Exception as exc:
+                            except SQLAlchemyError as exc:
                                 if self._is_vector_runtime_error(exc):
                                     await self._disable_vector_runtime_for_user(user_id, str(exc))
                                     vector_runtime_enabled = False
@@ -422,7 +432,7 @@ class CognitiveService:
                                     raise
                     except TimeoutError:
                         hyde_cancelled = True
-                    except Exception as e:
+                    except RECOVERABLE_LLM_ERRORS as e:
                         logger.warning(f"HyDE retrieval failed: {e}")
 
                 # Merge & deduplicate
@@ -482,7 +492,7 @@ class CognitiveService:
                 if batch_model_key:
                     try:
                         analysis = await self._run_explicit_batch_analysis(messages, batch_model_key)
-                    except Exception as exc:
+                    except RECOVERABLE_LLM_ERRORS as exc:
                         logger.warning(
                             "Explicit GLM batch analysis failed for fragment {} with {}: {}",
                             fragment_id,
@@ -507,7 +517,7 @@ class CognitiveService:
                             mocked_response = llm_service.chat(messages, temperature=0.5)
                             mocked_raw = await mocked_response if inspect.isawaitable(mocked_response) else mocked_response
                             analysis = self._coerce_json_result(mocked_raw)
-                        except Exception:
+                        except (RuntimeError, TypeError, ValueError):
                             analysis = None
                         if analysis is None:
                             analysis = {

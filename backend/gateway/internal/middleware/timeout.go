@@ -41,6 +41,10 @@ func TimeoutMiddleware(timeout time.Duration) gin.HandlerFunc {
 }
 
 func isLongRunningRoute(path string) bool {
+	// WebSocket routes are intentionally not listed here. They are registered
+	// outside the /api/v1 timeout middleware in setupRouter; after an upgrade,
+	// the HTTP connection is hijacked and request timeout deadlines should not
+	// govern the long-lived stream.
 	if strings.HasPrefix(path, "/api/v1/learning-paths/") {
 		return true
 	}

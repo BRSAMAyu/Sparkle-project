@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,9 +68,7 @@ class LtmReleaseGate:
         totals = 0
         missing = 0
         for model in (MemoryPreference, MemoryGoal, EpisodicMemory):
-            result_total = await self.db.execute(
-                select(func.count(model.id)).where(model.deleted_at.is_(None))
-            )
+            result_total = await self.db.execute(select(func.count(model.id)).where(model.deleted_at.is_(None)))
             total = result_total.scalar() or 0
             totals += total
             result_missing = await self.db.execute(
@@ -88,7 +87,8 @@ class LtmReleaseGate:
             return None
         try:
             return float(LTM_EVAL_AVG_SCORE._value.get())  # type: ignore[attr-defined]
-        except Exception:
+        except (AttributeError, TypeError, ValueError) as exc:
+            logger.warning("Unable to read LTM eval average score: {}", exc)
             return None
 
     def _has_eval_runs(self) -> bool:
@@ -97,7 +97,8 @@ class LtmReleaseGate:
             for metric in LTM_EVAL_TOTAL._metrics.values():  # type: ignore[attr-defined]
                 total += metric._value.get()  # type: ignore[attr-defined]
             return total > 0
-        except Exception:
+        except (AttributeError, TypeError, ValueError) as exc:
+            logger.warning("Unable to read LTM eval run counter: {}", exc)
             return False
 
     def _job_success_ratio(self) -> float | None:

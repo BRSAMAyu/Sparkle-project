@@ -173,105 +173,112 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     final activeAgentColor =
         _getAgentColor(context, activeStep?.agent ?? AgentType.orchestrator);
 
-    final headerContent = InkWell(
-      onTap: _toggleExpand,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: EdgeInsets.all(context.sparkleSpacing.md),
-        child: Row(
-          children: [
-            // Animated Agent Icon
-            SparkleAttentionPulse(
-              active: widget.isThinking,
-              glowColor: activeAgentColor,
-              child: AnimatedContainer(
-                duration: transitionDuration,
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: activeAgentColor,
-                  boxShadow: widget.isThinking
-                      ? [
-                          BoxShadow(
-                            color: activeAgentColor.withValues(alpha: 0.28),
-                            blurRadius: 12,
-                            spreadRadius: 1.5,
-                          ),
-                        ]
-                      : null,
+    final headerContent = Semantics(
+      button: true,
+      label: 'Chat agent reasoning bubble v2 control 1',
+      child: InkWell(
+        onTap: _toggleExpand,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: EdgeInsets.all(context.sparkleSpacing.md),
+          child: Row(
+            children: [
+              // Animated Agent Icon
+              SparkleAttentionPulse(
+                active: widget.isThinking,
+                glowColor: activeAgentColor,
+                child: AnimatedContainer(
+                  duration: transitionDuration,
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: activeAgentColor,
+                    boxShadow: widget.isThinking
+                        ? [
+                            BoxShadow(
+                              color: activeAgentColor.withValues(alpha: 0.28),
+                              blurRadius: 12,
+                              spreadRadius: 1.5,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: transitionDuration,
+                    child: Icon(
+                      _getAgentIcon(
+                          activeStep?.agent ?? AgentType.orchestrator),
+                      color: ThemeUtils.getContrastSafeText(
+                        activeAgentColor,
+                        darkText: DS.textPrimary,
+                      ),
+                      size: 18,
+                      key:
+                          ValueKey(activeStep?.agent ?? AgentType.orchestrator),
+                    ),
+                  ),
                 ),
-                child: AnimatedSwitcher(
+              ),
+
+              SizedBox(width: context.sparkleSpacing.md),
+
+              // Status Text
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getStatusText(activeStep, isCompleted),
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        fontWeight: DS.fontWeightSemibold,
+                        color:
+                            _getStatusColor(activeStep, isCompleted, context),
+                      ),
+                    ),
+                    if (widget.totalDurationMs != null && isCompleted)
+                      Text(
+                        context.l10n.chatDurationLabel(
+                          (widget.totalDurationMs! / 1000).toStringAsFixed(1),
+                        ),
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Right side: Progress or Expand/Collapse
+              if (widget.isThinking && activeStep != null)
+                Container(
+                  width: 20,
+                  height: 20,
+                  margin: const EdgeInsets.only(right: 8),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(
+                      _getAgentColor(context, activeStep.agent),
+                    ),
+                  ),
+                )
+              else if (isCompleted)
+                Icon(
+                  Icons.check_circle,
+                  color: DS.success,
+                  size: 20,
+                )
+              else
+                AnimatedRotation(
+                  turns: _isExpanded ? 0.5 : 0,
                   duration: transitionDuration,
                   child: Icon(
-                    _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
-                    color: ThemeUtils.getContrastSafeText(
-                      activeAgentColor,
-                      darkText: DS.textPrimary,
-                    ),
-                    size: 18,
-                    key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
+                    Icons.keyboard_arrow_down,
+                    color: DS.brandPrimary,
                   ),
                 ),
-              ),
-            ),
-
-            SizedBox(width: context.sparkleSpacing.md),
-
-            // Status Text
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getStatusText(activeStep, isCompleted),
-                    style: context.sparkleTypography.bodyMedium.copyWith(
-                      fontWeight: DS.fontWeightSemibold,
-                      color: _getStatusColor(activeStep, isCompleted, context),
-                    ),
-                  ),
-                  if (widget.totalDurationMs != null && isCompleted)
-                    Text(
-                      context.l10n.chatDurationLabel(
-                        (widget.totalDurationMs! / 1000).toStringAsFixed(1),
-                      ),
-                      style: context.sparkleTypography.labelSmall.copyWith(
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Right side: Progress or Expand/Collapse
-            if (widget.isThinking && activeStep != null)
-              Container(
-                width: 20,
-                height: 20,
-                margin: const EdgeInsets.only(right: 8),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(
-                    _getAgentColor(context, activeStep.agent),
-                  ),
-                ),
-              )
-            else if (isCompleted)
-              Icon(
-                Icons.check_circle,
-                color: DS.success,
-                size: 20,
-              )
-            else
-              AnimatedRotation(
-                turns: _isExpanded ? 0.5 : 0,
-                duration: transitionDuration,
-                child: Icon(
-                  Icons.keyboard_arrow_down,
-                  color: DS.brandPrimary,
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -430,42 +437,47 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           runSpacing: 4,
                           children: step.citations!
                               .map(
-                                (citation) => InkWell(
-                                  onTap: () => _showCitationDialog(citation),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: DS.brandPrimary
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: DS.brandPrimary
-                                            .withValues(alpha: 0.3),
+                                (citation) => Semantics(
+                                  button: true,
+                                  label:
+                                      'Chat agent reasoning bubble v2 control 2',
+                                  child: InkWell(
+                                    onTap: () => _showCitationDialog(citation),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
                                       ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.book,
-                                          size: 12,
-                                          color: DS.brandPrimary,
+                                      decoration: BoxDecoration(
+                                        color: DS.brandPrimary
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: DS.brandPrimary
+                                              .withValues(alpha: 0.3),
                                         ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          context.l10n
-                                              .chatCitationLabel(citation),
-                                          style: TextStyle(
-                                            fontSize: 11,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.book,
+                                            size: 12,
                                             color: DS.brandPrimary,
-                                            fontWeight: DS.fontWeightMedium,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            context.l10n
+                                                .chatCitationLabel(citation),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: DS.brandPrimary,
+                                              fontWeight: DS.fontWeightMedium,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),

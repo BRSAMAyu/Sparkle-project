@@ -284,30 +284,36 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
           final starValue = index + 1;
           final isSelected = _rating != null && starValue <= _rating!;
 
-          return GestureDetector(
-            onTap: () {
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
-              setState(() {
-                _rating = starValue;
-                // Auto-set helpful based on rating
-                if (starValue >= 4) {
-                  _wasHelpful = true;
-                } else if (starValue <= 2) {
-                  _wasHelpful = false;
-                }
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: DS.spacing4),
-              child: AnimatedScale(
-                duration: const Duration(milliseconds: 150),
-                scale: isSelected ? 1.1 : 1.0,
-                child: Icon(
-                  isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
-                  size: 44,
-                  color: isSelected
-                      ? DS.warning
-                      : theme.colorScheme.outline.withValues(alpha: 0.5),
+          return Semantics(
+            button: true,
+            label: 'Chat review rating dialog control 1',
+            child: GestureDetector(
+              onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                setState(() {
+                  _rating = starValue;
+                  // Auto-set helpful based on rating
+                  if (starValue >= 4) {
+                    _wasHelpful = true;
+                  } else if (starValue <= 2) {
+                    _wasHelpful = false;
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: DS.spacing4),
+                child: AnimatedScale(
+                  duration: const Duration(milliseconds: 150),
+                  scale: isSelected ? 1.1 : 1.0,
+                  child: Icon(
+                    isSelected
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 44,
+                    color: isSelected
+                        ? DS.warning
+                        : theme.colorScheme.outline.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
             ),
@@ -369,35 +375,40 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
           ? selectedColor.withValues(alpha: 0.1)
           : theme.colorScheme.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(DS.spacing12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(DS.spacing12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: DS.spacing12,
-            horizontal: DS.spacing16,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isSelected ? selectedIcon : icon,
-                size: DS.iconSizeSm,
-                color: isSelected
-                    ? selectedColor
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: DS.spacing8),
-              Text(
-                label,
-                style: theme.textTheme.bodyMedium?.copyWith(
+      child: Semantics(
+        button: true,
+        label: 'Chat review rating dialog control 2',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(DS.spacing12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: DS.spacing12,
+              horizontal: DS.spacing16,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSelected ? selectedIcon : icon,
+                  size: DS.iconSizeSm,
                   color: isSelected
                       ? selectedColor
                       : theme.colorScheme.onSurfaceVariant,
-                  fontWeight: isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                 ),
-              ),
-            ],
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isSelected
+                        ? selectedColor
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight:
+                        isSelected ? DS.fontWeightSemibold : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -508,43 +519,48 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
           ? selectedColor.withValues(alpha: 0.1)
           : theme.colorScheme.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(DS.spacing8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(DS.spacing8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: DS.spacing10,
-            horizontal: DS.spacing12,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: DS.iconSizeXs,
-                  color: isSelected
-                      ? selectedColor
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: DS.spacing4),
-              ],
-              Flexible(
-                child: Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
+      child: Semantics(
+        button: true,
+        label: 'Chat review rating dialog control 3',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(DS.spacing8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: DS.spacing10,
+              horizontal: DS.spacing12,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    size: DS.iconSizeXs,
                     color: isSelected
                         ? selectedColor
                         : theme.colorScheme.onSurfaceVariant,
-                    fontWeight:
-                        isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                   ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: DS.spacing4),
+                ],
+                Flexible(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isSelected
+                          ? selectedColor
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight: isSelected
+                          ? DS.fontWeightSemibold
+                          : FontWeight.normal,
+                    ),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -574,13 +590,17 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   onSubmitted: _addInaccuratePoint,
                 ),
               ),
-              SparkleIconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                onPressed: () => _addInaccuratePoint(
-                  _inaccuratePointController.text,
+              Semantics(
+                button: true,
+                label: 'Chat review rating dialog control 4',
+                child: SparkleIconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed: () => _addInaccuratePoint(
+                    _inaccuratePointController.text,
+                  ),
+                  semanticLabel: context.l10n.reviewRatingAddInaccuratePoint,
+                  variant: ButtonVariant.ghost,
                 ),
-                semanticLabel: context.l10n.reviewRatingAddInaccuratePoint,
-                variant: ButtonVariant.ghost,
               ),
             ],
           ),

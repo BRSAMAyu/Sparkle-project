@@ -40,7 +40,8 @@ class AuroraIndicator extends StatelessWidget {
         : switch (presenceLevel) {
             AuroraPresenceLevel.ambient => const Duration(milliseconds: 220),
             AuroraPresenceLevel.active => const Duration(milliseconds: 180),
-            AuroraPresenceLevel.metaSurface => const Duration(milliseconds: 160),
+            AuroraPresenceLevel.metaSurface =>
+              const Duration(milliseconds: 160),
           };
 
     return AnimatedContainer(

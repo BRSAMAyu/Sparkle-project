@@ -3,13 +3,13 @@ package agent
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
@@ -195,7 +195,10 @@ func (h *AgentHealthChecker) check() {
 		// Health check failed
 		h.isHealthy = false
 		h.recordFailure()
-		log.Printf("[AgentHealthChecker] Health check failed: %v (latency: %v)", err, latency)
+		zap.L().Warn("Agent health check failed",
+			zap.Duration("latency", latency),
+			zap.Error(err),
+		)
 	} else {
 		// Health check succeeded
 		h.isHealthy = true
@@ -290,7 +293,10 @@ func (h *AgentHealthChecker) transitionTo(newState CircuitState) {
 		h.successes = 0
 	}
 
-	log.Printf("[AgentHealthChecker] Circuit breaker transitioned: %s -> %s", oldState, newState)
+	zap.L().Warn("Agent circuit breaker transitioned",
+		zap.String("from_state", oldState.String()),
+		zap.String("to_state", newState.String()),
+	)
 
 	// Update Prometheus metrics
 	circuitBreakerStateGauge.Reset()

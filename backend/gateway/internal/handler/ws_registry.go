@@ -6,8 +6,15 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sparkle/gateway/internal/service"
 )
+
+var wsActiveConnectionsGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "sparkle_ws_active_connections",
+	Help: "Current active WebSocket connections across chat sessions",
+})
 
 // ConnectionRegistry centralizes WebSocket connection lifecycle management.
 //
@@ -74,6 +81,7 @@ func (r *ConnectionRegistry) Register(userID string, conn *websocket.Conn, write
 	if r.signalHub != nil && writer != nil {
 		r.signalHub.Register(userID, writer)
 	}
+	wsActiveConnectionsGauge.Set(float64(r.countLocked()))
 	r.mu.Unlock()
 
 	if r.chatHistory != nil {
@@ -118,6 +126,7 @@ func (r *ConnectionRegistry) Unregister(userID string, conn *websocket.Conn) {
 	if r.signalHub != nil && entry.writer != nil {
 		r.signalHub.Unregister(userID, entry.writer)
 	}
+	wsActiveConnectionsGauge.Set(float64(r.countLocked()))
 	r.mu.Unlock()
 
 	// chatHistory publish is fire-and-forget but tracked by WaitGroup.
@@ -207,6 +216,10 @@ func (r *ConnectionRegistry) BroadcastToUser(userID string, v interface{}) (int,
 func (r *ConnectionRegistry) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+	return r.countLocked()
+}
+
+func (r *ConnectionRegistry) countLocked() int {
 	total := 0
 	for _, entries := range r.connections {
 		total += len(entries)

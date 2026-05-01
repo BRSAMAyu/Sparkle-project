@@ -483,17 +483,21 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
               child: Center(
-                child: IconButton(
-                  icon: Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: DS.textSecondary,
-                  ),
-                  iconSize: DS.iconSizeSm,
-                  onPressed: widget.enabled ? _toggleToolbar : null,
-                  padding: const EdgeInsets.all(12),
-                  constraints: const BoxConstraints.tightFor(
-                    width: DS.touchTargetMinSize,
-                    height: DS.touchTargetMinSize,
+                child: Semantics(
+                  button: true,
+                  label: 'Open message tools',
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.add_circle_outline_rounded,
+                      color: DS.textSecondary,
+                    ),
+                    iconSize: DS.iconSizeSm,
+                    onPressed: widget.enabled ? _toggleToolbar : null,
+                    padding: const EdgeInsets.all(12),
+                    constraints: const BoxConstraints.tightFor(
+                      width: DS.touchTargetMinSize,
+                      height: DS.touchTargetMinSize,
+                    ),
                   ),
                 ),
               ),
@@ -501,54 +505,58 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
 
             // 输入框（居中，全宽）- 可滑动区域
             Expanded(
-              child: GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity == null) return;
-                  // 左滑 (velocity > 0) -> 语音模式
-                  if (details.primaryVelocity! > 300) {
-                    _handleSwipeLeft();
-                  }
-                  // 右滑 (velocity < 0) -> 分享模式
-                  else if (details.primaryVelocity! < -300) {
-                    _handleSwipeRight();
-                  }
-                },
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: _textNotEmpty,
-                  builder: (context, hasText, child) {
-                    final canSend = widget.enabled && !_isSending && hasText;
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: DS.surfaceTertiary,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: DS.surfaceTertiary),
-                      ),
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        maxLines: 4,
-                        minLines: 1,
-                        enabled: widget.enabled && !_isSending,
-                        textInputAction: enterToSend
-                            ? TextInputAction.send
-                            : TextInputAction.newline,
-                        keyboardType: TextInputType.multiline,
-                        decoration: InputDecoration(
-                          hintText: widget.hintText ?? 'Type a message...',
-                          hintStyle: TextStyle(color: DS.textSecondary),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: DS.spacing16,
-                            vertical: DS.spacing10,
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                        onSubmitted: canSend && enterToSend
-                            ? (_) => _handleSend()
-                            : null,
-                      ),
-                    );
+              child: Semantics(
+                button: true,
+                label: 'Swipe text input to switch input modes',
+                child: GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (details.primaryVelocity == null) return;
+                    // 左滑 (velocity > 0) -> 语音模式
+                    if (details.primaryVelocity! > 300) {
+                      _handleSwipeLeft();
+                    }
+                    // 右滑 (velocity < 0) -> 分享模式
+                    else if (details.primaryVelocity! < -300) {
+                      _handleSwipeRight();
+                    }
                   },
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _textNotEmpty,
+                    builder: (context, hasText, child) {
+                      final canSend = widget.enabled && !_isSending && hasText;
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: DS.surfaceTertiary,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: DS.surfaceTertiary),
+                        ),
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          maxLines: 4,
+                          minLines: 1,
+                          enabled: widget.enabled && !_isSending,
+                          textInputAction: enterToSend
+                              ? TextInputAction.send
+                              : TextInputAction.newline,
+                          keyboardType: TextInputType.multiline,
+                          decoration: InputDecoration(
+                            hintText: widget.hintText ?? 'Type a message...',
+                            hintStyle: TextStyle(color: DS.textSecondary),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: DS.spacing16,
+                              vertical: DS.spacing10,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                          onSubmitted: canSend && enterToSend
+                              ? (_) => _handleSend()
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -569,81 +577,91 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close,
-                  color: DS.textSecondary,
-                  size: DS.iconSizeMd,
+              child: Semantics(
+                button: true,
+                label: 'Return to text input',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: DS.textSecondary,
+                    size: DS.iconSizeMd,
+                  ),
+                  onPressed: _switchToTextMode,
+                  padding: const EdgeInsets.all(12),
                 ),
-                onPressed: _switchToTextMode,
-                padding: const EdgeInsets.all(12),
               ),
             ),
             // 放大的语音按钮（居中）- 可滑动区域
             Expanded(
-              child: GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity == null) return;
-                  // 左滑 (velocity > 0) -> 分享模式（如果有）或文字模式
-                  if (details.primaryVelocity! > 300) {
-                    _handleSwipeLeft();
-                  }
-                  // 右滑 (velocity < 0) -> 文字模式
-                  else if (details.primaryVelocity! < -300) {
-                    _handleSwipeRight();
-                  }
-                },
-                child: Center(
-                  child: VoiceInputButton(
-                    size: _voiceMode == _CommunityVoiceMode.tapToggle ? 56 : 72,
-                    interactionMode: _voiceMode == _CommunityVoiceMode.tapToggle
-                        ? VoiceInputInteractionMode.tapToggle
-                        : VoiceInputInteractionMode.holdToTalk,
-                    autoStart: _voiceAutoStart,
-                    showGestureHints: true,
-                    onTranscription: (_) {},
-                    onLiveTranscription: (text) {
-                      if (!mounted) return;
-                      setState(() {
-                        _voiceDraftText = text;
-                      });
-                    },
-                    onRecordingFinished: (text, action) {
-                      switch (action) {
-                        case VoiceReleaseAction.cancel:
-                          setState(() {
-                            _voiceDraftText = '';
-                          });
-                          _switchToTextMode();
-                        case VoiceReleaseAction.send:
-                          _sendVoiceTextDirectly(text);
-                        case VoiceReleaseAction.commit:
-                          _appendVoiceTextToComposer(text);
-                      }
-                    },
-                    onDraftCancelled: () {
-                      if (!mounted) return;
-                      setState(() {
-                        _voiceDraftText = '';
-                        _voiceAutoStart = false;
-                        _isVoiceRecording = false;
-                      });
-                    },
-                    onError: (error) => AppFeedback.error(context, error),
-                    onRecordingStarted: () {
-                      if (!mounted) return;
-                      setState(() {
-                        _isVoiceRecording = true;
-                        _voiceAutoStart = false;
-                      });
-                    },
-                    onRecordingStopped: () {
-                      if (!mounted) return;
-                      setState(() {
-                        _isVoiceRecording = false;
-                        _voiceAutoStart = false;
-                      });
-                    },
+              child: Semantics(
+                button: true,
+                label: 'Swipe voice input to switch input modes',
+                child: GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (details.primaryVelocity == null) return;
+                    // 左滑 (velocity > 0) -> 分享模式（如果有）或文字模式
+                    if (details.primaryVelocity! > 300) {
+                      _handleSwipeLeft();
+                    }
+                    // 右滑 (velocity < 0) -> 文字模式
+                    else if (details.primaryVelocity! < -300) {
+                      _handleSwipeRight();
+                    }
+                  },
+                  child: Center(
+                    child: VoiceInputButton(
+                      size:
+                          _voiceMode == _CommunityVoiceMode.tapToggle ? 56 : 72,
+                      interactionMode:
+                          _voiceMode == _CommunityVoiceMode.tapToggle
+                              ? VoiceInputInteractionMode.tapToggle
+                              : VoiceInputInteractionMode.holdToTalk,
+                      autoStart: _voiceAutoStart,
+                      showGestureHints: true,
+                      onTranscription: (_) {},
+                      onLiveTranscription: (text) {
+                        if (!mounted) return;
+                        setState(() {
+                          _voiceDraftText = text;
+                        });
+                      },
+                      onRecordingFinished: (text, action) {
+                        switch (action) {
+                          case VoiceReleaseAction.cancel:
+                            setState(() {
+                              _voiceDraftText = '';
+                            });
+                            _switchToTextMode();
+                          case VoiceReleaseAction.send:
+                            _sendVoiceTextDirectly(text);
+                          case VoiceReleaseAction.commit:
+                            _appendVoiceTextToComposer(text);
+                        }
+                      },
+                      onDraftCancelled: () {
+                        if (!mounted) return;
+                        setState(() {
+                          _voiceDraftText = '';
+                          _voiceAutoStart = false;
+                          _isVoiceRecording = false;
+                        });
+                      },
+                      onError: (error) => AppFeedback.error(context, error),
+                      onRecordingStarted: () {
+                        if (!mounted) return;
+                        setState(() {
+                          _isVoiceRecording = true;
+                          _voiceAutoStart = false;
+                        });
+                      },
+                      onRecordingStopped: () {
+                        if (!mounted) return;
+                        setState(() {
+                          _isVoiceRecording = false;
+                          _voiceAutoStart = false;
+                        });
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -664,62 +682,70 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close,
-                  color: DS.textSecondary,
-                  size: DS.iconSizeMd,
+              child: Semantics(
+                button: true,
+                label: 'Return to text input',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: DS.textSecondary,
+                    size: DS.iconSizeMd,
+                  ),
+                  onPressed: _switchToTextMode,
+                  padding: const EdgeInsets.all(12),
                 ),
-                onPressed: _switchToTextMode,
-                padding: const EdgeInsets.all(12),
               ),
             ),
             // 分享提示区域（居中）- 可滑动区域
             Expanded(
-              child: GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity == null) return;
-                  // 左滑 (velocity > 0) -> 文字模式
-                  if (details.primaryVelocity! > 300) {
-                    _handleSwipeLeft();
-                  }
-                  // 右滑 (velocity < 0) -> 语音模式
-                  else if (details.primaryVelocity! < -300) {
-                    _handleSwipeRight();
-                  }
-                },
-                child: InkWell(
-                  onTap: () {
-                    _showQuickShare();
-                    _switchToTextMode();
+              child: Semantics(
+                button: true,
+                label: 'Open quick share options',
+                child: GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (details.primaryVelocity == null) return;
+                    // 左滑 (velocity > 0) -> 文字模式
+                    if (details.primaryVelocity! > 300) {
+                      _handleSwipeLeft();
+                    }
+                    // 右滑 (velocity < 0) -> 语音模式
+                    else if (details.primaryVelocity! < -300) {
+                      _handleSwipeRight();
+                    }
                   },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing16,
-                      vertical: DS.spacing12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceTertiary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.share_rounded,
-                          color: DS.brandPrimary,
-                          size: DS.iconSizeMd,
-                        ),
-                        const SizedBox(width: DS.spacing8),
-                        Text(
-                          context.l10n.chatInputTapToShare,
-                          style: TextStyle(
-                            color: DS.textSecondary,
-                            fontSize: DS.fontSizeBase,
+                  child: InkWell(
+                    onTap: () {
+                      _showQuickShare();
+                      _switchToTextMode();
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing16,
+                        vertical: DS.spacing12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceTertiary,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.share_rounded,
+                            color: DS.brandPrimary,
+                            size: DS.iconSizeMd,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: DS.spacing8),
+                          Text(
+                            context.l10n.chatInputTapToShare,
+                            style: TextStyle(
+                              color: DS.textSecondary,
+                              fontSize: DS.fontSizeBase,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -835,29 +861,34 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
                 child: Material(
                   color: Colors.transparent,
                   shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: canSend ? _handleSend : null,
-                    onHighlightChanged: (pressed) {
-                      if (!mounted) return;
-                      setState(() => _isButtonPressed = pressed);
-                    },
-                    child: Center(
-                      child: _isSending
-                          ? SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: DS.textOnPrimary,
+                  child: Semantics(
+                    button: true,
+                    label: 'Send community message',
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: canSend ? _handleSend : null,
+                      onHighlightChanged: (pressed) {
+                        if (!mounted) return;
+                        setState(() => _isButtonPressed = pressed);
+                      },
+                      child: Center(
+                        child: _isSending
+                            ? SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: DS.textOnPrimary,
+                                ),
+                              )
+                            : Icon(
+                                Icons.arrow_upward_rounded,
+                                color: canSend
+                                    ? DS.textOnPrimary
+                                    : DS.textSecondary,
+                                size: DS.iconSizeBase,
                               ),
-                            )
-                          : Icon(
-                              Icons.arrow_upward_rounded,
-                              color:
-                                  canSend ? DS.textOnPrimary : DS.textSecondary,
-                              size: DS.iconSizeBase,
-                            ),
+                      ),
                     ),
                   ),
                 ),
@@ -916,14 +947,18 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: DS.iconSizeSm,
-                  color: DS.textSecondary,
+              child: Semantics(
+                button: true,
+                label: 'Cancel quoted message',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: DS.iconSizeSm,
+                    color: DS.textSecondary,
+                  ),
+                  onPressed: widget.onCancelQuote,
+                  padding: const EdgeInsets.all(12),
                 ),
-                onPressed: widget.onCancelQuote,
-                padding: const EdgeInsets.all(12),
               ),
             ),
           ],
@@ -949,33 +984,37 @@ class _ToolbarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isEnabled = onPressed != null;
 
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: DS.iconSizeMd,
-              color: isEnabled
-                  ? (isDark ? DS.neutral300 : DS.neutral600)
-                  : DS.neutral400,
-            ),
-            const SizedBox(height: DS.spacing4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: isEnabled ? DS.textSecondary : DS.neutral400,
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: DS.iconSizeMd,
+                color: isEnabled
+                    ? (isDark ? DS.neutral300 : DS.neutral600)
+                    : DS.neutral400,
               ),
-            ),
-          ],
+              const SizedBox(height: DS.spacing4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: isEnabled ? DS.textSecondary : DS.neutral400,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

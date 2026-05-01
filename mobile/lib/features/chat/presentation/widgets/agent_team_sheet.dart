@@ -67,15 +67,23 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                       ),
                     ),
                     const Spacer(),
-                    SparkleIconButton(
-                      icon: const Icon(Icons.person_add_alt_1_outlined),
-                      onPressed: () => _showCreateExpertDialog(context),
-                      variant: ButtonVariant.ghost,
+                    Semantics(
+                      button: true,
+                      label: 'Chat agent team sheet control 1',
+                      child: SparkleIconButton(
+                        icon: const Icon(Icons.person_add_alt_1_outlined),
+                        onPressed: () => _showCreateExpertDialog(context),
+                        variant: ButtonVariant.ghost,
+                      ),
                     ),
-                    SparkleIconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                      variant: ButtonVariant.ghost,
+                    Semantics(
+                      button: true,
+                      label: 'Chat agent team sheet control 2',
+                      child: SparkleIconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                        variant: ButtonVariant.ghost,
+                      ),
                     ),
                   ],
                 ),

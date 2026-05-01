@@ -1,4 +1,3 @@
-# DEPRECATED: no active importers — candidate for removal in next cleanup
 from __future__ import annotations
 
 """
@@ -6,6 +5,9 @@ ComplexityAnalyzer — 纯规则引擎，< 3ms 执行时间，零 LLM 调用。
 
 根据用户消息文本的多维信号，评估任务复杂度，并给出相对于 agent 默认 tier 的
 调整量（tier_delta）。负值 = 可降级，正值 = 需升级。
+
+Active dependency: app.core.llm_router uses this module for complexity-aware
+model tier adjustment. Keep it lightweight and deterministic.
 """
 
 import re

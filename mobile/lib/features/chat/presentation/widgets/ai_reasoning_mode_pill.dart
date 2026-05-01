@@ -19,46 +19,50 @@ class AiReasoningModePill extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GestureDetector(
-        onTap: () => _showReasoningModeSheet(context, ref, mode),
-        child: MaterialStyler(
-          material: AppMaterials.neoGlass(context).copyWith(
-            backgroundGradient: LinearGradient(
-              colors: [
-                config.color.withValues(alpha: 0.18),
-                config.color.withValues(alpha: 0.08),
+      child: Semantics(
+        button: true,
+        label: 'Chat ai reasoning mode pill control 1',
+        child: GestureDetector(
+          onTap: () => _showReasoningModeSheet(context, ref, mode),
+          child: MaterialStyler(
+            material: AppMaterials.neoGlass(context).copyWith(
+              backgroundGradient: LinearGradient(
+                colors: [
+                  config.color.withValues(alpha: 0.18),
+                  config.color.withValues(alpha: 0.08),
+                ],
+              ),
+              borderColor: config.color.withValues(alpha: 0.35),
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  config.icon,
+                  size: DS.iconSizeSm,
+                  color: config.color,
+                ),
+                const SizedBox(width: DS.spacing6),
+                Text(
+                  config.label,
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
+                ),
               ],
             ),
-            borderColor: config.color.withValues(alpha: 0.35),
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                config.icon,
-                size: DS.iconSizeSm,
-                color: config.color,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                config.label,
-                style: DS.bodySmall.copyWith(
-                  color: DS.textPrimary,
-                  fontWeight: DS.fontWeightMedium,
-                ),
-              ),
-              const SizedBox(width: DS.spacing4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: DS.iconSizeSm,
-                color: DS.textSecondary,
-              ),
-            ],
           ),
         ),
       ),
@@ -162,84 +166,88 @@ class _ReasoningModeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: DS.borderRadius20,
-        onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: selected
-                ? config.color.withValues(alpha: 0.10)
-                : DS.surfaceSecondary,
+        color: Colors.transparent,
+        child: Semantics(
+          button: true,
+          label: 'Chat ai reasoning mode pill control 2',
+          child: InkWell(
             borderRadius: DS.borderRadius20,
-            border: Border.all(
-              color: selected
-                  ? config.color.withValues(alpha: 0.45)
-                  : DS.borderSubtle,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing12,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: config.color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    config.icon,
-                    size: DS.iconSizeSm,
-                    color: config.color,
-                  ),
+            onTap: onTap,
+            child: Ink(
+              decoration: BoxDecoration(
+                color: selected
+                    ? config.color.withValues(alpha: 0.10)
+                    : DS.surfaceSecondary,
+                borderRadius: DS.borderRadius20,
+                border: Border.all(
+                  color: selected
+                      ? config.color.withValues(alpha: 0.45)
+                      : DS.borderSubtle,
                 ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        config.label,
-                        style: DS.bodyMedium.copyWith(
-                          color: DS.textPrimary,
-                          fontWeight: DS.fontWeightSemibold,
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing2),
-                      Text(
-                        config.caption,
-                        style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: DS.spacing12,
                 ),
-                const SizedBox(width: DS.spacing8),
-                if (selected)
-                  Icon(
-                    Icons.check_circle_rounded,
-                    size: DS.iconSizeBase,
-                    color: config.color,
-                  )
-                else
-                  Icon(
-                    Icons.radio_button_unchecked_rounded,
-                    size: DS.iconSizeBase,
-                    color: DS.textTertiary,
-                  ),
-              ],
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: config.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        config.icon,
+                        size: DS.iconSizeSm,
+                        color: config.color,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            config.label,
+                            style: DS.bodyMedium.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightSemibold,
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing2),
+                          Text(
+                            config.caption,
+                            style: DS.bodySmall.copyWith(
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    if (selected)
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: DS.iconSizeBase,
+                        color: config.color,
+                      )
+                    else
+                      Icon(
+                        Icons.radio_button_unchecked_rounded,
+                        size: DS.iconSizeBase,
+                        color: DS.textTertiary,
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _ReasoningModeVisuals {

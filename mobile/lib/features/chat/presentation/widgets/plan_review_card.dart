@@ -365,203 +365,208 @@ class _PlanReviewCardState extends State<PlanReviewCard>
           curve: Curves.easeOut,
         ),
       ),
-      child: GestureDetector(
-        onTapDown: showActions ? (_) => _pressController.forward() : null,
-        onTapUp: showActions ? (_) => _pressController.reverse() : null,
-        onTapCancel: showActions ? () => _pressController.reverse() : null,
-        child: RepaintBoundary(
-          child: SparkleMotion.pressScale(
-            animation: _pressController,
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
-              decoration: BoxDecoration(
-                color: context.colors.surfaceCard,
-                borderRadius: DS.borderRadius16,
-                boxShadow: DS.shadowMd,
-                border: Border.all(
-                  color: color.withValues(alpha: 0.3),
-                  width: 1.5,
+      child: Semantics(
+        button: true,
+        label: 'Chat plan review card control 1',
+        child: GestureDetector(
+          onTapDown: showActions ? (_) => _pressController.forward() : null,
+          onTapUp: showActions ? (_) => _pressController.reverse() : null,
+          onTapCancel: showActions ? () => _pressController.reverse() : null,
+          child: RepaintBoundary(
+            child: SparkleMotion.pressScale(
+              animation: _pressController,
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceCard,
+                  borderRadius: DS.borderRadius16,
+                  boxShadow: DS.shadowMd,
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
                 ),
-              ),
-              child: ClipRRect(
-                borderRadius: DS.borderRadius16,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 5,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(gradient: gradient),
-                      ),
-                    ),
-                    if (showActions)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: AnimatedBuilder(
-                            animation: _highlightController,
-                            builder: (context, child) {
-                              final progress = _highlightController.value;
-                              return DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      DS.surfacePrimary.withValues(alpha: 0),
-                                      color.withValues(
-                                        alpha: 0.03 + (progress * 0.05),
-                                      ),
-                                      DS.surfacePrimary.withValues(alpha: 0),
-                                    ],
-                                    stops: const [0.2, 0.5, 0.8],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                child: ClipRRect(
+                  borderRadius: DS.borderRadius16,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 5,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(gradient: gradient),
                         ),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.all(DS.spacing16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              AnimatedBuilder(
-                                animation: _iconScaleAnimation,
-                                child: Container(
-                                  padding: const EdgeInsets.all(DS.spacing10),
+                      if (showActions)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: AnimatedBuilder(
+                              animation: _highlightController,
+                              builder: (context, child) {
+                                final progress = _highlightController.value;
+                                return DecoratedBox(
                                   decoration: BoxDecoration(
-                                    gradient: gradient,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: color.withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        DS.surfacePrimary.withValues(alpha: 0),
+                                        color.withValues(
+                                          alpha: 0.03 + (progress * 0.05),
+                                        ),
+                                        DS.surfacePrimary.withValues(alpha: 0),
+                                      ],
+                                      stops: const [0.2, 0.5, 0.8],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.all(DS.spacing16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                AnimatedBuilder(
+                                  animation: _iconScaleAnimation,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(DS.spacing10),
+                                    decoration: BoxDecoration(
+                                      gradient: gradient,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: color.withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      icon,
+                                      color: DS.textOnPrimary,
+                                      size: DS.iconSizeBase,
+                                    ),
+                                  ),
+                                  builder: (context, child) => Transform.scale(
+                                    scale: showActions
+                                        ? _iconScaleAnimation.value
+                                        : 1,
+                                    child: child,
+                                  ),
+                                ),
+                                const SizedBox(width: DS.spacing12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: DS.fontWeightBold,
+                                              color: DS.neutral900,
+                                            ),
                                       ),
+                                      if (widget.review.confidence > 0)
+                                        Text(
+                                          context.l10n.chatConfidenceLabel(
+                                            (widget.review.confidence * 100)
+                                                .toInt(),
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: DS.neutral600,
+                                              ),
+                                        ),
                                     ],
                                   ),
-                                  child: Icon(
-                                    icon,
-                                    color: DS.textOnPrimary,
-                                    size: DS.iconSizeBase,
+                                ),
+                                _buildDecisionBadge(decision),
+                              ],
+                            ),
+                            if (widget.review.userFacingReason != null) ...[
+                              const SizedBox(height: DS.spacing12),
+                              Container(
+                                padding: const EdgeInsets.all(DS.spacing12),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.08),
+                                  borderRadius: DS.borderRadius8,
+                                  border: Border.all(
+                                    color: color.withValues(alpha: 0.2),
                                   ),
                                 ),
-                                builder: (context, child) => Transform.scale(
-                                  scale: showActions
-                                      ? _iconScaleAnimation.value
-                                      : 1,
-                                  child: child,
-                                ),
-                              ),
-                              const SizedBox(width: DS.spacing12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: DS.fontWeightBold,
-                                            color: DS.neutral900,
-                                          ),
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      size: DS.iconSizeSm,
+                                      color: color,
                                     ),
-                                    if (widget.review.confidence > 0)
-                                      Text(
-                                        context.l10n.chatConfidenceLabel(
-                                          (widget.review.confidence * 100)
-                                              .toInt(),
-                                        ),
+                                    const SizedBox(width: DS.spacing8),
+                                    Expanded(
+                                      child: Text(
+                                        widget.review.userFacingReason!,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
                                             ?.copyWith(
-                                              color: DS.neutral600,
+                                              color: DS.neutral800,
+                                              height: 1.4,
                                             ),
                                       ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              _buildDecisionBadge(decision),
                             ],
-                          ),
-                          if (widget.review.userFacingReason != null) ...[
-                            const SizedBox(height: DS.spacing12),
-                            Container(
-                              padding: const EdgeInsets.all(DS.spacing12),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.08),
-                                borderRadius: DS.borderRadius8,
-                                border: Border.all(
-                                  color: color.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline_rounded,
-                                    size: DS.iconSizeSm,
-                                    color: color,
-                                  ),
-                                  const SizedBox(width: DS.spacing8),
-                                  Expanded(
-                                    child: Text(
-                                      widget.review.userFacingReason!,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: DS.neutral800,
-                                            height: 1.4,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          if ((widget.review.reasoningSummary ?? '')
-                              .isNotEmpty) ...[
-                            const SizedBox(height: DS.spacing12),
-                            _buildReasoningSummary(color),
-                          ],
-                          if ((widget.review.alignmentSummary ?? '')
-                              .isNotEmpty) ...[
-                            const SizedBox(height: DS.spacing12),
-                            _buildAlignmentSummary(),
-                          ],
-                          if (widget.review.reasoningDetails.isNotEmpty) ...[
-                            const SizedBox(height: DS.spacing12),
-                            _buildReasoningDetails(),
-                          ],
-                          if (widget.review.comments.isNotEmpty) ...[
-                            const SizedBox(height: DS.spacing16),
-                            _buildCommentsSection(),
-                          ],
-                          if (widget.review.confidence > 0 &&
-                              !widget.review.autoApproved) ...[
-                            const SizedBox(height: DS.spacing12),
-                            _buildConfidenceBar(),
-                          ],
-                          if (showActions) ...[
-                            const SizedBox(height: DS.spacing16),
-                            if (_showDelegateToggle) ...[
-                              _buildDelegateToggleCard(),
+                            if ((widget.review.reasoningSummary ?? '')
+                                .isNotEmpty) ...[
                               const SizedBox(height: DS.spacing12),
+                              _buildReasoningSummary(color),
                             ],
-                            _buildActionButtons(decision, gradient),
+                            if ((widget.review.alignmentSummary ?? '')
+                                .isNotEmpty) ...[
+                              const SizedBox(height: DS.spacing12),
+                              _buildAlignmentSummary(),
+                            ],
+                            if (widget.review.reasoningDetails.isNotEmpty) ...[
+                              const SizedBox(height: DS.spacing12),
+                              _buildReasoningDetails(),
+                            ],
+                            if (widget.review.comments.isNotEmpty) ...[
+                              const SizedBox(height: DS.spacing16),
+                              _buildCommentsSection(),
+                            ],
+                            if (widget.review.confidence > 0 &&
+                                !widget.review.autoApproved) ...[
+                              const SizedBox(height: DS.spacing12),
+                              _buildConfidenceBar(),
+                            ],
+                            if (showActions) ...[
+                              const SizedBox(height: DS.spacing16),
+                              if (_showDelegateToggle) ...[
+                                _buildDelegateToggleCard(),
+                                const SizedBox(height: DS.spacing12),
+                              ],
+                              _buildActionButtons(decision, gradient),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1248,52 +1253,57 @@ extension on _PlanReviewCardState {
                       const SizedBox(height: DS.spacing12),
                       ...options.map((option) {
                         final isSelected = selected == option.value;
-                        return InkWell(
-                          onTap: () => setSheetState(() {
-                            selected = option.value;
-                            showError = false;
-                          }),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DS.spacing20,
-                              vertical: DS.spacing12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? DS.primaryBase.withValues(alpha: 0.08)
-                                  : DS.surfacePrimary.withValues(alpha: 0),
-                              border: Border(
-                                left: BorderSide(
-                                  color: isSelected
-                                      ? DS.primaryBase
-                                      : DS.surfacePrimary.withValues(alpha: 0),
-                                  width: 3,
+                        return Semantics(
+                          button: true,
+                          label: 'Chat plan review card control 2',
+                          child: InkWell(
+                            onTap: () => setSheetState(() {
+                              selected = option.value;
+                              showError = false;
+                            }),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing20,
+                                vertical: DS.spacing12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? DS.primaryBase.withValues(alpha: 0.08)
+                                    : DS.surfacePrimary.withValues(alpha: 0),
+                                border: Border(
+                                  left: BorderSide(
+                                    color: isSelected
+                                        ? DS.primaryBase
+                                        : DS.surfacePrimary
+                                            .withValues(alpha: 0),
+                                    width: 3,
+                                  ),
                                 ),
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    option.label,
-                                    style: TextStyle(
-                                      fontSize: DS.fontSizeBase,
-                                      fontWeight: isSelected
-                                          ? DS.fontWeightSemibold
-                                          : DS.fontWeightRegular,
-                                      color: isDark
-                                          ? DS.neutral100
-                                          : DS.neutral900,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      option.label,
+                                      style: TextStyle(
+                                        fontSize: DS.fontSizeBase,
+                                        fontWeight: isSelected
+                                            ? DS.fontWeightSemibold
+                                            : DS.fontWeightRegular,
+                                        color: isDark
+                                            ? DS.neutral100
+                                            : DS.neutral900,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: DS.primaryBase,
-                                    size: DS.iconSizeBase,
-                                  ),
-                              ],
+                                  if (isSelected)
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: DS.primaryBase,
+                                      size: DS.iconSizeBase,
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         );

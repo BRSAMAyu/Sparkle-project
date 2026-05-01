@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/visual_elements/presentation/shared/visual_element_palette.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -113,10 +114,10 @@ class _VisualElementCardState extends State<VisualElementCard>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    _InkVisualPalette.moonless,
-                    _InkVisualPalette.surface,
-                    Color.lerp(_InkVisualPalette.panel, accent, 0.08) ??
-                        _InkVisualPalette.panel,
+                    VisualElementPalette.moonless,
+                    VisualElementPalette.surface,
+                    Color.lerp(VisualElementPalette.panel, accent, 0.08) ??
+                        VisualElementPalette.panel,
                   ],
                 ),
                 borderRadius: borderRadius,
@@ -156,7 +157,8 @@ class _VisualElementCardState extends State<VisualElementCard>
                               colors: [
                                 accent.withValues(alpha: 0.18),
                                 Colors.transparent,
-                                _InkVisualPalette.gold.withValues(alpha: 0.10),
+                                VisualElementPalette.gold
+                                    .withValues(alpha: 0.10),
                               ],
                               stops: const [0.0, 0.38, 1.0],
                             ),
@@ -244,7 +246,7 @@ class _VisualElementCardState extends State<VisualElementCard>
 
   Widget _buildTextBlock(
     Color accent,
-    _RarityColors colors,
+    VisualElementRarityColors colors,
     AppLocalizations l10n,
   ) =>
       Column(
@@ -256,7 +258,7 @@ class _VisualElementCardState extends State<VisualElementCard>
             style: TextStyle(
               fontSize: widget.isCompact ? DS.fontSizeSm : DS.fontSizeBase,
               fontWeight: DS.fontWeightSemibold,
-              color: _InkVisualPalette.textPrimary,
+              color: VisualElementPalette.textPrimary,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -267,7 +269,7 @@ class _VisualElementCardState extends State<VisualElementCard>
               widget.element.description!,
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
-                color: _InkVisualPalette.textSecondary,
+                color: VisualElementPalette.textSecondary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -314,7 +316,7 @@ class _VisualElementCardState extends State<VisualElementCard>
     return DateTime.now().difference(unlockedAt) < newlyUnlockedWindow;
   }
 
-  Widget _buildPreviewBackground(_RarityColors colors) {
+  Widget _buildPreviewBackground(VisualElementRarityColors colors) {
     // 根据元素类型生成预览背景
     return Positioned.fill(
       child: Container(
@@ -409,9 +411,9 @@ class _VisualElementCardState extends State<VisualElementCard>
     }
     // 默认渐变
     return [
-      _InkVisualPalette.moonless,
-      _InkVisualPalette.surface,
-      _InkVisualPalette.blueWash,
+      VisualElementPalette.moonless,
+      VisualElementPalette.surface,
+      VisualElementPalette.blueWash,
     ];
   }
 
@@ -424,7 +426,7 @@ class _VisualElementCardState extends State<VisualElementCard>
         return Color(int.parse(hexColor, radix: 16));
       }
     } catch (_) {}
-    return _InkVisualPalette.surface;
+    return VisualElementPalette.surface;
   }
 
   Widget _buildTypeIcon() {
@@ -438,8 +440,8 @@ class _VisualElementCardState extends State<VisualElementCard>
           end: Alignment.bottomRight,
           colors: [
             DS.surfacePrimary.withValues(alpha: 0.94),
-            Color.lerp(_InkVisualPalette.panel, rarityColors.border, 0.18) ??
-                _InkVisualPalette.panel,
+            Color.lerp(VisualElementPalette.panel, rarityColors.border, 0.18) ??
+                VisualElementPalette.panel,
           ],
         ),
         borderRadius: DS.borderRadius8,
@@ -459,7 +461,7 @@ class _VisualElementCardState extends State<VisualElementCard>
         icon,
         size: widget.isCompact ? DS.iconSizeXs : DS.iconSizeSm,
         color: Color.lerp(
-          _InkVisualPalette.textSecondary,
+          VisualElementPalette.textSecondary,
           rarityColors.text,
           0.52,
         ),
@@ -470,35 +472,35 @@ class _VisualElementCardState extends State<VisualElementCard>
   Widget _buildPreviewHint(Color accent) {
     final zh = I18nService.instance.isChinese;
     return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing4,
-        ),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.13),
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(color: accent.withValues(alpha: 0.24)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.visibility_outlined,
-              size: DS.iconSizeXs,
-              color: Color.lerp(accent, _InkVisualPalette.textPrimary, 0.18),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.13),
+        borderRadius: DS.borderRadiusFull,
+        border: Border.all(color: accent.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.visibility_outlined,
+            size: DS.iconSizeXs,
+            color: Color.lerp(accent, VisualElementPalette.textPrimary, 0.18),
+          ),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            zh ? '预览' : 'Preview',
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: Color.lerp(accent, VisualElementPalette.textPrimary, 0.18),
+              fontWeight: DS.fontWeightMedium,
             ),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              zh ? '预览' : 'Preview',
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: Color.lerp(accent, _InkVisualPalette.textPrimary, 0.18),
-                fontWeight: DS.fontWeightMedium,
-              ),
-            ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   IconData _getTypeIcon(VisualElementType type) {
@@ -514,7 +516,8 @@ class _VisualElementCardState extends State<VisualElementCard>
     }
   }
 
-  Widget _buildRarityBadge(_RarityColors colors, AppLocalizations l10n) =>
+  Widget _buildRarityBadge(
+          VisualElementRarityColors colors, AppLocalizations l10n) =>
       Container(
         padding: EdgeInsets.symmetric(
           horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
@@ -589,7 +592,7 @@ class _VisualElementCardState extends State<VisualElementCard>
       statusIcon = Icons.lock_open;
     } else {
       statusText = _getUnlockSourceText(l10n);
-      statusColor = _InkVisualPalette.textSecondary;
+      statusColor = VisualElementPalette.textSecondary;
       statusIcon = Icons.lock;
     }
 
@@ -635,44 +638,44 @@ class _VisualElementCardState extends State<VisualElementCard>
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: Color.lerp(color, _InkVisualPalette.textPrimary, 0.14),
+            color: Color.lerp(color, VisualElementPalette.textPrimary, 0.14),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
       );
 
-  Widget _buildBundleProgressChip(_RarityColors colors) {
+  Widget _buildBundleProgressChip(VisualElementRarityColors colors) {
     final zh = I18nService.instance.isChinese;
     return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing4,
-        ),
-        decoration: BoxDecoration(
-          color: colors.border.withValues(alpha: 0.13),
-          borderRadius: DS.borderRadius8,
-          border: Border.all(color: colors.border.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inventory_2_rounded,
-              size: DS.iconSizeXs,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: colors.border.withValues(alpha: 0.13),
+        borderRadius: DS.borderRadius8,
+        border: Border.all(color: colors.border.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.inventory_2_rounded,
+            size: DS.iconSizeXs,
+            color: colors.text,
+          ),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            '${widget.bundleOwnedCount}/${widget.bundleTotalCount} ${zh ? '已集齐' : 'Collected'}',
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
               color: colors.text,
+              fontWeight: DS.fontWeightMedium,
             ),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              '${widget.bundleOwnedCount}/${widget.bundleTotalCount} ${zh ? '已集齐' : 'Collected'}',
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: colors.text,
-                fontWeight: DS.fontWeightMedium,
-              ),
-            ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   String _getUnlockSourceText(AppLocalizations l10n) {
@@ -691,7 +694,8 @@ class _VisualElementCardState extends State<VisualElementCard>
   }
 
   /// 磨砂玻璃锁定遮罩
-  Widget _buildLockedOverlay(AppLocalizations l10n, _RarityColors colors) =>
+  Widget _buildLockedOverlay(
+          AppLocalizations l10n, VisualElementRarityColors colors) =>
       Positioned.fill(
         child: ClipRRect(
           borderRadius:
@@ -702,7 +706,7 @@ class _VisualElementCardState extends State<VisualElementCard>
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
                 child: Container(
-                  color: _InkVisualPalette.moonless.withValues(alpha: 0.78),
+                  color: VisualElementPalette.moonless.withValues(alpha: 0.78),
                 ),
               ),
               // 内容
@@ -762,56 +766,8 @@ class _VisualElementCardState extends State<VisualElementCard>
     }
   }
 
-  _RarityColors _getRarityColors(VisualElementRarity rarity) {
-    switch (rarity) {
-      case VisualElementRarity.common:
-        return _RarityColors(
-          background: const Color(0xFF102436),
-          border: const Color(0xFF668696),
-          text: const Color(0xFFC6D6DB),
-        );
-      case VisualElementRarity.rare:
-        return _RarityColors(
-          background: const Color(0xFF0C2A37),
-          border: const Color(0xFF58C0D7),
-          text: const Color(0xFFC6F2F7),
-        );
-      case VisualElementRarity.epic:
-        return _RarityColors(
-          background: const Color(0xFF17253A),
-          border: const Color(0xFF91A9FF),
-          text: const Color(0xFFDCE5FF),
-        );
-      case VisualElementRarity.legendary:
-        return _RarityColors(
-          background: const Color(0xFF312813),
-          border: const Color(0xFFD9B66F),
-          text: const Color(0xFFFFE7A8),
-        );
-    }
-  }
-}
-
-class _InkVisualPalette {
-  static const Color moonless = Color(0xFF050A12);
-  static const Color surface = Color(0xFF0B1D2C);
-  static const Color panel = Color(0xFF10283A);
-  static const Color blueWash = Color(0xFF14384A);
-  static const Color gold = Color(0xFFD9B66F);
-  static const Color textPrimary = Color(0xFFEAF3F5);
-  static const Color textSecondary = Color(0xFF9CB4BD);
-}
-
-class _RarityColors {
-  _RarityColors({
-    required this.background,
-    required this.border,
-    required this.text,
-  });
-
-  final Color background;
-  final Color border;
-  final Color text;
+  VisualElementRarityColors _getRarityColors(VisualElementRarity rarity) =>
+      VisualElementPalette.rarityColors(rarity);
 }
 
 /// 呼吸边框画笔
@@ -857,7 +813,7 @@ class _ElementPreviewPainter extends CustomPainter {
   final VisualElementType elementType;
   final Map<String, dynamic> config;
   final int seed;
-  final _RarityColors colors;
+  final VisualElementRarityColors colors;
 
   @override
   void paint(Canvas canvas, Size size) {

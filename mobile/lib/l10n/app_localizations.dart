@@ -9638,6 +9638,66 @@ abstract class AppLocalizations {
   /// **'已读'**
   String get chatRead;
 
+  /// No description provided for @chatOfflineQueuePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条消息等待发送'**
+  String chatOfflineQueuePending(int count);
+
+  /// No description provided for @chatOfflineQueueSending.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在发送 {count} 条排队消息...'**
+  String chatOfflineQueueSending(int count);
+
+  /// No description provided for @chatOfflineQueueComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'已全部发送'**
+  String get chatOfflineQueueComplete;
+
+  /// No description provided for @chatOfflineQueuePendingSemantic.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线队列中有 {count} 条消息等待发送'**
+  String chatOfflineQueuePendingSemantic(int count);
+
+  /// No description provided for @chatOfflineQueueSendingSemantic.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络已恢复，正在发送 {count} 条排队消息'**
+  String chatOfflineQueueSendingSemantic(int count);
+
+  /// No description provided for @chatOfflineQueueCompleteSemantic.
+  ///
+  /// In zh, this message translates to:
+  /// **'排队消息已全部发送'**
+  String get chatOfflineQueueCompleteSemantic;
+
+  /// No description provided for @chatMessageQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待发送'**
+  String get chatMessageQueued;
+
+  /// No description provided for @chatMessageSending.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在发送'**
+  String get chatMessageSending;
+
+  /// No description provided for @chatMessageSendFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败'**
+  String get chatMessageSendFailed;
+
+  /// No description provided for @chatMessageRetrySend.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get chatMessageRetrySend;
+
   /// No description provided for @chatAgentNavigator.
   ///
   /// In zh, this message translates to:
@@ -10124,6 +10184,18 @@ abstract class AppLocalizations {
   /// **'做得很好！继续保持'**
   String get errorBookNoReviewHint;
 
+  /// No description provided for @errorBookNoReviewDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'做得很好！继续保持。先补记最近做错的一题，系统才会安排后续复习。'**
+  String get errorBookNoReviewDescription;
+
+  /// No description provided for @errorBookRecordFirstError.
+  ///
+  /// In zh, this message translates to:
+  /// **'去记录第一道错题'**
+  String get errorBookRecordFirstError;
+
   /// No description provided for @errorBookDeleteSuccess.
   ///
   /// In zh, this message translates to:
@@ -10327,6 +10399,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'正针对 \"{dimension}\" 维度进行针对性复习'**
   String errorBookCognitiveFilter(Object dimension);
+
+  /// No description provided for @errorBookKnowledgePointFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识点：{node}'**
+  String errorBookKnowledgePointFilter(String node);
+
+  /// No description provided for @errorBookCognitiveDimension.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知维度'**
+  String get errorBookCognitiveDimension;
+
+  /// No description provided for @errorBookKnowledgeNodeFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识节点'**
+  String get errorBookKnowledgeNodeFallback;
 
   /// No description provided for @errorBookReviewCount.
   ///
@@ -12889,6 +12979,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'管理员调整'**
   String get photonTransactionAdminAdjustment;
+
+  /// No description provided for @photonTransactionsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无交易记录'**
+  String get photonTransactionsEmpty;
+
+  /// No description provided for @photonTransactionsEnd.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有更多记录了'**
+  String get photonTransactionsEnd;
+
+  /// No description provided for @photonTransactionDaysAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days}天前'**
+  String photonTransactionDaysAgo(int days);
+
+  /// No description provided for @photonTransactionNoNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'无备注'**
+  String get photonTransactionNoNote;
 
   /// No description provided for @shopItemTypeSkin.
   ///
@@ -41899,6 +42013,30 @@ abstract class AppLocalizations {
   /// **'模拟生成失败'**
   String get simGenFailed;
 
+  /// No description provided for @simRealtimeConnectionRecovered.
+  ///
+  /// In zh, this message translates to:
+  /// **'实时连接中断，已恢复到最近一次保存的模拟进度。'**
+  String get simRealtimeConnectionRecovered;
+
+  /// No description provided for @simInteractionStreamRecovered.
+  ///
+  /// In zh, this message translates to:
+  /// **'互动流中断了，但我已经帮你恢复到最近一轮状态。'**
+  String get simInteractionStreamRecovered;
+
+  /// No description provided for @simRoundProgressSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'讨论已推进到第 {round} 轮，正在汇总关键分歧与共识。'**
+  String simRoundProgressSummary(int round);
+
+  /// No description provided for @simDraftInsightSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'模拟进行中，正在汇总当前讨论洞察...'**
+  String get simDraftInsightSummary;
+
   /// No description provided for @simStudyGroup.
   ///
   /// In zh, this message translates to:
@@ -43399,6 +43537,24 @@ abstract class AppLocalizations {
   /// **'延长复习间隔'**
   String get ebRememberedHint;
 
+  /// No description provided for @ebReviewMasteryPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'你对这道题的掌握情况？'**
+  String get ebReviewMasteryPrompt;
+
+  /// No description provided for @ebReviewMasterySheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'评价你的掌握情况'**
+  String get ebReviewMasterySheetTitle;
+
+  /// No description provided for @ebReviewMasterySheetDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'根据你的评价，系统会智能调整下次复习时间'**
+  String get ebReviewMasterySheetDesc;
+
   /// No description provided for @ebPerfectRecall.
   ///
   /// In zh, this message translates to:
@@ -44064,6 +44220,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'生词卡'**
   String get transWordCard;
+
+  /// No description provided for @transAddedToFlashcardsReviewLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'已加入生词卡，24小时后复习'**
+  String get transAddedToFlashcardsReviewLater;
+
+  /// No description provided for @transTranslationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻译失败'**
+  String get transTranslationFailed;
 
   /// No description provided for @auroraObserving.
   ///

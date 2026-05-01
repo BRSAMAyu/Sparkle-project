@@ -97,42 +97,46 @@ class _UnselectedPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-        child: GestureDetector(
-          onTap: onTap,
-          child: MaterialStyler(
-            material: AppMaterials.ceramic(context).copyWith(
-              // Use surfaceTertiary for consistent theming with Dashboard
-              backgroundColor: DS.surfaceTertiary,
-            ),
-            borderRadius: DS.borderRadius20,
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing8,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  size: DS.iconSizeSm,
-                  color: DS.textSecondary,
-                ),
-                const SizedBox(width: DS.spacing6),
-                Text(
-                  context.l10n.chatModeSelect,
-                  style: TextStyle(
+        child: Semantics(
+          button: true,
+          label: 'Chat chat mode selector pill control 1',
+          child: GestureDetector(
+            onTap: onTap,
+            child: MaterialStyler(
+              material: AppMaterials.ceramic(context).copyWith(
+                // Use surfaceTertiary for consistent theming with Dashboard
+                backgroundColor: DS.surfaceTertiary,
+              ),
+              borderRadius: DS.borderRadius20,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing8,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    size: DS.iconSizeSm,
                     color: DS.textSecondary,
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightMedium,
                   ),
-                ),
-                const SizedBox(width: DS.spacing4),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: DS.iconSizeSm,
-                  color: DS.textSecondary,
-                ),
-              ],
+                  const SizedBox(width: DS.spacing6),
+                  Text(
+                    context.l10n.chatModeSelect,
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: DS.iconSizeSm,
+                    color: DS.textSecondary,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -187,58 +191,62 @@ class _SelectedPill extends StatelessWidget {
         isDark ? foregroundColor.withValues(alpha: 0.72) : DS.textSecondary;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: MaterialStyler(
-          material: AppMaterials.neoGlass(context).copyWith(
-            backgroundGradient: LinearGradient(
-              colors: [
-                mode.color.withValues(alpha: 0.18),
-                mode.color.withValues(alpha: 0.08),
+      child: Semantics(
+        button: true,
+        label: 'Chat chat mode selector pill control 2',
+        child: GestureDetector(
+          onTap: onTap,
+          child: MaterialStyler(
+            material: AppMaterials.neoGlass(context).copyWith(
+              backgroundGradient: LinearGradient(
+                colors: [
+                  mode.color.withValues(alpha: 0.18),
+                  mode.color.withValues(alpha: 0.08),
+                ],
+              ),
+              borderColor: mode.color.withValues(alpha: 0.35),
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  mode.icon,
+                  size: DS.iconSizeSm,
+                  color: foregroundColor,
+                ),
+                const SizedBox(width: DS.spacing6),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: mode is ChatModeTeam
+                        ? 140
+                        : (mode.apiValue.startsWith(expertChatModePrefix)
+                            ? 84
+                            : 120),
+                  ),
+                  child: Text(
+                    _displayLabel,
+                    style: TextStyle(
+                      color: foregroundColor,
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: DS.iconSizeSm,
+                  color: chevronColor,
+                ),
               ],
             ),
-            borderColor: mode.color.withValues(alpha: 0.35),
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                mode.icon,
-                size: DS.iconSizeSm,
-                color: foregroundColor,
-              ),
-              const SizedBox(width: DS.spacing6),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: mode is ChatModeTeam
-                      ? 140
-                      : (mode.apiValue.startsWith(expertChatModePrefix)
-                          ? 84
-                          : 120),
-                ),
-                child: Text(
-                  _displayLabel,
-                  style: TextStyle(
-                    color: foregroundColor,
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightMedium,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: DS.spacing4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: DS.iconSizeSm,
-                color: chevronColor,
-              ),
-            ],
           ),
         ),
       ),

@@ -109,8 +109,7 @@ class CausalTimelineNotifier
       final entriesRaw = data['entries'] as List<dynamic>? ?? [];
       final entries = entriesRaw
           .map(
-            (e) =>
-                CausalTimelineEntry.fromJson(e as Map<String, dynamic>),
+            (e) => CausalTimelineEntry.fromJson(e as Map<String, dynamic>),
           )
           .toList();
       state = AsyncValue.data(entries);
@@ -169,7 +168,9 @@ class CausalTimelinePanel extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _Handle(),
-            _Header(onRefresh: () => ref.read(causalTimelineProvider.notifier).load()),
+            _Header(
+                onRefresh: () =>
+                    ref.read(causalTimelineProvider.notifier).load()),
             Flexible(
               child: timeline.when(
                 loading: () => const _LoadingState(),
@@ -236,12 +237,16 @@ class _Header extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            IconButton(
-              icon: Icon(Icons.refresh, size: 18, color: DS.textTertiary),
-              onPressed: onRefresh,
-              tooltip: '刷新',
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            Semantics(
+              button: true,
+              label: 'Chat causal timeline panel control 1',
+              child: IconButton(
+                icon: Icon(Icons.refresh, size: 18, color: DS.textTertiary),
+                onPressed: onRefresh,
+                tooltip: '刷新',
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
             ),
           ],
         ),
@@ -351,8 +356,7 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
   @override
   Widget build(BuildContext context) {
     final card = widget.entry.card;
-    final headline =
-        card?.headline ?? widget.entry.eventSummary;
+    final headline = card?.headline ?? widget.entry.eventSummary;
     final summary = card?.summary ?? '';
     final evidenceChain = card?.evidenceChain ?? [];
     final userActions = card?.userActions ?? [];
@@ -368,52 +372,56 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Compact row
-          InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () {
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
-              setState(() => _expanded = !_expanded);
-            },
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _CardTypeIcon(cardType: card?.cardType ?? 'causal'),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          headline,
-                          style: DS.bodySmall.copyWith(
-                            color: DS.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (!_expanded && summary.isNotEmpty) ...[
-                          const SizedBox(height: 2),
+          Semantics(
+            button: true,
+            label: 'Chat causal timeline panel control 2',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                setState(() => _expanded = !_expanded);
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _CardTypeIcon(cardType: card?.cardType ?? 'causal'),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            summary,
-                            style: DS.labelSmall
-                                .copyWith(color: DS.textSecondary),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            headline,
+                            style: DS.bodySmall.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                          if (!_expanded && summary.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              summary,
+                              style: DS.labelSmall
+                                  .copyWith(color: DS.textSecondary),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    size: 18,
-                    color: DS.textTertiary,
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Icon(
+                      _expanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 18,
+                      color: DS.textTertiary,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -596,22 +604,26 @@ class _ActionChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: DS.brandPrimary.withValues(alpha: 0.22),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat causal timeline panel control 3',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: DS.brandPrimary.withValues(alpha: 0.22),
+              ),
             ),
-          ),
-          child: Text(
-            label,
-            style: DS.labelSmall.copyWith(
-              color: DS.brandPrimary,
-              fontWeight: FontWeight.w500,
+            child: Text(
+              label,
+              style: DS.labelSmall.copyWith(
+                color: DS.brandPrimary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ),

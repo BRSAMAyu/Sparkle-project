@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"log"
 	"sync"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
@@ -34,10 +34,10 @@ type Client struct {
 	config *config.Config
 	connMu sync.RWMutex
 
-	reconnectMu      sync.Mutex
-	lastReconnectAt  time.Time
-	minReconnectGap  time.Duration // R5-G07: minimum gap between reconnect attempts
-	dialOptions      []grpc.DialOption
+	reconnectMu     sync.Mutex
+	lastReconnectAt time.Time
+	minReconnectGap time.Duration // R5-G07: minimum gap between reconnect attempts
+	dialOptions     []grpc.DialOption
 
 	// Health checker (optional)
 	healthChecker *AgentHealthChecker
@@ -76,7 +76,10 @@ func NewClient(cfg *config.Config) (*Client, error) {
 
 	conn, err := grpc.DialContext(ctx, cfg.AgentAddress, dialOptions...)
 	if err != nil {
-		log.Printf("Failed to connect to agent service at %s: %v", cfg.AgentAddress, err)
+		zap.L().Error("Failed to connect to agent service",
+			zap.String("address", cfg.AgentAddress),
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
@@ -95,7 +98,11 @@ func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 		if cfg.AgentTLSCACertPath != "" {
 			tlsCreds, err := credentials.NewClientTLSFromFile(cfg.AgentTLSCACertPath, cfg.AgentTLSServerName)
 			if err != nil {
-				log.Printf("Failed to load agent TLS CA cert: %v", err)
+				zap.L().Error("Failed to load agent TLS CA cert",
+					zap.String("ca_cert_path", cfg.AgentTLSCACertPath),
+					zap.String("server_name", cfg.AgentTLSServerName),
+					zap.Error(err),
+				)
 				return nil, err
 			}
 			creds = tlsCreds
@@ -185,7 +192,10 @@ func (c *Client) reconnect(ctx context.Context) error {
 
 	newConn, err := grpc.DialContext(reconnectCtx, c.config.AgentAddress, c.dialOptions...)
 	if err != nil {
-		log.Printf("[AgentClient] Reconnect to %s failed: %v", c.config.AgentAddress, err)
+		zap.L().Error("Agent client reconnect failed",
+			zap.String("address", c.config.AgentAddress),
+			zap.Error(err),
+		)
 		return err
 	}
 
@@ -199,7 +209,9 @@ func (c *Client) reconnect(ctx context.Context) error {
 		_ = oldConn.Close()
 	}
 
-	log.Printf("[AgentClient] Reconnected to agent service at %s", c.config.AgentAddress)
+	zap.L().Info("Agent client reconnected",
+		zap.String("address", c.config.AgentAddress),
+	)
 	return nil
 }
 
@@ -237,7 +249,10 @@ func NewClientWithHealthCheck(cfg *config.Config, healthCheckInterval, healthChe
 	c.healthChecker = NewAgentHealthChecker(c, healthCheckInterval, healthCheckTimeout, cbConfig)
 	c.healthChecker.Start()
 
-	log.Printf("[AgentClient] Health checker started (interval: %v, timeout: %v)", healthCheckInterval, healthCheckTimeout)
+	zap.L().Info("Agent health checker started",
+		zap.Duration("interval", healthCheckInterval),
+		zap.Duration("timeout", healthCheckTimeout),
+	)
 
 	return c, nil
 }

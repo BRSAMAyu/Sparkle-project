@@ -6,7 +6,9 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, case, desc, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -851,7 +853,8 @@ class GrowthDashboardService:
             return None
         try:
             return await PlanProgressService(self.db).evaluate_progress(user_id, plan.id)
-        except Exception:
+        except (SQLAlchemyError, TypeError, ValueError, AttributeError) as exc:
+            logger.warning("Failed to evaluate plan health for user_id={} plan_id={}: {}", user_id, plan.id, exc)
             return None
 
     def _serialize_active_plan(

@@ -3,9 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
@@ -79,7 +80,8 @@ Map<String, dynamic>? _decodeCommunityWsPayload(dynamic data) {
       if (decoded is Map) {
         return Map<String, dynamic>.from(decoded);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Community WS payload decode failed: $e');
       return null;
     }
   }
@@ -98,9 +100,10 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   FriendsNotifier(this._repository, Stream<dynamic> events)
       : super(const AsyncValue.loading()) {
     loadFriends();
-    events.listen(_handleEvent);
+    _eventsSubscription = events.listen(_handleEvent);
   }
   final CommunityRepository _repository;
+  late final StreamSubscription<dynamic> _eventsSubscription;
 
   void _handleEvent(dynamic data) {
     try {
@@ -170,6 +173,12 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   }
 
   Future<void> refresh() => loadFriends();
+
+  @override
+  void dispose() {
+    unawaited(_eventsSubscription.cancel());
+    super.dispose();
+  }
 
   /// 删除好友
   Future<void> deleteFriend(String friendshipId) async {
@@ -1547,9 +1556,8 @@ class GroupTasksNotifier
 }
 
 // 8. Private Chat Provider (Family)
-final privateChatProvider = StateNotifierProvider
-    .family<PrivateChatNotifier, AsyncValue<List<PrivateMessageInfo>>, String>(
-        (ref, friendId) {
+final privateChatProvider = StateNotifierProvider.family<PrivateChatNotifier,
+    AsyncValue<List<PrivateMessageInfo>>, String>((ref, friendId) {
   final stream = ref.watch(communityEventsStreamProvider);
   return PrivateChatNotifier(
     ref.watch(communityRepositoryProvider),
@@ -1574,6 +1582,7 @@ class PrivateChatNotifier
   final ChatCacheService _cacheService = ChatCacheService();
   final Ref _ref;
   String? _currentUserId;
+  StreamSubscription<dynamic>? _eventsSubscription;
 
   final Set<String> _pendingNonces = {};
   Set<String> get pendingNonces => _pendingNonces;
@@ -1588,7 +1597,9 @@ class PrivateChatNotifier
     }
     await loadMessages();
     await _retryPendingPrivateMessages();
-    events.listen(_handleEvent);
+    if (!mounted) return;
+    await _eventsSubscription?.cancel();
+    _eventsSubscription = events.listen(_handleEvent);
   }
 
   void _handleEvent(dynamic data) {
@@ -1625,13 +1636,16 @@ class PrivateChatNotifier
         final groupMessage = MessageInfo.fromJson(
           jsonData['message'] as Map<String, dynamic>,
         );
+        final l10n = I18nService.instance.l10n;
         _ref.read(unreadMessageCountProvider.notifier).increment();
         _ref.read(inAppNotificationProvider.notifier).show(
               NotificationMessage(
                 id: groupMessage.id,
-                senderName: groupMessage.sender?.displayName ?? '群成员',
+                senderName: groupMessage.sender?.displayName ??
+                    l10n.communityGroupMemberFallback,
                 senderAvatarUrl: groupMessage.sender?.avatarUrl,
-                content: groupMessage.content ?? '提及了你',
+                content: groupMessage.content ??
+                    l10n.memorySettingsSocialPersonMention,
                 timestamp: groupMessage.createdAt,
                 type: NotificationType.mention,
                 targetId: jsonData['group_id']?.toString(),
@@ -1689,7 +1703,11 @@ class PrivateChatNotifier
               }
             });
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint(
+            'PrivateChatNotifier.handleEvent message parse failed: $e',
+          );
+        }
       }
     } catch (e) {
       debugPrint('WS Parse Error (Private): $e');
@@ -1938,6 +1956,12 @@ class PrivateChatNotifier
   Future<List<PrivateMessageInfo>> searchMessages(String keyword) async =>
       _repository.searchPrivateMessages(_friendId, keyword);
 
+  @override
+  void dispose() {
+    unawaited(_eventsSubscription?.cancel());
+    super.dispose();
+  }
+
   Future<UserBrief> _buildCurrentUserBrief() async {
     final user = _ref.read(currentUserProvider);
     if (user == null) {
@@ -1947,7 +1971,9 @@ class PrivateChatNotifier
         final guestService = _ref.read(guestServiceProvider);
         userId = await guestService.getGuestId();
         nickname = guestService.getGuestNickname();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('PrivateChatNotifier guest profile lookup failed: $e');
+      }
       return UserBrief(
         id: userId,
         username: nickname,
@@ -1997,7 +2023,8 @@ class PrivateChatNotifier
     try {
       final guestService = _ref.read(guestServiceProvider);
       return await guestService.getGuestId();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('PrivateChatNotifier guest id lookup failed: $e');
       return 'guest';
     }
   }
@@ -2024,8 +2051,8 @@ class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
 }
 
 // 10. Blocked Users Provider (Phase 4)
-final blockedUsersProvider = StateNotifierProvider<
-    BlockedUsersNotifier, AsyncValue<List<BlockUserInfo>>>(
+final blockedUsersProvider = StateNotifierProvider<BlockedUsersNotifier,
+    AsyncValue<List<BlockUserInfo>>>(
   (ref) => BlockedUsersNotifier(ref.watch(communityRepositoryProvider)),
 );
 

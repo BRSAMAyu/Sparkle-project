@@ -545,13 +545,17 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                                   ),
                             ),
                           ),
-                          InkWell(
-                            onTap: widget.onCancelAppeal,
-                            borderRadius: DS.borderRadiusFull,
-                            child: Icon(
-                              Icons.close_rounded,
-                              color: DS.neutral400,
-                              size: DS.iconSizeSm,
+                          Semantics(
+                            button: true,
+                            label: 'Chat review appeal card control 1',
+                            child: InkWell(
+                              onTap: widget.onCancelAppeal,
+                              borderRadius: DS.borderRadiusFull,
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: DS.neutral400,
+                                size: DS.iconSizeSm,
+                              ),
                             ),
                           ),
                         ],
@@ -573,50 +577,54 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                         runSpacing: DS.spacing8,
                         children: _issueOptions(context).map((issue) {
                           final isSelected = _selectedIssues.contains(issue);
-                          return GestureDetector(
-                            onTap: () {
-                              unawaited(
-                                SensoryFeedbackService.emit(
-                                  SensoryFeedbackEvent.selection,
+                          return Semantics(
+                            button: true,
+                            label: 'Chat review appeal card control 2',
+                            child: GestureDetector(
+                              onTap: () {
+                                unawaited(
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.selection,
+                                  ),
+                                );
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedIssues.remove(issue);
+                                  } else {
+                                    _selectedIssues.add(issue);
+                                  }
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: DS.spacing10,
+                                  vertical: DS.spacing6,
                                 ),
-                              );
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedIssues.remove(issue);
-                                } else {
-                                  _selectedIssues.add(issue);
-                                }
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: DS.spacing10,
-                                vertical: DS.spacing6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? DS.warning.withValues(alpha: 0.15)
-                                    : DS.neutral100,
-                                borderRadius: DS.borderRadius20,
-                                border: Border.all(
+                                decoration: BoxDecoration(
                                   color: isSelected
-                                      ? DS.warning.withValues(alpha: 0.5)
-                                      : DS.neutral300,
+                                      ? DS.warning.withValues(alpha: 0.15)
+                                      : DS.neutral100,
+                                  borderRadius: DS.borderRadius20,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? DS.warning.withValues(alpha: 0.5)
+                                        : DS.neutral300,
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                issue,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(
-                                      color: isSelected
-                                          ? DS.warning
-                                          : DS.neutral700,
-                                      fontWeight: isSelected
-                                          ? DS.fontWeightSemibold
-                                          : DS.fontWeightMedium,
-                                    ),
+                                child: Text(
+                                  issue,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: isSelected
+                                            ? DS.warning
+                                            : DS.neutral700,
+                                        fontWeight: isSelected
+                                            ? DS.fontWeightSemibold
+                                            : DS.fontWeightMedium,
+                                      ),
+                                ),
                               ),
                             ),
                           );

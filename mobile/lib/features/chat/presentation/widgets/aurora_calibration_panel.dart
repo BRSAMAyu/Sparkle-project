@@ -76,7 +76,8 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
     return Container(
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(DS.radius20)),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(DS.radius20)),
         border: Border.all(color: DS.borderSubtle),
         boxShadow: DS.shadowLg,
       ),
@@ -88,7 +89,10 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
             _buildHandle(),
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                DS.spacing20, DS.spacing8, DS.spacing20, DS.spacing20,
+                DS.spacing20,
+                DS.spacing8,
+                DS.spacing20,
+                DS.spacing20,
               ),
               child: _phase == _CalibrationPhase.presenting
                   ? _buildPresentingContent(l10n)
@@ -384,7 +388,35 @@ class _ConfirmOptionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isSecondary) {
-      return GestureDetector(
+      return Semantics(
+        button: true,
+        label: 'Chat aurora calibration panel control 1',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing14,
+              vertical: DS.spacing8,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: DS.borderSubtle),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: DS.fontSizeSm,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return Semantics(
+      button: true,
+      label: 'Chat aurora calibration panel control 2',
+      child: GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -392,39 +424,19 @@ class _ConfirmOptionChip extends StatelessWidget {
             vertical: DS.spacing8,
           ),
           decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: DS.borderSubtle),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.25),
+            ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: DS.textSecondary,
+              color: DS.brandPrimary,
               fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightMedium,
             ),
-          ),
-        ),
-      );
-    }
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing14,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: DS.brandPrimary.withValues(alpha: 0.25),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: DS.brandPrimary,
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightMedium,
           ),
         ),
       ),

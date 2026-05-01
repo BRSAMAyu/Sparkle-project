@@ -321,42 +321,47 @@ class _ClaimTile extends StatelessWidget {
           ],
           if (evidenceRefs.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
-            InkWell(
-              onTap: () => unawaited(
-                EvidenceDrawer.show(
-                  context,
-                  refs: evidenceRefs,
-                  evidenceMissing: false,
+            Semantics(
+              button: true,
+              label: 'Chat profile front door card control 1',
+              child: InkWell(
+                onTap: () => unawaited(
+                  EvidenceDrawer.show(
+                    context,
+                    refs: evidenceRefs,
+                    evidenceMissing: false,
+                  ),
                 ),
-              ),
-              borderRadius: DS.borderRadius12,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing2,
-                  vertical: DS.spacing2,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.dataset_linked_outlined,
-                      size: DS.iconSizeSm,
-                      color: DS.info,
-                    ),
-                    const SizedBox(width: DS.spacing6),
-                    Flexible(
-                      child: Text(
-                        claim['evidence_cta']?.toString().isNotEmpty == true
-                            ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
-                            : claim['evidence_summary']?.toString() ??
-                                context.l10n.chatProfileViewEvidence,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.info,
-                              fontWeight: DS.fontWeightMedium,
-                            ),
+                borderRadius: DS.borderRadius12,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing2,
+                    vertical: DS.spacing2,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.dataset_linked_outlined,
+                        size: DS.iconSizeSm,
+                        color: DS.info,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing6),
+                      Flexible(
+                        child: Text(
+                          claim['evidence_cta']?.toString().isNotEmpty == true
+                              ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
+                              : claim['evidence_summary']?.toString() ??
+                                  context.l10n.chatProfileViewEvidence,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.info,
+                                    fontWeight: DS.fontWeightMedium,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -437,42 +442,47 @@ class _PredictionTile extends StatelessWidget {
           ],
           if (evidenceRefs.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
-            InkWell(
-              onTap: () => unawaited(
-                EvidenceDrawer.show(
-                  context,
-                  refs: evidenceRefs,
-                  evidenceMissing: false,
+            Semantics(
+              button: true,
+              label: 'Chat profile front door card control 2',
+              child: InkWell(
+                onTap: () => unawaited(
+                  EvidenceDrawer.show(
+                    context,
+                    refs: evidenceRefs,
+                    evidenceMissing: false,
+                  ),
                 ),
-              ),
-              borderRadius: DS.borderRadius12,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing2,
-                  vertical: DS.spacing2,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.dataset_linked_outlined,
-                      size: DS.iconSizeSm,
-                      color: DS.info,
-                    ),
-                    const SizedBox(width: DS.spacing6),
-                    Flexible(
-                      child: Text(
-                        item['evidence_cta']?.toString().isNotEmpty == true
-                            ? '${item['evidence_cta']} · ${item['evidence_summary']}'
-                            : item['evidence_summary']?.toString() ??
-                                context.l10n.chatProfileViewEvidence,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.info,
-                              fontWeight: DS.fontWeightMedium,
-                            ),
+                borderRadius: DS.borderRadius12,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing2,
+                    vertical: DS.spacing2,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.dataset_linked_outlined,
+                        size: DS.iconSizeSm,
+                        color: DS.info,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing6),
+                      Flexible(
+                        child: Text(
+                          item['evidence_cta']?.toString().isNotEmpty == true
+                              ? '${item['evidence_cta']} · ${item['evidence_summary']}'
+                              : item['evidence_summary']?.toString() ??
+                                  context.l10n.chatProfileViewEvidence,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.info,
+                                    fontWeight: DS.fontWeightMedium,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -539,7 +549,7 @@ Map<String, dynamic> _asMap(dynamic raw) {
 List<EvidenceRefModel> _parseEvidenceRefs(dynamic raw) {
   if (raw is List) {
     return raw
-        .whereType<Map>()
+        .whereType<Map<dynamic, dynamic>>()
         .map((item) =>
             EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)))
         .where((item) => item.type.isNotEmpty && item.id.isNotEmpty)

@@ -20,6 +20,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/config"
@@ -160,8 +162,21 @@ type ChatOrchestrator struct {
 	draining  atomic.Bool
 }
 
+var streamSemaphoreObserved atomic.Pointer[ChatOrchestrator]
+
+var _ = promauto.NewGaugeFunc(prometheus.GaugeOpts{
+	Name: "sparkle_grpc_stream_semaphore_usage",
+	Help: "Current gRPC StreamChat semaphore usage ratio in the gateway",
+}, func() float64 {
+	h := streamSemaphoreObserved.Load()
+	if h == nil || cap(h.streamSem) == 0 {
+		return 0
+	}
+	return float64(len(h.streamSem)) / float64(cap(h.streamSem))
+})
+
 func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIdentityService, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
-	return &ChatOrchestrator{
+	h := &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
 		userIdentity: ui,
@@ -181,6 +196,8 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIde
 		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
 		streamSem:  make(chan struct{}, streamSemaphoreSize(cfg)),
 	}
+	streamSemaphoreObserved.Store(h)
+	return h
 }
 
 func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
@@ -280,7 +297,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	userID := c.GetString("user_id")
 	if userID == "" {
 		log.Printf("WebSocket rejected: missing authentication")
-		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
+		writeWSMessageLogged(writer, "authentication close frame", websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
 		_ = writer.Close() // Explicitly close rejected connection
 		return
 	}
@@ -363,7 +380,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		idleTimer.Reset(idleTimeout)
 
 		if !msgLimiter.Allow() {
-			_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, defaultWSRateLimitMessage))
+			writeWSMessageLogged(writer, "rate limit close frame", websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, defaultWSRateLimitMessage))
 			break
 		}
 
@@ -386,7 +403,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				msgMap := make(map[string]interface{})
 				if err := json.Unmarshal(msg, &msgMap); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+					if !writeWSJSONLogged(writer, "invalid legacy JSON error", gin.H{"type": "error", "message": "Invalid JSON format"}) {
+						return true
+					}
 					return false
 				}
 
@@ -398,7 +417,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// Route based on message type
 				switch msgType {
 				case "ping":
-					_ = writer.WriteJSON(gin.H{"type": "pong"})
+					if !writeWSJSONLogged(writer, "pong", gin.H{"type": "pong"}) {
+						return true
+					}
 					return false
 				case "action_feedback":
 					h.handleActionFeedback(c.Request.Context(), writer, msgMap, userID, authToken)
@@ -429,7 +450,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					toolInput.RequestID, _ = msgMap["request_id"].(string)
 
 					if len(toolInput.ToolResultJSON) > maxToolResultLength {
-						_ = writer.WriteJSON(gin.H{"type": "error", "message": "Tool result too large"})
+						if !writeWSJSONLogged(writer, "tool result too large error", gin.H{"type": "error", "message": "Tool result too large"}) {
+							toolInput.Reset()
+							chatInputPool.Put(toolInput)
+							return true
+						}
 						toolInput.Reset()
 						chatInputPool.Put(toolInput)
 						return false
@@ -457,7 +482,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					// Continue with normal chat message handling
 				default:
 					log.Printf("Unknown message type: %s", msgType)
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Unknown message type"})
+					if !writeWSJSONLogged(writer, "unknown message type error", gin.H{"type": "error", "message": "Unknown message type"}) {
+						return true
+					}
 					return false
 				}
 
@@ -474,21 +501,27 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// Parse JSON input
 				if err := json.Unmarshal(msg, input); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+					if !writeWSJSONLogged(writer, "invalid chat JSON error", gin.H{"type": "error", "message": "Invalid JSON format"}) {
+						return true
+					}
 					return false
 				}
 
 				if input.Message == "" {
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
+					if !writeWSJSONLogged(writer, "empty message error", gin.H{"type": "error", "message": "Empty message"}) {
+						return true
+					}
 					return false
 				}
 
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {
-					_ = writer.WriteJSON(gin.H{
+					if !writeWSJSONLogged(writer, "message length error", gin.H{
 						"type":    "error",
 						"message": i18n.T(c.Request.Context(), "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}),
-					})
+					}) {
+						return true
+					}
 					return false
 				}
 
@@ -544,6 +577,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid chat_request payload", false)
 					return false
 				}
+
+				input.Message = sanitizer.Sanitize(input.Message)
 
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {

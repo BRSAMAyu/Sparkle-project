@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
@@ -10,8 +11,6 @@ import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.d
 import 'package:sparkle/features/translation/data/services/knowledge_integration_service.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Lightweight popover for word/phrase translation
 ///
@@ -124,7 +123,10 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
             _isSaving = false;
           });
 
-          AppFeedback.success(context, I18nService.instance.isChinese ? '已加入生词卡，24小时后复习' : 'Added to flashcards, review in 24h');
+          AppFeedback.success(
+            context,
+            context.l10n.transAddedToFlashcardsReviewLater,
+          );
           ref
             ..invalidate(galaxyRepositoryProvider)
             ..invalidate(enhancedGalaxyRepositoryProvider)
@@ -179,7 +181,10 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         setState(() {
           _isSaving = false;
         });
-        AppFeedback.error(context, context.l10n.transUnknownError(e.toString()));
+        AppFeedback.error(
+          context,
+          context.l10n.transUnknownError(e.toString()),
+        );
       }
     }
   }
@@ -231,7 +236,11 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton(
-                    label: _saved ? context.l10n.transSaved : (_isSaving ? context.l10n.transSaving : context.l10n.transWordCard),
+                    label: _saved
+                        ? context.l10n.transSaved
+                        : (_isSaving
+                            ? context.l10n.transSaving
+                            : context.l10n.transWordCard),
                     icon: Icon(
                       _saved ? Icons.bookmark : Icons.bookmark_add_outlined,
                       size: DS.iconSizeXs,
@@ -252,13 +261,16 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
 
   Widget _buildLoading() => Row(
         children: [
-          SizedBox(
+          const SizedBox(
             width: 16,
             height: 16,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          SizedBox(width: DS.sm),
-          Text(context.l10n.transTranslating, style: TextStyle(fontSize: 14)),
+          const SizedBox(width: DS.sm),
+          Text(
+            context.l10n.transTranslating,
+            style: const TextStyle(fontSize: 14),
+          ),
         ],
       );
 
@@ -268,7 +280,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
           const SizedBox(width: DS.sm),
           Expanded(
             child: Text(
-              I18nService.instance.isChinese ? '翻译失败' : 'Translation failed',
+              context.l10n.transTranslationFailed,
               style: TextStyle(fontSize: 14, color: DS.error),
             ),
           ),

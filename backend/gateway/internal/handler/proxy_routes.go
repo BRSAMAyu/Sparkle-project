@@ -127,6 +127,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		plans.GET("/archived", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.GET("/:id", h.proxyWithHeaders)
+		// PUT remains accepted for legacy full-update clients; PATCH is the preferred
+		// partial-update method used by the Python plans service.
 		plans.PUT("/:id", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.PATCH("/:id", h.proxyWithHeaders) // Python uses PATCH (not PUT)

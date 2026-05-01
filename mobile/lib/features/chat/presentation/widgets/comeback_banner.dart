@@ -162,13 +162,17 @@ class _ComebackBannerState extends State<ComebackBanner> {
                       ),
                     ),
                     if (widget.onDismiss != null)
-                      IconButton(
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
-                        onPressed: widget.onDismiss,
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: DS.textSecondary,
+                      Semantics(
+                        button: true,
+                        label: 'Chat comeback banner control 1',
+                        child: IconButton(
+                          tooltip: MaterialLocalizations.of(context)
+                              .closeButtonTooltip,
+                          onPressed: widget.onDismiss,
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: DS.textSecondary,
+                          ),
                         ),
                       ),
                   ],

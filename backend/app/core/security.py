@@ -2,6 +2,7 @@
 Security and Authentication Utilities
 JWT token generation, password hashing, etc.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -56,13 +57,11 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
             "iat": now,
             "jti": str(uuid4()),
             "type": "access",
-            "iss": getattr(settings, 'JWT_ISSUER', 'sparkle-gateway'),
-            "aud": getattr(settings, 'JWT_AUDIENCE', 'sparkle-app')
+            "iss": getattr(settings, "JWT_ISSUER", "sparkle-gateway"),
+            "aud": getattr(settings, "JWT_AUDIENCE", "sparkle-app"),
         }
     )
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
@@ -79,13 +78,11 @@ def create_refresh_token(data: dict) -> str:
             "iat": now,
             "jti": str(uuid4()),
             "type": "refresh",
-            "iss": getattr(settings, 'JWT_ISSUER', 'sparkle-gateway'),
-            "aud": getattr(settings, 'JWT_AUDIENCE', 'sparkle-app')
+            "iss": getattr(settings, "JWT_ISSUER", "sparkle-gateway"),
+            "aud": getattr(settings, "JWT_AUDIENCE", "sparkle-app"),
         }
     )
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
@@ -161,8 +158,16 @@ async def is_token_revoked(jti: str) -> bool:
         value = await cache_service.get(key)
         return value is not None
     except Exception as exc:
-        # Intentional fail-open behavior: Redis blacklist outages should not block existing valid JWTs.
-        logger.warning("Token blacklist lookup failed open for jti={}: {}", jti, exc)
+        env = (settings.ENVIRONMENT or "").strip().lower()
+        jti_prefix = jti[:8] if len(jti) > 8 else jti
+        logger.error(
+            "Token blacklist lookup failed for jti_prefix={} in env={}: {}",
+            jti_prefix,
+            env or "unknown",
+            exc,
+        )
+        if env in {"prod", "production"}:
+            return True
         return False
 
 
@@ -209,7 +214,9 @@ async def is_session_revoked(session_id: str) -> bool:
             return True
     except Exception as exc:
         # Intentional fail-open behavior: session service outages fall back to the DB session record.
-        logger.warning("Session revocation service lookup failed open to DB fallback for session {}: {}", session_id, exc)
+        logger.warning(
+            "Session revocation service lookup failed open to DB fallback for session {}: {}", session_id, exc
+        )
 
     try:
         from app.db.session import AsyncSessionLocal
@@ -284,11 +291,12 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
                     jti_prefix=jti[:8] if len(jti) > 8 else jti,
                     error=str(e),
                     error_type=type(e).__name__,
-                    attempts=max_retries
+                    attempts=max_retries,
                 )
                 return False
             # Exponential backoff: 100ms, 200ms, 300ms
             import asyncio
+
             await asyncio.sleep(0.1 * (attempt + 1))
 
     return True

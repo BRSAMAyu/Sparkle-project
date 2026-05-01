@@ -5159,6 +5159,44 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatRead => '已读';
 
   @override
+  String chatOfflineQueuePending(int count) {
+    return '$count 条消息等待发送';
+  }
+
+  @override
+  String chatOfflineQueueSending(int count) {
+    return '正在发送 $count 条排队消息...';
+  }
+
+  @override
+  String get chatOfflineQueueComplete => '已全部发送';
+
+  @override
+  String chatOfflineQueuePendingSemantic(int count) {
+    return '离线队列中有 $count 条消息等待发送';
+  }
+
+  @override
+  String chatOfflineQueueSendingSemantic(int count) {
+    return '网络已恢复，正在发送 $count 条排队消息';
+  }
+
+  @override
+  String get chatOfflineQueueCompleteSemantic => '排队消息已全部发送';
+
+  @override
+  String get chatMessageQueued => '等待发送';
+
+  @override
+  String get chatMessageSending => '正在发送';
+
+  @override
+  String get chatMessageSendFailed => '发送失败';
+
+  @override
+  String get chatMessageRetrySend => '重试';
+
+  @override
   String get chatAgentNavigator => '星图导航';
 
   @override
@@ -5410,6 +5448,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookNoReviewHint => '做得很好！继续保持';
 
   @override
+  String get errorBookNoReviewDescription => '做得很好！继续保持。先补记最近做错的一题，系统才会安排后续复习。';
+
+  @override
+  String get errorBookRecordFirstError => '去记录第一道错题';
+
+  @override
   String get errorBookDeleteSuccess => '删除成功';
 
   @override
@@ -5520,6 +5564,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String errorBookCognitiveFilter(Object dimension) {
     return '正针对 \"$dimension\" 维度进行针对性复习';
   }
+
+  @override
+  String errorBookKnowledgePointFilter(String node) {
+    return '知识点：$node';
+  }
+
+  @override
+  String get errorBookCognitiveDimension => '认知维度';
+
+  @override
+  String get errorBookKnowledgeNodeFallback => '知识节点';
 
   @override
   String errorBookReviewCount(Object count) {
@@ -6883,6 +6938,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get photonTransactionAdminAdjustment => '管理员调整';
+
+  @override
+  String get photonTransactionsEmpty => '暂无交易记录';
+
+  @override
+  String get photonTransactionsEnd => '没有更多记录了';
+
+  @override
+  String photonTransactionDaysAgo(int days) {
+    return '$days天前';
+  }
+
+  @override
+  String get photonTransactionNoNote => '无备注';
 
   @override
   String get shopItemTypeSkin => '皮肤';
@@ -22941,6 +23010,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simGenFailed => '模拟生成失败';
 
   @override
+  String get simRealtimeConnectionRecovered => '实时连接中断，已恢复到最近一次保存的模拟进度。';
+
+  @override
+  String get simInteractionStreamRecovered => '互动流中断了，但我已经帮你恢复到最近一轮状态。';
+
+  @override
+  String simRoundProgressSummary(int round) {
+    return '讨论已推进到第 $round 轮，正在汇总关键分歧与共识。';
+  }
+
+  @override
+  String get simDraftInsightSummary => '模拟进行中，正在汇总当前讨论洞察...';
+
+  @override
   String get simStudyGroup => '学习小组';
 
   @override
@@ -23728,6 +23811,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebRememberedHint => '延长复习间隔';
 
   @override
+  String get ebReviewMasteryPrompt => '你对这道题的掌握情况？';
+
+  @override
+  String get ebReviewMasterySheetTitle => '评价你的掌握情况';
+
+  @override
+  String get ebReviewMasterySheetDesc => '根据你的评价，系统会智能调整下次复习时间';
+
+  @override
   String get ebPerfectRecall => '完全记住了 ✓';
 
   @override
@@ -24068,6 +24160,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get transWordCard => '生词卡';
+
+  @override
+  String get transAddedToFlashcardsReviewLater => '已加入生词卡，24小时后复习';
+
+  @override
+  String get transTranslationFailed => '翻译失败';
 
   @override
   String get auroraObserving => 'Aurora · 观察中';

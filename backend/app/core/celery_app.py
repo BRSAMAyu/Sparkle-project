@@ -48,6 +48,8 @@ def _run_async(coro):
 REDIS_URL = str(settings.REDIS_URL or os.getenv("REDIS_URL") or "redis://localhost:6379/1")
 CELERY_BROKER_URL = str(os.getenv("CELERY_BROKER_URL") or REDIS_URL)
 CELERY_RESULT_BACKEND = str(os.getenv("CELERY_RESULT_BACKEND") or REDIS_URL)
+CELERY_TASK_TIME_LIMIT = 600
+CELERY_TASK_SOFT_TIME_LIMIT = 540
 
 # Celery 应用实例
 celery_app = Celery(
@@ -76,6 +78,8 @@ celery_app.conf.update(
     task_track_started=True,
     task_send_sent_event=True,
     task_ignore_result=False,
+    task_time_limit=CELERY_TASK_TIME_LIMIT,
+    task_soft_time_limit=CELERY_TASK_SOFT_TIME_LIMIT,
     # 重试配置
     task_reject_on_worker_lost=True,
     task_acks_late=True,

@@ -141,28 +141,32 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                 child: Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
-                          );
-                          widget.onApply();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: DS.info.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: DS.info.withValues(alpha: 0.25),
+                      child: Semantics(
+                        button: true,
+                        label: 'Chat community insight card control 1',
+                        child: GestureDetector(
+                          onTap: () {
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            );
+                            widget.onApply();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: DS.info.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: DS.info.withValues(alpha: 0.25),
+                              ),
                             ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              context.l10n.chatCommunityInsightRefer,
-                              style: DS.labelSmall.copyWith(
-                                color: DS.info,
-                                fontWeight: FontWeight.w500,
+                            child: Center(
+                              child: Text(
+                                context.l10n.chatCommunityInsightRefer,
+                                style: DS.labelSmall.copyWith(
+                                  color: DS.info,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
@@ -170,25 +174,29 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
-                        widget.onDismiss();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: DS.surfaceHigh,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: DS.borderSubtle),
-                        ),
-                        child: Text(
-                          '忽略',
-                          style: DS.labelSmall.copyWith(
-                            color: DS.textTertiary,
+                    Semantics(
+                      button: true,
+                      label: 'Chat community insight card control 2',
+                      child: GestureDetector(
+                        onTap: () {
+                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          widget.onDismiss();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: DS.surfaceHigh,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: DS.borderSubtle),
+                          ),
+                          child: Text(
+                            '忽略',
+                            style: DS.labelSmall.copyWith(
+                              color: DS.textTertiary,
+                            ),
                           ),
                         ),
                       ),
@@ -238,11 +246,15 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
-              onPressed: onDismiss,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            Semantics(
+              button: true,
+              label: 'Chat community insight card control 3',
+              child: IconButton(
+                icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
+                onPressed: onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
             ),
           ],
         ),

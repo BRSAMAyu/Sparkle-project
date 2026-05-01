@@ -19,6 +19,8 @@ from datetime import UTC, datetime, timedelta
 import grpc
 from google.protobuf.json_format import MessageToDict
 from loguru import logger
+from redis.exceptions import RedisError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.metrics import (
@@ -120,8 +122,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 correction_payload=payload,
             )
             return result.calibration_receipt or None
-        except Exception:
-            logger.debug("Failed to process Aurora correction metadata", exc_info=True)
+        except (ImportError, TypeError, ValueError, KeyError, AttributeError, SQLAlchemyError, RedisError) as exc:
+            logger.warning("Failed to process Aurora correction metadata: {}", exc, exc_info=True)
             return None
 
     @staticmethod
@@ -218,7 +220,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     context.set_code(grpc.StatusCode.PERMISSION_DENIED)
                     context.set_details("Admin access required")
                     return None
-        except Exception as e:
+        except (SQLAlchemyError, ValueError, TypeError) as e:
+            logger.error("Admin authorization lookup failed for user_id={}: {}", user_id, e, exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return None
@@ -259,7 +262,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             if request.HasField("extra_context"):
                 try:
                     request_extra_context = MessageToDict(request.extra_context)
-                except Exception as exc:
+                except (TypeError, ValueError, AttributeError) as exc:
                     logger.warning(f"Failed to parse request extra_context in StreamChat: {exc}")
             reasoning_mode = str(request_extra_context.get("reasoning_mode") or "balanced").strip().lower()
             if reasoning_mode not in {"fast", "balanced", "deep"}:
@@ -276,8 +279,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             try:
                 bandit = PromptBandit(redis_client=self.orchestrator.redis)
                 prompt_version = await bandit.select(workflow_id, prompt_versions)
-            except Exception as e:
-                logger.warning(f"Prompt bandit selection failed: {e}")
+            except (RedisError, ConnectionError, TimeoutError, KeyError, TypeError, ValueError) as e:
+                logger.warning(f"Prompt bandit selection failed: {e}", exc_info=True)
 
             await self._observe_feedback_effect(user_id, workflow_id, prompt_version, trace_id=trace_id)
 
@@ -324,7 +327,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             calibration_receipt_attached = True
                         yield self._normalize_v2_response(response)
                     await db_session.commit()
-                except Exception:
+                except Exception as exc:
+                    logger.warning("StreamChat transaction failed; rolling back db session: {}", exc, exc_info=True)
                     await db_session.rollback()
                     raise
 
@@ -354,6 +358,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             if user_id:
                 try:
                     from app.services.push_scheduler import PushScheduler
+
                     async with self.db_session_factory() as recall_db:
                         push_scheduler = PushScheduler(recall_db)
                         await push_scheduler.enqueue_session_end_recall(
@@ -363,8 +368,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                                 "diagnosed_files_count": 0,
                             },
                         )
-                except Exception as recall_err:
-                    logger.debug(f"Session-end recall check failed (non-fatal): {recall_err}")
+                except ImportError as recall_err:
+                    logger.debug(f"Session-end recall skipped; push scheduler unavailable: {recall_err}")
+                except (SQLAlchemyError, ValueError, TypeError, AttributeError) as recall_err:
+                    logger.warning(f"Session-end recall check failed (non-fatal): {recall_err}", exc_info=True)
 
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
@@ -521,7 +528,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 },
             )
             await self.orchestrator.redis.delete(key)
-        except Exception:
+        except (RedisError, ConnectionError, TimeoutError, TypeError, ValueError) as exc:
+            logger.warning(
+                "Failed to observe feedback effect user_id={} workflow_id={} prompt_version={}: {}",
+                user_id,
+                workflow_id,
+                prompt_version,
+                exc,
+                exc_info=True,
+            )
             return
 
     async def RetrieveMemory(
@@ -563,9 +578,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 for result in search_results:
                     # Build metadata
                     metadata = {
-                        "sector_code": result.node.sector_code.value
-                        if hasattr(result.node.sector_code, "value")
-                        else str(result.node.sector_code),
+                        "sector_code": (
+                            result.node.sector_code.value
+                            if hasattr(result.node.sector_code, "value")
+                            else str(result.node.sector_code)
+                        ),
                         "importance_level": str(result.node.importance_level),
                         "is_seed": str(result.node.is_seed),
                     }
@@ -788,8 +805,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             logger.info(
                                 f"Phase rollback will be triggered for plan {plan_id} (rejection_count={count})"
                             )
-                except Exception as e:
-                    logger.warning(f"Failed to track rejection for plan {plan_id}: {e}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to track rejection for plan {plan_id}: invalid id: {e}")
+                except (SQLAlchemyError, RedisError, ConnectionError, TimeoutError) as e:
+                    logger.warning(f"Failed to track rejection for plan {plan_id}: {e}", exc_info=True)
 
             if proto_decision == agent_service_pb2.APPROVE:
                 # Resume plan execution after approval with db_session for task generation
@@ -947,15 +966,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                                 f"[ContentReviewFeedback] Learning analysis complete: "
                                 f"misclassification_rate={report.misclassification_rate:.2%}"
                             )
-                        except Exception as e:
-                            logger.warning(f"[ContentReviewFeedback] Learning analysis failed: {e}")
+                        except (SQLAlchemyError, ValueError, TypeError, AttributeError) as e:
+                            logger.warning(f"[ContentReviewFeedback] Learning analysis failed: {e}", exc_info=True)
 
                     # Don't await - run in background
                     asyncio.create_task(run_learning())
                 except ImportError:
                     logger.debug("[ContentReviewFeedback] Learning service not available")
-                except Exception as e:
-                    logger.warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}")
+                except (SQLAlchemyError, ValueError, TypeError, AttributeError) as e:
+                    logger.warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}", exc_info=True)
 
             return agent_service_pb2.ContentReviewFeedbackResponse(
                 success=True,

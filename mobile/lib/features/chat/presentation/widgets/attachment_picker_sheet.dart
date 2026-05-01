@@ -127,64 +127,71 @@ class _AttachmentOption extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing16,
-              vertical: DS.spacing12,
-            ),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? DS.surfacePrimary.withValues(alpha: 0.5)
-                  : DS.surfaceSecondary,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: DS.borderSubtle),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: isDark ? 0.18 : 0.10),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: iconColor.withValues(alpha: isDark ? 0.28 : 0.16),
+        child: Semantics(
+          button: true,
+          label: 'Chat attachment picker sheet control 1',
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing16,
+                vertical: DS.spacing12,
+              ),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? DS.surfacePrimary.withValues(alpha: 0.5)
+                    : DS.surfaceSecondary,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: DS.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: isDark ? 0.18 : 0.10),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color:
+                            iconColor.withValues(alpha: isDark ? 0.28 : 0.16),
+                      ),
+                    ),
+                    child: Icon(icon, size: 22, color: iconColor),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: DS.textPrimary,
+                                    fontWeight: DS.fontWeightSemiBold,
+                                  ),
+                        ),
+                        const SizedBox(height: DS.spacing4),
+                        Text(
+                          subtitle,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.textSecondary,
+                                    height: 1.3,
+                                  ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Icon(icon, size: 22, color: iconColor),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: DS.textPrimary,
-                              fontWeight: DS.fontWeightSemiBold,
-                            ),
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                              height: 1.3,
-                            ),
-                      ),
-                    ],
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: DS.textSecondary,
+                    size: 20,
                   ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: DS.textSecondary,
-                  size: 20,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

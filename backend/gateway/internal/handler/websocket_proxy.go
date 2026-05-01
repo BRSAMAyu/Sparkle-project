@@ -1,6 +1,11 @@
 package handler
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
@@ -109,7 +114,7 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 	}
 
 	p.logger.Info("Group WS connection request",
-		zap.String("user_id", userID),
+		zap.String("user_id_hash", hashUserIDForLog(userID)),
 		zap.String("group_id", groupID))
 
 	// 构造后端 WebSocket URL
@@ -141,7 +146,7 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 	}
 
 	p.logger.Info("Personal WS connection request",
-		zap.String("user_id", userID))
+		zap.String("user_id_hash", hashUserIDForLog(userID)))
 
 	token := c.GetString("auth_token")
 	if token == "" {
@@ -155,7 +160,7 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 	if sessionID := c.Query("session_id"); sessionID != "" {
 		if !p.checkReconnectAllowed(userID) {
 			p.logger.Warn("WS reconnect rate limit exceeded",
-				zap.String("user_id", userID),
+				zap.String("user_id_hash", hashUserIDForLog(userID)),
 				zap.String("session_id", sessionID))
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "Reconnect rate limit exceeded. Please wait before retrying.",
@@ -166,7 +171,7 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 		p.recordReconnectAttempt(userID)
 		backendURL = backendURL + "?session_id=" + url.QueryEscape(sessionID)
 		p.logger.Info("WS reconnect with session_id",
-			zap.String("user_id", userID),
+			zap.String("user_id_hash", hashUserIDForLog(userID)),
 			zap.String("session_id", sessionID))
 	}
 
@@ -284,7 +289,7 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	})
 
 	p.logger.Info("WebSocket proxy connection established",
-		zap.String("user_id", userID),
+		zap.String("user_id_hash", hashUserIDForLog(userID)),
 		zap.String("conn_type", connType),
 		zap.String("resource_id", resourceID))
 
@@ -305,43 +310,80 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 		_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
 		return conn.WriteMessage(messageType, data)
 	}
+	sendErr := func(err error) {
+		select {
+		case errChan <- err:
+		default:
+			p.logger.Debug("WebSocket proxy error channel full",
+				zap.String("user_id_hash", hashUserIDForLog(userID)),
+				zap.Error(err))
+		}
+	}
+	var closeOnce sync.Once
+	closeConnections := func(code int, reason string) {
+		closeOnce.Do(func() {
+			closeMessage := websocket.FormatCloseMessage(code, reason)
+			_ = writeMessage(&clientWriteMu, clientConn, websocket.CloseMessage, closeMessage)
+			_ = writeMessage(&backendWriteMu, backendConn, websocket.CloseMessage, closeMessage)
+			_ = clientConn.Close()
+			_ = backendConn.Close()
+		})
+	}
+	recoverProxyGoroutine := func(name string) {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("%s panic: %v", name, r)
+			p.logger.Error("WebSocket proxy goroutine panic recovered",
+				zap.String("goroutine", name),
+				zap.String("user_id_hash", hashUserIDForLog(userID)),
+				zap.String("conn_type", connType),
+				zap.Any("panic", r),
+				zap.Stack("stack"))
+			closeConnections(websocket.CloseInternalServerErr, "internal websocket error")
+			sendErr(err)
+			signalDone()
+		}
+	}
 
 	// 客户端 -> 后端
 	go func() {
+		defer recoverProxyGoroutine("client_to_backend")
 		defer signalDone()
 		for {
 			messageType, data, err := clientConn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					p.logger.Warn("Client read error",
-						zap.String("user_id", userID),
+						zap.String("user_id_hash", hashUserIDForLog(userID)),
 						zap.Error(err))
 				}
-				errChan <- err
+				sendErr(err)
 				return
 			}
 			// Reject oversized messages
 			if len(data) > int(readLimit) {
 				p.logger.Warn("Dropping oversized client message",
-					zap.String("user_id", userID),
+					zap.String("user_id_hash", hashUserIDForLog(userID)),
 					zap.Int("size", len(data)),
 					zap.Int("max", int(readLimit)))
 				continue
 			}
 			if !msgLimiter.Allow() {
 				_ = writeMessage(&clientWriteMu, clientConn, websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, defaultWSRateLimitMessage))
-				errChan <- nil
+				sendErr(nil)
 				return
 			}
 			// Only allow text and binary message types
 			if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
 				continue
 			}
+			if messageType == websocket.TextMessage {
+				data = sanitizeCommunityWSTextPayload(data)
+			}
 			if err := writeMessage(&backendWriteMu, backendConn, messageType, data); err != nil {
 				p.logger.Warn("Backend write error",
-					zap.String("user_id", userID),
+					zap.String("user_id_hash", hashUserIDForLog(userID)),
 					zap.Error(err))
-				errChan <- err
+				sendErr(err)
 				return
 			}
 		}
@@ -349,37 +391,39 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 
 	// 后端 -> 客户端
 	go func() {
+		defer recoverProxyGoroutine("backend_to_client")
 		defer signalDone()
 		for {
 			messageType, data, err := backendConn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					p.logger.Warn("Backend read error",
-						zap.String("user_id", userID),
+						zap.String("user_id_hash", hashUserIDForLog(userID)),
 						zap.Error(err))
 				}
-				errChan <- err
+				sendErr(err)
 				return
 			}
 			// G-04: Validate backend message size before forwarding to client
 			if len(data) > int(readLimit) {
 				p.logger.Warn("Backend message exceeds limit, dropping",
-					zap.String("user_id", userID),
+					zap.String("user_id_hash", hashUserIDForLog(userID)),
 					zap.Int("size", len(data)),
 					zap.Int64("limit", readLimit))
 				continue
 			}
 			if err := writeMessage(&clientWriteMu, clientConn, messageType, data); err != nil {
 				p.logger.Warn("Client write error",
-					zap.String("user_id", userID),
+					zap.String("user_id_hash", hashUserIDForLog(userID)),
 					zap.Error(err))
-				errChan <- err
+				sendErr(err)
 				return
 			}
 		}
 	}()
 
 	go func() {
+		defer recoverProxyGoroutine("proxy_ping")
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
 		for {
@@ -388,12 +432,12 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				return
 			case <-ticker.C:
 				if err := writeMessage(&clientWriteMu, clientConn, websocket.PingMessage, nil); err != nil {
-					errChan <- err
+					sendErr(err)
 					signalDone()
 					return
 				}
 				if err := writeMessage(&backendWriteMu, backendConn, websocket.PingMessage, nil); err != nil {
-					errChan <- err
+					sendErr(err)
 					signalDone()
 					return
 				}
@@ -407,14 +451,14 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	case err := <-errChan:
 		if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 			p.logger.Debug("WebSocket proxy closed with terminal error",
-				zap.String("user_id", userID),
+				zap.String("user_id_hash", hashUserIDForLog(userID)),
 				zap.Error(err))
 		}
 	default:
 	}
 
 	p.logger.Info("WebSocket proxy connection closed",
-		zap.String("user_id", userID),
+		zap.String("user_id_hash", hashUserIDForLog(userID)),
 		zap.String("conn_type", connType))
 }
 
@@ -515,6 +559,44 @@ func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header
 	return headers
 }
 
+func hashUserIDForLog(userID string) string {
+	sum := sha256.Sum256([]byte(userID))
+	return hex.EncodeToString(sum[:])[:12]
+}
+
+func sanitizeCommunityWSTextPayload(data []byte) []byte {
+	var payload interface{}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&payload); err != nil {
+		return []byte(sanitizer.Sanitize(string(data)))
+	}
+	sanitized, err := json.Marshal(sanitizeCommunityWSJSONValue(payload))
+	if err != nil {
+		return []byte(sanitizer.Sanitize(string(data)))
+	}
+	return sanitized
+}
+
+func sanitizeCommunityWSJSONValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case string:
+		return sanitizer.Sanitize(v)
+	case []interface{}:
+		for i, item := range v {
+			v[i] = sanitizeCommunityWSJSONValue(item)
+		}
+		return v
+	case map[string]interface{}:
+		for key, item := range v {
+			v[key] = sanitizeCommunityWSJSONValue(item)
+		}
+		return v
+	default:
+		return v
+	}
+}
+
 // Close closes the WebSocket proxy (currently a no-op but kept for interface compatibility)
 func (p *WebSocketProxy) Close() error {
 	return nil
@@ -579,6 +661,13 @@ func (p *WebSocketProxy) reconnectBlockRemaining(userID string) int {
 
 func (p *WebSocketProxy) startReconnectTrackerCleanup() {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				p.logger.Error("WebSocket reconnect tracker cleanup panic recovered",
+					zap.Any("panic", r),
+					zap.Stack("stack"))
+			}
+		}()
 		ticker := time.NewTicker(time.Duration(reconnectCleanupSec) * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {

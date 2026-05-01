@@ -12,7 +12,9 @@ class WorkingMemoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = consolidated ? context.l10n.chatMemoryArchivedToLongTerm : context.l10n.chatMemoryCurrentSession;
+    final label = consolidated
+        ? context.l10n.chatMemoryArchivedToLongTerm
+        : context.l10n.chatMemoryCurrentSession;
     final color = consolidated ? DS.success : DS.info;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: 4),

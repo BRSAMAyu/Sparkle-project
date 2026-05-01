@@ -16,7 +16,10 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
+from prometheus_client import Counter
 from sqlalchemy import select
+
+from app.core.metrics import get_or_create_metric
 
 if TYPE_CHECKING:
     from app.services.plan_matching_service import PlanMatchingService
@@ -28,6 +31,13 @@ STATE_GENERATING = "GENERATING"
 STATE_TOOL_CALLING = "TOOL_CALLING"
 STATE_DONE = "DONE"
 STATE_FAILED = "FAILED"
+
+
+SESSION_LOCK_ACQUIRE_FAILURES_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_session_lock_acquire_failures_total",
+    "Total session lock acquire failures caused by lock contention",
+)
 
 
 @dataclass
@@ -301,6 +311,7 @@ class SessionStateManager:
                 if existing == request_id:
                     logger.debug(f"Lock already held by same request {request_id}")
                     return True
+                SESSION_LOCK_ACQUIRE_FAILURES_TOTAL.inc()
                 logger.warning(f"Failed to acquire lock for session {session_id}, already locked")
                 return False
 

@@ -102,10 +102,14 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                 ),
               ),
             ),
-            SparkleIconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.of(context).pop(false),
-              variant: ButtonVariant.ghost,
+            Semantics(
+              button: true,
+              label: 'Chat intent preview dialog control 1',
+              child: SparkleIconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(false),
+                variant: ButtonVariant.ghost,
+              ),
             ),
           ],
         ),

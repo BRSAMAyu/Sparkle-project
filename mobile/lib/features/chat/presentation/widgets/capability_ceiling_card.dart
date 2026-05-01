@@ -32,8 +32,7 @@ class CapabilityCeilingCard extends ConsumerStatefulWidget {
       _CapabilityCeilingCardState();
 }
 
-class _CapabilityCeilingCardState
-    extends ConsumerState<CapabilityCeilingCard> {
+class _CapabilityCeilingCardState extends ConsumerState<CapabilityCeilingCard> {
   bool _dismissed = false;
 
   @override
@@ -42,8 +41,8 @@ class _CapabilityCeilingCardState
 
     final l10n = I18nService.instance.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final reason =
-        widget.ceilingData['reason']?.toString() ?? l10n.capabilityCeilingDefault;
+    final reason = widget.ceilingData['reason']?.toString() ??
+        l10n.capabilityCeilingDefault;
     final suggestedRaw =
         widget.ceilingData['suggested_modes'] as List<dynamic>? ?? [];
     final suggestedModes = suggestedRaw
@@ -119,16 +118,21 @@ class _CapabilityCeilingCardState
             Wrap(
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
-              children: suggestedModes.map((mode) => _ModeSuggestionChip(
-                  mode: mode,
-                  onTap: () {
-                    ref
-                        .read(chatModeNotifierProvider.notifier)
-                        .setModeWithFeedback(mode, context);
-                    ref.read(lastMultiAgentModeProvider.notifier).state = mode;
-                    setState(() => _dismissed = true);
-                  },
-                ),).toList(),
+              children: suggestedModes
+                  .map(
+                    (mode) => _ModeSuggestionChip(
+                      mode: mode,
+                      onTap: () {
+                        ref
+                            .read(chatModeNotifierProvider.notifier)
+                            .setModeWithFeedback(mode, context);
+                        ref.read(lastMultiAgentModeProvider.notifier).state =
+                            mode;
+                        setState(() => _dismissed = true);
+                      },
+                    ),
+                  )
+                  .toList(),
             ),
           ],
 
@@ -176,12 +180,16 @@ class _DismissButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Icon(
-          Icons.close_rounded,
-          size: DS.iconSizeXs,
-          color: DS.textTertiary,
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat capability ceiling card control 1',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Icon(
+            Icons.close_rounded,
+            size: DS.iconSizeXs,
+            color: DS.textTertiary,
+          ),
         ),
       );
 }
@@ -194,14 +202,18 @@ class _ContinueButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = I18nService.instance.l10n;
-    return GestureDetector(
-      onTap: onTap,
-      child: Text(
-        l10n.capabilityCeilingContinue,
-        style: TextStyle(
-          fontSize: DS.fontSizeXs,
-          color: DS.textTertiary,
-          decoration: TextDecoration.underline,
+    return Semantics(
+      button: true,
+      label: 'Chat capability ceiling card control 2',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Text(
+          l10n.capabilityCeilingContinue,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: DS.textTertiary,
+            decoration: TextDecoration.underline,
+          ),
         ),
       ),
     );

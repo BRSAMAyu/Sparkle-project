@@ -24,6 +24,235 @@ enum MemorySort { newest, oldest, importance, confidence }
 
 enum MemoryViewMode { compact, expanded }
 
+class _MemoryPanelDataState {
+  const _MemoryPanelDataState({
+    this.isLoading = true,
+    this.error,
+    this.preferences = const [],
+    this.goals = const [],
+    this.episodic = const [],
+    this.recentScenes = const [],
+    this.foresightHint,
+    this.pendingCommitments = const [],
+    this.unresolvedConflicts = const [],
+    this.revokingIds = const {},
+    this.processingCommitmentIds = const {},
+    this.processingConflictIds = const {},
+  });
+
+  final bool isLoading;
+  final String? error;
+  final List<MemoryPreferenceItem> preferences;
+  final List<MemoryGoalItem> goals;
+  final List<EpisodicMemoryItem> episodic;
+  final List<RecentSceneSummaryItem> recentScenes;
+  final ForesightHintSummaryItem? foresightHint;
+  final List<PendingCommitmentItem> pendingCommitments;
+  final List<UnresolvedConflictItem> unresolvedConflicts;
+  final Set<String> revokingIds;
+  final Set<String> processingCommitmentIds;
+  final Set<String> processingConflictIds;
+
+  _MemoryPanelDataState copyWith({
+    bool? isLoading,
+    String? error,
+    List<MemoryPreferenceItem>? preferences,
+    List<MemoryGoalItem>? goals,
+    List<EpisodicMemoryItem>? episodic,
+    List<RecentSceneSummaryItem>? recentScenes,
+    Object? foresightHint = _foresightHintSentinel,
+    List<PendingCommitmentItem>? pendingCommitments,
+    List<UnresolvedConflictItem>? unresolvedConflicts,
+    Set<String>? revokingIds,
+    Set<String>? processingCommitmentIds,
+    Set<String>? processingConflictIds,
+    bool clearError = false,
+  }) =>
+      _MemoryPanelDataState(
+        isLoading: isLoading ?? this.isLoading,
+        error: clearError ? null : error ?? this.error,
+        preferences: preferences ?? this.preferences,
+        goals: goals ?? this.goals,
+        episodic: episodic ?? this.episodic,
+        recentScenes: recentScenes ?? this.recentScenes,
+        foresightHint: identical(foresightHint, _foresightHintSentinel)
+            ? this.foresightHint
+            : foresightHint as ForesightHintSummaryItem?,
+        pendingCommitments: pendingCommitments ?? this.pendingCommitments,
+        unresolvedConflicts: unresolvedConflicts ?? this.unresolvedConflicts,
+        revokingIds: revokingIds ?? this.revokingIds,
+        processingCommitmentIds:
+            processingCommitmentIds ?? this.processingCommitmentIds,
+        processingConflictIds:
+            processingConflictIds ?? this.processingConflictIds,
+      );
+}
+
+const Object _foresightHintSentinel = Object();
+
+class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
+  _MemoryPanelDataNotifier(this._service)
+      : super(const _MemoryPanelDataState());
+
+  final MemoryApiService _service;
+
+  Future<void> loadAll() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final results = await Future.wait([
+        _service.getPreferences(),
+        _service.getGoals(),
+        _service.getEpisodic(),
+        _service.getRecentScenes(),
+        _service.getForesightHintSummary(),
+        _service.getPendingCommitments(),
+        _service.getUnresolvedConflicts(),
+      ]);
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(
+        preferences: results[0] as List<MemoryPreferenceItem>,
+        goals: results[1] as List<MemoryGoalItem>,
+        episodic: results[2] as List<EpisodicMemoryItem>,
+        recentScenes: results[3] as List<RecentSceneSummaryItem>,
+        foresightHint: results[4] as ForesightHintSummaryItem?,
+        pendingCommitments: results[5] as List<PendingCommitmentItem>,
+        unresolvedConflicts: results[6] as List<UnresolvedConflictItem>,
+        isLoading: false,
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(isLoading: false, error: '$e');
+    }
+  }
+
+  Future<void> revokeAutoMemory(EpisodicMemoryItem item) async {
+    state = state.copyWith(revokingIds: {...state.revokingIds, item.id});
+    try {
+      await _service.retractMemory(
+        type: 'episodic',
+        id: item.id,
+        reason: 'user_revoked_ai_auto_memory',
+      );
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(
+        episodic: state.episodic.where((entry) => entry.id != item.id).toList(),
+        revokingIds: state.revokingIds.where((id) => id != item.id).toSet(),
+      );
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+          revokingIds: state.revokingIds.where((id) => id != item.id).toSet(),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> resolvePendingCommitment(PendingCommitmentItem item) async {
+    state = state.copyWith(
+      processingCommitmentIds: {...state.processingCommitmentIds, item.id},
+    );
+    try {
+      await _service.resolvePendingCommitment(item.id);
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(
+        pendingCommitments: state.pendingCommitments
+            .where((entry) => entry.id != item.id)
+            .toList(),
+        processingCommitmentIds:
+            state.processingCommitmentIds.where((id) => id != item.id).toSet(),
+      );
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+          processingCommitmentIds: state.processingCommitmentIds
+              .where((id) => id != item.id)
+              .toSet(),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> dismissPendingCommitment(PendingCommitmentItem item) async {
+    state = state.copyWith(
+      processingCommitmentIds: {...state.processingCommitmentIds, item.id},
+    );
+    try {
+      await _service.retractMemory(
+        type: 'episodic',
+        id: item.id,
+        reason: 'stage17_dismiss_pending_commitment',
+      );
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(
+        pendingCommitments: state.pendingCommitments
+            .where((entry) => entry.id != item.id)
+            .toList(),
+        processingCommitmentIds:
+            state.processingCommitmentIds.where((id) => id != item.id).toSet(),
+      );
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+          processingCommitmentIds: state.processingCommitmentIds
+              .where((id) => id != item.id)
+              .toSet(),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> arbitrateConflict(
+    UnresolvedConflictItem item, {
+    required String selection,
+  }) async {
+    state = state.copyWith(
+      processingConflictIds: {...state.processingConflictIds, item.id},
+    );
+    try {
+      await _service.arbitrateUnresolvedConflict(item.id, selection: selection);
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(
+        unresolvedConflicts: state.unresolvedConflicts
+            .where((entry) => entry.id != item.id)
+            .toList(),
+        processingConflictIds:
+            state.processingConflictIds.where((id) => id != item.id).toSet(),
+      );
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+          processingConflictIds:
+              state.processingConflictIds.where((id) => id != item.id).toSet(),
+        );
+      }
+      rethrow;
+    }
+  }
+}
+
+final _memoryPanelDataProvider = StateNotifierProvider.autoDispose<
+    _MemoryPanelDataNotifier, _MemoryPanelDataState>((ref) {
+  final notifier =
+      _MemoryPanelDataNotifier(ref.watch(memoryApiServiceProvider));
+  unawaited(notifier.loadAll());
+  return notifier;
+});
+
 class MemoryEntry {
   MemoryEntry({
     required this.id,
@@ -56,71 +285,39 @@ class MemoryPanelScreen extends ConsumerStatefulWidget {
 }
 
 class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
-  bool _loading = true;
-  String? _error;
-  List<MemoryPreferenceItem> _preferences = [];
-  List<MemoryGoalItem> _goals = [];
-  List<EpisodicMemoryItem> _episodic = [];
-  List<RecentSceneSummaryItem> _recentScenes = [];
-  ForesightHintSummaryItem? _foresightHint;
-  List<PendingCommitmentItem> _pendingCommitments = [];
-  List<UnresolvedConflictItem> _unresolvedConflicts = [];
   MemoryEntryType? _filterType;
   MemoryEvidenceStatus? _filterEvidence;
   DateTimeRange? _dateRange;
   MemorySort _sort = MemorySort.newest;
   MemoryViewMode _viewMode = MemoryViewMode.compact;
   final Set<String> _pinnedIds = {};
-  final Set<String> _revokingIds = {};
-  final Set<String> _processingCommitmentIds = {};
-  final Set<String> _processingConflictIds = {};
 
-  @override
-  void initState() {
-    super.initState();
-    _loadAll();
-  }
+  _MemoryPanelDataState get _data => ref.watch(_memoryPanelDataProvider);
 
-  Future<void> _loadAll() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  List<MemoryPreferenceItem> get _preferences => _data.preferences;
 
-    try {
-      final service = ref.read(memoryApiServiceProvider);
-      final results = await Future.wait([
-        service.getPreferences(),
-        service.getGoals(),
-        service.getEpisodic(),
-        service.getRecentScenes(),
-        service.getForesightHintSummary(),
-        service.getPendingCommitments(),
-        service.getUnresolvedConflicts(),
-      ]);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _preferences = results[0] as List<MemoryPreferenceItem>;
-        _goals = results[1] as List<MemoryGoalItem>;
-        _episodic = results[2] as List<EpisodicMemoryItem>;
-        _recentScenes = results[3] as List<RecentSceneSummaryItem>;
-        _foresightHint = results[4] as ForesightHintSummaryItem?;
-        _pendingCommitments = results[5] as List<PendingCommitmentItem>;
-        _unresolvedConflicts = results[6] as List<UnresolvedConflictItem>;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = context.l10n.memoryPanelLoadFailed('$e');
-        _loading = false;
-      });
-    }
-  }
+  List<MemoryGoalItem> get _goals => _data.goals;
+
+  List<EpisodicMemoryItem> get _episodic => _data.episodic;
+
+  List<RecentSceneSummaryItem> get _recentScenes => _data.recentScenes;
+
+  ForesightHintSummaryItem? get _foresightHint => _data.foresightHint;
+
+  List<PendingCommitmentItem> get _pendingCommitments =>
+      _data.pendingCommitments;
+
+  List<UnresolvedConflictItem> get _unresolvedConflicts =>
+      _data.unresolvedConflicts;
+
+  Set<String> get _revokingIds => _data.revokingIds;
+
+  Set<String> get _processingCommitmentIds => _data.processingCommitmentIds;
+
+  Set<String> get _processingConflictIds => _data.processingConflictIds;
+
+  Future<void> _loadAll() =>
+      ref.read(_memoryPanelDataProvider.notifier).loadAll();
 
   @override
   Widget build(BuildContext context) => GraphiteScaffold(
@@ -149,10 +346,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             ),
           ],
         ),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
+        child: _data.isLoading
+            ? const ContentConstraint(child: _MemoryPanelLoadingSkeleton())
             : ContentConstraint(
-                child: _error != null
+                child: _data.error != null
                     ? _buildError(context)
                     : AppFeatureFlags.enableMemoryPanelV2
                         ? _buildV2Panel(context)
@@ -176,7 +373,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _error ?? context.l10n.memoryPanelUnavailable,
+                _data.error == null
+                    ? context.l10n.memoryPanelUnavailable
+                    : context.l10n.memoryPanelLoadFailed(_data.error!),
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -464,7 +663,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       return const SizedBox.shrink();
     }
     final subtitleParts = [
-      if (item.deviationCount > 0) context.l10n.memoryPanelDeviationsDetected(item.deviationCount),
+      if (item.deviationCount > 0)
+        context.l10n.memoryPanelDeviationsDetected(item.deviationCount),
       if (item.generatedAt != null) _formatUpdated(item.generatedAt),
     ];
     return Card(
@@ -576,7 +776,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        context.l10n.memoryPanelSceneMemories(_formatSceneTime(item.timeStart, item.timeEnd), item.memberCount),
+                        context.l10n.memoryPanelSceneMemories(
+                            _formatSceneTime(item.timeStart, item.timeEnd),
+                            item.memberCount),
                         style: TextStyle(color: DS.textSecondary),
                       ),
                     ],
@@ -643,7 +845,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final showUndo = episodic != null && _isInferredAutoMemory(episodic);
     final subtitle = [
       _entryTypeLabel(entry.type),
-      if (episodic != null && _isInferredAutoMemory(episodic)) context.l10n.memoryPanelAiAutoMemories,
+      if (episodic != null && _isInferredAutoMemory(episodic))
+        context.l10n.memoryPanelAiAutoMemories,
       _formatUpdated(entry.updatedAt),
     ].where((value) => value.isNotEmpty).join(' · ');
     return Card(
@@ -668,7 +871,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               MemoryEvidenceBadge(status: entry.evidenceStatus),
               if (entry.correctionCount > 0) ...[
                 const SizedBox(width: 6),
-                _CorrectionBadge(label: context.l10n.memoryPanelCorrectionCount(entry.correctionCount)),
+                _CorrectionBadge(
+                    label: context.l10n
+                        .memoryPanelCorrectionCount(entry.correctionCount)),
               ],
               if (showAdjust) ...[
                 const SizedBox(width: 6),
@@ -680,7 +885,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               if (showUndo) ...[
                 const SizedBox(width: 6),
                 SparkleButton(
-                  label: _revokingIds.contains(entry.id) ? context.l10n.memoryPanelRevoking : context.l10n.memoryPanelRevoke,
+                  label: _revokingIds.contains(entry.id)
+                      ? context.l10n.memoryPanelRevoking
+                      : context.l10n.memoryPanelRevoke,
                   onPressed: _revokingIds.contains(entry.id)
                       ? () {}
                       : () => _revokeAutoMemory(episodic),
@@ -772,12 +979,16 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final confidence = entry.confidence;
     final parts = <String>[];
     if (importance != null) {
-      parts.add(context.l10n.memoryPanelImportanceValue(importance.toStringAsFixed(2)));
+      parts.add(context.l10n
+          .memoryPanelImportanceValue(importance.toStringAsFixed(2)));
     }
     if (confidence != null) {
-      parts.add(context.l10n.memoryPanelConfidenceValue(confidence.toStringAsFixed(2)));
+      parts.add(context.l10n
+          .memoryPanelConfidenceValue(confidence.toStringAsFixed(2)));
     }
-    return parts.isEmpty ? context.l10n.memoryPanelMetricsNone : parts.join(' · ');
+    return parts.isEmpty
+        ? context.l10n.memoryPanelMetricsNone
+        : parts.join(' · ');
   }
 
   void _setTypeFilter(MemoryEntryType? type) {
@@ -939,7 +1150,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   String _formatEpisodicSubtitle(EpisodicMemoryItem item) {
     final parts = <String>[
-      if (_isInferredAutoMemory(item)) item.declarationLabel ?? context.l10n.memoryPanelAiAutoMemories,
+      if (_isInferredAutoMemory(item))
+        item.declarationLabel ?? context.l10n.memoryPanelAiAutoMemories,
       if ((item.subjectType ?? '').isNotEmpty) item.subjectType!,
       _formatUpdated(item.occurredAt),
     ];
@@ -1008,7 +1220,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           runSpacing: DS.sm,
           children: [
             SparkleButton(
-              label: _revokingIds.contains(item.id) ? context.l10n.memoryPanelRevoking : context.l10n.memoryPanelRevokeThis,
+              label: _revokingIds.contains(item.id)
+                  ? context.l10n.memoryPanelRevoking
+                  : context.l10n.memoryPanelRevokeThis,
               onPressed: _revokingIds.contains(item.id)
                   ? () {}
                   : () => _revokeAutoMemory(item),
@@ -1038,98 +1252,70 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       item.sourceLane == 'inferred_extraction';
 
   Future<void> _revokeAutoMemory(EpisodicMemoryItem item) async {
-    setState(() {
-      _revokingIds.add(item.id);
-    });
     try {
-      final service = ref.read(memoryApiServiceProvider);
-      await service.retractMemory(
-        type: 'episodic',
-        id: item.id,
-        reason: 'user_revoked_ai_auto_memory',
-      );
+      await ref.read(_memoryPanelDataProvider.notifier).revokeAutoMemory(item);
       if (!mounted) {
         return;
       }
-      setState(() {
-        _episodic = _episodic.where((entry) => entry.id != item.id).toList();
-        _revokingIds.remove(item.id);
-      });
       AppFeedback.success(context, context.l10n.memoryPanelRevokedAutoMemory);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _revokingIds.remove(item.id);
-      });
       AppFeedback.error(context, context.l10n.memoryPanelRevokeFailed('$e'));
     }
   }
 
   Future<void> _resolvePendingCommitment(PendingCommitmentItem item) async {
-    setState(() => _processingCommitmentIds.add(item.id));
     try {
-      final service = ref.read(memoryApiServiceProvider);
-      await service.resolvePendingCommitment(item.id);
+      await ref
+          .read(_memoryPanelDataProvider.notifier)
+          .resolvePendingCommitment(item);
       if (!mounted) {
         return;
       }
-      setState(() {
-        _pendingCommitments =
-            _pendingCommitments.where((entry) => entry.id != item.id).toList();
-        _processingCommitmentIds.remove(item.id);
-      });
       AppFeedback.success(context, context.l10n.memoryPanelMarkedComplete);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() => _processingCommitmentIds.remove(item.id));
       AppFeedback.error(context, context.l10n.memoryPanelMarkFailed('$e'));
     }
   }
 
   Future<void> _dismissPendingCommitment(PendingCommitmentItem item) async {
-    setState(() => _processingCommitmentIds.add(item.id));
     try {
-      final service = ref.read(memoryApiServiceProvider);
-      await service.retractMemory(
-        type: 'episodic',
-        id: item.id,
-        reason: 'stage17_dismiss_pending_commitment',
-      );
+      await ref
+          .read(_memoryPanelDataProvider.notifier)
+          .dismissPendingCommitment(item);
       if (!mounted) {
         return;
       }
-      setState(() {
-        _pendingCommitments =
-            _pendingCommitments.where((entry) => entry.id != item.id).toList();
-        _processingCommitmentIds.remove(item.id);
-      });
       AppFeedback.success(context, context.l10n.memoryPanelCommitmentDismissed);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() => _processingCommitmentIds.remove(item.id));
       AppFeedback.error(context, context.l10n.memoryPanelDismissFailed('$e'));
     }
   }
 
   Future<void> _selectConflictLeft(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
-        selection: 'left', successMessage: context.l10n.memoryPanelConflictResolvedA);
+        selection: 'left',
+        successMessage: context.l10n.memoryPanelConflictResolvedA);
   }
 
   Future<void> _selectConflictRight(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
-        selection: 'right', successMessage: context.l10n.memoryPanelConflictResolvedB);
+        selection: 'right',
+        successMessage: context.l10n.memoryPanelConflictResolvedB);
   }
 
   Future<void> _selectConflictNone(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
-        selection: 'none', successMessage: context.l10n.memoryPanelConflictResolvedNone);
+        selection: 'none',
+        successMessage: context.l10n.memoryPanelConflictResolvedNone);
   }
 
   Future<void> _arbitrateConflict(
@@ -1137,27 +1323,19 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     required String selection,
     required String successMessage,
   }) async {
-    setState(() => _processingConflictIds.add(item.id));
     try {
-      final service = ref.read(memoryApiServiceProvider);
-      await service.arbitrateUnresolvedConflict(
-        item.id,
-        selection: selection,
-      );
+      await ref.read(_memoryPanelDataProvider.notifier).arbitrateConflict(
+            item,
+            selection: selection,
+          );
       if (!mounted) {
         return;
       }
-      setState(() {
-        _unresolvedConflicts =
-            _unresolvedConflicts.where((entry) => entry.id != item.id).toList();
-        _processingConflictIds.remove(item.id);
-      });
       AppFeedback.success(context, successMessage);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() => _processingConflictIds.remove(item.id));
       AppFeedback.error(context, context.l10n.memoryPanelConflictFailed('$e'));
     }
   }
@@ -1169,6 +1347,56 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     );
     context.push(uri.toString());
   }
+}
+
+class _MemoryPanelLoadingSkeleton extends StatelessWidget {
+  const _MemoryPanelLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) => ListView.separated(
+        padding: const EdgeInsets.all(DS.lg),
+        itemBuilder: (context, index) => Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(DS.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SkeletonBar(widthFactor: index == 0 ? 0.42 : 0.62),
+                const SizedBox(height: DS.sm),
+                const _SkeletonBar(widthFactor: 0.88, height: 12),
+                const SizedBox(height: DS.xs),
+                const _SkeletonBar(widthFactor: 0.58, height: 12),
+              ],
+            ),
+          ),
+        ),
+        separatorBuilder: (context, index) => const SizedBox(height: DS.md),
+        itemCount: 5,
+      );
+}
+
+class _SkeletonBar extends StatelessWidget {
+  const _SkeletonBar({
+    required this.widthFactor,
+    this.height = 16,
+  });
+
+  final double widthFactor;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => FractionallySizedBox(
+        widthFactor: widthFactor,
+        alignment: Alignment.centerLeft,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfaceTertiary,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: SizedBox(height: height),
+        ),
+      );
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -1237,7 +1465,9 @@ class _MemoryCard extends StatelessWidget {
                         badge,
                         if (correctionCount > 0) ...[
                           const SizedBox(width: 6),
-                          _CorrectionBadge(label: context.l10n.memoryPanelCorrectionCount(correctionCount)),
+                          _CorrectionBadge(
+                              label: context.l10n
+                                  .memoryPanelCorrectionCount(correctionCount)),
                         ],
                       ],
                     ),

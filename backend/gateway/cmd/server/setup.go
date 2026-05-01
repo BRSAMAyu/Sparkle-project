@@ -109,12 +109,24 @@ type proxyBundle struct {
 	abTestMiddleware *middleware.ABTestMiddleware
 }
 
+const (
+	defaultDBMaxConns        int32 = 30
+	defaultDBMinConns        int32 = 5
+	defaultDBMaxConnIdleTime       = 15 * time.Minute
+)
+
 func initTracer() func(context.Context) error {
 	return otelinfra.InitTracer("sparkle-gateway")
 }
 
 func initDatabase(ctx context.Context, cfg *config.Config) (*databaseHandles, error) {
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
+	applyDefaultPoolConfig(poolConfig)
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +154,12 @@ func initDatabase(ctx context.Context, cfg *config.Config) (*databaseHandles, er
 		queries:      queries,
 		chaosManager: chaosManager,
 	}, nil
+}
+
+func applyDefaultPoolConfig(poolConfig *pgxpool.Config) {
+	poolConfig.MaxConns = defaultDBMaxConns
+	poolConfig.MinConns = defaultDBMinConns
+	poolConfig.MaxConnIdleTime = defaultDBMaxConnIdleTime
 }
 
 func initRedis(cfg *config.Config) (*redisv9.Client, error) {

@@ -58,16 +58,21 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
   }
 
   String get _elapsedLabel {
-    if (widget.elapsedMinutes < 60) return context.l10n.chatStaleMinutes(widget.elapsedMinutes);
+    if (widget.elapsedMinutes < 60)
+      return context.l10n.chatStaleMinutes(widget.elapsedMinutes);
     if (widget.elapsedMinutes >= 1440) {
       final days = widget.elapsedMinutes ~/ 1440;
       final remaining = widget.elapsedMinutes % 1440;
       final hours = remaining ~/ 60;
-      return hours > 0 ? context.l10n.chatStaleDaysHours(days, hours) : context.l10n.chatStaleDaysOnly(days);
+      return hours > 0
+          ? context.l10n.chatStaleDaysHours(days, hours)
+          : context.l10n.chatStaleDaysOnly(days);
     }
     final hours = widget.elapsedMinutes ~/ 60;
     final mins = widget.elapsedMinutes % 60;
-    return mins > 0 ? context.l10n.chatStaleHoursMins(hours, mins) : context.l10n.chatStaleHoursOnly(hours);
+    return mins > 0
+        ? context.l10n.chatStaleHoursMins(hours, mins)
+        : context.l10n.chatStaleHoursOnly(hours);
   }
 
   @override
@@ -80,8 +85,7 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
             decoration: BoxDecoration(
               color: DS.surfaceHigh,
               borderRadius: BorderRadius.circular(16),
-              border:
-                  Border.all(color: DS.brandPrimary.withValues(alpha: 0.3)),
+              border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
                   color: DS.brandPrimary.withValues(alpha: 0.06),
@@ -157,11 +161,15 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.close, size: 16, color: DS.textTertiary),
-              onPressed: onDismiss,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            Semantics(
+              button: true,
+              label: 'Chat stale recovery card control 1',
+              child: IconButton(
+                icon: Icon(Icons.close, size: 16, color: DS.textTertiary),
+                onPressed: onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
             ),
           ],
         ),
@@ -182,8 +190,7 @@ class _OptionsRow extends StatelessWidget {
           runSpacing: 8,
           children: options
               .map(
-                (opt) =>
-                    _OptionChip(label: opt, onTap: () => onSelected(opt)),
+                (opt) => _OptionChip(label: opt, onTap: () => onSelected(opt)),
               )
               .toList(),
         ),
@@ -197,22 +204,26 @@ class _OptionChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: DS.brandPrimary.withValues(alpha: 0.25),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat stale recovery card control 2',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: DS.brandPrimary.withValues(alpha: 0.25),
+              ),
             ),
-          ),
-          child: Text(
-            label,
-            style: DS.labelSmall.copyWith(
-              color: DS.brandPrimary,
-              fontWeight: FontWeight.w500,
+            child: Text(
+              label,
+              style: DS.labelSmall.copyWith(
+                color: DS.brandPrimary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ),

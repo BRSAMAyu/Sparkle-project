@@ -21,9 +21,7 @@ _output_validator = LLMOutputValidator(strict_mode=True)
 
 _OPENAI_KEY_RE = re.compile(r"\bsk-[A-Za-z0-9][A-Za-z0-9._-]{8,}\b")
 _BEARER_RE = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._-]{8,}")
-_ASSIGNMENT_SECRET_RE = re.compile(
-    r"(?i)\b(api[_ -]?key|secret|token|password|authorization)\b\s*[:=]\s*([^\s,;]+)"
-)
+_ASSIGNMENT_SECRET_RE = re.compile(r"(?i)\b(api[_ -]?key|secret|token|password|authorization)\b\s*[:=]\s*([^\s,;]+)")
 _URL_CREDENTIAL_RE = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*://)([^/\s:@]+):([^@\s/]+)@")
 _TRACEBACK_RE = re.compile(r"Traceback \(most recent call last\):", re.IGNORECASE)
 _INTERNAL_ERROR_MARKERS = (
@@ -62,9 +60,6 @@ def redact_secrets(text: str) -> str:
     value = str(text or "")
     if not value:
         return ""
-    if not llm_safety_enabled():
-        _record_bypass("redact")
-        return value
 
     value = _OPENAI_KEY_RE.sub("[REDACTED_API_KEY]", value)
     value = _BEARER_RE.sub("Bearer [REDACTED]", value)
@@ -73,23 +68,35 @@ def redact_secrets(text: str) -> str:
     return value
 
 
+def _redact_string_values(value: Any) -> Any:
+    if isinstance(value, str):
+        return redact_secrets(value)
+    if isinstance(value, dict):
+        return {key: _redact_string_values(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_redact_string_values(item) for item in value]
+    return value
+
+
 def sanitize_text_for_llm(text: str, user_id: str | None = None) -> str:
     if not text:
         return ""
+    redacted = redact_secrets(text)
     if not llm_safety_enabled():
         _record_bypass("input")
-        return str(text)
-    check = _safety_service.sanitize_input(redact_secrets(text), user_id=user_id)
+        return redacted
+    check = _safety_service.sanitize_input(redacted, user_id=user_id)
     return check.sanitized_text
 
 
 def sanitize_llm_output(text: str, *, context: dict[str, Any] | None = None) -> str:
     if not text:
         return ""
+    redacted = redact_secrets(text)
     if not llm_safety_enabled():
         _record_bypass("output")
-        return str(text)
-    result = _output_validator.validate(redact_secrets(text), context=context)
+        return redacted
+    result = _output_validator.validate(redacted, context=context)
     if result.action == "block":
         return "抱歉，这部分内容无法直接返回。"
     return result.sanitized_text
@@ -98,19 +105,21 @@ def sanitize_llm_output(text: str, *, context: dict[str, Any] | None = None) -> 
 def wrap_user_message(text: str) -> str:
     if not text:
         return ""
+    redacted = redact_secrets(text)
     if not llm_safety_enabled():
         _record_bypass("wrap_user")
-        return str(text)
-    return f"{_USER_INPUT_OPEN}\n{text}\n{_USER_INPUT_CLOSE}"
+        return redacted
+    return f"{_USER_INPUT_OPEN}\n{redacted}\n{_USER_INPUT_CLOSE}"
 
 
 def wrap_tool_result(text: str) -> str:
     if not text:
         return ""
+    redacted = redact_secrets(text)
     if not llm_safety_enabled():
         _record_bypass("wrap_tool")
-        return str(text)
-    return f"{_TOOL_RESULT_OPEN}\n{text}\n{_TOOL_RESULT_CLOSE}"
+        return redacted
+    return f"{_TOOL_RESULT_OPEN}\n{redacted}\n{_TOOL_RESULT_CLOSE}"
 
 
 def secure_messages(
@@ -122,28 +131,38 @@ def secure_messages(
 ) -> list[dict[str, Any]]:
     if not llm_safety_enabled():
         _record_bypass("messages")
-        return [dict(message) for message in messages or []]
+        secured: list[dict[str, Any]] = []
+        for message in messages or []:
+            current = dict(message)
+            content = current.get("content")
+            current["content"] = _redact_string_values(content)
+            secured.append(current)
+        return secured
     secured: list[dict[str, Any]] = []
     for message in messages or []:
         current = dict(message)
         role = str(current.get("role") or "user")
         content = current.get("content")
         if isinstance(content, str):
-            safe_content = sanitize_text_for_llm(content, user_id=user_id) if role in {"user", "tool"} else redact_secrets(content)
+            safe_content = (
+                sanitize_text_for_llm(content, user_id=user_id) if role in {"user", "tool"} else redact_secrets(content)
+            )
             if role == "user" and wrap_user_messages:
                 safe_content = wrap_user_message(safe_content)
             elif role == "tool" and wrap_tool_messages:
                 safe_content = wrap_tool_result(safe_content)
             current["content"] = safe_content
+        elif content is not None:
+            current["content"] = _redact_string_values(content)
         secured.append(current)
     return secured
 
 
 def sanitize_exception_message(message: str | None, *, fallback: str = "工具执行失败，请稍后重试。") -> str:
+    raw = redact_secrets(str(message or "")).strip()
     if not llm_safety_enabled():
         _record_bypass("exception")
-        return str(message or "")
-    raw = redact_secrets(str(message or "")).strip()
+        return raw
     if not raw:
         return fallback
 
@@ -163,7 +182,7 @@ def sanitize_exception_message(message: str | None, *, fallback: str = "工具�
 def sanitize_tool_payload(payload: Any) -> Any:
     if not llm_safety_enabled():
         _record_bypass("tool_payload")
-        return payload
+        return _redact_string_values(payload)
     if isinstance(payload, dict):
         sanitized = {}
         for key, value in payload.items():
@@ -187,5 +206,5 @@ def sanitize_tool_payload(payload: Any) -> Any:
 def sanitize_tool_payload_json(payload: Any) -> str:
     if not llm_safety_enabled():
         _record_bypass("tool_payload_json")
-        return json.dumps(payload, ensure_ascii=False)
+        return json.dumps(sanitize_tool_payload(payload), ensure_ascii=False)
     return json.dumps(sanitize_tool_payload(payload), ensure_ascii=False)
