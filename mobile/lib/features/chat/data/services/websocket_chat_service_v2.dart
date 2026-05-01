@@ -1110,6 +1110,54 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         // 实时通知推送事件
         return NotificationEvent.fromJson(data);
 
+      case 'action_feedback':
+        return ActionFeedbackAckEvent(
+          actionId: data['action_id'] as String? ?? '',
+          status: data['status'] as String?,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          sessionId: sessionId,
+        );
+
+      case 'focus_completed':
+        return FocusCompletedAckEvent(
+          focusSessionId: data['focus_session_id'] as String? ?? '',
+          duration: data['duration'] as int?,
+          success: data['success'] as bool?,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          sessionId: sessionId,
+        );
+
+      case 'update_node_mastery':
+      case 'ack_update_node_mastery':
+        return NodeMasteryAckEvent(
+          nodeId: data['node_id'] as String? ?? '',
+          masteryLevel: (data['mastery_level'] as num?)?.toDouble(),
+          delta: (data['delta'] as num?)?.toDouble(),
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          sessionId: sessionId,
+        );
+
+      case 'error_update_node_mastery':
+        return NodeMasteryErrorEvent(
+          nodeId: data['node_id'] as String? ?? '',
+          error: data['error'] as String?,
+          retryable: data['retryable'] as bool?,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          sessionId: sessionId,
+        );
+
       default:
         if (finishReason != null) {
           final metadata = _normalizeMetadata(data['metadata']);

@@ -1849,3 +1849,69 @@ class SpineDegradedEvent extends ChatStreamEvent {
     super.promptVersion,
   });
 }
+
+/// Action Feedback Acknowledgment — confirms server received action feedback.
+class ActionFeedbackAckEvent extends ChatStreamEvent {
+  ActionFeedbackAckEvent({
+    required this.actionId,
+    this.status,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.sessionId,
+  });
+  final String actionId;
+  final String? status;
+}
+
+/// Focus Completed Acknowledgment — confirms focus session was recorded.
+class FocusCompletedAckEvent extends ChatStreamEvent {
+  FocusCompletedAckEvent({
+    required this.focusSessionId,
+    this.duration,
+    this.success,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.sessionId,
+  });
+  final String focusSessionId;
+  final int? duration;
+  final bool? success;
+}
+
+/// Node Mastery Update — confirms knowledge node mastery was updated.
+class NodeMasteryAckEvent extends ChatStreamEvent {
+  NodeMasteryAckEvent({
+    required this.nodeId,
+    this.masteryLevel,
+    this.delta,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.sessionId,
+  });
+  final String nodeId;
+  final double? masteryLevel;
+  final double? delta;
+}
+
+/// Node Mastery Error — reports failure to update knowledge node mastery.
+class NodeMasteryErrorEvent extends ChatStreamEvent {
+  NodeMasteryErrorEvent({
+    required this.nodeId,
+    this.error,
+    this.retryable,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.sessionId,
+  });
+  final String nodeId;
+  final String? error;
+  final bool? retryable;
+}
