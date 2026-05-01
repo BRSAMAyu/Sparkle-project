@@ -251,46 +251,95 @@
 
 | ID | 严重度 | 模块 | 问题 | 状态 |
 |----|--------|------|------|------|
-| C-N1 | P1 | 社区 / UX | 社区首页 4 个 filter 仅有视觉切换，没有真实数据筛选语义 | **FIXED** (dd36f28c) |
-| C-N2 | P1 | 社区 / 质量门 | feed 请求异常被静默降级为空列表，容易掩盖真实后端故障 | **FIXED** (dd36f28c) |
-| C-N3 | P2 | UIUX / i18n | 社区首页多处核心 copy 仍为英文硬编码 | **FIXED** (dd36f28c) |
-| C-N4 | P2 | UIUX / i18n | 任务执行链路离线/未连接提示仍是静态英文，绕过 l10n | **FIXED** (dd36f28c) |
+| C-N1 | P1 | 社区 / UX | 社区首页 4 个 filter 已开始传 `scope`，但后端 `/community/feed` 仍未接入筛选语义 | **REOPEN** (前端半修，后端未闭环) |
+| C-N2 | P1 | 社区 / 质量门 | feed 请求异常被静默降级为空列表，容易掩盖真实后端故障 | **VERIFIED FIXED** (dd36f28c) |
+| C-N3 | P2 | UIUX / i18n | 社区首页多处核心 copy 仍为英文硬编码 | **VERIFIED FIXED** (dd36f28c) |
+| C-N4 | P2 | UIUX / i18n | 任务执行链路离线/未连接提示已改成方法，但真实调用点仍未完成迁移并触发 analyzer 错误 | **REOPEN** |
+| C-N5 | P1 | 社区 / 编译健康 | `community_screen.dart` 当前缺少关闭 `CommunityScreen` 类的右花括号，Analyzer 已把 `_FilterChip/_GoalFocusSection` 解析成“类内声明类” | **REOPEN** |
+| C-N6 | P1 | 社区 / Demo 模式 | `MockCommunityRepository` 仍停留在旧版 `getFeed()` 签名，和新增 `scope` 参数不兼容，导致 Demo/mock 编译失败 | **REOPEN** |
+| C-N7 | P2 | 社区 / 交互连续性 | FeedNotifier 保存了 `_scope` 却从未复用，用户下拉刷新、错误重试、发帖后的自动刷新都会丢失当前筛选上下文 | **REOPEN** |
+| C-N8 | P2 | UIUX / i18n | 社区首页新增的 Goal Focus 首屏模块仍是纯英文文案，未进入双语/本地化体系 | **REOPEN** |
 
-#### C-N1 说明: 社区首页 feed filter 是“假筛选”
+#### C-N1 说明: 社区首页筛选只修到前端，未完成后端闭环
 
-- `community_screen.dart:94` 定义 4 个筛选项：`Global Feed / My Squad / Goal Mates / Following`
-- `community_screen.dart:126-129` 点击后只会：
-  1. 更新本地 `selectedIndex`
-  2. 调用 `feedProvider.refresh()`
-- `community_providers.dart:15-19` 的 `refresh()` 始终只调用 `_repository.getFeed()`
-- `community_repository.dart:24-42` 的 `getFeed()` 只有 `page` / `limit`，没有任何 filter / scope / audience 参数
+- 前端现在确实已经补上：
+  - `community_screen.dart:94-136` 点击 filter 时会传入 `scope`
+  - `community_providers.dart:17-22` 会调用 `_repository.getFeed(scope: scope)`
+  - `community_repository.dart:24-35` 会把 `scope` 作为 query parameter 发出
+- 但后端 `community.py:231-251` 的 `/feed` 仍然只有 `page` / `limit`，没有 `scope` 参数，也没有任何按小队 / 目标伙伴 / 关注关系筛选的查询逻辑
 
-**结论**: 当前社区首页给了用户“信息流筛选已生效”的交互暗示，但实际上所有筛选项都会拿回同一份 feed 数据。
+**结论**: 这不是“未修”，而是“修到一半”。当前社区首页的筛选视觉和前端请求已经开始分流，但服务端仍返回同一套全局数据，所以最终用户感知上依然是“假筛选”。
 
 #### C-N2 说明: feed 错误会被伪装成“没有内容”
 
-- `community_repository.dart:39-41` 里 `catch` 后直接 `return []`
-- 由于后端 `community.py:229-249` 实际上已经有 `/feed` 路由，这个逻辑不再是“临时过渡”，而是在掩盖真实故障
+- 已复验 `community_repository.dart:29-45`：原先静默 `return []` 的逻辑已删除
+- 当前在非 200 时会显式抛出 `Exception('Failed to load community feed')`
 
-**结论**: 当前实现会把后端故障、鉴权问题、解析失败等多类异常都表现成“社区暂时没有内容”，这会损害用户感知，也会削弱线上问题发现能力。
+**结论**: 该问题本轮可判定为已修复，前端不再把真实故障伪装成空社区。
 
 #### C-N3 说明: 社区首页核心 copy 仍未进入统一文案体系
 
-硬编码示例：
+- 已复验 `community_screen.dart:94-166`：上述首页级文案都已补成中英双语分支
+- 当前实现方式是 `isChinese ? '中文' : 'English'` 的页面内分支，而不是 ARB/l10n key
 
-- `community_screen.dart:94` `Global Feed / My Squad / Goal Mates / Following`
-- `community_screen.dart:111` `Discover what others are learning`
-- `community_screen.dart:151-166` `No community spark yet / Share a post / Refresh feed`
+**结论**: 以“是否仍为英文硬编码”这个验收口径看，该问题已修复；但从长期维护角度，仍建议后续收敛进统一 l10n 资源体系。
 
-**结论**: 这些不是边角文本，而是首页标题区与空状态主文案，已经属于上线前必须统一的产品语言层。
+#### C-N4 说明: 任务执行文案定义已改，但真实调用点仍未迁移完成
 
-#### C-N4 说明: 任务执行链路仍有静态英文提示
+- `execution_copy.dart:14-22` 现在已经把静态文案改成接受 `isChinese` 的方法
+- 但真实调用点仍保留旧用法：
+  - `task_provider.dart:828`
+  - `task_provider.dart:834`
+  - `task_execution_screen.dart:1224-1226`
+- `flutter analyze` 复验结果：
+  - `task_provider.dart:828:39` / `834:37` 报 `String Function([bool]) can't be assigned to String?`
+  - `task_execution_screen.dart:1224:7` 报 `Object can't be assigned to String`
 
-- `execution_copy.dart:14-18`
-  - `AI execution engine is currently offline...`
-  - `AI execution engine is not connected...`
+**结论**: 当前不是“文案没本地化”，而是“本地化改造尚未完成调用点迁移，并已造成 analyzer 报错”。因此这项不能通过最终验收。
 
-**结论**: 这是任务执行失败/离线场景下的第一反馈，不应绕过本地化与统一文案系统。
+#### C-N5 说明: `community_screen.dart` 当前不处于可签字的编译健康度
+
+- `community_screen.dart:148-183` 的 `_buildEmptyState()` 结束后，没有额外的 `}` 来关闭 `CommunityScreen` 类
+- 因此 `community_screen.dart:185+` 的 `_FilterChip`、`_GoalFocusSection`、`_GoalFocusCard` 被 Analyzer 解释成“声明在类内部的类”
+- 直接证据：
+  - `flutter analyze lib/features/community ...` 报 `class_in_class`
+  - `community_screen.dart:130` 报 `_FilterChip isn't defined`
+  - `community_screen.dart:155` 报 `_GoalFocusSection isn't a class`
+
+**结论**: 这是结构级语法/类边界问题，不是样式问题。当前社区首页文件仍不能算处于编译健康状态。
+
+#### C-N6 说明: Demo/mock 路径没有跟上 `scope` 接口变更
+
+- `community_repository.dart:24-28` 现在的主仓库接口是 `getFeed({page, limit, scope})`
+- `mock_community_repository.dart:1453` 仍然是 `getFeed({page, limit})`
+- `flutter analyze` 直接报 `invalid_override`
+- `flutter test test/widget/community_remaining_closure_test.dart` 也会因这个签名不兼容而无法编译
+
+**结论**: 这不是“只有测试仓没更新”。当前 `communityRepositoryProvider` 在 Demo 模式下真实会返回 `MockCommunityRepository`，因此这个问题会影响 Demo/验收环境可用性。
+
+#### C-N7 说明: 社区筛选上下文不会在后续刷新中保留
+
+- `community_providers.dart:15` 保存了 `_scope`
+- 但 `refresh({String? scope})` 内部始终调用 `_repository.getFeed(scope: scope)`，而不是在 `scope == null` 时回退到 `_scope`
+- 连带影响：
+  - `community_screen.dart:39` 下拉刷新未传 `scope`
+  - `community_screen.dart:77` 错误重试未传 `scope`
+  - `community_screen.dart:176` 空状态刷新未传 `scope`
+  - `community_providers.dart:70` 发帖成功后的自动刷新也未传 `scope`
+- `flutter analyze` 已给出 `community_providers.dart:15` 的 `_scope` unused warning
+
+**结论**: 即使后端稍后补齐 `scope` 过滤，当前实现仍会在用户刷新或发帖后悄悄掉回默认 feed，体验上不连续。
+
+#### C-N8 说明: 社区首页新增 Goal Focus 模块仍有首页级英文硬编码
+
+- `community_screen.dart:237` `Goal Focus`
+- `community_screen.dart:249-264`
+  - `Accountability Partners`
+  - `Common Mistakes`
+  - `Top Resources`
+  - 以及对应 subtitle
+
+**结论**: 前一轮修复覆盖了筛选条、副标题和空状态，但这块新增首屏模块仍没进入本地化体系，所以“社区首页首屏文案已统一”还不能完全成立。
 
 ### 12.4 补充判断
 
@@ -303,7 +352,10 @@
 3. **任务卡 / 计划 / 分享 / 群任务**: 主链路可以算 `PASS`，但**社区首页 feed** 还不能通过最终验收。
 
 4. **UIUX**: 当前不能直接给 `PASS`。  
-   页面结构已经明显成熟，但首页级文案、状态文案、本地化一致性还没到上线签字标准。
+   社区首页文案本身已补上双语，但社区筛选后端语义和任务执行失败态文案调用点仍未完全收口。
 
 5. **质量门 / 部署证据**: 已比前几轮诚实很多，当前更接近 `PASS-WIP`。  
    代码和 workflow 基本修到位了，但还缺一轮“更像真实上线前彩排”的证据包。
+
+6. **移动端编译健康**: 当前不能给 `PASS`。  
+   `community_screen.dart`、`MockCommunityRepository`、`task_execution_screen/task_provider` 这几处说明最近一轮收尾改动还存在“定义改了，但相邻调用点/Mock/文件边界没全部跟上”的问题。

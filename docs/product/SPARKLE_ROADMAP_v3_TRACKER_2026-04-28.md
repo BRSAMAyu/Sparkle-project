@@ -748,10 +748,13 @@
 
 | ID | 严重度 | 问题 | 文件/证据 | 状态 |
 |----|--------|------|-----------|------|
-| R8-1 | P1 | 社区首页 4 个 filter 只有视觉切换，没有真实数据筛选语义 | `community_screen.dart:94-129`, `community_providers.dart:15-19`, `community_repository.dart:24-42` | 🔴 Reopen |
-| R8-2 | P1 | community feed 请求异常被静默降级为空列表，容易掩盖真实后端故障 | `community_repository.dart:39-41`; 后端 `community.py:229-249` 实际已有 `/feed` | 🔴 Reopen |
-| R8-3 | P2 | 社区首页多处核心 copy 仍为英文硬编码 | `community_screen.dart:94`, `111`, `151-166` | 🟡 Reopen |
-| R8-4 | P2 | 任务执行页离线/未连接提示绕过 l10n，仍是静态英文 | `execution_copy.dart:14-18` | 🟡 Reopen |
+| R8-1 | P1 | 前端已开始传 `scope`，但后端 `/community/feed` 仍未接入筛选语义，社区首页最终用户感知仍是“假筛选” | `community_screen.dart:94-136`, `community_providers.dart:17-22`, `community_repository.dart:24-35`, `community.py:231-251` | 🔴 Reopen |
+| R8-2 | P1 | community feed 错误静默吞掉的问题已复验修复 | `community_repository.dart:29-45` | ✅ Fixed |
+| R8-3 | P2 | 社区首页原有筛选条/副标题/空状态英文硬编码已复验修复，但 Goal Focus 首屏模块仍有新增英文文案 | `community_screen.dart:94-176`, `237-265` | 🟡 Partial |
+| R8-4 | P2 | 任务执行页离线/未连接提示定义层已改，但真实调用点未迁移完成并触发 analyzer/编译错误 | `execution_copy.dart:14-22`, `task_provider.dart:828-834`, `task_execution_screen.dart:1224-1226` | 🔴 Reopen |
+| R8-5 | P1 | `community_screen.dart` 当前缺少关闭 `CommunityScreen` 类的右花括号，Analyzer 已把后续组件解析成类内声明 | `community_screen.dart:148-185` | 🔴 Reopen |
+| R8-6 | P1 | Demo/mock 路径未跟上 `getFeed(scope:)` 接口变更，`MockCommunityRepository` invalid override | `mock_community_repository.dart:1453` | 🔴 Reopen |
+| R8-7 | P2 | 社区筛选上下文不会在下拉刷新、错误重试、空状态刷新、发帖后自动刷新中保留 | `community_providers.dart:15-22`, `70`; `community_screen.dart:39`, `77`, `176` | 🟡 Reopen |
 
 ### R8.3 本轮抽样测试
 
@@ -764,6 +767,8 @@
 | `pytest tests/integration/test_memory_evolution_workflow.py tests/integration/test_community_integration.py tests/test_community_e2e.py -q` | ✅ `17 passed, 9 skipped` |
 | `flutter test test/app/main_pages_load_smoke_test.dart test/widget/plan_review_card_test.dart test/widget/profile_front_door_action_card_test.dart test/features/user/profile_transparent_screen_test.dart` | ✅ 全部通过 |
 | `flutter test test/widget/action_card_ux_test.dart test/widget/action_card_task_list_test.dart test/widget/chat_action_card_navigation_test.dart test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+| `flutter analyze lib/features/community lib/features/task lib/features/home lib/features/user` | ❌ 社区/任务存在多处 error，含 `invalid_override`、`class_in_class`、`argument_type_not_assignable` |
+| `flutter test test/widget/community_remaining_closure_test.dart` | ❌ 当前工作区编译失败，直接暴露 `MockCommunityRepository.getFeed` 签名不匹配与任务执行文案调用点错误 |
 
 ### R8.4 口径修正
 
@@ -776,3 +781,7 @@
 > **“整个项目已经只剩人工上线动作”。**
 
 因为社区首页 feed 的真实行为与视觉承诺仍不一致，且 UI 文案体系还有关键收尾项未完成。
+
+补充说明：
+
+> 本轮更宽的移动端静态检查还发现，最近一批“看似已修”的社区/任务收尾改动存在相邻调用点和 mock 仓库未同步的问题；因此移动端编译健康度仍不能视为最终通过。
