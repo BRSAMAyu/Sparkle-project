@@ -89,6 +89,10 @@ async def serve():
             traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
         )
 
+    # Initialize OTEL tracing — must happen before GrpcAioInstrumentorServer
+    # so that the TracerProvider is available when spans are created.
+    from app.core.tracing import tracer  # noqa: F401
+
     # 创建服务器
     server = grpc.aio.server(
         futures.ThreadPoolExecutor(max_workers=10),
