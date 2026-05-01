@@ -203,6 +203,18 @@ class DualCoreRouter:
             procrastination_score,
             profile,
         )
+
+        # Compute explicit precedence scores (higher = more override authority)
+        precedence = {
+            "emotional_block": 9.0 if emotional_block else 0.0,
+            "procrastination": 8.0 if procrastination_pattern else 0.0,
+            "cognitive_mode": 7.0 if routing_input.cognitive_mode_suggested else 0.0,
+            "low_metacognition": 6.0 if False else 0.0,  # placeholder, set later
+            "high_cognitive_load": 5.0 if (routing_input.cognitive_load is not None and float(routing_input.cognitive_load) >= 0.55) else 0.0,
+            "spine_fatigue": 4.0,  # set later
+            "reflection_phase": 3.0,  # set later
+            "goal_clarity": 1.0 * goal_clarity_score,
+        }
         cognitive_mode_suggested = bool(routing_input.cognitive_mode_suggested)
         pattern_guidance = self._pattern_guidance(routing_input)
         cognitive_load_value = float(routing_input.cognitive_load or 0.0)
@@ -507,7 +519,14 @@ class DualCoreRouter:
             if max_tasks is not None and max_tasks < 3:
                 execution_constraints.append(f"控制并发任务数量，单次推进不要超过 {max_tasks} 个任务。")
 
+        # Finalize precedence scores with late-computed signals
+        precedence["reflection_phase"] = 3.0 if reflection_phase_detected else 0.0
+        precedence["low_metacognition"] = 6.0 if low_metacognition_accuracy else 0.0
+        precedence["spine_fatigue"] = 4.0 if spine_fatigue_detected else 0.0
+        dominant_signal = max(precedence, key=lambda k: precedence[k])
         routing_debug = {
+            "dominant_signal": dominant_signal,
+            "precedence_scores": {k: round(v, 2) for k, v in precedence.items() if v > 0},
             "goal_clarity_score": round(goal_clarity_score, 3),
             "goal_clear_threshold": round(goal_clear_threshold, 3),
             "procrastination_score": round(procrastination_score, 3),
